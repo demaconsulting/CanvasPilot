@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.AnnotationSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.AnnotationSubsystem.AnnotationOverlayView"
+             x:DataType="vm:AnnotationOverlayViewModel"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch"
+             AutomationProperties.AutomationId="AnnotationOverlay"
+             AutomationProperties.Name="Marks on the picture">
+
+  <!-- The layer is as large as the picture, in the picture's own pixels (the preview pane scales both together). The
+       surface is transparent but takes the pointer, so that a press on it can start a shape; with no tool chosen the
+       view leaves every event unhandled and the press goes on to the picture underneath. The shapes and badges are
+       built by the code of the view, because their geometry depends on the shapes that were drawn. -->
+  <Panel Name="Surface" Background="Transparent" ClipToBounds="True">
+    <Canvas Name="MarkLayer"
+            AutomationProperties.AutomationId="AnnotationMarkLayer"
+            IsHitTestVisible="False" />
+  </Panel>
+
+</UserControl>

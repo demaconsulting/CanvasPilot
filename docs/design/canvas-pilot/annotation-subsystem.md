@@ -6,15 +6,18 @@
 
 The `Annotation` subsystem holds the marks that the user draws on the shown picture to say what they mean in a message:
 which picture each mark belongs to, its number, where it is in that picture, and an optional short note, and it finds
-which parts of the picture's source file lie under a mark. A mark is a rectangle, an ellipse, an arrow, or a freehand
-stroke. The subsystem has no dependency on the user interface, so all of its rules are tested without a window; the
-layer over the picture on which the user draws is added by a later unit and builds on it.
+which parts of the picture's source file lie under a mark, and it offers the layer on which the user draws them. A mark
+is a rectangle, an ellipse, an arrow, or a freehand stroke. The registry and the resolver have no dependency on the user
+interface, so their rules are tested without a window; the layer, `AnnotationOverlay`, keeps its own rules in a view
+model that needs no window either, and has two thin views, the layer over the picture and a tool bar.
 
-The subsystem contains two units: `MarkRegistry`, which makes and keeps the marks, and `MarkSourceResolver`, which maps
-a mark to the parts of the source file under it. It depends on `Preview` for the picture type `RenderedImage` and the
-point and box types of its coordinates, and on nothing else of the application. The `Composer` subsystem knows a mark
-only as a chip with an identity and a number, so it does not depend on this subsystem; the unit that joins the two is
-added later.
+The subsystem contains three units: `MarkRegistry`, which makes and keeps the marks, `MarkSourceResolver`, which maps a
+mark to the parts of the source file under it, and `AnnotationOverlay`, which is the layer on which the marks are drawn
+and shown. It depends on `Preview` for the picture type `RenderedImage`, the point and box types of its coordinates, and
+`IRenderedImageSource`, and on `Logging`, and on nothing else of the application. The `Composer` subsystem knows a mark
+only as a chip with an identity and a number, so the overlay does not know the composer either: the composition root
+joins the two, by telling the overlay which mark chips the message holds and by adding the chip of each mark that the
+overlay reports.
 
 ### Interfaces
 
@@ -38,6 +41,19 @@ added later.
   kind, identifier, text, source line, and box or pixel, the most covered first, or the statement that the picture
   cannot tell, with the reason.
 - *Constraints*: Stateless, safe for concurrent use. At most 25 elements are returned.
+
+**AnnotationOverlay**: The layer on which the user marks the shown picture.
+
+- *Type*: In-process .NET view models (`AnnotationOverlayViewModel`, `AnnotationToolbarViewModel`) and Avalonia views
+  that the view locator finds from them.
+- *Role*: Provider to the host, and consumer of the registry and the shown picture.
+- *Contract*: `SelectTool`, `BeginStroke`, `ContinueStroke`, `EndStroke`, `CommitNote`, `SkipNote`, `Cancel`, `Escape`,
+  and the keyboard methods `MoveCursor` and `ConfirmCursor` drive it; the points are in the pixels of the shown picture.
+  `SetActiveMarkIds` tells which mark chips the message holds. `IsDrawingAllowed` is set by the host. The event
+  `MarkAdded` carries each finished mark, which is already in the registry. The constructor takes a switch that is
+  called with `false` while a tool is chosen and `true` otherwise.
+- *Constraints*: Owned by the user interface thread; not safe for concurrent use. The views must be laid out in the
+  pixels of the picture, as the overlay slot of `PreviewPane` does.
 
 ### Design
 
@@ -70,3 +86,16 @@ chart mark, and axis for Mermaid diagrams and Vega-Lite charts, and the pixel of
 declares. `MarkSourceResolver` uses these facts and invents nothing; the rules of each shape are in the design of that
 unit. For every other kind of picture it says so, with a reason that names the format, so that the assistant is not
 told that nothing lies under a mark when the picture simply cannot say.
+
+**The layer.** `AnnotationOverlay` lives in the overlay slot of the preview pane, which is laid out in the pixels of the
+picture and scaled with it, so the position of a pointer event on the layer is already a point of the picture and no
+conversion exists to get wrong. Its tools are in a second slot, in the top bar of the pane, which is not scaled. The
+overlay makes a mark only when its note is finished, since a mark never changes, and reports it through an event; the
+overlay and the composer do not know each other, because `Composer` already depends on `Annotation`. The composition
+root joins them: it adds the chip of each reported mark with `ComposerViewModel.AddMark`, which is one undo step, and
+tells the overlay which chips the message holds each time the composer changes, so undo and redo of the chip hide and
+show the mark with no undo of its own. Because the pointer is also used to drag the picture out of the application, the
+overlay switches that off while a tool is chosen and handles the press only then, so with no tool the press goes on to
+the picture. A shape is cancelled by Escape from anywhere in the window, and the whole layer can be used with the
+keyboard. What a mark looks like on the screen is what `MarkImageComposer` draws in the annotated picture, so the user
+sees what the assistant gets.

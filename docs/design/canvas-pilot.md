@@ -13,6 +13,7 @@ flowchart TD
     subgraph Annotation
         MarkRegistry
         MarkSourceResolver
+        AnnotationOverlay
     end
     subgraph AppShell
         MainWindowShell
@@ -81,6 +82,9 @@ flowchart TD
     ComposerViewModel --> RollingFileLogger
     ComposerEditor --> ComposerViewModel
     MarkRegistry --> ImageRenderService
+    AnnotationOverlay --> MarkRegistry
+    AnnotationOverlay --> PreviewPane
+    AnnotationOverlay --> RollingFileLogger
     MarkSourceResolver --> MarkRegistry
     MarkSourceResolver --> ImageRenderService
     MarkImageComposer --> ImageRenderService
@@ -186,7 +190,8 @@ confined to the project folder, and returns the pixels, notes, or a coded error.
 exactly which picture it is (the file, a fingerprint of the file, and a fingerprint of the pixels) and where the
 elements of a diagram, chart, or model were drawn, so that something said about the picture later can be tied to what
 the user saw. `PreviewPane` also provides a layer over the shown picture, laid out in the picture's own pixel
-coordinates and scaled with it, which other items fill with content that refers to places in the picture. `PreviewPane`
+coordinates and scaled with it, which other items fill with content that refers to places in the picture, and a slot in
+its top bar, not scaled, for the controls of that content. `PreviewPane`
 follows the selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders
 that are no longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture
 as a PNG file or copies it to the clipboard for the Image menu. `ImageDragSource` prepares the shown picture for
@@ -230,8 +235,15 @@ message and which are shown on a given picture; the marks of an earlier version 
 picture but stay in the message. `MarkSourceResolver` maps a mark to the parts of the source file that lie under it,
 from the element positions and anchors that the renderer reported with the picture, and says that the picture cannot
 tell, with the reason, when it reported none. Neither unit depends on the user interface or on the file system; the
-`Annotation` subsystem depends only on the picture and coordinate types of `Preview`, and the layer on which the user
-draws the marks is added later.
+`Annotation` subsystem depends only on the picture and coordinate types of `Preview` and on the logger.
+`AnnotationOverlay` is the layer on which the user draws the marks: its tool bar offers a rectangle, an ellipse, a
+freehand, and an arrow tool; the pointer or the keyboard draws the chosen shape in the pixels of the picture, in the
+overlay slot of the preview pane, which is laid out in those pixels at any zoom; a finished shape asks for an optional
+note, and then the overlay makes the mark in `MarkRegistry`, pinned to the picture that was shown when the shape was
+started, and reports it. The overlay does not know the composer. The composition root adds the chip of every reported
+mark to the message with `ComposerViewModel.AddMark` and tells the overlay which mark chips the message holds, so the
+overlay draws only the marks of the shown picture whose chips are in the message and says how many it hides. While a
+tool is chosen the overlay has the preview pane turn off dragging the picture out, and Escape throws a shape away.
 
 `MessagePayload` and the values it is made of are the one form in which the message that the user sends reaches the
 assistant that is added later: the text with `[Mark n]` and `[Attachment n: name]` at the places of the marks and
@@ -245,7 +257,7 @@ so it can run in the background. `MarkImageComposer` draws the marks on the pict
 that it builds in memory around the picture the user saw, and cuts the areas; it is the only item besides
 `ImageRenderService` that uses CanvasNet to draw, and it never writes a file. `PayloadDescriber` writes a payload as
 text for the user to read. No subsystem uses the `Payload` subsystem yet, and no subsystem uses the `Annotation`
-subsystem except `Payload`.
+subsystem except `Payload`, `Composer`, and the composition root.
 
 ### Dependency Direction
 
@@ -569,12 +581,14 @@ and tell the control once that the message changed. When the message is sent, th
 document, from which the message is built, and empties the document and the history.
 
 When the user draws a mark on the shown picture, the layer over the picture gives `MarkRegistry.Add` the picture, the
-shape, and the points of the pointer in the picture's pixels. The registry puts the points in normal form inside the
-picture, numbers the mark, and returns it; the chip of the mark is then added to the message as one
-`ComposerEdit.AddMark`, so that undoing it removes the chip and hides the mark. To show a picture, the layer asks
-`MarkRegistry.VisibleMarks` with the identities of the mark chips in the message and the key of the picture. To describe
-a mark to the assistant, `MarkSourceResolver.Resolve` reads the element positions or anchors of the mark's picture and
-returns the parts of the source file under the mark, or that the picture cannot tell.
+shape, and the points of the pointer in the picture's pixels, once the shape is finished and its optional note is
+entered or skipped. The registry puts the points in normal form inside the picture, numbers the mark, and returns it;
+the overlay reports the mark, and the composition root adds its chip to the message as one `ComposerEdit.AddMark`, so
+that undoing it removes the chip and hides the mark. Each time the composer changes, the root tells the overlay which
+mark chips the message holds, and the overlay asks `MarkRegistry.VisibleMarks` with those identities and the key of the
+picture to show a picture. To describe a mark to the assistant, `MarkSourceResolver.Resolve` reads the element positions
+or anchors of the mark's picture and returns the parts of the source file under the mark, or that the picture cannot
+tell.
 
 When the message is sent, `ComposerViewModel.SendAsync` takes a snapshot of the document, puts the attachment chips of
 the snapshot into the project with `AttachmentStore.StageForSend` on a thread-pool thread, and gives the snapshot, the
@@ -657,6 +671,10 @@ returns the reason and the message, and nothing is loaded that could crash the p
   payload builder implements it, so the dependency runs from `Payload` to `Composer` only.
 - A mark shall hold the picture it was drawn on and shall be shown only on that picture; its geometry shall be in the
   pixels of that picture, and the units of the `Annotation` subsystem shall not write anything anywhere.
+- The `AnnotationOverlay` shall not depend on the composer: it reports the marks it makes and is told which mark chips
+  the message holds, and the composition root joins the two, so that the dependency between `Composer` and `Annotation`
+  runs one way. It shall draw a mark with the colors and sizes of the annotated picture of a message, so that the user
+  sees what the assistant gets.
 - A payload shall be built only from values that cannot change and shall itself never change, and the units of the
   `Payload` subsystem shall not write anything anywhere.
 - Content that is dropped or pasted shall be treated as data: it shall never be opened, run, rendered, or followed,

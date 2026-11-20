@@ -177,6 +177,101 @@ public sealed class AnnotationSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the overlay draws numbered marks on a rendered diagram with the four tools and a note, pinned to the
+    ///     rendered picture with the parts of the source under each mark found from them, and that the picture cannot be
+    ///     dragged out while a tool is chosen.
+    /// </summary>
+    [Fact]
+    public async Task AnnotationSubsystem_DrawMarks_OverlayOnRenderedDiagram_MakesNumberedMarksPinnedToThePicture()
+    {
+        // Arrange: a drawn diagram that is shown, a registry, and an overlay that reports to a drag-out switch
+        var picture = await RenderAsync("flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var source = new FakeRenderedImageSource { CurrentImage = picture };
+        var registry = new MarkRegistry();
+        var dragOut = new List<bool>();
+        using var overlay = new AnnotationOverlayViewModel(registry, source, dragOut.Add);
+        var start = picture.Positions.First(position => position is { Kind: "node", Text: "Start" });
+        var box = start.Box!.Value;
+
+        // Act: draw a rectangle around the first node with a note, an ellipse, a freehand line, and an arrow, then no tool
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        overlay.BeginStroke(new RenderPoint(box.X - 4, box.Y - 4));
+        overlay.EndStroke(new RenderPoint(box.X + box.Width + 4, box.Y + box.Height + 4));
+        overlay.NoteText = "rename this";
+        overlay.CommitNote();
+        overlay.SelectTool(AnnotationTool.Ellipse);
+        overlay.BeginStroke(new RenderPoint(2, 2));
+        overlay.EndStroke(new RenderPoint(12, 12));
+        overlay.SkipNote();
+        overlay.SelectTool(AnnotationTool.Freehand);
+        overlay.BeginStroke(new RenderPoint(1, 1));
+        overlay.ContinueStroke(new RenderPoint(8, 20));
+        overlay.EndStroke(new RenderPoint(30, 4));
+        overlay.SkipNote();
+        overlay.SelectTool(AnnotationTool.Arrow);
+        overlay.BeginStroke(new RenderPoint(1, 2));
+        overlay.EndStroke(new RenderPoint(20, 14));
+        overlay.SkipNote();
+        overlay.SelectTool(AnnotationTool.None);
+
+        // Assert: four marks in order with their kinds, the note, and the very picture; the first one covers the node it was
+        // drawn around; and dragging out was off while the tools were in use and is on again
+        Assert.Equal([MarkKind.Rectangle, MarkKind.Ellipse, MarkKind.Freehand, MarkKind.Arrow], registry.Marks.Select(mark => mark.Kind));
+        Assert.Equal([1, 2, 3, 4], registry.Marks.Select(mark => mark.Number));
+        Assert.Equal("rename this", registry.Marks[0].Note);
+        Assert.All(registry.Marks, mark => Assert.Same(picture, mark.Snapshot));
+        var found = Assert.Single(MarkSourceResolver.Resolve(registry.Marks[0]).Elements, element => element.Kind == "node");
+        Assert.Equal(start.Text, found.Text);
+        Assert.Equal(start.Id, found.Id);
+        Assert.Equal([false, false, false, false, true], dragOut);
+    }
+
+    /// <summary>
+    ///     Test that after the file changes the overlay shows only the marks of the picture that is shown, keeps the others
+    ///     in the message, and shows them again with their picture.
+    /// </summary>
+    [Fact]
+    public async Task AnnotationSubsystem_DrawMarks_FileChanged_OverlayShowsOnlyMarksOfTheShownPicture()
+    {
+        // Arrange: a diagram that is shown, with a mark drawn on it whose chip is in the message
+        var before = await RenderAsync("flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var source = new FakeRenderedImageSource { CurrentImage = before };
+        var registry = new MarkRegistry();
+        using var overlay = new AnnotationOverlayViewModel(registry, source);
+        var chips = new List<Guid>();
+        overlay.MarkAdded += (_, e) =>
+        {
+            chips.Add(e.Mark.Id);
+            overlay.SetActiveMarkIds(chips);
+        };
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        overlay.BeginStroke(new RenderPoint(5, 5));
+        overlay.EndStroke(new RenderPoint(40, 30));
+        overlay.SkipNote();
+        var shownBefore = overlay.VisibleMarks.Count;
+
+        // Act: the file is edited and drawn again, a mark is drawn on the new picture, and the first picture is shown again
+        var after = await RenderAsync("flow.mmd", "flowchart LR\n  A[Start] --> B[Finish] --> C[Done]\n");
+        source.CurrentImage = after;
+        var hidden = (overlay.VisibleMarks.Count, overlay.HiddenMarkCount);
+        overlay.BeginStroke(new RenderPoint(5, 5));
+        overlay.EndStroke(new RenderPoint(40, 30));
+        overlay.SkipNote();
+        var onNew = (overlay.VisibleMarks.Single().Number, overlay.HiddenMarkCount);
+        source.CurrentImage = before;
+        var backOnOld = (overlay.VisibleMarks.Single().Number, overlay.HiddenMarkCount);
+
+        // Assert: each picture showed only its own mark, nothing was lost, and the numbers continued
+        Assert.Equal(1, shownBefore);
+        Assert.Equal((0, 1), hidden);
+        Assert.Equal((2, 1), onNew);
+        Assert.Equal((1, 1), backOnOld);
+        Assert.Equal(2, registry.Marks.Length);
+        Assert.Same(before, registry.Marks[0].Snapshot);
+        Assert.Same(after, registry.Marks[1].Snapshot);
+    }
+
+    /// <summary>
     ///     Writes a file in the project and draws it with the real render service.
     /// </summary>
     /// <param name="name">The name of the file.</param>

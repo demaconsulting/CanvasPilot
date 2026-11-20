@@ -468,6 +468,66 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user who draws a rectangle on the shown picture gets a numbered mark whose chip is in the message at
+    ///     the caret, that undoing the chip hides the mark and redoing shows it, that dragging the picture out is off while
+    ///     the tool is chosen, and that the mark of an earlier picture is hidden when the edited file is shown again.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture()
+    {
+        // Arrange: the application with a project that holds a picture, which is shown, and some text in the message
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var picture = Path.Combine(folder, "logo.svg");
+        await File.WriteAllTextAsync(picture, "<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='#336699'/></svg>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(picture);
+        await composition.Preview.RenderCompletion;
+        composition.Composer.InsertTyped("Look here: ");
+        var overlay = composition.Annotation;
+
+        // Act: choose the rectangle tool, draw, and skip the note; undo and redo the chip; then edit the file and show it again
+        var toolsBefore = overlay.ToolsEnabled;
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        var dragOutWhileTool = composition.Preview.IsDragOutEnabled;
+        overlay.BeginStroke(new RenderPoint(10, 5));
+        overlay.EndStroke(new RenderPoint(50, 30));
+        overlay.SkipNote();
+        var chips = composition.Composer.Document.Chips.OfType<MarkChip>().ToList();
+        var shown = overlay.VisibleMarks.Count;
+        composition.Composer.Undo();
+        var afterUndo = (composition.Composer.Document.Chips.Count(), overlay.VisibleMarks.Count);
+        composition.Composer.Redo();
+        var afterRedo = overlay.VisibleMarks.Count;
+        await File.WriteAllTextAsync(picture, "<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40'><rect width='80' height='40' fill='#993366'/></svg>", token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "other.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'/>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "other.svg"));
+        await composition.Preview.RenderCompletion;
+        composition.Shell.Workspace.Explorer.SelectFile(picture);
+        await composition.Preview.RenderCompletion;
+        var onNewPicture = (overlay.VisibleMarks.Count, overlay.HiddenMarkCount, composition.Composer.MarkChipIds.Count);
+        overlay.SelectTool(AnnotationTool.None);
+        var dragOutAfterTool = composition.Preview.IsDragOutEnabled;
+        composition.Dispose();
+
+        // Assert: the mark is number one with the chip after the typed text; undo and redo hide and show it; the new
+        // picture hides it but the message keeps it; dragging out was off only while the tool was chosen
+        Assert.True(toolsBefore);
+        Assert.False(dragOutWhileTool);
+        Assert.True(dragOutAfterTool);
+        var chip = Assert.Single(chips);
+        Assert.Equal(1, chip.Number);
+        Assert.Equal(1, shown);
+        Assert.Equal((0, 0), afterUndo);
+        Assert.Equal(1, afterRedo);
+        Assert.Equal((0, 1, 1), onNewPicture);
+        Assert.Same(overlay, composition.Preview.Overlay);
+        Assert.IsType<AnnotationToolbarViewModel>(composition.Preview.Toolbar);
+    }
+
+    /// <summary>
     ///     Test that a user who sends a message with marks on the shown diagram and an attached file gets a payload for the
     ///     assistant that holds the text with its references, the picture with the marks drawn and numbered, the area
     ///     around each mark, the geometry of each mark in picture pixels, the parts of the source under each mark, and the

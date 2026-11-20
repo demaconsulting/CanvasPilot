@@ -23,6 +23,7 @@ This document covers the verification design for the following software items:
   - **Annotation** subsystem
     - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
     - **MarkSourceResolver** — the parts of the source file under a mark
+    - **AnnotationOverlay** — the layer on which the user draws numbered marks with an optional note, and its tool bar
   - **AppShell** subsystem
     - **MainWindowShell** — main window, menus, and dialog service
     - **ProjectWorkspace** — explorer and preview content area

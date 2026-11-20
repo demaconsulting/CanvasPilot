@@ -69,7 +69,12 @@ and are described here because they only join the units together.
    preview pane), the image exporter, the settings pages (the AI Provider page and the Speech page over the speech
    services, which use neither the audio system nor the model store until the Speech page is loaded), and the
    shell, in that order, and logs the start. The speech model service that the composition creates is disposed
-   with the composition.
+   with the composition. After the shell, the composition makes the mark registry, the composer of the message, and
+   the layer on which the user marks the picture. It puts the layer in the overlay slot of the preview pane and the
+   layer's tool bar in the top bar slot, gives the layer the switch for dragging the picture out, and joins it to
+   the message: it allows marks while the composer can edit, tells the layer which mark chips the message holds
+   whenever the composer changes, and adds the chip of each mark that the layer reports, so that an undo of the chip
+   hides the mark.
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. `App` records unhandled errors in the log and disposes the composition when the application exits.
 3. The shell follows the project service: when the open project changes it updates the title and shows the

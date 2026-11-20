@@ -10,6 +10,7 @@ includes:
   - docs/reqstream/quality.yaml
   - docs/reqstream/canvas-pilot.yaml
   - docs/reqstream/canvas-pilot/annotation-subsystem.yaml
+  - docs/reqstream/canvas-pilot/annotation-subsystem/annotation-overlay.yaml
   - docs/reqstream/canvas-pilot/annotation-subsystem/mark-registry.yaml
   - docs/reqstream/canvas-pilot/annotation-subsystem/mark-source-resolver.yaml
   - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml

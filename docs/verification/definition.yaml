@@ -20,6 +20,7 @@ input-files:
   - docs/verification/introduction.md
   - docs/verification/canvas-pilot.md
   - docs/verification/canvas-pilot/annotation-subsystem.md
+  - docs/verification/canvas-pilot/annotation-subsystem/annotation-overlay.md
   - docs/verification/canvas-pilot/annotation-subsystem/mark-registry.md
   - docs/verification/canvas-pilot/annotation-subsystem/mark-source-resolver.md
   - docs/verification/canvas-pilot/app-shell-subsystem.md

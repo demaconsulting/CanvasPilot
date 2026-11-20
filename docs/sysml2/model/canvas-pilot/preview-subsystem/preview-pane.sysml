@@ -2,7 +2,7 @@ package CanvasPilot {
     private import SoftwareItemMetadata::*;
 
     part def PreviewPane {
-        doc /* Follows the project explorer's selected file, renders it in the background, discards stale results, renders again when files change, shows the picture, busy state, errors, and notes, hosts a layer over the picture in the picture's own pixel coordinates, and starts the drag of the picture out of the application. */
+        doc /* Follows the project explorer's selected file, renders it in the background, discards stale results, renders again when files change, shows the picture, busy state, errors, and notes, hosts a layer over the picture in the picture's own pixel coordinates and a place in its top bar for the controls of that layer, and starts the drag of the picture out of the application. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

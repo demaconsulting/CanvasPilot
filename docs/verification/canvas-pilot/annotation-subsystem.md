@@ -4,11 +4,12 @@
 
 The `Annotation` subsystem is verified by integration tests defined in `AnnotationSubsystemTests.cs`. The tests use the
 real `ImageRenderService` of the `Preview` subsystem to draw a Mermaid diagram, an OpenSCAD model, and an SVG file in a
-temporary project folder, and the real `MarkRegistry` and `MarkSourceResolver` on the pictures it returns, the way the
-overlay and the payload will use them. They check the observable result: the number, geometry, note, and picture of each
-mark, what each picture shows after the file has changed, and the parts of the source that are reported under a mark.
-The subsystem has no dependency on the user interface or on another subsystem except `Preview`, so no substitute is
-needed.
+temporary project folder, and the real `MarkRegistry`, `MarkSourceResolver`, and `AnnotationOverlayViewModel` on the
+pictures it returns, the way the application uses them. They check the observable result: the number, geometry, note,
+and picture of each mark, what each picture shows after the file has changed, the marks that the overlay makes with each
+tool, and the parts of the source that are reported under a mark. The subsystem has no dependency on another subsystem
+except `Preview` and `Logging`, so no substitute is needed except the source of the shown picture, which the tests set
+by hand; the views of the overlay are verified by the headless UI tests described in the unit verification document.
 
 ### Test Environment
 
@@ -26,6 +27,11 @@ permission is needed.
 - A mark around a node of a rendered Mermaid diagram reports that node with its text and source line; a mark over an
   anchor of a rendered OpenSCAD model reports the anchor with its pixel; a mark on an SVG picture reports that the
   picture provides no element positions.
+- The overlay makes a rectangle, an ellipse, a freehand line, and an arrow on a rendered diagram as marks one to four,
+  with a note when one was typed, each pinned to the rendered picture; the mark around a node reports that node; and the
+  switch for dragging the picture out was off while the tools were in use and is on again.
+- After the file changes, the overlay shows only the marks of the picture that is shown, says how many are hidden, keeps
+  the other marks, and continues the numbering.
 
 ### Test Scenarios
 
@@ -52,3 +58,17 @@ only anchor of a model. The anchor is reported by kind `anchor`, name, and pixel
 **AnnotationSubsystem_FindSourceElements_SvgPicture_SaysNotAvailable**: A mark is drawn on an SVG picture. The result is
 not available, with the reason `svg provides no element positions`, and holds no elements. This scenario is tested by
 `AnnotationSubsystem_FindSourceElements_SvgPicture_SaysNotAvailable`.
+
+**AnnotationSubsystem_DrawMarks_OverlayOnRenderedDiagram_MakesNumberedMarksPinnedToThePicture**: A diagram is drawn and
+shown to an overlay. A rectangle is drawn around the node `Start` with a note, then an ellipse, a freehand line, and an
+arrow, each with the overlay's own methods for the press, the move, and the release of the pointer, and then no tool is
+chosen. There are four marks numbered one to four of the four kinds, the first has its note, every mark holds the
+rendered picture, the node `Start` is found under the first mark, and the switch for dragging out was told `false` for
+each tool and `true` at the end. This scenario is tested by
+`AnnotationSubsystem_DrawMarks_OverlayOnRenderedDiagram_MakesNumberedMarksPinnedToThePicture`.
+
+**AnnotationSubsystem_DrawMarks_FileChanged_OverlayShowsOnlyMarksOfTheShownPicture**: A mark is drawn on a diagram and
+its chip is announced to the overlay. The file is edited and drawn again: the overlay shows no mark and counts one
+hidden mark. A mark is drawn on the new picture and is number two and the only one shown; showing the first picture
+again shows only the first mark. Both marks stay in the registry with their own pictures. This scenario is tested by
+`AnnotationSubsystem_DrawMarks_FileChanged_OverlayShowsOnlyMarksOfTheShownPicture`.

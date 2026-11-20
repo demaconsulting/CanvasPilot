@@ -53,6 +53,17 @@ public sealed class ApplicationComposition : IDisposable
     private readonly EventHandler _projectChanged;
 
     /// <summary>
+    ///     The handler that tells the annotation layer which marks are in the message and whether marks can be made,
+    ///     kept so that it can be removed.
+    /// </summary>
+    private readonly EventHandler _composerChanged;
+
+    /// <summary>
+    ///     The handler that puts the chip of every mark that is drawn into the message, kept so that it can be removed.
+    /// </summary>
+    private readonly EventHandler<MarkAddedEventArgs> _markAdded;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ApplicationComposition" /> class.
     /// </summary>
     /// <param name="logger">The application log.</param>
@@ -64,6 +75,7 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="dictation">The dictation service.</param>
     /// <param name="composer">The composer of the message.</param>
     /// <param name="marks">The marks made for the draft message.</param>
+    /// <param name="annotation">The layer on which the user marks the shown picture.</param>
     /// <param name="ownedServices">The services the composition created and must dispose.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
@@ -75,6 +87,7 @@ public sealed class ApplicationComposition : IDisposable
         IDictationService dictation,
         ComposerViewModel composer,
         MarkRegistry marks,
+        AnnotationOverlayViewModel annotation,
         IReadOnlyList<IDisposable> ownedServices)
     {
         Logger = logger;
@@ -86,12 +99,25 @@ public sealed class ApplicationComposition : IDisposable
         Dictation = dictation;
         Composer = composer;
         Marks = marks;
+        Annotation = annotation;
         _ownedServices = ownedServices;
 
         // The message is written in the open project: follow it, and start with the one that is open now
         _projectChanged = (_, _) => Composer.SetProject(Projects.Current?.FolderPath);
         Projects.CurrentChanged += _projectChanged;
         Composer.SetProject(Projects.Current?.FolderPath);
+
+        // The marks belong to the message: the layer shows the marks whose chips are in it and can make marks while the
+        // message can be edited, and every mark that is drawn becomes a chip in the message at the caret
+        _composerChanged = (_, _) =>
+        {
+            Annotation.IsDrawingAllowed = Composer.CanEdit;
+            Annotation.SetActiveMarkIds(Composer.MarkChipIds);
+        };
+        _markAdded = (_, e) => Composer.AddMark(e.Mark);
+        Composer.Changed += _composerChanged;
+        Annotation.MarkAdded += _markAdded;
+        _composerChanged(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -139,6 +165,12 @@ public sealed class ApplicationComposition : IDisposable
     ///     Gets the marks that are drawn on the shown picture for the message being composed.
     /// </summary>
     public MarkRegistry Marks { get; }
+
+    /// <summary>
+    ///     Gets the layer on which the user marks the shown picture. Its tools are in the top bar of the preview pane, it
+    ///     is the overlay of the preview pane, and the chip of every mark drawn on it is added to the message.
+    /// </summary>
+    public AnnotationOverlayViewModel Annotation { get; }
 
     /// <summary>
     ///     Creates the units for the running application: the log under the per-user local application data
@@ -269,8 +301,13 @@ public sealed class ApplicationComposition : IDisposable
             dictation,
             logger: logger);
 
+        // The layer over the picture: drawing a mark turns off dragging the picture out, and its tools are in the top bar
+        var annotation = new AnnotationOverlayViewModel(marks, preview, allowed => preview.IsDragOutEnabled = allowed, logger);
+        preview.Overlay = annotation;
+        preview.Toolbar = new AnnotationToolbarViewModel(annotation);
+
         logger.Log(LogLevel.Info, "Application started.");
-        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, owned);
+        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, owned);
     }
 
     /// <inheritdoc />
@@ -283,6 +320,9 @@ public sealed class ApplicationComposition : IDisposable
 
         _disposed = true;
         Projects.CurrentChanged -= _projectChanged;
+        Composer.Changed -= _composerChanged;
+        Annotation.MarkAdded -= _markAdded;
+        Annotation.Dispose();
         Composer.Dispose();
         Shell.Dispose();
         Preview.Dispose();

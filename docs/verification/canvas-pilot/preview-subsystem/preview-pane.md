@@ -37,6 +37,8 @@ temporary local folders and real file I/O; no network or external services are r
 - The overlay slot is empty and hidden by default, shows the content assigned to it exactly over the picture, has the
   picture's pixel size in its own coordinates at actual size and when the picture is scaled down to the pane, and is
   scaled on screen by the same factor as the picture.
+- The slot in the top bar is empty and hidden by default, shows the content assigned to it at its own size although the
+  picture is scaled down, and is not inside the scaled picture.
 - A press of the left button on the shown picture followed by a move of at least four pixels starts one drag with the
   copy effect that offers a PNG file and a bitmap of the picture's size; a click, a move of three pixels, a drag while
   dragging out is off, and a drag from a pane without a drag source start nothing; a drag operation that fails is
@@ -170,6 +172,17 @@ keep the aspect ratio of 2 to 1, and cover the same rectangle in the window. Thi
 **PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown**: With a picture shown, the overlay host is hidden
 while the slot is empty, visible and holding exactly the assigned control after it is assigned, and hidden again after
 the slot is cleared. This scenario is tested by `PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown`.
+
+**PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced**: The slot in the top bar of a new pane is empty;
+assigning an object exposes exactly that object and sets `HasToolbar`; clearing it resets both; each change raises
+`PropertyChanged` for `Toolbar` and `HasToolbar`, and the overlay slot is not affected. This scenario is tested by
+`PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced`.
+
+**PreviewPaneView_ToolbarSlot_EmptyThenAssigned_IsHiddenThenShownOutsideThePicture**: With a large picture shown, scaled
+down to the pane, the host of the slot in the top bar is hidden while the slot is empty; after a control of 100 by 20 is
+assigned the host is visible, holds exactly that control, the control measures 100 by 20 on screen, and it is not a
+descendant of the scroll viewer that holds the picture; after the slot is cleared the host is hidden again. This
+scenario is tested by `PreviewPaneView_ToolbarSlot_EmptyThenAssigned_IsHiddenThenShownOutsideThePicture`.
 
 **PreviewPaneViewModel_PrepareDragFile_PictureShown_WritesPngOnlyWhenAllowed**: A pane with a drag source gives no file
 before a picture is shown, gives the PNG file named after the picture once one is shown, gives none while dragging out

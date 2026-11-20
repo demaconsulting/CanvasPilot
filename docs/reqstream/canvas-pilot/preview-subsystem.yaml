@@ -95,14 +95,17 @@ sections:
             title: >-
               The Preview subsystem shall provide a layer over the shown picture that the host fills with its own
               content, laid out in the picture's pixel coordinates at any zoom and scaled together with the
-              picture, and that stays the same while pictures are shown, change, or fail to draw.
+              picture, and that stays the same while pictures are shown, change, or fail to draw, and a place in
+              the pane's top bar for the host's controls for that layer, which is not scaled with the picture.
             justification: |
               Marks and other content that refer to places in the picture need a surface whose coordinates are
               the picture's pixels. Keeping the layer in the preview and its content outside keeps the preview
               free of any knowledge of what is drawn on it, and keeping it across renders lets the owner of the
-              content decide what happens to it when the picture changes.
+              content decide what happens to it when the picture changes. The controls of that content must stay
+              the same size at every zoom, so they have a place of their own that is not scaled.
             children:
               - CanvasPilot-PreviewPane-HostOverlay
+              - CanvasPilot-PreviewPane-HostToolbar
             tests:
               - PreviewSubsystem_HostOverlay_ContentAssigned_StaysWhilePicturesChange
 

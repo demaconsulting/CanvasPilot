@@ -135,6 +135,19 @@ sections:
                   - PreviewPaneView_FitOn_OverlaySizeEqualsImagePixelSize
                   - PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown
 
+              - id: CanvasPilot-PreviewPane-HostToolbar
+                title: >-
+                  The PreviewPane shall provide a slot in its top bar, beside the fit option, for content that the host
+                  fills, shown at its own size and not scaled with the picture, and shall show nothing there while the
+                  slot is empty.
+                justification: |
+                  The controls that belong to the layer over the picture, such as the tools for marking it, must be
+                  readable and operable at every zoom, so they cannot be placed on the scaled layer; and the pane must
+                  not know what they are, so that it can serve other tools.
+                tests:
+                  - PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced
+                  - PreviewPaneView_ToolbarSlot_EmptyThenAssigned_IsHiddenThenShownOutsideThePicture
+
               - id: CanvasPilot-PreviewPane-StartImageDrag
                 title: >-
                   The PreviewPane shall start a copy drag of the shown picture when the user presses the left

@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -268,6 +269,31 @@ public sealed class AppShellSubsystemTests : IDisposable
         Assert.Equal(0, composition.Composer.Document.Length);
         Assert.False(composition.Composer.InsertTyped("more"));
         Assert.Empty(composition.Marks.Marks);
+    }
+
+    /// <summary>
+    ///     Test that the marking layer is the overlay of the preview pane and has its tools in the pane's top bar, and that
+    ///     it can make marks only while a project is open, because only then can the message take their chips.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_AnnotationLayerIsOnThePictureAndFollowsTheOpenProject()
+    {
+        // Arrange: a composition with no project open
+        var composition = Compose();
+        var beforeProject = composition.Annotation.IsDrawingAllowed;
+
+        // Act: create a project, then close it
+        await composition.Projects.CreateAsync(Projects, "Demo", TestContext.Current.CancellationToken);
+        var withProject = composition.Annotation.IsDrawingAllowed;
+        composition.Projects.Close();
+        var afterClose = composition.Annotation.IsDrawingAllowed;
+
+        // Assert: the layer and its tool bar are in the preview pane, and marks are allowed only while a project is open
+        Assert.Same(composition.Annotation, composition.Preview.Overlay);
+        Assert.Same(composition.Annotation, Assert.IsType<AnnotationToolbarViewModel>(composition.Preview.Toolbar).Annotation);
+        Assert.False(beforeProject);
+        Assert.True(withProject);
+        Assert.False(afterClose);
     }
 
     /// <summary>

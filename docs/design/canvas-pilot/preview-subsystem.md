@@ -65,7 +65,8 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
   panel with the error code, message, and hint, a status line, and an expandable list of notes. The pane view
   model's `Overlay` property is a slot for content that the view shows exactly over the picture, laid out in the
   picture's own pixel coordinates and scaled together with the picture, so that the host's content needs no
-  conversion between the screen and the picture; the slot is empty by default.
+  conversion between the screen and the picture; the slot is empty by default. A second slot, `Toolbar`, is shown in
+  the top bar of the pane beside the fit option and is not scaled, for the host's controls of the overlay.
 
 **Image Drag-out**: How the shown picture leaves the application by drag and drop.
 
@@ -90,7 +91,8 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
    units use to tie marks and messages to exactly this picture; the pane itself does not use them.
    The picture and the overlay slot share one surface of the picture's pixel size inside a `Viewbox`, so content the
    host assigns to `Overlay` is laid out in picture pixels at any zoom. The slot keeps its content while pictures
-   change, are rendered again, or fail to draw.
+   change, are rendered again, or fail to draw. The slot in the top bar, `Toolbar`, shows the host's controls for the
+   overlay at their own size.
 4. When files in the project folder change, the pane asks the scheduler for a render after a short delay. The
    current picture stays visible until the new result arrives.
 5. The exporter is enabled while the pane shows a picture. Export asks the dialog service for a file name and

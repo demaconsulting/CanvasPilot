@@ -28,8 +28,15 @@ services, or display are required.
 - The About dialog opened from the composed shell shows the application name, a version, and the five libraries.
 - The composer of the message created by the composition works in the folder of the project that is open, and has no
   project and no draft once the project is closed.
+- The layer for marks is the overlay of the preview pane with its tool bar in the pane's top bar, and it can make marks
+  only while a project is open.
 
 ### Test Scenarios
+
+**AppShellSubsystem_ComposeApplication_AnnotationLayerIsOnThePictureAndFollowsTheOpenProject**: A composition starts
+with no project, and the layer for marks does not allow marks. The layer is the overlay of the preview pane and its tool
+bar is in the pane's top bar. After a project is created marks are allowed; after the project is closed they are not.
+This scenario is tested by `AppShellSubsystem_ComposeApplication_AnnotationLayerIsOnThePictureAndFollowsTheOpenProject`.
 
 **AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject**: A composition starts with no project, and its
 composer has none. After a project is created the composer works in the project's folder and accepts typed text; after

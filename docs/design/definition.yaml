@@ -23,6 +23,7 @@ input-files:
   - docs/design/introduction.md
   - docs/design/canvas-pilot.md
   - docs/design/canvas-pilot/annotation-subsystem.md
+  - docs/design/canvas-pilot/annotation-subsystem/annotation-overlay.md
   - docs/design/canvas-pilot/annotation-subsystem/mark-registry.md
   - docs/design/canvas-pilot/annotation-subsystem/mark-source-resolver.md
   - docs/design/canvas-pilot/app-shell-subsystem.md

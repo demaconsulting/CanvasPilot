@@ -18,6 +18,14 @@
                    Width="120"
                    IsIndeterminate="True"
                    IsVisible="{Binding IsBusy}" />
+      <!-- The slot for the host's controls is outside the scaled picture, so they keep their size at every zoom. -->
+      <ContentControl Name="PreviewToolbar"
+                      AutomationProperties.AutomationId="PreviewToolbar"
+                      DockPanel.Dock="Left"
+                      Margin="12,0,0,0"
+                      VerticalAlignment="Center"
+                      IsVisible="{Binding HasToolbar}"
+                      Content="{Binding Toolbar}" />
     </DockPanel>
 
     <Grid Grid.Row="1">

@@ -110,6 +110,27 @@ reviews:
       - "docs/verification/canvas-pilot/annotation-subsystem.md"
       - "test/**/AnnotationSubsystem/AnnotationSubsystemTests.cs"
 
+  - id: CanvasPilot-Annotation-AnnotationOverlay
+    title: Review of CanvasPilot AnnotationOverlay unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/annotation-subsystem.md
+      - docs/reqstream/canvas-pilot/annotation-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/annotation-subsystem/annotation-overlay.yaml"
+      - "docs/design/canvas-pilot/annotation-subsystem/annotation-overlay.md"
+      - "docs/verification/canvas-pilot/annotation-subsystem/annotation-overlay.md"
+      - "src/**/AnnotationSubsystem/AnnotationOverlayStyle.cs"
+      - "src/**/AnnotationSubsystem/AnnotationOverlayView.axaml"
+      - "src/**/AnnotationSubsystem/AnnotationOverlayView.axaml.cs"
+      - "src/**/AnnotationSubsystem/AnnotationOverlayViewModel.cs"
+      - "src/**/AnnotationSubsystem/AnnotationToolbarView.axaml"
+      - "src/**/AnnotationSubsystem/AnnotationToolbarView.axaml.cs"
+      - "src/**/AnnotationSubsystem/AnnotationToolbarViewModel.cs"
+      - "test/**/AnnotationSubsystem/AnnotationOverlayTests.cs"
+      - "test/**/AnnotationOverlayViewTests.cs"
+
   - id: CanvasPilot-Annotation-MarkRegistry
     title: Review of CanvasPilot MarkRegistry unit implementation
     context:

@@ -55,6 +55,9 @@ services, or display is required.
 - Marks drawn on the shown picture are numbered in order, keep their geometry in picture pixels and an optional note,
   stay with the exact picture they were drawn on and are not shown on a picture of the edited file, and report the parts
   of the diagram's source that lie under them.
+- A user who draws a rectangle on the shown picture gets a mark whose chip is in the message at the caret; undo of the
+  chip hides the mark and redo shows it; dragging the picture out is off only while a marking tool is chosen; and when
+  the file is edited the mark is not drawn on the new picture but stays in the message.
 - The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
   earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
   the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
@@ -171,6 +174,15 @@ one and two, hold the shown picture, and the parts of the source under the recta
 diagram is edited and shown again, a third mark is drawn on the new picture and is number three. Each picture shows only
 its own marks while all three belong to the message. This scenario is tested by
 `CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture`.
+
+**CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture**: The composed application's
+user has a project with an 80 by 40 SVG shown and some typed text in the message, chooses the rectangle tool, and draws
+with the overlay's pointer methods and skips the note. Dragging the picture out is off while the tool is chosen and on
+again after the tool is released. The message holds one mark chip with number one after the typed text, and the picture
+shows the mark. Undo removes the chip and the mark is not shown; redo shows both again. After the file is edited and
+shown again the mark is not shown, the overlay counts one hidden mark, and the message still holds the chip. The overlay
+is the overlay of the preview pane and its tool bar is the pane's tool bar. This scenario is tested by
+`CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture`.
 
 **CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile**: The composed application is started with a file of an
 earlier run in its drag folder, which is removed at start. Without a picture no file is offered. With a 32 by 16 SVG

@@ -599,6 +599,35 @@ public sealed class PreviewPaneTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that content assigned to the slot in the top bar is exposed and announced like the overlay, and that
+    ///     clearing the slot is announced too.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced()
+    {
+        // Arrange: a pane with an empty slot in the top bar that records which properties change
+        var pane = CreatePane();
+        var changed = new List<string?>();
+        pane.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var emptyBefore = (pane.Toolbar, pane.HasToolbar);
+        var content = new object();
+
+        // Act: assign content, then clear it
+        pane.Toolbar = content;
+        var assigned = (pane.Toolbar, pane.HasToolbar);
+        pane.Toolbar = null;
+
+        // Assert: the slot starts empty, holds exactly what was assigned, is independent of the overlay, and announces both changes
+        Assert.Equal((null, false), emptyBefore);
+        Assert.Same(content, assigned.Toolbar);
+        Assert.True(assigned.HasToolbar);
+        Assert.False(pane.HasToolbar);
+        Assert.False(pane.HasOverlay);
+        Assert.Equal(2, changed.Count(name => name == nameof(PreviewPaneViewModel.Toolbar)));
+        Assert.Equal(2, changed.Count(name => name == nameof(PreviewPaneViewModel.HasToolbar)));
+    }
+
+    /// <summary>
     ///     Test that the pane prepares the shown picture for dragging only while a picture is shown and dragging out is
     ///     turned on, and only when it has a drag source.
     /// </summary>

@@ -4,9 +4,10 @@
 # PURPOSE:
 # - Define requirements for the CanvasPilot Annotation subsystem
 # - The Annotation subsystem holds the marks that the user draws on the shown picture for the message being composed:
-#   which picture each mark belongs to, its number, its geometry in the picture's pixels, and its optional note, and
-#   it finds the parts of the picture's source file that lie under a mark. The subsystem has no dependency on the user
-#   interface; the layer on which the user draws is added by a later unit
+#   the layer on which the user draws them with the pointer or the keyboard, which picture each mark belongs to, its
+#   number, its geometry in the picture's pixels, and its optional note, and it finds the parts of the picture's source
+#   file that lie under a mark. The registry and the resolver have no dependency on the user interface; the layer does,
+#   and reaches the composer only through the host that joins them
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -68,3 +69,42 @@ sections:
               - AnnotationSubsystem_FindSourceElements_MermaidNode_IsReportedWithTextAndLine
               - AnnotationSubsystem_FindSourceElements_ScadAnchor_IsReportedWithPixel
               - AnnotationSubsystem_FindSourceElements_SvgPicture_SaysNotAvailable
+
+          - id: CanvasPilot-Annotation-DrawMarksOnPicture
+            title: >-
+              The Annotation subsystem shall let the user draw a rectangle, an ellipse, a freehand line, or an arrow on
+              the shown picture with the pointer or the keyboard, each with an optional note of one short line, in the
+              pixels of the picture at any zoom, make each finished shape a numbered mark that is pinned to that picture
+              and handed to the message, let the user stop a shape with Escape, offer the tools only when a mark can be
+              made, and keep the picture from being dragged out while a tool is chosen.
+            justification: |
+              Pointing at the part of a picture that is meant is the clearest way to say what to change, and it is the
+              user's own wish that the marks be simple shapes with a number and an optional few words. The marks must
+              be read by the assistant as pixels of an exact picture, so they are made in the picture's own pixels
+              whatever the window looks like, they belong to the picture that was shown when they were started, and they
+              are handed on once they are complete. The pointer is also used to drag the picture out, so the two must
+              not take the same gesture.
+            children:
+              - CanvasPilot-AnnotationOverlay-DrawShapes
+              - CanvasPilot-AnnotationOverlay-AddOptionalNote
+              - CanvasPilot-AnnotationOverlay-CancelWithEscape
+              - CanvasPilot-AnnotationOverlay-ReportCommittedMarks
+              - CanvasPilot-AnnotationOverlay-ToggleDragOutWithTool
+              - CanvasPilot-AnnotationOverlay-OperateByKeyboard
+              - CanvasPilot-AnnotationOverlay-OfferToolsOnlyWithPictureAndMessage
+            tests:
+              - AnnotationSubsystem_DrawMarks_OverlayOnRenderedDiagram_MakesNumberedMarksPinnedToThePicture
+
+          - id: CanvasPilot-Annotation-HideMarksOfOtherPictures
+            title: >-
+              The Annotation subsystem shall show on the picture only the marks of the message that were drawn on
+              exactly that picture, shall keep the marks of an earlier picture of the file in the message, and shall tell
+              the user how many are hidden.
+            justification: |
+              When the file is edited and the picture changes, a mark drawn before would point at other pixels, so it
+              must not be drawn on the new picture; but the mark is part of what the user said, so it stays in the
+              message and the user is told, instead of finding that marks have vanished.
+            children:
+              - CanvasPilot-AnnotationOverlay-ShowOnlyVisibleMarks
+            tests:
+              - AnnotationSubsystem_DrawMarks_FileChanged_OverlayShowsOnlyMarksOfTheShownPicture

@@ -23,7 +23,7 @@ disposal. The picture is also an immutable *render snapshot* that says exactly w
 - `SourceFileHash`: the SHA-256 hash of the bytes of the source file, or `null` when the file could not be read for
   it (see *Key Methods*).
 - `SnapshotKey`: `SourcePath`, a `#`, and `ContentHash`. Pictures with equal keys are the same picture of the same
-  file; a later step uses the key to keep marks with the picture they were drawn on.
+  file; the `MarkRegistry` and the marking layer use the key to keep marks with the picture they were drawn on.
 - `Positions`: `RenderPosition` records for the elements of a Mermaid diagram or Vega-Lite chart, empty for other
   kinds of file, and `PositionsTruncated`, which tells that the library left elements out because it reports at most
   a fixed number of them (1000).

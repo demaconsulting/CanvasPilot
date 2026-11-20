@@ -28,6 +28,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
+using Avalonia.VisualTree;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
@@ -369,6 +370,44 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.True(hiddenBefore);
         Assert.True(shown.IsVisible);
         Assert.Same(content, shown.Content);
+        Assert.False(host.IsVisible);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the slot in the top bar is hidden while it is empty, shows the content assigned to it beside the fit
+    ///     option and outside the scaled picture, and is hidden again when the slot is cleared.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_ToolbarSlot_EmptyThenAssigned_IsHiddenThenShownOutsideThePicture()
+    {
+        // Arrange: a shown pane with a picture and an empty slot in the top bar
+        await File.WriteAllTextAsync(Path.Combine(_folder, "large.svg"), LargeSvg, TestContext.Current.CancellationToken);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        explorer.SelectFile(Path.Combine(_folder, "large.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var host = SettingsUiHelpers.Find<ContentControl>(window, "PreviewToolbar");
+        var hiddenBefore = !host.IsVisible;
+
+        // Act: assign a control of 100 x 20, then clear the slot
+        var content = new Border { Width = 100, Height = 20, Background = Brushes.Transparent };
+        pane.Toolbar = content;
+        AppShellUiHelpers.Flush();
+        var shown = (host.IsVisible, host.Content, ScreenExtent(window, content).Size);
+        var scroller = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
+        var inScroller = content.GetVisualAncestors().Contains(scroller);
+        pane.Toolbar = null;
+        AppShellUiHelpers.Flush();
+
+        // Assert: hidden when empty, showing exactly the assigned content at its own size although the picture is scaled
+        // down, not inside the scaled picture, and hidden again after clearing
+        Assert.True(hiddenBefore);
+        Assert.True(shown.Item1);
+        Assert.Same(content, shown.Item2);
+        Assert.Equal(new Size(100, 20), shown.Item3);
+        Assert.False(inScroller);
         Assert.False(host.IsVisible);
 
         window.Close();

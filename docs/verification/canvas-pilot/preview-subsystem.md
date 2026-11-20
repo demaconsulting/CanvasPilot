@@ -29,6 +29,8 @@ watcher; no network, external services, or display are required.
   nodes inside the picture; a picture of an SVG has no element positions.
 - Content assigned to the pane's overlay slot stays there while different pictures are shown, a changed file is
   rendered again, and a file cannot be drawn.
+- The slot in the pane's top bar is hidden while empty and shows the content assigned to it at its own size outside the
+  scaled picture; this is verified by the pane's unit and headless tests.
 - The shown picture can be prepared for dragging out as a file that is a PNG of exactly that picture, which is reused
   for the same picture and is another file for another picture.
 

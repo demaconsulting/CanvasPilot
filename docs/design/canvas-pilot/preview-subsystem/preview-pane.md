@@ -10,7 +10,7 @@ render that is still running, ignores results of renders that are no longer want
 when files in the project change, and shows the picture, the busy state, the error with its code and hint, and the
 notes of the render. The view model has no dependency on Avalonia's imaging; the view converts the pixels. The pane
 also hosts one overlay slot over the picture, so that other units can place content on the picture in its own pixel
-coordinates without the pane knowing them.
+coordinates without the pane knowing them, and one slot in its top bar for the controls of that content.
 
 #### Data Model
 
@@ -36,6 +36,11 @@ default. The pane does not interpret it: the view shows it in a `ContentControl`
 picks the view of whatever view model the host assigns, and the pane never refers to the code that fills the slot.
 The slot belongs to the pane, not to a picture, so it keeps its content while pictures change, are rendered again, or
 fail to draw; the host decides what the content shows then.
+
+**Toolbar** / **HasToolbar**: `object?`, a slot in the top bar of the pane, beside the fit option, for the host's
+controls that belong to the overlay, such as the tools for marking the picture; `null` by default. It is a
+`ContentControl` (`PreviewToolbar`) that is visible only while the slot has content. It is outside the scaled
+picture, so its content keeps its own size at every zoom. Like `Overlay`, the pane does not interpret it.
 
 **IsDragOutEnabled** / **DragSource** / **PrepareDragFile()** / **ReportDragProblem(exception)**: `IsDragOutEnabled` is
 a `bool`, true by default, that the host turns off while the pointer is used on the picture for something else, such as
@@ -131,4 +136,6 @@ entry are ignored.
 
 - The workspace — shows the view through the view locator and disposes the view model.
 - `ImageExporter` — reads the shown picture through `IRenderedImageSource`.
-- `ApplicationComposition` — creates the pane over the explorer, the refresh scheduler, and the drag source.
+- `ApplicationComposition` — creates the pane over the explorer, the refresh scheduler, and the drag source, puts the
+  marking layer in `Overlay` and its tool bar in `Toolbar`, and turns `IsDragOutEnabled` off while a marking tool is
+  chosen.

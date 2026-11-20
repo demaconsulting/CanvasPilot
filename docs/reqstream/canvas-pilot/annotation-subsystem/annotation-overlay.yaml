@@ -1,0 +1,166 @@
+---
+# Software Unit Requirements for the AnnotationOverlay Unit
+#
+# The AnnotationOverlay unit is the layer on which the user marks the shown picture: the tool bar with the choice of a
+# rectangle, ellipse, freehand, or arrow tool, the drawing of the shape in the pixels of the picture with the pointer or
+# the keyboard, the optional short note, the numbered marks that are shown over the picture, and the switch that keeps the
+# picture from being dragged out while a tool is chosen. It makes every mark in the MarkRegistry and reports it; it does
+# not know the composer, so whoever joins the two adds the chip of each reported mark to the message and tells the
+# overlay which chips the message holds.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Annotation Subsystem Requirements
+        sections:
+          - title: AnnotationOverlay Requirements
+            requirements:
+              - id: CanvasPilot-AnnotationOverlay-DrawShapes
+                title: >-
+                  The AnnotationOverlay shall let the user choose a rectangle, an ellipse, a freehand line, or an arrow
+                  tool, or no tool, and, while a tool is chosen, draw its shape on the shown picture by pressing the
+                  pointer, moving it, and releasing it, showing the shape while it is drawn, with every point in the
+                  pixels of the picture whatever the zoom of the pane is and cut to the picture when the pointer leaves
+                  it, and shall make no mark of a click that is smaller than a pixel or of a press while no tool is
+                  chosen.
+                justification: |
+                  Users point at parts of a picture to say what they mean, and four shapes cover what they point with:
+                  a box around a part, a ring around it, a line along it, and an arrow at it. The mark is read by the
+                  assistant in the pixels of the picture, so the points must not depend on the size of the window, on
+                  scrolling, or on how far the picture is shrunk to fit. A stroke that leaves the picture is still a
+                  stroke of the part inside. A click is not a mark, and with no tool chosen the pointer must keep its
+                  own use.
+                tests:
+                  - AnnotationOverlayViewModel_New_NullArguments_Throw
+                  - AnnotationOverlayViewModel_ToolFlags_SetFromCheckBoxes_ChooseAndRevert
+                  - AnnotationOverlayViewModel_ToolName_EachTool_IsAWord
+                  - AnnotationOverlayViewModel_StatusText_EachState_TellsWhatToDo
+                  - AnnotationOverlayViewModel_BeginStroke_NoToolChosen_StartsNothing
+                  - AnnotationOverlayViewModel_Stroke_RectangleDragged_MakesNumberedMarkInPicturePixels
+                  - AnnotationOverlayViewModel_Stroke_EllipseAndArrow_MakeMarksOfTheirKind
+                  - AnnotationOverlayViewModel_Stroke_Freehand_KeepsSimplifiedPathWithEnds
+                  - AnnotationOverlayViewModel_Stroke_FreehandBeyondLimit_ReplacesLastPoint
+                  - AnnotationOverlayViewModel_Stroke_ClickWithoutDrag_MakesNoMarkAndSaysSo
+                  - AnnotationOverlayViewModel_Stroke_PointerOutsidePicture_IsClampedToPicture
+                  - AnnotationOverlayView_DragWithEachTool_DrawsDraftThenMakesMarkChipInPicturePixels
+                  - AnnotationOverlayView_DragRectangle_FitToWindowOff_CommitsSamePixelCoordinates
+                  - AnnotationOverlayView_ClickWithoutDrag_MakesNoMark
+                  - AnnotationOverlayView_PointerLeavesPicture_StrokeContinuesAndIsClampedToPicture
+
+              - id: CanvasPilot-AnnotationOverlay-AddOptionalNote
+                title: >-
+                  The AnnotationOverlay shall ask, when a shape is finished, for an optional note of at most 200
+                  characters, with the focus in the note, and shall make the mark with the note when the user confirms
+                  it with Enter or the button and without a note when the user skips it, and shall make the mark with the
+                  note typed so far when the user starts the next shape or chooses another tool.
+                justification: |
+                  A shape says where; a few words say what, such as "this label is wrong". The note must be optional
+                  and quick to give: the user can type and press Enter, skip it with a button, or simply go on with the
+                  next shape without a prompt that has to be answered. It is short because a mark's note is a remark and
+                  not a second message. Because a mark never changes after it is made, the note is asked for before the
+                  mark is made.
+                tests:
+                  - AnnotationOverlayViewModel_Note_Typed_IsKeptCleanAndCappedAtTwoHundredCharacters
+                  - AnnotationOverlayViewModel_Note_Skipped_MakesMarkWithoutNote
+                  - AnnotationOverlayViewModel_Note_NextShapeOrOtherToolChosen_KeepsPendingMarkWithTypedNote
+                  - AnnotationOverlayViewModel_CancelCommand_OnlyWhileShapeUnderConstruction
+                  - AnnotationOverlayView_NoteTyped_EnterMakesMarkWithNoteAndFocusIsInNote
+                  - AnnotationOverlayView_NoteButtons_AddMarkOrSkipNote
+
+              - id: CanvasPilot-AnnotationOverlay-CancelWithEscape
+                title: >-
+                  The AnnotationOverlay shall throw away a shape that is being drawn or that waits for its note when the
+                  user presses Escape, wherever the keyboard focus is, and make no mark of it, and shall, when there is no
+                  shape, give up the chosen tool when Escape is pressed on the layer.
+                justification: |
+                  A slip of the pointer or a change of mind must cost nothing: the user needs a way to stop that works
+                  at once, while the button is still down, and at the note, without having to finish and delete a mark.
+                  When nothing is being drawn, the same key leaves the tool, so the pointer is free again.
+                tests:
+                  - AnnotationOverlayViewModel_Escape_DuringStrokeNoteAndIdle_CancelsThenLeavesTheTool
+                  - AnnotationOverlayView_Escape_DuringDragAndWhileNote_MakesNoMark
+                  - AnnotationOverlayView_EscapeWithoutShape_GivesUpToolAndLayerTakesKeyboardOnlyWithTool
+
+              - id: CanvasPilot-AnnotationOverlay-ReportCommittedMarks
+                title: >-
+                  The AnnotationOverlay shall make each finished mark in the MarkRegistry, pinned to the picture that was
+                  shown when its shape was started and numbered by the registry, report it to the host once, when it is in
+                  the registry and no shape is under construction, and show it on the picture with its number in a badge,
+                  in the color and with the line width and badge size that the annotated picture of the message uses.
+                justification: |
+                  A mark must belong to the picture it was drawn on even when the file is drawn again while the user types
+                  the note, and the host that adds its chip to the message must find it in the registry. What the user
+                  sees on the screen must be what the assistant gets in the annotated picture, so a mark has the same
+                  color, line width, and badge in both.
+                tests:
+                  - AnnotationOverlayViewModel_MarkAdded_Raised_MarkIsAlreadyInRegistryAndStateIsClean
+                  - AnnotationOverlayViewModel_Stroke_PictureReplacedWithSamePixelsBeforeNote_MarkKeepsPictureOfFirstPress
+                  - AnnotationOverlayStyle_Values_EqualThoseOfMarkImageComposer
+                  - AnnotationOverlayView_ShownMarks_AreLaidOutInPicturePixelsWithTheColorOfTheirNumber
+
+              - id: CanvasPilot-AnnotationOverlay-ShowOnlyVisibleMarks
+                title: >-
+                  The AnnotationOverlay shall show over the picture only the marks whose chips are in the message and that
+                  were drawn on exactly the shown picture, shall keep every other mark of the message, and shall say how
+                  many marks of the message it hides because they were drawn on another picture.
+                justification: |
+                  A mark means the pixels under it. When the file changes and the preview shows a new picture, the marks
+                  of the old one would point at something else, so they are not drawn, yet the user must not lose them or
+                  wonder where they went: they stay in the message, and the layer says that some are hidden. Undoing a
+                  mark's chip must take the mark off the picture, so that one undo system covers marks.
+                tests:
+                  - AnnotationOverlayViewModel_SetActiveMarkIds_NewPicture_HidesMarksOfEarlierPictureAndCountsThem
+                  - AnnotationOverlayViewModel_SetActiveMarkIds_SamePixelsAgainOrNoPicture_ShowsOrHidesAllMarks
+                  - AnnotationOverlayView_FileChanged_HidesMarkOfEarlierPictureAndSaysSo
+                  - AnnotationOverlayView_ChipUndoAndRedo_HidesAndShowsTheMark
+
+              - id: CanvasPilot-AnnotationOverlay-ToggleDragOutWithTool
+                title: >-
+                  The AnnotationOverlay shall tell its host to turn off dragging the picture out of the application while a
+                  tool is chosen and to turn it on when no tool is chosen or the overlay is released, and shall leave the
+                  pointer to the picture, unhandled, while no tool is chosen.
+                justification: |
+                  Dragging the picture out and drawing on it both use a press and a move of the pointer on the picture, so
+                  while the user draws, a drag must not take the picture away, and while no tool is chosen the picture
+                  must still be draggable.
+                tests:
+                  - AnnotationOverlayViewModel_SelectTool_ToolThenNone_TurnsDragOutOffThenOn
+                  - AnnotationOverlayViewModel_Dispose_ToolChosen_AllowsDragOutAndStopsFollowing
+                  - AnnotationOverlayView_ToolChosen_PictureDragOutIsOffAndPointerDragsPictureOut
+
+              - id: CanvasPilot-AnnotationOverlay-OperateByKeyboard
+                title: >-
+                  The AnnotationOverlay shall let the user choose a tool and make a mark without a pointing device, with
+                  named tool buttons that show the chosen tool, arrow keys that move a cursor over the picture in steps of
+                  eight, one, or forty pixels, and Enter that starts and finishes the shape at the cursor, shall show the
+                  cursor, shall give the keyboard to the note when it asks for one, and shall tell the user in words what
+                  to do next.
+                justification: |
+                  A user who cannot or does not want to use a mouse must be able to mark a picture, and a screen reader
+                  must be able to name the tools, the marks, and the state. The keyboard makes the same marks, with the
+                  same geometry, as the pointer.
+                tests:
+                  - AnnotationOverlayViewModel_Keyboard_ArrowKeysAndEnter_DrawRectangle
+                  - AnnotationOverlayViewModel_Keyboard_NoToolOrNoteWaiting_DoesNothingAndCursorStaysInPicture
+                  - AnnotationOverlayViewModel_Keyboard_FreehandMovesAddPointsAndHideCursorStops
+                  - AnnotationOverlayView_Keyboard_ArrowKeysAndEnter_DrawRectangleMark
+                  - AnnotationToolbarView_ToolButtons_AreNamedCheckedWithTheToolAndOffWithoutPicture
+
+              - id: CanvasPilot-AnnotationOverlay-OfferToolsOnlyWithPictureAndMessage
+                title: >-
+                  The AnnotationOverlay shall offer its tools only while a picture is shown and its host allows marks,
+                  shall say why they are off otherwise, shall throw away a shape that is under construction when the
+                  picture changes to one with other pixels, goes away, or the host stops allowing marks, and shall keep a
+                  chosen tool while only the picture is missing and give it up when the host stops allowing marks.
+                justification: |
+                  A mark that is drawn when it cannot be put in the message, or on a picture that is not there any more,
+                  would be lost or would point at the wrong pixels. The preview shows nothing for a moment whenever
+                  another file is selected, and the user who is marking should not have to choose the tool again after
+                  every file; a project that is closed, however, takes the draft with it.
+                tests:
+                  - AnnotationOverlayViewModel_SelectTool_NoPicture_StaysOnPointerAndSaysWhy
+                  - AnnotationOverlayViewModel_SelectTool_DrawingNotAllowed_IsRefusedAndExplained
+                  - AnnotationOverlayViewModel_PictureChanged_WhileDrawing_CancelsOnlyForOtherPixels
+                  - AnnotationOverlayViewModel_PictureCleared_ShapeIsThrownAwayAndToolWaitsForNextPicture
+                  - AnnotationOverlayViewModel_IsDrawingAllowed_TurnedOffWhileNoteWaits_ThrowsShapeAwayAndGivesUpTool
+                  - AnnotationToolbarView_MessageCannotBeEdited_ToolsAreOffAndToolIsGivenUp

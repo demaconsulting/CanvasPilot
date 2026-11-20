@@ -149,6 +149,15 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     private object? _overlay;
 
     /// <summary>
+    ///     The content shown in the top bar of the pane, beside the fit option, or null. Like the overlay it is a
+    ///     slot that the pane does not interpret, but it is not scaled with the picture, so the controls the host
+    ///     puts there keep their size at every zoom.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasToolbar))]
+    private object? _toolbar;
+
+    /// <summary>
     ///     Whether the user may drag the shown picture out of the pane. The host turns it off while the pointer is
     ///     used for something else on the picture, such as drawing a mark.
     /// </summary>
@@ -241,6 +250,11 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     Gets a value indicating whether content is assigned to the overlay slot.
     /// </summary>
     public bool HasOverlay => Overlay is not null;
+
+    /// <summary>
+    ///     Gets a value indicating whether content is assigned to the slot in the top bar.
+    /// </summary>
+    public bool HasToolbar => Toolbar is not null;
 
     /// <summary>
     ///     Gets a value indicating whether the render failed.

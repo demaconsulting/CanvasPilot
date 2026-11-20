@@ -56,6 +56,6 @@ about a click.
 
 #### Callers
 
-- The overlay unit of a later step calls `Add` when the user finishes drawing, `VisibleMarks` to decide what to show,
-  and `Clear` when a message is sent.
+- `AnnotationOverlay` calls `Add` when the user finishes a shape and the note step ends, `VisibleMarks` to decide what
+  to show, and the registry is cleared by the composer when a message is sent.
 - The payload subsystem reads the marks of the message through `Marks` and `MarkSourceResolver`.

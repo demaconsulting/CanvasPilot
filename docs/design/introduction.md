@@ -22,7 +22,7 @@ requirements; it explains how they are realized.
 Local items:
 
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
-  - **Annotation** subsystem: **MarkRegistry** and **MarkSourceResolver** units.
+  - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
@@ -91,8 +91,8 @@ and the local data the application uses](architecture.svg)
 
 - **src/** - source files and projects
   - **DemaConsulting.CanvasPilot/** - main application library source
-    - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, and mapped to the parts
-      of the source file under them
+    - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, drawn with the pointer
+      or the keyboard on a layer over the picture, and mapped to the parts of the source file under them
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
     - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, the
       intake and copying of attachments, the view model that orchestrates them with dictation and sending, and the
