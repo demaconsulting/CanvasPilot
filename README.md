@@ -1,5 +1,13 @@
 # CanvasPilot
 
+<!-- IMPORTANT: All links in this file must be absolute URLs.
+     This file is distributed in packages and relative links will not resolve. -->
+
+![CanvasPilot banner: the CanvasPilot name with the tagline "Describe it. Get the picture." and the sample request
+"Draw our release flow". A typed or spoken request, files dropped in, marks on a picture, and many source formats flow
+on curved arrows into the CanvasPilot AI copilot, and arrows lead out to a standalone picture composed of a flowchart,
+a chart, and nested pictures, a PNG file, an email, and a presentation slide][hero]
+
 [![GitHub forks][badge-forks]][link-forks]
 [![GitHub stars][badge-stars]][link-stars]
 [![GitHub contributors][badge-contributors]][link-contributors]
@@ -8,102 +16,79 @@
 [![Quality Gate][badge-quality]][link-quality]
 [![Security][badge-security]][link-security]
 
-## Overview
+## What is CanvasPilot?
 
-CanvasPilot is an AI-powered desktop application that helps users create drawings and diagrams with the CanvasNet
-library — composing SVG, Mermaid, Vega-Lite, OpenSCAD, and other image sources into standalone images for use in
-email, presentations, and other media. It is planned to support conversational interaction by text or speech, using
-GitHub Copilot SDK or Ollama as the language model backend.
+CanvasPilot is a Windows desktop app for creating pictures with an AI copilot. You describe a picture by typing or
+speaking, and the copilot builds it with the [CanvasNet][link-canvasnet] library, compositing SVG, Mermaid, PlantUML,
+Vega-Lite, OpenSCAD, PDF, PowerPoint, and Visio pages, and raster images (even images nested in images) into a
+standalone picture for email, presentations, and other media. There is no Markdown or PDF document pipeline to set up.
 
-**Status: Increment 1 - AI chat not yet available.** This version is the application shell: you can manage projects,
-browse and preview their image files, export pictures, and store your AI provider and speech preferences. The
-assistant that will use those preferences is not part of this version.
+The workflow runs from a project folder to a picture you can export, copy, or drag into another program. When the
+picture is not right, you mark the problems on it or ask for changes, and go around again.
 
-![Workflow of CanvasPilot: create or open a project, add image sources, preview them, and export or copy the
-picture][workflow]
+![Workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in files,
+the planned AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the PNG; a
+return arrow from the preview to the description step is for marking problems or asking for changes][workflow]
 
 ## Features
 
-- **Project Shell**: A project is a folder with a `{name}.canvaspilot` file and your image source files; create,
-  open, save, and close projects, and return to recent projects from the File menu
-- **Explorer and Preview**: List the image files of the open project, with the list following changes made by other
-  tools, and see the picture of the selected file as drawn by CanvasNet, with notes and errors explained
-- **Export and Copy**: Export the picture as a PNG file or copy it to the clipboard for email and presentations
-- **Settings**: AI provider preferences (GitHub Copilot or Ollama, model, context window, reasoning level, and an
-  opt-in for unrestricted agent tools that is off by default) and speech preferences (audio devices and speech
-  models with downloads)
-- **Windows Installer**: One per-machine MSI package for 64-bit Windows that includes everything needed to run
-- **Local and Private**: Settings and logs are stored on your computer only; there is no telemetry
-- **Comprehensive CI/CD**: GitHub Actions workflows with quality checks, builds, and tests on Windows, Linux, and macOS
-- **Linting Enforcement**: LintMark, TextLint, and yamllint enforced on every CI run
-- **Continuous Compliance**: Compliance evidence generated automatically on every CI run, following
-  the [Continuous Compliance][link-continuous-compliance] methodology
-- **SonarCloud Integration**: Quality gate and security analysis on every build
-- **Documentation Generation**: Automated build notes, user guide, design and verification documents, code quality
-  reports, requirements, justifications, and trace matrix
-- **Requirements Traceability**: Requirements linked to passing tests with auto-generated trace matrix
+Available now:
 
-## Installation
+- **Projects**: A project is a folder; create, open, save, and close projects, and return to recent ones
+- **Project explorer**: Lists the image files of the open project and follows changes made by other tools
+- **Live preview**: Draws the selected file with CanvasNet and redraws it when the file changes, with error codes,
+  hints, and diagnostics explained below the picture
+- **Export and share**: Export the picture as a PNG file, copy the image, or drag the picture into other applications
+- **Chat composer**: Write a message by typing or by push-to-talk dictation (hold F8), drag and drop or paste files,
+  folders, and images as inline chips, and undo and redo in fine-grained steps
+- **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows, numbered
+  and with notes; the marks are embedded in the message with crops and the source elements under each mark
+- **Settings**: Choose the AI provider, and the speech devices and models, with model downloads
+- **Windows installer**: One MSI package for 64-bit Windows
 
-Download `CanvasPilot-{version}-win-x64.msi` from the
-[releases page][link-releases], run it, and start CanvasPilot from the Start Menu. The package is for 64-bit Windows,
-installs for all users, and replaces any installed version. See the [User Guide][link-guide] for details.
+Planned:
 
-## Usage
+- **AI copilot chat**: GitHub Copilot or Ollama writes, renders, inspects, and fixes drawings in a self-checking loop
+- **Built-in CanvasNet knowledge cards**: Format and style guidance the copilot reads while it works
+- **Safe by default**: The copilot can use only CanvasPilot's own tools, confined to the project folder, with an
+  opt-in unrestricted mode
+- **Spoken replies**: Text-to-speech for the copilot's answers
+- **Style kits**: Palette, fonts, size presets, and example images, shared per user, project, or team
+- **Variations**: Compare alternative drafts side by side
+- **Export profiles and batch export**: Export many pictures at once, in the sizes and formats each use needs
+- **Linux and macOS builds**
 
-1. Choose **File > New Project...** and name your project, or **File > Open Project...** to open a
-   `.canvaspilot` file.
-2. Put image source files (SVG, Mermaid, Vega-Lite, OpenSCAD, and others) in the project folder.
-3. Select a file in the explorer to see its picture, and read the notes and errors below it.
-4. Choose **Image > Export as PNG...** or **Image > Copy Image**.
-5. Choose **Tools > Settings...** for the AI provider and speech preferences.
+## Getting started
 
-Settings are kept in `%APPDATA%\CanvasPilot\settings.json` and logs in `%LOCALAPPDATA%\CanvasPilot\logs`.
+CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
 
-## Documentation
+1. Download `CanvasPilot-{version}-win-x64.msi` from the [releases page][link-releases], run it, and start
+   CanvasPilot from the Start Menu.
+2. Choose an AI provider in **Tools > Settings... > AI Provider**:
+   - **GitHub Copilot**: Install the GitHub Copilot CLI (version 1.0.113 or later), run `copilot`, and sign in with
+     `/login`. CanvasPilot uses your installed, signed-in CLI.
+   - **Ollama**: Enter the endpoint (default `http://localhost:11434`) and the model of your self-hosted Ollama server.
+     No GitHub account is needed.
+3. Optionally set up speech in **Tools > Settings... > Speech**: pick your microphone and speakers, and download the
+   speech models.
+4. Choose **File > New Project...**, then start describing a picture.
 
-Generated documentation includes:
+## Learn more
 
-- **Build Notes**: Release information and changes
-- **User Guide**: Comprehensive usage documentation
-- **Software Design and Verification Design**: Architecture and how each requirement is verified
-- **Code Quality Report**: CodeQL and SonarCloud analysis results
-- **Requirements**: Functional and non-functional requirements
-- **Requirements Justifications**: Detailed requirement rationale
-- **Trace Matrix**: Requirements to test traceability
-
-## Building
-
-```pwsh
-pwsh ./build.ps1
-```
-
-The build needs the .NET 10 SDK. The MSI installer is built by the Windows job of the CI pipeline from the published
-application; see [CONTRIBUTING.md][link-contributing] for the development setup.
-
-## User Guide
-
-The CanvasPilot User Guide is available on the
-[CanvasPilot releases page][link-releases].
-
-## Contributing
-
-See [CONTRIBUTING.md][link-contributing] for
-guidelines on reporting bugs, suggesting features, and submitting pull requests.
-
-## License
+- [User Guide][link-guide]: Installation, projects, the chat composer, marking pictures, and settings
+- [CanvasNet][link-canvasnet]: The library that draws the pictures
+- [Speech][link-speech]: The library behind dictation and spoken replies
+- [Releases][link-releases]: Installer packages and release notes
+- [Contributing][link-contributing]: Reporting bugs, suggesting features, and submitting pull requests
+- [Continuous Compliance][link-continuous-compliance]: The methodology this project follows
 
 Copyright (c) DEMA Consulting. Licensed under the MIT License. See [LICENSE][link-license] for details.
 
-By contributing to this project, you agree that your contributions will be licensed under the MIT License.
-
-## Support
-
-- [Report a bug or request a feature](https://github.com/demaconsulting/CanvasPilot/issues)
-- [Ask a question or start a discussion](https://github.com/demaconsulting/CanvasPilot/discussions)
+<!-- Image References -->
+[hero]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/hero.png
+[workflow]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/workflow.png
 
 <!-- Badge References -->
-[workflow]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/workflow.png
 [badge-forks]: https://img.shields.io/github/forks/demaconsulting/CanvasPilot?style=plastic
 [badge-stars]: https://img.shields.io/github/stars/demaconsulting/CanvasPilot?style=plastic
 [badge-contributors]: https://img.shields.io/github/contributors/demaconsulting/CanvasPilot?style=plastic
@@ -122,5 +107,7 @@ By contributing to this project, you agree that your contributions will be licen
 [link-security]: https://sonarcloud.io/dashboard?id=demaconsulting_CanvasPilot
 [link-releases]: https://github.com/demaconsulting/CanvasPilot/releases
 [link-contributing]: https://github.com/demaconsulting/CanvasPilot/blob/main/CONTRIBUTING.md
-[link-guide]: https://github.com/demaconsulting/CanvasPilot/blob/main/docs/user_guide/introduction.md
+[link-guide]: https://github.com/demaconsulting/CanvasPilot/tree/main/docs/user_guide
+[link-canvasnet]: https://github.com/demaconsulting/CanvasNet
+[link-speech]: https://github.com/demaconsulting/Speech
 [link-continuous-compliance]: https://github.com/demaconsulting/ContinuousCompliance

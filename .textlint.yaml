@@ -83,6 +83,7 @@ words:
   - unidirectionality
   - venv
   - Viewbox
+  - Visio
   - yamlfix
 
 # Exclude common build artifacts, dependencies, and vendored third-party code

@@ -4,8 +4,10 @@ CanvasPilot helps you create pictures from image source files such as SVG drawin
 charts, and OpenSCAD models. You keep the files of a drawing together in a project folder, see each file's picture
 as you work, and save the picture as a PNG file or copy it for use in email, presentations, and other documents.
 
-![The workflow of CanvasPilot: create or open a project, add image sources, preview them, and export or copy the
-picture](workflow.svg)
+![The workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in
+files, the planned AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the
+PNG; a return arrow from the preview to the description step is for marking problems or asking for
+changes](workflow.svg)
 
 ## Purpose
 

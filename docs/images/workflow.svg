@@ -1,70 +1,98 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1076" height="330" viewBox="0 0 1076 330" font-family="Segoe UI, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1256" height="392" viewBox="0 0 1256 392" font-family="Segoe UI, Arial, sans-serif">
   <title>CanvasPilot workflow</title>
-  <desc>The user creates or opens a project folder, puts image source files in it, selects a file to see its preview with any notes or errors, and exports it as a PNG file or copies it to the clipboard for use in email and presentations. An AI chat assistant is planned for a later version.</desc>
+  <desc>Five numbered steps from left to right. Step 1: open or create a project folder. Step 2: describe the picture by typing or speaking, and drop in files, folders, and reference pictures. Step 3: the AI copilot drafts the picture with CanvasNet; this step is planned and not available yet, and is drawn with a dashed outline. Step 4: the live preview redraws as files change and shows notes and errors. Step 5: export a PNG file, copy the image, or drag the picture into email or a presentation. A return arrow from the preview back to the description step says that when the picture is not right, you mark problems on it or ask for changes and go around again.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
     </marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#be185d"/>
+    </marker>
   </defs>
-  <rect x="2" y="2" width="1072" height="326" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
-  <text x="28" y="40" font-size="20" font-weight="700" fill="#0f172a">From a project to a picture you can use</text>
+  <rect x="2" y="2" width="1252" height="388" rx="20" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text x="28" y="42" font-size="21" font-weight="700" fill="#0f172a">From an idea to a picture you can use</text>
 
   <!-- Step 1 -->
-  <rect x="28" y="64" width="224" height="150" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
-  <circle cx="58" cy="94" r="14" fill="#16a34a"/>
-  <text x="58" y="99" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
-  <text x="82" y="99" font-size="15" font-weight="700" fill="#166534">Create or open</text>
-  <g font-size="12" fill="#166534">
-    <text x="44" y="130">File &gt; New Project... makes a</text>
-    <text x="44" y="148">folder with a .canvaspilot file.</text>
-    <text x="44" y="172">File &gt; Open Project... or</text>
-    <text x="44" y="190">Recent Projects returns to one.</text>
+  <rect x="28" y="68" width="216" height="176" rx="12" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <circle cx="58" cy="98" r="14" fill="#166534"/>
+  <text x="58" y="103" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+  <text x="82" y="103" font-size="16" font-weight="700" fill="#166534">Open a project</text>
+  <g font-size="14" fill="#14532d">
+    <text x="44" y="138">File &gt; New Project... or</text>
+    <text x="44" y="160">Open Project... A project</text>
+    <text x="44" y="182">is a folder that holds your</text>
+    <text x="44" y="204">files; Recent Projects</text>
+    <text x="44" y="226">brings one back.</text>
   </g>
 
   <!-- Step 2 -->
-  <rect x="284" y="64" width="224" height="150" rx="12" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
-  <circle cx="314" cy="94" r="14" fill="#7c3aed"/>
-  <text x="314" y="99" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
-  <text x="338" y="99" font-size="15" font-weight="700" fill="#4c1d95">Add image sources</text>
-  <g font-size="12" fill="#4c1d95">
-    <text x="300" y="130">Put SVG, Mermaid, Vega-Lite,</text>
-    <text x="300" y="148">OpenSCAD, and other files in</text>
-    <text x="300" y="166">the project folder, with any</text>
-    <text x="300" y="184">editor. The explorer lists them.</text>
+  <rect x="274" y="68" width="216" height="176" rx="12" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <circle cx="304" cy="98" r="14" fill="#5b21b6"/>
+  <text x="304" y="103" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+  <text x="328" y="103" font-size="16" font-weight="700" fill="#4c1d95">Describe it</text>
+  <g font-size="14" fill="#3b0764">
+    <text x="290" y="138">Type your request, or hold</text>
+    <text x="290" y="160">F8 and speak it. Drop in</text>
+    <text x="290" y="182">files, folders, and pictures</text>
+    <text x="290" y="204">as references; they show as</text>
+    <text x="290" y="226">chips in your message.</text>
   </g>
 
-  <!-- Step 3 -->
-  <rect x="540" y="64" width="224" height="150" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
-  <circle cx="570" cy="94" r="14" fill="#2563eb"/>
-  <text x="570" y="99" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
-  <text x="594" y="99" font-size="15" font-weight="700" fill="#1e3a8a">Preview</text>
-  <g font-size="12" fill="#1e3a8a">
-    <text x="556" y="130">Select a file to see its picture.</text>
-    <text x="556" y="148">It redraws when files change.</text>
-    <text x="556" y="172">Notes and errors, with a hint,</text>
-    <text x="556" y="190">appear below the picture.</text>
+  <!-- Step 3 (planned) -->
+  <rect x="520" y="68" width="216" height="176" rx="12" fill="#f1f5f9" stroke="#475569" stroke-width="2" stroke-dasharray="8 5"/>
+  <circle cx="550" cy="98" r="14" fill="#334155"/>
+  <text x="550" y="103" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+  <text x="574" y="103" font-size="16" font-weight="700" fill="#0f172a">AI drafts it</text>
+  <rect x="640" y="57" width="84" height="22" rx="11" fill="#ffffff" stroke="#475569" stroke-width="1.5"/>
+  <text x="682" y="73" font-size="12" font-weight="700" fill="#334155" text-anchor="middle">PLANNED</text>
+  <g font-size="14" fill="#1e293b">
+    <text x="536" y="138">The copilot composes the</text>
+    <text x="536" y="160">picture with CanvasNet,</text>
+    <text x="536" y="182">looks at the result, and</text>
+    <text x="536" y="204">fixes what it finds before</text>
+    <text x="536" y="226">it shows you.</text>
   </g>
 
   <!-- Step 4 -->
-  <rect x="796" y="64" width="252" height="150" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
-  <circle cx="826" cy="94" r="14" fill="#d97706"/>
-  <text x="826" y="99" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
-  <text x="850" y="99" font-size="15" font-weight="700" fill="#92400e">Export or copy</text>
-  <g font-size="12" fill="#92400e">
-    <text x="812" y="130">Image &gt; Export as PNG... saves</text>
-    <text x="812" y="148">a file. Image &gt; Copy Image</text>
-    <text x="812" y="172">puts the picture on the</text>
-    <text x="812" y="190">clipboard for email or slides.</text>
+  <rect x="766" y="68" width="216" height="176" rx="12" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <circle cx="796" cy="98" r="14" fill="#1e40af"/>
+  <text x="796" y="103" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">4</text>
+  <text x="820" y="103" font-size="16" font-weight="700" fill="#1e3a8a">Live preview</text>
+  <g font-size="14" fill="#172554">
+    <text x="782" y="138">The picture redraws as</text>
+    <text x="782" y="160">files change. Notes and</text>
+    <text x="782" y="182">errors, with a hint, appear</text>
+    <text x="782" y="204">below it; the explorer lists</text>
+    <text x="782" y="226">every file.</text>
   </g>
 
-  <g stroke="#475569" stroke-width="2" marker-end="url(#a)">
-    <line x1="252" y1="139" x2="282" y2="139"/>
-    <line x1="508" y1="139" x2="538" y2="139"/>
-    <line x1="764" y1="139" x2="794" y2="139"/>
+  <!-- Step 5 -->
+  <rect x="1012" y="68" width="216" height="176" rx="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+  <circle cx="1042" cy="98" r="14" fill="#92400e"/>
+  <text x="1042" y="103" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">5</text>
+  <text x="1066" y="103" font-size="16" font-weight="700" fill="#92400e">Export or share</text>
+  <g font-size="14" fill="#451a03">
+    <text x="1028" y="138">Export a PNG file, copy</text>
+    <text x="1028" y="160">the image, or drag the</text>
+    <text x="1028" y="182">picture straight into an</text>
+    <text x="1028" y="204">email or a PowerPoint</text>
+    <text x="1028" y="226">slide.</text>
   </g>
 
-  <!-- Later increment -->
-  <rect x="28" y="242" width="1020" height="62" rx="12" fill="#f1f5f9" stroke="#64748b" stroke-width="2" stroke-dasharray="8 5"/>
-  <text x="48" y="268" font-size="14" font-weight="700" fill="#0f172a">Planned for a later version</text>
-  <text x="48" y="288" font-size="12" fill="#334155">An AI chat assistant, by text or speech, that creates and edits the image source files for you. This version stores the provider and speech choices, but has no chat yet.</text>
+  <g stroke="#475569" stroke-width="2.5" marker-end="url(#a)">
+    <line x1="246" y1="156" x2="272" y2="156"/>
+    <line x1="492" y1="156" x2="518" y2="156"/>
+    <line x1="738" y1="156" x2="764" y2="156"/>
+    <line x1="984" y1="156" x2="1010" y2="156"/>
+  </g>
+
+  <!-- Feedback loop from the preview back to describing -->
+  <path d="M874,246 L874,282 Q874,298 858,298 L398,298 Q382,298 382,282 L382,248" fill="none" stroke="#be185d" stroke-width="2.5" marker-end="url(#b)"/>
+  <rect x="448" y="280" width="364" height="36" rx="18" fill="#ffffff" stroke="#be185d" stroke-width="2"/>
+  <text x="630" y="304" font-size="15" font-weight="700" fill="#9d174d" text-anchor="middle">Not right yet? Mark problems or ask for changes.</text>
+  <text x="630" y="338" font-size="14" fill="#334155" text-anchor="middle">Marks (rectangle, ellipse, freehand, arrow, numbered notes) travel with your message, with crops of what they cover.</text>
+
+  <!-- Legend -->
+  <rect x="28" y="356" width="34" height="18" rx="5" fill="#f1f5f9" stroke="#475569" stroke-width="1.5" stroke-dasharray="5 3"/>
+  <text x="72" y="370" font-size="13" fill="#334155">Dashed outline: planned, not available yet.</text>
 </svg>
