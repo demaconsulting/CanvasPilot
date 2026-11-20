@@ -4,7 +4,7 @@
 # The MainWindowShell unit is the main window's view model and the window that shows it. It owns the File, Image,
 # Tools, and Help commands, follows the open project in the window title, lists the recent projects, and talks
 # to the user only through an IDialogService that the window implements. The Image menu commands run through an
-# IImageExporter seam that the image preview plugs into.
+# IImageExporter that the image preview supplies.
 
 sections:
   - title: CanvasPilot Requirements
@@ -117,13 +117,13 @@ sections:
 
               - id: CanvasPilot-MainWindowShell-ProvideImageMenuSeam
                 title: >-
-                  The MainWindowShell shall provide Export as PNG and Copy Image commands that are disabled
-                  until an image exporter reports that an image is available, that follow the exporter as it
-                  changes, and that run the exporter with the dialog service.
+                  The MainWindowShell shall offer Export as PNG and Copy Image commands that are available only
+                  while a picture is shown, that follow the picture as it appears and goes away, and that export
+                  or copy the shown picture and tell the user the outcome.
                 justification: |
-                  Exporting and copying depend on the rendered image, which belongs to the image preview. A
-                  seam that stays disabled until the preview supplies an exporter lets the menu exist now
-                  without the shell knowing how images are produced.
+                  Exporting and copying apply to the picture the user is looking at. Offering the commands only
+                  while a picture is shown stops the user from trying to export something that does not exist,
+                  and reporting the outcome tells the user whether the file or clipboard now holds the picture.
                 tests:
                   - MainWindowShell_ImageCommands_FollowExporterAndInvokeIt
                   - NullImageExporter_Default_IsDisabledAndDoesNothing
@@ -132,16 +132,15 @@ sections:
 
               - id: CanvasPilot-MainWindowShell-TalkToUserThroughDialogService
                 title: >-
-                  The MainWindowShell shall ask questions, show messages, let the user pick folders and
-                  files, and place an image on the clipboard only through an IDialogService that the main
-                  window implements, with message,
-                  confirmation, and one-line prompt dialogs whose accepting button is unavailable for a blank
-                  prompt, and shall answer a cancelled platform picker as no choice.
+                  The MainWindowShell shall ask the user questions, show messages, let the user pick folders and
+                  files, and place a picture on the clipboard through dialogs that look and behave the same
+                  everywhere, shall refuse a blank answer to a one-line prompt, and shall treat a picker the
+                  platform cannot show as no choice.
                 justification: |
-                  Keeping dialogs behind one interface keeps the view models testable without a window, and a
-                  single message dialog gives every problem report and question the same look and behavior. A
-                  blank file name must not be accepted, and a picker the platform cannot show must read as
-                  cancelled rather than fail.
+                  A single, consistent way of asking and telling gives every problem report and question the
+                  same look and behavior, and keeps the logic testable without a window. A blank file name must
+                  not be accepted, and a picker the platform cannot show must read as cancelled rather than
+                  fail.
                 tests:
                   - MessageDialogViewModel_Message_OkAcceptsAndRequestsClose
                   - MessageDialogViewModel_Confirmation_CancelRequestsCloseWithoutAcceptance

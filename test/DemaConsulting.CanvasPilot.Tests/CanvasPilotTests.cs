@@ -201,6 +201,47 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user can rename and delete image source files from the project explorer, is asked before a
+    ///     file is deleted, and is told when a change is refused.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems()
+    {
+        // Arrange: the application with a project that holds two images, the first selected
+        var token = TestContext.Current.CancellationToken;
+        var (composition, dialogs) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.svg"), "<svg/>", token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "b.svg"), "<svg/>", token);
+        var workspace = composition.Shell.Workspace;
+        workspace.Explorer.Refresh();
+        workspace.Explorer.SelectFile(Path.Combine(folder, "a.svg"));
+
+        // Act: refuse a name that is not an image source file, rename to a good name, decline then confirm the delete
+        dialogs.PromptResult = "notes.txt";
+        await workspace.RenameSelectedCommand.ExecuteAsync(null);
+        var refused = dialogs.Messages.Count;
+        dialogs.PromptResult = "cover.svg";
+        await workspace.RenameSelectedCommand.ExecuteAsync(null);
+        dialogs.ConfirmResult = false;
+        await workspace.DeleteSelectedCommand.ExecuteAsync(null);
+        var keptWhenDeclined = File.Exists(Path.Combine(folder, "cover.svg"));
+        dialogs.ConfirmResult = true;
+        await workspace.DeleteSelectedCommand.ExecuteAsync(null);
+        var listed = workspace.Explorer.Items.Select(item => item.Name).ToArray();
+        composition.Dispose();
+
+        // Assert: the bad name was reported, the rename and confirmed delete happened, and the decline kept the file
+        Assert.Equal(1, refused);
+        Assert.True(keptWhenDeclined);
+        Assert.Equal(2, dialogs.Confirmations.Count);
+        Assert.False(File.Exists(Path.Combine(folder, "a.svg")));
+        Assert.False(File.Exists(Path.Combine(folder, "cover.svg")));
+        Assert.True(File.Exists(Path.Combine(folder, "b.svg")));
+        Assert.Equal(["b.svg"], listed);
+    }
+
+    /// <summary>
     ///     Test that the application starts on every supported platform: the units are composed exactly as at
     ///     startup, without a window, the settings are loaded, the start is logged, and the shell is ready.
     /// </summary>

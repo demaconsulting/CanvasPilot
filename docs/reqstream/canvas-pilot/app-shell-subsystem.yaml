@@ -40,16 +40,25 @@ sections:
           - id: CanvasPilot-AppShell-HostProjectWorkspace
             title: >-
               The AppShell subsystem shall show the open project's image files beside a content area that
-              explains what is missing, with a place for a preview of the selected file, and shall let the
-              user rename and delete files after confirmation.
+              explains what is missing, with a place for a preview of the selected file.
             justification: |
               The user works on one image source file at a time. Showing the project's files next to the
               area that will show their preview, with a plain explanation while there is no project, file, or
-              preview, keeps the window understandable at every step, and confirming deletions protects the
-              user's files.
+              preview, keeps the window understandable at every step.
             children:
               - CanvasPilot-ProjectWorkspace-HostExplorerAndPreview
               - CanvasPilot-ProjectWorkspace-FollowOpenProject
+            tests:
+              - AppShellSubsystem_ManageFiles_RenameAndDelete_UpdateFolderAndExplorer
+
+          - id: CanvasPilot-AppShell-ManageProjectFiles
+            title: >-
+              The AppShell subsystem shall let the user rename and delete the files listed in the project
+              explorer, ask for confirmation before deleting, and tell the user when a change is refused.
+            justification: |
+              Users reorganize their image files while working on them. A deletion cannot be undone, so
+              confirming it protects the user's files, and a refused name or a locked file must be explained.
+            children:
               - CanvasPilot-ProjectWorkspace-ConfirmDeleteAndPromptRename
             tests:
               - AppShellSubsystem_ManageFiles_RenameAndDelete_UpdateFolderAndExplorer

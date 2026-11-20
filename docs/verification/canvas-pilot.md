@@ -88,6 +88,12 @@ a text file; the project explorer is opened on the project folder and lists the 
 and selecting one reports its path. This scenario is tested by
 `CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles`.
 
+**CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems**: The composed application's user
+creates a project that holds two SVG files and selects the first. Renaming it to a name that is not an image source
+file is refused with a message; renaming it to `cover.svg` renames the file. Deleting `cover.svg` is first declined
+at the confirmation, which keeps the file, and then confirmed, which removes it. The explorer then lists only the
+other file. This scenario is tested by `CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems`.
+
 **CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell**: The application's units are composed exactly as
 at startup, without a window, over temporary per-user folders; the shell is titled with the application name,
 the commands that need nothing are available, those that need a project are not, the default settings are in

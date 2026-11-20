@@ -10,7 +10,7 @@ picture](workflow.svg)
 ## Purpose
 
 CanvasPilot is an AI-powered desktop application that helps users create drawings and diagrams with the
-CanvasNet library. This version, Increment 1, is the application shell. You can manage projects, browse and preview
+CanvasNet library. This version is the application shell. You can manage projects, browse and preview
 their image files, export pictures, and set the AI provider and speech preferences that the assistant will use. The AI
 chat is not available yet.
 

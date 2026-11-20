@@ -70,8 +70,7 @@ sections:
           - id: CanvasPilot-Project-BrowseProjectImages
             title: >-
               The Project subsystem shall list the image source files in the root of the open project's
-              folder, keep the list current as files change, and let the user select, rename, and delete
-              a file.
+              folder, keep the list current as files change, and let the user select a file.
             justification: |
               The top-level image source files of a project are the things the user works on. A list that
               follows the folder as files are added, removed, or renamed, by this application or by
@@ -82,6 +81,18 @@ sections:
               - CanvasPilot-ProjectExplorer-SelectFile
               - CanvasPilot-ProjectExplorer-RefreshOnFileChanges
               - CanvasPilot-ProjectExplorer-ReleaseWatcher
+            tests:
+              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources
+
+          - id: CanvasPilot-Project-ManageImageFiles
+            title: >-
+              The Project subsystem shall let the user rename and delete an image source file in the open
+              project's folder, keep the list current, and refuse a change that would lose or misplace a file.
+            justification: |
+              Managing a project's image files is part of working on them. Renaming and deleting through the
+              project list keeps it current and lets the application refuse a name that is invalid, is not an
+              image source file, or would replace another file, and report a file that cannot be changed.
+            children:
               - CanvasPilot-ProjectExplorer-DeleteSelectedFile
               - CanvasPilot-ProjectExplorer-RenameSelectedFile
             tests:

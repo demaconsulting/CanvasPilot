@@ -7,9 +7,9 @@
 # - System requirements are validated through system-level tests that compose real units
 #   without opening a window
 #
-# NOTE: The system requirements cover the capabilities of Increment 1 (operational logging, safe file handling,
-# persisted user settings, AI provider and speech configuration, projects, image browsing, preview and export, the
-# desktop shell, the Windows installer, and application startup). The AI chat is added with a later increment.
+# NOTE: The system requirements cover operational logging, safe file handling, persisted user settings, AI provider
+# and speech configuration, projects, image browsing and file management, preview and export, the desktop shell, the
+# Windows installer, and application startup. The AI chat is not yet covered.
 
 sections:
   - title: CanvasPilot Requirements
@@ -120,6 +120,22 @@ sections:
           - CanvasPilot-Project-BrowseProjectImages
         tests:
           - CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles
+
+      - id: CanvasPilot-System-ManageProjectFiles
+        title: >-
+          The application shall let the user rename and delete the image source files of the open project
+          from the project explorer, ask for confirmation before deleting, and tell the user when a file
+          cannot be renamed or deleted.
+        tags: [system]
+        justification: |
+          Users reorganize their drawings while working on them, and doing so without leaving the application
+          keeps the project list correct. A deleted file cannot be recovered, so the user must confirm it, and
+          a name that cannot be used or a file that is in use must be explained rather than silently ignored.
+        children:
+          - CanvasPilot-Project-ManageImageFiles
+          - CanvasPilot-AppShell-ManageProjectFiles
+        tests:
+          - CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems
 
       - id: CanvasPilot-System-PreviewImages
         title: >-

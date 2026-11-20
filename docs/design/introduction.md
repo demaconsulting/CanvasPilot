@@ -1,11 +1,11 @@
 # Introduction
 
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
-CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. Increment 1,
-described here, is the application shell: folder-based projects, an explorer of the project's image source files, a
+CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. It is,
+for now, the application shell: folder-based projects, an explorer of the project's image source files, a
 preview of the selected file that is drawn by CanvasNet, PNG export and copy to the clipboard, persisted settings with
 AI provider and speech choices, and the installer. The AI chat that will use the stored choices is not part of this
-increment. The document covers local software items (systems, subsystems, and units) and the OTS software items they
+version. The document covers local software items (systems, subsystems, and units) and the OTS software items they
 consume.
 
 ## Purpose

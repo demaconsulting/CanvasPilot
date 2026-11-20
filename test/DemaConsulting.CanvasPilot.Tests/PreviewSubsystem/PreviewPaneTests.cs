@@ -497,9 +497,13 @@ public sealed class PreviewPaneTests : IDisposable
         CreatePane();
         _explorer.Open(_folder);
 
-        // Act: a file changes and the watcher has time to report it
+        // Act: a file changes; wait until the explorer's watcher on the same folder has reported the change
         await File.WriteAllTextAsync(Path.Combine(_folder, "a.svg"), "<svg/>", TestContext.Current.CancellationToken);
-        await Task.Delay(500, TestContext.Current.CancellationToken);
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (_explorerScheduler.ScheduledCount == 0 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
 
         // Assert: nothing was scheduled and nothing was rendered
         Assert.Equal(0, _previewScheduler.ScheduledCount);
