@@ -230,6 +230,91 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user who selects an image file in the project sees it rendered, and sees why a broken file
+    ///     could not be drawn, without any window.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError()
+    {
+        // Arrange: the application with a created project that holds a good and a broken SVG
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "logo.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='16'><rect width='32' height='16' fill='#00ff00'/></svg>", token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "broken.svg"), "<svg><not closed", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+
+        // Act: select the good file, then the broken one
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "logo.svg"));
+        await composition.Preview.RenderCompletion;
+        var shown = (composition.Preview.HasImage, composition.Preview.Image?.Width, composition.Preview.Image?.Height, composition.Shell.ImageExporter.CanExport);
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "broken.svg"));
+        await composition.Preview.RenderCompletion;
+        var failed = (composition.Preview.HasError, composition.Preview.Error?.Code, composition.Shell.ImageExporter.CanExport);
+        composition.Dispose();
+
+        // Assert: the good file was rendered at its size and could be exported; the broken one gave an error and no picture
+        Assert.Equal((true, 32, 16, true), shown);
+        Assert.Equal((true, "cannot-draw", false), failed);
+    }
+
+    /// <summary>
+    ///     Test that a user can export the rendered picture as a PNG file from the Image menu command.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile()
+    {
+        // Arrange: the application with a project, a rendered SVG, and a user who chooses where to save
+        var token = TestContext.Current.CancellationToken;
+        var (composition, dialogs) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "logo.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='16'><rect width='32' height='16' fill='#00ff00'/></svg>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "logo.svg"));
+        await composition.Preview.RenderCompletion;
+        var target = Path.Combine(_tempRoot, "exported.png");
+        dialogs.SaveFileToPick = target;
+
+        // Act: run the export command of the Image menu
+        var canExport = composition.Shell.ExportPngCommand.CanExecute(null);
+        await composition.Shell.ExportPngCommand.ExecuteAsync(null);
+        composition.Dispose();
+
+        // Assert: the command was enabled and the file is a PNG of the picture's size
+        Assert.True(canExport);
+        var png = await File.ReadAllBytesAsync(target, token);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], png[..8]);
+        Assert.Equal(32, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16, 4)));
+        Assert.Equal(16, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4)));
+    }
+
+    /// <summary>
+    ///     Composes the application on temporary folders and has a user create a project through the New Project dialog.
+    /// </summary>
+    /// <returns>The composition, whose project is open, and the dialog service attached to its shell.</returns>
+    private async Task<(ApplicationComposition Composition, FakeDialogService Dialogs)> ComposeWithProjectAsync()
+    {
+        var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var dialogs = new FakeDialogService
+        {
+            OnNewProject = dialog =>
+            {
+                dialog.ProjectName = "Poster";
+                dialog.OkCommand.Execute(null);
+            },
+        };
+        var composition = ApplicationComposition.Create(
+            logger,
+            new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger),
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: documents);
+        composition.Shell.AttachDialogService(dialogs);
+        await composition.Shell.NewProjectCommand.ExecuteAsync(null);
+        return (composition, dialogs);
+    }
+
+    /// <summary>
     ///     Test that a user can work from the main window shell: create a project, see its image files in the
     ///     explorer, find it in the recent projects, and change a setting that survives a restart.
     /// </summary>

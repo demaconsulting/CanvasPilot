@@ -29,6 +29,9 @@ package CanvasPilot {
         // Resolves renamed file paths with the safe path-combination utility.
         dependency ProjectExplorer to PathHelpers;
 
+        // Uses the extension list of CanvasNet's viewer to decide which files are image sources.
+        dependency ProjectExplorer to Ots::CanvasNet;
+
         // Reports failed file operations to the application log.
         dependency ProjectExplorer to RollingFileLogger;
     }

@@ -31,6 +31,8 @@ Each OTS item is verified by a combination of:
 
 - The OTS tool's own self-validation suite (where the tool supports `--validate`)
 - Pipeline output assertions performed by FileAssert on documents produced by the tool
+- For runtime libraries without a self-validation mode, integration tests in `test/OtsSoftwareTests` that call
+  the library the way the application does
 
 Internal OTS tool design is out of scope; only integration and usage evidence is documented.
 
@@ -39,6 +41,7 @@ Internal OTS tool design is out of scope; only integration and usage evidence is
 The following OTS items have verification evidence in this section:
 
 - BuildMark (*buildmark.md*) — build-notes documentation tool
+- CanvasNet (*canvasnet.md*) — runtime library that draws image source files
 - FileAssert (*fileassert.md*) — document assertion tool
 - Pandoc (*pandoc.md*) — Markdown-to-HTML conversion tool
 - ReqStream (*reqstream.md*) — requirements traceability tool

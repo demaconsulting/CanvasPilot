@@ -1,7 +1,7 @@
 # Introduction
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on
-CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging,
+CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging, Preview,
 Project, Settings, and Utilities subsystems; further subsystems are added as they are introduced.
 
 ## Purpose
@@ -25,6 +25,10 @@ This document covers the verification design for the following software items:
     - **AboutDialog** — application identity window
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
+  - **Preview** subsystem
+    - **ImageRenderService** — background drawing of image source files with CanvasNet and PNG encoding
+    - **PreviewPane** — preview of the selected file with busy, error, and note display
+    - **ImageExporter** — PNG file and clipboard export of the shown picture
   - **Project** subsystem
     - **ProjectService** — project folders and versioned project files
     - **RecentProjects** — most-recently-used project list
@@ -40,6 +44,7 @@ This document covers the verification design for the following software items:
 **OTS items:**
 
 - **BuildMark** — build-notes documentation tool
+- **CanvasNet** — image source rendering library
 - **FileAssert** — document assertion tool
 - **Pandoc** — Markdown-to-HTML conversion tool
 - **ReqStream** — requirements traceability tool
@@ -68,6 +73,7 @@ test/
 └── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
     ├── AppShellSubsystem/
     ├── LoggingSubsystem/
+    ├── PreviewSubsystem/
     ├── ProjectSubsystem/
     ├── SettingsSubsystem/
     └── UtilitiesSubsystem/

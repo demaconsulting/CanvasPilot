@@ -46,6 +46,7 @@ enableGlobDot: true
 words:
   - Avalonia
   - axaml
+  - bgra
   - canvaspilot
   - Dema
   - demaconsulting
@@ -55,6 +56,7 @@ words:
   - nestings
   - netstandard
   - Mvvm
+  - premul
   - sarif
   - Setext
   - shopt

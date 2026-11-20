@@ -4,7 +4,7 @@ resource-path:
   - docs/verification/canvas-pilot
   - docs/verification/canvas-pilot/app-shell-subsystem
   - docs/verification/canvas-pilot/logging-subsystem
-  - docs/verification/canvas-pilot/project-subsystem
+  - docs/verification/canvas-pilot/preview-subsystem  - docs/verification/canvas-pilot/project-subsystem
   - docs/verification/canvas-pilot/settings-subsystem
   - docs/verification/canvas-pilot/utilities-subsystem
   - docs/verification/ots
@@ -20,6 +20,10 @@ input-files:
   - docs/verification/canvas-pilot/app-shell-subsystem/about-dialog.md
   - docs/verification/canvas-pilot/logging-subsystem.md
   - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
+  - docs/verification/canvas-pilot/preview-subsystem.md
+  - docs/verification/canvas-pilot/preview-subsystem/image-render-service.md
+  - docs/verification/canvas-pilot/preview-subsystem/preview-pane.md
+  - docs/verification/canvas-pilot/preview-subsystem/image-exporter.md
   - docs/verification/canvas-pilot/project-subsystem.md
   - docs/verification/canvas-pilot/project-subsystem/project-service.md
   - docs/verification/canvas-pilot/project-subsystem/recent-projects.md
@@ -33,6 +37,7 @@ input-files:
   - docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/verification/ots.md
   - docs/verification/ots/buildmark.md
+  - docs/verification/ots/canvasnet.md
   - docs/verification/ots/fileassert.md
   - docs/verification/ots/pandoc.md
   - docs/verification/ots/reqstream.md

@@ -1,0 +1,107 @@
+---
+# Software Unit Requirements for the ImageRenderService Unit
+#
+# The ImageRenderService unit draws an image source file on a background thread with the CanvasNet viewer
+# library, copies the pixels out as a straight-alpha RGBA picture, and encodes pictures as PNG. It is the one
+# place in the application that talks to CanvasNet's viewer and codecs. Ordinary failures are returned as
+# results with CanvasNet's own code and hint, never thrown.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        sections:
+          - title: ImageRenderService Requirements
+            requirements:
+              - id: CanvasPilot-ImageRenderService-RenderFileToPixels
+                title: >-
+                  The ImageRenderService shall draw an image source file on a background thread and return a
+                  picture that holds the file's width, height, drawn format, and pixels as red, green, blue,
+                  alpha bytes with straight alpha, rows from the top with no padding.
+                justification: |
+                  The preview and the exporter need the drawn picture as plain data that is independent of the
+                  drawing library and can be shown, tested, and saved. Drawing on a background thread keeps the
+                  window responsive while large or complex files render, and a copy of the pixels means no
+                  library object has to be kept alive or disposed by its users.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-RenderImageSources
+                tests:
+                  - ImageRenderService_RenderAsync_SvgFile_ReturnsPixelsSizeAndFormat
+                  - RenderedImage_New_ValidArguments_KeepsValues
+                  - RenderedImage_New_InvalidArguments_Throw
+                  - RenderResult_Factories_ReportExactlyOneOutcome
+
+              - id: CanvasPilot-ImageRenderService-ConfineFileAccess
+                title: >-
+                  The ImageRenderService shall allow the file it draws to read other files, such as embedded
+                  pictures, models, and data, only from inside the project folder, including its sub-folders.
+                justification: |
+                  Image source files can name other files by relative or absolute path, and projects may be
+                  shared. Confining those reads to the project folder keeps a file from drawing the contents
+                  of unrelated files from the user's computer into a picture that is then exported or sent
+                  on, while assets in the project's sub-folders still work.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ConfineFileAccess
+                tests:
+                  - ImageRenderService_RenderAsync_EmbeddedPictureOutsideProject_ReportsAccessDeniedNote
+                  - ImageRenderService_RenderAsync_EmbeddedPictureInProjectSubFolder_IsDrawnWithoutNotes
+
+              - id: CanvasPilot-ImageRenderService-ReportNotes
+                title: >-
+                  The ImageRenderService shall return the notes that the drawing library reports about a
+                  picture, each with a severity, a code, and a message, together with the picture.
+                justification: |
+                  A picture can be drawn successfully and still be incomplete, for example when an embedded
+                  file was denied or a feature is not supported. The user needs to see those notes next to
+                  the picture to understand what is missing.
+                tests:
+                  - ImageRenderService_RenderAsync_EmbeddedPictureOutsideProject_ReportsAccessDeniedNote
+                  - RenderDiagnostic_DisplayText_ShowsSeverityCodeAndMessage
+
+              - id: CanvasPilot-ImageRenderService-ReturnFailuresAsResults
+                title: >-
+                  The ImageRenderService shall return every failure to draw a file as an error result with a
+                  code, a message, and, when the drawing library gives one, a hint, using the library's own
+                  code and hint for the errors it describes, and shall not throw for such failures.
+                justification: |
+                  Users edit files while the application shows them, so missing, unreadable, unsupported, and
+                  malformed files are ordinary events. Returning them as results lets the preview explain the
+                  problem and carry on, and keeping the library's stable codes and hints gives the user the
+                  library's own advice on how to fix the file.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ReportFailures
+                tests:
+                  - ImageRenderService_RenderAsync_BrokenSvg_ReturnsCannotDrawErrorWithoutThrowing
+                  - ImageRenderService_RenderAsync_MissingFile_ReturnsInputNotFoundError
+                  - ImageRenderService_RenderAsync_UnsupportedExtension_ReturnsUnsupportedFormatError
+                  - ImageRenderService_RenderAsync_ViewerException_ReturnsItsCodeAndHint
+                  - ImageRenderService_RenderAsync_OtherFailures_AreReturnedAsErrors
+                  - ImageRenderService_RenderAsync_Failure_IsLogged
+                  - ImageRenderService_InvalidArguments_Throw
+
+              - id: CanvasPilot-ImageRenderService-HonorCancellation
+                title: >-
+                  The ImageRenderService shall stop a render when its cancellation token is cancelled, before
+                  or while the file is drawn, and return a cancelled result that is neither a picture nor an
+                  error.
+                justification: |
+                  The preview cancels a render when the user selects another file. A render that stops
+                  promptly does not waste the processor on a picture nobody will see, and a cancelled result
+                  is distinguishable from a failure so it is never shown as one.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-HonorCancellation
+                tests:
+                  - ImageRenderService_RenderAsync_AlreadyCancelledToken_ReturnsCancelledWithoutDrawing
+                  - ImageRenderService_RenderAsync_CancelledWhileRendering_ReturnsCancelled
+
+              - id: CanvasPilot-ImageRenderService-EncodePng
+                title: >-
+                  The ImageRenderService shall encode a rendered picture as the bytes of a PNG file that has
+                  the picture's size and pixels, including its transparency.
+                justification: |
+                  Exporting must save exactly what the user sees, with transparency intact, from the picture
+                  data alone, without drawing the source file again.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-EncodePng
+                tests:
+                  - ImageRenderService_EncodePng_Image_ProducesValidPngWithSamePixels

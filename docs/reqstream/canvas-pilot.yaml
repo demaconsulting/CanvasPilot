@@ -8,8 +8,9 @@
 #   without opening a window
 #
 # NOTE: This file currently covers only the capabilities delivered so far (operational logging,
-# safe file handling, persisted user settings, AI provider configuration, projects, the desktop shell, and
-# application startup). Additional system requirements are added as further subsystems are introduced.
+# safe file handling, persisted user settings, AI provider configuration, projects, image preview and export, the
+# desktop shell, and application startup). Additional system requirements are added as further subsystems are
+# introduced.
 
 sections:
   - title: CanvasPilot Requirements
@@ -103,6 +104,35 @@ sections:
           - CanvasPilot-Project-BrowseProjectImages
         tests:
           - CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles
+
+      - id: CanvasPilot-System-PreviewImages
+        title: >-
+          The application shall show the picture of the image source file the user selects, keep it matched to
+          the file as the file and the files it uses change, and explain files that cannot be drawn.
+        tags: [system]
+        justification: |
+          The user creates images by editing source files, so seeing each file's picture, up to date and
+          without leaving the application, is the core of the main window. Files are often invalid while being
+          edited, and the user needs to be told why instead of seeing a blank or stale picture.
+        children:
+          - CanvasPilot-Preview-RenderSelectedImage
+          - CanvasPilot-Preview-ExplainRenderProblems
+          - CanvasPilot-Preview-KeepPreviewCurrent
+        tests:
+          - CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError
+
+      - id: CanvasPilot-System-ExportImages
+        title: >-
+          The application shall let the user save the shown picture as a PNG file or copy it to the clipboard
+          for use in other programs.
+        tags: [system]
+        justification: |
+          The pictures are composed to be used in email, presentations, and other media, which take a PNG file
+          or a pasted picture.
+        children:
+          - CanvasPilot-Preview-ExportImage
+        tests:
+          - CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile
 
       - id: CanvasPilot-System-DesktopShell
         title: >-

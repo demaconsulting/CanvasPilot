@@ -24,6 +24,8 @@ sections:
                   sub-folders and application data in the hidden folder, so listing them would be noise.
                   Using the extensions that CanvasNet can draw keeps the list to files the application
                   can show.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ListSupportedTypes
                 tests:
                   - ProjectExplorerViewModel_Open_ProjectFolder_ListsOnlyRootImageSourceFilesSorted
                   - ProjectExplorerViewModel_Open_HiddenAttributeFile_IsNotListed

@@ -5,7 +5,7 @@ resource-path:
   - docs/design/canvas-pilot
   - docs/design/canvas-pilot/app-shell-subsystem
   - docs/design/canvas-pilot/logging-subsystem
-  - docs/design/canvas-pilot/project-subsystem
+  - docs/design/canvas-pilot/preview-subsystem  - docs/design/canvas-pilot/project-subsystem
   - docs/design/canvas-pilot/settings-subsystem
   - docs/design/canvas-pilot/utilities-subsystem
   - docs/design/ots
@@ -23,6 +23,10 @@ input-files:
   - docs/design/canvas-pilot/app-shell-subsystem/about-dialog.md
   - docs/design/canvas-pilot/logging-subsystem.md
   - docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md
+  - docs/design/canvas-pilot/preview-subsystem.md
+  - docs/design/canvas-pilot/preview-subsystem/image-render-service.md
+  - docs/design/canvas-pilot/preview-subsystem/preview-pane.md
+  - docs/design/canvas-pilot/preview-subsystem/image-exporter.md
   - docs/design/canvas-pilot/project-subsystem.md
   - docs/design/canvas-pilot/project-subsystem/project-service.md
   - docs/design/canvas-pilot/project-subsystem/recent-projects.md
@@ -36,6 +40,7 @@ input-files:
   - docs/design/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/design/ots.md
   - docs/design/ots/buildmark.md
+  - docs/design/ots/canvasnet.md
   - docs/design/ots/fileassert.md
   - docs/design/ots/pandoc.md
   - docs/design/ots/reqstream.md

@@ -1,7 +1,7 @@
 # Introduction
 
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on
-CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging,
+CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging, Preview,
 Project, Settings, and Utilities subsystems; further subsystems are added as they are introduced. It covers local
 software items (systems, subsystems, and units) and the OTS software items they consume.
 
@@ -21,6 +21,7 @@ Local items:
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
+  - **Preview** subsystem: **ImageRenderService**, **PreviewPane**, and **ImageExporter** units.
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
     **ProjectExplorer** units.
   - **Settings** subsystem: **SettingsService**, **SettingsDialog**, and **AiProviderSettingsPage** units.
@@ -29,6 +30,7 @@ Local items:
 OTS items:
 
 - **BuildMark**: integration and usage design.
+- **CanvasNet**: integration and usage design (runtime library).
 - **FileAssert**: integration and usage design.
 - **Pandoc**: integration and usage design.
 - **ReqStream**: integration and usage design.
@@ -50,9 +52,10 @@ The following topics are out of scope:
 The software structure is modeled in SysML2 under `docs/sysml2/` and rendered to the diagram
 below by SysML2Tools as part of the build pipeline. AI agents should query the SysML2 model
 directly (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose
-elsewhere in this document. The model captures the shipped system's runtime composition only;
-the OTS items listed in Scope above are build-time/pipeline tooling, documented separately
-(see `docs/design/ots.md`) rather than modeled as SysML2 parts.
+elsewhere in this document. The model captures the shipped system's runtime composition, including
+CanvasNet, the one runtime OTS item modeled so far (its units' dependencies point to it); the other OTS items
+listed in Scope above are documented separately (see `docs/design/ots.md`) and are formalized in the model with
+their own documents.
 
 ![Software Structure](SoftwareStructureView.svg)
 
@@ -62,6 +65,7 @@ the OTS items listed in Scope above are build-time/pipeline tooling, documented 
   - **DemaConsulting.CanvasPilot/** - main application library source
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
     - **LoggingSubsystem/** - local rolling log file subsystem
+    - **PreviewSubsystem/** - image rendering with CanvasNet, preview pane, and PNG and clipboard export
     - **ProjectSubsystem/** - projects, recent projects, New Project dialog, and project explorer
     - **SettingsSubsystem/** - persisted settings, settings dialog, and settings pages
     - **UtilitiesSubsystem/** - shared utilities subsystem

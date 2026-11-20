@@ -14,7 +14,8 @@ when renaming it, which the explorer leaves to its caller.
 **Explorer**: `ProjectExplorerViewModel` — the explorer shown on the left; the workspace owns and disposes it.
 
 **Preview** / **HasPreview**: `object?` and whether it is set. The view shows the content through the view locator
-when it is set.
+when it is set. The application sets it to the preview pane, whose own placeholder then replaces the workspace's.
+When the workspace is disposed it also disposes a `Preview` that is `IDisposable`.
 
 **HasProject** / **HasSelectedFile** / **SelectedFile**: taken from the explorer.
 
@@ -62,4 +63,5 @@ explorer as text and are shown to the user, not thrown.
 
 - **MainWindowShell** — hosts the workspace as the window content, calls `ShowProject` when the open project
   changes, and supplies the dialog service.
-- The image preview (a later increment) — sets `Preview` and reads `SelectedFile`.
+- The `PreviewPane` of the `Preview` subsystem — the application sets `Preview` to it, and it follows the
+  explorer's selection; the workspace disposes it with the explorer.

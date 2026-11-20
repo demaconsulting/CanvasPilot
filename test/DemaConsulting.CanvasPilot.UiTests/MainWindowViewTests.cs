@@ -21,8 +21,10 @@
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
@@ -327,9 +329,11 @@ public sealed class MainWindowViewTests : IDisposable
     [AvaloniaFact]
     public async Task MainWindowView_Workspace_SelectionAndPreview_ChangePlaceholderAndContent()
     {
-        // Arrange: a window showing a project with one image
+        // Arrange: a window showing a project with one image; the composed preview pane is removed so the
+        // workspace's own placeholder and preview slot can be checked on their own
         await CreateRememberedProjectAsync("Preview", "a.svg");
         var (composition, window) = CreateWindow();
+        composition.Shell.Workspace.Preview = null;
         window.Show();
         await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
         AppShellUiHelpers.Flush();
@@ -348,6 +352,75 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal("No preview available", withSelection);
         Assert.False(placeholder.IsEffectivelyVisible);
         Assert.True(SettingsUiHelpers.Find<ContentControl>(window, "WorkspacePreviewHost").IsEffectivelyVisible);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that selecting an image in the open project shows its rendered picture in the workspace's preview
+    ///     pane and enables the Image menu items, and that closing the project disables them again.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu()
+    {
+        // Arrange: a window showing a project that holds a valid SVG
+        await CreateRememberedProjectAsync("Preview", "a.svg");
+        var (composition, window) = CreateWindow();
+        window.Show();
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "a.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='12'><rect width='30' height='12' fill='#0000ff'/></svg>",
+            TestContext.Current.CancellationToken);
+        composition.Shell.Workspace.Explorer.Refresh();
+        var export = window.FindControl<MenuItem>("ExportPngMenuItem")!;
+        var copy = window.FindControl<MenuItem>("CopyImageMenuItem")!;
+        var disabledBefore = !IsUsable(export) && !IsUsable(copy);
+
+        // Act: select the file in the explorer and wait for the render
+        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var enabledWithPicture = IsUsable(export) && IsUsable(copy);
+        var bitmap = SettingsUiHelpers.Find<Image>(window, "PreviewImage").Source;
+        var shownSize = Assert.IsType<Avalonia.Media.Imaging.WriteableBitmap>(bitmap).PixelSize;
+        composition.Shell.CloseProjectCommand.Execute(null);
+        AppShellUiHelpers.Flush();
+
+        // Assert: the picture was shown at its size in the preview pane inside the workspace and the menu followed it
+        Assert.True(disabledBefore);
+        Assert.True(enabledWithPicture);
+        Assert.Equal(new Avalonia.PixelSize(30, 12), shownSize);
+        Assert.False(IsUsable(export));
+        Assert.False(IsUsable(copy));
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that copying a picture to the clipboard reports whether the platform clipboard took it, and that it
+    ///     is readable as a bitmap when it did.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable()
+    {
+        // Arrange: a shown main window and a 2 x 2 picture
+        var (_, window) = CreateWindow();
+        window.Show();
+        var pixels = new byte[2 * 2 * 4];
+        Array.Fill(pixels, (byte)255);
+        var image = new RenderedImage("a.svg", "svg", 2, 2, pixels);
+
+        // Act: copy it to the clipboard of the window
+        var copied = await window.CopyImageToClipboardAsync(image);
+        var clipboard = window.Clipboard;
+        var readBack = copied && clipboard is not null ? await clipboard.TryGetBitmapAsync() : null;
+
+        // Assert: the result matches whether the platform has a clipboard, and a copied picture can be read back
+        Assert.Equal(clipboard is not null, copied);
+        Assert.Equal(copied, readBack is not null);
+        Assert.Equal(copied ? new Avalonia.PixelSize(2, 2) : default, readBack?.PixelSize ?? default);
 
         window.Close();
     }

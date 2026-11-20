@@ -61,8 +61,12 @@ alone. This scenario is tested by `ProjectWorkspace_FileCommands_NoDialogService
 **ProjectWorkspace_Dispose_DisposesExplorer**: Disposing the workspace disposes the explorer. This scenario is
 tested by `ProjectWorkspace_Dispose_DisposesExplorer`.
 
-**MainWindowView_Workspace_SelectionAndPreview_ChangePlaceholderAndContent**: In the window the placeholder follows
-the list selection and supplied preview content hides it and shows the preview host. This scenario is tested by
+**ProjectWorkspace_Dispose_DisposesPreviewContent**: Disposing the workspace disposes a preview that needs
+disposal, such as the preview pane. This scenario is tested by `ProjectWorkspace_Dispose_DisposesPreviewContent`.
+
+**MainWindowView_Workspace_SelectionAndPreview_ChangePlaceholderAndContent**: In the window, with the composed
+preview pane removed, the workspace's placeholder follows the list selection and supplied preview content hides it
+and shows the preview host. This scenario is tested by
 `MainWindowView_Workspace_SelectionAndPreview_ChangePlaceholderAndContent`.
 
 **MainWindowView_DeleteSelectedFile_ConfirmDialog_RemovesFile**: Running Delete in the window shows a dialog naming

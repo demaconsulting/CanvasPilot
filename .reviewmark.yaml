@@ -199,6 +199,69 @@ reviews:
       - "src/**/LoggingSubsystem/RollingFileLogger.cs"
       - "test/**/LoggingSubsystem/RollingFileLoggerTests.cs"
 
+  # CanvasPilot - Preview
+  - id: CanvasPilot-Preview
+    title: Review of CanvasPilot Preview subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem.md"
+      - "docs/verification/canvas-pilot/preview-subsystem.md"
+      - "test/**/PreviewSubsystem/PreviewSubsystemTests.cs"
+
+  - id: CanvasPilot-Preview-ImageRenderService
+    title: Review of CanvasPilot ImageRenderService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/image-render-service.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/image-render-service.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/image-render-service.md"
+      - "src/**/PreviewSubsystem/IImageRenderService.cs"
+      - "src/**/PreviewSubsystem/ImageRenderService.cs"
+      - "src/**/PreviewSubsystem/RenderResult.cs"
+      - "test/**/PreviewSubsystem/ImageRenderServiceTests.cs"
+      - "test/**/PreviewSubsystem/RenderResultTests.cs"
+
+  - id: CanvasPilot-Preview-PreviewPane
+    title: Review of CanvasPilot PreviewPane unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/preview-pane.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/preview-pane.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/preview-pane.md"
+      - "src/**/PreviewSubsystem/IRenderedImageSource.cs"
+      - "src/**/PreviewSubsystem/PreviewPaneViewModel.cs"
+      - "src/**/PreviewSubsystem/PreviewPaneView.axaml"
+      - "src/**/PreviewSubsystem/PreviewPaneView.axaml.cs"
+      - "src/**/PreviewSubsystem/RenderedImageBitmap.cs"
+      - "test/**/PreviewSubsystem/PreviewPaneTests.cs"
+      - "test/**/PreviewSubsystem/RenderedImageBitmapTests.cs"
+      - "test/**/PreviewSubsystem/PreviewSubsystemFakes.cs"
+      - "test/**/PreviewPaneViewTests.cs"
+
+  - id: CanvasPilot-Preview-ImageExporter
+    title: Review of CanvasPilot ImageExporter unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/image-exporter.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/image-exporter.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/image-exporter.md"
+      - "src/**/PreviewSubsystem/ImageExporter.cs"
+      - "test/**/PreviewSubsystem/ImageExporterTests.cs"
   # CanvasPilot - Project
   - id: CanvasPilot-Project
     title: Review of CanvasPilot Project subsystem architecture and interfaces
@@ -381,6 +444,25 @@ reviews:
       - "docs/reqstream/ots/buildmark.yaml"
       - "docs/design/ots/buildmark.md"
       - "docs/verification/ots/buildmark.md"
+
+  - id: OTS-CanvasNet
+    title: Review of CanvasNet OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/canvasnet.yaml"
+      - "docs/design/ots/canvasnet.md"
+      - "docs/verification/ots/canvasnet.md"
+      - "test/**/CanvasNetTests.cs"
+
+  - id: OTS-Avalonia
+    title: Review of Avalonia and CommunityToolkit.Mvvm OTS verification tests
+    context:
+      - docs/design/ots.md
+      - docs/verification/ots.md
+    paths:
+      # The requirements, design, and verification documents of these runtime items are formalized with the
+      # dedicated OTS step; until then their self-validation tests are reviewed here.
+      - "test/OtsSoftwareTests/AvaloniaTests.cs"
+      - "test/OtsSoftwareTests/TestAppBuilder.cs"
 
   - id: OTS-FileAssert
     title: Review of FileAssert OTS verification evidence

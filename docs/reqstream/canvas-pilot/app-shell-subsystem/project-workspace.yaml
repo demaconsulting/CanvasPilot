@@ -29,6 +29,7 @@ sections:
                   - ProjectWorkspace_ShowProject_ListsFilesAndTracksSelection
                   - ProjectWorkspace_Preview_SuppliedContent_ReplacesPlaceholder
                   - ProjectWorkspace_Dispose_DisposesExplorer
+                  - ProjectWorkspace_Dispose_DisposesPreviewContent
                   - MainWindowView_Workspace_SelectionAndPreview_ChangePlaceholderAndContent
 
               - id: CanvasPilot-ProjectWorkspace-FollowOpenProject

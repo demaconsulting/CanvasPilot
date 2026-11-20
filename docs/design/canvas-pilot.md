@@ -5,9 +5,8 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented so far are five subsystems, `AppShell`, `Logging`, `Project`, `Settings`, and
-`Utilities`; further subsystems (speech and image preview) are added to this document as they are
-introduced.
+software items documented so far are six subsystems, `AppShell`, `Logging`, `Preview`, `Project`, `Settings`, and
+`Utilities`; a further subsystem (speech) is added to this document as it is introduced.
 
 ```mermaid
 flowchart TD
@@ -18,6 +17,11 @@ flowchart TD
     end
     subgraph Logging
         RollingFileLogger
+    end
+    subgraph Preview
+        ImageRenderService
+        PreviewPane
+        ImageExporter
     end
     subgraph Project
         ProjectService
@@ -34,6 +38,14 @@ flowchart TD
         PathHelpers
     end
     RollingFileLogger --> PathHelpers
+    ImageRenderService --> RollingFileLogger
+    PreviewPane --> ImageRenderService
+    PreviewPane --> ProjectExplorer
+    PreviewPane --> ProjectService
+    PreviewPane --> RollingFileLogger
+    ImageExporter --> ImageRenderService
+    ImageExporter --> MainWindowShell
+    ImageExporter --> RollingFileLogger
     ProjectService --> PathHelpers
     ProjectService --> RollingFileLogger
     RecentProjects --> SettingsService
@@ -77,9 +89,16 @@ the refresh scheduler that these units use, so the `Project` subsystem does not 
 
 `MainWindowShell` is the view model of the main window and the only item that talks to the user about projects and
 settings: it runs the File, Image, Tools, and Help commands and shows its dialogs through an `IDialogService` that
-the window implements. `ProjectWorkspace` holds the project explorer and the place for the image preview, and
+the window implements. `ProjectWorkspace` holds the project explorer and the preview pane, and
 `AboutDialog` identifies the application. At startup the application builds all units in one place,
 `ApplicationComposition`, which system tests also use without a window.
+
+`ImageRenderService` is the only item that draws files: it calls the CanvasNet viewer library in the background,
+confined to the project folder, and returns the pixels, notes, or a coded error. `PreviewPane` follows the
+selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders that are no
+longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture as a PNG
+file or copies it to the clipboard for the Image menu. The `Preview` subsystem reaches the main window only through
+`IImageExporter` and `IDialogService`, which `MainWindowShell` owns.
 
 ## External Interfaces
 
@@ -131,6 +150,17 @@ works with its files.
 - *Constraints*: OK is enabled only for a project that can be created. The list shows only image source files in
   the project root and follows file changes.
 
+**Image Preview and Export**: The picture of the selected file, and the files and clipboard it is exported to.
+
+- *Direction*: Input (the selected image source file and the files it uses) and output (the picture, a PNG file,
+  and a clipboard image).
+- *Type*: Avalonia control in the main window, files on the local file system, and the system clipboard.
+- *Format*: The picture is drawn by CanvasNet at the file's natural size. An export is a PNG file with the same
+  pixels, including transparency; a copy is a bitmap on the clipboard.
+- *Constraints*: The drawn file may read other files only from inside the project folder. A file that cannot be
+  drawn is explained with its error code, message, and hint, never an unhandled failure. Export and copy are
+  enabled only while a picture is shown.
+
 **Main Window**: The application's window and menus.
 
 - *Direction*: Input and output.
@@ -143,13 +173,12 @@ works with its files.
 
 ## Dependencies
 
-The `AppShell`, `Logging`, `Project`, `Settings`, and `Utilities` subsystems use .NET base class library types,
-`System.Text.Json` for the settings and project files, and, for dialogs, pages, and lists, Avalonia and
-CommunityToolkit.Mvvm, which are runtime third-party items. The `ProjectExplorer` unit also uses the extension
-list of the `DemaConsulting.CanvasNet.Viewer` library to decide which files are image sources; its OTS
-documentation is added with the image preview subsystem. Third-party items consumed at run time are
-documented with the subsystems that use them as those subsystems are added. Build, documentation, and quality
-tools are documented in the OTS design documents (see *OTS Dependencies*).
+The `AppShell`, `Logging`, `Preview`, `Project`, `Settings`, and `Utilities` subsystems use .NET base class library
+types, `System.Text.Json` for the settings and project files, and, for dialogs, pages, and lists, Avalonia and
+CommunityToolkit.Mvvm, which are runtime third-party items. The `ImageRenderService` unit draws files and encodes PNG
+with the `DemaConsulting.CanvasNet.Viewer` library, and the `ProjectExplorer` unit uses its extension list to decide
+which files are image sources; the library is documented as an OTS item (see *OTS Dependencies*). Build,
+documentation, and quality tools are documented in the OTS design documents.
 
 ## Risk Control Measures
 
@@ -178,6 +207,12 @@ damaged. Renaming a file never replaces an existing file or folder, and deleting
 confirm with the user. Names are checked against rules that reject separators, traversal, hidden names, and
 reserved device names.
 
+**Confined drawing**: The files that a drawn file references (embedded pictures, model includes, chart data) are read
+only from inside the project folder, through CanvasNet's `UnderRoots` file access policy, so an image source file
+cannot pull unrelated files of the user's computer into a picture that is exported or shared. A denied file is
+reported as a note. Drawing runs in the background and can be cancelled, so a slow or hostile file cannot block the
+window.
+
 ## Data Flow
 
 Application subsystems call `RollingFileLogger.Log` with a severity, a message, and optional exception
@@ -199,11 +234,18 @@ through `SettingsService`, and the project folder is opened in `ProjectExplorer`
 files, watches the folder, and refreshes the list after file changes.
 
 At startup `App` asks `ApplicationComposition` to build the units: the logger, the settings service (whose settings
-are loaded at once), the project service, the recent projects list, the project explorer, the workspace, and the
-shell. The `MainWindowView` is created over the shell and gives itself to the shell as the dialog service. From
+are loaded at once), the project service, the recent projects list, the project explorer, the render service, the
+preview pane, the workspace, the image exporter, and the shell. The `MainWindowView` is created over the shell and
+gives itself to the shell as the dialog service. From
 then on the user's menu choices become shell commands, which call the `Project` and `Settings` subsystems, show
 dialogs through the dialog service, and, when the open project changes, update the window title and open or close
 the project in the workspace. On exit `App` disposes the composition.
+
+When the user selects a file in `ProjectExplorer`, `PreviewPane` cancels any render that is running and asks
+`ImageRenderService` to draw the file in the background; the result, a picture with notes or an error with its
+code and hint, is shown unless a newer render was started meanwhile. When files in the project change, the pane
+renders again after a short delay. The Image menu runs `ImageExporter`, which encodes the shown picture as PNG and
+writes it where the user chooses, or hands it to the window to put on the clipboard.
 
 ## Design Constraints
 
@@ -224,6 +266,10 @@ the project in the workspace. On exit `App` disposes the composition.
 - View models shall talk to the user only through `IDialogService`, which the main window implements, so no
   view model references a window.
 - Every control that a test or assistive technology must find shall carry an automation identifier.
-- The image preview shall plug into the shell through `IImageExporter` and `ProjectWorkspaceViewModel.Preview`
-  and shall not require changes to the shell's commands.
+- The image preview plugs into the shell through `IImageExporter` and `ProjectWorkspaceViewModel.Preview`
+  and does not require changes to the shell's commands.
+- Only `ImageRenderService` shall call the CanvasNet viewer to draw, and it shall confine the files a drawn file
+  reads to the project folder.
+- Rendering shall never run on the user interface thread, and the result of a render that is no longer wanted shall
+  never be shown.
 - The application's units shall be built only in `ApplicationComposition`.

@@ -287,6 +287,23 @@ public sealed class ProjectWorkspaceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that disposing the workspace also disposes a preview that needs disposal, such as the preview pane.
+    /// </summary>
+    [Fact]
+    public void ProjectWorkspace_Dispose_DisposesPreviewContent()
+    {
+        // Arrange: a workspace whose preview needs disposal
+        var probe = new DisposeProbe();
+        var workspace = new ProjectWorkspaceViewModel(NewExplorer()) { Preview = probe };
+
+        // Act: dispose the workspace
+        workspace.Dispose();
+
+        // Assert: the preview was disposed
+        Assert.True(probe.IsDisposed);
+    }
+
+    /// <summary>
     ///     Creates a workspace with the dialog service attached.
     /// </summary>
     /// <returns>The workspace, disposed with the fixture.</returns>
@@ -326,5 +343,22 @@ public sealed class ProjectWorkspaceTests : IDisposable
         {
             File.WriteAllText(Path.Combine(_folder, name), "x");
         }
+    }
+}
+
+/// <summary>
+///     Content that records whether it was disposed, standing in for a preview that needs disposal.
+/// </summary>
+internal sealed class DisposeProbe : IDisposable
+{
+    /// <summary>
+    ///     Gets a value indicating whether the object was disposed.
+    /// </summary>
+    public bool IsDisposed { get; private set; }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        IsDisposed = true;
     }
 }

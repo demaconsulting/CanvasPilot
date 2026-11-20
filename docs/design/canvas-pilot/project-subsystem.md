@@ -91,5 +91,6 @@ to refresh.
 
 The `NewProjectDialog` and `ProjectExplorer` are bound to their views through the application's view locator,
 which maps a view model `XxxViewModel` to the view `XxxView` in the same namespace. The explorer uses the
-extension list of the CanvasNet viewer library to decide which files are image sources; that library is the
-only third-party item the subsystem consumes beyond Avalonia and CommunityToolkit.Mvvm.
+extension list of the CanvasNet viewer library to decide which files are image sources (see the CanvasNet OTS
+design); that library is the only third-party item the subsystem consumes beyond Avalonia and
+CommunityToolkit.Mvvm. Drawing the selected file is the job of the `Preview` subsystem.

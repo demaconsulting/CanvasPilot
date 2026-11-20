@@ -1,0 +1,113 @@
+---
+# Software Unit Requirements for the PreviewPane Unit
+#
+# The PreviewPane unit is the preview pane's view model and view. It follows the file selected in the project
+# explorer, renders it in the background through the image render service, keeps stale renders from replacing
+# newer ones, renders again when files change on disk, converts the picture for display, and shows the picture,
+# the busy state, the render error with its code and hint, and the notes of the render.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        sections:
+          - title: PreviewPane Requirements
+            requirements:
+              - id: CanvasPilot-PreviewPane-RenderSelectedFile
+                title: >-
+                  The PreviewPane shall render the file selected in the project explorer, in the open
+                  project's folder, as soon as the selection or the project changes, and shall show the
+                  resulting picture with its size and format.
+                justification: |
+                  The user works on one file at a time and expects to see it as soon as it is chosen,
+                  without a separate command.
+                tests:
+                  - PreviewPaneViewModel_SelectFile_RenderSucceeds_ShowsBusyThenImageStatusAndNotes
+                  - PreviewPaneViewModel_New_FileAlreadySelected_StartsRender
+                  - PreviewPaneView_SvgSelected_ShowsBitmapWithConvertedPixels
+                  - MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu
+
+              - id: CanvasPilot-PreviewPane-DiscardStaleRenders
+                title: >-
+                  The PreviewPane shall cancel the render that is running when the selection changes, the
+                  project closes, or the pane is disposed, and shall never let the result of an earlier
+                  render replace what a later render or a cleared selection shows.
+                justification: |
+                  Renders take different times, so an earlier file's result can arrive after a later one's.
+                  Showing it would put the wrong picture next to the selected file name, and a render that is
+                  no longer wanted should stop using the processor.
+                tests:
+                  - PreviewPaneViewModel_SelectAnotherFile_CancelsRunningRenderAndIgnoresStaleResult
+                  - PreviewPaneViewModel_SelectAnotherFile_StaleErrorIsIgnored
+                  - PreviewPaneViewModel_SelectionCleared_CancelsRenderAndClearsPane
+                  - PreviewPaneViewModel_ProjectClosed_CancelsRenderAndClearsPane
+                  - PreviewPaneViewModel_Dispose_CancelsRenderIgnoresResultAndIsRepeatable
+                  - PreviewPaneView_ProjectClosed_ClearsPicture
+
+              - id: CanvasPilot-PreviewPane-ShowBusyAndErrors
+                title: >-
+                  The PreviewPane shall show a busy indicator and the name of the file while a render runs,
+                  and shall show a render that failed as its error code, message, and hint, without a
+                  picture, and shall not stay busy when the render service fails unexpectedly.
+                justification: |
+                  A render can take noticeable time, and a file that cannot be drawn is the usual result of
+                  an edit in progress. The user needs to see that work is going on, and then either the
+                  picture or what to fix.
+                tests:
+                  - PreviewPaneViewModel_RenderFails_ShowsCodeMessageAndHintAndClearsImage
+                  - PreviewPaneViewModel_RenderFailsWithoutHint_ShowsNoHint
+                  - PreviewPaneViewModel_RenderServiceThrows_ShowsOperationFailedAndIsNotBusy
+                  - PreviewPaneViewModel_CurrentRenderReportsCancelled_IsNotBusyAndShowsNothing
+                  - PreviewPaneView_BrokenFile_ShowsErrorCodeMessageAndHint
+                  - PreviewPaneView_RenderRunning_ShowsBusyIndicatorUntilDone
+
+              - id: CanvasPilot-PreviewPane-ShowDiagnostics
+                title: >-
+                  The PreviewPane shall list the notes that the render reported, with their number, next to
+                  the picture, and shall show no list when there are none.
+                justification: |
+                  A picture can be drawn and still lack something, such as an embedded file that was denied.
+                  Listing the notes explains why the picture differs from what the file intends.
+                tests:
+                  - PreviewPaneViewModel_SelectFile_RenderSucceeds_ShowsBusyThenImageStatusAndNotes
+                  - PreviewPaneView_RenderWithNotes_ListsDiagnostics
+
+              - id: CanvasPilot-PreviewPane-RenderAgainOnFileChanges
+                title: >-
+                  The PreviewPane shall watch the project folder, including its sub-folders but not the
+                  hidden data folder or the project file, and render the selected file again after a short
+                  delay once files change, so that a burst of changes causes one render, while keeping the
+                  current picture visible until the new one is ready.
+                justification: |
+                  Files are edited by other tools while the application shows them, and a drawing depends on
+                  the files it embeds, which may be in sub-folders. Following the folder keeps the picture
+                  current without the user asking, the delay avoids a render for every intermediate save,
+                  and the hidden data folder and project file are not pictures or their assets.
+                tests:
+                  - PreviewPaneViewModel_RequestRerender_Burst_CoalescesIntoOneRenderAndKeepsPicture
+                  - PreviewPaneViewModel_SelectionChangesWhileRerenderPending_DiscardsPendingRender
+                  - PreviewPaneViewModel_FileChangesOnDisk_WatcherRequestsRerender
+                  - PreviewPaneViewModel_FileChangesWithoutSelection_RequestsNoRender
+                  - PreviewPaneViewModel_IsRelevantChange_ProjectPaths_IgnoresDataFolderAndProjectFile
+                  - PreviewPaneViewModel_IsRelevantChange_PathOutsideProject_IsRelevant
+
+              - id: CanvasPilot-PreviewPane-ConvertPixelsForDisplay
+                title: >-
+                  The PreviewPane shall convert a rendered picture's straight-alpha red, green, blue, alpha
+                  pixels to the premultiplied blue, green, red, alpha pixels of a display bitmap, rounding to
+                  the nearest value and respecting the bitmap's row size, and shall show the bitmap scaled to
+                  fit the pane or at its own size with scroll bars as the user chooses.
+                justification: |
+                  Showing a picture with the wrong channel order or alpha representation gives wrong colors
+                  and dark fringes around transparent areas. Fitting large pictures to the pane makes them
+                  viewable at a glance, while actual size lets the user inspect detail.
+                tests:
+                  - RenderedImageBitmap_Convert_OpaquePixels_SwapsRedAndBlueOnly
+                  - RenderedImageBitmap_Convert_SemiTransparentPixel_MultipliesColorByAlpha
+                  - RenderedImageBitmap_Convert_TransparentPixel_BecomesZero
+                  - RenderedImageBitmap_Convert_WiderDestinationRows_UsesStrideAndKeepsPadding
+                  - RenderedImageBitmap_Convert_InvalidArguments_Throw
+                  - RenderedImageBitmap_Create_Picture_HasSizeAndPremultipliedBgraPixels
+                  - PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars
+                  - PreviewPaneViewModel_New_NoProject_ShowsPlaceholderAndFitsWindow
+                  - PreviewPaneViewModel_New_NullArguments_Throw

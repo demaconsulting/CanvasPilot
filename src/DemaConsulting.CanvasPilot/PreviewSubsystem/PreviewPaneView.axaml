@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.PreviewSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.PreviewSubsystem.PreviewPaneView"
+             x:DataType="vm:PreviewPaneViewModel">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <DockPanel Grid.Row="0" Margin="6,4" LastChildFill="False">
+      <CheckBox Name="FitToWindowCheckBox"
+                AutomationProperties.AutomationId="PreviewFitToWindow"
+                DockPanel.Dock="Left"
+                Content="Fit to window"
+                IsChecked="{Binding FitToWindow}" />
+      <ProgressBar Name="BusyIndicator"
+                   AutomationProperties.AutomationId="PreviewBusy"
+                   DockPanel.Dock="Right"
+                   Width="120"
+                   IsIndeterminate="True"
+                   IsVisible="{Binding IsBusy}" />
+    </DockPanel>
+
+    <Grid Grid.Row="1">
+
+      <ScrollViewer Name="ImageScroller"
+                    AutomationProperties.AutomationId="PreviewScroller"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Disabled"
+                    IsVisible="{Binding HasImage}">
+        <Image Name="PreviewImage"
+               AutomationProperties.AutomationId="PreviewImage"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               Stretch="Uniform"
+               StretchDirection="DownOnly" />
+      </ScrollViewer>
+
+      <StackPanel Name="ErrorPanel"
+                  AutomationProperties.AutomationId="PreviewErrorPanel"
+                  Margin="16"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  MaxWidth="640"
+                  Spacing="6"
+                  IsVisible="{Binding HasError}">
+        <TextBlock AutomationProperties.AutomationId="PreviewErrorTitle"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Foreground="Firebrick"
+                   TextWrapping="Wrap"
+                   Text="{Binding ErrorTitle}" />
+        <TextBlock AutomationProperties.AutomationId="PreviewErrorMessage"
+                   TextWrapping="Wrap"
+                   Text="{Binding ErrorMessage}" />
+        <TextBlock AutomationProperties.AutomationId="PreviewErrorHint"
+                   Opacity="0.8"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasErrorHint}"
+                   Text="{Binding ErrorHint}" />
+      </StackPanel>
+
+      <TextBlock AutomationProperties.AutomationId="PreviewPlaceholder"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 FontSize="16"
+                 Opacity="0.7"
+                 IsVisible="{Binding ShowPlaceholder}"
+                 Text="{Binding PlaceholderText}" />
+
+    </Grid>
+
+    <StackPanel Grid.Row="2" Margin="6,4" Spacing="2">
+      <TextBlock AutomationProperties.AutomationId="PreviewStatus"
+                 Opacity="0.8"
+                 TextTrimming="CharacterEllipsis"
+                 Text="{Binding StatusText}" />
+      <Expander AutomationProperties.AutomationId="PreviewDiagnosticsExpander"
+                Header="{Binding DiagnosticsHeader}"
+                IsVisible="{Binding HasDiagnostics}">
+        <ScrollViewer MaxHeight="120">
+          <ItemsControl AutomationProperties.AutomationId="PreviewDiagnostics"
+                        ItemsSource="{Binding Diagnostics}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RenderDiagnostic">
+                <TextBlock Margin="0,1"
+                           TextWrapping="Wrap"
+                           Text="{Binding DisplayText}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Expander>
+    </StackPanel>
+
+  </Grid>
+
+</UserControl>

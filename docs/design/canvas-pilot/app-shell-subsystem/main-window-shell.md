@@ -23,7 +23,8 @@ this unit.
 `FilePath`, `OpenCommand`) built from `IRecentProjects.GetRecent`. `Header` doubles underscores so the menu does
 not treat them as access keys.
 
-**ImageExporter**: `IImageExporter` — `NullImageExporter` unless one is supplied to the constructor.
+**ImageExporter**: `IImageExporter` — `NullImageExporter` unless one is supplied to the constructor; the application
+supplies the exporter of the `Preview` subsystem.
 
 **Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled
 while a project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can
@@ -35,7 +36,8 @@ export), `OpenSettingsCommand`, and `ShowAboutCommand`.
 (unavailable for a prompt whose entry is blank), `CancelCommand`, and `CloseRequested`.
 
 **Main window**: `MainWindowView` has a `Menu` (`MainMenu`) with the four menus and a host for the workspace. It
-implements `IDialogService` with `ShowDialog`, `StorageProvider`, and the message dialog. Its constructor passes
+implements `IDialogService` with `ShowDialog`, `StorageProvider`, the clipboard, and the message dialog. Its
+constructor passes
 itself to `AttachDialogService`, and `ExitRequested` closes it.
 
 #### Key Methods
@@ -70,6 +72,11 @@ its own operations. `Dispose` unsubscribes and disposes the workspace.
 **Dialog service**: `AttachDialogService` gives the shell, and through it the workspace, the dialog service. Until
 it is attached the commands that need the user do nothing.
 
+**Clipboard image**: `IDialogService.CopyImageToClipboardAsync(image)` is implemented by the window: it creates a
+bitmap from the picture (`RenderedImageBitmap.Create`), puts it on the window's clipboard with `SetBitmapAsync`,
+and flushes the clipboard so the image survives the application exiting. It answers `false` when the platform has
+no clipboard or refuses the image.
+
 #### Error Handling
 
 The constructor throws `ArgumentNullException` for a missing collaborator, and `AttachDialogService` does the
@@ -85,9 +92,10 @@ texts or a blank accepting label.
 - **SettingsDialog** and **SettingsService** (through `ISettingsService` and `ISettingsPage`) — the settings dialog.
 - **ProjectWorkspace** and **AboutDialog** — the content area and the About dialog.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.
-- **Avalonia** — the window, menus, dialogs, and storage provider.
+- **Avalonia** — the window, menus, dialogs, storage provider, and clipboard.
 
 #### Callers
 
 - `App` (through `ApplicationComposition`) — creates the shell and shows `MainWindowView` over it.
-- The image preview (a later increment) — supplies the `IImageExporter` and the workspace's preview content.
+- The `Preview` subsystem — `ImageExporter` supplies the `IImageExporter`, and the preview pane is the workspace's
+  preview content; `ApplicationComposition` connects them.

@@ -86,8 +86,9 @@ entry are ignored.
 - **ProjectService** — the project file extension constant and the file name rules.
 - **PathHelpers** — resolves the renamed file path.
 - **RollingFileLogger** — optional; records read, delete, rename, and watcher problems.
-- **DemaConsulting.CanvasNet.Viewer** — only `CanvasNetViewer.Extensions`, through
-  `CanvasNetImageSourceFilter`. Rendering is not part of this unit.
+- **DemaConsulting.CanvasNet.Viewer** (OTS) — only `CanvasNetViewer.Extensions`, through
+  `CanvasNetImageSourceFilter`; see the CanvasNet OTS design. Drawing files is done by `ImageRenderService`
+  of the `Preview` subsystem, not by this unit.
 - **CommunityToolkit.Mvvm**, **Avalonia** — notification, source generators, controls, and the user interface
   thread dispatcher.
 

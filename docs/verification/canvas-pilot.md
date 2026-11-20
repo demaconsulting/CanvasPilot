@@ -28,6 +28,8 @@ services, or display is required.
 - A project created in a folder is reopened from the recent projects list, and a damaged project file is
   refused with a message and a log entry without changing the open project.
 - The project explorer lists the image source files of the open project and not other content.
+- A selected image source file is rendered and shown with its size, a file that cannot be drawn shows an error with
+  its code, and the shown picture can be exported as a valid PNG file.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The main window shell creates a project, lists its image files, finds it in the recent projects after a
@@ -73,6 +75,15 @@ the commands that need nothing are available, those that need a project are not,
 effect, and the log holds the start and stop entries. The platform requirements link this test to each platform
 and runtime with source filters. This scenario is tested by
 `CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell`.
+
+**CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError**: The composed application's user creates a
+project that holds a good and a broken SVG and selects the good file: the preview shows a 32 by 16 picture and the
+image export is available. Selecting the broken file shows an error with the code `cannot-draw`, no picture, and no
+export. This scenario is tested by `CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError`.
+
+**CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile**: With the good SVG shown, the Export as PNG command is
+enabled and, with a chosen file, writes a file that starts with the PNG signature and whose header holds width 32 and
+height 16. This scenario is tested by `CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile`.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

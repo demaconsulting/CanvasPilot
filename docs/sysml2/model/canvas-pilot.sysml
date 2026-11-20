@@ -4,8 +4,8 @@ package CanvasPilot {
     doc
     /*
      * CanvasPilot is an AI-assisted drawing application built on CanvasNet.
-     * The current build contains the application shell, logging, project, settings, and utility subsystems; further
-     * subsystems are added to this system as they are introduced.
+     * The current build contains the application shell, logging, preview, project, settings, and utility subsystems;
+     * further subsystems are added to this system as they are introduced.
      */
 
     part def CanvasPilotSystem {
@@ -20,8 +20,12 @@ package CanvasPilot {
 
         part appShell : AppShellSubsystem;
         part logging : LoggingSubsystem;
+        part preview : PreviewSubsystem;
         part project : ProjectSubsystem;
         part settings : SettingsSubsystem;
         part utilities : UtilitiesSubsystem;
+
+        // CanvasNet is consumed at run time by the Preview and Project subsystems.
+        part canvasNet : Ots::CanvasNet;
     }
 }

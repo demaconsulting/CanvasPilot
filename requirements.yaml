@@ -20,6 +20,10 @@ includes:
   - docs/reqstream/canvas-pilot/project-subsystem/recent-projects.yaml
   - docs/reqstream/canvas-pilot/project-subsystem/new-project-dialog.yaml
   - docs/reqstream/canvas-pilot/project-subsystem/project-explorer.yaml
+  - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+  - docs/reqstream/canvas-pilot/preview-subsystem/image-render-service.yaml
+  - docs/reqstream/canvas-pilot/preview-subsystem/preview-pane.yaml
+  - docs/reqstream/canvas-pilot/preview-subsystem/image-exporter.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem/settings-service.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem/settings-dialog.yaml
@@ -28,6 +32,7 @@ includes:
   - docs/reqstream/canvas-pilot/utilities-subsystem/path-helpers.yaml
   - docs/reqstream/canvas-pilot/platform-requirements.yaml
   - docs/reqstream/ots/xunit.yaml
+  - docs/reqstream/ots/canvasnet.yaml
   - docs/reqstream/ots/reqstream.yaml
   - docs/reqstream/ots/buildmark.yaml
   - docs/reqstream/ots/versionmark.yaml

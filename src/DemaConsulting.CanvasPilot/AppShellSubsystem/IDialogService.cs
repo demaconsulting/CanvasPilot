@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
@@ -67,6 +68,16 @@ public interface IDialogService : IFolderPicker
     /// <param name="filterPattern">The file name pattern of the type, for example <c>*.png</c>.</param>
     /// <returns>The full path chosen, or <see langword="null" /> when cancelled.</returns>
     Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern);
+
+    /// <summary>
+    ///     Puts a picture on the system clipboard as an image.
+    /// </summary>
+    /// <param name="image">The picture to copy.</param>
+    /// <returns>
+    ///     <see langword="true" /> when the picture is on the clipboard; <see langword="false" /> when the
+    ///     platform has no clipboard available or refused it.
+    /// </returns>
+    Task<bool> CopyImageToClipboardAsync(RenderedImage image);
 
     /// <summary>
     ///     Shows a message with an OK button.

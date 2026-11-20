@@ -4,7 +4,7 @@
 # The MainWindowShell unit is the main window's view model and the window that shows it. It owns the File, Image,
 # Tools, and Help commands, follows the open project in the window title, lists the recent projects, and talks
 # to the user only through an IDialogService that the window implements. The Image menu commands run through an
-# IImageExporter seam that the image preview plugs into later.
+# IImageExporter seam that the image preview plugs into.
 
 sections:
   - title: CanvasPilot Requirements
@@ -119,11 +119,13 @@ sections:
                   - MainWindowShell_ImageCommands_FollowExporterAndInvokeIt
                   - NullImageExporter_Default_IsDisabledAndDoesNothing
                   - MainWindowView_ImageMenu_ExporterEnables_ItemsEnabledAndRunExporter
+                  - MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu
 
               - id: CanvasPilot-MainWindowShell-TalkToUserThroughDialogService
                 title: >-
-                  The MainWindowShell shall ask questions, show messages, and let the user pick folders and
-                  files only through an IDialogService that the main window implements, with message,
+                  The MainWindowShell shall ask questions, show messages, let the user pick folders and
+                  files, and place an image on the clipboard only through an IDialogService that the main
+                  window implements, with message,
                   confirmation, and one-line prompt dialogs whose accepting button is unavailable for a blank
                   prompt, and shall answer a cancelled platform picker as no choice.
                 justification: |
@@ -140,3 +142,4 @@ sections:
                   - MainWindowView_Confirm_ConfirmAndCancelButtons_ReturnAnswer
                   - MainWindowView_Prompt_TypedTextAndCancel_ReturnTrimmedTextOrNull
                   - MainWindowView_Pickers_HeadlessPlatform_ReturnNull
+                  - MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable

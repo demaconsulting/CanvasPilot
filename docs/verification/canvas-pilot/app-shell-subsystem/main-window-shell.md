@@ -173,6 +173,15 @@ project name with the underscore doubled and its command opens the project. This
 exporter reports an image, then usable, and each reaches the exporter. This scenario is tested by
 `MainWindowView_ImageMenu_ExporterEnables_ItemsEnabledAndRunExporter`.
 
+**MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu**: With the composed application, selecting an SVG in the
+explorer shows its bitmap in the preview pane inside the workspace and makes the Image items usable; closing the
+project makes them unusable again. This scenario is tested by
+`MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu`.
+
+**MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable**: The window puts a picture on its
+clipboard as a bitmap, answers whether that worked, and the clipboard returns a bitmap of the same size. This
+scenario is tested by `MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable`.
+
 **MainWindowView_ShowMessage_OkButtonClosesDialog**: A message dialog shows its text without a text entry or
 Cancel, and OK closes it. This scenario is tested by `MainWindowView_ShowMessage_OkButtonClosesDialog`.
 

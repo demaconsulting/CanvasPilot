@@ -24,21 +24,22 @@ and are described here because they only join the units together.
 - *Contract*: `ShowNewProjectAsync`, `ShowSettingsAsync`, and `ShowAboutAsync` show modal dialogs;
   `PickFolderAsync`, `PickProjectFileAsync`, and `PickSaveFileAsync` return a path or `null` when cancelled;
   `ShowMessageAsync`, `ConfirmAsync`, and `PromptAsync` show a message, ask for confirmation, and ask for a line
-  of text. Every method completes when the user has closed the dialog.
+  of text; `CopyImageToClipboardAsync` puts a picture on the clipboard and answers whether it succeeded. Every
+  other method completes when the user has closed the dialog.
 - *Constraints*: A platform picker that cannot be shown answers `null`, which reads as cancelled.
 
 **Image Exporter**: The extension point behind the Image menu.
 
 - *Type*: In-process .NET API (`IImageExporter`).
-- *Role*: Provider of the contract; the image preview is expected to supply the implementation. The shell uses
-  `NullImageExporter` until then.
+- *Role*: Provider of the contract; the `ImageExporter` of the `Preview` subsystem is the implementation, and the
+  shell uses `NullImageExporter` when none is supplied.
 - *Contract*: `CanExport` and `CanExportChanged` say whether an image can be exported or copied;
   `ExportPngAsync(dialogs)` and `CopyImageAsync(dialogs)` perform the operations using the dialog service.
 
 **Preview Content**: The extension point in the workspace.
 
 - *Type*: In-process .NET API (`ProjectWorkspaceViewModel.Preview`, an object property).
-- *Role*: Provider; the image preview supplies a view model and the view locator shows its view.
+- *Role*: Provider; the preview pane supplies a view model and the view locator shows its view.
 - *Contract*: While `Preview` is `null` the workspace shows a placeholder; otherwise it shows the content.
 
 **Project, Recent Projects, and Settings APIs**: What the shell uses.
@@ -60,7 +61,8 @@ and are described here because they only join the units together.
 
 1. At startup `App` calls `ApplicationComposition.CreateDefault`, which creates the logger, the settings service
    (and loads the settings), the project service, the recent projects list, the project explorer with its image
-   source filter and refresh scheduler, the workspace, and the shell, in that order, and logs the start.
+   source filter and refresh scheduler, the render service, the preview pane, the workspace (which shows the
+   preview pane), the image exporter, and the shell, in that order, and logs the start.
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. `App` records unhandled errors in the log and disposes the composition when the application exits.
 3. The shell follows the project service: when the open project changes it updates the title and shows the
@@ -69,7 +71,7 @@ and are described here because they only join the units together.
 4. The File, Image, Tools, and Help commands are methods of the shell that talk to the user through the dialog
    service. The workspace gets the same dialog service for the confirmed delete and the rename prompt.
 5. The view locator maps a view model `XxxViewModel` to the view `XxxView` of the same namespace, so the workspace
-   shows the explorer, and later the preview, without referencing their views.
+   shows the explorer and the preview without referencing their views.
 
 The composition is deliberately plain construction code with no container, so the dependencies of every unit are
 visible in one place. System tests call the same composition with temporary folders and no window.

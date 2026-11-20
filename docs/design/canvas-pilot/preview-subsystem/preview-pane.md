@@ -1,0 +1,97 @@
+### PreviewPane
+
+![Preview Structure](PreviewSubsystemView.svg)
+
+#### Purpose
+
+`PreviewPane` is the view model (`PreviewPaneViewModel`) and view (`PreviewPaneView`) that show the picture of the
+file selected in the project explorer. It starts a render whenever the selection or project changes, cancels the
+render that is still running, ignores results of renders that are no longer wanted, renders again after a delay
+when files in the project change, and shows the picture, the busy state, the error with its code and hint, and the
+notes of the render. The view model has no dependency on Avalonia's imaging; the view converts the pixels.
+
+#### Data Model
+
+**Image** / **HasImage** / **CurrentImage**: the shown `RenderedImage` or `null`. `CurrentImageChanged` is raised
+after it changes (`IRenderedImageSource`).
+
+**IsBusy** / **StatusText**: whether a render runs, and a line such as `Rendering a.svg...`,
+`a.svg: 40 x 20 px, svg, 1 note`, or `a.svg: render failed`.
+
+**Error**, **HasError**, **ErrorTitle** (`Render failed (code)`), **ErrorMessage**, **ErrorHint** (`Hint: ...` or
+empty) and **HasErrorHint**: the failed render.
+
+**Diagnostics**, **HasDiagnostics**, **DiagnosticsHeader** (`1 note`, `3 notes`): the notes of the shown picture.
+
+**ShowPlaceholder** / **PlaceholderText**: true while there is no picture, error, or running render; the text says
+that no project is open or that a file is to be selected.
+
+**FitToWindow**: `bool`, true by default; scale the picture down to the pane, otherwise show it at its own size
+with scroll bars.
+
+**RenderCompletion**: a task that completes when every render started so far has applied or discarded its result,
+so tests and callers can wait.
+
+**RenderedImageBitmap**: `ConvertToPremultipliedBgra(rgba, width, height, destination, destinationRowBytes)` and
+`Create(image)`. CanvasNet's pixels are red, green, blue, alpha with straight alpha; Avalonia's `WriteableBitmap`
+composites blue, green, red, alpha with premultiplied alpha. Each color channel becomes
+`(channel * alpha + 127) / 255` and the first and third channels swap places; rows are written at the framebuffer's
+row size. `Create` makes a 96 dpi `WriteableBitmap` (`Bgra8888`, `AlphaFormat.Premul`) and fills it through
+`Lock`.
+
+**View**: `PreviewPaneView` has a check box (`PreviewFitToWindow`), a busy `ProgressBar` (`PreviewBusy`), a
+`ScrollViewer` (`PreviewScroller`) with the `Image` (`PreviewImage`), an error panel (`PreviewErrorPanel`,
+`PreviewErrorTitle`, `PreviewErrorMessage`, `PreviewErrorHint`), a placeholder (`PreviewPlaceholder`), a status
+line (`PreviewStatus`), and an `Expander` (`PreviewDiagnosticsExpander`) with the list of notes
+(`PreviewDiagnostics`). The view creates the bitmap when the view model's picture changes, disposes the previous
+one, and releases it when detached.
+
+#### Key Methods
+
+**Following the explorer**: A change of `SelectedItem` starts a render of `SelectedFile` in `FolderPath`. A change
+of `FolderPath` (project opened, replaced, or closed) restarts the folder watcher, cancels any render, and clears
+the pane; the selection change that follows decides what to render.
+
+**StartRender**: Under a lock, disposes any pending delayed render, cancels the running render's token, increments
+the generation counter, and creates a new token. With no selected file it clears the pane instead. It clears the
+picture and error unless the render is a repeat for the same file, sets the busy state, and awaits the render
+service.
+
+**Stale results**: When a render finishes, the pane compares the render's generation with the current one under
+the lock and discards the result when they differ, when the pane was disposed, or when a cancelled result arrives
+for the current render. A render service that throws is shown as the error `operation-failed`.
+
+**RequestRerender**: Callable from any thread. Disposes the pending delayed render and schedules a new one with the
+scheduler after the debounce delay (400 milliseconds by default), so a burst of changes causes one render. When it
+runs it re-renders with the current picture kept visible until the result arrives. A callback that was scheduled
+for an earlier generation does nothing.
+
+**Folder watcher**: A `FileSystemWatcher` over the project folder with sub-folders, watching file names,
+directory names, write times, and sizes. `IsRelevantChange(projectFolder, changedPath)` ignores a path inside the
+hidden `.canvaspilot` folder at the project root and a `.canvaspilot` project file at the root, and treats every
+other path, including assets in sub-folders, as relevant. Watcher errors are logged and request a render. A folder
+that cannot be watched is logged; the pane then renders only when the selection changes.
+
+**Dispose**: Stops the watcher, discards the pending render, cancels the running render, and unsubscribes from the
+explorer. It is safe to call twice. Results that arrive afterwards are ignored.
+
+#### Error Handling
+
+The constructor throws `ArgumentNullException` for a missing collaborator. `ConvertToPremultipliedBgra` throws
+`ArgumentOutOfRangeException` for a dimension below 1 or a row size below `width * 4`, and `ArgumentException` for
+a source or destination that is too small. Render problems are shown, never thrown. Failures to write a log
+entry are ignored.
+
+#### Dependencies
+
+- **ImageRenderService** (through `IImageRenderService`) — draws the files.
+- **ProjectExplorer** — the selected file and project folder, and the `IRefreshScheduler` seam shared with it.
+- **ProjectService** — the project file extension and data folder name constants.
+- **RollingFileLogger** — optional; records unexpected failures and watcher problems.
+- **CommunityToolkit.Mvvm**, **Avalonia** — notification, source generators, controls, and bitmaps.
+
+#### Callers
+
+- The workspace — shows the view through the view locator and disposes the view model.
+- `ImageExporter` — reads the shown picture through `IRenderedImageSource`.
+- `ApplicationComposition` — creates the pane over the explorer and the refresh scheduler.

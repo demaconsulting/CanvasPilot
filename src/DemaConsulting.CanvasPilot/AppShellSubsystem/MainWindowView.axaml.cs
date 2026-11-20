@@ -18,8 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
@@ -133,6 +136,33 @@ public sealed partial class MainWindowView : Window, IDialogService
 
         var file = await StorageProvider.SaveFilePickerAsync(options);
         return file?.TryGetLocalPath();
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> CopyImageToClipboardAsync(RenderedImage image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+
+        var clipboard = Clipboard;
+        if (clipboard is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            // The bitmap is handed to the clipboard, which may render it on demand, so it is not disposed here;
+            // the flush asks the platform to render it now so it stays available after the application exits.
+            var bitmap = RenderedImageBitmap.Create(image);
+            await clipboard.SetBitmapAsync(bitmap);
+            await clipboard.FlushAsync();
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or COMException or IOException)
+        {
+            // The platform clipboard is shared with other programs and can be locked or unavailable.
+            return false;
+        }
     }
 
     /// <inheritdoc />

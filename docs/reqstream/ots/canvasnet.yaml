@@ -1,0 +1,85 @@
+---
+# CanvasNet OTS Software Requirements
+#
+# Requirements for the DemaConsulting.CanvasNet viewer library (DemaConsulting.CanvasNet.Viewer, with the
+# DemaConsulting.CanvasNet core library it brings) as used by CanvasPilot at run time. The library is a runtime
+# dependency, so each requirement is a child of the requirement of the unit that uses the feature
+# (ImageRenderService and ProjectExplorer) and is not a root requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: CanvasNet Requirements
+        requirements:
+          - id: CanvasPilot-OTS-CanvasNet-RenderImageSources
+            title: >-
+              CanvasNet shall render an image source file to a picture of the file's natural size whose pixels
+              are red, green, blue, alpha bytes with straight alpha, tightly packed by row, and report the
+              format it drew.
+            justification: |
+              The preview shows pictures of the user's SVG, diagram, chart, and other image source files. The
+              application copies the pixels as they are and converts them for display, so their layout and
+              alpha representation are part of the interface it relies on.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_SvgFile_ProducesStraightAlphaPixels
+
+          - id: CanvasPilot-OTS-CanvasNet-ListSupportedTypes
+            title: >-
+              CanvasNet shall list the file name extensions it can draw, lower case with the leading dot and
+              including compound extensions.
+            justification: |
+              The project explorer shows exactly the files that can be drawn, so the list of extensions must be
+              available from the library and complete, including multi-part ones such as .vl.json.
+            tags: [ots]
+            tests:
+              - CanvasNet_Extensions_ListsSupportedImageSourceTypes
+
+          - id: CanvasPilot-OTS-CanvasNet-ConfineFileAccess
+            title: >-
+              CanvasNet shall allow the files that a rendered file references to be read only from the folders
+              the caller allows, report a denied file as a warning note, and still draw files that lie in the
+              allowed folders.
+            justification: |
+              Image source files can embed other files by path. The application allows only the project folder
+              so that a file cannot draw unrelated files from the user's computer into a picture.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_UnderRootsPolicy_DeniesEmbeddedFileOutsideRoots
+              - CanvasNet_Render_UnderRootsPolicy_AllowsEmbeddedFileInsideRoots
+
+          - id: CanvasPilot-OTS-CanvasNet-ReportFailures
+            title: >-
+              CanvasNet shall report a file that cannot be rendered by throwing an exception that describes the
+              problem, with a stable error code and a hint for the errors it classifies, and shall distinguish
+              malformed content, a missing file, and an unsupported file type.
+            justification: |
+              Users edit files while they are shown, so failures are common. The application turns each into a
+              message for the user, using the library's code and hint where it provides them, and needs the
+              failures to be distinguishable.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_PageBeyondLastPage_ThrowsViewerExceptionWithCodeAndHint
+              - CanvasNet_Render_UnusableFiles_ThrowDescriptiveExceptions
+
+          - id: CanvasPilot-OTS-CanvasNet-HonorCancellation
+            title: >-
+              CanvasNet shall stop a render with an operation-cancelled exception when the cancellation token
+              given to it is cancelled.
+            justification: |
+              The preview cancels renders of files that are no longer selected, so the library must observe the
+              token it is given instead of always running to completion.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_CancelledToken_ThrowsOperationCanceled
+
+          - id: CanvasPilot-OTS-CanvasNet-EncodePng
+            title: >-
+              CanvasNet shall encode a surface as a PNG stream that decodes to the same pixels, including
+              transparency.
+            justification: |
+              Exporting saves the shown picture as a PNG file, so the encoder must produce valid PNG data that
+              keeps every pixel and its alpha.
+            tags: [ots]
+            tests:
+              - CanvasNet_PngCodec_SaveSurface_WritesValidPngThatRoundTrips

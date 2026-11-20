@@ -143,6 +143,7 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     public void Dispose()
     {
         Explorer.PropertyChanged -= OnExplorerPropertyChanged;
+        (Preview as IDisposable)?.Dispose();
         Explorer.Dispose();
     }
 

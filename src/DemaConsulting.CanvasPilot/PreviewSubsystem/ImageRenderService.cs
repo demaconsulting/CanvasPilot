@@ -1,0 +1,214 @@
+// Copyright (c) DEMA Consulting
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using DemaConsulting.CanvasNet.Canvas;
+using DemaConsulting.CanvasNet.Codecs;
+using DemaConsulting.CanvasNet.Files;
+using DemaConsulting.CanvasNet.ImageSources;
+using DemaConsulting.CanvasNet.Viewer;
+using DemaConsulting.CanvasPilot.LoggingSubsystem;
+
+namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
+
+/// <summary>
+///     Draws image source files with <see cref="CanvasNetViewer" /> on a thread-pool thread, copies the pixels of
+///     the picture into a <see cref="RenderedImage" />, and encodes pictures as PNG with CanvasNet's PNG codec.
+///     Every failure to draw a file is returned as a <see cref="RenderError" />, so callers never handle viewer
+///     exceptions.
+/// </summary>
+public sealed class ImageRenderService : IImageRenderService
+{
+    /// <summary>
+    ///     Draws a file with the given options; the viewer by default, a substitute in tests.
+    /// </summary>
+    private readonly Func<string, ViewerRenderOptions, ViewerImage> _render;
+
+    /// <summary>
+    ///     Optional logger for problems with files.
+    /// </summary>
+    private readonly RollingFileLogger? _logger;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ImageRenderService" /> class that draws with the viewer.
+    /// </summary>
+    /// <param name="logger">Optional logger for diagnostics.</param>
+    public ImageRenderService(RollingFileLogger? logger = null)
+        : this(CanvasNetViewer.Render, logger)
+    {
+    }
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="ImageRenderService" /> class around a drawing function.
+    /// </summary>
+    /// <param name="render">Draws a file with the given options.</param>
+    /// <param name="logger">Optional logger for diagnostics.</param>
+    internal ImageRenderService(Func<string, ViewerRenderOptions, ViewerImage> render, RollingFileLogger? logger = null)
+    {
+        ArgumentNullException.ThrowIfNull(render);
+
+        _render = render;
+        _logger = logger;
+    }
+
+    /// <inheritdoc />
+    public Task<RenderResult> RenderAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
+
+        // The viewer observes the token itself, so the task is not started with it: a cancelled render
+        // completes with a cancelled result instead of a cancelled task.
+        return Task.Run(() => Render(filePath, projectFolder, cancellationToken), CancellationToken.None);
+    }
+
+    /// <inheritdoc />
+    public byte[] EncodePng(RenderedImage image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+
+        using var surface = new Surface(image.Width, image.Height);
+        var rowBytes = image.Width * 4;
+        for (var y = 0; y < image.Height; y++)
+        {
+            image.RgbaPixels.Span.Slice(y * rowBytes, rowBytes).CopyTo(surface.GetRowSpanBytes(y));
+        }
+
+        using var stream = new MemoryStream();
+        PngCodec.Save(surface, stream);
+        return stream.ToArray();
+    }
+
+    /// <summary>
+    ///     Draws a file and turns the outcome, including every ordinary failure, into a result. Runs on a
+    ///     thread-pool thread.
+    /// </summary>
+    /// <param name="filePath">The file to draw.</param>
+    /// <param name="projectFolder">The folder the file may read from.</param>
+    /// <param name="cancellationToken">Cancels the render.</param>
+    /// <returns>The result.</returns>
+    private RenderResult Render(string filePath, string projectFolder, CancellationToken cancellationToken)
+    {
+        var fullPath = filePath;
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            fullPath = Path.GetFullPath(filePath);
+            var options = new ViewerRenderOptions
+            {
+                FileAccess = FileAccessPolicy.UnderRoots(Path.GetFullPath(projectFolder)),
+                CancellationToken = cancellationToken
+            };
+
+            using var viewerImage = _render(fullPath, options);
+            return RenderResult.Success(Copy(fullPath, viewerImage));
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return RenderResult.Cancelled();
+        }
+        catch (Exception ex)
+        {
+            // Rendering parses arbitrary user files with many format libraries. Whatever goes wrong must reach the
+            // user as a message and never escape a background thread, so every failure becomes a result here.
+            var error = ToError(ex);
+            Log(LogLevel.Warning, $"Rendering '{fullPath}' failed ({error.Code}): {error.Message}", ex);
+            return RenderResult.Failure(error);
+        }
+    }
+
+    /// <summary>
+    ///     Copies the pixels and notes of a viewer picture, so the picture can be disposed.
+    /// </summary>
+    /// <param name="fullPath">The file that was drawn.</param>
+    /// <param name="viewerImage">The viewer picture.</param>
+    /// <returns>The copy.</returns>
+    private static RenderedImage Copy(string fullPath, ViewerImage viewerImage)
+    {
+        var surface = viewerImage.Surface;
+        var rowBytes = surface.Width * 4;
+        var pixels = new byte[rowBytes * surface.Height];
+        for (var y = 0; y < surface.Height; y++)
+        {
+            surface.GetRowSpanBytes(y).CopyTo(pixels.AsSpan(y * rowBytes, rowBytes));
+        }
+
+        var diagnostics = viewerImage.Diagnostics
+            .Select(note => new RenderDiagnostic(ToSeverity(note.Severity), note.Code, note.Message))
+            .ToList();
+        return new RenderedImage(fullPath, viewerImage.Format, surface.Width, surface.Height, pixels, diagnostics);
+    }
+
+    /// <summary>
+    ///     Converts the severity of a CanvasNet note.
+    /// </summary>
+    /// <param name="severity">The CanvasNet severity.</param>
+    /// <returns>The matching severity.</returns>
+    private static RenderDiagnosticSeverity ToSeverity(ImageDiagnosticSeverity severity)
+    {
+        return severity switch
+        {
+            ImageDiagnosticSeverity.Info => RenderDiagnosticSeverity.Info,
+            ImageDiagnosticSeverity.Unsupported => RenderDiagnosticSeverity.Unsupported,
+            _ => RenderDiagnosticSeverity.Warning
+        };
+    }
+
+    /// <summary>
+    ///     Describes an exception that stopped a render as an error.
+    /// </summary>
+    /// <param name="exception">The exception.</param>
+    /// <returns>The error, with CanvasNet's own code and hint for a viewer error.</returns>
+    private static RenderError ToError(Exception exception)
+    {
+        return exception switch
+        {
+            ViewerException viewer => new RenderError(viewer.Code, viewer.Message, viewer.Hint),
+            FileNotFoundException or DirectoryNotFoundException =>
+                new RenderError(RenderErrorCodes.InputNotFound, exception.Message, "Check that the file still exists in the project folder."),
+            NotSupportedException =>
+                new RenderError(RenderErrorCodes.UnsupportedFormat, exception.Message, "Rename the file to one of the supported file name extensions."),
+            ImageSourceException =>
+                new RenderError(RenderErrorCodes.CannotDraw, exception.Message, "Fix the problem described in the message and save the file."),
+            ImageSourceBudgetException =>
+                new RenderError(RenderErrorCodes.SizeLimit, exception.Message, "Use a smaller image or reduce its size."),
+            FileReferenceException or IOException or UnauthorizedAccessException =>
+                new RenderError(RenderErrorCodes.InputUnreadable, exception.Message, "Check that the file can be read and is not larger than 16 MiB."),
+            _ => new RenderError(RenderErrorCodes.OperationFailed, exception.Message)
+        };
+    }
+
+    /// <summary>
+    ///     Writes a diagnostic entry when a logger is available. Failing to log never fails a render.
+    /// </summary>
+    /// <param name="level">Severity of the event.</param>
+    /// <param name="message">Event text.</param>
+    /// <param name="exception">Optional failure context.</param>
+    private void Log(LogLevel level, string message, Exception? exception)
+    {
+        try
+        {
+            _logger?.Log(level, message, exception);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Best effort: diagnostics must not make a file problem worse.
+        }
+    }
+}

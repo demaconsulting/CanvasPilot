@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
@@ -66,6 +67,16 @@ public sealed class FakeDialogService : IDialogService
     ///     Gets or sets the text the user enters in a prompt, or null for cancel.
     /// </summary>
     public string? PromptResult { get; set; }
+
+    /// <summary>
+    ///     Gets or sets whether copying to the clipboard succeeds.
+    /// </summary>
+    public bool ClipboardAvailable { get; set; } = true;
+
+    /// <summary>
+    ///     Gets the pictures that were copied to the clipboard.
+    /// </summary>
+    public List<RenderedImage> CopiedImages { get; } = [];
 
     /// <summary>
     ///     Gets how many times the New Project dialog was shown.
@@ -169,6 +180,13 @@ public sealed class FakeDialogService : IDialogService
     public Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern)
     {
         return Task.FromResult(SaveFileToPick);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> CopyImageToClipboardAsync(RenderedImage image)
+    {
+        CopiedImages.Add(image);
+        return Task.FromResult(ClipboardAvailable);
     }
 
     /// <inheritdoc />

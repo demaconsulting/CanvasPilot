@@ -1,0 +1,77 @@
+---
+# Preview Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Preview subsystem
+# - The Preview subsystem spans ImageRenderService (IImageRenderService.cs, ImageRenderService.cs, RenderResult.cs),
+#   PreviewPane (PreviewPaneViewModel.cs, PreviewPaneView.axaml, RenderedImageBitmap.cs, IRenderedImageSource.cs), and
+#   ImageExporter (ImageExporter.cs)
+# - Subsystem requirements describe the preview behavior that satisfies the system-level preview requirements
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Preview-RenderSelectedImage
+            title: >-
+              The Preview subsystem shall draw the image source file selected in the open project with CanvasNet,
+              confined to the project folder, in the background, and show the picture in the main window.
+            justification: |
+              Seeing the picture of the selected file is the purpose of the application's main window. Drawing in
+              the background keeps the window responsive, and confining the files the drawing may read to the
+              project keeps a file from pulling in unrelated files.
+            children:
+              - CanvasPilot-ImageRenderService-RenderFileToPixels
+              - CanvasPilot-ImageRenderService-ConfineFileAccess
+              - CanvasPilot-PreviewPane-RenderSelectedFile
+              - CanvasPilot-PreviewPane-ConvertPixelsForDisplay
+            tests:
+              - PreviewSubsystem_RenderSelectedImage_SvgInProject_ShowsRenderedPixels
+
+          - id: CanvasPilot-Preview-ExplainRenderProblems
+            title: >-
+              The Preview subsystem shall show that a render is running, and shall explain a file that cannot be
+              drawn with its error code, message, and hint, and a picture that is incomplete with the notes the
+              renderer reported, without failing.
+            justification: |
+              Files are edited while they are shown, so they are often briefly invalid. The user should be told
+              what is wrong, in the words of the drawing library, and the application should keep working and
+              recover as soon as the file is valid again.
+            children:
+              - CanvasPilot-ImageRenderService-ReportNotes
+              - CanvasPilot-ImageRenderService-ReturnFailuresAsResults
+              - CanvasPilot-PreviewPane-ShowBusyAndErrors
+              - CanvasPilot-PreviewPane-ShowDiagnostics
+            tests:
+              - PreviewSubsystem_ReportRenderProblems_BrokenFile_ShowsErrorThenRecovers
+
+          - id: CanvasPilot-Preview-KeepPreviewCurrent
+            title: >-
+              The Preview subsystem shall keep the shown picture matched to the selected file by canceling and
+              ignoring renders of files that are no longer selected, and by rendering again when files in the
+              project folder change on disk.
+            justification: |
+              The picture beside a file name must always be that file's current picture, whatever order renders
+              finish in and whoever edits the file or the assets it embeds.
+            children:
+              - CanvasPilot-ImageRenderService-HonorCancellation
+              - CanvasPilot-PreviewPane-DiscardStaleRenders
+              - CanvasPilot-PreviewPane-RenderAgainOnFileChanges
+            tests:
+              - PreviewSubsystem_KeepPreviewCurrent_SelectedFileEdited_RendersNewContent
+
+          - id: CanvasPilot-Preview-ExportImage
+            title: >-
+              The Preview subsystem shall let the user save the shown picture as a PNG file or copy it to the
+              clipboard, only while a picture is shown.
+            justification: |
+              The pictures are made to be used elsewhere, in email, presentations, and other media, and a PNG
+              file or the clipboard are the ways those programs take a picture.
+            children:
+              - CanvasPilot-ImageRenderService-EncodePng
+              - CanvasPilot-ImageExporter-EnableWhenPictureShown
+              - CanvasPilot-ImageExporter-ExportPng
+              - CanvasPilot-ImageExporter-CopyToClipboard
+            tests:
+              - PreviewSubsystem_ExportImage_ShownPicture_WritesPngAndCopiesToClipboard

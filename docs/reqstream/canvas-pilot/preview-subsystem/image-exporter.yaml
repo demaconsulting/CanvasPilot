@@ -1,0 +1,55 @@
+---
+# Software Unit Requirements for the ImageExporter Unit
+#
+# The ImageExporter unit is what the Image menu exports. It saves the picture the preview shows as a PNG file the
+# user chooses, or copies it to the clipboard, and is available only while a picture is shown.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        sections:
+          - title: ImageExporter Requirements
+            requirements:
+              - id: CanvasPilot-ImageExporter-EnableWhenPictureShown
+                title: >-
+                  The ImageExporter shall report that it can export only while the preview shows a picture,
+                  and shall tell listeners whenever that changes.
+                justification: |
+                  Exporting and copying are meaningless without a picture. Telling listeners when the state
+                  changes lets the Image menu enable and disable its items to match.
+                tests:
+                  - ImageExporter_CanExport_FollowsShownPicture_AndRaisesEvent
+                  - MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu
+
+              - id: CanvasPilot-ImageExporter-ExportPng
+                title: >-
+                  The ImageExporter shall ask the user where to save, suggesting the source file's name with
+                  a .png extension, write the shown picture there as a valid PNG file with a .png extension,
+                  write nothing when the user cancels, and tell the user when the file cannot be written.
+                justification: |
+                  A PNG file is the form in which the picture is used in email, presentations, and other
+                  media. The user chooses the place and name, a misspelled or missing extension should not
+                  produce a file that other programs do not recognize, and a failure to save must be reported
+                  rather than lost.
+                tests:
+                  - ImageExporter_ExportPngAsync_PictureShown_WritesValidPngToChosenFile
+                  - ImageExporter_ExportPngAsync_NameWithoutExtension_AppendsPng
+                  - ImageExporter_ExportPngAsync_CancelledOrNoPicture_WritesNothing
+                  - ImageExporter_ExportPngAsync_UnwritableTarget_ShowsMessage
+                  - ImageExporter_SuggestFileName_SourcePath_ReplacesImageExtensionWithPng
+                  - ImageExporter_InvalidArguments_Throw
+
+              - id: CanvasPilot-ImageExporter-CopyToClipboard
+                title: >-
+                  The ImageExporter shall put the shown picture on the clipboard as an image through the
+                  dialog service, do nothing when no picture is shown, and tell the user when the clipboard
+                  cannot be used.
+                justification: |
+                  Pasting a picture straight into another program is the quickest way to use it. The
+                  clipboard belongs to the platform and can be unavailable, in which case the user needs to
+                  know that nothing was copied.
+                tests:
+                  - ImageExporter_CopyImageAsync_PictureShown_CopiesPictureToClipboard
+                  - ImageExporter_CopyImageAsync_ClipboardUnavailableOrNoPicture_ShowsMessageOrDoesNothing
+                  - MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable
