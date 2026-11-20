@@ -18,10 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Security.Cryptography;
 using DemaConsulting.CanvasNet.Canvas;
 using DemaConsulting.CanvasNet.Codecs;
 using DemaConsulting.CanvasNet.Files;
 using DemaConsulting.CanvasNet.ImageSources;
+using DemaConsulting.CanvasNet.Positions;
 using DemaConsulting.CanvasNet.Viewer;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 
@@ -29,7 +31,8 @@ namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 /// <summary>
 ///     Draws image source files with <see cref="CanvasNetViewer" /> on a thread-pool thread, copies the pixels of
-///     the picture into a <see cref="RenderedImage" />, and encodes pictures as PNG with CanvasNet's PNG codec.
+///     the picture, the fingerprints that identify it, and the positions of its elements into a
+///     <see cref="RenderedImage" />, and encodes pictures as PNG with CanvasNet's PNG codec.
 ///     Every failure to draw a file is returned as a <see cref="RenderError" />, so callers never handle viewer
 ///     exceptions.
 /// </summary>
@@ -113,11 +116,16 @@ public sealed class ImageRenderService : IImageRenderService
             var options = new ViewerRenderOptions
             {
                 FileAccess = FileAccessPolicy.UnderRoots(Path.GetFullPath(projectFolder)),
-                CancellationToken = cancellationToken
+                CancellationToken = cancellationToken,
+
+                // Ask for the position of every element: Mermaid and Vega-Lite report nodes, edges, marks, and
+                // axes, and every other kind ignores the request. OpenSCAD anchors are reported without asking.
+                Positions = PositionSelection.All
             };
 
             using var viewerImage = _render(fullPath, options);
-            return RenderResult.Success(Copy(fullPath, viewerImage));
+            var sourceFileHash = HashSourceFile(fullPath);
+            return RenderResult.Success(Copy(fullPath, viewerImage, sourceFileHash));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -134,12 +142,14 @@ public sealed class ImageRenderService : IImageRenderService
     }
 
     /// <summary>
-    ///     Copies the pixels and notes of a viewer picture, so the picture can be disposed.
+    ///     Copies the pixels, notes, element positions, and anchors of a viewer picture, so the picture can be
+    ///     disposed.
     /// </summary>
     /// <param name="fullPath">The file that was drawn.</param>
     /// <param name="viewerImage">The viewer picture.</param>
+    /// <param name="sourceFileHash">The fingerprint of the file that was drawn, or <see langword="null" />.</param>
     /// <returns>The copy.</returns>
-    private static RenderedImage Copy(string fullPath, ViewerImage viewerImage)
+    private static RenderedImage Copy(string fullPath, ViewerImage viewerImage, string? sourceFileHash)
     {
         var surface = viewerImage.Surface;
         var rowBytes = surface.Width * 4;
@@ -152,7 +162,68 @@ public sealed class ImageRenderService : IImageRenderService
         var diagnostics = viewerImage.Diagnostics
             .Select(note => new RenderDiagnostic(ToSeverity(note.Severity), note.Code, note.Message))
             .ToList();
-        return new RenderedImage(fullPath, viewerImage.Format, surface.Width, surface.Height, pixels, diagnostics);
+        var positions = viewerImage.Positions.Select(ToPosition).ToList();
+        var anchors = viewerImage.Anchors
+            .Select(anchor => new RenderAnchor(anchor.Name, anchor.PixelX, anchor.PixelY))
+            .ToList();
+        return new RenderedImage(
+            fullPath,
+            viewerImage.Format,
+            surface.Width,
+            surface.Height,
+            pixels,
+            diagnostics,
+            sourceFileHash,
+            positions,
+            viewerImage.PositionsTruncated,
+            anchors);
+    }
+
+    /// <summary>
+    ///     Converts an element position of CanvasNet. Empty text and empty element references mean the same as none.
+    /// </summary>
+    /// <param name="position">The CanvasNet position.</param>
+    /// <returns>The matching position.</returns>
+    private static RenderPosition ToPosition(ImagePosition position)
+    {
+        return new RenderPosition(
+            position.Kind,
+            position.Id,
+            NullIfEmpty(position.Text),
+            position.Line,
+            NullIfEmpty(position.From),
+            NullIfEmpty(position.To),
+            position.Box is { } box ? new RenderBox(box.X, box.Y, box.Width, box.Height) : null,
+            position.Pixel is { } pixel ? new RenderPoint(pixel.X, pixel.Y) : null);
+    }
+
+    /// <summary>
+    ///     Gives <see langword="null" /> for an empty text.
+    /// </summary>
+    /// <param name="text">The text, or <see langword="null" />.</param>
+    /// <returns>The text, or <see langword="null" /> when it is null or empty.</returns>
+    private static string? NullIfEmpty(string? text)
+    {
+        return string.IsNullOrEmpty(text) ? null : text;
+    }
+
+    /// <summary>
+    ///     Computes the fingerprint of the bytes of the file that was drawn. A file that was removed or locked
+    ///     since it was drawn has none, which does not fail the render.
+    /// </summary>
+    /// <param name="fullPath">The file that was drawn.</param>
+    /// <returns>The SHA-256 hash as lower case hexadecimal, or <see langword="null" /> when the file cannot be read.</returns>
+    private static string? HashSourceFile(string fullPath)
+    {
+        try
+        {
+            using var stream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            return Convert.ToHexStringLower(SHA256.HashData(stream));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

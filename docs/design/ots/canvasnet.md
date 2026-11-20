@@ -18,6 +18,18 @@ application project.
 - `ViewerRenderOptions.FileAccess = FileAccessPolicy.UnderRoots(projectFolder)` — confines the files the drawn file
   reads to the project folder; a denied picture becomes the warning note `image-access-denied`.
 - `ViewerRenderOptions.CancellationToken` — stops a render; an `OperationCanceledException` results.
+- `ViewerRenderOptions.Positions = PositionSelection.All` — asks a Mermaid diagram or a Vega-Lite chart for the
+  position of every element. `ViewerImage.Positions` (`ImagePosition`: `Kind` such as `node`, `edge`, `mark`, `axis`,
+  `Id`, `Text`, `Line`, `From`, `To`, `Box`, and `Pixel`, in continuous picture pixels with the origin at the top-left
+  corner) and `ViewerImage.PositionsTruncated` (the library reports at most 1000 positions) carry the answer. Every
+  other kind of file ignores the request, and a picture that a file embeds never reports positions.
+- `ViewerImage.Anchors` (`SourceAnchor`: `Name`, `X`, `Y`, `Z`, `PixelX`, `PixelY`) — the anchors that an OpenSCAD model
+  declares with `echo("anchor", name, [x, y, z])`. Their pixel positions are valid only while the render is not
+  resized with `Width` or `Height`; the application renders at the natural size.
+- `CanvasNetViewer.Render(Stream, fileName, options)` — draws an SVG document held in memory. A later unit uses it to
+  draw marks over the picture the user saw: the SVG embeds the picture as a `data:image/png;base64` link and draws
+  rectangle, ellipse, polyline, and text elements over it, so no file is written and the picture is exactly the
+  pixels that were shown. A render of a stream resolves no file the document names, because it has no folder.
 - `ViewerException` (`Code`, `Message`, `Hint`) and the other exceptions of `Render` (`ImageSourceException`,
   `ImageSourceBudgetException`, `FileNotFoundException`, `NotSupportedException`, `FileReferenceException`) — the
   failures the application turns into messages.

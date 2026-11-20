@@ -18,7 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Security.Cryptography;
 using DemaConsulting.CanvasNet.Codecs;
+using DemaConsulting.CanvasNet.Positions;
 using DemaConsulting.CanvasNet.Viewer;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
@@ -338,6 +340,208 @@ public sealed class ImageRenderServiceTests : IDisposable
         }
 
         Assert.Equal(pixels, decodedPixels);
+    }
+
+    /// <summary>
+    ///     Test that a Mermaid diagram reports its nodes and edges with their source lines, text, and boxes in the
+    ///     pixels of the picture, and that the request for positions does not add notes.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_MermaidFile_ReportsNodePositionsInPixels()
+    {
+        // Arrange: a diagram with three nodes and two edges
+        var file = Write("flow.mmd", "flowchart LR\n  A[Start] --> B[Middle]\n  B --> C[End]\n");
+        var service = new ImageRenderService();
+
+        // Act: render it
+        var result = await service.RenderAsync(file, Project, TestContext.Current.CancellationToken);
+
+        // Assert: the three nodes carry id, text, source line, and a box that lies inside the picture
+        Assert.True(result.Succeeded);
+        var image = result.Image!;
+        Assert.Equal("mermaid", image.Format);
+        Assert.Empty(image.Diagnostics);
+        Assert.False(image.PositionsTruncated);
+        Assert.Empty(image.Anchors);
+        var nodes = image.Positions.Where(position => position.Kind == "node").ToList();
+        Assert.Equal(["A", "B", "C"], nodes.Select(node => node.Id));
+        Assert.Equal(["Start", "Middle", "End"], nodes.Select(node => node.Text));
+        Assert.Equal(2, nodes[0].Line);
+        Assert.All(nodes, node =>
+        {
+            var box = Assert.IsType<RenderBox>(node.Box);
+            Assert.True(box.X >= 0 && box.Y >= 0 && box.Width > 0 && box.Height > 0);
+            Assert.True(box.X + box.Width <= image.Width && box.Y + box.Height <= image.Height);
+            Assert.NotNull(node.Pixel);
+        });
+
+        // Assert: the nodes are drawn from left to right and the edges name the nodes they join
+        Assert.True(nodes[0].Box!.Value.X < nodes[1].Box!.Value.X);
+        Assert.True(nodes[1].Box!.Value.X < nodes[2].Box!.Value.X);
+        var edges = image.Positions.Where(position => position.Kind == "edge").ToList();
+        Assert.Equal([("A", "B"), ("B", "C")], edges.Select(edge => (edge.From, edge.To)));
+    }
+
+    /// <summary>
+    ///     Test that a Vega-Lite chart reports its marks and axes.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_VegaLiteChart_ReportsMarkPositions()
+    {
+        // Arrange: a bar chart with two bars
+        var file = Write(
+            "bars.vl.json",
+            "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\"," +
+            "\"data\":{\"values\":[{\"a\":\"A\",\"b\":3},{\"a\":\"B\",\"b\":5}]},\"mark\":\"bar\"," +
+            "\"encoding\":{\"x\":{\"field\":\"a\",\"type\":\"nominal\"},\"y\":{\"field\":\"b\",\"type\":\"quantitative\"}}}");
+        var service = new ImageRenderService();
+
+        // Act: render it
+        var result = await service.RenderAsync(file, Project, TestContext.Current.CancellationToken);
+
+        // Assert: two bars and the axes are reported, each with a box
+        Assert.True(result.Succeeded);
+        var image = result.Image!;
+        Assert.Equal("vega-lite", image.Format);
+        Assert.Equal(2, image.Positions.Count(position => position.Kind == "mark"));
+        Assert.Equal(2, image.Positions.Count(position => position.Kind == "axis"));
+        Assert.All(image.Positions, position => Assert.NotNull(position.Box));
+    }
+
+    /// <summary>
+    ///     Test that an OpenSCAD model reports the anchors it declares with their pixel positions.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_ScadWithAnchor_ReportsAnchor()
+    {
+        // Arrange: a model that declares one anchor
+        var file = Write("part.scad", "cube([10, 10, 10]);\necho(\"anchor\", \"top\", [5, 5, 10]);\n");
+        var service = new ImageRenderService();
+
+        // Act: render it
+        var result = await service.RenderAsync(file, Project, TestContext.Current.CancellationToken);
+
+        // Assert: one anchor with a pixel inside the picture, and no element positions
+        Assert.True(result.Succeeded);
+        var image = result.Image!;
+        Assert.Equal("scad", image.Format);
+        var anchor = Assert.Single(image.Anchors);
+        Assert.Equal("top", anchor.Name);
+        Assert.InRange(anchor.PixelX!.Value, 0, image.Width);
+        Assert.InRange(anchor.PixelY!.Value, 0, image.Height);
+        Assert.Empty(image.Positions);
+    }
+
+    /// <summary>
+    ///     Test that a kind of file without element data reports no positions and no anchors, and no notes about it.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_SvgFile_ReportsNoPositions()
+    {
+        // Arrange: an SVG
+        var file = Write("half.svg", HalfRedSvg);
+        var service = new ImageRenderService();
+
+        // Act: render it
+        var result = await service.RenderAsync(file, Project, TestContext.Current.CancellationToken);
+
+        // Assert: no positions, no anchors, no truncation, and no notes
+        var image = result.Image!;
+        Assert.Empty(image.Positions);
+        Assert.Empty(image.Anchors);
+        Assert.False(image.PositionsTruncated);
+        Assert.Empty(image.Diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that rendering the same unchanged file twice gives the same fingerprints, and that the file
+    ///     fingerprint is the SHA-256 hash of the file's bytes.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_SameFileTwice_SameContentHash()
+    {
+        // Arrange: a file and a service
+        var file = Write("half.svg", HalfRedSvg);
+        var service = new ImageRenderService();
+
+        // Act: render it twice
+        var first = (await service.RenderAsync(file, Project, TestContext.Current.CancellationToken)).Image!;
+        var second = (await service.RenderAsync(file, Project, TestContext.Current.CancellationToken)).Image!;
+
+        // Assert: equal fingerprints, equal keys, and the file hash is the hash of the file's bytes
+        Assert.Equal(first.ContentHash, second.ContentHash);
+        Assert.Equal(first.SourceFileHash, second.SourceFileHash);
+        Assert.Equal(first.SnapshotKey, second.SnapshotKey);
+        var expected = Convert.ToHexStringLower(SHA256.HashData(await File.ReadAllBytesAsync(file, TestContext.Current.CancellationToken)));
+        Assert.Equal(expected, first.SourceFileHash);
+    }
+
+    /// <summary>
+    ///     Test that changing the file changes both fingerprints and the snapshot key.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_ChangedFile_DifferentSourceAndContentHash()
+    {
+        // Arrange: a file rendered once, then changed to another color
+        var file = Write("half.svg", HalfRedSvg);
+        var service = new ImageRenderService();
+        var before = (await service.RenderAsync(file, Project, TestContext.Current.CancellationToken)).Image!;
+        Write("half.svg", HalfRedSvg.Replace("#ff0000", "#00ff00", StringComparison.Ordinal));
+
+        // Act: render it again
+        var after = (await service.RenderAsync(file, Project, TestContext.Current.CancellationToken)).Image!;
+
+        // Assert: the file, the pixels, and so the key differ
+        Assert.NotEqual(before.SourceFileHash, after.SourceFileHash);
+        Assert.NotEqual(before.ContentHash, after.ContentHash);
+        Assert.NotEqual(before.SnapshotKey, after.SnapshotKey);
+    }
+
+    /// <summary>
+    ///     Test that a file that disappears after it was drawn still gives a picture, without a file fingerprint.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_FileGoneAfterDrawing_HasNoSourceFileHash()
+    {
+        // Arrange: a drawing function that draws the real file and then deletes it
+        var file = Write("half.svg", HalfRedSvg);
+        var service = new ImageRenderService((path, options) =>
+        {
+            var image = CanvasNetViewer.Render(path, options);
+            File.Delete(path);
+            return image;
+        });
+
+        // Act: render the file
+        var result = await service.RenderAsync(file, Project, TestContext.Current.CancellationToken);
+
+        // Assert: the picture exists, has pixel fingerprint, and has no file fingerprint
+        Assert.True(result.Succeeded);
+        Assert.Null(result.Image!.SourceFileHash);
+        Assert.Equal(64, result.Image.ContentHash.Length);
+    }
+
+    /// <summary>
+    ///     Test that the request to the viewer asks for the position of every element.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_Request_AsksForAllPositions()
+    {
+        // Arrange: a drawing function that records the options it receives
+        ViewerRenderOptions? received = null;
+        var service = new ImageRenderService((_, options) =>
+        {
+            received = options;
+            throw new InvalidOperationException("stop");
+        });
+
+        // Act: render any file
+        await service.RenderAsync(Path.Combine(Project, "any.mmd"), Project, TestContext.Current.CancellationToken);
+
+        // Assert: every position was requested
+        Assert.NotNull(received);
+        Assert.NotNull(received.Positions);
+        Assert.Same(PositionSelection.All, received.Positions);
     }
 
     /// <summary>

@@ -46,6 +46,8 @@ shown as a failure.
 **CancelDownload** (command, with the row as its parameter): Cancels the token of that row's download.
 
 **CancelAllDownloads**: Cancels every running download; used when the dialog closes and when the panel is loaded.
+The running downloads are kept in a concurrent dictionary because, where there is no synchronization context (as in
+tests), downloads that were cancelled together end on different threads and remove themselves at the same time.
 
 **Refresh** (command): Reads the catalog again, keeping the chosen models. It is refused with an explanation while
 a download runs, because rebuilding the rows would discard the rows that show the downloads.

@@ -18,10 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Text;
 using DemaConsulting.CanvasNet.Canvas;
 using DemaConsulting.CanvasNet.Codecs;
 using DemaConsulting.CanvasNet.Files;
 using DemaConsulting.CanvasNet.ImageSources;
+using DemaConsulting.CanvasNet.Positions;
 using DemaConsulting.CanvasNet.Viewer;
 
 namespace OtsSoftwareTests;
@@ -195,6 +197,126 @@ public sealed class CanvasNetTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a Mermaid diagram rendered with every position requested reports its nodes and edges with their
+    ///     identifiers, text, source lines, and boxes in the pixels of the picture, and that it reports none when no
+    ///     positions were requested.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_Render_MermaidWithPositionsSelection_ReportsNodesWithBoxes()
+    {
+        // Arrange: a diagram with three nodes and two edges
+        var file = Write("flow.mmd", "flowchart LR\n  A[Start] --> B[Middle]\n  B --> C[End]\n");
+
+        // Act: render it once asking for every position and once asking for none
+        using var image = CanvasNetViewer.Render(file, new ViewerRenderOptions { Positions = PositionSelection.All });
+        using var plain = CanvasNetViewer.Render(file);
+
+        // Assert: five positions, the nodes with text, line, and a box inside the picture; none when not asked for
+        Assert.Equal("mermaid", image.Format);
+        Assert.False(image.PositionsTruncated);
+        Assert.Equal(5, image.Positions.Count);
+        var nodes = image.Positions.Where(position => position.Kind == "node").ToList();
+        Assert.Equal(["A", "B", "C"], nodes.Select(node => node.Id));
+        Assert.Equal(["Start", "Middle", "End"], nodes.Select(node => node.Text));
+        Assert.Equal(2, nodes[0].Line);
+        Assert.All(nodes, node =>
+        {
+            var box = Assert.IsType<PositionBox>(node.Box);
+            Assert.True(box.Width > 0 && box.Height > 0);
+            Assert.True(box.X >= 0 && box.Y >= 0);
+            Assert.True(box.X + box.Width <= image.Surface.Width && box.Y + box.Height <= image.Surface.Height);
+            Assert.NotNull(node.Pixel);
+        });
+        var edges = image.Positions.Where(position => position.Kind == "edge").ToList();
+        Assert.Equal([("A", "B"), ("B", "C")], edges.Select(edge => (edge.From, edge.To)));
+        Assert.Empty(plain.Positions);
+    }
+
+    /// <summary>
+    ///     Test that a Vega-Lite chart rendered with every position requested reports its marks and axes with boxes.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_Render_VegaLiteWithPositionsSelection_ReportsMarksAndAxes()
+    {
+        // Arrange: a bar chart with two bars
+        var file = Write(
+            "bars.vl.json",
+            "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\"," +
+            "\"data\":{\"values\":[{\"a\":\"A\",\"b\":3},{\"a\":\"B\",\"b\":5}]},\"mark\":\"bar\"," +
+            "\"encoding\":{\"x\":{\"field\":\"a\",\"type\":\"nominal\"},\"y\":{\"field\":\"b\",\"type\":\"quantitative\"}}}");
+
+        // Act: render it asking for every position
+        using var image = CanvasNetViewer.Render(file, new ViewerRenderOptions { Positions = PositionSelection.All });
+
+        // Assert: two bar marks and two axes, each with a box
+        Assert.Equal("vega-lite", image.Format);
+        Assert.Equal(2, image.Positions.Count(position => position.Kind == "mark"));
+        Assert.Equal(2, image.Positions.Count(position => position.Kind == "axis"));
+        Assert.All(image.Positions, position => Assert.NotNull(position.Box));
+    }
+
+    /// <summary>
+    ///     Test that an OpenSCAD model reports the anchors it declares with <c>echo("anchor", ...)</c> with their pixel
+    ///     positions in the picture, and that the request for positions does not change that.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_Render_ScadAnchors_ReportsPixelPositions()
+    {
+        // Arrange: a model that declares one anchor on the top of a cube
+        var file = Write("part.scad", "cube([10, 10, 10]);\necho(\"anchor\", \"top\", [5, 5, 10]);\n");
+
+        // Act: render it asking for every position, as the application does
+        using var image = CanvasNetViewer.Render(file, new ViewerRenderOptions { Positions = PositionSelection.All });
+
+        // Assert: one anchor with its world position and a pixel inside the picture; no element positions
+        Assert.Equal("scad", image.Format);
+        var anchor = Assert.Single(image.Anchors);
+        Assert.Equal("top", anchor.Name);
+        Assert.Equal((5, 5, 10), (anchor.X, anchor.Y, anchor.Z));
+        Assert.InRange(anchor.PixelX!.Value, 0, image.Surface.Width);
+        Assert.InRange(anchor.PixelY!.Value, 0, image.Surface.Height);
+        Assert.Empty(image.Positions);
+    }
+
+    /// <summary>
+    ///     Test that an SVG document given as a stream, that embeds a PNG picture as a data link and draws shapes
+    ///     and text over it, is drawn with the picture and with all of the shapes. This is how the application draws
+    ///     the marks over a picture it has already shown.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_Render_SvgStream_WithDataUriImageAndShapes_DrawsAll()
+    {
+        // Arrange: a 100 x 50 solid red PNG, embedded as a data link in an SVG that draws a blue rectangle outline,
+        // a green ellipse outline, a yellow polyline, and white text over it
+        using var picture = new Surface(100, 50);
+        picture.Clear(new Rgba32(255, 0, 0, 255));
+        using var png = new MemoryStream();
+        PngCodec.Save(picture, png);
+        var svg =
+            "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='100' height='50'>" +
+            $"<image href='data:image/png;base64,{Convert.ToBase64String(png.ToArray())}' x='0' y='0' width='100' height='50'/>" +
+            "<rect x='10' y='10' width='40' height='30' fill='none' stroke='#0000ff' stroke-width='4'/>" +
+            "<ellipse cx='75' cy='25' rx='15' ry='10' fill='none' stroke='#00ff00' stroke-width='4'/>" +
+            "<polyline points='55,45 95,45' fill='none' stroke='#ffff00' stroke-width='4'/>" +
+            "<text x='12' y='9' font-size='8' fill='#ffffff'>1</text></svg>";
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(svg));
+
+        // Act: render the stream
+        using var image = CanvasNetViewer.Render(stream, "marks.svg", new ViewerRenderOptions());
+
+        // Assert: the size of the SVG, the embedded picture, and each stroke at a pixel on its line
+        Assert.Equal("svg", image.Format);
+        Assert.Equal(100, image.Surface.Width);
+        Assert.Equal(50, image.Surface.Height);
+        Assert.Equal(new Rgba32(255, 0, 0, 255), image.Surface[2, 2]);
+        Assert.Equal(new Rgba32(0, 0, 255, 255), image.Surface[10, 25]);
+        Assert.Equal(new Rgba32(0, 255, 0, 255), image.Surface[90, 25]);
+        Assert.Equal(new Rgba32(255, 255, 0, 255), image.Surface[75, 45]);
+        Assert.True(HasPixelOtherThan(image.Surface, new Rgba32(255, 0, 0, 255), 11, 1, 20, 9), "The text was not drawn.");
+        Assert.Empty(image.Diagnostics);
+    }
+
+    /// <summary>
     ///     Test that CanvasNet's PNG codec encodes a surface to a PNG stream that decodes back to the same pixels,
     ///     transparency included.
     /// </summary>
@@ -230,6 +352,32 @@ public sealed class CanvasNetTests : IDisposable
         var path = Path.Combine(Project, relativePath);
         File.WriteAllText(path, content);
         return path;
+    }
+
+    /// <summary>
+    ///     Tells whether any pixel in a region of a surface differs from a color.
+    /// </summary>
+    /// <param name="surface">The surface.</param>
+    /// <param name="color">The color.</param>
+    /// <param name="left">The left edge of the region.</param>
+    /// <param name="top">The top edge of the region.</param>
+    /// <param name="right">The right edge of the region, not included.</param>
+    /// <param name="bottom">The bottom edge of the region, not included.</param>
+    /// <returns><see langword="true" /> when at least one pixel of the region is not the color.</returns>
+    private static bool HasPixelOtherThan(Surface surface, Rgba32 color, int left, int top, int right, int bottom)
+    {
+        for (var y = top; y < bottom; y++)
+        {
+            for (var x = left; x < right; x++)
+            {
+                if (surface[x, y] != color)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

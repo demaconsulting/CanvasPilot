@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -55,9 +56,11 @@ public sealed partial class ModelCatalogPanelViewModel : ObservableObject
     private readonly Func<Action<SpeechModelDownloadProgress>, IProgress<SpeechModelDownloadProgress>> _createProgress;
 
     /// <summary>
-    ///     The cancellation source of each running download, by model identifier.
+    ///     The cancellation source of each running download, by model identifier. Downloads normally end on the
+    ///     user interface thread, but where there is no synchronization context (as in tests) several can end at the
+    ///     same time, so the collection tolerates concurrent changes.
     /// </summary>
-    private readonly Dictionary<string, CancellationTokenSource> _downloads = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CancellationTokenSource> _downloads = new(StringComparer.Ordinal);
 
     /// <summary>
     ///     The speech-to-text model identifier last chosen or loaded, kept when the list cannot show it.
@@ -204,7 +207,7 @@ public sealed partial class ModelCatalogPanelViewModel : ObservableObject
         ShowReport(model, report);
         if (_downloads.TryGetValue(model.Id, out var current) && ReferenceEquals(current, source))
         {
-            _downloads.Remove(model.Id);
+            _downloads.TryRemove(new KeyValuePair<string, CancellationTokenSource>(model.Id, source));
         }
 
         OnPropertyChanged(nameof(IsDownloading));

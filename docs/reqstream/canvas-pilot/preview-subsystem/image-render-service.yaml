@@ -2,7 +2,8 @@
 # Software Unit Requirements for the ImageRenderService Unit
 #
 # The ImageRenderService unit draws an image source file on a background thread with the CanvasNet viewer
-# library, copies the pixels out as a straight-alpha RGBA picture, and encodes pictures as PNG. It is the one
+# library, copies the pixels out as a straight-alpha RGBA picture together with the fingerprints that identify the
+# picture and the positions of its elements, and encodes pictures as PNG. It is the one
 # place in the application that talks to CanvasNet's viewer and codecs. Ordinary failures are returned as
 # results with CanvasNet's own code and hint, never thrown.
 
@@ -25,6 +26,9 @@ sections:
                   library object has to be kept alive or disposed by its users.
                 children:
                   - CanvasPilot-OTS-CanvasNet-RenderImageSources
+                  # Provisional parent: the requirement of the unit that composes the marks over the picture (added
+                  # in a later step of this increment) takes over this link.
+                  - CanvasPilot-OTS-CanvasNet-ComposeSvgFromStream
                 tests:
                   - ImageRenderService_RenderAsync_SvgFile_ReturnsPixelsSizeAndFormat
                   - RenderedImage_New_ValidArguments_KeepsValues
@@ -105,3 +109,40 @@ sections:
                   - CanvasPilot-OTS-CanvasNet-EncodePng
                 tests:
                   - ImageRenderService_EncodePng_Image_ProducesValidPngWithSamePixels
+
+              - id: CanvasPilot-ImageRenderService-ReportSnapshotIdentity
+                title: >-
+                  The ImageRenderService shall give each picture it returns the path of the file it was drawn from,
+                  a SHA-256 fingerprint of the file's bytes, and a SHA-256 fingerprint of the picture's size and
+                  pixels, so that the same file gives the same fingerprints and a changed file gives different ones.
+                justification: |
+                  A picture is only a snapshot: the file can change at any time. Messages and marks that refer to a
+                  picture must say which version they mean, and fingerprints of the file and of what was seen tell
+                  versions apart without keeping the picture. A file that cannot be read for its fingerprint after
+                  it was drawn must not stop the picture from being shown.
+                tests:
+                  - ImageRenderService_RenderAsync_SameFileTwice_SameContentHash
+                  - ImageRenderService_RenderAsync_ChangedFile_DifferentSourceAndContentHash
+                  - ImageRenderService_RenderAsync_FileGoneAfterDrawing_HasNoSourceFileHash
+                  - RenderedImage_SnapshotKey_CombinesPathAndContentHash
+                  - RenderedImage_ContentHash_DependsOnPixelsAndSizeOnly
+
+              - id: CanvasPilot-ImageRenderService-ReportElementPositions
+                title: >-
+                  The ImageRenderService shall return, with a picture of a Mermaid diagram or a Vega-Lite chart,
+                  each element's kind, identifier, text, source line, and box in picture pixels, and with a picture
+                  of an OpenSCAD model the pixel position of each anchor the model declares, and shall return none
+                  for other kinds of file.
+                justification: |
+                  A mark drawn on a picture is only meaningful if it can be traced to the part of the source file it
+                  covers. The drawing library knows where it drew each element, and reporting it together with the
+                  picture lets the application name the elements under a mark instead of guessing from pixels.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ReportElementPositions
+                tests:
+                  - ImageRenderService_RenderAsync_MermaidFile_ReportsNodePositionsInPixels
+                  - ImageRenderService_RenderAsync_VegaLiteChart_ReportsMarkPositions
+                  - ImageRenderService_RenderAsync_ScadWithAnchor_ReportsAnchor
+                  - ImageRenderService_RenderAsync_SvgFile_ReportsNoPositions
+                  - ImageRenderService_RenderAsync_Request_AsksForAllPositions
+                  - RenderedImage_New_PositionsAndAnchors_AreCopiedAndDefaultToEmpty

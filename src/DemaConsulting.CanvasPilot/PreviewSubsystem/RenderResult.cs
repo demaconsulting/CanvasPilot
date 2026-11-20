@@ -18,6 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Buffers.Binary;
+using System.Security.Cryptography;
+
 namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 /// <summary>
@@ -50,8 +53,59 @@ public sealed record RenderDiagnostic(RenderDiagnosticSeverity Severity, string 
 }
 
 /// <summary>
-///     A rendered picture: its size, its pixels, and the notes the renderer reported. The pixels are copied out
-///     of the renderer, so the object holds no native or disposable resources and may be shared freely.
+///     A point in the pixel coordinates of a rendered picture: the origin is the top-left corner, X grows to the
+///     right and Y grows downward. The coordinates are continuous, so they may have fractions.
+/// </summary>
+/// <param name="X">The distance from the left edge, in pixels.</param>
+/// <param name="Y">The distance from the top edge, in pixels.</param>
+public readonly record struct RenderPoint(double X, double Y);
+
+/// <summary>
+///     A rectangle in the pixel coordinates of a rendered picture, with the same origin and axes as
+///     <see cref="RenderPoint" />.
+/// </summary>
+/// <param name="X">The left edge, in pixels.</param>
+/// <param name="Y">The top edge, in pixels.</param>
+/// <param name="Width">The width in pixels; not negative.</param>
+/// <param name="Height">The height in pixels; not negative.</param>
+public readonly record struct RenderBox(double X, double Y, double Width, double Height);
+
+/// <summary>
+///     One element of a rendered diagram or chart, such as a node, an edge, a bar, or an axis, with where it was
+///     drawn. Only Mermaid diagrams and Vega-Lite charts report elements.
+/// </summary>
+/// <param name="Kind">The kind of element, a lower case word such as <c>node</c>, <c>edge</c>, <c>mark</c>, or <c>axis</c>.</param>
+/// <param name="Id">The identifier the source gives the element, or one the renderer derives; may be empty.</param>
+/// <param name="Text">The text of the element, such as a label, or <see langword="null" /> for none.</param>
+/// <param name="Line">The 1-based line of the source file that declares the element, or <see langword="null" /> when unknown.</param>
+/// <param name="From">The identifier of the element an edge starts at, or <see langword="null" />.</param>
+/// <param name="To">The identifier of the element an edge ends at, or <see langword="null" />.</param>
+/// <param name="Box">The bounds of the element in picture pixels, or <see langword="null" /> when unknown.</param>
+/// <param name="Pixel">A point on the element a pointer can aim at, or <see langword="null" /> when unknown.</param>
+public sealed record RenderPosition(
+    string Kind,
+    string Id,
+    string? Text = null,
+    int? Line = null,
+    string? From = null,
+    string? To = null,
+    RenderBox? Box = null,
+    RenderPoint? Pixel = null);
+
+/// <summary>
+///     A named point that an OpenSCAD model declared with <c>echo("anchor", name, [x, y, z])</c>, with where it
+///     appears in the rendered picture.
+/// </summary>
+/// <param name="Name">The name the model gives the anchor.</param>
+/// <param name="PixelX">The distance of the anchor from the left edge of the picture, or <see langword="null" /> when unknown.</param>
+/// <param name="PixelY">The distance of the anchor from the top edge of the picture, or <see langword="null" /> when unknown.</param>
+public sealed record RenderAnchor(string Name, double? PixelX = null, double? PixelY = null);
+
+/// <summary>
+///     A rendered picture: its size, its pixels, the notes the renderer reported, and the facts that identify
+///     exactly which picture it is: the file it came from, fingerprints of the file and of the pixels, and where the
+///     elements of a diagram, chart, or model were drawn. The pixels are copied out of the renderer, so the object
+///     holds no native or disposable resources and may be shared freely.
 /// </summary>
 public sealed class RenderedImage
 {
@@ -67,6 +121,13 @@ public sealed class RenderedImage
     ///     alpha, rows from the top with no padding, so exactly <c>width * height * 4</c> bytes.
     /// </param>
     /// <param name="diagnostics">The notes the renderer reported; <see langword="null" /> for none.</param>
+    /// <param name="sourceFileHash">
+    ///     The SHA-256 fingerprint of the bytes of the source file as lower case hexadecimal, or
+    ///     <see langword="null" /> when the file could not be read for the fingerprint.
+    /// </param>
+    /// <param name="positions">The elements of a diagram or chart with where they were drawn; <see langword="null" /> for none.</param>
+    /// <param name="positionsTruncated">Whether the renderer left out elements because there were too many.</param>
+    /// <param name="anchors">The anchors of a model with where they appear; <see langword="null" /> for none.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the width or height is less than 1.</exception>
     /// <exception cref="ArgumentException">Thrown when the pixel data is not the size the dimensions require.</exception>
     public RenderedImage(
@@ -75,7 +136,11 @@ public sealed class RenderedImage
         int width,
         int height,
         ReadOnlyMemory<byte> rgbaPixels,
-        IReadOnlyList<RenderDiagnostic>? diagnostics = null)
+        IReadOnlyList<RenderDiagnostic>? diagnostics = null,
+        string? sourceFileHash = null,
+        IReadOnlyList<RenderPosition>? positions = null,
+        bool positionsTruncated = false,
+        IReadOnlyList<RenderAnchor>? anchors = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         ArgumentNullException.ThrowIfNull(format);
@@ -94,6 +159,11 @@ public sealed class RenderedImage
         Height = height;
         RgbaPixels = rgbaPixels;
         Diagnostics = diagnostics ?? [];
+        SourceFileHash = sourceFileHash;
+        Positions = positions is null ? [] : positions.ToArray();
+        PositionsTruncated = positionsTruncated;
+        Anchors = anchors is null ? [] : anchors.ToArray();
+        ContentHash = ComputeContentHash(width, height, rgbaPixels.Span);
     }
 
     /// <summary>
@@ -125,6 +195,60 @@ public sealed class RenderedImage
     ///     Gets the notes the renderer reported.
     /// </summary>
     public IReadOnlyList<RenderDiagnostic> Diagnostics { get; }
+
+    /// <summary>
+    ///     Gets the SHA-256 fingerprint, as lower case hexadecimal, of what the user saw: the width and height and
+    ///     every pixel. Two pictures with the same fingerprint look the same.
+    /// </summary>
+    public string ContentHash { get; }
+
+    /// <summary>
+    ///     Gets the SHA-256 fingerprint, as lower case hexadecimal, of the bytes of the source file as they were
+    ///     when the picture was drawn, or <see langword="null" /> when the file could not be read for it.
+    /// </summary>
+    public string? SourceFileHash { get; }
+
+    /// <summary>
+    ///     Gets the elements of a Mermaid diagram or Vega-Lite chart with where they were drawn, in picture pixels;
+    ///     empty for every other kind of file.
+    /// </summary>
+    public IReadOnlyList<RenderPosition> Positions { get; }
+
+    /// <summary>
+    ///     Gets a value indicating whether <see cref="Positions" /> lacks elements because the renderer reports at
+    ///     most a fixed number of them.
+    /// </summary>
+    public bool PositionsTruncated { get; }
+
+    /// <summary>
+    ///     Gets the anchors that an OpenSCAD model declared, with where they appear in picture pixels; empty for every
+    ///     other kind of file and for a model without anchors.
+    /// </summary>
+    public IReadOnlyList<RenderAnchor> Anchors { get; }
+
+    /// <summary>
+    ///     Gets the identity of this exact picture: the path of the source file and the fingerprint of the pixels.
+    ///     Pictures with equal keys are the same picture of the same file.
+    /// </summary>
+    public string SnapshotKey => $"{SourcePath}#{ContentHash}";
+
+    /// <summary>
+    ///     Computes the fingerprint of a picture.
+    /// </summary>
+    /// <param name="width">The width in pixels.</param>
+    /// <param name="height">The height in pixels.</param>
+    /// <param name="pixels">The pixels.</param>
+    /// <returns>The SHA-256 hash of the width, the height, and the pixels, as lower case hexadecimal.</returns>
+    private static string ComputeContentHash(int width, int height, ReadOnlySpan<byte> pixels)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        Span<byte> size = stackalloc byte[8];
+        BinaryPrimitives.WriteInt32LittleEndian(size, width);
+        BinaryPrimitives.WriteInt32LittleEndian(size[4..], height);
+        hash.AppendData(size);
+        hash.AppendData(pixels);
+        return Convert.ToHexStringLower(hash.GetHashAndReset());
+    }
 }
 
 /// <summary>

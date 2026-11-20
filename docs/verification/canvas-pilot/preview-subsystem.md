@@ -25,6 +25,8 @@ watcher; no network, external services, or display are required.
 - Replacing the selected file on disk makes the pane show the new content after the debounce delay.
 - Export writes a PNG file whose signature and header size match the picture, and copy hands the picture to the
   clipboard of the export dialogs.
+- The shown picture of a diagram names its file, holds fingerprints of the file and the pixels, and locates its
+  nodes inside the picture; a picture of an SVG has no element positions.
 
 ### Test Scenarios
 
@@ -48,3 +50,10 @@ shows the 10 by 10 picture. This scenario is tested by
 writes the chosen file, which starts with the PNG signature and whose header holds width 40 and height 20, and copy
 gives the shown picture to the export dialogs. This scenario is tested by
 `PreviewSubsystem_ExportImage_ShownPicture_WritesPngAndCopiesToClipboard`.
+
+**PreviewSubsystem_ReportPictureFacts_DiagramAndSvg_ShowsIdentityAndPositions**: A project holds a two-node Mermaid
+diagram and an SVG. After the diagram is selected the shown picture names the diagram's file, has a 64-character file
+fingerprint, has the snapshot key made of the path and the pixel fingerprint, and has boxes for the nodes `Start` and
+`End` that lie inside the picture. After the SVG is selected its picture has a different pixel fingerprint and no
+positions and no anchors. This scenario is tested by
+`PreviewSubsystem_ReportPictureFacts_DiagramAndSvg_ShowsIdentityAndPositions`.

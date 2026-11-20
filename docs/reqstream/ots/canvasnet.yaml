@@ -83,3 +83,32 @@ sections:
             tags: [ots]
             tests:
               - CanvasNet_PngCodec_SaveSurface_WritesValidPngThatRoundTrips
+
+          - id: CanvasPilot-OTS-CanvasNet-ReportElementPositions
+            title: >-
+              CanvasNet shall report, when asked for every position, the kind, identifier, text, source line, and
+              box in picture pixels of each node and edge of a Mermaid diagram and each mark and axis of a
+              Vega-Lite chart, and the pixel position of each anchor that an OpenSCAD model declares, and shall
+              report no positions when none are asked for.
+            justification: |
+              The application traces a mark on a picture to the part of the source file it covers. Only the
+              drawing library knows where it drew each element, so the positions, in the pixels of the picture it
+              returned, are the interface the application relies on, and they must be absent when not requested.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_MermaidWithPositionsSelection_ReportsNodesWithBoxes
+              - CanvasNet_Render_VegaLiteWithPositionsSelection_ReportsMarksAndAxes
+              - CanvasNet_Render_ScadAnchors_ReportsPixelPositions
+
+          - id: CanvasPilot-OTS-CanvasNet-ComposeSvgFromStream
+            title: >-
+              CanvasNet shall draw an SVG document given as a stream, including a PNG picture embedded as a data
+              link and rectangle, ellipse, polyline, and text elements drawn over it, to a picture of the
+              document's size.
+            justification: |
+              The application composes a picture with its marks drawn on it by building an SVG document in memory
+              that embeds the picture the user saw, so that no file has to be written and the picture is exactly
+              the pixels that were shown. The library must draw the embedded picture and every shape over it.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_SvgStream_WithDataUriImageAndShapes_DrawsAll

@@ -34,8 +34,10 @@ public interface IImageRenderService
     /// <param name="projectFolder">The project folder, which is the only folder the drawn file may read from.</param>
     /// <param name="cancellationToken">Cancels the render.</param>
     /// <returns>
-    ///     A task with the picture, the reason the file could not be drawn, or a cancelled result. The task does
-    ///     not fail for ordinary problems with the file.
+    ///     A task with the picture, the reason the file could not be drawn, or a cancelled result. The picture
+    ///     carries the fingerprints of the file and of the pixels and, for Mermaid diagrams, Vega-Lite charts, and
+    ///     OpenSCAD models, the positions of their elements. The task does not fail for ordinary problems with the
+    ///     file.
     /// </returns>
     Task<RenderResult> RenderAsync(string filePath, string projectFolder, CancellationToken cancellationToken);
 

@@ -103,6 +103,44 @@ public sealed class PreviewSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the shown picture of a diagram names its file, holds fingerprints of the file and the pixels, and
+    ///     reports where each node was drawn, and that a picture of a kind without element data reports none.
+    /// </summary>
+    [Fact]
+    public async Task PreviewSubsystem_ReportPictureFacts_DiagramAndSvg_ShowsIdentityAndPositions()
+    {
+        // Arrange: a project with a diagram and an SVG, and a preview built over the real render service
+        var diagram = Path.Combine(_folder, "flow.mmd");
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[End]\n", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), WideSvg, TestContext.Current.CancellationToken);
+        var (explorer, pane) = Create();
+        explorer.Open(_folder);
+
+        // Act: select the diagram, then the SVG
+        explorer.SelectFile(diagram);
+        await pane.RenderCompletion;
+        var diagramImage = pane.CurrentImage;
+        explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
+        await pane.RenderCompletion;
+        var svgImage = pane.CurrentImage;
+
+        // Assert: the diagram's picture is identified by its file and fingerprints and locates both nodes inside it
+        Assert.NotNull(diagramImage);
+        Assert.Equal(diagram, diagramImage.SourcePath);
+        Assert.Equal(64, diagramImage.SourceFileHash?.Length);
+        Assert.Equal($"{diagram}#{diagramImage.ContentHash}", diagramImage.SnapshotKey);
+        var nodes = diagramImage.Positions.Where(position => position.Kind == "node").ToList();
+        Assert.Equal(["Start", "End"], nodes.Select(node => node.Text));
+        Assert.All(nodes, node => Assert.True(node.Box!.Value.X + node.Box.Value.Width <= diagramImage.Width));
+
+        // Assert: the SVG's picture has its own fingerprints and no element data
+        Assert.NotNull(svgImage);
+        Assert.NotEqual(diagramImage.ContentHash, svgImage.ContentHash);
+        Assert.Empty(svgImage.Positions);
+        Assert.Empty(svgImage.Anchors);
+    }
+
+    /// <summary>
     ///     Test that a file that cannot be drawn shows an error and a file that can be drawn shows a picture again,
     ///     and that export follows whether a picture is shown.
     /// </summary>

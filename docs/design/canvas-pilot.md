@@ -120,7 +120,10 @@ speech. The speech choices are stored only; no speech engine is part of the curr
 the stored choices through the settings service.
 
 `ImageRenderService` is the only item that draws files: it calls the CanvasNet viewer library in the background,
-confined to the project folder, and returns the pixels, notes, or a coded error. `PreviewPane` follows the
+confined to the project folder, and returns the pixels, notes, or a coded error. Each picture it returns also says
+exactly which picture it is (the file, a fingerprint of the file, and a fingerprint of the pixels) and where the
+elements of a diagram, chart, or model were drawn, so that something said about the picture later can be tied to what
+the user saw. `PreviewPane` follows the
 selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders that are no
 longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture as a PNG
 file or copies it to the clipboard for the Image menu. The `Preview` subsystem owns the two interfaces that this needs,

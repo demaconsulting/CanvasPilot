@@ -332,6 +332,51 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user who selects a diagram sees a picture that is pinned to the exact file and pixels shown:
+    ///     the picture carries fingerprints of the file and the pixels, and the positions of the diagram's elements, and
+    ///     all of them change when the file is edited.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements()
+    {
+        // Arrange: the application with a project that holds a diagram
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var diagram = Path.Combine(folder, "flow.mmd");
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[End]\n", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+
+        // Act: select the diagram, show another file, edit the diagram, and select it again
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        var before = composition.Preview.Image;
+        await File.WriteAllTextAsync(Path.Combine(folder, "other.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'/>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "other.svg"));
+        await composition.Preview.RenderCompletion;
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[Finish]\n", token);
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        var after = composition.Preview.Image;
+        composition.Dispose();
+
+        // Assert: each picture names its file, holds fingerprints, and reports the nodes with their text; the edit
+        // changed the fingerprints, the snapshot key, and the text of the second node
+        Assert.NotNull(before);
+        Assert.NotNull(after);
+        Assert.Equal(diagram, before.SourcePath);
+        Assert.Equal(64, before.SourceFileHash?.Length);
+        Assert.Equal(64, before.ContentHash.Length);
+        Assert.Equal(["Start", "End"], before.Positions.Where(position => position.Kind == "node").Select(node => node.Text));
+        Assert.All(before.Positions, position => Assert.NotNull(position.Box));
+        Assert.Equal(["Start", "Finish"], after.Positions.Where(position => position.Kind == "node").Select(node => node.Text));
+        Assert.NotEqual(before.SourceFileHash, after.SourceFileHash);
+        Assert.NotEqual(before.ContentHash, after.ContentHash);
+        Assert.NotEqual(before.SnapshotKey, after.SnapshotKey);
+    }
+
+    /// <summary>
     ///     Composes the application on temporary folders and has a user create a project through the New Project dialog.
     /// </summary>
     /// <returns>The composition, whose project is open, and the dialog service attached to its shell.</returns>

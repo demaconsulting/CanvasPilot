@@ -166,6 +166,22 @@ sections:
         tests:
           - CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile
 
+      - id: CanvasPilot-System-BuildMessagePayload
+        title: >-
+          The application shall identify each picture that a chat message refers to by the file it was drawn from
+          and by fingerprints of that file and of the picture's pixels, and shall record where the diagram elements
+          and model anchors are in the picture, so that the message is tied to exactly what the user saw.
+        tags: [system]
+        justification: |
+          A message about a picture is only useful if the reader knows which picture it means. Files change while
+          the user works, so a name alone is not enough: the exact file contents and pixels, and where the parts of
+          a diagram are, let a later reader tell which version of the picture was meant and which parts of the
+          source the user pointed at.
+        children:
+          - CanvasPilot-Preview-ReportPictureFacts
+        tests:
+          - CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements
+
       - id: CanvasPilot-System-DesktopShell
         title: >-
           The application shall present a main window with menus from which the user creates and opens

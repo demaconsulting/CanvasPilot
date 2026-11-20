@@ -100,4 +100,82 @@ public sealed class RenderResultTests
         // Assert: the display text carries all three
         Assert.Equal("Warning: image-access-denied: image was not drawn", note.DisplayText);
     }
+
+    /// <summary>
+    ///     Test that the snapshot key combines the path of the file with the fingerprint of the pixels, so it
+    ///     changes when either changes.
+    /// </summary>
+    [Fact]
+    public void RenderedImage_SnapshotKey_CombinesPathAndContentHash()
+    {
+        // Arrange: pictures that differ only in path, only in pixels, and not at all
+        var pixels = new byte[] { 1, 2, 3, 4 };
+        var original = new RenderedImage("c:\\p\\a.svg", "svg", 1, 1, pixels);
+        var same = new RenderedImage("c:\\p\\a.svg", "svg", 1, 1, pixels);
+        var otherPath = new RenderedImage("c:\\p\\b.svg", "svg", 1, 1, pixels);
+        var otherPixels = new RenderedImage("c:\\p\\a.svg", "svg", 1, 1, new byte[] { 1, 2, 3, 5 });
+
+        // Act / Assert: the key contains path and hash; equal pictures share it and the others differ
+        Assert.Contains("c:\\p\\a.svg", original.SnapshotKey, StringComparison.Ordinal);
+        Assert.Contains(original.ContentHash, original.SnapshotKey, StringComparison.Ordinal);
+        Assert.Equal(original.SnapshotKey, same.SnapshotKey);
+        Assert.NotEqual(original.SnapshotKey, otherPath.SnapshotKey);
+        Assert.NotEqual(original.SnapshotKey, otherPixels.SnapshotKey);
+    }
+
+    /// <summary>
+    ///     Test that the pixel fingerprint is a SHA-256 hash in lower case hexadecimal that depends on the pixels and
+    ///     on the size, not on the notes or the path.
+    /// </summary>
+    [Fact]
+    public void RenderedImage_ContentHash_DependsOnPixelsAndSizeOnly()
+    {
+        // Arrange: the same eight bytes as 2 x 1 and as 1 x 2, and the 2 x 1 picture with notes and another path
+        var pixels = new byte[8];
+        var wide = new RenderedImage("a.svg", "svg", 2, 1, pixels);
+        var tall = new RenderedImage("a.svg", "svg", 1, 2, pixels);
+        var withNote = new RenderedImage(
+            "b.svg",
+            "svg",
+            2,
+            1,
+            pixels,
+            [new RenderDiagnostic(RenderDiagnosticSeverity.Info, "code", "message")]);
+
+        // Act / Assert: 64 lower case hexadecimal characters; the size matters; notes and path do not
+        Assert.Matches("^[0-9a-f]{64}$", wide.ContentHash);
+        Assert.NotEqual(wide.ContentHash, tall.ContentHash);
+        Assert.Equal(wide.ContentHash, withNote.ContentHash);
+    }
+
+    /// <summary>
+    ///     Test that a picture without element data has empty lists, and that the lists it was given are copied so
+    ///     later changes to the caller's lists do not change the picture.
+    /// </summary>
+    [Fact]
+    public void RenderedImage_New_PositionsAndAnchors_AreCopiedAndDefaultToEmpty()
+    {
+        // Arrange: a picture without element data and one built from lists that are changed afterwards
+        var plain = new RenderedImage("a.mmd", "mermaid", 1, 1, new byte[4]);
+        var positions = new List<RenderPosition> { new("node", "A", "Start", 2, null, null, new RenderBox(1, 2, 3, 4), new RenderPoint(2.5, 4)) };
+        var anchors = new List<RenderAnchor> { new("top", 10, 20) };
+        var image = new RenderedImage("a.mmd", "mermaid", 1, 1, new byte[4], null, "abc", positions, true, anchors);
+
+        // Act: change the lists the picture was built from
+        positions.Clear();
+        anchors.Clear();
+
+        // Assert: the plain picture has nothing; the other still holds its copies and the facts it was given
+        Assert.Empty(plain.Positions);
+        Assert.Empty(plain.Anchors);
+        Assert.False(plain.PositionsTruncated);
+        Assert.Null(plain.SourceFileHash);
+        var position = Assert.Single(image.Positions);
+        Assert.Equal(("node", "A", "Start", 2), (position.Kind, position.Id, position.Text, position.Line));
+        Assert.Equal(new RenderBox(1, 2, 3, 4), position.Box);
+        Assert.Equal(new RenderPoint(2.5, 4), position.Pixel);
+        Assert.Equal(new RenderAnchor("top", 10, 20), Assert.Single(image.Anchors));
+        Assert.True(image.PositionsTruncated);
+        Assert.Equal("abc", image.SourceFileHash);
+    }
 }

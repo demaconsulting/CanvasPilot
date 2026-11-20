@@ -7,14 +7,16 @@ are defined in the CanvasNet OTS Software Requirements document.
 
 CanvasNet (`DemaConsulting.CanvasNet.Viewer`, with the `DemaConsulting.CanvasNet` core library it depends on) draws
 the image source files of a project to pixels, lists the file types it can draw, confines the files a drawn file
-may read, reports problems with files as descriptive exceptions, honors cancellation, and encodes PNG. The
-application relies on each of these behaviors, so each has a requirement and a test.
+may read, reports problems with files as descriptive exceptions, honors cancellation, encodes PNG, reports where it
+drew the elements of diagrams, charts, and models, and draws an SVG document held in memory. The application relies
+on each of these behaviors, so each has a requirement and a test.
 
 ### Verification Approach
 
 CanvasNet has no self-validation mode. It is verified by integration tests in `test/OtsSoftwareTests/CanvasNetTests.cs`
 that call the library directly, on temporary folders, with the same calls and options the application uses
-(`CanvasNetViewer.Render` with `FileAccessPolicy.UnderRoots`, `CanvasNetViewer.Extensions`, and `PngCodec.Save`).
+(`CanvasNetViewer.Render` with `FileAccessPolicy.UnderRoots` and `PositionSelection.All`, `CanvasNetViewer.Extensions`,
+`CanvasNetViewer.Render` of a stream, and `PngCodec.Save`).
 The tests are the evidence that the library behaves as the application relies on, and they are run again before a
 version upgrade is accepted. The unit tests of the units that use the library repeat part of this evidence through
 the application's own calls.
@@ -89,3 +91,42 @@ not-supported exception whose message lists the supported extensions.
 **Expected**: The bytes start with the PNG signature, and the decoded surface has the same size and the same pixel.
 
 **Requirement coverage**: `CanvasPilot-OTS-CanvasNet-EncodePng`.
+
+#### CanvasNet_Render_MermaidWithPositionsSelection_ReportsNodesWithBoxes
+
+**Scenario**: A flowchart with three nodes and two edges is rendered once with every position requested and once with
+none.
+
+**Expected**: Five positions: the nodes `A`, `B`, and `C` with the text `Start`, `Middle`, and `End`, the first on
+source line 2, each with a box of positive size inside the picture and a pixel, and two edges joining `A` to `B` and `B`
+to `C`; no truncation; and no positions when none were requested.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ReportElementPositions`.
+
+#### CanvasNet_Render_VegaLiteWithPositionsSelection_ReportsMarksAndAxes
+
+**Scenario**: A bar chart with two bars is rendered with every position requested.
+
+**Expected**: Two marks and two axes are reported and every position has a box.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ReportElementPositions`.
+
+#### CanvasNet_Render_ScadAnchors_ReportsPixelPositions
+
+**Scenario**: A model that declares the anchor `top` at 5, 5, 10 is rendered with every position requested.
+
+**Expected**: One anchor named `top` with the world position 5, 5, 10 and a pixel position inside the picture, and no
+element positions.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ReportElementPositions`.
+
+#### CanvasNet_Render_SvgStream_WithDataUriImageAndShapes_DrawsAll
+
+**Scenario**: A 100 by 50 red PNG is embedded as a data link in an SVG document in a stream that also draws a blue
+rectangle outline, a green ellipse outline, a yellow polyline, and white text over it; the stream is rendered.
+
+**Expected**: The picture is 100 by 50 with format `svg`; a pixel away from the shapes is red; a pixel on each of the
+rectangle, ellipse, and polyline strokes has that stroke's color; some pixel in the text's region is not red; and
+there are no notes.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ComposeSvgFromStream`.

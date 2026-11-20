@@ -20,8 +20,9 @@ unit, `ImageRenderService`, so the other units and their tests work with a subst
 - *Type*: In-process .NET API (`IImageRenderService`).
 - *Role*: Provider.
 - *Contract*: `RenderAsync(filePath, projectFolder, cancellationToken)` returns a `RenderResult` that holds a
-  `RenderedImage` (width, height, format, straight-alpha RGBA pixels, and notes), a `RenderError` (code, message,
-  and optional hint), or a cancelled outcome; `EncodePng(image)` returns the bytes of a PNG file.
+  `RenderedImage` (width, height, format, straight-alpha RGBA pixels, notes, a fingerprint of the source file and of
+  the pixels, a snapshot key, and the positions of the elements of a diagram, chart, or model), a `RenderError`
+  (code, message, and optional hint), or a cancelled outcome; `EncodePng(image)` returns the bytes of a PNG file.
 - *Constraints*: Ordinary failures to draw a file are results, never exceptions. The drawn file may read other
   files only from inside the project folder. A cancelled token gives a cancelled result.
 
@@ -70,7 +71,9 @@ unit, `ImageRenderService`, so the other units and their tests work with a subst
    through `IImageRenderService.RenderAsync`, and shows the busy state. A counter identifies each render; a result
    that arrives for an older render is ignored.
 3. When the render finishes, the pane shows the picture and its notes, or the error with its code and hint.
-   The view converts the picture's pixels to an Avalonia bitmap and shows it.
+   The view converts the picture's pixels to an Avalonia bitmap and shows it. The picture also carries its
+   identity (file, file fingerprint, pixel fingerprint, snapshot key) and the positions of its elements, which later
+   units use to tie marks and messages to exactly this picture; the pane itself does not use them.
 4. When files in the project folder change, the pane asks the scheduler for a render after a short delay. The
    current picture stays visible until the new result arrives.
 5. The exporter is enabled while the pane shows a picture. Export asks the dialog service for a file name and

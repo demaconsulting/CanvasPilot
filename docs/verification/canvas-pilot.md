@@ -39,6 +39,8 @@ services, or display is required.
 - The project explorer lists the image source files of the open project and not other content.
 - A selected image source file is rendered and shown with its size, a file that cannot be drawn shows an error with
   its code, and the shown picture can be exported as a valid PNG file.
+- The shown picture of a diagram is identified by its file and by fingerprints of the file and the pixels, which
+  change when the file is edited, and it locates the diagram's elements in picture pixels.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
@@ -109,6 +111,14 @@ export. This scenario is tested by `CanvasPilot_PreviewImages_SelectedFile_Shows
 **CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile**: With the good SVG shown, the Export as PNG command is
 enabled and, with a chosen file, writes a file that starts with the PNG signature and whose header holds width 32 and
 height 16. This scenario is tested by `CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile`.
+
+**CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements**: The composed application's
+user selects a two-node Mermaid diagram in a project. The shown picture names the diagram's file, has a file
+fingerprint and a pixel fingerprint of 64 hexadecimal characters each, has a box for each of its two nodes, and the
+nodes' text is `Start` and `End`. After another file is shown, the diagram is edited so that the second node is
+`Finish`, and it is selected again: the file fingerprint, the pixel fingerprint, and the snapshot key all differ and
+the node text is `Start` and `Finish`. This scenario is tested by
+`CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements`.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

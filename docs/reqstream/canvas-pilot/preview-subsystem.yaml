@@ -75,3 +75,18 @@ sections:
               - CanvasPilot-ImageExporter-CopyToClipboard
             tests:
               - PreviewSubsystem_ExportImage_ShownPicture_WritesPngAndCopiesToClipboard
+
+          - id: CanvasPilot-Preview-ReportPictureFacts
+            title: >-
+              The Preview subsystem shall identify each picture it shows by the file it was drawn from and by
+              fingerprints of that file and of the picture's pixels, and shall report where the elements of a
+              diagram, chart, or model are in the picture, in picture pixels, for the kinds of file that provide them.
+            justification: |
+              Messages about a picture, and marks on it, must stay tied to the exact version the user saw, even
+              after the file is edited and the picture is drawn again. The fingerprints tell versions apart, and
+              the element positions let a mark be traced back to the part of the source file it covers.
+            children:
+              - CanvasPilot-ImageRenderService-ReportSnapshotIdentity
+              - CanvasPilot-ImageRenderService-ReportElementPositions
+            tests:
+              - PreviewSubsystem_ReportPictureFacts_DiagramAndSvg_ShowsIdentityAndPositions
