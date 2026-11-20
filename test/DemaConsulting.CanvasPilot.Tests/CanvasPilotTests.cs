@@ -46,9 +46,20 @@ public sealed class CanvasPilotTests : IDisposable
     /// </summary>
     private readonly string _tempRoot = Directory.CreateTempSubdirectory("canvaspilot-tests-").FullName;
 
+    /// <summary>
+    ///     What the tests composed and must release before the temporary root is removed, in the order it was created.
+    /// </summary>
+    private readonly List<IDisposable> _disposables = [];
+
     /// <inheritdoc />
     public void Dispose()
     {
+        // Release what was composed, last first, so that a test that failed halfway leaves no file open
+        for (var index = _disposables.Count - 1; index >= 0; index--)
+        {
+            _disposables[index].Dispose();
+        }
+
         if (Directory.Exists(_tempRoot))
         {
             Directory.Delete(_tempRoot, recursive: true);
@@ -877,6 +888,463 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user who types, marks a node of the shown diagram with a note, and attaches a file sends one message
+    ///     whose transcript entry shows the words, the mark chip, and the file chip in the order they were placed, whose
+    ///     payload holds the text with its references, the marked picture, and the attachment in the project, and that the
+    ///     draft is empty afterwards.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown, and a file outside the project
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var (_, picture) = await ShowDiagramAsync(composition, "flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var brief = Path.Combine(Directory.CreateDirectory(Path.Combine(_tempRoot, "external")).FullName, "brief.txt");
+        await File.WriteAllTextAsync(brief, "the brief", token);
+        var emptyBefore = composition.Chat.CanSend;
+
+        // Act: type, mark the node 'Start' with a note, type more, drop the file, and send through the chat panel
+        composition.Composer.InsertTyped("Make ");
+        DrawRectangleAround(composition, NodeBox(picture, "Start"), "bigger");
+        composition.Composer.InsertTyped(" like ");
+        composition.Composer.HandleDrop(new DroppedContent { Paths = [brief] });
+        var canSend = composition.Chat.CanSend;
+        var attachmentsWhileDrafting = Directory.Exists(Path.Combine(folder, "attachments"));
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var entry = Assert.Single(composition.Chat.Transcript);
+        var items = entry.Items.Select(item => item.Text ?? "#").ToList();
+        var chips = entry.Items.Select(item => item.Chip).ToList();
+        var summary = entry.Summary;
+        var payload = entry.Payload!;
+        var afterSend = (composition.Composer.Document.Length, composition.Composer.CanUndo, composition.Chat.CanSend, composition.Marks.Marks.Length, composition.Annotation.VisibleMarks.Count);
+        var copy = await File.ReadAllTextAsync(Path.Combine(folder, "attachments", "brief.txt"), token);
+        composition.Dispose();
+
+        // Assert: the message could be sent only once it had words; the transcript holds words and chips in order; the
+        // payload holds the text, the mark with its note and the node under it, and the attachment's path; the file was
+        // copied only at send; the draft, its history, and the marks are gone
+        Assert.False(emptyBefore);
+        Assert.True(canSend);
+        Assert.False(attachmentsWhileDrafting);
+        Assert.Equal(["Make ", "#", " like ", "#"], items);
+        Assert.IsType<MarkChip>(chips[1]);
+        Assert.IsType<FileChip>(chips[3]);
+        Assert.Equal("1 mark, 1 attachment", summary);
+        Assert.Equal("Make [Mark 1] like [Attachment 1: brief.txt]", payload.Text);
+        Assert.Equal("attachments/brief.txt", Assert.Single(payload.Attachments).ProjectRelativePath);
+        var mark = Assert.Single(Assert.Single(payload.Images).Marks);
+        Assert.Equal("bigger", mark.Note);
+        Assert.Equal("Start", Assert.Single(mark.SourceElements, element => element.Kind == "node").Text);
+        Assert.Equal("the brief", copy);
+        Assert.Equal((0, false, false, 0, 0), afterSend);
+    }
+
+    /// <summary>
+    ///     Test that a user who types, dictates, drops files, marks the picture, and deletes a chip can undo every action
+    ///     one at a time with the Edit menu's command, back to the empty message, and redo them one at a time, with typing
+    ///     one character per step and a dictated block or a drop of several files one step, that sending leaves nothing to
+    ///     undo, and that nothing of the draft is written into the project.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_UndoRedoMessage_EachActionKind_StepsAsSpecified()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown, and two files outside the project,
+        // with the composer as the target that the Edit menu undoes and redoes
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var (_, picture) = await ShowDiagramAsync(composition, "flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var external = Directory.CreateDirectory(Path.Combine(_tempRoot, "external")).FullName;
+        var first = Path.Combine(external, "a.txt");
+        var second = Path.Combine(external, "b.txt");
+        await File.WriteAllTextAsync(first, "a", token);
+        await File.WriteAllTextAsync(second, "b", token);
+        var composer = composition.Composer;
+        composition.Shell.EditTarget = composer;
+        string[] ProjectEntries() => [.. Directory.GetFileSystemEntries(folder, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal)];
+        (string Text, int Chips, int Marks) State() => (composer.Document.FlatText, composer.Document.Chips.Count(), composition.Annotation.VisibleMarks.Count);
+        var entriesBefore = ProjectEntries();
+        var states = new List<(string Text, int Chips, int Marks)> { State() };
+
+        // Act: type two characters, dictate a block, drop two files, mark the picture, and delete a file chip, one action
+        // each, noting the state after each; then undo them all with the Edit menu's command and redo them all
+        composer.InsertTyped("a");
+        states.Add(State());
+        composer.InsertTyped("b");
+        states.Add(State());
+        composer.AddDictatedBlock(" make it red");
+        states.Add(State());
+        composer.HandleDrop(new DroppedContent { Paths = [first, second] });
+        states.Add(State());
+        DrawRectangleAround(composition, NodeBox(picture, "Start"));
+        states.Add(State());
+        composer.DeleteChip(composer.Document.FlatText.IndexOf('\uFFFC', StringComparison.Ordinal));
+        states.Add(State());
+        var entriesAfterDrafting = ProjectEntries();
+        var undone = new List<(string Text, int Chips, int Marks)>();
+        while (composition.Shell.UndoCommand.CanExecute(null))
+        {
+            composition.Shell.UndoCommand.Execute(null);
+            undone.Add(State());
+        }
+
+        var redone = new List<(string Text, int Chips, int Marks)>();
+        while (composition.Shell.RedoCommand.CanExecute(null))
+        {
+            composition.Shell.RedoCommand.Execute(null);
+            redone.Add(State());
+        }
+
+        await composer.SendAsync(token);
+        var afterSend = (composer.Document.Length, composer.CanUndo, composer.CanRedo, composition.Shell.UndoCommand.CanExecute(null), composition.Shell.RedoCommand.CanExecute(null));
+        composition.Dispose();
+
+        // Assert: every action was one step, going back passes through the states in reverse down to the empty message
+        // and going forward through them in order; sending leaves nothing to undo or redo; nothing was written to the
+        // project before the send
+        Assert.Equal(6, undone.Count);
+        Assert.Equal(states.AsEnumerable().Reverse().Skip(1), undone);
+        Assert.Equal(states.Skip(1), redone);
+        Assert.Equal(("ab make it red", 0, 0), (states[3].Text, states[3].Chips, states[3].Marks));
+        Assert.Equal(2, states[4].Chips);
+        Assert.Equal((3, 1), (states[5].Chips, states[5].Marks));
+        Assert.Equal((2, 1), (states[6].Chips, states[6].Marks));
+        Assert.Equal(entriesBefore, entriesAfterDrafting);
+        Assert.Equal((0, false, false, false, false), afterSend);
+    }
+
+    /// <summary>
+    ///     Test that a user who drops a file, a folder, and a picture and pastes a screenshot sees only chips while the
+    ///     message is a draft, with nothing copied into the project, and that sending copies them into the project's
+    ///     attachments folder byte for byte, without overwriting a file that is already there, and without leaving the
+    ///     pasted picture in the draft folder.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_AttachToMessage_DropFileFolderImage_CopiedIntoProjectOnlyAtSend()
+    {
+        // Arrange: the application with a project, and a file, a folder with a nested file, and a picture outside it
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var store = new AttachmentStore(folder);
+        var outside = Directory.CreateDirectory(Path.Combine(_tempRoot, "outside")).FullName;
+        var brief = Path.Combine(outside, "brief.txt");
+        var photos = Directory.CreateDirectory(Path.Combine(outside, "photos", "more")).FullName;
+        var sketch = Path.Combine(outside, "sketch.png");
+        byte[] picture = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3, 4];
+        byte[] screenshot = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 5, 6, 7];
+        await File.WriteAllTextAsync(brief, "the brief", token);
+        await File.WriteAllTextAsync(Path.Combine(outside, "photos", "a.txt"), "photo notes", token);
+        await File.WriteAllTextAsync(Path.Combine(photos, "b.txt"), "more notes", token);
+        await File.WriteAllBytesAsync(sketch, picture, token);
+
+        // Act: type, drop the three things in one drop, paste the screenshot, look at the project while drafting, then
+        // put a file of the same name into the attachments folder, as an earlier message could have, and send
+        composition.Composer.InsertTyped("Use these ");
+        composition.Composer.HandleDrop(new DroppedContent { Paths = [brief, Path.Combine(outside, "photos"), sketch] });
+        composition.Composer.HandlePaste(new DroppedContent { Images = [screenshot] });
+        var chipKinds = composition.Composer.Document.Chips.Select(chip => chip.GetType()).ToList();
+        var attachmentsWhileDrafting = Directory.Exists(store.AttachmentsFolder);
+        Directory.CreateDirectory(store.AttachmentsFolder);
+        await File.WriteAllTextAsync(Path.Combine(store.AttachmentsFolder, "brief.txt"), "mine", token);
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        var paths = payload.Attachments.Select(attachment => attachment.ProjectRelativePath).ToList();
+        var briefCopy = await File.ReadAllTextAsync(Path.Combine(folder, paths[0]), token);
+        var folderCopy = (
+            await File.ReadAllTextAsync(Path.Combine(folder, paths[1], "a.txt"), token),
+            await File.ReadAllTextAsync(Path.Combine(folder, paths[1], "more", "b.txt"), token));
+        var sketchCopy = await File.ReadAllBytesAsync(Path.Combine(folder, paths[2]), token);
+        var screenshotCopy = await File.ReadAllBytesAsync(Path.Combine(folder, paths[3]), token);
+        var mine = await File.ReadAllTextAsync(Path.Combine(store.AttachmentsFolder, "brief.txt"), token);
+        var leftover = Directory.GetFiles(store.PastedImagesFolder);
+        var originalsKept = (File.Exists(brief), File.Exists(sketch), Directory.Exists(Path.Combine(outside, "photos")));
+        composition.Dispose();
+
+        // Assert: four chips in the draft and nothing in the project; at send each thing is in the attachments folder
+        // with its exact content, the file that was already there is untouched, the draft folder is empty, and the
+        // originals are where they were
+        Assert.Equal([typeof(FileChip), typeof(FolderChip), typeof(ImageChip), typeof(ImageChip)], chipKinds);
+        Assert.False(attachmentsWhileDrafting);
+        Assert.Equal(4, paths.Count);
+        Assert.All(paths, path => Assert.StartsWith("attachments/", path, StringComparison.Ordinal));
+        Assert.NotEqual("attachments/brief.txt", paths[0]);
+        Assert.Equal("mine", mine);
+        Assert.Equal("the brief", briefCopy);
+        Assert.Equal(("photo notes", "more notes"), folderCopy);
+        Assert.Equal(picture, sketchCopy);
+        Assert.Equal(screenshot, screenshotCopy);
+        Assert.Empty(leftover);
+        Assert.Equal((true, true, true), originalsKept);
+    }
+
+    /// <summary>
+    ///     Test that a user who drops programs, scripts, a shortcut, a web page, a picture that is no picture, and a file
+    ///     that another program holds open exclusively only gets chips: nothing is opened, run, or shown, the files are
+    ///     copied unchanged when the message is sent, and a script that would leave a marker file when run does not.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_AttachToMessage_DroppedContent_IsNeverOpened()
+    {
+        // Arrange: the application with a project and a diagram that is shown, and dropped files whose content would do
+        // something if it were run, shown, or followed: scripts that write a marker file, and others
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var (_, shown) = await ShowDiagramAsync(composition, "flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var outside = Directory.CreateDirectory(Path.Combine(_tempRoot, "outside")).FullName;
+        var marker = Path.Combine(outside, "marker.txt");
+        var contents = new Dictionary<string, string>
+        {
+            ["run.bat"] = $"@echo off\r\necho ran> \"{marker}\"\r\n",
+            ["run.ps1"] = $"Set-Content -Path '{marker}' -Value ran\r\n",
+            ["run.sh"] = $"#!/bin/sh\necho ran > '{marker}'\n",
+            ["page.html"] = "<html><script>alert(1)</script></html>",
+            ["link.lnk"] = "not a shortcut",
+            ["picture.svg"] = "<svg onload='alert(1)'/>",
+            ["fake.png"] = "this is not a picture",
+            ["setup.exe"] = "MZ-not-really",
+        };
+        var paths = new List<string>();
+        foreach (var (name, text) in contents)
+        {
+            var path = Path.Combine(outside, name);
+            await File.WriteAllTextAsync(path, text, token);
+            paths.Add(path);
+        }
+
+        var locked = Path.Combine(outside, "locked.docx");
+        await File.WriteAllTextAsync(locked, "secret", token);
+
+        // Act: drop everything while one file is held open exclusively, which could not be read; look at what is shown;
+        // then let go of the file and send
+        FileStream hold = new(locked, FileMode.Open, FileAccess.Read, FileShare.None);
+        bool dropped;
+        try
+        {
+            dropped = composition.Composer.HandleDrop(new DroppedContent { Paths = [.. paths, locked] });
+        }
+        finally
+        {
+            await hold.DisposeAsync();
+        }
+
+        var chipKinds = composition.Composer.Document.Chips.Select(chip => chip.GetType()).ToList();
+        var statusAfterDrop = composition.Composer.StatusText;
+        var stillShown = composition.Preview.Image;
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        var copies = new Dictionary<string, string>();
+        foreach (var attachment in payload.Attachments)
+        {
+            copies[Path.GetFileName(attachment.ProjectRelativePath)] = await File.ReadAllTextAsync(Path.Combine(folder, attachment.ProjectRelativePath), token);
+        }
+
+        var originals = new Dictionary<string, string>();
+        foreach (var path in paths)
+        {
+            originals[Path.GetFileName(path)] = await File.ReadAllTextAsync(path, token);
+        }
+
+        var markerWritten = File.Exists(marker);
+        composition.Dispose();
+
+        // Assert: every dropped thing is a chip, a file or a picture by its name only, and nothing is in the status; the
+        // shown picture is the diagram still; the copies and the originals hold the content that was dropped; no
+        // script ran
+        Assert.True(dropped);
+        Assert.Equal(contents.Count + 1, chipKinds.Count);
+        Assert.Equal(["fake.png", "picture.svg"], payload.Attachments.Where(attachment => attachment.Kind == AttachmentKind.Image).Select(attachment => Path.GetFileName(attachment.ProjectRelativePath)).Order(StringComparer.Ordinal));
+        Assert.Equal(string.Empty, statusAfterDrop);
+        Assert.Same(shown, stillShown);
+        Assert.Equal(contents.Count + 1, payload.Attachments.Length);
+        Assert.Equal(contents.Append(new("locked.docx", "secret")).OrderBy(pair => pair.Key, StringComparer.Ordinal), copies.OrderBy(pair => pair.Key, StringComparer.Ordinal));
+        Assert.Equal(contents.OrderBy(pair => pair.Key, StringComparer.Ordinal), originals.OrderBy(pair => pair.Key, StringComparer.Ordinal));
+        Assert.False(markerWritten);
+    }
+
+    /// <summary>
+    ///     Test that a user who holds the talk key, with a speech model chosen in the settings, lets go and gets the
+    ///     recognized words as one block of dictated text after the typed text, that the words were not in the message
+    ///     while the key was held, and that one undo removes the whole block.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_DictateMessage_HeldAndReleased_InsertsOneBlock()
+    {
+        // Arrange: the application over a model that is installed and chosen and a microphone that is a recorded sound
+        // file, with a project, and some typed text
+        var (composition, _) = await ComposeWithDictationAsync(modelInstalled: true);
+        composition.Composer.InsertTyped("Please ");
+
+        // Act: hold the talk key, look at the message and the button, let go, and then undo and redo
+        await composition.Shell.BeginPushToTalkAsync();
+        var held = (composition.Shell.IsPushToTalkActive, composition.Chat.IsTalking, composition.Composer.CanSend, composition.Composer.Document.FlatText);
+        await composition.Shell.EndPushToTalkAsync();
+        var released = (composition.Shell.IsPushToTalkActive, composition.Chat.IsTalking, composition.Composer.StatusText);
+        var segments = composition.Composer.Document.Snapshot().Segments;
+        composition.Composer.Undo();
+        var afterUndo = composition.Composer.Document.FlatText;
+        composition.Composer.Redo();
+        var afterRedo = composition.Composer.Document.FlatText;
+        composition.Dispose();
+
+        // Assert: while held the message was unchanged and could not be sent; after the release the typed text and one
+        // dictated block are in the message in order; undo took the whole block out and redo put it back
+        Assert.Equal((true, true, false, "Please "), held);
+        Assert.Equal((false, false, string.Empty), released);
+        Assert.Collection(
+            segments,
+            segment => Assert.Equal(new TextSegment("Please ", TextOrigin.Typed), segment),
+            segment =>
+            {
+                var text = Assert.IsType<TextSegment>(segment);
+                Assert.Equal(TextOrigin.Dictated, text.Origin);
+                Assert.Equal("Make the second box blue.", text.Text.Trim());
+            });
+        Assert.Equal("Please ", afterUndo);
+        Assert.Equal("Please Make the second box blue.", afterRedo.Trim().Replace("  ", " ", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    ///     Test that a user who holds the talk key with no speech model chosen, or a chosen model that is not installed, is
+    ///     told what to do, that the microphone is not opened, that the message is as it was, and that it can still be
+    ///     sent.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_DictateMessage_NoModel_ExplainsAndKeepsDraft()
+    {
+        // Arrange: the application with a project and a microphone that fails when it is opened, with typed text
+        var (composition, settings) = await ComposeWithDictationAsync(modelInstalled: false);
+        composition.Composer.InsertTyped("Keep this ");
+
+        // Act: hold and release the talk key with no model chosen, then with a model chosen that is not installed, and
+        // send the message
+        await composition.Shell.BeginPushToTalkAsync();
+        await composition.Shell.EndPushToTalkAsync();
+        var withoutModel = (composition.Composer.StatusText, composition.Dictation.CheckAvailability().Reason);
+        var afterFirst = (composition.Composer.Document.FlatText, composition.Composer.DictationState, composition.Chat.IsTalking, composition.Composer.CanUndo);
+        settings.Update(current => current with { Speech = current.Speech with { SttModelId = "stt-missing" } });
+        await composition.Shell.BeginPushToTalkAsync();
+        await composition.Shell.EndPushToTalkAsync();
+        var notInstalled = (composition.Composer.StatusText, composition.Dictation.CheckAvailability().Reason);
+        var afterSecond = (composition.Composer.Document.FlatText, composition.Composer.DictationState, composition.Chat.IsTalking);
+        var canSend = composition.Chat.CanSend;
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var sent = Assert.Single(composition.Chat.Transcript).Payload!.Text;
+        composition.Dispose();
+
+        // Assert: each answer says what to do and is not a failure, nothing was added or lost, no talk state is left over,
+        // and the message was sent with the words that were typed
+        Assert.Equal(DictationAvailabilityReason.NoModelChosen, withoutModel.Reason);
+        Assert.Contains("Speech page", withoutModel.StatusText, StringComparison.Ordinal);
+        Assert.Equal(DictationAvailabilityReason.ModelNotInstalled, notInstalled.Reason);
+        Assert.Contains("stt-missing", notInstalled.StatusText, StringComparison.Ordinal);
+        Assert.NotEqual(withoutModel.StatusText, notInstalled.StatusText);
+        Assert.Equal(("Keep this ", DictationState.Idle, false, true), afterFirst);
+        Assert.Equal(("Keep this ", DictationState.Idle, false), afterSecond);
+        Assert.True(canSend);
+        Assert.Equal("Keep this", sent.Trim());
+    }
+
+    /// <summary>
+    ///     Test that a user who draws on the shown picture with the pointer and with the keyboard gets numbered marks, each
+    ///     with its chip in the message at the place where the user was writing, and that each mark holds the exact
+    ///     picture that was shown when it was drawn: the same picture, with its file and pixel fingerprints.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_MarkImage_DrawOnShownPicture_AddsNumberedChipPinnedToSnapshot()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown, and some typed text
+        var (composition, _) = await ComposeWithProjectAsync();
+        var (_, picture) = await ShowDiagramAsync(composition, "flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        composition.Composer.InsertTyped("Look: ");
+
+        // Act: mark the node 'Start' with the pointer and a note, type, and mark with the keyboard cursor
+        DrawRectangleAround(composition, NodeBox(picture, "Start"), "this one");
+        composition.Composer.InsertTyped(" and ");
+        composition.Annotation.SelectTool(AnnotationTool.Ellipse);
+        composition.Annotation.MoveCursor(-20, -10);
+        composition.Annotation.ConfirmCursor();
+        composition.Annotation.MoveCursor(60, 30);
+        composition.Annotation.ConfirmCursor();
+        composition.Annotation.SkipNote();
+        var marks = composition.Marks.Marks;
+        var segments = composition.Composer.Document.Snapshot().Segments;
+        var visible = composition.Annotation.VisibleMarks.Select(mark => mark.Number).ToList();
+        composition.Dispose();
+
+        // Assert: two marks numbered in order, the rectangle with its note around the node and the ellipse from the
+        // keyboard; each holds the very picture that was shown, with its fingerprints; the message holds their chips in
+        // the order the user wrote them, and the layer shows both
+        Assert.Equal([1, 2], marks.Select(mark => mark.Number));
+        Assert.Equal([MarkKind.Rectangle, MarkKind.Ellipse], marks.Select(mark => mark.Kind));
+        Assert.Equal("this one", marks[0].Note);
+        Assert.Null(marks[1].Note);
+        Assert.All(marks, mark =>
+        {
+            Assert.Same(picture, mark.Snapshot);
+            Assert.Equal(picture.SnapshotKey, mark.Snapshot.SnapshotKey);
+            Assert.Equal((64, 64), (mark.Snapshot.SourceFileHash?.Length, mark.Snapshot.ContentHash.Length));
+        });
+        var start = NodeBox(picture, "Start");
+        Assert.True(marks[0].Geometry.Points[0].X < start.X && marks[0].Geometry.Points[1].X > start.X + start.Width);
+        Assert.Collection(
+            segments,
+            segment => Assert.Equal(new TextSegment("Look: ", TextOrigin.Typed), segment),
+            segment => Assert.Equal(new MarkChip(marks[0].Id, 1), segment),
+            segment => Assert.Equal(new TextSegment(" and ", TextOrigin.Typed), segment),
+            segment => Assert.Equal(new MarkChip(marks[1].Id, 2), segment));
+        Assert.Equal([1, 2], visible);
+    }
+
+    /// <summary>
+    ///     Test that a mark stays exactly where the user drew it when its diagram is drawn again: drawing the unchanged
+    ///     file again shows the mark in the same place, and after the file was edited the mark is not shown on the new
+    ///     picture and is not moved to it, and the message that is sent holds the picture the mark was drawn on, with the
+    ///     part of the source that was under the mark then.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown, with a mark around the node 'Start'
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var (diagram, original) = await ShowDiagramAsync(composition, "flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        composition.Composer.InsertTyped("Fix ");
+        DrawRectangleAround(composition, NodeBox(original, "Start"), "here");
+        var mark = Assert.Single(composition.Marks.Marks);
+        var points = mark.Geometry.Points.ToList();
+
+        // Act: draw the unchanged file again, then edit the node 'Start' so that the picture changes, draw it again, and
+        // send the message
+        var sameAgain = await ShowDiagramAgainAsync(composition, diagram);
+        var onSamePicture = (composition.Annotation.VisibleMarks.Count, composition.Annotation.HiddenMarkCount);
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Begin with a much longer title] --> B[End]\n", token);
+        var edited = await ShowDiagramAgainAsync(composition, diagram);
+        var onNewPicture = (composition.Annotation.VisibleMarks.Count, composition.Annotation.HiddenMarkCount, composition.Composer.MarkChipIds.Count);
+        var afterEdit = (mark.Snapshot, mark.Geometry.Points.ToList());
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        composition.Dispose();
+
+        // Assert: the unchanged picture shows the mark where it was; the edited one has other pixels and does not show it
+        // but the message keeps it; the mark still holds the first picture and the same points; the payload is made from
+        // that picture and the node that was under the mark then
+        Assert.Equal(original.SnapshotKey, sameAgain.SnapshotKey);
+        Assert.Equal((1, 0), onSamePicture);
+        Assert.NotEqual(original.ContentHash, edited.ContentHash);
+        Assert.Equal((0, 1, 1), onNewPicture);
+        Assert.Same(original, afterEdit.Snapshot);
+        Assert.Equal(points, afterEdit.Item2);
+        var image = Assert.Single(payload.Images);
+        Assert.Equal((original.SourceFileHash, original.ContentHash), (image.SourceFileHash, image.ContentHash));
+        Assert.Equal(points, Assert.Single(image.Marks).Points);
+        Assert.Equal("Start", Assert.Single(Assert.Single(image.Marks).SourceElements, element => element.Kind == "node").Text);
+    }
+
+    /// <summary>
     ///     Composes the application on temporary folders and has a user create a project through the New Project dialog.
     /// </summary>
     /// <param name="dragFolder">The folder for pictures dragged out, or <see langword="null" /> for one in the temporary root.</param>
@@ -899,9 +1367,144 @@ public sealed class CanvasPilotTests : IDisposable
             new FakeRefreshScheduler(),
             defaultProjectsFolder: documents,
             dragFolder: dragFolder ?? PathHelpers.SafePathCombine(_tempRoot, "drag"));
+        _disposables.Add(composition);
         composition.Shell.AttachDialogService(dialogs);
         await composition.Shell.NewProjectCommand.ExecuteAsync(null);
         return (composition, dialogs);
+    }
+
+    /// <summary>
+    ///     Composes the application over a speech model service whose model is installed in a temporary store (or whose
+    ///     store holds none) and an audio service whose microphone is a recorded sound file (or one that must never be
+    ///     opened), and has a user create a project. No microphone, speech runtime, or network is used.
+    /// </summary>
+    /// <param name="modelInstalled">
+    ///     Whether the model is installed and chosen in the settings, as the Speech page of the settings does.
+    /// </param>
+    /// <returns>The composition, whose project is open, and the settings service it uses.</returns>
+    private async Task<(ApplicationComposition Composition, SettingsService Settings)> ComposeWithDictationAsync(bool modelInstalled)
+    {
+        var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var settings = new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger);
+        var modelStore = PathHelpers.SafePathCombine(_tempRoot, "models");
+        var wave = PathHelpers.SafePathCombine(_tempRoot, "speech.wav");
+        Directory.CreateDirectory(modelStore);
+        if (modelInstalled)
+        {
+            DictationTestFiles.InstallModel(modelStore, "stt-fake");
+            DictationTestFiles.WriteSilentWave(wave, seconds: 1, sampleRate: 16000);
+        }
+
+        var models = new SpeechModelService(
+            () => new SpeechModelCatalog(new SpeechModelStoreOptions { RootPathOverride = modelStore }).AddModels(
+                new FakeRecognitionModel(
+                    "stt-fake",
+                    () => new FakeRecognitionBackend(
+                        [new SpeechRecognitionResult("make the", IsFinal: false)],
+                        new SpeechRecognitionResult("Make the second box blue.", IsFinal: true)))));
+        _disposables.Add(models);
+        var audio = new AudioDeviceService(
+            () => [SpeechTestData.Capture("Desk mic")],
+            () => [],
+            () => { },
+            captureCreator: _ => modelInstalled
+                ? new WavFileAudioCaptureDevice(wave, 1600)
+                : throw new InvalidOperationException("The microphone must not be opened without a model."));
+        var dialogs = new FakeDialogService
+        {
+            OnNewProject = dialog =>
+            {
+                dialog.ProjectName = "Poster";
+                dialog.OkCommand.Execute(null);
+            },
+        };
+        var composition = ApplicationComposition.Create(
+            logger,
+            settings,
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: documents,
+            audioDevices: audio,
+            speechModels: models,
+            dragFolder: PathHelpers.SafePathCombine(_tempRoot, "drag"));
+        _disposables.Add(composition);
+        composition.Shell.AttachDialogService(dialogs);
+        if (modelInstalled)
+        {
+            settings.Update(current => current with { Speech = current.Speech with { SttModelId = "stt-fake" } });
+        }
+
+        await composition.Shell.NewProjectCommand.ExecuteAsync(null);
+        return (composition, settings);
+    }
+
+    /// <summary>
+    ///     Writes a diagram into the open project, has the user select it, and waits until its picture is shown.
+    /// </summary>
+    /// <param name="composition">The composed application.</param>
+    /// <param name="name">The file name of the diagram.</param>
+    /// <param name="source">The content of the diagram.</param>
+    /// <returns>The path of the diagram and the picture that is shown.</returns>
+    private static async Task<(string Path, RenderedImage Picture)> ShowDiagramAsync(ApplicationComposition composition, string name, string source)
+    {
+        var path = Path.Combine(composition.Shell.CurrentProject!.FolderPath, name);
+        await File.WriteAllTextAsync(path, source, TestContext.Current.CancellationToken);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(path);
+        await composition.Preview.RenderCompletion;
+        return (path, composition.Preview.Image!);
+    }
+
+    /// <summary>
+    ///     Has the user show another file and then the diagram again, which draws the diagram anew from its file as it
+    ///     is then, and waits until the new picture is shown.
+    /// </summary>
+    /// <param name="composition">The composed application.</param>
+    /// <param name="diagram">The path of the diagram.</param>
+    /// <returns>The picture that is shown.</returns>
+    private static async Task<RenderedImage> ShowDiagramAgainAsync(ApplicationComposition composition, string diagram)
+    {
+        var other = Path.Combine(composition.Shell.CurrentProject!.FolderPath, "other.svg");
+        await File.WriteAllTextAsync(other, "<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'/>", TestContext.Current.CancellationToken);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(other);
+        await composition.Preview.RenderCompletion;
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        return composition.Preview.Image!;
+    }
+
+    /// <summary>
+    ///     Finds the box of a node of a picture of a diagram.
+    /// </summary>
+    /// <param name="picture">The picture.</param>
+    /// <param name="text">The text of the node.</param>
+    /// <returns>The box of the node, in picture pixels.</returns>
+    private static RenderBox NodeBox(RenderedImage picture, string text) =>
+        picture.Positions.First(position => position.Kind == "node" && position.Text == text).Box!.Value;
+
+    /// <summary>
+    ///     Has the user draw a rectangle a little larger than a box on the shown picture with the pointer and finish the
+    ///     mark with a note or without one.
+    /// </summary>
+    /// <param name="composition">The composed application.</param>
+    /// <param name="box">The box to mark, in picture pixels.</param>
+    /// <param name="note">The note, or <see langword="null" /> to skip it.</param>
+    private static void DrawRectangleAround(ApplicationComposition composition, RenderBox box, string? note = null)
+    {
+        var overlay = composition.Annotation;
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        overlay.BeginStroke(new RenderPoint(box.X - 4, box.Y - 4));
+        overlay.EndStroke(new RenderPoint(box.X + box.Width + 4, box.Y + box.Height + 4));
+        if (note is null)
+        {
+            overlay.SkipNote();
+        }
+        else
+        {
+            overlay.NoteText = note;
+            overlay.CommitNote();
+        }
     }
 
     /// <summary>

@@ -71,6 +71,12 @@ services, or display is required.
 - With the speech settings composed as at startup, dictation tells a user who has no model chosen to choose one, and a
   user who holds the talk control with a model chosen gets the recognized words as text that is added to the message as
   one dictated block, in order after the typed text.
+- Holding the talk key opens neither the microphone nor the speech engine when no model is chosen or the chosen model is
+  not installed; the status says what to do, the message is unchanged and can still be sent, and with a model the words
+  recognized while the key was held are added as one dictated block that one undo removes.
+- Marks keep their numbers, points, and picture when the diagram is drawn again; a changed picture does not show them
+  and the sent message holds the picture they were drawn on; the Edit menu's undo and redo go through every action of
+  the message one step at a time, and what is dropped is never opened, run, or shown, whatever it is.
 - A user who marks a node of the shown diagram, writes around the mark, and sends the message through the chat panel
   sees the message in the transcript with its words and mark chip in order, and "View payload" shows the payload
   exactly as the payload describer writes it, with the place of the mark, the node under it, and the annotated picture
@@ -233,6 +239,72 @@ chip, and the text " green"; its payload text is `Make [Mark 1] green`. Choosing
 inspector whose description is exactly the output of the payload describer for that payload, contains the node text
 `Start` as a source element, and has two pictures, the annotated picture and the area around the mark. This scenario is
 tested by `CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload`.
+
+**CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript**: The composed application's user has a
+project with a two-node Mermaid diagram shown and a file outside the project. An empty message cannot be sent. The user
+types "Make ", draws a rectangle with the note "bigger" around the node `Start`, types " like ", drops the file, and
+sends the message through the chat panel. While drafting nothing is in the attachments folder. The transcript holds one
+entry whose items are the text "Make ", the mark chip, the text " like ", and the file chip, with the summary "1 mark, 1
+attachment"; its payload text is `Make [Mark 1] like [Attachment 1: brief.txt]`, its one attachment is
+`attachments/brief.txt` and the file is there with its content, its one picture holds one mark with the note and the
+node `Start` as its source element, and the message, what can be undone, the marks, and the marks shown are empty. This
+scenario is tested by `CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript`.
+
+**CanvasPilot_UndoRedoMessage_EachActionKind_StepsAsSpecified**: The composed application's user has a project with a
+two-node Mermaid diagram shown, two files outside the project, and the message as the target of the Edit menu. The user
+types two characters, dictates a block, drops the two files, marks the node `Start`, and deletes a file chip, one action
+each, and the state of the message after each action is noted. The Edit menu's undo command, run until it is disabled,
+passes through the noted states in reverse order down to the empty message, with one step for each character, the block,
+the drop of two files, the mark and its shown mark, and the deleted chip; the redo command passes through them in order.
+The files of the project are the same before and after drafting. After the message is sent, nothing can be undone or
+redone and both commands are disabled. This scenario is tested by
+`CanvasPilot_UndoRedoMessage_EachActionKind_StepsAsSpecified`.
+
+**CanvasPilot_AttachToMessage_DropFileFolderImage_CopiedIntoProjectOnlyAtSend**: In the composed application's project,
+a text file, a folder with a nested folder and two files, and a picture file are dropped in one drop, and a screenshot
+is pasted. The message holds a file chip, a folder chip, and two picture chips, and the project has no attachments
+folder. A file of the same name as the text file is then put into the attachments folder. After the message is sent, the
+four attachments are in the attachments folder with their exact content, the text file under another name, the earlier
+file unchanged, the pasted picture's draft folder is empty, and the originals are where they were. This scenario is
+tested by `CanvasPilot_AttachToMessage_DropFileFolderImage_CopiedIntoProjectOnlyAtSend`.
+
+**CanvasPilot_AttachToMessage_DroppedContent_IsNeverOpened**: In the composed application with a diagram shown, scripts
+that would write a marker file when run, a web page, a shortcut, a picture file that is no picture, a vector picture
+with a script in it, a program, and a file that another program holds open exclusively are dropped in one drop. Each
+becomes a chip without a message in the status, and the picture shown is still the diagram. After the lock is released
+and the message sent, every file is in the attachments folder with the content that was dropped, the originals are
+unchanged, the two picture files are attachments of the kind picture, and the marker file was never written. This
+scenario is tested by `CanvasPilot_AttachToMessage_DroppedContent_IsNeverOpened`.
+
+**CanvasPilot_DictateMessage_HeldAndReleased_InsertsOneBlock**: The application is composed over a model that is
+installed and chosen in the settings and a microphone that is a recorded sound file, with a project and the typed text
+"Please ". The talk key is pressed: the shell and the chat panel report talking, the message cannot be sent and is
+unchanged. When the key is released nothing is talking, the status is empty, and the message holds the typed text and
+one block of dictated text "Make the second box blue." in that order; one undo removes the whole block and redo puts it
+back. This scenario is tested by `CanvasPilot_DictateMessage_HeldAndReleased_InsertsOneBlock`.
+
+**CanvasPilot_DictateMessage_NoModel_ExplainsAndKeepsDraft**: The application is composed with a project, the typed text
+"Keep this ", and a microphone that fails when it is opened. The talk key is pressed and released with no model chosen:
+the status names the Speech page, the reason is that no model is chosen, and the message is unchanged, idle, and has the
+one step of typing. With a model chosen that is not installed, the status is another one that names the model and the
+reason is that it is not installed. The microphone was never opened, the message can still be sent, and what is sent is
+"Keep this". This scenario is tested by `CanvasPilot_DictateMessage_NoModel_ExplainsAndKeepsDraft`.
+
+**CanvasPilot_MarkImage_DrawOnShownPicture_AddsNumberedChipPinnedToSnapshot**: The composed application's user has a
+two-node Mermaid diagram shown and the typed text "Look: ". The user draws a rectangle with the note "this one" around
+the node `Start` with the pointer, types " and ", and draws an ellipse with the keyboard cursor, skipping the note. The
+two marks are numbered one and two, are a rectangle and an ellipse, and each holds the very picture that was shown, with
+its file and pixel fingerprints; the rectangle's points enclose the node; the message holds the text, the first chip,
+the text, and the second chip in that order; and the layer shows both marks. This scenario is tested by
+`CanvasPilot_MarkImage_DrawOnShownPicture_AddsNumberedChipPinnedToSnapshot`.
+
+**CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks**: The composed application's user has a two-node Mermaid diagram
+shown and marks the node `Start` with a note. Drawing the unchanged file again gives a picture with the same snapshot
+key and shows the mark. After the file is edited and drawn again, the picture has other pixels, the layer shows no mark
+and counts one hidden mark, the message still holds the chip, and the mark still holds the first picture and the same
+points. The message that is sent has a picture with the fingerprints of the first picture, the mark with the same
+points, and the node `Start` as the source element under it. This scenario is tested by
+`CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks`.
 
 **Speech_NativeRuntimePublished**: After the Windows build job publishes the application self-contained for win-x64,
 FileAssert asserts that the published folder, which the installer takes whole, holds exactly one each of
