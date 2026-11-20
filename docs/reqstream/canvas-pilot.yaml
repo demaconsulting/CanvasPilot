@@ -8,8 +8,8 @@
 #   without opening a window
 #
 # NOTE: This file currently covers only the capabilities delivered so far (operational logging,
-# safe file handling, persisted user settings, AI provider configuration, and projects). Additional system
-# requirements are added as further subsystems are introduced.
+# safe file handling, persisted user settings, AI provider configuration, projects, the desktop shell, and
+# application startup). Additional system requirements are added as further subsystems are introduced.
 
 sections:
   - title: CanvasPilot Requirements
@@ -103,3 +103,34 @@ sections:
           - CanvasPilot-Project-BrowseProjectImages
         tests:
           - CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles
+
+      - id: CanvasPilot-System-DesktopShell
+        title: >-
+          The application shall present a main window with menus from which the user creates and opens
+          projects, sees the project's image files, returns to recent projects, changes settings, and
+          learns about the application.
+        tags: [system]
+        justification: |
+          The main window is what the user sees and uses. Bringing the project, settings, and application
+          information together under familiar menus, with the open project named in the title, lets a
+          user work without knowing how the application is built.
+        children:
+          - CanvasPilot-AppShell-ProvideMainWindow
+          - CanvasPilot-AppShell-HostProjectWorkspace
+          - CanvasPilot-AppShell-ShowApplicationInformation
+        tests:
+          - CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip
+
+      - id: CanvasPilot-System-StartApplication
+        title: >-
+          The application shall start on every supported platform by building its parts in dependency
+          order, loading the stored settings, and recording its start and stop in the application log.
+        tags: [system]
+        justification: |
+          An application that cannot start leaves the user with nothing. Building the parts the same way
+          on every platform, in one place, makes the start checkable without a window, and the log
+          records when it happened for anyone investigating a problem.
+        children:
+          - CanvasPilot-AppShell-ComposeApplication
+        tests:
+          - CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell

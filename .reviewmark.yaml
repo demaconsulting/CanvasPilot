@@ -98,6 +98,81 @@ reviews:
     paths:
       - "docs/reqstream/canvas-pilot/**/*.yaml"
 
+  # CanvasPilot - AppShell
+  - id: CanvasPilot-AppShell
+    title: Review of CanvasPilot AppShell subsystem architecture, composition root, and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem.md"
+      - "src/**/App.axaml"
+      - "src/**/App.axaml.cs"
+      - "src/**/AppShellSubsystem/ApplicationComposition.cs"
+      - "src/**/AppShellSubsystem/ViewLocator.cs"
+      - "src/DemaConsulting.CanvasPilot.Desktop/Program.cs"
+      - "test/**/AppShellSubsystem/AppShellSubsystemTests.cs"
+      - "test/DemaConsulting.CanvasPilot.UiTests/TestAppBuilder.cs"
+
+  - id: CanvasPilot-AppShell-MainWindowShell
+    title: Review of CanvasPilot MainWindowShell unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/main-window-shell.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/main-window-shell.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/main-window-shell.md"
+      - "src/**/AppShellSubsystem/MainWindowShell.cs"
+      - "src/**/AppShellSubsystem/IDialogService.cs"
+      - "src/**/AppShellSubsystem/IImageExporter.cs"
+      - "src/**/AppShellSubsystem/MessageDialogViewModel.cs"
+      - "src/**/AppShellSubsystem/MessageDialogView.axaml"
+      - "src/**/AppShellSubsystem/MessageDialogView.axaml.cs"
+      - "src/**/AppShellSubsystem/MainWindowView.axaml"
+      - "src/**/AppShellSubsystem/MainWindowView.axaml.cs"
+      - "test/**/AppShellSubsystem/MainWindowShellTests.cs"
+      - "test/**/AppShellSubsystem/MessageDialogTests.cs"
+      - "test/**/AppShellSubsystem/AppShellSubsystemFakes.cs"
+      - "test/**/MainWindowViewTests.cs"
+      - "test/**/AppShellUiTestSupport.cs"
+
+  - id: CanvasPilot-AppShell-ProjectWorkspace
+    title: Review of CanvasPilot ProjectWorkspace unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/project-workspace.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/project-workspace.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/project-workspace.md"
+      - "src/**/AppShellSubsystem/ProjectWorkspaceViewModel.cs"
+      - "src/**/AppShellSubsystem/ProjectWorkspaceView.axaml"
+      - "src/**/AppShellSubsystem/ProjectWorkspaceView.axaml.cs"
+      - "test/**/AppShellSubsystem/ProjectWorkspaceTests.cs"
+
+  - id: CanvasPilot-AppShell-AboutDialog
+    title: Review of CanvasPilot AboutDialog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/about-dialog.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/about-dialog.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/about-dialog.md"
+      - "src/**/AppShellSubsystem/AboutDialogViewModel.cs"
+      - "src/**/AppShellSubsystem/AboutDialogView.axaml"
+      - "src/**/AppShellSubsystem/AboutDialogView.axaml.cs"
+      - "test/**/AppShellSubsystem/AboutDialogTests.cs"
+
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
     title: Review of CanvasPilot Logging subsystem architecture and interfaces

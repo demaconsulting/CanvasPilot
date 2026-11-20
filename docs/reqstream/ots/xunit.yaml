@@ -21,7 +21,7 @@ sections:
               - RollingFileLogger_Log_Event_WritesTimestampedEntry
               - RollingFileLogger_Log_WithException_IncludesExceptionDetails
               - RollingFileLogger_Constructor_NonPositiveMaximumFileSize_ThrowsArgumentException
-              - MainWindowShell_New_TitleIsApplicationName
+              - MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled
           - id: CanvasPilot-OTS-xUnit-Report
             title: xUnit shall record test results in TRX output files.
             justification: |
@@ -35,4 +35,4 @@ sections:
               - RollingFileLogger_Log_Event_WritesTimestampedEntry
               - RollingFileLogger_Log_WithException_IncludesExceptionDetails
               - RollingFileLogger_Constructor_NonPositiveMaximumFileSize_ThrowsArgumentException
-              - MainWindowShell_New_TitleIsApplicationName
+              - MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled

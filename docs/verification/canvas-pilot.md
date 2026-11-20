@@ -5,7 +5,8 @@
 System-level verification uses tests in `CanvasPilotTests.cs` that compose real units on temporary
 directories without opening a window. Each test exercises the units together as the application does
 and asserts on observable outcomes such as the files written to disk and the exceptions raised. The
-tests use real file I/O and no mocks, because the units under test depend only on the local file system.
+tests use real file I/O and no mocks for the units themselves; where a user would act in a dialog, a hand-written
+dialog service plays the user, and a hand-written refresh scheduler replaces timed refreshes so no test waits.
 
 ## Test Environment
 
@@ -27,6 +28,10 @@ services, or display is required.
 - A project created in a folder is reopened from the recent projects list, and a damaged project file is
   refused with a message and a log entry without changing the open project.
 - The project explorer lists the image source files of the open project and not other content.
+- The application starts on every supported platform: composing its units without a window gives a titled shell
+  with the right commands available, and the log records the start and stop.
+- The main window shell creates a project, lists its image files, finds it in the recent projects after a
+  restart, and keeps a changed setting across the restart.
 
 ## Test Scenarios
 
@@ -62,7 +67,15 @@ a text file; the project explorer is opened on the project folder and lists the 
 and selecting one reports its path. This scenario is tested by
 `CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles`.
 
-**MainWindowShell_New_TitleIsApplicationName**: The application shell is created on each supported
-platform and runtime and reports the application name as its title, proving the application's managed
-code loads and runs there. The platform requirements link this test to each platform and runtime with
-source filters. This scenario is tested by `MainWindowShell_New_TitleIsApplicationName`.
+**CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell**: The application's units are composed exactly as
+at startup, without a window, over temporary per-user folders; the shell is titled with the application name,
+the commands that need nothing are available, those that need a project are not, the default settings are in
+effect, and the log holds the start and stop entries. The platform requirements link this test to each platform
+and runtime with source filters. This scenario is tested by
+`CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell`.
+
+**CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
+creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the
+image and the title names the project. The user changes the AI model name in the settings dialog and the
+application is restarted: the project is in the recent projects menu and the model name is in effect. This
+scenario is tested by `CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip`.

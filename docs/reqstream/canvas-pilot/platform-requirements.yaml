@@ -14,8 +14,8 @@
 #   macos@TestName        - proves the test passed on a macOS platform
 #   dotnet10.x@TestName   - proves the test ran with .NET 10.x runtime
 #
-# NOTE: The tests linked here are the earliest shell tests. They are replaced by dedicated
-# application startup tests when the system-level requirements are finalized.
+# NOTE: The tests linked here are the application startup test, which composes the application's units exactly
+# as at startup (without a window) and runs on every supported platform and runtime.
 
 sections:
   - title: CanvasPilot Requirements
@@ -29,7 +29,7 @@ sections:
               DEMA Consulting tools must support Windows as a major development platform.
             tests:
               # Tests link to "windows" to ensure results come from Windows platform
-              - "windows@MainWindowShell_New_TitleIsApplicationName"
+              - "windows@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"
 
           - id: CanvasPilot-Platform-Linux
             title: The application shall execute successfully on Linux platforms.
@@ -38,7 +38,7 @@ sections:
               DEMA Consulting tools must support Linux for CI/CD and containerized environments.
             tests:
               # Tests link to "ubuntu" to ensure results come from Linux platform
-              - "ubuntu@MainWindowShell_New_TitleIsApplicationName"
+              - "ubuntu@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"
 
           - id: CanvasPilot-Platform-MacOS
             title: The application shall execute successfully on macOS platforms.
@@ -47,7 +47,7 @@ sections:
               DEMA Consulting tools must support macOS for developers using Apple platforms.
             tests:
               # Tests link to "macos" to ensure results come from macOS platform
-              - "macos@MainWindowShell_New_TitleIsApplicationName"
+              - "macos@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"
 
           - id: CanvasPilot-Platform-Net10
             title: The application shall support the .NET 10 runtime.
@@ -56,4 +56,4 @@ sections:
               .NET 10 is a Long-Term Support (LTS) release, providing long-term stability for
               enterprise users.
             tests:
-              - "dotnet10.x@MainWindowShell_New_TitleIsApplicationName"
+              - "dotnet10.x@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"

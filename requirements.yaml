@@ -9,6 +9,10 @@ root-tags: [system, quality]
 includes:
   - docs/reqstream/quality.yaml
   - docs/reqstream/canvas-pilot.yaml
+  - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+  - docs/reqstream/canvas-pilot/app-shell-subsystem/main-window-shell.yaml
+  - docs/reqstream/canvas-pilot/app-shell-subsystem/project-workspace.yaml
+  - docs/reqstream/canvas-pilot/app-shell-subsystem/about-dialog.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml
   - docs/reqstream/canvas-pilot/project-subsystem.yaml

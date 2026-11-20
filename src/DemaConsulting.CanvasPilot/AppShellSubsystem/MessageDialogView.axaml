@@ -1,0 +1,46 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DemaConsulting.CanvasPilot.AppShellSubsystem"
+        x:Class="DemaConsulting.CanvasPilot.AppShellSubsystem.MessageDialogView"
+        x:DataType="vm:MessageDialogViewModel"
+        Title="{Binding Title}"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Width="460"
+        Height="220"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+
+  <Grid Margin="16" RowDefinitions="Auto,Auto,Auto">
+
+    <TextBlock Grid.Row="0"
+               AutomationProperties.AutomationId="MessageDialogText"
+               Text="{Binding Message}"
+               TextWrapping="Wrap" />
+
+    <TextBox Grid.Row="1"
+             Margin="0,12,0,0"
+             AutomationProperties.AutomationId="MessageDialogInput"
+             IsVisible="{Binding IsPrompt}"
+             Text="{Binding InputText}" />
+
+    <StackPanel Grid.Row="2"
+                Margin="0,16,0,0"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Spacing="8">
+      <Button AutomationProperties.AutomationId="MessageDialogOkButton"
+              Content="{Binding OkText}"
+              IsDefault="True"
+              MinWidth="80"
+              Command="{Binding OkCommand}" />
+      <Button AutomationProperties.AutomationId="MessageDialogCancelButton"
+              Content="Cancel"
+              IsCancel="True"
+              IsVisible="{Binding ShowCancel}"
+              MinWidth="80"
+              Command="{Binding CancelCommand}" />
+    </StackPanel>
+
+  </Grid>
+
+</Window>

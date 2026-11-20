@@ -1,0 +1,82 @@
+---
+# AppShell Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot AppShell subsystem
+# - The AppShell subsystem spans MainWindowShell (MainWindowShell.cs, IDialogService.cs, IImageExporter.cs,
+#   MainWindowView.axaml, MessageDialogViewModel.cs, MessageDialogView.axaml), ProjectWorkspace
+#   (ProjectWorkspaceViewModel.cs, ProjectWorkspaceView.axaml), and AboutDialog (AboutDialogViewModel.cs,
+#   AboutDialogView.axaml), plus the composition root (ApplicationComposition.cs, App.axaml.cs) and the view
+#   locator (ViewLocator.cs)
+# - Subsystem requirements describe the application shell behavior that satisfies the system-level requirements
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-AppShell-ProvideMainWindow
+            title: >-
+              The AppShell subsystem shall provide a main window with File, Image, Tools, and Help menus
+              through which the user creates, opens, saves, and closes projects, changes settings, views
+              information about the application, and exits, with the open project's name in the window title.
+            justification: |
+              The main window is the user's way into every capability of the application. A familiar menu
+              structure, a title that names the open project, and problems reported in dialogs rather than
+              failures let the user work with projects without knowing how the application is built.
+            children:
+              - CanvasPilot-MainWindowShell-ExposeMenus
+              - CanvasPilot-MainWindowShell-TitleFollowsProject
+              - CanvasPilot-MainWindowShell-CreateAndOpenProjects
+              - CanvasPilot-MainWindowShell-SaveAndCloseProjects
+              - CanvasPilot-MainWindowShell-ListRecentProjects
+              - CanvasPilot-MainWindowShell-ShowSettingsAndAbout
+              - CanvasPilot-MainWindowShell-ProvideImageMenuSeam
+              - CanvasPilot-MainWindowShell-TalkToUserThroughDialogService
+            tests:
+              - AppShellSubsystem_ProjectLifecycle_NewSaveCloseReopenFromRecent
+              - AppShellSubsystem_Settings_DialogOk_StoresChoicesForNextRun
+
+          - id: CanvasPilot-AppShell-HostProjectWorkspace
+            title: >-
+              The AppShell subsystem shall show the open project's image files beside a content area that
+              explains what is missing, with a place for a preview of the selected file, and shall let the
+              user rename and delete files after confirmation.
+            justification: |
+              The user works on one image source file at a time. Showing the project's files next to the
+              area that will show their preview, with a plain explanation while there is no project, file, or
+              preview, keeps the window understandable at every step, and confirming deletions protects the
+              user's files.
+            children:
+              - CanvasPilot-ProjectWorkspace-HostExplorerAndPreview
+              - CanvasPilot-ProjectWorkspace-FollowOpenProject
+              - CanvasPilot-ProjectWorkspace-ConfirmDeleteAndPromptRename
+            tests:
+              - AppShellSubsystem_ManageFiles_RenameAndDelete_UpdateFolderAndExplorer
+
+          - id: CanvasPilot-AppShell-ShowApplicationInformation
+            title: >-
+              The AppShell subsystem shall show the application's name, tagline, version, copyright, and the
+              open source libraries it is built on in an About dialog.
+            justification: |
+              Users and support staff need to know which version of the application they are running, and the
+              open source libraries the application is built on are acknowledged where users can see them.
+            children:
+              - CanvasPilot-AboutDialog-ShowApplicationIdentity
+              - CanvasPilot-AboutDialog-ListDependencies
+              - CanvasPilot-AboutDialog-CloseDialog
+            tests:
+              - AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries
+
+          - id: CanvasPilot-AppShell-ComposeApplication
+            title: >-
+              The AppShell subsystem shall build the application's units at startup in dependency order, load
+              the stored settings, record the start and stop in the application log, and release the units on
+              exit.
+            justification: |
+              One place that creates every unit and passes each its dependencies keeps the application's
+              structure visible and testable, so the application starts the same way on every platform and
+              in tests without a window, and settings that are stored are in effect from the first moment.
+            tests:
+              - AppShellSubsystem_ComposeApplication_LoadsSettingsListsRecentProjectsAndLogs
+              - AppShellSubsystem_Create_NullArguments_Throw

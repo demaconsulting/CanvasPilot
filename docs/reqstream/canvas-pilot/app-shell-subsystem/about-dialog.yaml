@@ -1,0 +1,46 @@
+---
+# Software Unit Requirements for the AboutDialog Unit
+#
+# The AboutDialog unit is the modal About window and its view model: the application name, tagline, version,
+# copyright, and the open source libraries the application is built on.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: AboutDialog Requirements
+            requirements:
+              - id: CanvasPilot-AboutDialog-ShowApplicationIdentity
+                title: >-
+                  The AboutDialog shall show the application name, tagline, copyright notice, and version,
+                  using the application's informational version without build metadata unless a version is
+                  supplied.
+                justification: |
+                  Users and support staff need to know exactly which version they are running, and build
+                  metadata after a plus sign is noise in a dialog meant for people.
+                tests:
+                  - AboutDialogViewModel_New_ShowsIdentityAndVersion
+                  - AboutDialogViewModel_New_SuppliedVersion_IsShownTrimmed
+                  - AboutDialogViewModel_New_BlankVersion_UsesAssemblyVersion
+                  - MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses
+
+              - id: CanvasPilot-AboutDialog-ListDependencies
+                title: >-
+                  The AboutDialog shall list the open source libraries the application is built on with what
+                  each is used for.
+                justification: |
+                  Acknowledging the libraries the application depends on is part of using open source software
+                  responsibly, and it tells users what the application is made of.
+                tests:
+                  - AboutDialogViewModel_Dependencies_ListsOpenSourceLibraries
+                  - MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses
+
+              - id: CanvasPilot-AboutDialog-CloseDialog
+                title: >-
+                  The AboutDialog shall close when the user chooses Close.
+                justification: |
+                  The dialog is informational and must be easy to dismiss.
+                tests:
+                  - AboutDialogViewModel_Close_RequestsClose
+                  - MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses

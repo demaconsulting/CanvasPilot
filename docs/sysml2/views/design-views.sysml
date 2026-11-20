@@ -23,6 +23,12 @@ package CanvasPilot {
         render asInterconnectionDiagram;
     }
 
+    view AppShellSubsystemView {
+        expose AppShellSubsystem;
+        expose AppShellSubsystem::*;
+        render asInterconnectionDiagram;
+    }
+
     view LoggingSubsystemView {
         expose LoggingSubsystem;
         expose LoggingSubsystem::*;

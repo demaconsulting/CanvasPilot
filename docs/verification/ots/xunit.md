@@ -54,10 +54,10 @@ non-positive maximum file size raises an exception.
 
 **Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
 
-#### MainWindowShell_New_TitleIsApplicationName
+#### MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled
 
 **Scenario**: xUnit discovers and runs this test; the test verifies that a newly created application
-shell reports the application name as its title.
+shell reports the application name as its title and disables the commands that need a project.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 

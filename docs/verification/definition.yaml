@@ -2,6 +2,7 @@
 resource-path:
   - docs/verification
   - docs/verification/canvas-pilot
+  - docs/verification/canvas-pilot/app-shell-subsystem
   - docs/verification/canvas-pilot/logging-subsystem
   - docs/verification/canvas-pilot/project-subsystem
   - docs/verification/canvas-pilot/settings-subsystem
@@ -13,6 +14,10 @@ input-files:
   - docs/verification/title.txt
   - docs/verification/introduction.md
   - docs/verification/canvas-pilot.md
+  - docs/verification/canvas-pilot/app-shell-subsystem.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/main-window-shell.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/project-workspace.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/about-dialog.md
   - docs/verification/canvas-pilot/logging-subsystem.md
   - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/verification/canvas-pilot/project-subsystem.md

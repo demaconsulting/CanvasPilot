@@ -5,12 +5,17 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented so far are four subsystems, `Logging`, `Project`, `Settings`, and `Utilities`;
-further subsystems (application shell, speech, and image preview) are added to this document as they
-are introduced.
+software items documented so far are five subsystems, `AppShell`, `Logging`, `Project`, `Settings`, and
+`Utilities`; further subsystems (speech and image preview) are added to this document as they are
+introduced.
 
 ```mermaid
 flowchart TD
+    subgraph AppShell
+        MainWindowShell
+        ProjectWorkspace
+        AboutDialog
+    end
     subgraph Logging
         RollingFileLogger
     end
@@ -41,6 +46,13 @@ flowchart TD
     SettingsService --> RollingFileLogger
     SettingsDialog --> SettingsService
     AiProviderSettingsPage --> SettingsDialog
+    MainWindowShell --> ProjectService
+    MainWindowShell --> RecentProjects
+    MainWindowShell --> NewProjectDialog
+    MainWindowShell --> SettingsDialog
+    MainWindowShell --> ProjectWorkspace
+    MainWindowShell --> AboutDialog
+    ProjectWorkspace --> ProjectExplorer
 ```
 
 `PathHelpers` provides safe path combination and has no dependencies on other local items.
@@ -62,6 +74,12 @@ settings through `SettingsService`. `NewProjectDialog` collects and validates a 
 `ProjectService`, and `ProjectExplorer` lists, watches, selects, renames, and deletes the image source files in
 the root of the open project's folder. The application supplies the folder picker, the image source filter, and
 the refresh scheduler that these units use, so the `Project` subsystem does not depend on the main window.
+
+`MainWindowShell` is the view model of the main window and the only item that talks to the user about projects and
+settings: it runs the File, Image, Tools, and Help commands and shows its dialogs through an `IDialogService` that
+the window implements. `ProjectWorkspace` holds the project explorer and the place for the image preview, and
+`AboutDialog` identifies the application. At startup the application builds all units in one place,
+`ApplicationComposition`, which system tests also use without a window.
 
 ## External Interfaces
 
@@ -113,9 +131,19 @@ works with its files.
 - *Constraints*: OK is enabled only for a project that can be created. The list shows only image source files in
   the project root and follows file changes.
 
+**Main Window**: The application's window and menus.
+
+- *Direction*: Input and output.
+- *Type*: Avalonia window with File, Image, Tools, and Help menus, a project explorer, a preview area, and modal
+  dialogs (New Project, Settings, About, and message, confirmation, and prompt dialogs).
+- *Format*: The window title is `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`.
+  Every menu item has a name and an automation identifier that are the same.
+- *Constraints*: Menu items are enabled only when their command can run. Problems are shown in a dialog, never
+  as an unhandled failure.
+
 ## Dependencies
 
-The `Logging`, `Project`, `Settings`, and `Utilities` subsystems use .NET base class library types,
+The `AppShell`, `Logging`, `Project`, `Settings`, and `Utilities` subsystems use .NET base class library types,
 `System.Text.Json` for the settings and project files, and, for dialogs, pages, and lists, Avalonia and
 CommunityToolkit.Mvvm, which are runtime third-party items. The `ProjectExplorer` unit also uses the extension
 list of the `DemaConsulting.CanvasNet.Viewer` library to decide which files are image sources; its OTS
@@ -170,6 +198,13 @@ creates the project folder, the project file, and the data folder. To open a pro
 through `SettingsService`, and the project folder is opened in `ProjectExplorer`, which lists its image source
 files, watches the folder, and refreshes the list after file changes.
 
+At startup `App` asks `ApplicationComposition` to build the units: the logger, the settings service (whose settings
+are loaded at once), the project service, the recent projects list, the project explorer, the workspace, and the
+shell. The `MainWindowView` is created over the shell and gives itself to the shell as the dialog service. From
+then on the user's menu choices become shell commands, which call the `Project` and `Settings` subsystems, show
+dialogs through the dialog service, and, when the open project changes, update the window title and open or close
+the project in the workspace. On exit `App` disposes the composition.
+
 ## Design Constraints
 
 - Log files shall be written only to local disk; no telemetry or remote transmission is performed.
@@ -186,3 +221,9 @@ files, watches the folder, and refreshes the list after file changes.
   never list its content and nothing else shall be written there until a requirement defines it.
 - The project subsystem shall not depend on the main window; the folder picker and refresh scheduler are
   supplied by the application.
+- View models shall talk to the user only through `IDialogService`, which the main window implements, so no
+  view model references a window.
+- Every control that a test or assistive technology must find shall carry an automation identifier.
+- The image preview shall plug into the shell through `IImageExporter` and `ProjectWorkspaceViewModel.Preview`
+  and shall not require changes to the shell's commands.
+- The application's units shall be built only in `ApplicationComposition`.

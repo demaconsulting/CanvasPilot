@@ -1,7 +1,7 @@
 # Introduction
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on
-CanvasNet. The current build is an Avalonia desktop application skeleton that contains the Logging,
+CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging,
 Project, Settings, and Utilities subsystems; further subsystems are added as they are introduced.
 
 ## Purpose
@@ -19,6 +19,10 @@ This document covers the verification design for the following software items:
 **Local items:**
 
 - **CanvasPilot** — system, subsystem, and unit verification:
+  - **AppShell** subsystem
+    - **MainWindowShell** — main window, menus, and dialog service
+    - **ProjectWorkspace** — explorer and preview content area
+    - **AboutDialog** — application identity window
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
   - **Project** subsystem
@@ -62,6 +66,7 @@ The test folder structure mirrors the source subsystem breakdown:
 ```text
 test/
 └── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
+    ├── AppShellSubsystem/
     ├── LoggingSubsystem/
     ├── ProjectSubsystem/
     ├── SettingsSubsystem/

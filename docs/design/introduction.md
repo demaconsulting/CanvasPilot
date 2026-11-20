@@ -1,7 +1,7 @@
 # Introduction
 
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on
-CanvasNet. The current build is an Avalonia desktop application skeleton that contains the Logging,
+CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging,
 Project, Settings, and Utilities subsystems; further subsystems are added as they are introduced. It covers local
 software items (systems, subsystems, and units) and the OTS software items they consume.
 
@@ -19,6 +19,7 @@ requirements; it explains how they are realized.
 Local items:
 
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
+  - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
     **ProjectExplorer** units.
@@ -59,10 +60,12 @@ the OTS items listed in Scope above are build-time/pipeline tooling, documented 
 
 - **src/** - source files and projects
   - **DemaConsulting.CanvasPilot/** - main application library source
+    - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
     - **LoggingSubsystem/** - local rolling log file subsystem
     - **ProjectSubsystem/** - projects, recent projects, New Project dialog, and project explorer
     - **SettingsSubsystem/** - persisted settings, settings dialog, and settings pages
     - **UtilitiesSubsystem/** - shared utilities subsystem
+  - **DemaConsulting.CanvasPilot.Desktop/** - thin desktop head that starts the Avalonia application
 
 ## Document Conventions
 

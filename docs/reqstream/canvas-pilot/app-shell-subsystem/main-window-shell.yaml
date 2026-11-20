@@ -1,0 +1,142 @@
+---
+# Software Unit Requirements for the MainWindowShell Unit
+#
+# The MainWindowShell unit is the main window's view model and the window that shows it. It owns the File, Image,
+# Tools, and Help commands, follows the open project in the window title, lists the recent projects, and talks
+# to the user only through an IDialogService that the window implements. The Image menu commands run through an
+# IImageExporter seam that the image preview plugs into later.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: MainWindowShell Requirements
+            requirements:
+              - id: CanvasPilot-MainWindowShell-ExposeMenus
+                title: >-
+                  The MainWindowShell shall present File, Image, Tools, and Help menus whose items carry a name
+                  and an automation identifier, and shall enable an item only when its command can run.
+                justification: |
+                  A predictable menu structure is how users find the application's functions, and stable
+                  identifiers let automated tests and assistive technology find each item. Disabled items tell
+                  the user what is not available yet, such as saving without a project.
+                tests:
+                  - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
+                  - MainWindowView_Menus_NoProject_EnabledStateFollowsCommands
+                  - MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled
+
+              - id: CanvasPilot-MainWindowShell-TitleFollowsProject
+                title: >-
+                  The MainWindowShell shall show the window title as the open project's name followed by the
+                  application name, or the application name alone when no project is open, and shall follow
+                  changes made through the project service until it is disposed.
+                justification: |
+                  The title tells the user which project they are working on, including when a project is
+                  closed or opened by another part of the application, and a shell that has been disposed
+                  must not keep reacting to services it no longer owns.
+                tests:
+                  - MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled
+                  - MainWindowShell_ProjectServiceChanges_TitleFollows
+                  - MainWindowShell_Dispose_StopsFollowingServices
+                  - MainWindowShell_Constructor_NullArguments_Throw
+                  - MainWindowView_Show_OpensWithShellTitle
+
+              - id: CanvasPilot-MainWindowShell-CreateAndOpenProjects
+                title: >-
+                  The MainWindowShell shall create a project from the New Project dialog and open a project
+                  from a chosen project file, show the project and remember it in the recent projects, start
+                  its pickers in the folder that holds the user's projects, and show any problem to the user
+                  instead of failing.
+                justification: |
+                  Creating and opening projects are the first things a user does. Remembering each project and
+                  starting the pickers where the projects live saves repeated navigation, and explaining a
+                  problem such as a damaged file keeps the user informed and the application running.
+                tests:
+                  - MainWindowShell_NewProject_DialogAccepted_CreatesAndShowsProject
+                  - MainWindowShell_NewProject_DialogCancelled_CreatesNothing
+                  - MainWindowShell_NewProject_CreateFails_ShowsMessage
+                  - MainWindowShell_OpenProject_FileChosen_OpensAndRemembersProject
+                  - MainWindowShell_OpenProject_PickerCancelled_OpensNothing
+                  - MainWindowShell_OpenProject_DamagedFile_ShowsMessageAndOpensNothing
+                  - MainWindowShell_OpenProject_WithRecentProject_PickerStartsInProjectsFolder
+                  - MainWindowShell_CommandsWithoutDialogService_DoNothing
+                  - MainWindowView_NewProjectMenuItem_CancelThenOk_CreatesProjectAndUpdatesTitle
+
+              - id: CanvasPilot-MainWindowShell-SaveAndCloseProjects
+                title: >-
+                  The MainWindowShell shall save the open project, close the open project, and ask the main
+                  window to close when the user chooses Exit, and shall show a failed save to the user.
+                justification: |
+                  Users expect to save their work, to put a project away, and to leave the application from
+                  the File menu, and a save that fails must be explained rather than silently lost.
+                tests:
+                  - MainWindowShell_SaveProject_OpenProject_WritesModifiedTime
+                  - MainWindowShell_SaveProject_SaveFails_ShowsMessage
+                  - MainWindowShell_CloseProject_OpenProject_ResetsTitleAndExplorer
+                  - MainWindowShell_Exit_RaisesExitRequested
+                  - MainWindowView_ExitMenuItem_ClosesWindow
+
+              - id: CanvasPilot-MainWindowShell-ListRecentProjects
+                title: >-
+                  The MainWindowShell shall list the recent projects most recent first in the Recent Projects
+                  menu, show each by its project name with underscores kept visible, open a project when it is
+                  chosen, and drop a project whose file is gone after telling the user.
+                justification: |
+                  Users usually return to the projects they used last. A menu that reflects the stored list,
+                  shows names as typed, and does not keep offering a project that no longer exists gets them
+                  back to work in one choice.
+                tests:
+                  - MainWindowShell_RecentProjects_ListedMostRecentFirstAndOpenOnChoice
+                  - MainWindowShell_RecentProjectItem_NameWithUnderscore_HeaderDoublesUnderscore
+                  - MainWindowShell_RecentProjects_MissingProject_ShowsMessageAndRemovesEntry
+                  - MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow
+                  - MainWindowView_RecentProjectsSubmenu_ItemShowsNameAndOpensProject
+
+              - id: CanvasPilot-MainWindowShell-ShowSettingsAndAbout
+                title: >-
+                  The MainWindowShell shall open the settings dialog over the supplied settings pages, tell the
+                  pages when the dialog closed, and open the About dialog.
+                justification: |
+                  Settings and information about the application are reached from the Tools and Help menus.
+                  Pages that are told when the dialog closes can release resources such as running downloads.
+                tests:
+                  - MainWindowShell_OpenSettings_ShowsDialogWithPagesAndNotifiesClose
+                  - MainWindowShell_ShowAbout_ShowsAboutDialog
+                  - MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses
+                  - MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses
+
+              - id: CanvasPilot-MainWindowShell-ProvideImageMenuSeam
+                title: >-
+                  The MainWindowShell shall provide Export as PNG and Copy Image commands that are disabled
+                  until an image exporter reports that an image is available, that follow the exporter as it
+                  changes, and that run the exporter with the dialog service.
+                justification: |
+                  Exporting and copying depend on the rendered image, which belongs to the image preview. A
+                  seam that stays disabled until the preview supplies an exporter lets the menu exist now
+                  without the shell knowing how images are produced.
+                tests:
+                  - MainWindowShell_ImageCommands_FollowExporterAndInvokeIt
+                  - NullImageExporter_Default_IsDisabledAndDoesNothing
+                  - MainWindowView_ImageMenu_ExporterEnables_ItemsEnabledAndRunExporter
+
+              - id: CanvasPilot-MainWindowShell-TalkToUserThroughDialogService
+                title: >-
+                  The MainWindowShell shall ask questions, show messages, and let the user pick folders and
+                  files only through an IDialogService that the main window implements, with message,
+                  confirmation, and one-line prompt dialogs whose accepting button is unavailable for a blank
+                  prompt, and shall answer a cancelled platform picker as no choice.
+                justification: |
+                  Keeping dialogs behind one interface keeps the view models testable without a window, and a
+                  single message dialog gives every problem report and question the same look and behavior. A
+                  blank file name must not be accepted, and a picker the platform cannot show must read as
+                  cancelled rather than fail.
+                tests:
+                  - MessageDialogViewModel_Message_OkAcceptsAndRequestsClose
+                  - MessageDialogViewModel_Confirmation_CancelRequestsCloseWithoutAcceptance
+                  - MessageDialogViewModel_Prompt_BlankEntry_CannotBeAccepted
+                  - MessageDialogViewModel_Constructor_InvalidArguments_Throw
+                  - MainWindowView_ShowMessage_OkButtonClosesDialog
+                  - MainWindowView_Confirm_ConfirmAndCancelButtons_ReturnAnswer
+                  - MainWindowView_Prompt_TypedTextAndCancel_ReturnTrimmedTextOrNull
+                  - MainWindowView_Pickers_HeadlessPlatform_ReturnNull

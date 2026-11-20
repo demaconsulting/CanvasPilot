@@ -9,9 +9,99 @@
         Width="1100"
         Height="720">
 
-  <TextBlock Text="CanvasPilot"
-             HorizontalAlignment="Center"
-             VerticalAlignment="Center"
-             FontSize="24" />
+  <Window.Resources>
+    <!-- Each recent project becomes a menu item that shows its name and opens the project. -->
+    <ControlTheme x:Key="RecentProjectMenuItemTheme"
+                  TargetType="MenuItem"
+                  x:DataType="vm:RecentProjectItem"
+                  BasedOn="{StaticResource {x:Type MenuItem}}">
+      <Setter Property="Header" Value="{Binding Header}" />
+      <Setter Property="Command" Value="{Binding OpenCommand}" />
+    </ControlTheme>
+  </Window.Resources>
+
+  <DockPanel>
+
+    <Menu DockPanel.Dock="Top"
+          Name="MainMenu"
+          AutomationProperties.AutomationId="MainMenu">
+
+      <MenuItem Name="FileMenu"
+                AutomationProperties.AutomationId="FileMenu"
+                Header="_File">
+        <MenuItem Name="NewProjectMenuItem"
+                  AutomationProperties.AutomationId="NewProjectMenuItem"
+                  Header="_New Project..."
+                  HotKey="Ctrl+N"
+                  InputGesture="Ctrl+N"
+                  Command="{Binding NewProjectCommand}" />
+        <MenuItem Name="OpenProjectMenuItem"
+                  AutomationProperties.AutomationId="OpenProjectMenuItem"
+                  Header="_Open Project..."
+                  HotKey="Ctrl+O"
+                  InputGesture="Ctrl+O"
+                  Command="{Binding OpenProjectCommand}" />
+        <MenuItem Name="RecentProjectsMenuItem"
+                  AutomationProperties.AutomationId="RecentProjectsMenuItem"
+                  Header="_Recent Projects"
+                  IsEnabled="{Binding HasRecentProjects}"
+                  ItemContainerTheme="{StaticResource RecentProjectMenuItemTheme}"
+                  ItemsSource="{Binding RecentProjects}" />
+        <Separator />
+        <MenuItem Name="SaveProjectMenuItem"
+                  AutomationProperties.AutomationId="SaveProjectMenuItem"
+                  Header="_Save Project"
+                  HotKey="Ctrl+S"
+                  InputGesture="Ctrl+S"
+                  Command="{Binding SaveProjectCommand}" />
+        <MenuItem Name="CloseProjectMenuItem"
+                  AutomationProperties.AutomationId="CloseProjectMenuItem"
+                  Header="_Close Project"
+                  Command="{Binding CloseProjectCommand}" />
+        <Separator />
+        <MenuItem Name="ExitMenuItem"
+                  AutomationProperties.AutomationId="ExitMenuItem"
+                  Header="E_xit"
+                  Command="{Binding ExitCommand}" />
+      </MenuItem>
+
+      <MenuItem Name="ImageMenu"
+                AutomationProperties.AutomationId="ImageMenu"
+                Header="_Image">
+        <MenuItem Name="ExportPngMenuItem"
+                  AutomationProperties.AutomationId="ExportPngMenuItem"
+                  Header="_Export as PNG..."
+                  Command="{Binding ExportPngCommand}" />
+        <MenuItem Name="CopyImageMenuItem"
+                  AutomationProperties.AutomationId="CopyImageMenuItem"
+                  Header="_Copy Image"
+                  Command="{Binding CopyImageCommand}" />
+      </MenuItem>
+
+      <MenuItem Name="ToolsMenu"
+                AutomationProperties.AutomationId="ToolsMenu"
+                Header="_Tools">
+        <MenuItem Name="SettingsMenuItem"
+                  AutomationProperties.AutomationId="SettingsMenuItem"
+                  Header="_Settings..."
+                  Command="{Binding OpenSettingsCommand}" />
+      </MenuItem>
+
+      <MenuItem Name="HelpMenu"
+                AutomationProperties.AutomationId="HelpMenu"
+                Header="_Help">
+        <MenuItem Name="AboutMenuItem"
+                  AutomationProperties.AutomationId="AboutMenuItem"
+                  Header="_About CanvasPilot"
+                  Command="{Binding ShowAboutCommand}" />
+      </MenuItem>
+
+    </Menu>
+
+    <ContentControl Name="WorkspaceHost"
+                    AutomationProperties.AutomationId="WorkspaceHost"
+                    Content="{Binding Workspace}" />
+
+  </DockPanel>
 
 </Window>

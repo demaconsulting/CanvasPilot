@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.AppShellSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.AppShellSubsystem.ProjectWorkspaceView"
+             x:DataType="vm:ProjectWorkspaceViewModel">
+
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="F2" Command="{Binding RenameSelectedCommand}" />
+    <KeyBinding Gesture="Delete" Command="{Binding DeleteSelectedCommand}" />
+  </UserControl.KeyBindings>
+
+  <Grid ColumnDefinitions="260,Auto,*">
+
+    <ContentControl Grid.Column="0"
+                    AutomationProperties.AutomationId="WorkspaceExplorerHost"
+                    Content="{Binding Explorer}">
+      <ContentControl.ContextMenu>
+        <ContextMenu>
+          <MenuItem Name="RenameFileMenuItem"
+                    AutomationProperties.AutomationId="RenameFileMenuItem"
+                    Header="_Rename..."
+                    InputGesture="F2"
+                    Command="{Binding RenameSelectedCommand}" />
+          <MenuItem Name="DeleteFileMenuItem"
+                    AutomationProperties.AutomationId="DeleteFileMenuItem"
+                    Header="_Delete..."
+                    InputGesture="Delete"
+                    Command="{Binding DeleteSelectedCommand}" />
+        </ContextMenu>
+      </ContentControl.ContextMenu>
+    </ContentControl>
+
+    <GridSplitter Grid.Column="1"
+                  AutomationProperties.AutomationId="WorkspaceSplitter"
+                  Width="5"
+                  ResizeDirection="Columns" />
+
+    <Grid Grid.Column="2">
+
+      <ContentControl AutomationProperties.AutomationId="WorkspacePreviewHost"
+                      IsVisible="{Binding HasPreview}"
+                      Content="{Binding Preview}" />
+
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="6"
+                  IsVisible="{Binding !HasPreview}">
+        <TextBlock AutomationProperties.AutomationId="WorkspacePlaceholder"
+                   HorizontalAlignment="Center"
+                   FontSize="20"
+                   Opacity="0.7"
+                   Text="{Binding PlaceholderText}" />
+        <TextBlock AutomationProperties.AutomationId="WorkspaceHint"
+                   HorizontalAlignment="Center"
+                   Opacity="0.6"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HintText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Text="{Binding HintText}" />
+      </StackPanel>
+
+    </Grid>
+
+  </Grid>
+
+</UserControl>

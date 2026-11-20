@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -195,5 +196,85 @@ public sealed class CanvasPilotTests : IDisposable
         // Assert: the images are listed, the other content is not, and the selection is available
         Assert.Equal(["chart.svg", "cover.svg"], explorer.Items.Select(item => item.Name));
         Assert.Equal(Path.Combine(project.FolderPath, "cover.svg"), explorer.SelectedFile);
+    }
+
+    /// <summary>
+    ///     Test that the application starts on every supported platform: the units are composed exactly as at
+    ///     startup, without a window, the settings are loaded, the start is logged, and the shell is ready.
+    /// </summary>
+    [Fact]
+    public void CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell()
+    {
+        // Arrange: per-user folders under a temporary data root, as the application resolves them
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, Path.Combine("CanvasPilot", "logs")));
+        var settings = new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger);
+
+        // Act: compose the application as App does at startup, then shut it down
+        var composition = ApplicationComposition.Create(logger, settings, new FakeRefreshScheduler());
+        var shell = composition.Shell;
+        var title = shell.Title;
+        var commandsReady = shell.NewProjectCommand.CanExecute(null) && shell.OpenProjectCommand.CanExecute(null)
+            && shell.OpenSettingsCommand.CanExecute(null) && shell.ShowAboutCommand.CanExecute(null) && shell.ExitCommand.CanExecute(null);
+        var projectCommandsOff = !shell.SaveProjectCommand.CanExecute(null) && !shell.CloseProjectCommand.CanExecute(null);
+        composition.Dispose();
+
+        // Assert: the shell is titled and idle, the settings are in effect, and the start and stop were logged
+        Assert.Equal("CanvasPilot", title);
+        Assert.True(commandsReady);
+        Assert.True(projectCommandsOff);
+        Assert.False(shell.HasProject);
+        Assert.Equal(new AppSettings().AiProvider, composition.Settings.Current.AiProvider);
+        var log = File.ReadAllText(logger.ActiveFilePath);
+        Assert.Contains("Application started.", log, StringComparison.Ordinal);
+        Assert.Contains("Application stopped.", log, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a user can work from the main window shell: create a project, see its image files in the
+    ///     explorer, find it in the recent projects, and change a setting that survives a restart.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip()
+    {
+        // Arrange: the application composed on temporary folders, with a user who creates a project and edits settings
+        var token = TestContext.Current.CancellationToken;
+        var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot");
+        var dialogs = new FakeDialogService
+        {
+            OnNewProject = dialog =>
+            {
+                dialog.ProjectName = "Menu Board";
+                dialog.OkCommand.Execute(null);
+            },
+            OnSettings = dialog =>
+            {
+                var page = (AiProviderSettingsPageViewModel)dialog.Pages[0];
+                page.ModelName = "shell-model";
+                dialog.OkCommand.Execute(null);
+            },
+        };
+        var composition = ApplicationComposition.Create(logger, new SettingsService(settingsFolder, logger), new FakeRefreshScheduler(), defaultProjectsFolder: documents);
+        composition.Shell.AttachDialogService(dialogs);
+
+        // Act: create the project, add images, refresh the explorer, change a setting, and restart the application
+        await composition.Shell.NewProjectCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "menu.svg"), "<svg/>", token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "notes.txt"), "notes", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        var title = composition.Shell.Title;
+        var listed = composition.Shell.Workspace.Explorer.Items.Select(item => item.Name).ToArray();
+        await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        composition.Dispose();
+        using var restarted = ApplicationComposition.Create(logger, new SettingsService(settingsFolder, logger), new FakeRefreshScheduler());
+
+        // Assert: the title named the project, only the image was listed, the project is in the recent menu after
+        // the restart, and the changed setting was restored
+        Assert.Equal("Menu Board - CanvasPilot", title);
+        Assert.Equal(["menu.svg"], listed);
+        Assert.Equal(["Menu Board"], restarted.Shell.RecentProjects.Select(item => item.Name));
+        Assert.Equal("shell-model", restarted.Settings.Current.AiProvider.ModelName);
     }
 }

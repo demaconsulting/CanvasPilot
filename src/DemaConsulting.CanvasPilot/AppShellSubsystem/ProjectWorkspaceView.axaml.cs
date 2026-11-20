@@ -18,25 +18,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using Avalonia.Controls;
 
-namespace DemaConsulting.CanvasPilot.Tests;
+namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
 /// <summary>
-///     Tests for the MainWindowShell view model.
+///     View of the main window's content area, bound to a <see cref="ProjectWorkspaceViewModel" /> by the view
+///     locator: the project explorer, a splitter, and the preview area.
 /// </summary>
-public class MainWindowShellTests
+public sealed partial class ProjectWorkspaceView : UserControl
 {
     /// <summary>
-    ///     Test that a new shell has the application name as its title.
+    ///     Initializes a new instance of the <see cref="ProjectWorkspaceView" /> class.
     /// </summary>
-    [Fact]
-    public void MainWindowShell_New_TitleIsApplicationName()
+    public ProjectWorkspaceView()
     {
-        // Arrange & Act: create a new shell
-        var shell = new MainWindowShell();
-
-        // Assert: the title is the application name
-        Assert.Equal("CanvasPilot", shell.Title);
+        InitializeComponent();
     }
 }
