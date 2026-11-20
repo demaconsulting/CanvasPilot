@@ -1,12 +1,12 @@
 # Introduction
 
-This document contains the requirements for the Template DotNet Tool project.
+This document contains the requirements for the CanvasPilot project.
 
 ## Purpose
 
-Template DotNet Tool is a reference implementation demonstrating best practices for DEMA Consulting
-.NET command-line tools. It provides a standardized approach to command-line argument parsing,
-self-validation, and comprehensive documentation generation.
+CanvasPilot is an AI-powered application that helps users create drawings and diagrams with the
+CanvasNet library. The current build is a .NET command-line scaffold. It provides a standardized
+approach to command-line argument parsing, self-validation, and comprehensive documentation generation.
 
 ## Scope
 
@@ -24,7 +24,11 @@ This requirements document covers:
 
 This document is intended for:
 
-- Software developers working on Template DotNet Tool
+- Software developers working on CanvasPilot
 - Quality assurance teams validating requirements
 - Project stakeholders reviewing project scope
 - Users understanding the tool's capabilities
+
+## References
+
+N/A

@@ -9,7 +9,7 @@
         "build",
         "--configuration",
         "Release",
-        "${workspaceFolder}/DemaConsulting.TemplateDotNetTool.slnx"
+        "${workspaceFolder}/DemaConsulting.CanvasPilot.slnx"
       ],
       "problemMatcher": "$msCompile",
       "group": {
@@ -28,7 +28,7 @@
       "args": [
         "run",
         "--project",
-        "${workspaceFolder}/src/DemaConsulting.TemplateDotNetTool",
+        "${workspaceFolder}/src/DemaConsulting.CanvasPilot",
         "--configuration",
         "Release",
         "--framework",

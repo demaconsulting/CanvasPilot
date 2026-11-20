@@ -1,13 +1,13 @@
 ---
-title: Template DotNet Tool User Guide
-subtitle: A .NET Reference Implementation for CLI Tools
+title: CanvasPilot User Guide
+subtitle: AI-assisted drawing creation with CanvasNet
 author: DEMA Consulting
-description: A .NET Reference Implementation for CLI Tools
+description: AI-assisted drawing creation with CanvasNet
 lang: en-US
 keywords:
-  - Template DotNet Tool
+  - CanvasPilot
   - .NET
   - Command-Line Tool
   - Documentation
-  - Best Practices
+  - CanvasNet
 ---

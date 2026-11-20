@@ -8,8 +8,9 @@ its outputs, and use them](workflow.svg)
 
 ## Purpose
 
-Template DotNet Tool is a demonstration project that showcases best practices for DEMA
-Consulting DotNet Tools.
+CanvasPilot is an AI-powered application that helps users create drawings and diagrams with the
+CanvasNet library. The current build is a command-line scaffold providing version and help display
+and self-validation.
 
 ## Scope
 
@@ -22,7 +23,7 @@ This user guide covers:
 
 # Continuous Compliance
 
-This template follows the
+CanvasPilot follows the
 [Continuous Compliance](https://github.com/demaconsulting/ContinuousCompliance) methodology, which ensures
 compliance evidence is generated automatically on every CI run.
 
@@ -40,7 +41,7 @@ compliance evidence is generated automatically on every CI run.
 Install the tool globally using the .NET CLI:
 
 ```bash
-dotnet tool install -g DemaConsulting.TemplateDotNetTool
+dotnet tool install -g DemaConsulting.CanvasPilot
 ```
 
 # Usage
@@ -50,7 +51,7 @@ dotnet tool install -g DemaConsulting.TemplateDotNetTool
 Display the tool version:
 
 ```bash
-templatetool --version
+canvaspilot --version
 ```
 
 ## Default Behavior
@@ -58,7 +59,7 @@ templatetool --version
 When invoked with no arguments, the tool displays the banner and copyright notice:
 
 ```bash
-templatetool
+canvaspilot
 ```
 
 ## Display Help
@@ -66,12 +67,12 @@ templatetool
 Display usage information:
 
 ```bash
-templatetool --help
+canvaspilot --help
 ```
 
 ## Self-Validation
 
-Self-validation produces a report demonstrating that Template DotNet Tool is functioning
+Self-validation produces a report demonstrating that CanvasPilot is functioning
 correctly. This is useful in regulated industries where tool validation evidence is required.
 
 ### Running Validation
@@ -79,13 +80,13 @@ correctly. This is useful in regulated industries where tool validation evidence
 To perform self-validation:
 
 ```bash
-templatetool --validate
+canvaspilot --validate
 ```
 
 To save validation results to a file:
 
 ```bash
-templatetool --validate --results results.trx
+canvaspilot --validate --results results.trx
 ```
 
 The `--result` option is an accepted alias for `--results`.
@@ -100,7 +101,7 @@ This is useful when embedding the validation report into a larger markdown docum
 
 ```bash
 # Embed validation at heading level 2
-templatetool --validate --depth 2
+canvaspilot --validate --depth 2
 ```
 
 ### Validation Report
@@ -111,7 +112,7 @@ The validation report contains the tool version, machine name, operating system 
 Example validation report:
 
 ```text
-# DEMA Consulting Template DotNet Tool
+# DEMA Consulting CanvasPilot
 
 | Information         | Value                                              |
 | :------------------ | :------------------------------------------------- |
@@ -121,8 +122,8 @@ Example validation report:
 | DotNet Runtime      | .NET 10.0.0                                        |
 | Time Stamp          | 2024-01-15 10:30:00 UTC                            |
 
-✓ TemplateTool_VersionDisplay - Passed
-✓ TemplateTool_HelpDisplay - Passed
+✓ CanvasPilot_VersionDisplay - Passed
+✓ CanvasPilot_HelpDisplay - Passed
 
 Total Tests: 2
 Passed: 2
@@ -133,15 +134,15 @@ Failed: 0
 
 Each test proves specific functionality works correctly:
 
-- **`TemplateTool_VersionDisplay`** - `--version` outputs a valid version string.
-- **`TemplateTool_HelpDisplay`** - `--help` outputs usage and options information.
+- **`CanvasPilot_VersionDisplay`** - `--version` outputs a valid version string.
+- **`CanvasPilot_HelpDisplay`** - `--help` outputs usage and options information.
 
 ## Silent Mode
 
 Suppress console output:
 
 ```bash
-templatetool --silent
+canvaspilot --silent
 ```
 
 ## Logging
@@ -149,7 +150,7 @@ templatetool --silent
 Write output to a log file:
 
 ```bash
-templatetool --log output.log
+canvaspilot --log output.log
 ```
 
 ## Error Handling
@@ -183,19 +184,19 @@ The following command-line options are supported:
 ## Example 1: Basic Usage
 
 ```bash
-templatetool
+canvaspilot
 ```
 
 ## Example 2: Self-Validation with Results
 
 ```bash
-templatetool --validate --results validation-results.trx
+canvaspilot --validate --results validation-results.trx
 ```
 
 ## Example 3: Silent Mode with Logging
 
 ```bash
-templatetool --silent --log tool-output.log
+canvaspilot --silent --log tool-output.log
 ```
 
 ## References

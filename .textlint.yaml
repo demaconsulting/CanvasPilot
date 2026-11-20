@@ -5,8 +5,8 @@
 # - Maintain professional documentation and code quality
 # - Catch spelling errors before publication
 # - Support consistent technical terminology usage
-# - Misspelled words should be fixed in the source
-# - NEVER add a misspelled word to the 'words' list
+# - NEVER add a misspelled word - fix the typo in the source instead
+# - NEVER add a British-English spelling - correct to US-English in the source
 # - PROPOSE only genuine technical terms/names as needed
 #
 # Run from the repository root (the pinned tool is restored by 'dotnet tool restore'):
@@ -39,12 +39,13 @@ language: en
 # The files to spell-check
 files:
   - "**/*.{md,yaml,yml,json,cs,cpp,hpp,h,txt}"
-
 # Also check hidden paths such as .github/ and .*.yaml
 enableGlobDot: true
 
 # Project-specific technical terms and tool names
 words:
+  - Avalonia
+  - canvaspilot
   - Dema
   - demaconsulting
   - lintmark
@@ -57,7 +58,7 @@ words:
   - slnx
   - snupkg
   - sonarscanner
-  - templatetool
+  - Ollama
   - thirdparty
   - unidirectionality
   - venv

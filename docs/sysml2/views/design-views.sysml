@@ -1,28 +1,43 @@
 // Views rendered into docs/design/generated/ for the Design document.
-// Reopens the TemplateDotNetTool package so each 'expose' statement can reference
+// Reopens the CanvasPilot package so each 'expose' statement can reference
 // its target part def directly. Per SysML2Tools syntax, 'expose' is only valid
 // inside a named 'view' usage (not a 'view def' definition), and it - not
 // 'render' - is what scopes the rendered diagram content.
-package TemplateDotNetTool {
+//
+// This file is a sibling of docs/sysml2/model/ (not nested inside it), so a single
+// 'docs/sysml2/model/**/*.sysml' glob never needs to exclude view files.
+//
+// Each container view exposes the container part def and its direct children
+// ('expose X; expose X::*;') and renders 'asInterconnectionDiagram' so nested
+// composition (and, where declared, 'dependency' relationships) render correctly.
+package CanvasPilot {
     private import StandardViewDefinitions::*;
 
     view SoftwareStructureView : InterconnectionView {
-        expose TemplateDotNetTool::**;
+        expose CanvasPilot::**;
     }
 
-    view TemplateDotNetToolView {
-        expose TemplateDotNetToolSystem;
+    view CanvasPilotView {
+        expose CanvasPilotSystem;
+        expose CanvasPilotSystem::*;
+        render asInterconnectionDiagram;
     }
 
     view CliView {
         expose CliSubsystem;
+        expose CliSubsystem::*;
+        render asInterconnectionDiagram;
     }
 
     view SelfTestView {
         expose SelfTestSubsystem;
+        expose SelfTestSubsystem::*;
+        render asInterconnectionDiagram;
     }
 
     view UtilitiesView {
         expose UtilitiesSubsystem;
+        expose UtilitiesSubsystem::*;
+        render asInterconnectionDiagram;
     }
 }
