@@ -37,10 +37,18 @@ project folder.
 
 **Scenario**: The extension list of the viewer is read.
 
-**Expected**: It contains `.svg`, `.png`, `.jpg`, `.pdf`, `.mmd`, `.scad`, `.puml`, and the compound `.vl.json`, and
-every entry is lower case and starts with a period.
+**Expected**: It contains `.svg`, `.png`, `.jpg`, `.pdf`, `.mmd`, `.scad`, `.puml`, `.plantuml`, `.pu`, and the compound
+`.vl.json`, and every entry is lower case and starts with a period.
 
 **Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ListSupportedTypes`.
+
+#### CanvasNet_Render_PlantUmlFile_ProducesPicture
+
+**Scenario**: A small PlantUML sequence diagram file is rendered with file access confined to the project folder.
+
+**Expected**: The format is `plantuml`, the surface has a positive size and tightly packed rows, and it is not blank.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-RenderImageSources`.
 
 #### CanvasNet_Render_UnderRootsPolicy_DeniesEmbeddedFileOutsideRoots
 

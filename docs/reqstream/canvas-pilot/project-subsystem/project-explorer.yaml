@@ -32,6 +32,7 @@ sections:
                   - ProjectExplorerViewModel_Open_NoImageFiles_ShowsEmptyMessage
                   - ProjectExplorerViewModel_Open_MissingFolder_ShowsErrorAndEmptyList
                   - CanvasNetImageSourceFilter_IsImageSource_CanvasNetExtensions_AreAccepted
+                  - CanvasNetImageSourceFilter_IsImageSource_PlantUmlExtensions_AreAccepted
                   - ProjectExplorerViewModel_Open_WithCanvasNetFilter_ListsSvgButNotText
                   - ProjectExplorerView_OpenProject_ListsImageFiles
                   - ProjectExplorerView_NoProjectOrNoImages_ShowsEmptyMessage

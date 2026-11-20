@@ -23,6 +23,7 @@ sections:
             tags: [ots]
             tests:
               - CanvasNet_Render_SvgFile_ProducesStraightAlphaPixels
+              - CanvasNet_Render_PlantUmlFile_ProducesPicture
 
           - id: CanvasPilot-OTS-CanvasNet-ListSupportedTypes
             title: >-

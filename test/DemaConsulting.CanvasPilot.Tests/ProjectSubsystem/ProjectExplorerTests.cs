@@ -176,6 +176,24 @@ public sealed class ProjectExplorerTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the listing accepts the PlantUML extensions without any special handling, ignoring case.
+    /// </summary>
+    [Fact]
+    public void CanvasNetImageSourceFilter_IsImageSource_PlantUmlExtensions_AreAccepted()
+    {
+        // Arrange: the filter
+        var filter = new CanvasNetImageSourceFilter();
+
+        // Act / Assert: each PlantUML extension is accepted in any case
+        foreach (var extension in new[] { ".puml", ".plantuml", ".pu" })
+        {
+            Assert.Contains(extension, CanvasNetViewer.Extensions);
+            Assert.True(filter.IsImageSource("diagram" + extension), extension);
+            Assert.True(filter.IsImageSource(Path.Combine("folder", "DIAGRAM" + extension.ToUpperInvariant())), extension);
+        }
+    }
+
+    /// <summary>
     ///     Test that the real filter lists a CanvasNet source file in a project folder.
     /// </summary>
     [Fact]

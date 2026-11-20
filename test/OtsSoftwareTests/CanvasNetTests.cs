@@ -95,13 +95,35 @@ public sealed class CanvasNetTests : IDisposable
         var extensions = CanvasNetViewer.Extensions;
 
         // Assert: the common image source types are present, including the compound Vega-Lite extension
-        foreach (var expected in new[] { ".svg", ".png", ".jpg", ".pdf", ".mmd", ".scad", ".puml", ".vl.json" })
+        foreach (var expected in new[] { ".svg", ".png", ".jpg", ".pdf", ".mmd", ".scad", ".puml", ".plantuml", ".pu", ".vl.json" })
         {
             Assert.Contains(expected, extensions);
         }
 
         Assert.All(extensions, extension => Assert.Equal(extension.ToLowerInvariant(), extension));
         Assert.All(extensions, extension => Assert.StartsWith(".", extension, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    ///     Test that CanvasNet renders a PlantUML file to a picture, reporting the format it drew, so PlantUML files
+    ///     in a project can be shown like the other image source types.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_Render_PlantUmlFile_ProducesPicture()
+    {
+        // Arrange: a small sequence diagram
+        var file = Write("hello.puml", "@startuml\nAlice -> Bob: Hello\nBob --> Alice: Hi\n@enduml\n");
+
+        // Act: render it as the application does
+        using var image = CanvasNetViewer.Render(file, new ViewerRenderOptions { FileAccess = FileAccessPolicy.UnderRoots(Project) });
+
+        // Assert: a non-empty picture, tightly packed rows, drawn as PlantUML, and something other than a blank page
+        Assert.Equal("plantuml", image.Format);
+        Assert.True(image.Surface.Width > 0 && image.Surface.Height > 0);
+        Assert.Equal(image.Surface.Width * 4, image.Surface.GetRowSpanBytes(0).Length);
+        Assert.True(
+            HasPixelOtherThan(image.Surface, image.Surface[0, 0], 0, 0, image.Surface.Width, image.Surface.Height),
+            "The diagram was not drawn.");
     }
 
     /// <summary>

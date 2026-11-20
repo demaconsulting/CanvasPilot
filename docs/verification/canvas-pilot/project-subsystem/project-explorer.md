@@ -59,6 +59,11 @@ lists is accepted in lower and upper case, including `.vl.json`; `.txt`, `.json`
 bare extension, no extension, and an empty name are not. This scenario is tested by
 `CanvasNetImageSourceFilter_IsImageSource_CanvasNetExtensions_AreAccepted`.
 
+**CanvasNetImageSourceFilter_IsImageSource_PlantUmlExtensions_AreAccepted**: The PlantUML extensions `.puml`,
+`.plantuml`, and `.pu` are in the viewer library's list and are accepted in lower and upper case, so PlantUML
+files are listed with no special handling. This scenario is tested by
+`CanvasNetImageSourceFilter_IsImageSource_PlantUmlExtensions_AreAccepted`.
+
 **ProjectExplorerViewModel_Open_WithCanvasNetFilter_ListsSvgButNotText**: With the real filter, an SVG is listed
 and a text file is not. This scenario is tested by
 `ProjectExplorerViewModel_Open_WithCanvasNetFilter_ListsSvgButNotText`.

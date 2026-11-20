@@ -6,9 +6,11 @@ This document describes the integration and usage design for the `CanvasNet` OTS
 
 `DemaConsulting.CanvasNet.Viewer` (with the `DemaConsulting.CanvasNet` core library it depends on) is the DEMA
 Consulting library that draws image source files: SVG, Mermaid, PlantUML, Vega-Lite, OpenSCAD, PDF, PPTX, VSDX, and
-raster files, with images nested in images. It is the library CanvasPilot exists to drive, so the application uses
-it for what it shows and saves instead of drawing files itself. The packages are pinned to one version in the
-application project.
+raster files, with images nested in images. It is the library CanvasPilot exists to drive, so the application uses it
+for what it shows and saves instead of drawing files itself. The package reference in the application project pins the
+viewer library; the library takes its drawing from several packages that are listed as its dependencies and are restored
+with it (core, SVG, PDF, PPTX, VSDX, 3D, OpenSCAD, Vega-Lite, Mermaid, PlantUML, and a shared layout package), so the
+whole set always moves to one version together.
 
 ### Features Used
 

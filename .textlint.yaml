@@ -53,6 +53,7 @@ words:
   - demaconsulting
   - CONIN
   - CONOUT
+  - enduml
   - FFFC
   - Hmmssfff
   - Inlines
@@ -78,6 +79,7 @@ words:
   - slnx
   - snupkg
   - sonarscanner
+  - startuml
   - Ollama
   - thirdparty
   - unidirectionality
