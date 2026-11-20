@@ -8,8 +8,8 @@
 #   without opening a window
 #
 # NOTE: The system requirements cover operational logging, safe file handling, persisted user settings, AI provider
-# and speech configuration, projects, image browsing and file management, preview and export, the desktop shell, the
-# Windows installer, and application startup. The AI chat is not yet covered.
+# and speech configuration, projects, image browsing and file management, preview and export, composing a message,
+# the desktop shell, the Windows installer, and application startup. The AI chat itself is not yet covered.
 
 sections:
   - title: CanvasPilot Requirements
@@ -212,6 +212,38 @@ sections:
           - CanvasPilot-Preview-DragImageOut
         tests:
           - CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile
+
+      - id: CanvasPilot-System-ComposeMessage
+        title: >-
+          The application shall let the user compose a message to the assistant from typed text, dictated text, and
+          things that are attached or pointed at, kept together in the order the user placed them, with the origin of
+          each piece of text and the kind of each attachment kept.
+        tags: [system]
+        justification: |
+          Users explain a drawing with words and with things: a sentence they type, a sentence they say, a file they
+          drop in, a spot on the picture they point at. The meaning of the message depends on where each of these is,
+          and the assistant needs to know which words were dictated because speech recognition makes mistakes that
+          typing does not.
+        children:
+          - CanvasPilot-Composer-HoldOrderedSegments
+        tests:
+          - CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage
+
+      - id: CanvasPilot-System-UndoRedoMessage
+        title: >-
+          The application shall let the user undo and redo changes to the message being composed one action at a time,
+          shall forget what can be undone when the message is sent, and shall not keep drafts after the application
+          ends.
+        tags: [system]
+        justification: |
+          Dropping many files or dictating a paragraph by mistake must be one undo away, while typing is undone
+          character by character like in any editor. After a message is sent, undo must not bring it back, and a draft
+          that was written to disk would leave the user's words and file names on the computer.
+        children:
+          - CanvasPilot-Composer-UndoRedoPerAction
+          - CanvasPilot-Composer-ForgetDraftOnSend
+        tests:
+          - CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears
 
       - id: CanvasPilot-System-DesktopShell
         title: >-

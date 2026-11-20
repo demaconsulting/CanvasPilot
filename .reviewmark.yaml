@@ -172,6 +172,49 @@ reviews:
       - "src/**/AppShellSubsystem/AboutDialogView.axaml.cs"
       - "test/**/AppShellSubsystem/AboutDialogTests.cs"
 
+  # CanvasPilot - Composer
+  - id: CanvasPilot-Composer
+    title: Review of CanvasPilot Composer subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem.md"
+      - "docs/verification/canvas-pilot/composer-subsystem.md"
+      - "test/**/ComposerSubsystem/ComposerSubsystemTests.cs"
+
+  - id: CanvasPilot-Composer-ComposerDocument
+    title: Review of CanvasPilot ComposerDocument unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/composer-document.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/composer-document.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/composer-document.md"
+      - "src/**/ComposerSubsystem/ComposerDocument.cs"
+      - "src/**/ComposerSubsystem/ComposerSegment.cs"
+      - "src/**/ComposerSubsystem/ComposerSnapshot.cs"
+      - "test/**/ComposerSubsystem/ComposerDocumentTests.cs"
+
+  - id: CanvasPilot-Composer-ComposerHistory
+    title: Review of CanvasPilot ComposerHistory unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/composer-history.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/composer-history.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/composer-history.md"
+      - "src/**/ComposerSubsystem/ComposerEdit.cs"
+      - "src/**/ComposerSubsystem/ComposerHistory.cs"
+      - "test/**/ComposerSubsystem/ComposerHistoryTests.cs"
+
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
     title: Review of CanvasPilot Logging subsystem architecture and interfaces

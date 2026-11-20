@@ -1,0 +1,68 @@
+---
+# Composer Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Composer subsystem
+# - The Composer subsystem holds the message that the user is composing for the chat and its attachments: the message
+#   as ordered segments, the undo and redo of the user's changes, and the intake and staging of dropped and pasted
+#   content. The subsystem has no dependency on the user interface; the editing control that shows the message is
+#   added by a later unit
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Composer Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Composer-HoldOrderedSegments
+            title: >-
+              The Composer subsystem shall hold the message being composed as an ordered sequence of typed text,
+              dictated text, and chips for attached files, folders, and images and for marks on the picture, so
+              that every part keeps its place, its origin, and its kind, and shall give an unchangeable copy of the
+              message on request.
+            justification: |
+              The message mixes what the user wrote, what the user said, and the things the user pointed at or
+              attached, and its meaning depends on where each of them is. The agent needs to know which words were
+              dictated, because speech recognition makes mistakes that typing does not. An unchangeable copy lets the
+              message be built and shown while the user keeps working.
+            children:
+              - CanvasPilot-ComposerDocument-KeepOrderedSegments
+              - CanvasPilot-ComposerDocument-InsertChipsAtCaret
+              - CanvasPilot-ComposerDocument-DeleteRanges
+              - CanvasPilot-ComposerDocument-SanitizeText
+              - CanvasPilot-ComposerDocument-SnapshotImmutably
+            tests:
+              - ComposerSubsystem_Compose_MixedParts_KeepOrderOriginAndKind
+
+          - id: CanvasPilot-Composer-UndoRedoPerAction
+            title: >-
+              The Composer subsystem shall undo and redo the user's changes to the message one action at a time:
+              each typed or deleted character, each dictated block, each drop or paste of any number of items, each
+              added mark, and each deleted chip is one step, and redo gives the same steps again.
+            justification: |
+              Users expect undo to take back what they just did and no more or less. A dictated block or a drop of
+              many files is one action to the user, so it has to be one step, while typing is undone character by
+              character like in any text editor. A redo that gave different steps than the undo would lose the
+              user's work.
+            children:
+              - CanvasPilot-ComposerHistory-StepGranularity
+              - CanvasPilot-ComposerHistory-RedoSameSteps
+              - CanvasPilot-ComposerHistory-DiscardRedoOnNewEdit
+              - CanvasPilot-ComposerHistory-BoundedDepth
+            tests:
+              - ComposerSubsystem_UndoRedo_MixedSequence_ReturnsToEachStateInOrder
+
+          - id: CanvasPilot-Composer-ForgetDraftOnSend
+            title: >-
+              The Composer subsystem shall keep the draft and its undo history only in memory, and shall clear both
+              when the message is sent, so that nothing of a sent message can be undone or found in the next one.
+            justification: |
+              A draft that was written to disk could leave the user's words, and the names of the files attached, on
+              the computer after the user thought they were gone. Undo after sending would bring a sent message back
+              into the next one.
+            children:
+              - CanvasPilot-ComposerHistory-ClearOnDemand
+              - CanvasPilot-ComposerHistory-StartEmpty
+            tests:
+              - ComposerSubsystem_Send_ClearsHistoryAndDocument
+              - ComposerSubsystem_Send_SnapshotIsUnaffectedByNextDraft

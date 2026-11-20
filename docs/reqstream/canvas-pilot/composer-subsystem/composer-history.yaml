@@ -1,0 +1,90 @@
+---
+# Software Unit Requirements for the ComposerHistory Unit
+#
+# The ComposerHistory unit applies the user's changes to the ComposerDocument as steps, and undoes and redoes whole
+# steps. Each user action is exactly one step. The history lives only in memory and is cleared when the message is
+# sent. The unit has no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Composer Subsystem Requirements
+        sections:
+          - title: ComposerHistory Requirements
+            requirements:
+              - id: CanvasPilot-ComposerHistory-StepGranularity
+                title: >-
+                  The ComposerHistory shall make each of these one undo step: a typed character, a deleted character,
+                  a deleted selection, typing over a selection, a dictated block, a drop or a paste of any number of
+                  items or of any length of text, an added mark, and a deleted chip; shall give back the caret of the
+                  step when it is undone or redone; and shall not record a change that changes nothing.
+                justification: |
+                  Undo has to take back what the user just did, no more and no less. A dictated block or a drop of
+                  many files is one action to the user, while a typed word is undone character by character. A step
+                  that does nothing would make the user press undo for no visible effect.
+                tests:
+                  - ComposerHistory_TypedCharacters_EachIsOneStep
+                  - ComposerHistory_BackspaceAndDelete_EachCharacterIsOneStep
+                  - ComposerHistory_DeleteSelection_IsOneStep
+                  - ComposerHistory_TypeOverSelection_IsOneStep
+                  - ComposerHistory_DictatedBlock_IsOneStep
+                  - ComposerHistory_DropOfSeveralItems_IsOneStep
+                  - ComposerHistory_TextPaste_IsOneStep
+                  - ComposerHistory_AddMark_IsOneStep
+                  - ComposerHistory_DeleteChip_IsOneStep
+                  - ComposerEdit_DeleteChip_OffsetOfTextOrEnd_ThrowsArgumentException
+                  - ComposerHistory_UndoAndRedo_RestoreCaret
+                  - ComposerHistory_EmptyEdits_AreNotRecorded
+                  - ComposerHistory_Execute_EditOfAnotherDocumentState_ThrowsAndChangesNothing
+
+              - id: CanvasPilot-ComposerHistory-RedoSameSteps
+                title: >-
+                  The ComposerHistory shall redo an undone step by applying the same change again, so that redo has
+                  the same granularity as the original action and passes through the same states.
+                justification: |
+                  A redo that gave a different result than the action that was undone would make undo and redo
+                  unreliable and lose the user's work.
+                tests:
+                  - ComposerHistory_Redo_RestoresSameGranularity
+
+              - id: CanvasPilot-ComposerHistory-DiscardRedoOnNewEdit
+                title: >-
+                  The ComposerHistory shall discard the steps that could be redone when a new change is made after an
+                  undo.
+                justification: |
+                  After a new change the undone steps no longer follow from what the message holds, and applying
+                  them would produce a message the user never wrote.
+                tests:
+                  - ComposerHistory_NewEditAfterUndo_ClearsRedo
+
+              - id: CanvasPilot-ComposerHistory-ClearOnDemand
+                title: >-
+                  The ComposerHistory shall forget every step on request, and when the message is sent it shall hand
+                  over the content of the message, empty the document, and forget every step.
+                justification: |
+                  After a message is sent, undo must not bring it back, and the next message starts empty with
+                  nothing to undo.
+                tests:
+                  - ComposerHistory_Clear_EmptiesBothStacks
+                  - ComposerHistory_CompleteSend_ClearsStacksAndDocumentAndReturnsContent
+
+              - id: CanvasPilot-ComposerHistory-BoundedDepth
+                title: >-
+                  The ComposerHistory shall keep a bounded number of steps and drop the oldest when the limit is
+                  passed.
+                justification: |
+                  A very long draft must not use unlimited memory; the oldest steps are the least likely to be
+                  needed.
+                tests:
+                  - ComposerHistory_Limit_DropsOldestStep
+
+              - id: CanvasPilot-ComposerHistory-StartEmpty
+                title: >-
+                  The ComposerHistory shall start with nothing to undo or redo, however much the document holds, and
+                  shall keep its steps in memory only.
+                justification: |
+                  A draft is never restored from an earlier run, so no step of an earlier draft can exist, and the
+                  words of a draft are not left on the computer.
+                tests:
+                  - ComposerHistory_NewHistoryOverDocumentWithContent_HasNoSteps
+                  - ComposerHistory_UndoOnEmpty_DoesNothing

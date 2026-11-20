@@ -4,7 +4,7 @@ resource-path:
   - docs/design/generated
   - docs/design/canvas-pilot
   - docs/design/canvas-pilot/app-shell-subsystem
-  - docs/design/canvas-pilot/logging-subsystem
+  - docs/design/canvas-pilot/composer-subsystem  - docs/design/canvas-pilot/logging-subsystem
   - docs/design/canvas-pilot/preview-subsystem
   - docs/design/canvas-pilot/project-subsystem
   - docs/design/canvas-pilot/settings-subsystem
@@ -23,6 +23,9 @@ input-files:
   - docs/design/canvas-pilot/app-shell-subsystem/main-window-shell.md
   - docs/design/canvas-pilot/app-shell-subsystem/project-workspace.md
   - docs/design/canvas-pilot/app-shell-subsystem/about-dialog.md
+  - docs/design/canvas-pilot/composer-subsystem.md
+  - docs/design/canvas-pilot/composer-subsystem/composer-document.md
+  - docs/design/canvas-pilot/composer-subsystem/composer-history.md
   - docs/design/canvas-pilot/logging-subsystem.md
   - docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/design/canvas-pilot/preview-subsystem.md

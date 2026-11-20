@@ -45,6 +45,9 @@ services, or display is required.
 - The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
   earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
   the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
+- A message is composed from typed text, dictated text, and chips for attached files, folders, images, and marks, which
+  stay in the order they were placed with the origin and kind of each; each user action is one undo step and redo gives
+  the same steps; sending clears the draft and what can be undone, and nothing of the draft is written to disk.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
@@ -135,6 +138,19 @@ earlier run in its drag folder, which is removed at start. Without a picture no 
 shown the offered file is in the drag folder, is named `logo-` and the start of the pixel fingerprint, and is a PNG
 of width 32 and height 16; with dragging out turned off none is offered; after the composition is disposed the file is
 gone. This scenario is tested by `CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile`.
+
+**CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage**: A message is composed by typing, dictating a
+block, dropping a file and a folder in one operation, adding a mark where the caret was, and typing more. The message
+holds the typed text up to the mark, the mark, the dictated text with its dictated origin, the file, the folder, and the
+last typed text, in that order, and its length is the number of characters plus one for each chip. This scenario is
+tested by `CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage`.
+
+**CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears**: A draft is built from a typed
+character, a dictated block, a drop of two chips, and a deleted chip. Undoing the deleted chip brings back one chip,
+undoing the drop removes both chips together, undoing the dictation removes the whole block, and redoing it restores the
+whole block. After sending, nothing can be undone or redone, the draft is empty, and no file or folder was written in
+the temporary folder of the test. This scenario is tested by
+`CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears`.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

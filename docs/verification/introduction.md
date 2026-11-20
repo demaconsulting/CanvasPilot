@@ -2,8 +2,8 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
-AppShell, Logging, Preview, Project, Settings, Speech, and Utilities subsystems; further subsystems, such as the AI
-chat, are added as they are introduced.
+AppShell, Composer, Logging, Preview, Project, Settings, Speech, and Utilities subsystems; further subsystems, such as
+the AI chat, are added as they are introduced.
 
 ## Purpose
 
@@ -24,6 +24,9 @@ This document covers the verification design for the following software items:
     - **MainWindowShell** — main window, menus, and dialog service
     - **ProjectWorkspace** — explorer and preview content area
     - **AboutDialog** — application identity window
+  - **Composer** subsystem
+    - **ComposerDocument** — the message being composed as ordered segments of text and chips
+    - **ComposerHistory** — undo and redo of the user's changes, one action at a time
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
   - **Preview** subsystem
@@ -87,6 +90,7 @@ The test folder structure mirrors the source subsystem breakdown:
 test/
 ├── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
 │   ├── AppShellSubsystem/
+│   ├── ComposerSubsystem/
 │   ├── LoggingSubsystem/
 │   ├── PreviewSubsystem/
 │   ├── ProjectSubsystem/

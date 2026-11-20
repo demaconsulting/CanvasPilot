@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
@@ -453,6 +454,75 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(32, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(16, 4)));
         Assert.Equal(16, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(20, 4)));
         Assert.False(File.Exists(path));
+    }
+
+    /// <summary>
+    ///     Test that a user who types, dictates, and attaches things composes one message in which everything stays in
+    ///     the order it was added, with the kind of each part kept.
+    /// </summary>
+    [Fact]
+    public void CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage()
+    {
+        // Arrange: an empty message and its history, as the chat panel will hold them
+        var document = new ComposerDocument();
+        var history = new ComposerHistory(document);
+
+        // Act: type, dictate a block, attach a file and a folder in one drop, add a mark, and type more
+        history.Execute(ComposerEdit.TypeText(document, document.Length, "Look at "));
+        history.Execute(ComposerEdit.Dictate(document, document.Length, "the second box"));
+        history.Execute(ComposerEdit.Drop(document, document.Length, [new FileChip(@"C:\notes\brief.txt"), new FolderChip(@"C:\notes\photos")]));
+        history.Execute(ComposerEdit.AddMark(document, 8, new MarkChip(Guid.NewGuid(), 1)));
+        history.Execute(ComposerEdit.TypeText(document, document.Length, " please"));
+        var message = document.Snapshot();
+
+        // Assert: the parts are in the order they were added, the mark sits where the caret was, and origins are kept
+        Assert.Collection(
+            message.Segments,
+            segment => Assert.Equal(new TextSegment("Look at ", TextOrigin.Typed), segment),
+            segment => Assert.IsType<MarkChip>(segment),
+            segment => Assert.Equal(new TextSegment("the second box", TextOrigin.Dictated), segment),
+            segment => Assert.IsType<FileChip>(segment),
+            segment => Assert.IsType<FolderChip>(segment),
+            segment => Assert.Equal(new TextSegment(" please", TextOrigin.Typed), segment));
+        Assert.Equal(8 + 1 + 14 + 2 + 7, message.Length);
+    }
+
+    /// <summary>
+    ///     Test that a user can undo and redo the message one action at a time, that sending clears what can be undone,
+    ///     and that nothing of the draft is written to disk.
+    /// </summary>
+    [Fact]
+    public void CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears()
+    {
+        // Arrange: a draft of a typed character, a dictated block, a drop of two items, and a deleted chip
+        var folderBefore = Directory.GetFileSystemEntries(_tempRoot).Length;
+        var document = new ComposerDocument();
+        var history = new ComposerHistory(document);
+        history.Execute(ComposerEdit.TypeText(document, 0, "a"));
+        history.Execute(ComposerEdit.Dictate(document, 1, " dictated block of words"));
+        history.Execute(ComposerEdit.Drop(document, document.Length, [new FileChip(@"C:\a.txt"), new ImageChip(@"C:\b.png")]));
+        history.Execute(ComposerEdit.DeleteChip(document, document.Length - 1));
+
+        // Act: undo the deleted chip, the drop, and the dictation, redo the dictation, then send
+        history.Undo();
+        var afterUndoChip = document.Chips.Count();
+        history.Undo();
+        var afterUndoDrop = document.Chips.Count();
+        history.Undo();
+        var afterUndoDictation = document.FlatText;
+        history.Redo();
+        var afterRedoDictation = document.FlatText;
+        history.CompleteSend();
+
+        // Assert: each action was undone and redone as one step, sending left nothing to undo, and no file was written
+        Assert.Equal(2, afterUndoChip);
+        Assert.Equal(0, afterUndoDrop);
+        Assert.Equal("a", afterUndoDictation);
+        Assert.Equal("a dictated block of words", afterRedoDictation);
+        Assert.False(history.CanUndo);
+        Assert.False(history.CanRedo);
+        Assert.Equal(0, document.Length);
+        Assert.Equal(folderBefore, Directory.GetFileSystemEntries(_tempRoot).Length);
     }
 
     /// <summary>

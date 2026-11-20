@@ -5,8 +5,8 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented are seven subsystems, `AppShell`, `Logging`, `Preview`, `Project`, `Settings`, `Speech`, and
-`Utilities`.
+software items documented are eight subsystems, `AppShell`, `Composer`, `Logging`, `Preview`, `Project`, `Settings`,
+`Speech`, and `Utilities`.
 
 ```mermaid
 flowchart TD
@@ -14,6 +14,10 @@ flowchart TD
         MainWindowShell
         ProjectWorkspace
         AboutDialog
+    end
+    subgraph Composer
+        ComposerDocument
+        ComposerHistory
     end
     subgraph Logging
         RollingFileLogger
@@ -46,7 +50,7 @@ flowchart TD
         PathHelpers
     end
     RollingFileLogger --> PathHelpers
-    ImageRenderService --> RollingFileLogger
+    ComposerHistory --> ComposerDocument    ImageRenderService --> RollingFileLogger
     PreviewPane --> ImageRenderService
     PreviewPane --> ProjectExplorer
     PreviewPane --> ProjectService
@@ -132,6 +136,14 @@ dragging it into another program, such as a presentation, a mail message, or a f
 file in a folder of its own, and the preview view offers that file and the picture's bitmap to the program the user
 drops them on. The `Preview` subsystem owns the two interfaces that this needs, `IImageExporter` and `IExportDialogs`,
 and does not refer to the main window.
+
+`ComposerDocument` holds the message that the user is composing for the chat as an ordered sequence of typed text,
+dictated text, and chips for attached files, folders, and images and for marks on the picture, and is the single source
+of truth about the message. `ComposerHistory` applies each change that the user makes to the message as one undo step,
+so that a typed character, a dictated block, a drop or paste of any number of items, an added mark, and a deleted chip
+are each one step, and clears the steps, together with the message, when the message is sent. Neither unit depends on
+the user interface, on another subsystem, or on the file system; the units that show the message and attach files to it
+are added later and build on them. No subsystem uses the `Composer` subsystem yet.
 
 ### Dependency Direction
 
@@ -278,9 +290,10 @@ works with its files.
 
 ## Dependencies
 
-The `AppShell`, `Logging`, `Preview`, `Project`, `Settings`, `Speech`, and `Utilities` subsystems use .NET base class
-library types, `System.Text.Json` for the settings and project files, and, for dialogs, pages, and lists, Avalonia and
-CommunityToolkit.Mvvm, which are runtime third-party items. The `ImageRenderService` unit draws files and encodes PNG
+The `AppShell`, `Composer`, `Logging`, `Preview`, `Project`, `Settings`, `Speech`, and `Utilities` subsystems use .NET
+base class library types, `System.Text.Json` for the settings and project files, and, for dialogs, pages, and lists,
+Avalonia and CommunityToolkit.Mvvm, which are runtime third-party items (the `Composer` units so far use base class
+library types only). The `ImageRenderService` unit draws files and encodes PNG
 with the `DemaConsulting.CanvasNet.Viewer` library, and the `ProjectExplorer` unit uses its extension list to decide
 which files are image sources. The `AudioDeviceService` and `SpeechModelService` units list audio devices and speech
 models and download models with the `DemaConsulting.Speech` library and its Sherpa model package, and the speech
@@ -327,6 +340,12 @@ characters that a file name cannot hold replaced and the length limited, and are
 `PathHelpers.SafePathCombine`, so a file name cannot lead outside the drag folder. The unit deletes only files that
 match its own name pattern, never folders or other files, so cleaning up cannot remove the user's files.
 
+**Clean message text**: Text that enters the message being composed, whether typed, pasted, dropped, or recognized from
+speech, is data from outside the application. `ComposerDocument` removes from it the character that stands for a chip
+and every control character other than tab and line feed, so that text can never be taken for a chip or confuse the
+editing control or the tools that read the message. The draft and its undo steps are kept in memory only, are never
+written to disk, and are cleared when the message is sent.
+
 **Safe speech handling**: Downloads of speech models start only when the user asks, run over HTTPS, and are verified
 against checksums by the speech library before a model is installed completely or not at all, so a damaged or
 tampered download is discarded. A download never outlives the settings dialog that shows it. A choice that the page
@@ -372,6 +391,11 @@ button on the shown picture and moves the pointer, the preview view asks `Previe
 `ImageDragSource` writes the PNG in its folder, and the view starts the operating system's drag with that file and
 a bitmap of the picture.
 
+The message being composed is held by `ComposerDocument`, and every change the user makes to it, typing, dictating,
+dropping, pasting, adding a mark, and deleting, is made as one `ComposerEdit` that `ComposerHistory.Execute` applies to
+the document and records. Undo and redo revert and apply whole edits and return the caret to restore. When the message
+is sent, `ComposerHistory.CompleteSend` returns a snapshot of the document, from which the message is built, and empties
+the document and the history.
 When the user opens Settings and chooses the Speech page, `SpeechSettingsPage` loads: `DeviceSelection` asks
 `AudioDeviceService` for the devices and selects the stored ones by name, `ModelCatalogPanel` asks
 `SpeechModelService` for the models and selects the stored ones by identifier, and `ModelParameterEditor` shows the
@@ -410,6 +434,9 @@ failed. On OK or Apply the page merges the choices into the speech section of th
 - Only `ImageDragSource` shall write the files for dragging a picture out, only in its own folder, and a failure to
   prepare or to drag shall be logged and shall never reach the user as an unhandled failure.
 - The application's units shall be built only in `ApplicationComposition`.
+- Every change that the user makes to the message being composed shall be one `ComposerEdit` executed through
+  `ComposerHistory`, so that the message and the undo steps never disagree; the units of the `Composer` subsystem that
+  hold the message shall not write it anywhere.
 - Only `AudioDeviceService` shall use the audio system and only `SpeechModelService` shall use the speech model
   catalog; neither shall use its backend before it is first asked, and neither shall throw for a missing audio
   system, an unreadable model store, or a failed download.
