@@ -24,8 +24,8 @@ Local items:
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
   - **Annotation** subsystem: **MarkRegistry** and **MarkSourceResolver** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
-  - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**, and
-    **ComposerViewModel** units.
+  - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
+    **ComposerViewModel**, and **ComposerEditor** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Payload** subsystem: **MessagePayload**, **MarkImageComposer**, **PayloadBuilder**, and **PayloadDescriber**
     units.
@@ -40,6 +40,7 @@ Local items:
 OTS items:
 
 - **Avalonia**: integration and usage design (runtime user interface framework).
+- **AvaloniaEdit**: integration and usage design (runtime text editing control of the message composer).
 - **CommunityToolkit.Mvvm**: integration and usage design (runtime view model source generators).
 - **CanvasNet**: integration and usage design (runtime library that draws image source files).
 - **Speech**: integration and usage design (runtime library for audio devices, speech models, and speech recognition,
@@ -94,7 +95,8 @@ and the local data the application uses](architecture.svg)
       of the source file under them
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
     - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, the
-      intake and copying of attachments, and the view model that orchestrates them with dictation and sending
+      intake and copying of attachments, the view model that orchestrates them with dictation and sending, and the
+      editing view that shows the message with its chips inline
     - **LoggingSubsystem/** - local rolling log file subsystem
     - **PayloadSubsystem/** - the message that is sent as one immutable payload: text with references, attachments,
       annotated pictures, mark crops, mark geometry, and source elements, and its description
@@ -127,9 +129,9 @@ Verification is layered, and each layer is run by `build.ps1` and by the build p
   the system requirements, including startup on each platform.
 - **User interface tests** (`test/DemaConsulting.CanvasPilot.UiTests`) show the real views and view models in the
   Avalonia headless platform, so that menus, dialogs, and bindings are tested without a display.
-- **OTS tests** (`test/OtsSoftwareTests`) call the runtime OTS libraries (Avalonia, CommunityToolkit.Mvvm, CanvasNet,
-  and Speech) the way the application does, and are the qualification evidence for libraries that have no
-  self-validation mode.
+- **OTS tests** (`test/OtsSoftwareTests`) call the runtime OTS libraries (Avalonia, AvaloniaEdit,
+  CommunityToolkit.Mvvm, CanvasNet, and Speech) the way the application does, and are the qualification evidence for
+  libraries that have no self-validation mode.
 - **Document and package assertions** (FileAssert, `.fileassert.yaml`) check the generated documents, the rendered
   diagrams, and the MSI package.
 

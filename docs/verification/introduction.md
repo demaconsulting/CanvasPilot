@@ -34,6 +34,8 @@ This document covers the verification design for the following software items:
     - **AttachmentStore** — pasted pictures in the draft folder and attachments copied into the project at send
     - **ComposerViewModel** — the message without a window: one undo step per action, dictation, drop and paste, and
       send
+    - **ComposerEditor** — the editing view of the message: text, dictated text, and chips inline, with undo and redo
+      keys, paste, and drop
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
   - **Payload** subsystem
@@ -68,6 +70,7 @@ This document covers the verification design for the following software items:
 **OTS items:**
 
 - **Avalonia** — user interface framework
+- **AvaloniaEdit** — text editing control of the message composer
 - **BuildMark** — build-notes documentation tool
 - **CanvasNet** — image source rendering library
 - **CommunityToolkit.Mvvm** — view model source generators
@@ -117,10 +120,10 @@ test/
 └── OtsSoftwareTests/                  — tests of the runtime OTS libraries
 ```
 
-Headless user-interface tests for the views live in `test/DemaConsulting.CanvasPilot.UiTests/` and are
-referenced by the unit verification documents of the items that own the views. The tests of the runtime OTS libraries
-(Avalonia, CommunityToolkit.Mvvm, CanvasNet, and Speech) live in `test/OtsSoftwareTests/` and are referenced by the OTS
-verification documents.
+Headless user-interface tests for the views live in `test/DemaConsulting.CanvasPilot.UiTests/` and are referenced by the
+unit verification documents of the items that own the views. The tests of the runtime OTS libraries (Avalonia,
+AvaloniaEdit, CommunityToolkit.Mvvm, CanvasNet, and Speech) live in `test/OtsSoftwareTests/` and are referenced by the
+OTS verification documents.
 
 ## Verification Layers
 

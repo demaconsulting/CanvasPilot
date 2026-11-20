@@ -4,9 +4,9 @@
 # PURPOSE:
 # - Define requirements for the CanvasPilot Composer subsystem
 # - The Composer subsystem holds the message that the user is composing for the chat and its attachments: the message
-#   as ordered segments, the undo and redo of the user's changes, and the intake and staging of dropped and pasted
-#   content. The subsystem has no dependency on the user interface; the editing control that shows the message is
-#   added by a later unit
+#   as ordered segments, the undo and redo of the user's changes, the intake and staging of dropped and pasted
+#   content, and the view that shows the message in one editing surface with chips inline. The logic of the
+#   subsystem has no dependency on the user interface; only the editor view and its chip, preview, and drawing parts do
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -88,6 +88,7 @@ sections:
               - CanvasPilot-AttachmentStore-SavePastedImages
               - CanvasPilot-AttachmentStore-RemoveLeftovers
               - CanvasPilot-ComposerViewModel-ReportIntakeProblems
+              - CanvasPilot-ComposerEditor-AcceptDropAndPaste
             tests:
               - ComposerSubsystem_DropThenUndo_RemovesChipsAndCopiesNothing
 
@@ -139,6 +140,7 @@ sections:
             children:
               - CanvasPilot-ComposerViewModel-MapEditsToHistorySteps
               - CanvasPilot-ComposerViewModel-ExposeUndoRedo
+              - CanvasPilot-ComposerEditor-HandleUndoRedoKeys
             tests:
               - ComposerSubsystem_EditThroughViewModel_MixedActionsUndoAndRedoOneStepEach
 
@@ -185,3 +187,39 @@ sections:
               - CanvasPilot-ComposerViewModel-RequireOpenProject
             tests:
               - AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject
+
+          - id: CanvasPilot-Composer-ShowEditableMessage
+            title: >-
+              The Composer subsystem shall show the message in one editing surface in which the user can type, delete,
+              select, and copy, that always holds exactly what the message holds, that shows dictated words with a
+              distinct background, the live words of a dictation, and the sentence about the last action, and that
+              reports every change of the user as one action on the message.
+            justification: |
+              The editing surface is where the user sees and writes the message. If it could differ from the message, the
+              user could send something other than what they see, so the surface only shows the message and reports what
+              the user did. Dictated words must be recognizable, because speech recognition makes mistakes that typing
+              does not, and the user must see at once what a dictation or a drop did.
+            children:
+              - CanvasPilot-ComposerEditor-EditTextWithCaretAndSelection
+              - CanvasPilot-ComposerEditor-MirrorEditsIntoViewModel
+              - CanvasPilot-ComposerEditor-RefuseForbiddenTypedText
+              - CanvasPilot-ComposerEditor-CopyChipsAsReadableText
+              - CanvasPilot-ComposerEditor-ShowDictatedTextDistinctly
+              - CanvasPilot-ComposerEditor-ShowStatusAndLiveWords
+            tests:
+              - ComposerSubsystem_EditMessageInEditor_MixedActions_SurfaceAlwaysEqualsMessage
+
+          - id: CanvasPilot-Composer-ShowChipsInline
+            title: >-
+              The Composer subsystem shall show the files, folders, pictures, and marks of the message as chips inline in
+              the text, in the order of the message, each deletable with a button or a key as one step that undo brings
+              back in the same place.
+            justification: |
+              The meaning of the message depends on where each thing stands among the words, so the things must stand
+              where the user put them, recognizable at a glance, and the user must be able to take one away as easily as
+              a character.
+            children:
+              - CanvasPilot-ComposerEditor-ShowChipsInline
+              - CanvasPilot-ComposerEditor-DeleteChipWithButtonOrKey
+            tests:
+              - ComposerSubsystem_ShowChipsInline_DropThenDeleteAndUndo_ChipsFollowTheMessage

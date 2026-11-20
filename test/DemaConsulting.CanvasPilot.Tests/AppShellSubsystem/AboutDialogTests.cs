@@ -85,9 +85,9 @@ public sealed class AboutDialogTests
         // Arrange & Act: create the dialog
         var viewModel = new AboutDialogViewModel();
 
-        // Assert: the four libraries are listed with a description each
+        // Assert: the five libraries are listed with a description each
         Assert.Equal(
-            ["Avalonia", "CommunityToolkit.Mvvm", "DemaConsulting.CanvasNet", "DemaConsulting.Speech"],
+            ["Avalonia", "Avalonia.AvaloniaEdit", "CommunityToolkit.Mvvm", "DemaConsulting.CanvasNet", "DemaConsulting.Speech"],
             viewModel.Dependencies.Select(dependency => dependency.Name));
         Assert.All(viewModel.Dependencies, dependency => Assert.False(string.IsNullOrWhiteSpace(dependency.Description)));
     }

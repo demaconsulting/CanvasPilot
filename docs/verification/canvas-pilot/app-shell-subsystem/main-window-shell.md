@@ -149,7 +149,7 @@ About items are usable and the Recent, Save, Close, Export, and Copy items are n
 by `MainWindowView_ExitMenuItem_ClosesWindow`.
 
 **MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses**: The About command opens the dialog with
-the identity texts and four libraries, and clicking Close ends it. This scenario is tested by
+the identity texts and five libraries, and clicking Close ends it. This scenario is tested by
 `MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses`.
 
 **MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses**: The Settings command opens the dialog with

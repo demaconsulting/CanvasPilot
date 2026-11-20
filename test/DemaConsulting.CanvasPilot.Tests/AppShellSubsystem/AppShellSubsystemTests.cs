@@ -239,7 +239,7 @@ public sealed class AppShellSubsystemTests : IDisposable
         var about = _dialogs.LastAbout!;
         Assert.Equal("CanvasPilot", about.Name);
         Assert.False(string.IsNullOrWhiteSpace(about.Version));
-        Assert.Equal(4, about.Dependencies.Count);
+        Assert.Equal(5, about.Dependencies.Count);
     }
 
     /// <summary>

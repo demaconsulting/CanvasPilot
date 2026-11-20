@@ -16,7 +16,7 @@ open source libraries it is built on.
 the application assembly with any build metadata after a plus sign removed (`0.0.0` when the assembly has none),
 and the same prefixed with `Version `.
 
-**Dependencies**: `IReadOnlyList<AboutDependency>` — `Avalonia`, `CommunityToolkit.Mvvm`,
+**Dependencies**: `IReadOnlyList<AboutDependency>` — `Avalonia`, `Avalonia.AvaloniaEdit`, `CommunityToolkit.Mvvm`,
 `DemaConsulting.CanvasNet`, and `DemaConsulting.Speech`, each with a description of what the application uses it for.
 
 **CloseCommand** / **CloseRequested**: Close raises the event and the window closes itself.

@@ -227,6 +227,7 @@ reviews:
       - "docs/design/canvas-pilot/composer-subsystem.md"
       - "docs/verification/canvas-pilot/composer-subsystem.md"
       - "test/**/ComposerSubsystem/ComposerSubsystemTests.cs"
+      - "test/**/ComposerSubsystemUiTests.cs"
 
   - id: CanvasPilot-Composer-ComposerDocument
     title: Review of CanvasPilot ComposerDocument unit implementation
@@ -309,6 +310,30 @@ reviews:
       - "src/**/ComposerSubsystem/SentMessage.cs"
       - "test/**/ComposerSubsystem/ComposerViewModelTests.cs"
       - "test/**/ComposerSubsystem/ComposerViewModelFakes.cs"
+
+  - id: CanvasPilot-Composer-ComposerEditor
+    title: Review of CanvasPilot ComposerEditor unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/composer-editor.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/composer-editor.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/composer-editor.md"
+      - "src/**/ComposerSubsystem/ChipElementGenerator.cs"
+      - "src/**/ComposerSubsystem/ChipView.axaml"
+      - "src/**/ComposerSubsystem/ChipView.axaml.cs"
+      - "src/**/ComposerSubsystem/ComposerEditorView.axaml"
+      - "src/**/ComposerSubsystem/ComposerEditorView.axaml.cs"
+      - "src/**/ComposerSubsystem/DataTransferReader.cs"
+      - "src/**/ComposerSubsystem/DictatedTextBackgroundRenderer.cs"
+      - "src/**/ComposerSubsystem/IChipThumbnailProvider.cs"
+      - "src/**/ComposerSubsystem/ImageChipThumbnailProvider.cs"
+      - "test/**/ComposerEditorViewTests.cs"
+      - "test/**/ComposerEditorSupportTests.cs"
+      - "test/**/ComposerUiTestSupport.cs"
 
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
@@ -833,6 +858,14 @@ reviews:
       - "docs/verification/ots/avalonia.md"
       - "test/OtsSoftwareTests/AvaloniaTests.cs"
       - "test/OtsSoftwareTests/TestAppBuilder.cs"
+
+  - id: OTS-AvaloniaEdit
+    title: Review of AvaloniaEdit OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/avalonia-edit.yaml"
+      - "docs/design/ots/avalonia-edit.md"
+      - "docs/verification/ots/avalonia-edit.md"
+      - "test/OtsSoftwareTests/AvaloniaEditTests.cs"
 
   - id: OTS-CommunityToolkitMvvm
     title: Review of CommunityToolkit.Mvvm OTS verification evidence

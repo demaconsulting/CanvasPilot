@@ -7,19 +7,20 @@
 The `Composer` subsystem holds the message that the user is composing for the chat. The message is not one string:
 it is typed text, dictated text, and chips that stand for files, folders, and images that are attached and for marks
 drawn on the shown picture, in the order the user placed them. The subsystem keeps that sequence, lets the user undo and
-redo changes to it one action at a time, and forgets it when the message is sent. It has no dependency on the user
-interface, so all of its rules are tested without a window.
+redo changes to it one action at a time, and forgets it when the message is sent. Its rules have no dependency on the
+user interface, so they are all tested without a window; only the editing view and its small parts do.
 
-The subsystem contains five units: `ComposerDocument`, the sequence of segments, `ComposerHistory`, the undo and redo of
+The subsystem contains six units: `ComposerDocument`, the sequence of segments, `ComposerHistory`, the undo and redo of
 the changes made to it, `AttachmentIntake`, which turns dropped and pasted content into chips and text,
-`AttachmentStore`, which keeps the files that belong to attachments in the project, and `ComposerViewModel`, which
-orchestrates all of them with the marks, dictation, and sending, without a window. `AttachmentIntake` and
-`AttachmentStore` work with the file system, but only to look at paths, to save pasted pictures, and to copy attachments
-into the project when the message is sent; the document and the history have no file access. The units that show the
-message in an editing control are added with the later steps of the chat; their design is described with them. The
-subsystem depends on `Utilities` (safe path combination), `Logging` (diagnostics), `Annotation` (the registry of marks),
-`Speech` (dictation), and, for the name of the project's data folder only, `Project`. It does not depend on `Payload`:
-it owns the `IMessageBuilder` interface through which it has a sent message built, and `Payload` implements it.
+`AttachmentStore`, which keeps the files that belong to attachments in the project, `ComposerViewModel`, which
+orchestrates all of them with the marks, dictation, and sending, without a window, and `ComposerEditor`, the view that
+shows the message in one editing surface with its chips inline and reports what the user does to the view model.
+`AttachmentIntake` and `AttachmentStore` work with the file system, but only to look at paths, to save pasted pictures,
+and to copy attachments into the project when the message is sent; the document and the history have no file access.
+The subsystem depends on `Utilities` (safe path combination), `Logging` (diagnostics), `Annotation` (the registry of
+marks), `Speech` (dictation), and, for the name of the project's data folder only, `Project`. It does not depend on
+`Payload`: it owns the `IMessageBuilder` interface through which it has a sent message built, and `Payload` implements
+it.
 
 ### Interfaces
 
@@ -37,6 +38,20 @@ it owns the `IMessageBuilder` interface through which it has a sent message buil
   event once for each action.
 - *Constraints*: Owned by the interface thread, not safe for concurrent use. The message can be edited only while a
   project is open and no message is being sent.
+
+**ComposerEditor**: The editing view of the message.
+
+- *Type*: In-process Avalonia user control (`ComposerEditorView`) with its parts: `ChipView`, `ChipElementGenerator`,
+  `DictatedTextBackgroundRenderer`, `DataTransferReader`, and `IChipThumbnailProvider` with
+  `ImageChipThumbnailProvider`.
+- *Role*: Consumer of `ComposerViewModel`, which it takes as its data context; provider to the chat panel and the Edit
+  menu.
+- *Contract*: Shows exactly the message of the view model in one editing surface, with each chip inline as one position;
+  reports every change of the user as one view model action; writes every other change of the view model into the
+  surface; handles Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, paste, copy, cut, and drops as data; gives the view model as the
+  `IUndoRedoTarget` of the focused surface; and takes the pictures of chips from an `IChipThumbnailProvider`.
+- *Constraints*: Owned by the interface thread. The surface is read-only while the message cannot be edited. It uses
+  the AvaloniaEdit control, and holds no state of the message.
 
 **AttachmentIntake**: Dropped and pasted content as chips and text.
 
@@ -138,6 +153,18 @@ meanwhile; only when both worked is the draft emptied. Dictation is a small stat
 project change in the middle of a dictation without adding anything or leaving the microphone in use. The send is built
 through `IMessageBuilder`, an interface that the composer owns and the payload builder implements, so the composer
 needs no reference to the payload subsystem, which depends on the composer.
+
+**The editing view.** `ComposerEditorView` shows the message in the AvaloniaEdit control and is a mirror, never the
+owner: the text of the control is `ComposerDocument.FlatText`, with one placeholder character for each chip, and the
+n-th placeholder is the n-th chip, so offsets are the same on both sides and a chip needs no identity in the text. The
+control's own undo is switched off so that the message's history is the only one. Each update of the control is handed
+to the view model as one action, each change of the view model that did not come from the control is written into the
+control under a flag, and after each change the control is made equal to the message, so that text that the message
+cleaned, or a change it refused, never shows. Paste, copy, cut, and drop are taken from the control and handled as data:
+`DataTransferReader` reads a drop or the clipboard into `DroppedContent` (files before a picture before text), copy puts
+readable text on the clipboard instead of the placeholder characters, and typed text with a placeholder or a control
+character is refused before it enters. Chips are drawn inline by a generator that makes a small control for each
+placeholder, with the picture that an `IChipThumbnailProvider` gives it, and dictated words get a background.
 
 **Marks.** The composer knows a mark only as a `MarkChip` (identity and number), except that the view model holds the
 registry of marks, so that it can check the mark it adds, pass the marks that are part of the message to the builder,

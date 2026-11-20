@@ -1,0 +1,46 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="DemaConsulting.CanvasPilot.ComposerSubsystem.ChipView"
+             AutomationProperties.AutomationId="ComposerChip"
+             Focusable="False">
+
+  <!-- The chip as it stands in a line of the message: an icon or picture, the name, and a button that deletes it.
+       Colors are neutral transparent grays so that the chip reads on a light and a dark theme alike. -->
+  <Border Name="ChipBorder"
+          Margin="1,0"
+          Padding="4,0,1,0"
+          CornerRadius="4"
+          BorderThickness="1"
+          BorderBrush="#55808080"
+          Background="#22808080">
+    <StackPanel Orientation="Horizontal" Spacing="4">
+      <Panel Width="16" Height="16" VerticalAlignment="Center">
+        <Path Name="IconPath"
+              Fill="#FF6B7B8C"
+              Stretch="Uniform" />
+        <Image Name="ThumbnailImage"
+               AutomationProperties.AutomationId="ComposerChipThumbnail"
+               Stretch="UniformToFill"
+               IsVisible="False" />
+      </Panel>
+      <TextBlock Name="LabelText"
+                 AutomationProperties.AutomationId="ComposerChipLabel"
+                 VerticalAlignment="Center"
+                 MaxWidth="180"
+                 TextTrimming="CharacterEllipsis" />
+      <Button Name="DeleteButton"
+              AutomationProperties.AutomationId="ComposerChipDelete"
+              VerticalAlignment="Center"
+              Height="18"
+              MinHeight="0"
+              MinWidth="0"
+              Padding="4,0"
+              FontSize="12"
+              Background="Transparent"
+              BorderThickness="0"
+              Focusable="False"
+              Content="×" />
+    </StackPanel>
+  </Border>
+
+</UserControl>

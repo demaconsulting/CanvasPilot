@@ -25,6 +25,7 @@ flowchart TD
         AttachmentIntake
         AttachmentStore
         ComposerViewModel
+        ComposerEditor
     end
     subgraph Logging
         RollingFileLogger
@@ -78,6 +79,7 @@ flowchart TD
     ComposerViewModel --> MarkRegistry
     ComposerViewModel --> DictationService
     ComposerViewModel --> RollingFileLogger
+    ComposerEditor --> ComposerViewModel
     MarkRegistry --> ImageRenderService
     MarkSourceResolver --> MarkRegistry
     MarkSourceResolver --> ImageRenderService
@@ -211,8 +213,12 @@ one undo step, offers undo and redo to the Edit menu and the keys, shows the wor
 talk control is held and adds them as one dictated block when it is released, names what a drop left out, allows editing
 only while a project is open, and sends the message: it has the attachments put into the project, has the message built
 through `IMessageBuilder`, and then empties the draft, the history, and the marks and gives the immutable sent message
-to whoever shows the transcript. The units that show the message in an editing control are added later and build on
-these. The `Payload` subsystem uses the `Composer` subsystem to read the snapshot of the message and the staged
+to whoever shows the transcript. `ComposerEditor` is the view of the message: one editing surface, the AvaloniaEdit
+control, in which text, dictated text, and chips stand in order, each chip as one placeholder character that is drawn as
+a small control; it shows what the view model holds and reports everything the user does to it, takes undo, redo,
+paste, copy, cut, and drops over from the control and handles dropped and pasted content as data, and keeps the control
+equal to the message after every change. The `Payload` subsystem uses the `Composer` subsystem to read the snapshot of
+the message and the staged
 attachments and to implement `IMessageBuilder`, which `Composer` owns; the `Composer` subsystem uses `Annotation` (the
 registry of marks) and `Speech` (dictation) and, to send a message, the `Payload` subsystem only through that interface.
 
@@ -428,7 +434,9 @@ made in the project when the message is sent.
 The `Annotation`, `AppShell`, `Composer`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`, `Speech`, and
 `Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and project files and the
 description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm, which are runtime
-third-party items (the `Annotation` and `Composer` units use base class library types only, and the `Payload` units base
+third-party items (the `Composer` editor view also uses the AvaloniaEdit editing control, which is a runtime
+third-party item too; the other `Annotation` and `Composer` units use base class library types only, and the `Payload`
+units base
 class library types and CanvasNet). The `ImageRenderService` unit draws files and encodes PNG with the
 `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a picture with
 the same library, and the `ProjectExplorer` unit uses its extension list to decide which files are image sources. The

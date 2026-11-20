@@ -1,10 +1,10 @@
 # OTS Verification
 
-This section provides verification evidence for all Off-The-Shelf (OTS) software items
-used by CanvasPilot: the runtime libraries Avalonia, CommunityToolkit.Mvvm, CanvasNet, and Speech; the WiX Toolset
-that builds the installer package; the xUnit test framework; and the build, documentation, and analysis tools
-BuildMark, FileAssert, Pandoc, ReqStream, ReviewMark, SarifMark, SonarMark, SysML2Tools, VersionMark, and WeasyPrint.
-The per-item files under `docs/verification/ots/` cover the verification evidence for each individual OTS item.
+This section provides verification evidence for all Off-The-Shelf (OTS) software items used by CanvasPilot: the runtime
+libraries Avalonia, AvaloniaEdit, CommunityToolkit.Mvvm, CanvasNet, and Speech; the WiX Toolset that builds the
+installer package; the xUnit test framework; and the build, documentation, and analysis tools BuildMark, FileAssert,
+Pandoc, ReqStream, ReviewMark, SarifMark, SonarMark, SysML2Tools, VersionMark, and WeasyPrint. The per-item files under
+`docs/verification/ots/` cover the verification evidence for each individual OTS item.
 
 ## Verification Strategy
 
@@ -43,6 +43,7 @@ Internal OTS design is out of scope; only integration and usage evidence is docu
 The following OTS items have verification evidence in this section:
 
 - Avalonia (*avalonia.md*) — runtime user interface framework
+- AvaloniaEdit (*avalonia-edit.md*) — runtime text editing control of the message composer
 - BuildMark (*buildmark.md*) — build-notes documentation tool
 - CanvasNet (*canvasnet.md*) — runtime library that draws image source files
 - CommunityToolkit.Mvvm (*communitytoolkit-mvvm.md*) — runtime view model source generators

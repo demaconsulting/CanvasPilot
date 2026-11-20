@@ -30,12 +30,12 @@ pre-release version. This scenario is tested by `AboutDialogViewModel_New_Suppli
 **AboutDialogViewModel_New_BlankVersion_UsesAssemblyVersion**: A blank version equals the default version. This
 scenario is tested by `AboutDialogViewModel_New_BlankVersion_UsesAssemblyVersion`.
 
-**AboutDialogViewModel_Dependencies_ListsOpenSourceLibraries**: The four libraries are listed in order, each with
+**AboutDialogViewModel_Dependencies_ListsOpenSourceLibraries**: The five libraries are listed in order, each with
 a description. This scenario is tested by `AboutDialogViewModel_Dependencies_ListsOpenSourceLibraries`.
 
 **AboutDialogViewModel_Close_RequestsClose**: Close raises one close request. This scenario is tested by
 `AboutDialogViewModel_Close_RequestsClose`.
 
 **MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses**: The shown window has the identity texts and
-four libraries, and clicking Close closes it. This scenario is tested by
+five libraries, and clicking Close closes it. This scenario is tested by
 `MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses`.

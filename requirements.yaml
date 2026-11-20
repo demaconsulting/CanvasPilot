@@ -22,6 +22,7 @@ includes:
   - docs/reqstream/canvas-pilot/composer-subsystem/attachment-store.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/attachment-intake.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-view-model.yaml
+  - docs/reqstream/canvas-pilot/composer-subsystem/composer-editor.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml
   - docs/reqstream/canvas-pilot/payload-subsystem.yaml
@@ -56,6 +57,7 @@ includes:
   - docs/reqstream/canvas-pilot/platform-requirements.yaml
   - docs/reqstream/ots/xunit.yaml
   - docs/reqstream/ots/avalonia.yaml
+  - docs/reqstream/ots/avalonia-edit.yaml
   - docs/reqstream/ots/communitytoolkit-mvvm.yaml
   - docs/reqstream/ots/canvasnet.yaml
   - docs/reqstream/ots/speech.yaml

@@ -25,7 +25,7 @@ services, or display are required.
 - Renaming and deleting the selected file through the workspace changes the project folder and the explorer list.
 - Choices made in the settings dialog opened from the shell are stored and in effect in the next run, and the
   dialog hosts the AI Provider page followed by the Speech page.
-- The About dialog opened from the composed shell shows the application name, a version, and the four libraries.
+- The About dialog opened from the composed shell shows the application name, a version, and the five libraries.
 - The composer of the message created by the composition works in the folder of the project that is open, and has no
   project and no draft once the project is closed.
 
@@ -60,7 +60,7 @@ shell shows a dialog whose pages are titled AI Provider and Speech, in that orde
 Speech page. This scenario is tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
 
 **AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries**: The About command of a composed shell
-shows a dialog with the application name, a non-blank version, and four libraries. This scenario is tested by
+shows a dialog with the application name, a non-blank version, and five libraries. This scenario is tested by
 `AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries`.
 
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler

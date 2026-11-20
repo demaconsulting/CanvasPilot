@@ -259,6 +259,8 @@ sections:
           - CanvasPilot-Composer-HoldOrderedSegments
           - CanvasPilot-Composer-SendComposedMessage
           - CanvasPilot-Composer-WorkInsideAnOpenProject
+          - CanvasPilot-Composer-ShowEditableMessage
+          - CanvasPilot-Composer-ShowChipsInline
         tests:
           - CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage
 

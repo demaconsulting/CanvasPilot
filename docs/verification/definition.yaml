@@ -32,6 +32,7 @@ input-files:
   - docs/verification/canvas-pilot/composer-subsystem/attachment-store.md
   - docs/verification/canvas-pilot/composer-subsystem/attachment-intake.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-view-model.md
+  - docs/verification/canvas-pilot/composer-subsystem/composer-editor.md
   - docs/verification/canvas-pilot/logging-subsystem.md
   - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/verification/canvas-pilot/payload-subsystem.md
@@ -65,6 +66,7 @@ input-files:
   - docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/verification/ots.md
   - docs/verification/ots/avalonia.md
+  - docs/verification/ots/avalonia-edit.md
   - docs/verification/ots/buildmark.md
   - docs/verification/ots/canvasnet.md
   - docs/verification/ots/communitytoolkit-mvvm.md

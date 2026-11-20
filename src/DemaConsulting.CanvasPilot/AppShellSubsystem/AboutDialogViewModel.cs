@@ -105,6 +105,7 @@ public sealed partial class AboutDialogViewModel : ObservableObject
     public IReadOnlyList<AboutDependency> Dependencies { get; } =
     [
         new("Avalonia", "Cross-platform user interface framework"),
+        new("Avalonia.AvaloniaEdit", "Text editing control that the message composer is built on"),
         new("CommunityToolkit.Mvvm", "Model-view-view model helpers"),
         new("DemaConsulting.CanvasNet", "Composes SVG, Mermaid, Vega-Lite, and other sources into images"),
         new("DemaConsulting.Speech", "Speech recognition and synthesis models and audio devices")

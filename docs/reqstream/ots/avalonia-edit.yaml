@@ -1,0 +1,86 @@
+---
+# AvaloniaEdit OTS Software Requirements
+#
+# Requirements for the AvaloniaEdit text editing control (the Avalonia.AvaloniaEdit package in the application) as
+# used by CanvasPilot at run time. The control is a runtime dependency, so each requirement is a child of the
+# requirement of the unit that uses the feature (ComposerEditor) and is not a root requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: AvaloniaEdit Requirements
+        requirements:
+          - id: CanvasPilot-OTS-AvaloniaEdit-EditTextWithInlineObjects
+            title: >-
+              AvaloniaEdit shall draw a control in the line of text in place of a placeholder character that an
+              application generator chooses, between the pieces of text before and after it, shall move the caret over
+              the control as one position, and shall delete it as one character with Backspace and Delete.
+            justification: |
+              The message composer shows each attached file, folder, picture, and mark as a chip in the line of text,
+              and the chip is one placeholder character in the text of the editor. The composer relies on the editor to
+              reserve space for the chip, to draw the chip's control there, and to treat it as one character when the
+              user moves the caret or deletes, so that the text and the chips stay in step.
+            tags: [ots]
+            tests:
+              - AvaloniaEdit_VisualLine_PlaceholderCharacter_BecomesInlineObjectElementHoldingControl
+              - AvaloniaEdit_Caret_MovesOverInlineObjectAsOnePositionAndKeysDeleteItAsOneCharacter
+
+          - id: CanvasPilot-OTS-AvaloniaEdit-ReportDocumentChanges
+            title: >-
+              AvaloniaEdit shall report each change of its text with the exact offset, the removed text, and the
+              inserted text: one change for each typed character, for each removal, for a commit of several characters
+              by an input method, and for typing over a selection; shall report a change that the application writes into
+              the text in the same way; shall refuse a change of the text from inside the change event; and shall allow
+              one when the update finishes.
+            justification: |
+              The message composer turns each change of the editor into exactly one action on the message, which decides
+              what one undo takes back, so the offsets and the grouping of the reports must be exact. Because writes by
+              the application raise the same event as the user's typing, the composer must be able to tell its own writes
+              from the user's, and the rules for when the text may be changed again decide where it can bring the editor
+              and the message together.
+            tags: [ots]
+            tests:
+              - AvaloniaEdit_Document_TypingAndDeleting_ReportExactChanges
+              - AvaloniaEdit_Document_ProgrammaticEdit_RaisesChangedAndNestedEditsFollowTheRules
+
+          - id: CanvasPilot-OTS-AvaloniaEdit-DisableBuiltInUndoRedo
+            title: >-
+              AvaloniaEdit shall keep no undo history when its undo stack is limited to zero, shall let the application
+              remove the built-in undo and redo commands, and shall let key bindings of the application handle Ctrl+Z,
+              Ctrl+Y, and Ctrl+Shift+Z.
+            justification: |
+              The message composer owns the undo history of the message, because one undo step must be one action of the
+              user, such as a dictated block or a drop of many files. A second history in the editor would undo things
+              behind the composer's back and bring chips back without their marks, so the composer must be able to
+              switch the editor's history off completely and answer the keys itself.
+            tags: [ots]
+            tests:
+              - AvaloniaEdit_UndoStack_SizeLimitZeroAndRemovedCommands_LeaveApplicationInCharge
+
+          - id: CanvasPilot-OTS-AvaloniaEdit-InterceptPasteAndDrop
+            title: >-
+              AvaloniaEdit shall let the application replace its paste, copy, and cut commands, so that the keys and the
+              control's own methods reach the application's handlers and leave the text unchanged, and shall deliver a
+              drop of files to a handler of the application on the text view, also when the drop carries the paths as
+              text, without inserting anything itself.
+            justification: |
+              Dropped files, pasted pictures, and copied chips are not text. The editor would put the paths of dropped
+              files in as text, ignore pictures, and copy the placeholder characters of chips to other programs, so the
+              composer takes the commands and the drop over and handles the data itself. The behavior of the real
+              operating system clipboard and drag and drop is checked by hand before a release.
+            tags: [ots]
+            tests:
+              - AvaloniaEdit_CommandBindings_PasteCopyCut_CanBeReplaced
+              - AvaloniaEdit_Drop_OnTextViewWithAllowDrop_ReachesApplicationHandler
+
+          - id: CanvasPilot-OTS-AvaloniaEdit-RefuseTypedText
+            title: >-
+              AvaloniaEdit shall let the application refuse typed or input-method text before it enters the text, by
+              marking the entering event as handled, and shall still accept the text typed after it.
+            justification: |
+              A placeholder character in typed text would be taken for a chip and shift every chip after it. The composer
+              refuses such characters before they enter, because it must never change the text from inside the change
+              event.
+            tags: [ots]
+            tests:
+              - AvaloniaEdit_TextEntering_Handled_RefusesTheTypedText

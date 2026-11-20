@@ -29,9 +29,10 @@ package CanvasPilot {
         part speech : SpeechSubsystem;
         part utilities : UtilitiesSubsystem;
 
-        // The user interface framework and the view model source generators are consumed at run time by the
-        // subsystems that have views and view models.
+        // The user interface framework, its text editing control, and the view model source generators are consumed at
+        // run time by the subsystems that have views and view models.
         part userInterface : Ots::Avalonia;
+        part textEditor : Ots::AvaloniaEdit;
         part viewModelToolkit : Ots::CommunityToolkitMvvm;
 
         // CanvasNet is consumed at run time by the Preview, Project, and Payload subsystems.

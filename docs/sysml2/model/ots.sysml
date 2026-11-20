@@ -16,6 +16,17 @@ package CanvasPilot {
             }
         }
 
+        part def AvaloniaEdit {
+            doc /* Avalonia.AvaloniaEdit NuGet dependency, the text editing control that the message composer is built on: the surface in which typed text, dictated text, and inline chips stand, with its caret, selection, input method support, change reports, and replaceable commands. */
+
+            metadata info : SoftwareInfo {
+                testFiles = ("test/OtsSoftwareTests/AvaloniaEditTests.cs");
+                designFiles = ("docs/design/ots/avalonia-edit.md");
+                verificationFiles = ("docs/verification/ots/avalonia-edit.md");
+                requirementFiles = ("docs/reqstream/ots/avalonia-edit.yaml");
+            }
+        }
+
         part def CommunityToolkitMvvm {
             doc /* CommunityToolkit.Mvvm NuGet dependency whose source generators write the property change notification and command code of the application's view models. */
 
