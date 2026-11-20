@@ -18,13 +18,33 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.Tests;
+using Avalonia;
+using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Markup.Xaml;
+using DemaConsulting.CanvasPilot.AppShellSubsystem;
 
-// Tests share Console state, so they must not run in parallel.
+namespace DemaConsulting.CanvasPilot;
+
 /// <summary>
-/// Defines the Sequential test collection.
-/// Tests in this collection are disabled from running in parallel to
-/// prevent conflicts when sharing Console state.
+///     Avalonia application entry point. Acts as the composition root that creates the main window shell
+///     and hosts it in the <see cref="MainWindowView" />.
 /// </summary>
-[CollectionDefinition("Sequential", DisableParallelization = true)]
-public sealed class SequentialCollection { }
+public sealed class App : Application
+{
+    /// <inheritdoc />
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+    }
+
+    /// <inheritdoc />
+    public override void OnFrameworkInitializationCompleted()
+    {
+        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+        {
+            desktop.MainWindow = new MainWindowView(new MainWindowShell());
+        }
+
+        base.OnFrameworkInitializationCompleted();
+    }
+}

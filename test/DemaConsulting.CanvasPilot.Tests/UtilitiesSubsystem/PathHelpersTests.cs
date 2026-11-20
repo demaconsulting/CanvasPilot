@@ -18,14 +18,13 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using DemaConsulting.CanvasPilot.Utilities;
+using DemaConsulting.CanvasPilot.UtilitiesSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
 /// <summary>
 ///     Tests for the PathHelpers class.
 /// </summary>
-[Collection("Sequential")]
 public class PathHelpersTests
 {
     /// <summary>

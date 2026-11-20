@@ -1,8 +1,11 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/DemaConsulting.CanvasPilot.Desktop/DemaConsulting.CanvasPilot.Desktop.csproj" />
     <Project Path="src/DemaConsulting.CanvasPilot/DemaConsulting.CanvasPilot.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/DemaConsulting.CanvasPilot.Tests/DemaConsulting.CanvasPilot.Tests.csproj" />
+    <Project Path="test/DemaConsulting.CanvasPilot.UiTests/DemaConsulting.CanvasPilot.UiTests.csproj" />
+    <Project Path="test/OtsSoftwareTests/OtsSoftwareTests.csproj" />
   </Folder>
 </Solution>

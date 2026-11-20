@@ -1,0 +1,17 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DemaConsulting.CanvasPilot.AppShellSubsystem"
+        x:Class="DemaConsulting.CanvasPilot.AppShellSubsystem.MainWindowView"
+        x:DataType="vm:MainWindowShell"
+        Name="MainWindow"
+        Title="{Binding Title}"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Width="1100"
+        Height="720">
+
+  <TextBlock Text="CanvasPilot"
+             HorizontalAlignment="Center"
+             VerticalAlignment="Center"
+             FontSize="24" />
+
+</Window>

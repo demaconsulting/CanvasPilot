@@ -21,7 +21,8 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 # [PROJECT-SPECIFIC] Add additional build steps here.
 
 Write-Host "Running unit tests..."
-dotnet test --configuration Release
+# VSTest-style run (xunit.v3 3.2.2 + Avalonia.Headless.XUnit): TRX results are written to artifacts/tests.
+dotnet test --configuration Release --no-build --logger "trx" --results-directory artifacts/tests
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # [PROJECT-SPECIFIC] Add additional test or post-build steps here.
