@@ -4,112 +4,69 @@
 
 ## Architecture
 
-The CanvasPilot is a command-line application built on .NET. It is structured as one
-system containing one top-level unit (`Program`) and three subsystems (`Cli`, `SelfTest`,
-`Utilities`):
+CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
+software items documented so far are two subsystems, `Logging` and `Utilities`; further subsystems
+(application shell, projects, settings, speech, and image preview) are added to this document as they
+are introduced.
 
 ```mermaid
 flowchart TD
-    Program
-    subgraph Cli
-        Context
-    end
-    subgraph SelfTest
-        Validation
+    subgraph Logging
+        RollingFileLogger
     end
     subgraph Utilities
         PathHelpers
     end
-    Program --> Context
-    Program --> Validation
-    Validation --> Program
-    Validation --> PathHelpers
+    RollingFileLogger --> PathHelpers
 ```
 
-`Program` is the entry point. It creates a `Context` from the `Cli` subsystem, dispatches to
-`Validation` when `--validate` is passed, and returns the exit code from `Context`. `Validation`
-calls `Program.Run` recursively to exercise the tool during self-testing, and uses `PathHelpers`
-to construct safe temporary file paths.
+`PathHelpers` provides safe path combination and has no dependencies on other local items.
+`RollingFileLogger` is the application's only log writer. It uses `PathHelpers` to resolve the active
+log file and archive file paths inside its log folder, so that a malformed file name can never place a
+log file outside that folder.
 
 ## External Interfaces
 
-**Command-Line Interface**: The primary input interface for tool invocation.
+**Log Files**: Local diagnostic output written by the application.
 
-- *Type*: CLI.
-- *Role*: Consumer (the host environment invokes the system with command-line arguments).
-- *Contract*: Accepts arguments `-v`/`--version`, `-?`/`-h`/`--help`, `--silent`, `--validate`,
-  `--results <file>`, `--result <file>` (legacy alias for `--results`), `--depth <n>`, and
-  `--log <file>`. Returns exit code 0 for success and 1 for failures.
-- *Constraints*: Unknown arguments cause exit code 1 and an error message on stderr.
-
-**Standard Output**: Normal program output written to `Console.Out`.
-
-- *Type*: Standard I/O.
-- *Role*: Provider.
-- *Contract*: Writes version, banner, help text, validation summary, or demo message depending
-  on the flags provided. Suppressed when `--silent` is active; the log file still receives all
-  output.
-- *Constraints*: Human-readable text; no machine-parseable format contract.
-
-**Standard Error**: Error message output written to `Console.Error`.
-
-- *Type*: Standard I/O.
-- *Role*: Provider.
-- *Contract*: Writes error messages in red when a failure occurs. Suppressed when `--silent`
-  is active but the exit code is still set to 1.
-- *Constraints*: Color output requires a terminal that supports `ConsoleColor`.
-
-**Log File**: Optional persistent output file.
-
-- *Type*: File.
-- *Role*: Provider.
-- *Contract*: When `--log <file>` is supplied, all `Context.WriteLine` and `Context.WriteError`
-  output is written to the file regardless of `--silent`. The file is truncated at open.
-- *Constraints*: The path must be writable; failure to open the file raises an
-  `InvalidOperationException` and causes exit code 1.
-
-**Results File**: Optional self-validation results file.
-
-- *Type*: File.
-- *Role*: Provider.
-- *Contract*: When `--results <file>` is supplied alongside `--validate`, self-validation results
-  are serialized to the file. Extension `.trx` selects MSTest TRX format; `.xml` selects JUnit
-  XML format.
-- *Constraints*: Any other extension causes an error message and exit code 1; no file is written.
+- *Direction*: Output.
+- *Type*: Text files on the local file system.
+- *Format*: One timestamped, leveled entry per line (exception details follow on additional lines),
+  UTF-8, in `canvaspilot.log` plus timestamped archive files in the log folder.
+- *Constraints*: The default location is `%LOCALAPPDATA%\CanvasPilot\logs`. Files are written locally
+  only; no telemetry or remote transmission is performed. Disk usage is bounded by the rotation size
+  and the retained archive count.
 
 ## Dependencies
 
-- **DemaConsulting.TestResults**: provides `TestResults`, `TestResult`, and `TestOutcome` for
-  accumulating self-validation results.
-- **DemaConsulting.TestResults.IO**: provides `TrxSerializer` and `JUnitSerializer` for writing
-  results files.
+The `Logging` and `Utilities` subsystems use only .NET base class library types. Third-party items
+consumed at run time are documented with the subsystems that use them as those subsystems are added.
+Build, documentation, and quality tools are documented in the OTS design documents (see *OTS
+Dependencies*).
 
 ## Risk Control Measures
 
-N/A - not a safety-classified software item.
+**Path confinement**: Every file path built from a caller-supplied name passes through
+`PathHelpers.SafePathCombine`, which rejects traversal sequences and absolute paths. `RollingFileLogger`
+applies this to its configurable base file name, so logging cannot create or overwrite files outside the
+log folder. Segregation of the checking logic into the `Utilities` subsystem lets it be reviewed and
+verified once for every consumer.
+
+**Bounded diagnostics**: Log rotation caps the disk space consumed by diagnostic output, so a failure
+that logs repeatedly cannot exhaust the user's disk.
 
 ## Data Flow
 
-1. The host environment starts the tool process and passes command-line arguments to
-   `Program.Main`.
-2. `Program.Main` calls `Context.Create(args)`, which parses the arguments and opens the log
-   file if `--log` was specified. An `ArgumentException` or `InvalidOperationException` at
-   this point is caught, written to stderr, and causes exit code 1.
-3. `Program.Run(context)` inspects the parsed flags and dispatches to one handler:
-   - `--version` flag → `context.WriteLine(Version)`, then return.
-   - Otherwise, `PrintBanner` is called first; then:
-     - `--help` flag → `PrintHelp(context)`, then return.
-     - `--validate` flag → `Validation.Run(context)`.
-     - No flags → `RunToolLogic(context)`.
-4. `Program.Main` returns `context.ExitCode` (0 if no errors were reported, 1 otherwise).
+Application subsystems call `RollingFileLogger.Log` with a severity, a message, and optional exception
+context. `RollingFileLogger` asks `PathHelpers` to resolve the active file path inside the log folder,
+rotates and prunes archives when the active file has reached its size threshold, and appends the
+formatted entry to the active file. Nothing flows back to the caller except a propagated `IOException`
+when an entry cannot be written.
 
 ## Design Constraints
 
-- Platform: multi-targets net10.0 and net11.0 framework compatibility specifications on Windows, Linux, and macOS.
-- Threading: single-threaded console application; no shared mutable state between invocations.
-- Immutability: `Context` properties are set once at construction via `init` accessors and are
-  read-only thereafter.
-- Resource lifecycle: `Context` implements `IDisposable`; callers must dispose it to flush and
-  close any open log file handle.
-- Path safety: all caller-supplied path components are validated by `PathHelpers.SafePathCombine`
-  before file-system use.
+- Log files shall be written only to local disk; no telemetry or remote transmission is performed.
+- The default log folder shall be under the per-user local application data folder so that no
+  administrator rights are required to write logs.
+- All file paths built from caller-supplied names shall be resolved with `PathHelpers.SafePathCombine`.
+- Logging shall be safe to call from multiple threads.

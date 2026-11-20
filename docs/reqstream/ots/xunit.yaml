@@ -17,14 +17,11 @@ sections:
               test method.
             tags: [ots]
             tests:
-              - Context_Create_NoArguments_ReturnsDefaultContext
-              - Context_Create_VersionFlag_SetsVersionTrue
-              - Context_Create_SilentFlag_SetsSilentTrue
-              - Context_Create_LogFlag_OpensLogFile
-              - Context_Create_UnknownArgument_ThrowsArgumentException
               - PathHelpers_SafePathCombine_ValidPaths_CombinesCorrectly
-              - Program_Run_WithVersionFlag_DisplaysVersionOnly
-              - Validation_Run_WithSilentContext_PrintsSummary
+              - RollingFileLogger_Log_Event_WritesTimestampedEntry
+              - RollingFileLogger_Log_WithException_IncludesExceptionDetails
+              - RollingFileLogger_Constructor_NonPositiveMaximumFileSize_ThrowsArgumentException
+              - MainWindowShell_New_TitleIsApplicationName
           - id: CanvasPilot-OTS-xUnit-Report
             title: xUnit shall record test results in TRX output files.
             justification: |
@@ -34,11 +31,8 @@ sections:
               correctly.
             tags: [ots]
             tests:
-              - Context_Create_NoArguments_ReturnsDefaultContext
-              - Context_Create_VersionFlag_SetsVersionTrue
-              - Context_Create_SilentFlag_SetsSilentTrue
-              - Context_Create_LogFlag_OpensLogFile
-              - Context_Create_UnknownArgument_ThrowsArgumentException
               - PathHelpers_SafePathCombine_ValidPaths_CombinesCorrectly
-              - Program_Run_WithVersionFlag_DisplaysVersionOnly
-              - Validation_Run_WithSilentContext_PrintsSummary
+              - RollingFileLogger_Log_Event_WritesTimestampedEntry
+              - RollingFileLogger_Log_WithException_IncludesExceptionDetails
+              - RollingFileLogger_Constructor_NonPositiveMaximumFileSize_ThrowsArgumentException
+              - MainWindowShell_New_TitleIsApplicationName

@@ -1,7 +1,8 @@
 # Introduction
 
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on
-CanvasNet. The current build is a .NET command-line scaffold. It covers local
+CanvasNet. The current build is an Avalonia desktop application skeleton that contains the Logging
+and Utilities subsystems; further subsystems are added as they are introduced. It covers local
 software items (systems, subsystems, and units) and the OTS software items they consume.
 
 ## Purpose
@@ -17,7 +18,9 @@ requirements; it explains how they are realized.
 
 Local items:
 
-- **CanvasPilot**: system, subsystem, and unit design for all local components.
+- **CanvasPilot**: system, subsystem, and unit design for all local components:
+  - **Logging** subsystem: **RollingFileLogger** unit.
+  - **Utilities** subsystem: **PathHelpers** unit.
 
 OTS items:
 
@@ -49,20 +52,12 @@ the OTS items listed in Scope above are build-time/pipeline tooling, documented 
 
 ![Software Structure](SoftwareStructureView.svg)
 
-The diagram below is a placeholder that complements the structure view by showing how data flows
-at run time: replace its TODO boxes to show how your tool's entry point, Cli, subsystems, inputs,
-and outputs fit together.
-
-![Placeholder architecture diagram: replace the TODO boxes for your tool entry point, Cli,
-subsystems, support units, dependencies, inputs, and outputs with the real ones](architecture.svg)
-
 ## Folder Layout
 
 - **src/** - source files and projects
-  - **DemaConsulting.CanvasPilot/** - main application source
-    - **Cli/** - command-line interface subsystem
-    - **SelfTest/** - self-validation subsystem
-    - **Utilities/** - shared utilities subsystem
+  - **DemaConsulting.CanvasPilot/** - main application library source
+    - **LoggingSubsystem/** - local rolling log file subsystem
+    - **UtilitiesSubsystem/** - shared utilities subsystem
 
 ## Document Conventions
 

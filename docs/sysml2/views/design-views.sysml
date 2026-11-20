@@ -23,19 +23,13 @@ package CanvasPilot {
         render asInterconnectionDiagram;
     }
 
-    view CliView {
-        expose CliSubsystem;
-        expose CliSubsystem::*;
+    view LoggingSubsystemView {
+        expose LoggingSubsystem;
+        expose LoggingSubsystem::*;
         render asInterconnectionDiagram;
     }
 
-    view SelfTestView {
-        expose SelfTestSubsystem;
-        expose SelfTestSubsystem::*;
-        render asInterconnectionDiagram;
-    }
-
-    view UtilitiesView {
+    view UtilitiesSubsystemView {
         expose UtilitiesSubsystem;
         expose UtilitiesSubsystem::*;
         render asInterconnectionDiagram;

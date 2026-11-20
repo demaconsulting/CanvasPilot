@@ -3,9 +3,8 @@ resource-path:
   - docs/design
   - docs/design/generated
   - docs/design/canvas-pilot
-  - docs/design/canvas-pilot/cli
-  - docs/design/canvas-pilot/self-test
-  - docs/design/canvas-pilot/utilities
+  - docs/design/canvas-pilot/logging-subsystem
+  - docs/design/canvas-pilot/utilities-subsystem
   - docs/design/ots
   - docs/images
   - docs/template
@@ -15,13 +14,10 @@ input-files:
   - docs/design/title.txt
   - docs/design/introduction.md
   - docs/design/canvas-pilot.md
-  - docs/design/canvas-pilot/program.md
-  - docs/design/canvas-pilot/cli.md
-  - docs/design/canvas-pilot/cli/context.md
-  - docs/design/canvas-pilot/self-test.md
-  - docs/design/canvas-pilot/self-test/validation.md
-  - docs/design/canvas-pilot/utilities.md
-  - docs/design/canvas-pilot/utilities/path-helpers.md
+  - docs/design/canvas-pilot/logging-subsystem.md
+  - docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md
+  - docs/design/canvas-pilot/utilities-subsystem.md
+  - docs/design/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/design/ots.md
   - docs/design/ots/buildmark.md
   - docs/design/ots/fileassert.md

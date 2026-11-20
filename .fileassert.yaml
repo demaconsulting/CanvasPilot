@@ -159,19 +159,13 @@ tests:
         xml:
           - query: "//*[local-name()='svg']"
             count: 1
-      - pattern: "docs/design/generated/CliView.svg"
+      - pattern: "docs/design/generated/LoggingSubsystemView.svg"
         count: 1
         min-size: 100
         xml:
           - query: "//*[local-name()='svg']"
             count: 1
-      - pattern: "docs/design/generated/SelfTestView.svg"
-        count: 1
-        min-size: 100
-        xml:
-          - query: "//*[local-name()='svg']"
-            count: 1
-      - pattern: "docs/design/generated/UtilitiesView.svg"
+      - pattern: "docs/design/generated/UtilitiesSubsystemView.svg"
         count: 1
         min-size: 100
         xml:

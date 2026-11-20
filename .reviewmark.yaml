@@ -68,7 +68,7 @@ reviews:
       - "docs/design/canvas-pilot.md"
       - "docs/verification/introduction.md"
       - "docs/verification/canvas-pilot.md"
-      - "test/**/IntegrationTests.cs"
+      - "test/**/CanvasPilotTests.cs"
 
   - id: CanvasPilot-Design
     title: Review of CanvasPilot architectural and design consistency
@@ -98,70 +98,31 @@ reviews:
     paths:
       - "docs/reqstream/canvas-pilot/**/*.yaml"
 
-  # CanvasPilot - Program
-  - id: CanvasPilot-Program
-    title: Review of CanvasPilot Program unit implementation
+  # CanvasPilot - Logging
+  - id: CanvasPilot-Logging
+    title: Review of CanvasPilot Logging subsystem architecture and interfaces
     context:
       - docs/design/canvas-pilot.md
       - docs/reqstream/canvas-pilot.yaml
     paths:
-      - "docs/reqstream/canvas-pilot/program.yaml"
-      - "docs/design/canvas-pilot/program.md"
-      - "docs/verification/canvas-pilot/program.md"
-      - "src/**/Program.cs"
-      - "test/**/ProgramTests.cs"
+      - "docs/reqstream/canvas-pilot/logging-subsystem.yaml"
+      - "docs/design/canvas-pilot/logging-subsystem.md"
+      - "docs/verification/canvas-pilot/logging-subsystem.md"
+      - "test/**/LoggingSubsystem/LoggingSubsystemTests.cs"
 
-  # CanvasPilot - Cli
-  - id: CanvasPilot-Cli
-    title: Review of CanvasPilot Cli subsystem architecture and interfaces
+  - id: CanvasPilot-Logging-RollingFileLogger
+    title: Review of CanvasPilot RollingFileLogger unit implementation
     context:
       - docs/design/canvas-pilot.md
       - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/logging-subsystem.md
+      - docs/reqstream/canvas-pilot/logging-subsystem.yaml
     paths:
-      - "docs/reqstream/canvas-pilot/cli.yaml"
-      - "docs/design/canvas-pilot/cli.md"
-      - "docs/verification/canvas-pilot/cli.md"
-      - "test/**/Cli/CliSubsystemTests.cs"
-
-  - id: CanvasPilot-Cli-Context
-    title: Review of CanvasPilot Context unit implementation
-    context:
-      - docs/design/canvas-pilot.md
-      - docs/reqstream/canvas-pilot.yaml
-      - docs/design/canvas-pilot/cli.md
-      - docs/reqstream/canvas-pilot/cli.yaml
-    paths:
-      - "docs/reqstream/canvas-pilot/cli/context.yaml"
-      - "docs/design/canvas-pilot/cli/context.md"
-      - "docs/verification/canvas-pilot/cli/context.md"
-      - "src/**/Cli/Context.cs"
-      - "test/**/Cli/ContextTests.cs"
-
-  # CanvasPilot - SelfTest
-  - id: CanvasPilot-SelfTest
-    title: Review of CanvasPilot SelfTest subsystem architecture and interfaces
-    context:
-      - docs/design/canvas-pilot.md
-      - docs/reqstream/canvas-pilot.yaml
-    paths:
-      - "docs/reqstream/canvas-pilot/self-test.yaml"
-      - "docs/design/canvas-pilot/self-test.md"
-      - "docs/verification/canvas-pilot/self-test.md"
-      - "test/**/SelfTest/SelfTestSubsystemTests.cs"
-
-  - id: CanvasPilot-SelfTest-Validation
-    title: Review of CanvasPilot Validation unit implementation
-    context:
-      - docs/design/canvas-pilot.md
-      - docs/reqstream/canvas-pilot.yaml
-      - docs/design/canvas-pilot/self-test.md
-      - docs/reqstream/canvas-pilot/self-test.yaml
-    paths:
-      - "docs/reqstream/canvas-pilot/self-test/validation.yaml"
-      - "docs/design/canvas-pilot/self-test/validation.md"
-      - "docs/verification/canvas-pilot/self-test/validation.md"
-      - "src/**/SelfTest/Validation.cs"
-      - "test/**/SelfTest/ValidationTests.cs"
+      - "docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml"
+      - "docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md"
+      - "docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md"
+      - "src/**/LoggingSubsystem/RollingFileLogger.cs"
+      - "test/**/LoggingSubsystem/RollingFileLoggerTests.cs"
 
   # CanvasPilot - Utilities
   - id: CanvasPilot-Utilities
@@ -170,24 +131,24 @@ reviews:
       - docs/design/canvas-pilot.md
       - docs/reqstream/canvas-pilot.yaml
     paths:
-      - "docs/reqstream/canvas-pilot/utilities.yaml"
-      - "docs/design/canvas-pilot/utilities.md"
-      - "docs/verification/canvas-pilot/utilities.md"
-      - "test/**/Utilities/UtilitiesSubsystemTests.cs"
+      - "docs/reqstream/canvas-pilot/utilities-subsystem.yaml"
+      - "docs/design/canvas-pilot/utilities-subsystem.md"
+      - "docs/verification/canvas-pilot/utilities-subsystem.md"
+      - "test/**/UtilitiesSubsystem/UtilitiesSubsystemTests.cs"
 
   - id: CanvasPilot-Utilities-PathHelpers
     title: Review of CanvasPilot PathHelpers unit implementation
     context:
       - docs/design/canvas-pilot.md
       - docs/reqstream/canvas-pilot.yaml
-      - docs/design/canvas-pilot/utilities.md
-      - docs/reqstream/canvas-pilot/utilities.yaml
+      - docs/design/canvas-pilot/utilities-subsystem.md
+      - docs/reqstream/canvas-pilot/utilities-subsystem.yaml
     paths:
-      - "docs/reqstream/canvas-pilot/utilities/path-helpers.yaml"
-      - "docs/design/canvas-pilot/utilities/path-helpers.md"
-      - "docs/verification/canvas-pilot/utilities/path-helpers.md"
-      - "src/**/Utilities/PathHelpers.cs"
-      - "test/**/Utilities/PathHelpersTests.cs"
+      - "docs/reqstream/canvas-pilot/utilities-subsystem/path-helpers.yaml"
+      - "docs/design/canvas-pilot/utilities-subsystem/path-helpers.md"
+      - "docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md"
+      - "src/**/UtilitiesSubsystem/PathHelpers.cs"
+      - "test/**/UtilitiesSubsystem/PathHelpersTests.cs"
 
   # OTS Items
   - id: OTS-BuildMark

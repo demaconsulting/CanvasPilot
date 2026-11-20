@@ -1,6 +1,6 @@
 ### PathHelpers
 
-![Utilities Structure](UtilitiesView.svg)
+![Utilities Structure](UtilitiesSubsystemView.svg)
 
 #### Purpose
 
@@ -52,5 +52,6 @@ callers receive exceptions directly.
 
 #### Callers
 
-- **Validation** — calls `PathHelpers.SafePathCombine` to construct log file paths and
-  temporary directory paths during self-validation test execution.
+- **RollingFileLogger** — calls `PathHelpers.SafePathCombine` to resolve the active log file path and
+  archive file paths inside its log folder. Other subsystems that build file paths from caller-supplied
+  names are added here as they are introduced.

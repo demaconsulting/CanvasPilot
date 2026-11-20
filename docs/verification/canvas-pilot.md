@@ -2,86 +2,38 @@
 
 ## Verification Approach
 
-System-level verification uses end-to-end integration tests that invoke the tool as a real
-process via the `Runner.Run` helper in `IntegrationTests.cs`. Each test exercises the full
-stack — argument parsing, dispatch, execution, and output — and validates both exit code and
-combined console output. The tests treat the tool as a black box and assert only on observable
-outputs; no internal implementation details are assumed.
-
-`Runner.Run` merges stdout and stderr into a single combined output string. Per-stream assertions
-(e.g., "standard error is empty") are not possible at this level; all assertions are made
-against the combined output.
+System-level verification uses tests in `CanvasPilotTests.cs` that compose real units on temporary
+directories without opening a window. Each test exercises the units together as the application does
+and asserts on observable outcomes such as the files written to disk and the exceptions raised. The
+tests use real file I/O and no mocks, because the units under test depend only on the local file system.
 
 ## Test Environment
 
-Integration tests run on .NET 10.0 and .NET 11.0 across Windows, Linux, and macOS.
-All scenarios are expected to produce identical results on all supported runtime and platform
-combinations. Temporary files and directories are created and cleaned up within each test.
+System tests run under the standard .NET test runner on Windows, Linux, and macOS with the .NET 10
+runtime. Temporary directories are created and removed within each test. No network access, external
+services, or display is required.
 
 ## Acceptance Criteria
 
-- All integration tests pass with zero failures across all supported runtimes and platforms.
-- Exit code 0 is returned for all valid invocations.
-- Exit code non-zero is returned for all invalid argument combinations.
-- Results files are created at the specified paths when `--results` is used with `--validate`.
-- Silent mode (`--silent`) produces empty combined output.
+- All system tests pass with zero failures on every supported platform.
+- Application events and failures logged by the application appear in a local log file within the log
+  folder.
+- A file location built from a name that attempts to leave its intended folder is rejected, while a
+  name inside the folder is accepted.
 
 ## Test Scenarios
 
-**CanvasPilot_VersionFlag_Provided_OutputsVersion**: The `--version` flag is passed as
-the sole argument; the tool outputs the version string and exits with code 0. This scenario is
-tested by `CanvasPilot_VersionFlag_Provided_OutputsVersion`.
+**CanvasPilot_OperationalLogging_ApplicationEvent_WritesLocalLog**: A log folder is resolved beneath a
+per-user data root, an informational event and a failure with exception details are logged, and the log
+folder is inspected; exactly one log file exists and it contains both entries including the exception
+detail. This scenario is tested by `CanvasPilot_OperationalLogging_ApplicationEvent_WritesLocalLog`.
 
-**CanvasPilot_HelpFlag_Provided_OutputsUsageInformation**: The `--help` flag is passed
-as the sole argument; the combined output contains "Usage" and "Options" and the tool exits
-with code 0. This scenario is tested by
-`CanvasPilot_HelpFlag_Provided_OutputsUsageInformation`.
+**CanvasPilot_SafeFileHandling_TraversalName_IsRejected**: A supplied name containing parent-directory
+traversal is combined with a base folder and an `ArgumentException` is thrown; a name inside the folder
+is combined successfully and the result stays under the base folder. This scenario is tested by
+`CanvasPilot_SafeFileHandling_TraversalName_IsRejected`.
 
-**CanvasPilot_ValidateFlag_Provided_RunsValidation**: The `--validate` flag is passed as
-the sole argument; the combined output contains "Total Tests:" and the tool exits with code 0,
-confirming the self-validation suite runs and completes successfully. This scenario is tested by
-`CanvasPilot_ValidateFlag_Provided_RunsValidation`.
-
-**CanvasPilot_ValidateWithTrxResults_Requested_GeneratesTrxFile**: The `--validate` flag
-is combined with `--results <path>.trx`; a TRX file containing a `<TestRun` XML element is
-created at the specified path and the tool exits with code 0. This scenario is tested by
-`CanvasPilot_ValidateWithTrxResults_Requested_GeneratesTrxFile`.
-
-**CanvasPilot_ValidateWithXmlResults_Requested_GeneratesJUnitFile**: The `--validate` flag
-is combined with `--results <path>.xml`; a JUnit XML file containing a `<testsuites` XML element
-is created at the specified path and the tool exits with code 0. This scenario is tested by
-`CanvasPilot_ValidateWithXmlResults_Requested_GeneratesJUnitFile`.
-
-**CanvasPilot_SilentFlag_Provided_SuppressesOutput**: The `--version` and `--silent`
-flags are passed together; the combined output is empty or whitespace-only while the tool exits
-with code 0, confirming silent mode suppresses all console output. This scenario is tested by
-`CanvasPilot_SilentFlag_Provided_SuppressesOutput`.
-
-**CanvasPilot_LogFlag_Provided_WritesOutputToFile**: The `--log <path>` flag is passed
-pointing to a temporary file; the tool exits with code 0 and the log file is created containing
-output that also appears in the combined console output. This scenario is tested by
-`CanvasPilot_LogFlag_Provided_WritesOutputToFile`.
-
-**CanvasPilot_UnknownArgument_Provided_ReturnsError**: An unrecognized argument
-(`--unknown`) is passed; the tool exits with a non-zero code and the combined output contains
-an error message identifying the unknown argument. This scenario is tested by
-`CanvasPilot_UnknownArgument_Provided_ReturnsError`.
-
-**CanvasPilot_ValidateWithDepth_DepthThree_OutputsCorrectHeadingLevel**: The `--validate`
-flag is combined with `--depth 3`; the combined output contains `###` (heading at depth 3) and
-the tool exits with code 0. This scenario is tested by
-`CanvasPilot_ValidateWithDepth_DepthThree_OutputsCorrectHeadingLevel`.
-
-**CanvasPilot_NoArguments_Invoked_DisplaysBanner**: The tool is invoked with no
-arguments; the combined output contains the tool name and copyright notice and the exit code is
-0. This scenario is tested by `CanvasPilot_NoArguments_Invoked_DisplaysBanner`.
-
-**CanvasPilot_ResultAlias_LegacyFlag_WritesResultsFile**: The `--validate` flag is
-combined with `--result <path>.trx` (the legacy alias); a TRX file is created at the specified
-path and the tool exits with code 0. This scenario is tested by
-`CanvasPilot_ResultAlias_LegacyFlag_WritesResultsFile`.
-
-**CanvasPilot_ValidateWithBadExtension_ExtensionInvalid_ReturnsNonZero**: The `--validate`
-flag is combined with `--results <path>.bad` (unsupported extension); the tool exits with a
-non-zero code and no file is created at the specified path. This scenario is tested by
-`CanvasPilot_ValidateWithBadExtension_ExtensionInvalid_ReturnsNonZero`.
+**MainWindowShell_New_TitleIsApplicationName**: The application shell is created on each supported
+platform and runtime and reports the application name as its title, proving the application's managed
+code loads and runs there. The platform requirements link this test to each platform and runtime with
+source filters. This scenario is tested by `MainWindowShell_New_TitleIsApplicationName`.

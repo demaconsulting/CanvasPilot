@@ -18,50 +18,6 @@ run for all scenarios constitutes evidence that both requirements are satisfied.
 
 ### Test Scenarios
 
-#### Context_Create_NoArguments_ReturnsDefaultContext
-
-**Scenario**: xUnit discovers and runs this test; the test verifies Context default construction.
-
-**Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
-
-**Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
-
-#### Context_Create_VersionFlag_SetsVersionTrue
-
-**Scenario**: xUnit discovers and runs this test; the test verifies that passing the --version flag
-sets the Version property to true.
-
-**Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
-
-**Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
-
-#### Context_Create_SilentFlag_SetsSilentTrue
-
-**Scenario**: xUnit discovers and runs this test; the test verifies that passing the --silent flag
-sets the Silent property to true.
-
-**Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
-
-**Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
-
-#### Context_Create_LogFlag_OpensLogFile
-
-**Scenario**: xUnit discovers and runs this test; the test verifies that passing the --log flag
-opens a log file.
-
-**Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
-
-**Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
-
-#### Context_Create_UnknownArgument_ThrowsArgumentException
-
-**Scenario**: xUnit discovers and runs this test; the test verifies that an unrecognized argument
-raises an exception.
-
-**Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
-
-**Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
-
 #### PathHelpers_SafePathCombine_ValidPaths_CombinesCorrectly
 
 **Scenario**: xUnit discovers and runs this test; the test verifies that SafePathCombine correctly
@@ -71,19 +27,37 @@ joins valid path segments.
 
 **Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
 
-#### Program_Run_WithVersionFlag_DisplaysVersionOnly
+#### RollingFileLogger_Log_Event_WritesTimestampedEntry
 
-**Scenario**: xUnit discovers and runs this test; the test verifies that the program prints only
-version information when invoked with the --version flag.
+**Scenario**: xUnit discovers and runs this test; the test verifies that logging an event writes a
+timestamped, leveled entry to the active log file.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 
 **Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
 
-#### Validation_Run_WithSilentContext_PrintsSummary
+#### RollingFileLogger_Log_WithException_IncludesExceptionDetails
 
-**Scenario**: xUnit discovers and runs this test; the test verifies that Validation.Run prints a
-summary even when the context is configured for silent operation.
+**Scenario**: xUnit discovers and runs this test; the test verifies that logging a failure records the
+exception details alongside the message.
+
+**Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
+
+**Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
+
+#### RollingFileLogger_Constructor_NonPositiveMaximumFileSize_ThrowsArgumentException
+
+**Scenario**: xUnit discovers and runs this test; the test verifies that constructing a logger with a
+non-positive maximum file size raises an exception.
+
+**Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
+
+**Requirement coverage**: `CanvasPilot-OTS-xUnit-Execute`, `CanvasPilot-OTS-xUnit-Report`.
+
+#### MainWindowShell_New_TitleIsApplicationName
+
+**Scenario**: xUnit discovers and runs this test; the test verifies that a newly created application
+shell reports the application name as its title.
 
 **Expected**: xUnit executes the test, the test passes, and the result appears in the TRX output.
 

@@ -1,8 +1,8 @@
 ---
 # System-Level Platform Requirements
 #
-# These requirements specify the platforms and runtimes the tool must support.
-# They ensure the tool works across the required execution environments.
+# These requirements specify the platforms and runtimes the application must support.
+# They ensure the application works across the required execution environments.
 #
 # Test links can include a source filter prefix (e.g. "windows@", "ubuntu@", "dotnet10.x@") to restrict
 # which test results count as evidence for a requirement. This is critical for platform and runtime
@@ -12,58 +12,48 @@
 #   windows@TestName      - proves the test passed on a Windows platform
 #   ubuntu@TestName       - proves the test passed on a Linux (Ubuntu) platform
 #   macos@TestName        - proves the test passed on a macOS platform
-#   dotnet10.x@TestName   - proves the self-validation test ran with .NET 10.x runtime
-#   dotnet11.x@TestName   - proves the self-validation test ran with .NET 11.x runtime
+#   dotnet10.x@TestName   - proves the test ran with .NET 10.x runtime
+#
+# NOTE: The tests linked here are the earliest shell tests. They are replaced by dedicated
+# application startup tests when the system-level requirements are finalized.
 
 sections:
-  - title: Platform Support
-    requirements:
-      - id: CanvasPilot-Platform-Windows
-        title: The tool shall execute successfully on Windows platforms.
-        tags: [system]
-        justification: |
-          DEMA Consulting tools must support Windows as a major development platform.
-        tests:
-          # Tests link to "windows" to ensure results come from Windows platform
-          - "windows@CanvasPilot_VersionDisplay"
-          - "windows@CanvasPilot_HelpDisplay"
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Platform Support
+        requirements:
+          - id: CanvasPilot-Platform-Windows
+            title: The application shall execute successfully on Windows platforms.
+            tags: [system]
+            justification: |
+              DEMA Consulting tools must support Windows as a major development platform.
+            tests:
+              # Tests link to "windows" to ensure results come from Windows platform
+              - "windows@MainWindowShell_New_TitleIsApplicationName"
 
-      - id: CanvasPilot-Platform-Linux
-        title: The tool shall execute successfully on Linux platforms.
-        tags: [system]
-        justification: |
-          DEMA Consulting tools must support Linux for CI/CD and containerized environments.
-        tests:
-          # Tests link to "ubuntu" to ensure results come from Linux platform
-          - "ubuntu@CanvasPilot_VersionDisplay"
-          - "ubuntu@CanvasPilot_HelpDisplay"
+          - id: CanvasPilot-Platform-Linux
+            title: The application shall execute successfully on Linux platforms.
+            tags: [system]
+            justification: |
+              DEMA Consulting tools must support Linux for CI/CD and containerized environments.
+            tests:
+              # Tests link to "ubuntu" to ensure results come from Linux platform
+              - "ubuntu@MainWindowShell_New_TitleIsApplicationName"
 
-      - id: CanvasPilot-Platform-MacOS
-        title: The tool shall execute successfully on macOS platforms.
-        tags: [system]
-        justification: |
-          DEMA Consulting tools must support macOS for developers using Apple platforms.
-        tests:
-          # Tests link to "macos" to ensure results come from macOS platform
-          - "macos@CanvasPilot_VersionDisplay"
-          - "macos@CanvasPilot_HelpDisplay"
+          - id: CanvasPilot-Platform-MacOS
+            title: The application shall execute successfully on macOS platforms.
+            tags: [system]
+            justification: |
+              DEMA Consulting tools must support macOS for developers using Apple platforms.
+            tests:
+              # Tests link to "macos" to ensure results come from macOS platform
+              - "macos@MainWindowShell_New_TitleIsApplicationName"
 
-      - id: CanvasPilot-Platform-Net10
-        title: The tool shall support .NET 10 runtime.
-        tags: [system]
-        justification: |
-          .NET 10 is a Long-Term Support (LTS) release and the oldest supported .NET runtime,
-          providing long-term stability for enterprise users.
-        tests:
-          - "dotnet10.x@CanvasPilot_VersionDisplay"
-          - "dotnet10.x@CanvasPilot_HelpDisplay"
-
-      - id: CanvasPilot-Platform-Net11
-        title: The tool shall support .NET 11 runtime.
-        tags: [system]
-        justification: |
-          .NET 11 support enables users to leverage the latest .NET features and performance
-          improvements.
-        tests:
-          - "dotnet11.x@CanvasPilot_VersionDisplay"
-          - "dotnet11.x@CanvasPilot_HelpDisplay"
+          - id: CanvasPilot-Platform-Net10
+            title: The application shall support the .NET 10 runtime.
+            tags: [system]
+            justification: |
+              .NET 10 is a Long-Term Support (LTS) release, providing long-term stability for
+              enterprise users.
+            tests:
+              - "dotnet10.x@MainWindowShell_New_TitleIsApplicationName"

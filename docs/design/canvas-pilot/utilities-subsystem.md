@@ -1,6 +1,6 @@
 ## Utilities
 
-![Utilities Structure](UtilitiesView.svg)
+![Utilities Structure](UtilitiesSubsystemView.svg)
 
 ### Overview
 
@@ -30,7 +30,6 @@ The `Utilities` subsystem contains only the `PathHelpers` unit. It has no depend
 tool units or subsystems; it uses only .NET BCL types (`Path`, `ArgumentNullException`).
 
 `PathHelpers.SafePathCombine` is a pure utility method: it performs no file-system I/O, holds
-no state, and throws immediately on invalid input. All calls to `SafePathCombine` in the
-codebase originate from the `SelfTest` subsystem (`Validation`), which uses it to construct
-log and result file paths inside temporary directories created during self-validation test
-execution.
+no state, and throws immediately on invalid input. Consumers use it to construct file paths from
+caller-supplied names: currently the `Logging` subsystem (`RollingFileLogger`), which resolves its
+active log file and archive file paths inside its log folder.
