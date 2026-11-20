@@ -136,7 +136,21 @@ internal sealed class FakeDictationService : IDictationService
     public DictationAvailability CheckAvailability() => Availability;
 
     /// <inheritdoc />
-    public Task<DictationAvailability> PrepareAsync(CancellationToken cancellationToken = default) => Task.FromResult(Availability);
+    public Task<DictationAvailability> PrepareAsync(CancellationToken cancellationToken = default)
+    {
+        PrepareCount++;
+        return PrepareFailure is null ? Task.FromResult(Availability) : Task.FromException<DictationAvailability>(PrepareFailure);
+    }
+
+    /// <summary>
+    ///     Gets the number of times the engine was prepared ahead of time.
+    /// </summary>
+    public int PrepareCount { get; private set; }
+
+    /// <summary>
+    ///     Gets or sets the exception that <see cref="PrepareAsync" /> fails with, or <see langword="null" /> for none.
+    /// </summary>
+    public Exception? PrepareFailure { get; set; }
 
     /// <inheritdoc />
     public async Task<DictationStart> BeginAsync(CancellationToken cancellationToken = default)

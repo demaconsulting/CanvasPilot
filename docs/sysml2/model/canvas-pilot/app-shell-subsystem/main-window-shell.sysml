@@ -46,5 +46,9 @@ package CanvasPilot {
 
         // Runs the Image menu commands through the exporter seam (IImageExporter) that the Preview subsystem owns.
         dependency MainWindowShell to ImageExporter;
+
+        // Shows the payload inspector as a dialog it owns, on behalf of the chat panel, through the launcher seam
+        // (IPayloadInspectorLauncher) that the Chat subsystem owns and the dialog service extends.
+        dependency MainWindowShell to PayloadInspector;
     }
 }

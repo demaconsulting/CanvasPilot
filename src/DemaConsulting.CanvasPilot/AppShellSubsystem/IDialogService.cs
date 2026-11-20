@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -27,9 +28,11 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 /// <summary>
 ///     Shows the application's dialogs and platform pickers on behalf of the view models. The main window
 ///     implements it, because showing a dialog needs the window as owner; tests supply a fake so no real window
-///     is needed. Every method completes when the user has closed the dialog.
+///     is needed. Every method completes when the user has closed the dialog. It includes the dialogs that lower
+///     subsystems ask for through their own interfaces: the folder picker of the project subsystem, the export dialogs
+///     of the preview subsystem, and the payload inspector of the chat subsystem.
 /// </summary>
-public interface IDialogService : IFolderPicker, IExportDialogs
+public interface IDialogService : IFolderPicker, IExportDialogs, IPayloadInspectorLauncher
 {
     /// <summary>
     ///     Shows the New Project dialog modally. The view model reports whether it was accepted.

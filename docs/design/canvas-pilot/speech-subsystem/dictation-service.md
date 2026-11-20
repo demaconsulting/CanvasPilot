@@ -53,8 +53,8 @@ crash the process; a missing audio library is reported by the audio system as no
 **PrepareAsync**: Does the checks of `CheckAvailability` and, when dictation is available, loads the engine ahead of
 time so that the first press responds at once. While a session is listening it leaves a loaded engine alone even when
 the settings have changed, because the session is using it; the next press loads the new one. Failures are logged and
-returned as `EngineUnavailable`; only a cancellation by the caller is thrown. The chat, which is added by a later step,
-calls it when it is shown and when the speech settings change.
+returned as `EngineUnavailable`; only a cancellation by the caller is thrown. The chat panel calls it when it is shown;
+calling it when the speech settings change is added by a later step.
 
 **BeginAsync**: (1) Claims the single listening slot; a request while the slot is taken is ignored and returns no
 session with an available result. (2) Checks the model and the native files, without the microphone. (3) Gets the
@@ -117,5 +117,5 @@ keep the remaining native failures from reaching the user as a crash.
 
 - `ApplicationComposition` — creates the service over the settings, the model service, and the audio service, and
   disposes it.
-- The chat panel and the talk key, which are added by a later step, call `CheckAvailability`, `PrepareAsync`, and
-  `BeginAsync`.
+- The chat panel (through `ComposerViewModel` for the talk button, and itself for `PrepareAsync`) calls
+  `CheckAvailability`, `PrepareAsync`, and `BeginAsync`; the talk key of a later step does the same.

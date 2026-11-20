@@ -2,8 +2,8 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
-AppShell, Annotation, Composer, Logging, Payload, Preview, Project, Settings, Speech, and Utilities subsystems; further
-subsystems, such as the AI chat, are added as they are introduced.
+AppShell, Annotation, Chat, Composer, Logging, Payload, Preview, Project, Settings, Speech, and Utilities subsystems;
+further subsystems, such as the AI agent, are added as they are introduced.
 
 ## Purpose
 
@@ -28,6 +28,10 @@ This document covers the verification design for the following software items:
     - **MainWindowShell** — main window, menus, and dialog service
     - **ProjectWorkspace** — explorer and preview content area
     - **AboutDialog** — application identity window
+  - **Chat** subsystem
+    - **ChatPanel** — the transcript of the sent messages, the composer with its send and hold-to-talk buttons, and the
+      joining of marks to the message
+    - **PayloadInspector** — the window that shows exactly what the assistant would receive for a sent message
   - **Composer** subsystem
     - **ComposerDocument** — the message being composed as ordered segments of text and chips
     - **ComposerHistory** — undo and redo of the user's changes, one action at a time
@@ -93,8 +97,9 @@ The following topics are out of scope:
 - Verification documents are not produced for the test projects themselves — they are the
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
-- The AI chat and the agent are not part of this increment, and so are not verified; only the stored settings that they
-  will read are. The talk button and key that call dictation are added by a later step
+- The AI agent is not part of this increment, and so is not verified; only the stored settings that it will read are.
+  The chat panel is verified on its own; its place in the main window, the Edit menu, and the talk key are added by a
+  later step
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified
@@ -108,6 +113,7 @@ test/
 ├── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
 │   ├── AnnotationSubsystem/
 │   ├── AppShellSubsystem/
+│   ├── ChatSubsystem/
 │   ├── ComposerSubsystem/
 │   ├── LoggingSubsystem/
 │   ├── PayloadSubsystem/

@@ -15,7 +15,7 @@ The subsystem contains three units: `MarkRegistry`, which makes and keeps the ma
 mark to the parts of the source file under it, and `AnnotationOverlay`, which is the layer on which the marks are drawn
 and shown. It depends on `Preview` for the picture type `RenderedImage`, the point and box types of its coordinates, and
 `IRenderedImageSource`, and on `Logging`, and on nothing else of the application. The `Composer` subsystem knows a mark
-only as a chip with an identity and a number, so the overlay does not know the composer either: the composition root
+only as a chip with an identity and a number, so the overlay does not know the composer either: the chat panel
 joins the two, by telling the overlay which mark chips the message holds and by adding the chip of each mark that the
 overlay reports.
 
@@ -91,8 +91,8 @@ told that nothing lies under a mark when the picture simply cannot say.
 picture and scaled with it, so the position of a pointer event on the layer is already a point of the picture and no
 conversion exists to get wrong. Its tools are in a second slot, in the top bar of the pane, which is not scaled. The
 overlay makes a mark only when its note is finished, since a mark never changes, and reports it through an event; the
-overlay and the composer do not know each other, because `Composer` already depends on `Annotation`. The composition
-root joins them: it adds the chip of each reported mark with `ComposerViewModel.AddMark`, which is one undo step, and
+overlay and the composer do not know each other, because `Composer` already depends on `Annotation`. The chat panel
+joins them: it adds the chip of each reported mark with `ComposerViewModel.AddMark`, which is one undo step, and
 tells the overlay which chips the message holds each time the composer changes, so undo and redo of the chip hide and
 show the mark with no undo of its own. Because the pointer is also used to drag the picture out of the application, the
 overlay switches that off while a tool is chosen and handles the press only then, so with no tool the press goes on to

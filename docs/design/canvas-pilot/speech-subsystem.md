@@ -13,8 +13,8 @@ devices and creates the capture device of the chosen microphone; `SpeechModelSer
 speech models and loads the engine of an installed speech-to-text model; `DictationService`, which listens while the
 talk control is held and returns the text; and four units that make up the page, `DeviceSelection` (the device
 pickers), `ModelCatalogPanel` (the model lists and downloads), `ModelParameterEditor` (the tunable settings of a
-model), and `SpeechSettingsPage`, which composes the other three and plugs into the settings dialog. The talk button,
-the talk key, and the chat that shows the words and adds them to the message are added by a later step; this
+model), and `SpeechSettingsPage`, which composes the other three and plugs into the settings dialog. The talk button
+of the chat panel calls the dictation service and shows the words; the talk key is added by a later step. This
 subsystem provides what they call. The native speech runtime, which the speech engine needs, arrives with the library's
 packages and is shipped beside the application and in the installer; `DictationService` checks that it is there before
 it loads an engine, because an engine started without it can crash the process. The speech library is used in exactly

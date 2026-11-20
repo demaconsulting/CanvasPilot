@@ -80,17 +80,19 @@ sections:
           - id: CanvasPilot-AppShell-ComposeApplication
             title: >-
               The AppShell subsystem shall build the application's units at startup in dependency order, load
-              the stored settings, join the layer for marks on the picture to the preview pane and to the message
-              being composed, record the start and stop in the application log, and release the units on
-              exit.
+              the stored settings, build the chat panel that joins the layer for marks on the picture to the message
+              being composed, join the layer to the preview pane, record the start and stop in the application log, and
+              release the units on exit.
             justification: |
               One place that creates every unit and passes each its dependencies keeps the application's
               structure visible and testable, so the application starts the same way on every platform and
               in tests without a window, and settings that are stored are in effect from the first moment. The
               units that draw the marks and that hold the message do not know each other, so the one place that
-              creates them also makes the marks become chips and lets only a message that can be edited take marks.
+              creates them also creates the chat panel, which makes the marks become chips and lets only a message
+              that can be edited take marks.
             tests:
               - AppShellSubsystem_ComposeApplication_LoadsSettingsListsRecentProjectsAndLogs
               - AppShellSubsystem_ComposeApplication_AnnotationLayerIsOnThePictureAndFollowsTheOpenProject
+              - AppShellSubsystem_ComposeApplication_ChatPanelFollowsTheOpenProject
               - AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages
               - AppShellSubsystem_Create_NullArguments_Throw

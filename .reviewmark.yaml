@@ -237,6 +237,61 @@ reviews:
       - "src/**/AppShellSubsystem/AboutDialogView.axaml.cs"
       - "test/**/AppShellSubsystem/AboutDialogTests.cs"
 
+  # CanvasPilot - Chat
+  - id: CanvasPilot-Chat
+    title: Review of CanvasPilot Chat subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem.md"
+      - "docs/verification/canvas-pilot/chat-subsystem.md"
+      - "test/**/ChatSubsystem/ChatSubsystemTests.cs"
+
+  - id: CanvasPilot-Chat-ChatPanel
+    title: Review of CanvasPilot ChatPanel unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/chat-panel.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/chat-panel.md"
+      - "src/**/ChatSubsystem/ChatPanelView.axaml"
+      - "src/**/ChatSubsystem/ChatPanelView.axaml.cs"
+      - "src/**/ChatSubsystem/ChatPanelViewModel.cs"
+      - "src/**/ChatSubsystem/ChipThumbnailProvider.cs"
+      - "src/**/ChatSubsystem/TranscriptEntryView.axaml"
+      - "src/**/ChatSubsystem/TranscriptEntryView.axaml.cs"
+      - "src/**/ChatSubsystem/TranscriptEntryViewModel.cs"
+      - "src/**/ChatSubsystem/TranscriptItem.cs"
+      - "test/**/ChatSubsystem/ChatPanelTests.cs"
+      - "test/**/ChatSubsystem/ChatSubsystemFakes.cs"
+      - "test/**/ChatPanelViewTests.cs"
+      - "test/**/ChatUiTestSupport.cs"
+
+  - id: CanvasPilot-Chat-PayloadInspector
+    title: Review of CanvasPilot PayloadInspector unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/payload-inspector.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/payload-inspector.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/payload-inspector.md"
+      - "src/**/ChatSubsystem/IPayloadInspectorLauncher.cs"
+      - "src/**/ChatSubsystem/PayloadInspectorView.axaml"
+      - "src/**/ChatSubsystem/PayloadInspectorView.axaml.cs"
+      - "src/**/ChatSubsystem/PayloadInspectorViewModel.cs"
+      - "src/**/ChatSubsystem/PayloadPictureViewModel.cs"
+      - "test/**/ChatSubsystem/PayloadInspectorTests.cs"
+      - "test/**/PayloadInspectorViewTests.cs"
+
   # CanvasPilot - Composer
   - id: CanvasPilot-Composer
     title: Review of CanvasPilot Composer subsystem architecture and interfaces

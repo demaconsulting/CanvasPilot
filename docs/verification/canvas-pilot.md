@@ -20,7 +20,8 @@ written in managed code and a recorded sound file for the microphone, so no nati
 is needed. Dictation with a real microphone and a real model, the native speech files in an installed application, and
 the reaction of the application to a blocked microphone or missing native files need a person and an installed package;
 they are checked by hand before each release as listed under *Manual Verification* in the verification of the Speech
-subsystem, together with the checks of the installed package, and are not evidence for a requirement.
+subsystem and of the Chat subsystem (the talk button of the chat panel with a real microphone and model, and the Windows
+microphone privacy setting), together with the checks of the installed package, and are not evidence for a requirement.
 
 ## Test Environment
 
@@ -70,6 +71,10 @@ services, or display is required.
 - With the speech settings composed as at startup, dictation tells a user who has no model chosen to choose one, and a
   user who holds the talk control with a model chosen gets the recognized words as text that is added to the message as
   one dictated block, in order after the typed text.
+- A user who marks a node of the shown diagram, writes around the mark, and sends the message through the chat panel
+  sees the message in the transcript with its words and mark chip in order, and "View payload" shows the payload
+  exactly as the payload describer writes it, with the place of the mark, the node under it, and the annotated picture
+  and the area around the mark.
 - The published win-x64 application contains the native speech and audio runtime libraries and so does the installer
   package, so that the installed application needs nothing but the model download to run a chosen speech model.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
@@ -219,6 +224,15 @@ dictation is available; the user holds the talk control and lets go, and the fin
 Added to a message after typed text with the dictation edit, the message holds the typed text and one block of dictated
 text, in that order. This scenario is tested by
 `CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable`.
+
+**CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload**: The composed application's user has
+a project with a two-node Mermaid diagram shown and a payload inspector launcher that records what it is asked to show.
+The user types "Make ", draws a rectangle around the node `Start` and skips the note, types " green", and sends the
+message through the chat panel, which could be sent. The transcript holds one entry whose items are the text "Make ", a
+chip, and the text " green"; its payload text is `Make [Mark 1] green`. Choosing "View payload" gives the launcher an
+inspector whose description is exactly the output of the payload describer for that payload, contains the node text
+`Start` as a source element, and has two pictures, the annotated picture and the area around the mark. This scenario is
+tested by `CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload`.
 
 **Speech_NativeRuntimePublished**: After the Windows build job publishes the application self-contained for win-x64,
 FileAssert asserts that the published folder, which the installer takes whole, holds exactly one each of

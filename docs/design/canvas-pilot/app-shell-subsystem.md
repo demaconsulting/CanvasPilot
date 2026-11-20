@@ -19,8 +19,8 @@ and are described here because they only join the units together.
 
 **Dialog Service**: How the view models ask the user questions, show dialogs, and open platform pickers.
 
-- *Type*: In-process .NET API (`IDialogService`, which extends `IFolderPicker` of the `Project` subsystem
-  and`n  `IExportDialogs`of the`Preview` subsystem).
+- *Type*: In-process .NET API (`IDialogService`, which extends `IFolderPicker` of the `Project` subsystem,
+  `IExportDialogs` of the `Preview` subsystem, and `IPayloadInspectorLauncher` of the `Chat` subsystem).
 - *Role*: Provider of the contract; the main window (`MainWindowView`) is the implementation.
 - *Contract*: `ShowNewProjectAsync`, `ShowSettingsAsync`, and `ShowAboutAsync` show modal dialogs;
   `PickFolderAsync`, `PickProjectFileAsync`, and `PickSaveFileAsync` return a path or `null` when cancelled;
@@ -28,7 +28,8 @@ and are described here because they only join the units together.
   of text; `CopyImageToClipboardAsync` puts a picture on the clipboard and answers whether it succeeded. Every
   other method completes when the user has closed the dialog. `PickSaveFileAsync`, `ShowMessageAsync`, and
   `CopyImageToClipboardAsync` are declared by `IExportDialogs`, which the `Preview` subsystem owns, so the
-  image exporter needs nothing of the shell.
+  image exporter needs nothing of the shell. `ShowPayloadInspectorAsync` is declared by `IPayloadInspectorLauncher`,
+  which the `Chat` subsystem owns; the window shows the payload inspector as a dialog that it owns.
 - *Constraints*: A platform picker that cannot be shown answers `null`, which reads as cancelled.
 
 **Image Exporter**: The extension point behind the Image menu.
@@ -69,12 +70,13 @@ and are described here because they only join the units together.
    preview pane), the image exporter, the settings pages (the AI Provider page and the Speech page over the speech
    services, which use neither the audio system nor the model store until the Speech page is loaded), and the
    shell, in that order, and logs the start. The speech model service that the composition creates is disposed
-   with the composition. After the shell, the composition makes the mark registry, the composer of the message, and
-   the layer on which the user marks the picture. It puts the layer in the overlay slot of the preview pane and the
-   layer's tool bar in the top bar slot, gives the layer the switch for dragging the picture out, and joins it to
-   the message: it allows marks while the composer can edit, tells the layer which mark chips the message holds
-   whenever the composer changes, and adds the chip of each mark that the layer reports, so that an undo of the chip
-   hides the mark.
+   with the composition. After the shell, the composition makes the mark registry, the composer of the message, the
+   layer on which the user marks the picture, and the chat panel. It puts the layer in the overlay slot of the preview
+   pane and the layer's tool bar in the top bar slot, and gives the layer the switch for dragging the picture out. The
+   chat panel joins the layer to the message: it allows marks while the composer can edit, tells the layer which mark
+   chips the message holds whenever the composer changes, and adds the chip of each mark that the layer reports, so that
+   an undo of the chip hides the mark. The composition holds the panel but does not place it in the workspace; that is
+   a later step.
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. `App` records unhandled errors in the log and disposes the composition when the application exits.
 3. The shell follows the project service: when the open project changes it updates the title and shows the

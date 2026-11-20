@@ -4,8 +4,8 @@ package CanvasPilot {
     doc
     /*
      * CanvasPilot is an AI-assisted drawing application built on CanvasNet.
-     * The model contains the application shell, annotation, composer, logging, payload, preview, project, settings,
-     * speech, and utility subsystems; the AI chat is not yet part of it.
+     * The model contains the application shell, annotation, chat, composer, logging, payload, preview, project, settings,
+     * speech, and utility subsystems; the AI agent is not yet part of it.
      */
 
     part def CanvasPilotSystem {
@@ -20,6 +20,7 @@ package CanvasPilot {
 
         part annotation : AnnotationSubsystem;
         part appShell : AppShellSubsystem;
+        part chat : ChatSubsystem;
         part composer : ComposerSubsystem;
         part logging : LoggingSubsystem;
         part payload : PayloadSubsystem;

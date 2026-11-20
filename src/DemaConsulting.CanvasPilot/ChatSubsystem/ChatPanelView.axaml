@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.ChatSubsystem"
+             xmlns:composer="using:DemaConsulting.CanvasPilot.ComposerSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.ChatSubsystem.ChatPanelView"
+             x:DataType="vm:ChatPanelViewModel"
+             AutomationProperties.AutomationId="ChatPanel">
+
+  <Grid Margin="8" RowDefinitions="*,Auto,Auto">
+
+    <!-- The messages that were sent in this project, oldest first; a message is only in memory and cannot be changed -->
+    <Grid Grid.Row="0">
+      <ScrollViewer Name="TranscriptScroll"
+                    AutomationProperties.AutomationId="ChatTranscriptScroll"
+                    HorizontalScrollBarVisibility="Disabled"
+                    VerticalScrollBarVisibility="Auto">
+        <ItemsControl Name="TranscriptList"
+                      AutomationProperties.AutomationId="ChatTranscript"
+                      ItemsSource="{Binding Transcript}" />
+      </ScrollViewer>
+      <TextBlock Name="EmptyTranscriptText"
+                 AutomationProperties.AutomationId="ChatTranscriptEmpty"
+                 Margin="4"
+                 Opacity="0.6"
+                 IsHitTestVisible="False"
+                 TextWrapping="Wrap"
+                 Text="{x:Static vm:ChatPanelViewModel.EmptyTranscriptText}"
+                 IsVisible="{Binding !HasTranscript}" />
+    </Grid>
+
+    <!-- The message being written, with the words that are being recognized and the status line of the composer -->
+    <Border Grid.Row="1"
+            Margin="0,8,0,0"
+            Padding="4"
+            BorderThickness="1"
+            CornerRadius="4"
+            BorderBrush="#55808080">
+      <composer:ComposerEditorView Name="ComposerView"
+                                   MaxHeight="240"
+                                   DataContext="{Binding Composer}" />
+    </Border>
+
+    <!-- Hold to talk, and Send -->
+    <Grid Grid.Row="2" Margin="0,8,0,0" ColumnDefinitions="*,Auto,Auto">
+      <Button Name="HoldToTalkButton"
+              Grid.Column="1"
+              AutomationProperties.AutomationId="ChatHoldToTalkButton"
+              Margin="0,0,8,0"
+              MinWidth="150"
+              Content="{Binding TalkText}"
+              IsEnabled="{Binding CanTalk}"
+              ToolTip.Tip="Hold this button, speak, and let go to add what you said to the message" />
+      <Button Name="SendButton"
+              Grid.Column="2"
+              AutomationProperties.AutomationId="ChatSendButton"
+              MinWidth="80"
+              Content="Send"
+              Command="{Binding SendCommand}"
+              ToolTip.Tip="Send the message" />
+    </Grid>
+
+  </Grid>
+
+</UserControl>

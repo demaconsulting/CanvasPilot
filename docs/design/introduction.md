@@ -4,7 +4,9 @@ This document provides the detailed design for CanvasPilot, an AI-assisted drawi
 CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. It is,
 for now, the application shell: folder-based projects, an explorer of the project's image source files, a
 preview of the selected file that is drawn by CanvasNet, PNG export and copy to the clipboard, persisted settings with
-AI provider and speech choices, and the installer. The AI chat that will use the stored choices is not part of this
+AI provider and speech choices, the message composer with attachments, marks, and dictation, the chat panel with its
+transcript and payload inspector, and the installer. The AI agent that will answer the messages and use the stored
+choices is not part of this
 version. The document covers local software items (systems, subsystems, and units) and the OTS software items they
 consume.
 
@@ -24,6 +26,7 @@ Local items:
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
+  - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
@@ -55,9 +58,9 @@ The following topics are out of scope:
 
 - Design documents are not produced for the test projects, the executable project that starts the application, the
   installer project (which is covered by the WiX Toolset OTS design), or the build pipeline CI configuration
-- The AI chat and the agent are not part of this increment; the settings that they will read are
-  designed (see the *AI Provider Seam* section of the system design). The talk button and key and the chat that use
-  dictation are added by a later step
+- The AI agent that answers the messages is not part of this increment; the settings that it will read are
+  designed (see the *AI Provider Seam* section of the system design). The chat panel is built by the composition root
+  but is placed in the main window, with the Edit menu and the talk key, by a later step
 - The internal design of OTS software items is excluded; only integration and usage design is documented
 
 ## Software Structure
@@ -65,12 +68,12 @@ The following topics are out of scope:
 The software structure is modeled in SysML2 under `docs/sysml2/` and rendered to the diagram
 below by SysML2Tools as part of the build pipeline. AI agents should query the SysML2 model
 directly (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose
-elsewhere in this document. The diagram shows the system, its ten subsystems with their units, and the runtime OTS
+elsewhere in this document. The diagram shows the system, its eleven subsystems with their units, and the runtime OTS
 items that the system consumes; the dependencies between the units are in the model and are shown in the view of each
 subsystem. The build and documentation tools listed in Scope above are documented separately (see
 `docs/design/ots.md`).
 
-![The CanvasPilot system with its ten subsystems and their units, and the runtime third-party items it
+![The CanvasPilot system with its eleven subsystems and their units, and the runtime third-party items it
 uses](SoftwareStructureView.svg)
 
 ## Architecture
@@ -94,6 +97,8 @@ and the local data the application uses](architecture.svg)
     - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, drawn with the pointer
       or the keyboard on a layer over the picture, and mapped to the parts of the source file under them
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
+    - **ChatSubsystem/** - the chat panel with the transcript of the sent messages, the composer, the send and
+      hold-to-talk buttons and the joining of marks to the message, and the payload inspector window
     - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, the
       intake and copying of attachments, the view model that orchestrates them with dictation and sending, and the
       editing view that shows the message with its chips inline

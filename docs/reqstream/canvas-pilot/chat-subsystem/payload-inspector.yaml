@@ -1,0 +1,61 @@
+---
+# Software Unit Requirements for the PayloadInspector Unit
+#
+# The PayloadInspector unit is the window that shows the user exactly what the assistant would receive for a sent
+# message: the text that the payload describer writes for it, and the pictures that the payload holds. It only shows; it
+# changes nothing and writes nothing.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Chat Subsystem Requirements
+        sections:
+          - title: PayloadInspector Requirements
+            requirements:
+              - id: CanvasPilot-PayloadInspector-ShowExactPayload
+                title: >-
+                  The PayloadInspector shall show, as read-only text that can be selected, exactly the description that
+                  the payload describer writes for the payload of a sent message, which lists the text with the places
+                  of the marks and attachments in the order the user placed them, the attachments, and for every marked
+                  picture its identity and its marks with their geometry, notes, areas, and source elements.
+                justification: |
+                  The point of the inspector is trust: the user sees what the assistant would receive and not a summary
+                  of it. The text must therefore be the output of the one unit that describes payloads and not a second
+                  rendering that could drift from it, and it must not be editable, because nothing that is sent can be
+                  changed.
+                tests:
+                  - PayloadInspectorViewModel_New_NullPayload_Throws
+                  - PayloadInspectorViewModel_Description_IsExactlyWhatThePayloadDescriberWrites
+                  - PayloadInspectorView_Shown_ShowsTheDescriptionAsReadOnlyText
+
+              - id: CanvasPilot-PayloadInspector-ShowPayloadImages
+                title: >-
+                  The PayloadInspector shall show the pictures of the payload in order, the annotated picture of each
+                  marked file followed by the area around each of its marks, each decoded from the bytes that the
+                  payload holds and with a caption that says what it is, and shall say that there are none when the
+                  message has no marks.
+                justification: |
+                  The assistant is sent pictures, not coordinates, so the user must see the same pictures: the picture
+                  with the marks drawn and numbered on it, and the area around each mark. The bytes shown are the
+                  bytes of the payload, so what the user sees is what is sent. A message with no marks has no pictures,
+                  and the inspector says so rather than showing an empty area.
+                tests:
+                  - PayloadInspectorViewModel_Pictures_AnnotatedPictureThenEachMarkCrop_WithCaptions
+                  - PayloadInspectorViewModel_Pictures_MessageWithoutMarks_HasNone
+                  - PayloadInspectorView_Shown_ShowsAnnotatedPictureAndEachMarkCropWithCaptions
+                  - PayloadInspectorView_Shown_MessageWithoutMarks_SaysItHasNoPictures
+
+              - id: CanvasPilot-PayloadInspector-CloseAndRelease
+                title: >-
+                  The PayloadInspector shall be shown by the main window as a dialog that it owns, shall close when the
+                  user presses Close, and shall release the decoded pictures when it closes, whatever way it closes.
+                justification: |
+                  The inspector is a place to look, not to work, so it is a dialog that the user closes and that goes
+                  away with its window. Decoded pictures can be large, and nothing but the window shows them, so they
+                  are released when it closes. Showing it needs the main window as its owner, which is why the main
+                  window shows it on behalf of the chat panel.
+                tests:
+                  - PayloadInspectorViewModel_CloseCommand_RaisesCloseRequested
+                  - PayloadPictureViewModel_Bitmap_BytesAreNotAPicture_IsNullAndDisposeTwiceIsHarmless
+                  - PayloadInspectorView_CloseButton_ClosesWindowAndReleasesPictures
+                  - MainWindowView_ShowPayloadInspector_ShowsDialogOwnedByTheWindow

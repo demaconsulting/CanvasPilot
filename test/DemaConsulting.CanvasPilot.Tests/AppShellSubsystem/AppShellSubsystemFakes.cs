@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -104,6 +105,16 @@ public sealed class FakeDialogService : IDialogService
     public AboutDialogViewModel? LastAbout { get; private set; }
 
     /// <summary>
+    ///     Gets how many times the payload inspector was shown.
+    /// </summary>
+    public int InspectorCount { get; private set; }
+
+    /// <summary>
+    ///     Gets the last payload inspector view model shown.
+    /// </summary>
+    public PayloadInspectorViewModel? LastInspector { get; private set; }
+
+    /// <summary>
     ///     Gets how many times the project file picker was shown.
     /// </summary>
     public int ProjectPickCount { get; private set; }
@@ -158,6 +169,14 @@ public sealed class FakeDialogService : IDialogService
     {
         AboutCount++;
         LastAbout = viewModel;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task ShowPayloadInspectorAsync(PayloadInspectorViewModel viewModel)
+    {
+        InspectorCount++;
+        LastInspector = viewModel;
         return Task.CompletedTask;
     }
 

@@ -38,4 +38,4 @@ no I/O and logs nothing.
 
 #### Callers
 
-- The payload inspector of a later step shows the text beside the images.
+- The payload inspector shows the text beside the images.

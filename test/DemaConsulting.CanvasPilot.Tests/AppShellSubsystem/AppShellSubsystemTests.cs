@@ -297,6 +297,34 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the chat panel is part of the composition, is joined to the composer and the annotation layer, sends a
+    ///     message of the open project into its transcript, and drops the transcript when the project is closed.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_ChatPanelFollowsTheOpenProject()
+    {
+        // Arrange: a composition with no project open
+        var composition = Compose();
+        var beforeProject = composition.Chat.CanTalk;
+
+        // Act: create a project, send a message through the chat panel, then close the project
+        await composition.Projects.CreateAsync(Projects, "Demo", TestContext.Current.CancellationToken);
+        var withProject = composition.Chat.CanTalk;
+        composition.Composer.InsertTyped("hello");
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var sent = composition.Chat.Transcript.Count;
+        composition.Projects.Close();
+
+        // Assert: the panel works with the composition's composer, can be used only while a project is open, kept one
+        // message, and has none after the close
+        Assert.Same(composition.Composer, composition.Chat.Composer);
+        Assert.False(beforeProject);
+        Assert.True(withProject);
+        Assert.Equal(1, sent);
+        Assert.Empty(composition.Chat.Transcript);
+    }
+
+    /// <summary>
     ///     Test that composing the application refuses missing parts.
     /// </summary>
     [Fact]

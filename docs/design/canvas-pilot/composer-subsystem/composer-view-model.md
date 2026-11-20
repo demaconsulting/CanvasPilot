@@ -116,6 +116,6 @@ send. It is owned by the interface thread and is not safe for concurrent use.
 #### Callers
 
 - The `ApplicationComposition` creates it, follows the open project with `SetProject`, and disposes it.
-- The editing control and the chat panel of later steps call the editing methods, show its state, and handle
+- The editing control and the chat panel call the editing methods, show its state, and handle
   `MessageSent`; the window finds it as the `IUndoRedoTarget` for the Edit menu and as the `IPushToTalkTarget` for the
-  talk key.
+  talk key, which a later step adds.

@@ -5,6 +5,7 @@ resource-path:
   - docs/design/canvas-pilot
   - docs/design/canvas-pilot/annotation-subsystem
   - docs/design/canvas-pilot/app-shell-subsystem
+  - docs/design/canvas-pilot/chat-subsystem
   - docs/design/canvas-pilot/composer-subsystem
   - docs/design/canvas-pilot/logging-subsystem
   - docs/design/canvas-pilot/payload-subsystem
@@ -30,6 +31,9 @@ input-files:
   - docs/design/canvas-pilot/app-shell-subsystem/main-window-shell.md
   - docs/design/canvas-pilot/app-shell-subsystem/project-workspace.md
   - docs/design/canvas-pilot/app-shell-subsystem/about-dialog.md
+  - docs/design/canvas-pilot/chat-subsystem.md
+  - docs/design/canvas-pilot/chat-subsystem/chat-panel.md
+  - docs/design/canvas-pilot/chat-subsystem/payload-inspector.md
   - docs/design/canvas-pilot/composer-subsystem.md
   - docs/design/canvas-pilot/composer-subsystem/composer-document.md
   - docs/design/canvas-pilot/composer-subsystem/composer-history.md

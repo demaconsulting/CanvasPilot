@@ -25,7 +25,8 @@ The unit is made of these parts, all in the user interface layer:
 - `ChipElementGenerator`: the library's inline element generator, which turns each placeholder character of the surface
   into an inline control.
 - `ChipView` (a `UserControl`): one chip, with an icon for its kind (file, folder, picture, mark) or the picture from
-  the provider, its name, a delete button, and a tooltip with the full path or `Mark n on the picture`.
+  the provider, its name, a delete button (which `IsDeleteButtonVisible` can hide; the transcript of sent messages hides
+  it), and a tooltip with the full path or `Mark n on the picture`.
 - `IChipThumbnailProvider` and `ImageChipThumbnailProvider`: the contract that gives a chip its small picture
   asynchronously, and the default implementation for attached picture files.
 - `DictatedTextBackgroundRenderer` and `DictatedRange`: draws the background behind dictated text; `GetRanges` finds the
@@ -124,6 +125,6 @@ it cannot be verified without a real input method (see the verification document
 
 #### Callers
 
-- The chat panel of a later step hosts the view, gives it the view model of the message and, where marks are known, a
-  provider of pictures for mark chips.
+- The chat panel hosts the view, gives it the view model of the message and a provider of pictures for mark chips, and
+  shows the sent messages with the same chip control, without its delete button (`IsDeleteButtonVisible`).
 - The Edit menu and the keys reach undo and redo through `UndoRedoTarget`, which is the view model.

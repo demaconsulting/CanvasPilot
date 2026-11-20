@@ -20,6 +20,7 @@
 
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
@@ -594,6 +595,57 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal("End", Assert.Single(image.Marks[1].SourceElements, element => element.Kind == "node").Text);
         Assert.Equal(0, document.Length);
         Assert.Equal(0, history.UndoCount);
+    }
+
+    /// <summary>
+    ///     Test that a user who draws a rectangle around a node of the shown diagram, writes a message, and sends it through
+    ///     the chat panel sees the message in the transcript with its mark chip, and that "View payload" shows exactly what
+    ///     the assistant would receive: the text with the place of the mark, the annotated picture, the area around the
+    ///     mark, and the node under it.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown, and a window that shows the
+        // inspector on its own
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var diagram = Path.Combine(folder, "flow.mmd");
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[End]\n", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        var start = composition.Preview.Image!.Positions.First(position => position is { Kind: "node", Text: "Start" }).Box!.Value;
+        var launcher = new RecordingInspectorLauncher();
+        composition.Chat.InspectorLauncher = launcher;
+
+        // Act: type, mark the node 'Start' with the rectangle tool, type more, send, and choose "View payload"
+        composition.Composer.InsertTyped("Make ");
+        composition.Annotation.SelectTool(AnnotationTool.Rectangle);
+        composition.Annotation.BeginStroke(new RenderPoint(start.X - 4, start.Y - 4));
+        composition.Annotation.EndStroke(new RenderPoint(start.X + start.Width + 4, start.Y + start.Height + 4));
+        composition.Annotation.SkipNote();
+        composition.Composer.InsertTyped(" green");
+        var canSend = composition.Chat.CanSend;
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var entry = Assert.Single(composition.Chat.Transcript);
+        await entry.ViewPayloadCommand.ExecuteAsync(null);
+        var shown = Assert.Single(launcher.Shown);
+        var description = shown.Description;
+        var payload = entry.Payload;
+        var pictures = shown.Pictures.Count;
+        composition.Dispose();
+
+        // Assert: the message was sendable, the transcript shows its words and chip, the inspector shows the payload as
+        // the describer writes it, with the place of the mark and the node under it, and two pictures
+        Assert.True(canSend);
+        Assert.Equal(["Make ", "#", " green"], entry.Items.Select(item => item.Text ?? "#"));
+        Assert.NotNull(payload);
+        Assert.Equal("Make [Mark 1] green", payload.Text);
+        Assert.Equal(PayloadDescriber.Describe(payload), description);
+        Assert.Contains("\"text\": \"Start\"", description);
+        Assert.Equal(2, pictures);
     }
 
     /// <summary>

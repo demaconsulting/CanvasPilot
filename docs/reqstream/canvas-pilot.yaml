@@ -201,10 +201,12 @@ sections:
           - CanvasPilot-Payload-ReferenceAttachments
           - CanvasPilot-Payload-BeImmutable
           - CanvasPilot-Payload-ListWhatIsSent
+          - CanvasPilot-Chat-InspectPayload
         tests:
           - CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements
           - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
           - CanvasPilot_BuildMessagePayload_MermaidWithMarks_ContainsImagesCropsGeometryAndSourceElements
+          - CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload
 
       - id: CanvasPilot-System-MarkImage
         title: >-
@@ -227,6 +229,7 @@ sections:
           - CanvasPilot-Annotation-NumberMarks
           - CanvasPilot-Annotation-DrawMarksOnPicture
           - CanvasPilot-Annotation-HideMarksOfOtherPictures
+          - CanvasPilot-Chat-LinkMarksToChips
         tests:
           - CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures
           - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
@@ -252,21 +255,25 @@ sections:
         title: >-
           The application shall let the user compose a message to the assistant from typed text, dictated text, and
           things that are attached or pointed at, kept together in the order the user placed them, with the origin of
-          each piece of text and the kind of each attachment kept.
+          each piece of text and the kind of each attachment kept, shall let the user send it, and shall show the
+          messages that were sent in a transcript.
         tags: [system]
         justification: |
           Users explain a drawing with words and with things: a sentence they type, a sentence they say, a file they
           drop in, a spot on the picture they point at. The meaning of the message depends on where each of these is,
           and the assistant needs to know which words were dictated because speech recognition makes mistakes that
-          typing does not.
+          typing does not. The user needs to see what has been said in the conversation, in the form it was composed.
         children:
           - CanvasPilot-Composer-HoldOrderedSegments
           - CanvasPilot-Composer-SendComposedMessage
           - CanvasPilot-Composer-WorkInsideAnOpenProject
           - CanvasPilot-Composer-ShowEditableMessage
           - CanvasPilot-Composer-ShowChipsInline
+          - CanvasPilot-Chat-ShowTranscriptOfSentMessages
+          - CanvasPilot-Chat-SendComposedMessage
         tests:
           - CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage
+          - CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload
 
       - id: CanvasPilot-System-UndoRedoMessage
         title: >-
@@ -317,12 +324,13 @@ sections:
           on the pointer while pointing at it. Showing the words as they come lets the user see at once that they are
           understood, and adding them as one block lets a mistake in a whole dictation be undone in one step. Speech
           depends on a downloaded model, a microphone, and files that the application ships, and any of them can be
-          missing on a user's machine, so each case must say what to do. The chat panel and the talk key that call
-          this capability are added in a later step; this requirement states the part that exists.
+          missing on a user's machine, so each case must say what to do. The talk button of the chat panel calls this
+          capability; the talk key is added in a later step.
         children:
           - CanvasPilot-Speech-DictateWhileHeld
           - CanvasPilot-Speech-ExplainDictationUnavailable
           - CanvasPilot-Composer-AddDictatedWordsAsOneBlock
+          - CanvasPilot-Chat-HoldToTalk
         tests:
           - CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable
 

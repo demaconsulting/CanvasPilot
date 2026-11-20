@@ -30,8 +30,15 @@ services, or display are required.
   project and no draft once the project is closed.
 - The layer for marks is the overlay of the preview pane with its tool bar in the pane's top bar, and it can make marks
   only while a project is open.
+- The chat panel of the composition works with the composition's composer, can be used only while a project is open,
+  keeps the message that was sent in its transcript, and has an empty transcript once the project is closed.
 
 ### Test Scenarios
+
+**AppShellSubsystem_ComposeApplication_ChatPanelFollowsTheOpenProject**: A composition starts with no project, and its
+chat panel cannot be used. After a project is created the panel works with the composition's composer; a message typed
+in the composer and sent through the panel's command is the one entry of its transcript. After the project is closed the
+transcript is empty. This scenario is tested by `AppShellSubsystem_ComposeApplication_ChatPanelFollowsTheOpenProject`.
 
 **AppShellSubsystem_ComposeApplication_AnnotationLayerIsOnThePictureAndFollowsTheOpenProject**: A composition starts
 with no project, and the layer for marks does not allow marks. The layer is the overlay of the preview pane and its tool

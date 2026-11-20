@@ -44,6 +44,7 @@ enableGlobDot: true
 
 # Project-specific technical terms and tool names
 words:
+  - Argb
   - Avalonia
   - axaml
   - bgra
@@ -54,6 +55,7 @@ words:
   - CONOUT
   - FFFC
   - Hmmssfff
+  - Inlines
   - lintmark
   - ncipollo
   - nestings

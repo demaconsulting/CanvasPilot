@@ -17,6 +17,9 @@ includes:
   - docs/reqstream/canvas-pilot/app-shell-subsystem/main-window-shell.yaml
   - docs/reqstream/canvas-pilot/app-shell-subsystem/project-workspace.yaml
   - docs/reqstream/canvas-pilot/app-shell-subsystem/about-dialog.yaml
+  - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+  - docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml
+  - docs/reqstream/canvas-pilot/chat-subsystem/payload-inspector.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-document.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-history.yaml

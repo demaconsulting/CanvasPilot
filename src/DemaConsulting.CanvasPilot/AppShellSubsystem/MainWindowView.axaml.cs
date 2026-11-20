@@ -22,6 +22,7 @@ using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -91,6 +92,13 @@ public sealed partial class MainWindowView : Window, IDialogService
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         await new AboutDialogView(viewModel).ShowDialog(this);
+    }
+
+    /// <inheritdoc />
+    public async Task ShowPayloadInspectorAsync(PayloadInspectorViewModel viewModel)
+    {
+        ArgumentNullException.ThrowIfNull(viewModel);
+        await new PayloadInspectorView(viewModel).ShowDialog(this);
     }
 
     /// <inheritdoc />

@@ -88,6 +88,16 @@ public sealed partial class ChipView : UserControl
     public ChipSegment? Chip { get; private set; }
 
     /// <summary>
+    ///     Gets or sets a value indicating whether the delete button is shown. It is shown by default, in the message being
+    ///     written; the transcript of sent messages hides it, because a sent message cannot be changed.
+    /// </summary>
+    public bool IsDeleteButtonVisible
+    {
+        get => DeleteButton.IsVisible;
+        set => DeleteButton.IsVisible = value;
+    }
+
+    /// <summary>
     ///     Gets the text that the chip shows: the name of the attached item, or the label of the mark.
     /// </summary>
     /// <param name="chip">The chip.</param>

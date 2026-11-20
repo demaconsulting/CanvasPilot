@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
@@ -53,17 +54,6 @@ public sealed class ApplicationComposition : IDisposable
     private readonly EventHandler _projectChanged;
 
     /// <summary>
-    ///     The handler that tells the annotation layer which marks are in the message and whether marks can be made,
-    ///     kept so that it can be removed.
-    /// </summary>
-    private readonly EventHandler _composerChanged;
-
-    /// <summary>
-    ///     The handler that puts the chip of every mark that is drawn into the message, kept so that it can be removed.
-    /// </summary>
-    private readonly EventHandler<MarkAddedEventArgs> _markAdded;
-
-    /// <summary>
     ///     Initializes a new instance of the <see cref="ApplicationComposition" /> class.
     /// </summary>
     /// <param name="logger">The application log.</param>
@@ -76,6 +66,7 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="composer">The composer of the message.</param>
     /// <param name="marks">The marks made for the draft message.</param>
     /// <param name="annotation">The layer on which the user marks the shown picture.</param>
+    /// <param name="chat">The chat panel, which joins the composer and the annotation layer.</param>
     /// <param name="ownedServices">The services the composition created and must dispose.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
@@ -88,6 +79,7 @@ public sealed class ApplicationComposition : IDisposable
         ComposerViewModel composer,
         MarkRegistry marks,
         AnnotationOverlayViewModel annotation,
+        ChatPanelViewModel chat,
         IReadOnlyList<IDisposable> ownedServices)
     {
         Logger = logger;
@@ -100,24 +92,13 @@ public sealed class ApplicationComposition : IDisposable
         Composer = composer;
         Marks = marks;
         Annotation = annotation;
+        Chat = chat;
         _ownedServices = ownedServices;
 
         // The message is written in the open project: follow it, and start with the one that is open now
         _projectChanged = (_, _) => Composer.SetProject(Projects.Current?.FolderPath);
         Projects.CurrentChanged += _projectChanged;
         Composer.SetProject(Projects.Current?.FolderPath);
-
-        // The marks belong to the message: the layer shows the marks whose chips are in it and can make marks while the
-        // message can be edited, and every mark that is drawn becomes a chip in the message at the caret
-        _composerChanged = (_, _) =>
-        {
-            Annotation.IsDrawingAllowed = Composer.CanEdit;
-            Annotation.SetActiveMarkIds(Composer.MarkChipIds);
-        };
-        _markAdded = (_, e) => Composer.AddMark(e.Mark);
-        Composer.Changed += _composerChanged;
-        Annotation.MarkAdded += _markAdded;
-        _composerChanged(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -168,9 +149,17 @@ public sealed class ApplicationComposition : IDisposable
 
     /// <summary>
     ///     Gets the layer on which the user marks the shown picture. Its tools are in the top bar of the preview pane, it
-    ///     is the overlay of the preview pane, and the chip of every mark drawn on it is added to the message.
+    ///     is the overlay of the preview pane, and the chip of every mark drawn on it is added to the message by the chat
+    ///     panel.
     /// </summary>
     public AnnotationOverlayViewModel Annotation { get; }
+
+    /// <summary>
+    ///     Gets the chat panel: the transcript of the sent messages, the message being composed with its send and
+    ///     hold-to-talk buttons, and the joining of the marks to the message. It is ready to be placed in the workspace
+    ///     but is not placed in it yet.
+    /// </summary>
+    public ChatPanelViewModel Chat { get; }
 
     /// <summary>
     ///     Creates the units for the running application: the log under the per-user local application data
@@ -295,8 +284,9 @@ public sealed class ApplicationComposition : IDisposable
 
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project
         var marks = new MarkRegistry();
+        var markImages = new MarkImageComposer(renderer);
         var composer = new ComposerViewModel(
-            messageBuilder ?? new PayloadBuilder(new MarkImageComposer(renderer)),
+            messageBuilder ?? new PayloadBuilder(markImages),
             marks,
             dictation,
             logger: logger);
@@ -306,8 +296,12 @@ public sealed class ApplicationComposition : IDisposable
         preview.Overlay = annotation;
         preview.Toolbar = new AnnotationToolbarViewModel(annotation);
 
+        // The chat panel joins the two: every mark that is drawn becomes a chip of the message, and the layer shows the
+        // marks whose chips the message holds
+        var chat = new ChatPanelViewModel(composer, marks, annotation, markImages, dictation, logger);
+
         logger.Log(LogLevel.Info, "Application started.");
-        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, owned);
+        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat, owned);
     }
 
     /// <inheritdoc />
@@ -320,8 +314,7 @@ public sealed class ApplicationComposition : IDisposable
 
         _disposed = true;
         Projects.CurrentChanged -= _projectChanged;
-        Composer.Changed -= _composerChanged;
-        Annotation.MarkAdded -= _markAdded;
+        Chat.Dispose();
         Annotation.Dispose();
         Composer.Dispose();
         Shell.Dispose();

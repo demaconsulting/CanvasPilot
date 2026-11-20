@@ -45,5 +45,5 @@ points. A value that was built never throws. The unit performs no I/O and logs n
 
 #### Callers
 
-- `PayloadBuilder` makes the values, `PayloadDescriber` reads them, and the chat and the inspector of later steps hold
+- `PayloadBuilder` makes the values, `PayloadDescriber` reads them, and the chat panel and the payload inspector hold
   and show them.

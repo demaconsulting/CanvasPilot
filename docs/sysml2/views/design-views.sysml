@@ -35,6 +35,12 @@ package CanvasPilot {
         render asInterconnectionDiagram;
     }
 
+    view ChatSubsystemView {
+        expose ChatSubsystem;
+        expose ChatSubsystem::*;
+        render asInterconnectionDiagram;
+    }
+
     view ComposerSubsystemView {
         expose ComposerSubsystem;
         expose ComposerSubsystem::*;

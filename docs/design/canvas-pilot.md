@@ -5,8 +5,8 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented are ten subsystems, `Annotation`, `AppShell`, `Composer`, `Logging`, `Payload`, `Preview`,
-`Project`, `Settings`, `Speech`, and `Utilities`.
+software items documented are eleven subsystems, `Annotation`, `AppShell`, `Chat`, `Composer`, `Logging`, `Payload`,
+`Preview`, `Project`, `Settings`, `Speech`, and `Utilities`.
 
 ```mermaid
 flowchart TD
@@ -19,6 +19,10 @@ flowchart TD
         MainWindowShell
         ProjectWorkspace
         AboutDialog
+    end
+    subgraph Chat
+        ChatPanel
+        PayloadInspector
     end
     subgraph Composer
         ComposerDocument
@@ -81,6 +85,18 @@ flowchart TD
     ComposerViewModel --> DictationService
     ComposerViewModel --> RollingFileLogger
     ComposerEditor --> ComposerViewModel
+    ChatPanel --> ComposerViewModel
+    ChatPanel --> ComposerEditor
+    ChatPanel --> MarkRegistry
+    ChatPanel --> AnnotationOverlay
+    ChatPanel --> MarkImageComposer
+    ChatPanel --> MessagePayload
+    ChatPanel --> DictationService
+    ChatPanel --> PayloadInspector
+    ChatPanel --> RollingFileLogger
+    PayloadInspector --> PayloadDescriber
+    PayloadInspector --> MessagePayload
+    MainWindowShell --> PayloadInspector
     MarkRegistry --> ImageRenderService
     AnnotationOverlay --> MarkRegistry
     AnnotationOverlay --> PreviewPane
@@ -182,8 +198,8 @@ loaded once and reused. Every state in which dictation cannot work, such as no m
 downloaded, no microphone, an engine that will not start, or native speech files that are missing, is a result with its
 own explanation, never an exception. The native speech runtime arrives with the speech library's packages and is
 shipped beside the application and in the installer; `DictationService` checks that it is there before it loads an
-engine, because an engine started without it can crash the process, which no code can catch. The talk button and key
-and the chat that uses the service are added by a later step.
+engine, because an engine started without it can crash the process, which no code can catch. The talk button of the chat
+panel calls the service; the talk key is added by a later step.
 
 `ImageRenderService` is the only item that draws files: it calls the CanvasNet viewer library in the background,
 confined to the project folder, and returns the pixels, notes, or a coded error. Each picture it returns also says
@@ -240,7 +256,7 @@ tell, with the reason, when it reported none. Neither unit depends on the user i
 freehand, and an arrow tool; the pointer or the keyboard draws the chosen shape in the pixels of the picture, in the
 overlay slot of the preview pane, which is laid out in those pixels at any zoom; a finished shape asks for an optional
 note, and then the overlay makes the mark in `MarkRegistry`, pinned to the picture that was shown when the shape was
-started, and reports it. The overlay does not know the composer. The composition root adds the chip of every reported
+started, and reports it. The overlay does not know the composer. The chat panel adds the chip of every reported
 mark to the message with `ComposerViewModel.AddMark` and tells the overlay which mark chips the message holds, so the
 overlay draws only the marks of the shown picture whose chips are in the message and says how many it hides. While a
 tool is chosen the overlay has the preview pane turn off dragging the picture out, and Escape throws a shape away.
@@ -256,8 +272,30 @@ were put into the project, uses only the marks whose chips are in the message, a
 so it can run in the background. `MarkImageComposer` draws the marks on the picture with CanvasNet, from an SVG document
 that it builds in memory around the picture the user saw, and cuts the areas; it is the only item besides
 `ImageRenderService` that uses CanvasNet to draw, and it never writes a file. `PayloadDescriber` writes a payload as
-text for the user to read. No subsystem uses the `Payload` subsystem yet, and no subsystem uses the `Annotation`
-subsystem except `Payload`, `Composer`, and the composition root.
+text for the user to read. Only the `Chat` subsystem and the composition root use the `Payload` subsystem, and no
+subsystem uses the `Annotation` subsystem except `Payload`, `Composer`, `Chat`, and the composition root.
+
+`ChatPanel` is the panel in which the user converses: above, the transcript of the messages that were sent in the open
+project, oldest first; below, the composer's editing control; and between them and the user, a button that listens while
+it is held and a button that sends. The transcript shows only sent messages, each once, with its words in the order they
+were written (dictated words with the same subtle background as in the editing control), the chips of its attachments
+and marks in their places with their pictures, and a button, "View payload". The panel keeps nothing on disk: the
+transcript lives in memory and is dropped when the project changes or closes. Sending is the composer's own command, so
+the panel only follows its state and shows the result: an entry for a message that was sent, and, when sending failed,
+the composer's status text with the draft untouched. The talk button listens exactly as long as it is held: pressing the
+pointer starts it and captures the pointer, and letting go anywhere, losing the capture, losing the focus, or removing
+the panel ends it; when dictation cannot work, the composer's status line in the panel says why and what to do. The
+panel also joins the annotation layer to the composer, which do not know each other: it adds the chip of every mark that
+is drawn to the message at the caret as one undo step, and each time the message changes it tells the layer which mark
+chips the message holds and whether marks can be made. It prepares dictation when it is shown and gives the chips their
+pictures: the area around the mark, cut from the picture the mark was drawn on, and the preview of an attached picture
+file. `PayloadInspector` is the window that "View payload" opens: it shows the text that `PayloadDescriber` writes for
+the payload of the message, which is exactly what the assistant would receive, and, next to it, the pictures of the
+payload: the annotated picture of every marked file and the area around every mark, each with a caption. The window
+cannot change anything. The panel does not know what shows the inspector; it asks an `IPayloadInspectorLauncher`, which
+`IDialogService` extends, so the main window shows it as a dialog. The `Chat` subsystem depends on `Composer`,
+`Annotation`, `Payload`, `Speech`, and `Logging`, and not on `AppShell`. Placing the panel in the main window, with the
+menu and the talk key, is a later step; until then the composition builds the panel and holds it, and nothing shows it.
 
 ### Dependency Direction
 
@@ -272,10 +310,13 @@ the render service, the preview pane, and the exporter, which is its job for eve
 `RenderedImage` of `Preview` into an Avalonia bitmap with `RenderedImageBitmap` when it puts it on the clipboard.
 `ProjectWorkspace` still holds the preview as an untyped content object, found by the view locator.
 
-Because the direction is fixed, a subsystem added later, such as the chat, depends on the subsystems below it and
-never on `AppShell`; only the composition root and the window refer to every subsystem. The direction is shown in the
-model and in the diagram above, and the verification of `ImageExporter` uses a substitute for `IExportDialogs`, so no
-test of `Preview` needs the dialog service of `AppShell`.
+Because the direction is fixed, a subsystem added later depends on the subsystems below it and never on `AppShell`; only
+the composition root and the window refer to every subsystem. The `Chat` subsystem is the first of them: it uses
+`Composer`, `Annotation`, `Payload`, and `Speech`, and the seam by which it asks for the inspector window,
+`IPayloadInspectorLauncher`, belongs to `Chat`, so `IDialogService` extends it just as it extends the seams of `Project`
+and `Preview`. The direction is shown in the model and in the diagram above, and the verification of `ImageExporter`
+uses a substitute for `IExportDialogs`, so no test of `Preview` needs the dialog service of `AppShell`, and the
+verification of the chat panel uses a substitute for the launcher.
 
 The same rule keeps `Composer` and `Payload` apart. The payload is built from the composer's snapshot, so `Payload`
 depends on `Composer`; the composer sends the messages, so it needs them built. The seam belongs to the lower
@@ -443,11 +484,12 @@ made in the project when the message is sent.
 
 ## Dependencies
 
-The `Annotation`, `AppShell`, `Composer`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`, `Speech`, and
+The `Annotation`, `AppShell`, `Chat`, `Composer`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`, `Speech`, and
 `Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and project files and the
 description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm, which are runtime
 third-party items (the `Composer` editor view also uses the AvaloniaEdit editing control, which is a runtime
-third-party item too; the other `Annotation` and `Composer` units use base class library types only, and the `Payload`
+third-party item too; the other `Annotation`, `Chat`, and `Composer` units use base class library types and Avalonia
+only, and the `Payload`
 units base
 class library types and CanvasNet). The `ImageRenderService` unit draws files and encodes PNG with the
 `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a picture with
@@ -583,8 +625,8 @@ document, from which the message is built, and empties the document and the hist
 When the user draws a mark on the shown picture, the layer over the picture gives `MarkRegistry.Add` the picture, the
 shape, and the points of the pointer in the picture's pixels, once the shape is finished and its optional note is
 entered or skipped. The registry puts the points in normal form inside the picture, numbers the mark, and returns it;
-the overlay reports the mark, and the composition root adds its chip to the message as one `ComposerEdit.AddMark`, so
-that undoing it removes the chip and hides the mark. Each time the composer changes, the root tells the overlay which
+the overlay reports the mark, and the chat panel adds its chip to the message as one `ComposerEdit.AddMark`, so
+that undoing it removes the chip and hides the mark. Each time the composer changes, the panel tells the overlay which
 mark chips the message holds, and the overlay asks `MarkRegistry.VisibleMarks` with those identities and the key of the
 picture to show a picture. To describe a mark to the assistant, `MarkSourceResolver.Resolve` reads the element positions
 or anchors of the mark's picture and returns the parts of the source file under the mark, or that the picture cannot
@@ -633,6 +675,16 @@ audio already received, releases the session and the microphone, and returns the
 `ComposerEdit.Dictate` adds to the message at the caret as one dictated block. If dictation cannot start, the same call
 returns the reason and the message, and nothing is loaded that could crash the process.
 
+In the chat panel the talk button does this with the pointer: `ChatPanelView` starts `BeginPushToTalkAsync` when the
+pointer is pressed on the button and captures the pointer, and ends it with `EndPushToTalkAsync` when the pointer is
+released, wherever it is, when the capture is lost, when the button loses the focus, or when the panel leaves the
+window, so that the microphone is never left open. When the composer raises `MessageSent`, `ChatPanelViewModel` appends
+a `TranscriptEntryViewModel` for the immutable message, whose chips get their pictures from the cut-outs that the
+payload already holds and from the copies of attached pictures in the project. "View payload" makes a
+`PayloadInspectorViewModel` for the payload of the entry, which writes the description with `PayloadDescriber.Describe`
+and lists the payload's pictures, and gives it to the `IPayloadInspectorLauncher`, which the main window implements by
+showing `PayloadInspectorView` as a dialog.
+
 ## Design Constraints
 
 - Log files shall be written only to local disk; no telemetry or remote transmission is performed.
@@ -672,9 +724,14 @@ returns the reason and the message, and nothing is loaded that could crash the p
 - A mark shall hold the picture it was drawn on and shall be shown only on that picture; its geometry shall be in the
   pixels of that picture, and the units of the `Annotation` subsystem shall not write anything anywhere.
 - The `AnnotationOverlay` shall not depend on the composer: it reports the marks it makes and is told which mark chips
-  the message holds, and the composition root joins the two, so that the dependency between `Composer` and `Annotation`
+  the message holds, and the chat panel joins the two, so that the dependency between `Composer` and `Annotation`
   runs one way. It shall draw a mark with the colors and sizes of the annotated picture of a message, so that the user
   sees what the assistant gets.
+- The `Chat` subsystem shall keep the transcript only in memory, shall list only messages that were sent, and shall show
+  in the payload inspector exactly the text that `PayloadDescriber` writes and the picture bytes that the payload holds;
+  it shall not depend on `AppShell`, and it shall not write anything anywhere.
+- The talk button shall listen only while it is held: a release of the pointer anywhere, a lost capture, a lost focus,
+  and the removal of the panel shall each end it.
 - A payload shall be built only from values that cannot change and shall itself never change, and the units of the
   `Payload` subsystem shall not write anything anywhere.
 - Content that is dropped or pasted shall be treated as data: it shall never be opened, run, rendered, or followed,

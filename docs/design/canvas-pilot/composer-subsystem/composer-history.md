@@ -53,4 +53,5 @@ one throws in the constructor. Nothing is logged; the unit performs no I/O and n
 
 #### Callers
 
-- The chat panel of a later step executes the edit of every user action and calls `Undo`, `Redo`, and `CompleteSend`.
+- `ComposerViewModel` executes the edit of every user action and calls `Undo`, `Redo`, and `CompleteSend`; the chat
+  panel uses it only through the view model.
