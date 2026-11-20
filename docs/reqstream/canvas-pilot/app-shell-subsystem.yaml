@@ -3,7 +3,7 @@
 #
 # PURPOSE:
 # - Define requirements for the CanvasPilot AppShell subsystem
-# - The AppShell subsystem spans MainWindowShell (MainWindowShell.cs, IDialogService.cs, IImageExporter.cs,
+# - The AppShell subsystem spans MainWindowShell (MainWindowShell.cs, IDialogService.cs,
 #   MainWindowView.axaml, MessageDialogViewModel.cs, MessageDialogView.axaml), ProjectWorkspace
 #   (ProjectWorkspaceViewModel.cs, ProjectWorkspaceView.axaml), and AboutDialog (AboutDialogViewModel.cs,
 #   AboutDialogView.axaml), plus the composition root (ApplicationComposition.cs, App.axaml.cs) and the view

@@ -73,7 +73,7 @@ composition root) and hosts the others; Preview follows the file selected in the
 page to the Settings dialog, as the arrows between neighbors show; every subsystem logs through Logging, and the
 subsystems that build file locations use Utilities. The third-party items are used inside the library, and the
 application reads and writes only the local data in the bottom row. Section *Architecture* of the system design
-explains the dependencies between the subsystems, including the one between AppShell and Preview.
+explains the dependencies between the subsystems, including why AppShell depends on Preview and not the reverse.
 
 ![Architecture of CanvasPilot: the desktop head starts the application library, whose AppShell subsystem builds and
 hosts the Project, Preview, Settings, and Speech subsystems above Logging and Utilities, with the third-party items

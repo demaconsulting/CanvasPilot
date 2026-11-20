@@ -19,12 +19,13 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
+using NSubstitute;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
 /// <summary>
 ///     Tests for the <see cref="ImageExporter" /> unit with a fake picture source, the real PNG encoder, a fake
-///     dialog service, and a temporary folder.
+///     export dialogs, and a temporary folder.
 /// </summary>
 public sealed class ImageExporterTests : IDisposable
 {
@@ -44,9 +45,9 @@ public sealed class ImageExporterTests : IDisposable
     private readonly FakeRenderedImageSource _source = new();
 
     /// <summary>
-    ///     The dialog service that answers the save picker.
+    ///     The export dialogs that answer the save picker.
     /// </summary>
-    private readonly FakeDialogService _dialogs = new();
+    private readonly FakeExportDialogs _dialogs = new();
 
     /// <inheritdoc />
     public void Dispose()
@@ -225,6 +226,31 @@ public sealed class ImageExporterTests : IDisposable
         Assert.Contains("clipboard", message.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    ///     Test that the exporter needs only the export dialogs of the Preview subsystem: it exports and copies
+    ///     through a substitute that implements nothing of the application's dialog service.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportAndCopy_UsingExportDialogsOnly_DoNotRequireDialogService()
+    {
+        // Arrange: a shown picture and a substitute for the export dialogs that picks a target and accepts the clipboard
+        var target = Path.Combine(_folder, "only-export-dialogs.png");
+        _source.CurrentImage = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        var dialogs = Substitute.For<IExportDialogs>();
+        dialogs.PickSaveFileAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult<string?>(target));
+        dialogs.CopyImageToClipboardAsync(Arg.Any<RenderedImage>()).Returns(Task.FromResult(true));
+        var exporter = new ImageExporter(_source, new ImageRenderService());
+
+        // Act: export and copy through the substitute
+        await exporter.ExportPngAsync(dialogs);
+        await exporter.CopyImageAsync(dialogs);
+
+        // Assert: the file was written, the picture was copied and no message was shown
+        Assert.True(File.Exists(target));
+        await dialogs.Received(1).CopyImageToClipboardAsync(_source.CurrentImage);
+        await dialogs.DidNotReceive().ShowMessageAsync(Arg.Any<string>(), Arg.Any<string>());
+    }
     /// <summary>
     ///     Test that the constructor and methods reject missing arguments.
     /// </summary>

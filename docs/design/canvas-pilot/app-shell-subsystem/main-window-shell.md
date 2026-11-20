@@ -23,8 +23,8 @@ this unit.
 `FilePath`, `OpenCommand`) built from `IRecentProjects.GetRecent`. `Header` doubles underscores so the menu does
 not treat them as access keys.
 
-**ImageExporter**: `IImageExporter` — `NullImageExporter` unless one is supplied to the constructor; the application
-supplies the exporter of the `Preview` subsystem.
+**ImageExporter**: `IImageExporter` of the `Preview` subsystem — `NullImageExporter` unless one is supplied to the
+constructor; the application supplies the exporter of the `Preview` subsystem.
 
 **Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled
 while a project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can
@@ -91,11 +91,13 @@ texts or a blank accepting label.
 - **NewProjectDialog** — collects a project name and location.
 - **SettingsDialog** and **SettingsService** (through `ISettingsService` and `ISettingsPage`) — the settings dialog.
 - **ProjectWorkspace** and **AboutDialog** — the content area and the About dialog.
+- **ImageExporter** (through `IImageExporter` and `IExportDialogs`) — the Image menu commands run it, and the
+  dialog service extends `IExportDialogs` so the exporter can ask the user through it.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.
 - **Avalonia** — the window, menus, dialogs, storage provider, and clipboard.
 
 #### Callers
 
 - `App` (through `ApplicationComposition`) — creates the shell and shows `MainWindowView` over it.
-- The `Preview` subsystem — `ImageExporter` supplies the `IImageExporter`, and the preview pane is the workspace's
-  preview content; `ApplicationComposition` connects them.
+- `ApplicationComposition` — connects the `Preview` subsystem: `ImageExporter` is passed as the `IImageExporter`,
+  and the preview pane is the workspace's preview content.

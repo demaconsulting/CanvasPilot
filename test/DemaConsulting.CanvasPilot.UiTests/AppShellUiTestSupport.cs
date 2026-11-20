@@ -22,6 +22,7 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
@@ -87,14 +88,14 @@ internal sealed class SwitchableImageExporter : IImageExporter
     public int Copies { get; private set; }
 
     /// <inheritdoc />
-    public Task ExportPngAsync(IDialogService dialogs)
+    public Task ExportPngAsync(IExportDialogs dialogs)
     {
         Exports++;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public Task CopyImageAsync(IDialogService dialogs)
+    public Task CopyImageAsync(IExportDialogs dialogs)
     {
         Copies++;
         return Task.CompletedTask;

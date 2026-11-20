@@ -33,11 +33,12 @@ unit, `ImageRenderService`, so the other units and their tests work with a subst
 
 **Image Exporter**: The unit behind the Image menu.
 
-- *Type*: In-process .NET API (`IImageExporter` of the `AppShell` subsystem).
-- *Role*: Provider.
+- *Type*: In-process .NET API (`IImageExporter`, with `NullImageExporter`, and `IExportDialogs`).
+- *Role*: Provider of both contracts; the main window's shell consumes `IImageExporter`, and the main window's
+  dialog service implements `IExportDialogs`.
 - *Contract*: `CanExport` is true while a picture is shown; `ExportPngAsync(dialogs)` asks for a file with
-  `IDialogService.PickSaveFileAsync` and writes a PNG; `CopyImageAsync(dialogs)` calls
-  `IDialogService.CopyImageToClipboardAsync`.
+  `IExportDialogs.PickSaveFileAsync` and writes a PNG; `CopyImageAsync(dialogs)` calls
+  `IExportDialogs.CopyImageToClipboardAsync`; `ShowMessageAsync` reports problems.
 
 **Project Explorer**: The selection and project folder that drive the preview.
 
@@ -76,8 +77,8 @@ unit, `ImageRenderService`, so the other units and their tests work with a subst
    writes the PNG that `EncodePng` produces from the shown pixels; Copy hands the picture to the dialog service,
    whose window implementation puts a bitmap on the clipboard.
 
-The pane and exporter depend on the main window only through `IDialogService` and `IImageExporter`, which
-`AppShell` defines; the application composes them in `ApplicationComposition`.
+The subsystem does not depend on `AppShell`: the exporter asks the user only through `IExportDialogs`, which this
+subsystem defines and the main window implements; the application composes the units in `ApplicationComposition`.
 
 ### Third-party items
 

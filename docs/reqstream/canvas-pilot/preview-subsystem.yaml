@@ -5,7 +5,7 @@
 # - Define requirements for the CanvasPilot Preview subsystem
 # - The Preview subsystem spans ImageRenderService (IImageRenderService.cs, ImageRenderService.cs, RenderResult.cs),
 #   PreviewPane (PreviewPaneViewModel.cs, PreviewPaneView.axaml, RenderedImageBitmap.cs, IRenderedImageSource.cs), and
-#   ImageExporter (ImageExporter.cs)
+#   ImageExporter (ImageExporter.cs, IImageExporter.cs, IExportDialogs.cs)
 # - Subsystem requirements describe the preview behavior that satisfies the system-level preview requirements
 
 sections:

@@ -174,7 +174,7 @@ public sealed class PreviewSubsystemTests : IDisposable
         await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), WideSvg, TestContext.Current.CancellationToken);
         var (explorer, pane) = Create();
         var exporter = new ImageExporter(pane, new ImageRenderService());
-        var dialogs = new FakeDialogService { SaveFileToPick = Path.Combine(_folder, "wide-export.png") };
+        var dialogs = new FakeExportDialogs { SaveFileToPick = Path.Combine(_folder, "wide-export.png") };
         explorer.Open(_folder);
         explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
         await pane.RenderCompletion;

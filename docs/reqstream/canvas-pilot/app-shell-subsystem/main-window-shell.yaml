@@ -4,7 +4,7 @@
 # The MainWindowShell unit is the main window's view model and the window that shows it. It owns the File, Image,
 # Tools, and Help commands, follows the open project in the window title, lists the recent projects, and talks
 # to the user only through an IDialogService that the window implements. The Image menu commands run through an
-# IImageExporter that the image preview supplies.
+# IImageExporter (owned by the Preview subsystem) that the image preview supplies.
 
 sections:
   - title: CanvasPilot Requirements

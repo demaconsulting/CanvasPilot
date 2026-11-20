@@ -8,7 +8,6 @@ package CanvasPilot {
             sourceFiles = (
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/MainWindowShell.cs",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/IDialogService.cs",
-                "src/DemaConsulting.CanvasPilot/AppShellSubsystem/IImageExporter.cs",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/MessageDialogViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/MessageDialogView.axaml",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/MessageDialogView.axaml.cs",
@@ -44,5 +43,8 @@ package CanvasPilot {
 
         // Opens the About dialog.
         dependency MainWindowShell to AboutDialog;
+
+        // Runs the Image menu commands through the exporter seam (IImageExporter) that the Preview subsystem owns.
+        dependency MainWindowShell to ImageExporter;
     }
 }

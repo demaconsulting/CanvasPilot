@@ -52,7 +52,6 @@ flowchart TD
     PreviewPane --> ProjectService
     PreviewPane --> RollingFileLogger
     ImageExporter --> ImageRenderService
-    ImageExporter --> MainWindowShell
     ImageExporter --> RollingFileLogger
     ProjectService --> PathHelpers
     ProjectService --> RollingFileLogger
@@ -79,6 +78,7 @@ flowchart TD
     MainWindowShell --> NewProjectDialog
     MainWindowShell --> SettingsDialog
     MainWindowShell --> ProjectWorkspace
+    MainWindowShell --> ImageExporter
     MainWindowShell --> AboutDialog
     ProjectWorkspace --> ProjectExplorer
 ```
@@ -123,28 +123,26 @@ the stored choices through the settings service.
 confined to the project folder, and returns the pixels, notes, or a coded error. `PreviewPane` follows the
 selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders that are no
 longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture as a PNG
-file or copies it to the clipboard for the Image menu. The `Preview` subsystem reaches the main window only through
-`IImageExporter` and `IDialogService`, which `MainWindowShell` owns.
+file or copies it to the clipboard for the Image menu. The `Preview` subsystem owns the two interfaces that this needs,
+`IImageExporter` and `IExportDialogs`, and does not refer to the main window.
 
-### Dependency Between AppShell and Preview
+### Dependency Direction
 
-The two subsystems refer to each other, and the design accepts this on purpose. The seams belong to the consumer:
-`AppShell` owns `IDialogService` and `IImageExporter`, and `ImageExporter` in `Preview` implements the exporter seam and
-asks the user through the dialog service, so the `Preview` units depend on `AppShell` only through these two
-interfaces. In the other direction `AppShell` refers to `Preview` in three places: `ApplicationComposition`, the
-composition root, builds the render service, the preview pane, and the exporter, which is its job for every subsystem;
-`IDialogService.CopyImageToClipboardAsync` takes the `RenderedImage` data type of `Preview`; and `MainWindowView` turns
-that picture into an Avalonia bitmap with `RenderedImageBitmap` when it puts it on the clipboard. `MainWindowShell` and
-`ProjectWorkspace` do not refer to `Preview` types: the workspace holds the preview as an untyped content object, found
-by the view locator, so the shell works without a preview (it then uses a disabled `NullImageExporter`).
+The dependencies between the subsystems run one way: `AppShell` depends on `Preview`, and `Preview` does not depend on
+`AppShell`. The seams belong to the provider, the lower subsystem. `Preview` owns `IImageExporter`, the contract the
+Image menu uses, and `IExportDialogs`, the three platform operations that an export needs: choosing where to save,
+putting a picture on the clipboard, and showing a message. `ImageExporter` asks the user only through `IExportDialogs`.
+`AppShell` owns `IDialogService`, which extends `IExportDialogs` and adds the dialogs of the shell, so the main window
+implements one interface and passes itself to the exporter. `MainWindowShell` holds the exporter as an `IImageExporter`,
+using a disabled `NullImageExporter` when none is supplied, and `ApplicationComposition`, the composition root, builds
+the render service, the preview pane, and the exporter, which is its job for every subsystem. `MainWindowView` turns the
+`RenderedImage` of `Preview` into an Avalonia bitmap with `RenderedImageBitmap` when it puts it on the clipboard.
+`ProjectWorkspace` still holds the preview as an untyped content object, found by the view locator.
 
-All of this is one assembly, so the cycle is a matter of namespaces, not of deployment. Removing it would need the
-two seam interfaces and the picture type moved into a neutral place that both subsystems refer to, with a matching
-change of their requirements, design, verification, and review-sets; this was judged larger than the benefit while
-there is a single exporter and a single dialog service. A later increment that adds more consumers of the dialog
-service, such as the chat, should do it then. The dependency of `ImageExporter` on `MainWindowShell` is shown in the
-model and in the diagram above, and the verification of `ImageExporter` uses a substitute dialog service, so the
-cycle does not complicate any test.
+Because the direction is fixed, a subsystem added later, such as the chat, depends on the subsystems below it and
+never on `AppShell`; only the composition root and the window refer to every subsystem. The direction is shown in the
+model and in the diagram above, and the verification of `ImageExporter` uses a substitute for `IExportDialogs`, so no
+test of `Preview` needs the dialog service of `AppShell`.
 
 ### AI Provider Seam
 
@@ -371,9 +369,9 @@ failed. On OK or Apply the page merges the choices into the speech section of th
   view model references a window.
 - Every control that a test or assistive technology must find shall carry an automation identifier.
 - The image preview plugs into the shell through `IImageExporter` and `ProjectWorkspaceViewModel.Preview`
-  and does not require changes to the shell's commands. The two seam interfaces and the picture type are the only
-  links between `AppShell` and `Preview` other than the composition root (see *Dependency Between AppShell and
-  Preview*).
+  and does not require changes to the shell's commands. `Preview` shall not depend on `AppShell`: it owns the
+  exporter seam `IImageExporter` and the dialog seam `IExportDialogs`, and `AppShell` refers to `Preview` only for
+  these interfaces, the picture type, and the composition root (see *Dependency Direction*).
 - Only `ImageRenderService` shall call the CanvasNet viewer to draw, and it shall confine the files a drawn file
   reads to the project folder.
 - Rendering shall never run on the user interface thread, and the result of a render that is no longer wanted shall

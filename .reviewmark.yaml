@@ -129,7 +129,6 @@ reviews:
       - "docs/verification/canvas-pilot/app-shell-subsystem/main-window-shell.md"
       - "src/**/AppShellSubsystem/MainWindowShell.cs"
       - "src/**/AppShellSubsystem/IDialogService.cs"
-      - "src/**/AppShellSubsystem/IImageExporter.cs"
       - "src/**/AppShellSubsystem/MessageDialogViewModel.cs"
       - "src/**/AppShellSubsystem/MessageDialogView.axaml"
       - "src/**/AppShellSubsystem/MessageDialogView.axaml.cs"
@@ -261,7 +260,10 @@ reviews:
       - "docs/design/canvas-pilot/preview-subsystem/image-exporter.md"
       - "docs/verification/canvas-pilot/preview-subsystem/image-exporter.md"
       - "src/**/PreviewSubsystem/ImageExporter.cs"
+      - "src/**/PreviewSubsystem/IImageExporter.cs"
+      - "src/**/PreviewSubsystem/IExportDialogs.cs"
       - "test/**/PreviewSubsystem/ImageExporterTests.cs"
+      - "test/**/PreviewSubsystem/PreviewSubsystemFakes.cs"
   # CanvasPilot - Project
   - id: CanvasPilot-Project
     title: Review of CanvasPilot Project subsystem architecture and interfaces

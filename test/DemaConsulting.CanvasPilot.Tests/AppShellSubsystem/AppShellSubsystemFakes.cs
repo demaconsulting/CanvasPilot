@@ -247,12 +247,12 @@ public sealed class FakeImageExporter : IImageExporter
     public int CopyCount { get; private set; }
 
     /// <summary>
-    ///     Gets the dialog service passed to the last request.
+    ///     Gets the dialogs passed to the last request.
     /// </summary>
-    public IDialogService? LastDialogs { get; private set; }
+    public IExportDialogs? LastDialogs { get; private set; }
 
     /// <inheritdoc />
-    public Task ExportPngAsync(IDialogService dialogs)
+    public Task ExportPngAsync(IExportDialogs dialogs)
     {
         ExportCount++;
         LastDialogs = dialogs;
@@ -260,7 +260,7 @@ public sealed class FakeImageExporter : IImageExporter
     }
 
     /// <inheritdoc />
-    public Task CopyImageAsync(IDialogService dialogs)
+    public Task CopyImageAsync(IExportDialogs dialogs)
     {
         CopyCount++;
         LastDialogs = dialogs;

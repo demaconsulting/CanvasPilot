@@ -19,22 +19,26 @@ and are described here because they only join the units together.
 
 **Dialog Service**: How the view models ask the user questions, show dialogs, and open platform pickers.
 
-- *Type*: In-process .NET API (`IDialogService`, which extends `IFolderPicker` of the `Project` subsystem).
+- *Type*: In-process .NET API (`IDialogService`, which extends `IFolderPicker` of the `Project` subsystem
+  and`n  `IExportDialogs`of the`Preview` subsystem).
 - *Role*: Provider of the contract; the main window (`MainWindowView`) is the implementation.
 - *Contract*: `ShowNewProjectAsync`, `ShowSettingsAsync`, and `ShowAboutAsync` show modal dialogs;
   `PickFolderAsync`, `PickProjectFileAsync`, and `PickSaveFileAsync` return a path or `null` when cancelled;
   `ShowMessageAsync`, `ConfirmAsync`, and `PromptAsync` show a message, ask for confirmation, and ask for a line
   of text; `CopyImageToClipboardAsync` puts a picture on the clipboard and answers whether it succeeded. Every
-  other method completes when the user has closed the dialog.
+  other method completes when the user has closed the dialog. `PickSaveFileAsync`, `ShowMessageAsync`, and
+  `CopyImageToClipboardAsync` are declared by `IExportDialogs`, which the `Preview` subsystem owns, so the
+  image exporter needs nothing of the shell.
 - *Constraints*: A platform picker that cannot be shown answers `null`, which reads as cancelled.
 
 **Image Exporter**: The extension point behind the Image menu.
 
-- *Type*: In-process .NET API (`IImageExporter`).
-- *Role*: Provider of the contract; the `ImageExporter` of the `Preview` subsystem is the implementation, and the
+- *Type*: In-process .NET API (`IImageExporter` and `NullImageExporter` of the `Preview` subsystem).
+- *Role*: Consumer of the contract; the `ImageExporter` of the `Preview` subsystem is the implementation, and the
   shell uses `NullImageExporter` when none is supplied.
 - *Contract*: `CanExport` and `CanExportChanged` say whether an image can be exported or copied;
-  `ExportPngAsync(dialogs)` and `CopyImageAsync(dialogs)` perform the operations using the dialog service.
+  `ExportPngAsync(dialogs)` and `CopyImageAsync(dialogs)` perform the operations using the dialogs, which the
+  shell passes as its dialog service.
 
 **Preview Content**: The extension point in the workspace.
 

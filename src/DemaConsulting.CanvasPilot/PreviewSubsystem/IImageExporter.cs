@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
+namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 /// <summary>
 ///     The extension point behind the Image menu. The shell enables Export as PNG and Copy Image only while
@@ -40,16 +40,16 @@ public interface IImageExporter
     /// <summary>
     ///     Saves the rendered image as a PNG file, asking the user where to save it.
     /// </summary>
-    /// <param name="dialogs">The dialog service to ask the user with and to report problems through.</param>
+    /// <param name="dialogs">The dialogs to ask the user with and to report problems through.</param>
     /// <returns>A task that completes when the export has finished or was cancelled.</returns>
-    Task ExportPngAsync(IDialogService dialogs);
+    Task ExportPngAsync(IExportDialogs dialogs);
 
     /// <summary>
     ///     Copies the rendered image to the clipboard.
     /// </summary>
-    /// <param name="dialogs">The dialog service to report problems through.</param>
+    /// <param name="dialogs">The dialogs to report problems through.</param>
     /// <returns>A task that completes when the copy has finished.</returns>
-    Task CopyImageAsync(IDialogService dialogs);
+    Task CopyImageAsync(IExportDialogs dialogs);
 }
 
 /// <summary>
@@ -69,13 +69,13 @@ public sealed class NullImageExporter : IImageExporter
     public bool CanExport => false;
 
     /// <inheritdoc />
-    public Task ExportPngAsync(IDialogService dialogs)
+    public Task ExportPngAsync(IExportDialogs dialogs)
     {
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
-    public Task CopyImageAsync(IDialogService dialogs)
+    public Task CopyImageAsync(IExportDialogs dialogs)
     {
         return Task.CompletedTask;
     }

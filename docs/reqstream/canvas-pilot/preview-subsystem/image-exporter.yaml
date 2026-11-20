@@ -2,7 +2,8 @@
 # Software Unit Requirements for the ImageExporter Unit
 #
 # The ImageExporter unit is what the Image menu exports. It saves the picture the preview shows as a PNG file the
-# user chooses, or copies it to the clipboard, and is available only while a picture is shown.
+# user chooses, or copies it to the clipboard, and is available only while a picture is shown. It asks the user and
+# reaches the clipboard only through the IExportDialogs interface of the Preview subsystem (IExportDialogs.cs).
 
 sections:
   - title: CanvasPilot Requirements
@@ -39,11 +40,12 @@ sections:
                   - ImageExporter_ExportPngAsync_UnwritableTarget_ShowsMessage
                   - ImageExporter_SuggestFileName_SourcePath_ReplacesImageExtensionWithPng
                   - ImageExporter_InvalidArguments_Throw
+                  - ImageExporter_ExportAndCopy_UsingExportDialogsOnly_DoNotRequireDialogService
 
               - id: CanvasPilot-ImageExporter-CopyToClipboard
                 title: >-
-                  The ImageExporter shall put the shown picture on the clipboard as an image through the
-                  dialog service, do nothing when no picture is shown, and tell the user when the clipboard
+                  The ImageExporter shall put the shown picture on the clipboard as an image through its
+                  export dialogs, do nothing when no picture is shown, and tell the user when the clipboard
                   cannot be used.
                 justification: |
                   Pasting a picture straight into another program is the quickest way to use it. The

@@ -4,7 +4,8 @@
 
 `ImageExporter` is verified by unit tests in `ImageExporterTests.cs`. They use a hand-written
 `FakeRenderedImageSource` for the shown picture, the real `ImageRenderService` for PNG encoding, the hand-written
-`FakeDialogService` that plays the user (a chosen save path, or cancel; a clipboard that works or refuses), and a
+`FakeExportDialogs` that plays the user (a chosen save path, or cancel; a clipboard that works or refuses; it
+implements only `IExportDialogs` of the `Preview` subsystem), an NSubstitute `IExportDialogs` in one test, and a
 temporary folder for the written files. The real clipboard and save picker belong to the main window and are
 verified by `MainWindowViewTests.cs` (the clipboard under the headless platform) and manually before a release (the
 platform save picker, which cannot be shown headless).
@@ -20,8 +21,10 @@ The headless clipboard test runs under the Avalonia headless platform.
 - Export is possible only while a picture is shown, and each change is announced once.
 - Export writes a PNG file with the signature at the chosen path, adds `.png` when the chosen name lacks it, writes
   nothing when the user cancels or no picture is shown, and tells the user when the file cannot be written.
+- The exporter works with a substitute that implements only IExportDialogs, which proves it does not depend on the
+  application's dialog service.
 - The suggested file name is the source file's stem with `.png`, including for `.vl.json` files.
-- Copy gives the shown picture to the dialog service and says nothing when it works; it tells the user when the
+- Copy gives the shown picture to the export dialogs and says nothing when it works; it tells the user when the
   clipboard cannot be used and does nothing without a picture.
 - The headless clipboard takes a picture and returns it as a bitmap of the same size.
 
@@ -60,7 +63,12 @@ nothing; with a picture and a clipboard that refuses it shows a message titled `
 clipboard. This scenario is tested by
 `ImageExporter_CopyImageAsync_ClipboardUnavailableOrNoPicture_ShowsMessageOrDoesNothing`.
 
-**ImageExporter_InvalidArguments_Throw**: Missing collaborators, a blank path, and missing dialog services are
+**ImageExporter_ExportAndCopy_UsingExportDialogsOnly_DoNotRequireDialogService**: Export and copy run against a
+substitute that implements only IExportDialogs: the PNG is written to the path the substitute returns, the picture is
+copied through it exactly once, and no message is shown, so the exporter needs nothing of the application's dialog
+service. This scenario is tested by ImageExporter_ExportAndCopy_UsingExportDialogsOnly_DoNotRequireDialogService.
+
+**ImageExporter_InvalidArguments_Throw**: Missing collaborators, a blank path, and missing export dialogs are
 refused. This scenario is tested by `ImageExporter_InvalidArguments_Throw`.
 
 **MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable**: Under the headless platform the main

@@ -18,7 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 
 namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
@@ -106,7 +105,7 @@ public sealed class ImageExporter : IImageExporter
     }
 
     /// <inheritdoc />
-    public async Task ExportPngAsync(IDialogService dialogs)
+    public async Task ExportPngAsync(IExportDialogs dialogs)
     {
         ArgumentNullException.ThrowIfNull(dialogs);
 
@@ -140,7 +139,7 @@ public sealed class ImageExporter : IImageExporter
     }
 
     /// <inheritdoc />
-    public async Task CopyImageAsync(IDialogService dialogs)
+    public async Task CopyImageAsync(IExportDialogs dialogs)
     {
         ArgumentNullException.ThrowIfNull(dialogs);
 

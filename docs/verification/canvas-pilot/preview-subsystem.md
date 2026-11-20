@@ -6,8 +6,8 @@ The `Preview` subsystem is verified by integration tests defined in `PreviewSubs
 real `ImageRenderService` (and so the real CanvasNet viewer and PNG codec), a real `PreviewPaneViewModel` over a real
 `ProjectExplorerViewModel` with the real `CanvasNetImageSourceFilter`, and a real `ImageExporter`, on temporary
 project folders with real SVG files. No mocking is required for the behavior under test: the refresh schedulers are
-hand-written fakes that hold callbacks until a test runs them, so no test waits for a delay, and the dialog service
-is a hand-written fake that plays the user. The views are verified by the headless UI tests described in the unit
+hand-written fakes that hold callbacks until a test runs them, so no test waits for a delay, and the export dialogs
+are a hand-written fake that plays the user. The views are verified by the headless UI tests described in the unit
 verification documents.
 
 ### Test Environment
@@ -24,7 +24,7 @@ watcher; no network, external services, or display are required.
   selecting a good file then shows its picture and makes export available.
 - Replacing the selected file on disk makes the pane show the new content after the debounce delay.
 - Export writes a PNG file whose signature and header size match the picture, and copy hands the picture to the
-  clipboard of the dialog service.
+  clipboard of the export dialogs.
 
 ### Test Scenarios
 
@@ -46,5 +46,5 @@ shows the 10 by 10 picture. This scenario is tested by
 
 **PreviewSubsystem_ExportImage_ShownPicture_WritesPngAndCopiesToClipboard**: With a 40 by 20 picture shown, export
 writes the chosen file, which starts with the PNG signature and whose header holds width 40 and height 20, and copy
-gives the shown picture to the dialog service. This scenario is tested by
+gives the shown picture to the export dialogs. This scenario is tested by
 `PreviewSubsystem_ExportImage_ShownPicture_WritesPngAndCopiesToClipboard`.

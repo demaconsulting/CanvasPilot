@@ -29,7 +29,7 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 ///     implements it, because showing a dialog needs the window as owner; tests supply a fake so no real window
 ///     is needed. Every method completes when the user has closed the dialog.
 /// </summary>
-public interface IDialogService : IFolderPicker
+public interface IDialogService : IFolderPicker, IExportDialogs
 {
     /// <summary>
     ///     Shows the New Project dialog modally. The view model reports whether it was accepted.
@@ -58,34 +58,6 @@ public interface IDialogService : IFolderPicker
     /// <param name="initialFolder">The folder to start in, or <see langword="null" /> for the platform default.</param>
     /// <returns>The full path of the chosen <c>.canvaspilot</c> file, or <see langword="null" /> when cancelled.</returns>
     Task<string?> PickProjectFileAsync(string? initialFolder);
-
-    /// <summary>
-    ///     Asks the user where to save a file.
-    /// </summary>
-    /// <param name="title">The picker title.</param>
-    /// <param name="suggestedFileName">The file name to suggest, including its extension.</param>
-    /// <param name="filterName">The name of the file type shown in the picker, for example <c>PNG image</c>.</param>
-    /// <param name="filterPattern">The file name pattern of the type, for example <c>*.png</c>.</param>
-    /// <returns>The full path chosen, or <see langword="null" /> when cancelled.</returns>
-    Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern);
-
-    /// <summary>
-    ///     Puts a picture on the system clipboard as an image.
-    /// </summary>
-    /// <param name="image">The picture to copy.</param>
-    /// <returns>
-    ///     <see langword="true" /> when the picture is on the clipboard; <see langword="false" /> when the
-    ///     platform has no clipboard available or refused it.
-    /// </returns>
-    Task<bool> CopyImageToClipboardAsync(RenderedImage image);
-
-    /// <summary>
-    ///     Shows a message with an OK button.
-    /// </summary>
-    /// <param name="title">The dialog title.</param>
-    /// <param name="message">The message.</param>
-    /// <returns>A task that completes when the user has closed the message.</returns>
-    Task ShowMessageAsync(string title, string message);
 
     /// <summary>
     ///     Asks the user to confirm an action.

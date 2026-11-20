@@ -23,6 +23,52 @@ using DemaConsulting.CanvasPilot.PreviewSubsystem;
 namespace DemaConsulting.CanvasPilot.Tests;
 
 /// <summary>
+///     Hand-written export dialogs for tests: it answers the save picker with a configured path, records the
+///     pictures copied and the messages shown, and can imitate a clipboard that refuses.
+/// </summary>
+public sealed class FakeExportDialogs : IExportDialogs
+{
+    /// <summary>
+    ///     Gets or sets the path the save picker returns, or <see langword="null" /> to imitate canceling.
+    /// </summary>
+    public string? SaveFileToPick { get; set; }
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether the clipboard accepts pictures.
+    /// </summary>
+    public bool ClipboardAvailable { get; set; } = true;
+
+    /// <summary>
+    ///     Gets the pictures that were copied to the clipboard.
+    /// </summary>
+    public List<RenderedImage> CopiedImages { get; } = [];
+
+    /// <summary>
+    ///     Gets the messages shown, as title and message.
+    /// </summary>
+    public List<(string Title, string Message)> Messages { get; } = [];
+
+    /// <inheritdoc />
+    public Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern)
+    {
+        return Task.FromResult(SaveFileToPick);
+    }
+
+    /// <inheritdoc />
+    public Task<bool> CopyImageToClipboardAsync(RenderedImage image)
+    {
+        CopiedImages.Add(image);
+        return Task.FromResult(ClipboardAvailable);
+    }
+
+    /// <inheritdoc />
+    public Task ShowMessageAsync(string title, string message)
+    {
+        Messages.Add((title, message));
+        return Task.CompletedTask;
+    }
+}
+/// <summary>
 ///     Hand-written render service for tests: every render waits until the test completes it, so tests control
 ///     the order in which results arrive and can check that stale renders are cancelled and ignored.
 /// </summary>
