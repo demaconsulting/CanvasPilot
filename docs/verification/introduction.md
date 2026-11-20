@@ -2,7 +2,7 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on
 CanvasNet. The current build is an Avalonia desktop application skeleton that contains the Logging,
-Settings, and Utilities subsystems; further subsystems are added as they are introduced.
+Project, Settings, and Utilities subsystems; further subsystems are added as they are introduced.
 
 ## Purpose
 
@@ -21,6 +21,11 @@ This document covers the verification design for the following software items:
 - **CanvasPilot** — system, subsystem, and unit verification:
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
+  - **Project** subsystem
+    - **ProjectService** — project folders and versioned project files
+    - **RecentProjects** — most-recently-used project list
+    - **NewProjectDialog** — window to choose a project name and location
+    - **ProjectExplorer** — list of the project's image source files
   - **Settings** subsystem
     - **SettingsService** — versioned per-user settings file
     - **SettingsDialog** — modal settings window hosting settings pages
@@ -58,6 +63,7 @@ The test folder structure mirrors the source subsystem breakdown:
 test/
 └── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
     ├── LoggingSubsystem/
+    ├── ProjectSubsystem/
     ├── SettingsSubsystem/
     └── UtilitiesSubsystem/
 ```

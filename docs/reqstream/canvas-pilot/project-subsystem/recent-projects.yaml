@@ -1,0 +1,59 @@
+---
+# Software Unit Requirements for the RecentProjects Unit
+#
+# The RecentProjects unit keeps the most-recently-used list of project files in the application settings,
+# through ISettingsService, so the list survives restarts and shares the settings file with other subsystems.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Project Subsystem Requirements
+        sections:
+          - title: RecentProjects Requirements
+            requirements:
+              - id: CanvasPilot-RecentProjects-KeepMostRecentFirst
+                title: >-
+                  The RecentProjects shall keep at most ten full project file paths, most recent first,
+                  moving a project that is added again to the top and treating paths that differ only
+                  in letter case as the same project, and shall ignore empty or invalid paths.
+                justification: |
+                  A short list with the latest project on top is what users expect from a recent files
+                  menu, and the same project must not appear twice because of how its path was typed.
+                tests:
+                  - RecentProjects_Add_ThreeProjects_ListsMostRecentFirst
+                  - RecentProjects_Add_ExistingProject_MovesToTopWithoutDuplicate
+                  - RecentProjects_Add_PathDifferingInCase_ReplacesEarlierEntry
+                  - RecentProjects_Add_RelativePath_StoresFullPath
+                  - RecentProjects_Add_MoreThanTen_KeepsNewestTen
+                  - RecentProjects_Add_EmptyOrInvalidPath_IsIgnored
+
+              - id: CanvasPilot-RecentProjects-DropMissingProjects
+                title: >-
+                  The RecentProjects shall return only project files that still exist, shall remove the
+                  missing ones from the stored list, and shall announce a change only when the list
+                  changed.
+                justification: |
+                  Projects are moved and deleted outside the application. Offering a project that no
+                  longer exists can only produce an error, and announcing changes only when there are
+                  any avoids needless refreshes of the menu.
+                tests:
+                  - RecentProjects_GetRecent_NothingAdded_IsEmpty
+                  - RecentProjects_GetRecent_MissingFile_IsDroppedAndStoredListPruned
+                  - RecentProjects_GetRecent_NothingMissing_DoesNotAnnounceChange
+
+              - id: CanvasPilot-RecentProjects-StoreInSettings
+                title: >-
+                  The RecentProjects shall store the list in the application settings by updating the
+                  latest settings, leaving the other settings unchanged, shall allow entries to be
+                  removed and the list to be cleared, and shall report a failed save as a result
+                  without throwing or announcing a change.
+                justification: |
+                  Sharing the settings file avoids a second file for users to manage, and updating the
+                  latest settings avoids overwriting values other subsystems changed. A problem saving
+                  the list must not stop the user from opening a project.
+                tests:
+                  - RecentProjects_Add_Project_PersistsInSettingsAndKeepsOtherSettings
+                  - RecentProjects_Add_SettingsWriteFails_ReturnsFalseAndDoesNotAnnounce
+                  - RecentProjects_Remove_ListedProject_IsRemoved
+                  - RecentProjects_Clear_ListedProjects_EmptiesList
+                  - RecentProjects_Constructor_NullSettings_Throws

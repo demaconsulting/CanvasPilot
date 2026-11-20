@@ -4,6 +4,7 @@ resource-path:
   - docs/design/generated
   - docs/design/canvas-pilot
   - docs/design/canvas-pilot/logging-subsystem
+  - docs/design/canvas-pilot/project-subsystem
   - docs/design/canvas-pilot/settings-subsystem
   - docs/design/canvas-pilot/utilities-subsystem
   - docs/design/ots
@@ -17,6 +18,11 @@ input-files:
   - docs/design/canvas-pilot.md
   - docs/design/canvas-pilot/logging-subsystem.md
   - docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md
+  - docs/design/canvas-pilot/project-subsystem.md
+  - docs/design/canvas-pilot/project-subsystem/project-service.md
+  - docs/design/canvas-pilot/project-subsystem/recent-projects.md
+  - docs/design/canvas-pilot/project-subsystem/new-project-dialog.md
+  - docs/design/canvas-pilot/project-subsystem/project-explorer.md
   - docs/design/canvas-pilot/settings-subsystem.md
   - docs/design/canvas-pilot/settings-subsystem/settings-service.md
   - docs/design/canvas-pilot/settings-subsystem/settings-dialog.md

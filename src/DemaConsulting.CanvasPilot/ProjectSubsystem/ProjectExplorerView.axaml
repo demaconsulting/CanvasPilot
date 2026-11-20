@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.ProjectSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.ProjectSubsystem.ProjectExplorerView"
+             x:DataType="vm:ProjectExplorerViewModel">
+
+  <Grid RowDefinitions="*,Auto">
+
+    <ListBox Grid.Row="0"
+             AutomationProperties.AutomationId="ProjectExplorerList"
+             ItemsSource="{Binding Items}"
+             SelectedItem="{Binding SelectedItem}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:ProjectFileItem">
+          <TextBlock Text="{Binding Name}" Margin="4,2" ToolTip.Tip="{Binding FullPath}" />
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <TextBlock Grid.Row="0"
+               AutomationProperties.AutomationId="ProjectExplorerEmptyMessage"
+               Margin="8"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Top"
+               Opacity="0.7"
+               TextWrapping="Wrap"
+               IsHitTestVisible="False"
+               IsVisible="{Binding EmptyMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+               Text="{Binding EmptyMessage}" />
+
+    <TextBlock Grid.Row="1"
+               AutomationProperties.AutomationId="ProjectExplorerError"
+               Margin="4"
+               Foreground="Firebrick"
+               TextWrapping="Wrap"
+               IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+               Text="{Binding ErrorMessage}" />
+
+  </Grid>
+
+</UserControl>

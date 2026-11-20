@@ -3,6 +3,7 @@ resource-path:
   - docs/verification
   - docs/verification/canvas-pilot
   - docs/verification/canvas-pilot/logging-subsystem
+  - docs/verification/canvas-pilot/project-subsystem
   - docs/verification/canvas-pilot/settings-subsystem
   - docs/verification/canvas-pilot/utilities-subsystem
   - docs/verification/ots
@@ -14,6 +15,11 @@ input-files:
   - docs/verification/canvas-pilot.md
   - docs/verification/canvas-pilot/logging-subsystem.md
   - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
+  - docs/verification/canvas-pilot/project-subsystem.md
+  - docs/verification/canvas-pilot/project-subsystem/project-service.md
+  - docs/verification/canvas-pilot/project-subsystem/recent-projects.md
+  - docs/verification/canvas-pilot/project-subsystem/new-project-dialog.md
+  - docs/verification/canvas-pilot/project-subsystem/project-explorer.md
   - docs/verification/canvas-pilot/settings-subsystem.md
   - docs/verification/canvas-pilot/settings-subsystem/settings-service.md
   - docs/verification/canvas-pilot/settings-subsystem/settings-dialog.md

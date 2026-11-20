@@ -1,0 +1,73 @@
+---
+# Software Unit Requirements for the NewProjectDialog Unit
+#
+# The NewProjectDialog unit is the modal New Project window and its view model. It collects a project name and
+# the folder that will contain the project folder, validates them through IProjectService, and delegates
+# browsing for a folder to an IFolderPicker supplied by the application. The caller creates the project when
+# the dialog was accepted.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Project Subsystem Requirements
+        sections:
+          - title: NewProjectDialog Requirements
+            requirements:
+              - id: CanvasPilot-NewProjectDialog-CollectNameAndLocation
+                title: >-
+                  The NewProjectDialog shall show a project name entry and a location entry that starts
+                  with a supplied folder, and shall show where the project folder would be created once
+                  the entries are valid.
+                justification: |
+                  The user needs to see and change both the name and the place a project will be
+                  created, and seeing the resulting folder path avoids surprises.
+                tests:
+                  - NewProjectDialogViewModel_New_InitialFolder_ShowsFolderAndDisablesOk
+                  - NewProjectDialogViewModel_New_NoInitialFolder_AsksForFolder
+                  - NewProjectDialogViewModel_ValidEntries_EnableOkAndShowTargetPath
+                  - NewProjectDialogViewModel_Constructor_NullArguments_Throw
+                  - NewProjectDialogView_Show_EmptyName_ShowsMessageAndDisablesOk
+                  - NewProjectDialogView_TypeValidName_EnablesOkAndShowsTargetPath
+
+              - id: CanvasPilot-NewProjectDialog-ValidateEntries
+                title: >-
+                  The NewProjectDialog shall show a message for each problem with the name, the location,
+                  or the project folder as the entries change, and shall enable OK only when a project
+                  can be created from the entries.
+                justification: |
+                  Explaining a problem where the user typed it is faster than a failure after OK, and
+                  disabling OK keeps invalid names and locations from reaching the file system.
+                tests:
+                  - NewProjectDialogViewModel_InvalidName_ShowsMessageAndDisablesOk
+                  - NewProjectDialogViewModel_MissingFolder_ShowsMessageAndDisablesOk
+                  - NewProjectDialogViewModel_ExistingNonEmptyFolder_ShowsTargetErrorAndDisablesOk
+                  - NewProjectDialogViewModel_ProjectName_BecomesValid_SignalsOkCanExecuteChanged
+                  - NewProjectDialogView_InvalidEntries_ShowMessagesAndDisableOk
+
+              - id: CanvasPilot-NewProjectDialog-BrowseForLocation
+                title: >-
+                  The NewProjectDialog shall let the user browse for the location through a folder
+                  picker supplied by the application, starting in the current location, and shall keep
+                  the location unchanged when the user cancels.
+                justification: |
+                  Typing a full folder path is error prone. Delegating the picker to the application
+                  keeps the platform folder dialog out of the view model so the behavior can be tested.
+                tests:
+                  - NewProjectDialogViewModel_Browse_FolderChosen_SetsParentFolder
+                  - NewProjectDialogViewModel_Browse_Cancelled_KeepsParentFolder
+                  - NewProjectDialogViewModel_Browse_NoFolderEntered_PassesNoStartFolder
+                  - NewProjectDialogView_BrowseButton_ShowsChosenFolder
+
+              - id: CanvasPilot-NewProjectDialog-AcceptOrCancel
+                title: >-
+                  The NewProjectDialog shall, when the user chooses OK with valid entries, mark the
+                  dialog accepted and close, and when the user chooses Cancel, close without accepting.
+                justification: |
+                  The caller creates the project only for an accepted dialog, so the dialog must report
+                  clearly whether the user accepted or cancelled.
+                tests:
+                  - NewProjectDialogViewModel_Ok_ValidEntries_AcceptsAndRequestsClose
+                  - NewProjectDialogViewModel_Ok_InvalidEntries_DoesNothing
+                  - NewProjectDialogViewModel_Cancel_RequestsCloseWithoutAcceptance
+                  - NewProjectDialogView_OkButton_ClosesWindowAndAccepts
+                  - NewProjectDialogView_CancelButton_ClosesWindowWithoutAccepting

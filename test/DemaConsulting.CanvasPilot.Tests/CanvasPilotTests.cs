@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
+using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.UtilitiesSubsystem;
 
@@ -132,5 +133,67 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(32768, restored.ContextWindowTokens);
         Assert.Equal("http://ollama.example.test:11434", restored.OllamaEndpoint);
         Assert.False(restored.UnrestrictedAgentTools);
+    }
+
+    /// <summary>
+    ///     Test that a user can create a project, close it, and open it again from the recent projects list, and
+    ///     that an unusable project file is refused with a message.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject()
+    {
+        // Arrange: the application's services composed as at startup
+        var token = TestContext.Current.CancellationToken;
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var projectService = new ProjectService(logger);
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot");
+        var settings = new SettingsService(settingsFolder, logger);
+        var recent = new RecentProjects(settings);
+        var parent = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+
+        // Act: create a project, remember it, close it, and open it from the list; then try a damaged file
+        var created = await projectService.CreateAsync(parent, "Launch Deck", token);
+        recent.Add(created.Project!.FilePath);
+        projectService.Close();
+        var reloaded = new SettingsService(settingsFolder);
+        reloaded.Load();
+        var fromList = await projectService.OpenAsync(new RecentProjects(reloaded).GetRecent()[0], token);
+        var damaged = Path.Combine(parent, "Damaged.canvaspilot");
+        await File.WriteAllTextAsync(damaged, "not json", token);
+        var refused = await projectService.OpenAsync(damaged, token);
+
+        // Assert: the project reopened from the list, and the damaged file was refused without changing it
+        Assert.True(fromList.Succeeded, fromList.Error);
+        Assert.Equal("Launch Deck", fromList.Project!.Name);
+        Assert.Same(fromList.Project, projectService.Current);
+        Assert.False(refused.Succeeded);
+        Assert.Same(fromList.Project, projectService.Current);
+        Assert.Contains("Damaged.canvaspilot", await File.ReadAllTextAsync(logger.ActiveFilePath, token));
+    }
+
+    /// <summary>
+    ///     Test that the project explorer lists the image source files of the open project, so the user can pick
+    ///     one to work on.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles()
+    {
+        // Arrange: a created project that holds two images and other content
+        var token = TestContext.Current.CancellationToken;
+        var parent = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+        var projectService = new ProjectService();
+        var project = (await projectService.CreateAsync(parent, "Brochure", token)).Project!;
+        await File.WriteAllTextAsync(Path.Combine(project.FolderPath, "cover.svg"), "<svg/>", token);
+        await File.WriteAllTextAsync(Path.Combine(project.FolderPath, "chart.svg"), "<svg/>", token);
+        await File.WriteAllTextAsync(Path.Combine(project.FolderPath, "notes.txt"), "notes", token);
+        using var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), new FakeRefreshScheduler());
+
+        // Act: show the open project in the explorer and select an image
+        explorer.Open(projectService.Current!.FolderPath);
+        explorer.SelectFile(Path.Combine(project.FolderPath, "cover.svg"));
+
+        // Assert: the images are listed, the other content is not, and the selection is available
+        Assert.Equal(["chart.svg", "cover.svg"], explorer.Items.Select(item => item.Name));
+        Assert.Equal(Path.Combine(project.FolderPath, "cover.svg"), explorer.SelectedFile);
     }
 }

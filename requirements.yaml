@@ -11,6 +11,11 @@ includes:
   - docs/reqstream/canvas-pilot.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml
+  - docs/reqstream/canvas-pilot/project-subsystem.yaml
+  - docs/reqstream/canvas-pilot/project-subsystem/project-service.yaml
+  - docs/reqstream/canvas-pilot/project-subsystem/recent-projects.yaml
+  - docs/reqstream/canvas-pilot/project-subsystem/new-project-dialog.yaml
+  - docs/reqstream/canvas-pilot/project-subsystem/project-explorer.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem/settings-service.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem/settings-dialog.yaml

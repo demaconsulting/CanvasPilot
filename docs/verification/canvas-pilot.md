@@ -24,6 +24,9 @@ services, or display is required.
   settings, a kept-aside copy of the file, and a log entry rather than a failure.
 - AI provider choices made in the settings dialog are stored and restored, and unrestricted agent tools
   remain off unless the user opts in.
+- A project created in a folder is reopened from the recent projects list, and a damaged project file is
+  refused with a message and a log entry without changing the open project.
+- The project explorer lists the image source files of the open project and not other content.
 
 ## Test Scenarios
 
@@ -47,6 +50,17 @@ and logs the corruption. This scenario is tested by
 over the AI provider page; Ollama, a model name, a context window, and an endpoint are chosen and OK is
 selected; a new service loads those choices and unrestricted agent tools are still off. This scenario is
 tested by `CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn`.
+
+**CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject**: A project is created in a
+documents folder, added to the recent projects list, and closed; a new settings service loads the list and the
+first entry is opened. The project reopens with its name. A damaged project file is then opened and refused with
+a failed result, the open project is unchanged, and the refusal is logged. This scenario is tested by
+`CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject`.
+
+**CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles**: A created project holds two SVG files and
+a text file; the project explorer is opened on the project folder and lists the two SVG files in name order,
+and selecting one reports its path. This scenario is tested by
+`CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles`.
 
 **MainWindowShell_New_TitleIsApplicationName**: The application shell is created on each supported
 platform and runtime and reports the application name as its title, proving the application's managed

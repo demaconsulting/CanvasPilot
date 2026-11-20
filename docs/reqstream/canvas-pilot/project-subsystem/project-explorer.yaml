@@ -1,0 +1,111 @@
+---
+# Software Unit Requirements for the ProjectExplorer Unit
+#
+# The ProjectExplorer unit is the project explorer view model and its list view. It lists the image source
+# files in the root of the open project's folder, keeps the list current by watching the folder, and deletes
+# or renames the selected file. The file types come from an IImageSourceFilter, backed in the application by
+# the CanvasNet viewer library's extension list, and refreshes are delayed through an IRefreshScheduler.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Project Subsystem Requirements
+        sections:
+          - title: ProjectExplorer Requirements
+            requirements:
+              - id: CanvasPilot-ProjectExplorer-ListProjectImages
+                title: >-
+                  The ProjectExplorer shall list, sorted by name, the files in the root of the project
+                  folder that have an image source extension, excluding sub-folders, the hidden
+                  .canvaspilot folder, the project file, and hidden files, and shall explain an empty
+                  list or an unreadable folder.
+                justification: |
+                  The top-level image sources are the files the user works on. Supporting assets live in
+                  sub-folders and application data in the hidden folder, so listing them would be noise.
+                  Using the extensions that CanvasNet can draw keeps the list to files the application
+                  can show.
+                tests:
+                  - ProjectExplorerViewModel_Open_ProjectFolder_ListsOnlyRootImageSourceFilesSorted
+                  - ProjectExplorerViewModel_Open_HiddenAttributeFile_IsNotListed
+                  - ProjectExplorerViewModel_Open_NoImageFiles_ShowsEmptyMessage
+                  - ProjectExplorerViewModel_Open_MissingFolder_ShowsErrorAndEmptyList
+                  - CanvasNetImageSourceFilter_IsImageSource_CanvasNetExtensions_AreAccepted
+                  - ProjectExplorerViewModel_Open_WithCanvasNetFilter_ListsSvgButNotText
+                  - ProjectExplorerView_OpenProject_ListsImageFiles
+                  - ProjectExplorerView_NoProjectOrNoImages_ShowsEmptyMessage
+
+              - id: CanvasPilot-ProjectExplorer-SelectFile
+                title: >-
+                  The ProjectExplorer shall expose the selected file, let the selection be set from the
+                  list or by path, keep the selection of a file that is still listed after a refresh,
+                  and clear it when the file is gone.
+                justification: |
+                  Other parts of the application act on the selected file, so it must be available and
+                  stay stable while the list changes around it.
+                tests:
+                  - ProjectExplorerViewModel_SelectFile_ListedAndUnlisted_ReportsResult
+                  - ProjectExplorerViewModel_Refresh_FilesAddedAndRemoved_UpdatesListAndKeepsSelection
+                  - ProjectExplorerViewModel_Refresh_SelectedFileRemoved_ClearsSelection
+                  - ProjectExplorerView_SelectItem_UpdatesSelectedFile
+                  - ProjectExplorerView_SelectFileInViewModel_SelectsItemInList
+
+              - id: CanvasPilot-ProjectExplorer-RefreshOnFileChanges
+                title: >-
+                  The ProjectExplorer shall watch the project folder and refresh the list after file
+                  changes, waiting a short delay so that a burst of changes causes one refresh, and
+                  shall recover when a previously unreadable folder can be read.
+                justification: |
+                  Files are added, removed, and renamed by this application and by other tools. A list
+                  that follows the folder without the user asking stays correct, and the delay avoids
+                  redrawing for every intermediate change of a large copy.
+                tests:
+                  - ProjectExplorerViewModel_RequestRefresh_Burst_CoalescesIntoOneRefresh
+                  - ProjectExplorerViewModel_RequestRefresh_DefaultDebounce_IsQuarterSecond
+                  - ProjectExplorerViewModel_RequestRefresh_NoProjectOrDisposed_SchedulesNothing
+                  - ProjectExplorerViewModel_Open_FileCreatedInFolder_WatcherRequestsRefresh
+                  - ProjectExplorerViewModel_Refresh_FolderReappears_ClearsError
+                  - ProjectExplorerView_FilesChangeOnDisk_ListRefreshesAfterDebounce
+
+              - id: CanvasPilot-ProjectExplorer-ReleaseWatcher
+                title: >-
+                  The ProjectExplorer shall stop watching, cancel any pending refresh, and clear the
+                  list when the project is closed, replaced, or the explorer is disposed, and shall
+                  ignore a refresh that was scheduled for an earlier project.
+                justification: |
+                  A watcher left running would keep a folder handle open and could refresh a list that
+                  now belongs to another project.
+                tests:
+                  - ProjectExplorerViewModel_OpenAndClose_StartsAndStopsWatchingAndClearsList
+                  - ProjectExplorerViewModel_Open_AnotherFolder_ReplacesListAndIgnoresStaleRefresh
+                  - ProjectExplorerViewModel_Dispose_OpenFolder_StopsWatchingAndRefusesOpen
+                  - ProjectExplorerViewModel_InvalidArguments_Throw
+
+              - id: CanvasPilot-ProjectExplorer-DeleteSelectedFile
+                title: >-
+                  The ProjectExplorer shall delete the selected file from the project folder, shall
+                  report a message instead of throwing when nothing is selected or the file cannot be
+                  deleted, and shall log a failed deletion.
+                justification: |
+                  Removing a source file from the list is a normal editing step. Problems such as a file
+                  open in another program are expected and must be explained to the user.
+                tests:
+                  - ProjectExplorerViewModel_DeleteSelected_SelectedFile_DeletesFileAndRefreshes
+                  - ProjectExplorerViewModel_DeleteAndRename_NothingSelected_ReportMessage
+                  - ProjectExplorerViewModel_DeleteSelected_FileInUse_ReturnsMessageAndLogs
+
+              - id: CanvasPilot-ProjectExplorer-RenameSelectedFile
+                title: >-
+                  The ProjectExplorer shall rename the selected file within the project folder to a new
+                  name that is valid and still has an image source extension, never replacing an
+                  existing file or folder, shall select the renamed file, and shall report a message for
+                  a refused rename.
+                justification: |
+                  Renaming keeps a file in the project, so the new name must stay inside the folder, stay
+                  a file the application can show, and never overwrite the user's other files.
+                tests:
+                  - ProjectExplorerViewModel_RenameSelected_ValidName_RenamesAndSelectsNewFile
+                  - ProjectExplorerViewModel_RenameSelected_CaseOnlyChange_IsAllowed
+                  - ProjectExplorerViewModel_RenameSelected_SameName_DoesNothing
+                  - ProjectExplorerViewModel_RenameSelected_InvalidName_IsRefused
+                  - ProjectExplorerViewModel_RenameSelected_TargetExists_IsRefusedAndNothingReplaced
+                  - ProjectExplorerView_RenameRefused_ShowsErrorMessage

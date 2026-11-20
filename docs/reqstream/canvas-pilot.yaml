@@ -8,7 +8,7 @@
 #   without opening a window
 #
 # NOTE: This file currently covers only the capabilities delivered so far (operational logging,
-# safe file handling, persisted user settings, and AI provider configuration). Additional system
+# safe file handling, persisted user settings, AI provider configuration, and projects). Additional system
 # requirements are added as further subsystems are introduced.
 
 sections:
@@ -73,3 +73,33 @@ sections:
           - CanvasPilot-Settings-ConfigureAiProvider
         tests:
           - CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn
+
+      - id: CanvasPilot-System-ManageProjects
+        title: >-
+          The application shall let the user create, open, save, and close projects, each a folder with
+          a project file, and quickly reopen recently used projects.
+        tags: [system]
+        justification: |
+          Users organize their drawings in projects. A project folder keeps a drawing's images and
+          assets together where other tools can also reach them, and a list of recent projects gets
+          the user back to their work with one choice. Problems such as an invalid name, a damaged
+          file, or a file from a newer version must be explained rather than cause a failure.
+        children:
+          - CanvasPilot-Project-ManageProjectFiles
+          - CanvasPilot-Project-CreateNewProject
+          - CanvasPilot-Project-RememberRecentProjects
+        tests:
+          - CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject
+
+      - id: CanvasPilot-System-BrowseProjectImages
+        title: >-
+          The application shall list the image source files of the open project so the user can choose
+          one to work on, keeping the list current as files change.
+        tags: [system]
+        justification: |
+          The user works on one image source file at a time, and needs to see which files the project
+          holds, including files added or changed by other tools, without leaving the application.
+        children:
+          - CanvasPilot-Project-BrowseProjectImages
+        tests:
+          - CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles

@@ -1,0 +1,124 @@
+---
+# Software Unit Requirements for the ProjectService Unit
+#
+# The ProjectService unit creates, opens, saves, and closes projects. A project is a folder holding a
+# {name}.canvaspilot JSON project file and a hidden .canvaspilot data folder reserved for future application
+# data. The ProjectDocument, ProjectInfo, and ProjectResult records and the IProjectService interface are part
+# of this unit, as are the rules for project and file names.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Project Subsystem Requirements
+        sections:
+          - title: ProjectService Requirements
+            requirements:
+              - id: CanvasPilot-ProjectService-CreateProjectFolder
+                title: >-
+                  The ProjectService shall create a project as the folder {parent}/{name} holding a
+                  {name}.canvaspilot JSON file with formatVersion 1, the name, and the creation time
+                  in UTC, plus an empty hidden .canvaspilot folder, and shall make it the open
+                  project; an existing empty folder may be used, and a cancelled creation shall leave
+                  nothing behind.
+                justification: |
+                  The project file identifies the folder as a project and carries its format version.
+                  The hidden folder reserves a place for application data without writing anything
+                  into it yet. Removing what a cancelled or failed creation added keeps the user's
+                  folders clean.
+                tests:
+                  - ProjectService_CreateAsync_ValidName_CreatesFolderProjectFileAndDataFolder
+                  - ProjectService_CreateAsync_NameWithSurroundingSpaces_TrimsName
+                  - ProjectService_CreateAsync_ExistingEmptyFolder_Succeeds
+                  - ProjectService_CreateAsync_Cancelled_RemovesFolderItCreated
+                  - ProjectService_CreateAsync_CancelledInExistingFolder_KeepsFolderRemovesAdditions
+
+              - id: CanvasPilot-ProjectService-RejectUnsafeProjectNames
+                title: >-
+                  The ProjectService shall refuse to create a project when the name is empty, too long,
+                  starts or ends with a period, contains characters that are invalid in file names on
+                  any supported platform, or is a reserved device name, when the parent folder is
+                  empty, relative, or missing, or when the project folder already exists with content,
+                  and shall change nothing on disk.
+                justification: |
+                  Project names become folder and file names, so a name that could escape the parent
+                  folder, hide the project, or fail on another platform must be refused before any file
+                  is written. Never writing into a folder that already has content protects the user's
+                  existing files.
+                tests:
+                  - ProjectService_CreateAsync_InvalidName_FailsWithoutCreatingAnything
+                  - ProjectService_ValidateProjectName_LengthLimit_IsEnforced
+                  - ProjectService_ValidateProjectName_OrdinaryName_IsAccepted
+                  - ProjectService_CreateAsync_UnusableParentFolder_Fails
+                  - ProjectService_CreateAsync_ExistingNonEmptyFolder_FailsAndLeavesContent
+                  - ProjectService_CreateAsync_ExistingFileWithName_Fails
+                  - ProjectService_ValidateNewProject_NameProblemComesFirst
+
+              - id: CanvasPilot-ProjectService-OpenProjectFile
+                title: >-
+                  The ProjectService shall open a project file, tolerating comments, trailing commas,
+                  property name casing, and properties it does not know, taking the name from the file
+                  name when the file has none, and shall make the project the open project.
+                justification: |
+                  Project files may be edited by hand or written by a later version that adds
+                  properties. Tolerant reading lets such files open without loss, and a replaceable open
+                  project lets the user switch projects.
+                tests:
+                  - ProjectService_OpenAsync_CreatedProject_ReturnsSameProject
+                  - ProjectService_OpenAsync_UnknownPropertiesAndComments_AreIgnored
+                  - ProjectService_OpenAsync_MissingName_UsesFileName
+                  - ProjectService_OpenAsync_SecondProject_ReplacesCurrentAndRaisesEvent
+
+              - id: CanvasPilot-ProjectService-RejectUnusableProjectFiles
+                title: >-
+                  The ProjectService shall refuse a project file that is missing, has the wrong
+                  extension, is not valid JSON, has no valid formatVersion, or has a newer
+                  formatVersion than this version supports, shall tell the user to update for a newer
+                  version, and shall leave the open project unchanged.
+                justification: |
+                  A file from a newer version may hold data this version would damage by saving, so it
+                  must be refused with a message that says what to do. Damaged and unrelated files
+                  must be explained rather than crash the application or replace the open project.
+                tests:
+                  - ProjectService_OpenAsync_NewerFormat_FailsWithClearMessageAndKeepsCurrent
+                  - ProjectService_OpenAsync_NotAProjectFile_FailsAndLogs
+                  - ProjectService_OpenAsync_MissingWrongOrBlankPath_Fails
+
+              - id: CanvasPilot-ProjectService-SaveProject
+                title: >-
+                  The ProjectService shall save the open project by atomically rewriting its project
+                  file with an updated modified time, keeping the created time, the name, and the
+                  properties it does not know, and shall refuse to save when no project is open.
+                justification: |
+                  Saving records that the project was worked on without losing data written by other
+                  versions. Writing a temporary file and replacing the project file means a failure
+                  cannot leave a truncated project file.
+                tests:
+                  - ProjectService_SaveAsync_OpenProject_UpdatesModifiedTimeAndKeepsContent
+                  - ProjectService_SaveAsync_UnknownProperties_ArePreserved
+                  - ProjectService_SaveAsync_NoProject_Fails
+                  - ProjectService_CloseThenOpen_SameFile_OpensAgain
+
+              - id: CanvasPilot-ProjectService-CloseProject
+                title: >-
+                  The ProjectService shall close the open project, clearing the current project and
+                  raising a change event once, and shall do nothing when no project is open.
+                justification: |
+                  The application shows the project name and its files only while a project is open, so
+                  it needs one reliable signal when that changes.
+                tests:
+                  - ProjectService_Close_OpenProject_ClearsCurrentAndRaisesEventOnce
+
+              - id: CanvasPilot-ProjectService-ReportFailuresAsResults
+                title: >-
+                  The ProjectService shall report refused and failed operations, including input and
+                  output failures, as failed results carrying a user-readable message, and shall log
+                  each failure, rather than throwing for ordinary user problems.
+                justification: |
+                  Ordinary problems such as a bad name or a full disk are expected, and the application
+                  must be able to explain them to the user. A log entry gives support the details when
+                  the user reports the problem.
+                tests:
+                  - ProjectService_CreateAsync_IoFailure_ReturnsFailureAndLogsError
+                  - ProjectService_CreateAsync_InvalidName_LogsWarning
+                  - ProjectService_SaveAsync_FolderRemoved_FailsAndLogsError
+                  - ProjectService_OpenAsync_NotAProjectFile_FailsAndLogs

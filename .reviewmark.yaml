@@ -124,6 +124,89 @@ reviews:
       - "src/**/LoggingSubsystem/RollingFileLogger.cs"
       - "test/**/LoggingSubsystem/RollingFileLoggerTests.cs"
 
+  # CanvasPilot - Project
+  - id: CanvasPilot-Project
+    title: Review of CanvasPilot Project subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem.yaml"
+      - "docs/design/canvas-pilot/project-subsystem.md"
+      - "docs/verification/canvas-pilot/project-subsystem.md"
+      - "test/**/ProjectSubsystem/ProjectSubsystemTests.cs"
+
+  - id: CanvasPilot-Project-ProjectService
+    title: Review of CanvasPilot ProjectService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/project-subsystem.md
+      - docs/reqstream/canvas-pilot/project-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem/project-service.yaml"
+      - "docs/design/canvas-pilot/project-subsystem/project-service.md"
+      - "docs/verification/canvas-pilot/project-subsystem/project-service.md"
+      - "src/**/ProjectSubsystem/IProjectService.cs"
+      - "src/**/ProjectSubsystem/ProjectDocument.cs"
+      - "src/**/ProjectSubsystem/ProjectNameRules.cs"
+      - "src/**/ProjectSubsystem/ProjectService.cs"
+      - "test/**/ProjectSubsystem/ProjectServiceTests.cs"
+
+  - id: CanvasPilot-Project-RecentProjects
+    title: Review of CanvasPilot RecentProjects unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/project-subsystem.md
+      - docs/reqstream/canvas-pilot/project-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem/recent-projects.yaml"
+      - "docs/design/canvas-pilot/project-subsystem/recent-projects.md"
+      - "docs/verification/canvas-pilot/project-subsystem/recent-projects.md"
+      - "src/**/ProjectSubsystem/IRecentProjects.cs"
+      - "src/**/ProjectSubsystem/RecentProjects.cs"
+      - "test/**/ProjectSubsystem/RecentProjectsTests.cs"
+
+  - id: CanvasPilot-Project-NewProjectDialog
+    title: Review of CanvasPilot NewProjectDialog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/project-subsystem.md
+      - docs/reqstream/canvas-pilot/project-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem/new-project-dialog.yaml"
+      - "docs/design/canvas-pilot/project-subsystem/new-project-dialog.md"
+      - "docs/verification/canvas-pilot/project-subsystem/new-project-dialog.md"
+      - "src/**/ProjectSubsystem/IFolderPicker.cs"
+      - "src/**/ProjectSubsystem/NewProjectDialogViewModel.cs"
+      - "src/**/ProjectSubsystem/NewProjectDialogView.axaml"
+      - "src/**/ProjectSubsystem/NewProjectDialogView.axaml.cs"
+      - "test/**/ProjectSubsystem/NewProjectDialogTests.cs"
+      - "test/**/NewProjectDialogViewTests.cs"
+
+  - id: CanvasPilot-Project-ProjectExplorer
+    title: Review of CanvasPilot ProjectExplorer unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/project-subsystem.md
+      - docs/reqstream/canvas-pilot/project-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem/project-explorer.yaml"
+      - "docs/design/canvas-pilot/project-subsystem/project-explorer.md"
+      - "docs/verification/canvas-pilot/project-subsystem/project-explorer.md"
+      - "src/**/ProjectSubsystem/IImageSourceFilter.cs"
+      - "src/**/ProjectSubsystem/IRefreshScheduler.cs"
+      - "src/**/ProjectSubsystem/ProjectFileItem.cs"
+      - "src/**/ProjectSubsystem/ProjectExplorerViewModel.cs"
+      - "src/**/ProjectSubsystem/ProjectExplorerView.axaml"
+      - "src/**/ProjectSubsystem/ProjectExplorerView.axaml.cs"
+      - "test/**/ProjectSubsystem/ProjectExplorerTests.cs"
+      - "test/**/ProjectSubsystem/ProjectSubsystemFakes.cs"
+      - "test/**/ProjectExplorerViewTests.cs"
+
   # CanvasPilot - Settings
   - id: CanvasPilot-Settings
     title: Review of CanvasPilot Settings subsystem architecture and interfaces
