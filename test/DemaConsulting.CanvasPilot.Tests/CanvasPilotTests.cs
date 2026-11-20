@@ -526,6 +526,62 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user who drops files, a folder, and a program, and pastes a screenshot, gets chips without
+    ///     anything being copied while drafting, that undo removes them, and that sending copies the things into the
+    ///     project's attachments folder unchanged, without the explorer listing them or the draft folder keeping
+    ///     anything.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend()
+    {
+        // Arrange: a created project with an image, and content from outside the project: a file, a folder, a program
+        var token = TestContext.Current.CancellationToken;
+        var parent = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+        var projectService = new ProjectService();
+        var project = (await projectService.CreateAsync(parent, "Poster", token)).Project!;
+        await File.WriteAllTextAsync(Path.Combine(project.FolderPath, "cover.svg"), "<svg/>", token);
+        var outside = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "outside")).FullName;
+        var brief = Path.Combine(outside, "brief.txt");
+        var program = Path.Combine(outside, "setup.exe");
+        var folder = Directory.CreateDirectory(Path.Combine(outside, "photos")).FullName;
+        await File.WriteAllTextAsync(brief, "the brief", token);
+        await File.WriteAllBytesAsync(program, [0x4D, 0x5A, 1, 2], token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.txt"), "photo notes", token);
+        byte[] screenshot = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 5, 6];
+        var store = new AttachmentStore(project.FolderPath);
+        var intake = new AttachmentIntake(store);
+        var document = new ComposerDocument();
+        var history = new ComposerHistory(document);
+
+        // Act: drop and paste in one operation, check that nothing is copied, undo, redo, and send
+        var accepted = intake.Accept(new DroppedContent { Paths = [brief, program, folder], Images = [screenshot] });
+        history.Execute(ComposerEdit.Drop(document, 0, accepted.Segments));
+        var attachmentsWhileDrafting = Directory.Exists(store.AttachmentsFolder);
+        history.Undo();
+        var chipsAfterUndo = document.Chips.Count();
+        history.Redo();
+        var chipsAfterRedo = document.Chips.Count();
+        var result = store.StageForSend([.. history.CompleteSend().Chips.OfType<AttachmentChip>()]);
+        using var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), new FakeRefreshScheduler());
+        explorer.Open(project.FolderPath);
+
+        // Assert: nothing was copied while drafting; the chips came and went as one step; everything is in attachments
+        // byte for byte; the explorer shows only the project's image; the draft folder holds nothing
+        Assert.False(attachmentsWhileDrafting);
+        Assert.Equal(0, chipsAfterUndo);
+        Assert.Equal(4, chipsAfterRedo);
+        Assert.True(result.Succeeded);
+        Assert.Equal(4, result.Attachments.Length);
+        Assert.Equal("the brief", await File.ReadAllTextAsync(Path.Combine(store.AttachmentsFolder, "brief.txt"), token));
+        Assert.Equal(new byte[] { 0x4D, 0x5A, 1, 2 }, await File.ReadAllBytesAsync(Path.Combine(store.AttachmentsFolder, "setup.exe"), token));
+        Assert.Equal("photo notes", await File.ReadAllTextAsync(Path.Combine(store.AttachmentsFolder, "photos", "a.txt"), token));
+        Assert.Equal(screenshot, await File.ReadAllBytesAsync(Path.Combine(project.FolderPath, result.Attachments[3].ProjectRelativePath), token));
+        Assert.Equal(["cover.svg"], explorer.Items.Select(item => item.Name));
+        Assert.Empty(Directory.GetFiles(store.PastedImagesFolder));
+        Assert.True(File.Exists(brief));
+    }
+
+    /// <summary>
     ///     Composes the application on temporary folders and has a user create a project through the New Project dialog.
     /// </summary>
     /// <param name="dragFolder">The folder for pictures dragged out, or <see langword="null" /> for one in the temporary root.</param>

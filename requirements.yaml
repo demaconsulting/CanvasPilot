@@ -16,6 +16,8 @@ includes:
   - docs/reqstream/canvas-pilot/composer-subsystem.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-document.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-history.yaml
+  - docs/reqstream/canvas-pilot/composer-subsystem/attachment-store.yaml
+  - docs/reqstream/canvas-pilot/composer-subsystem/attachment-intake.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml
   - docs/reqstream/canvas-pilot/project-subsystem.yaml

@@ -23,7 +23,8 @@ Local items:
 
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
-  - **Composer** subsystem: **ComposerDocument** and **ComposerHistory** units.
+  - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, and **AttachmentStore**
+    units.
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Preview** subsystem: **ImageRenderService**, **PreviewPane**, **ImageExporter**, and **ImageDragSource** units.
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
@@ -85,7 +86,8 @@ and the local data the application uses](architecture.svg)
 - **src/** - source files and projects
   - **DemaConsulting.CanvasPilot/** - main application library source
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
-    - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, and undo and redo
+    - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, and the
+      intake and copying of attachments
     - **LoggingSubsystem/** - local rolling log file subsystem
     - **PreviewSubsystem/** - image rendering with CanvasNet, preview pane, PNG and clipboard export, and drag-out
     - **ProjectSubsystem/** - projects, recent projects, New Project dialog, and project explorer

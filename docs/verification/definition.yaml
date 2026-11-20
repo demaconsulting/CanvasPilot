@@ -23,6 +23,8 @@ input-files:
   - docs/verification/canvas-pilot/composer-subsystem.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-document.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-history.md
+  - docs/verification/canvas-pilot/composer-subsystem/attachment-store.md
+  - docs/verification/canvas-pilot/composer-subsystem/attachment-intake.md
   - docs/verification/canvas-pilot/logging-subsystem.md
   - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/verification/canvas-pilot/preview-subsystem.md

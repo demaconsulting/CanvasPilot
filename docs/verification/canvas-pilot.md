@@ -48,6 +48,9 @@ services, or display is required.
 - A message is composed from typed text, dictated text, and chips for attached files, folders, images, and marks, which
   stay in the order they were placed with the origin and kind of each; each user action is one undo step and redo gives
   the same steps; sending clears the draft and what can be undone, and nothing of the draft is written to disk.
+- Files, folders, pictures, and text that are dropped or pasted become chips and text without anything being opened or
+  copied; sending copies them into the project's attachments folder byte for byte, never over another file, within the
+  limits of one message; the explorer does not list them.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
@@ -151,6 +154,14 @@ undoing the drop removes both chips together, undoing the dictation removes the 
 whole block. After sending, nothing can be undone or redone, the draft is empty, and no file or folder was written in
 the temporary folder of the test. This scenario is tested by
 `CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears`.
+
+**CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend**: In a project created by the project
+service that holds one image, a text file, a program, and a folder with a file are dropped from outside the project and
+a screenshot is pasted, in one operation. Nothing is copied into the project while drafting; undo removes the four chips
+and redo brings them back; after sending, the text file, the program, the folder with its file, and the screenshot are
+in the attachments folder with their exact bytes, the original text file is unchanged, the explorer lists only the
+project's image, and the folder for pasted pictures is empty. This scenario is tested by
+`CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend`.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

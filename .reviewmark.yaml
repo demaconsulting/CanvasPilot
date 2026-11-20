@@ -215,6 +215,38 @@ reviews:
       - "src/**/ComposerSubsystem/ComposerHistory.cs"
       - "test/**/ComposerSubsystem/ComposerHistoryTests.cs"
 
+  - id: CanvasPilot-Composer-AttachmentIntake
+    title: Review of CanvasPilot AttachmentIntake unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/attachment-intake.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/attachment-intake.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/attachment-intake.md"
+      - "src/**/ComposerSubsystem/AttachmentIntake.cs"
+      - "src/**/ComposerSubsystem/DroppedContent.cs"
+      - "test/**/ComposerSubsystem/AttachmentIntakeTests.cs"
+
+  - id: CanvasPilot-Composer-AttachmentStore
+    title: Review of CanvasPilot AttachmentStore unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/attachment-store.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/attachment-store.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/attachment-store.md"
+      - "src/**/ComposerSubsystem/AttachmentNames.cs"
+      - "src/**/ComposerSubsystem/AttachmentStore.cs"
+      - "src/**/ComposerSubsystem/IAttachmentStore.cs"
+      - "src/**/ComposerSubsystem/StagedAttachment.cs"
+      - "test/**/ComposerSubsystem/AttachmentStoreTests.cs"
+
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
     title: Review of CanvasPilot Logging subsystem architecture and interfaces

@@ -1,0 +1,116 @@
+---
+# Software Unit Requirements for the AttachmentStore Unit
+#
+# The AttachmentStore unit keeps the files that belong to attachments in the project folder: pictures pasted from the
+# clipboard are saved in the project's private data folder while the message is a draft, and when the message is sent
+# the things its chips stand for are copied into the project's attachments folder. The content of an attachment is
+# data; the store never opens, runs, or interprets it.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Composer Subsystem Requirements
+        sections:
+          - title: AttachmentStore Requirements
+            requirements:
+              - id: CanvasPilot-AttachmentStore-SavePastedImages
+                title: >-
+                  The AttachmentStore shall save a pasted PNG picture of up to 50 MB, as a file named for the time and a
+                  number in the private attachments folder of the project's data folder, with exactly the bytes that
+                  were pasted, and shall refuse data that is empty, too large, or not a PNG picture without writing
+                  anything.
+                justification: |
+                  A screenshot from the clipboard has no file, so it is saved to be attached. Only a PNG picture is
+                  expected, and anything else is a mistake or an attack that must not be written to the user's disk.
+                  A name from the time and a number never replaces an earlier picture.
+                tests:
+                  - AttachmentStore_SavePastedImage_Png_SavesInPrivateDraftFolderWithPasteName
+                  - AttachmentStore_SavePastedImage_TwoInSameSecond_UseDifferentFiles
+                  - AttachmentStore_SavePastedImage_NotAPngOrTooLarge_ThrowsArgumentExceptionAndWritesNothing
+                  - AttachmentStore_SavePastedImage_Name_MatchesDocumentedPattern
+
+              - id: CanvasPilot-AttachmentStore-RemoveLeftovers
+                title: >-
+                  The AttachmentStore shall delete the saved pasted pictures that no chip refers to, and nothing else:
+                  not the pictures that chips refer to, not other files, and not folders.
+                justification: |
+                  Pictures that were pasted and then removed from the message, or that were left behind when the
+                  application ended, would pile up in the project. The folder may hold files of the user, which must
+                  never be deleted.
+                tests:
+                  - AttachmentStore_RemoveLeftovers_UnreferencedPastedPictures_AreDeletedAndOthersStay
+                  - AttachmentStore_RemoveLeftovers_NoDraftFolder_ReturnsZero
+
+              - id: CanvasPilot-AttachmentStore-CopyIntoProjectAtSend
+                title: >-
+                  The AttachmentStore shall, for each attachment of a message that is sent, copy a file or a folder with
+                  everything in it from outside the project into the attachments folder of the project, move a pasted
+                  picture there, refer to a file or folder that is in the project by its project-relative path without
+                  copying it, put an attachment that is attached twice there once, and tell for each attachment where it
+                  is in the project, its size, and how many files it holds, without changing or removing what the user
+                  attached.
+                justification: |
+                  The assistant works on the project, so the material attached to a message must be in it. Material
+                  that is in the project already needs no copy. The user's originals are never touched.
+                tests:
+                  - AttachmentStore_StageForSend_ExternalFile_IsCopiedIntoAttachmentsFolder
+                  - AttachmentStore_StageForSend_SameFileTwice_IsCopiedOnce
+                  - AttachmentStore_StageForSend_Folder_IsCopiedRecursively
+                  - AttachmentStore_StageForSend_ItemsInsideProject_AreReferencedInPlace
+                  - AttachmentStore_StageForSend_PastedPicture_IsMovedIntoAttachments
+                  - AttachmentStore_StageForSend_NoChips_SucceedsAndCreatesNothing
+
+              - id: CanvasPilot-AttachmentStore-LimitCopiedSize
+                title: >-
+                  The AttachmentStore shall refuse a message whose attachments would bring more than 500 files, more
+                  than 500 folders, or more than 200 MB into the project, naming the attachment that passes the limit,
+                  and shall measure a dropped folder without enumerating it past the limits.
+                justification: |
+                  One message must not fill the user's disk or exhaust the assistant, and a huge folder dropped by
+                  mistake must not freeze the application while it is counted.
+                tests:
+                  - AttachmentStore_StageForSend_TooManyFiles_FailsNamingChipAndCopiesNothing
+                  - AttachmentStore_StageForSend_FileOverSizeLimit_FailsNamingChipAndCopiesNothing
+                  - AttachmentStore_StageForSend_TooManyFolders_Fails
+
+              - id: CanvasPilot-AttachmentStore-CopyAllOrNothing
+                title: >-
+                  The AttachmentStore shall put either all attachments of a message into the project or none: when one
+                  attachment cannot be put there, it shall remove everything the call created, leave nothing partial
+                  behind, and name the attachment and the reason, including attachments that no longer exist, that are
+                  in the private data folder, that hold the project, or that cannot be read.
+                justification: |
+                  A message that is only partly attached would mislead the assistant, and leftovers of a failed send
+                  would clutter the project. Naming the attachment lets the user remove just that one and send again.
+                tests:
+                  - AttachmentStore_StageForSend_FileCannotBeRead_RemovesWhatWasCopiedAndNamesChip
+                  - AttachmentStore_StageForSend_ItemsThatCannotBeAttached_FailWithReasonNamingChip
+                  - AttachmentStore_StageForSend_TooManyFiles_FailsNamingChipAndCopiesNothing
+
+              - id: CanvasPilot-AttachmentStore-KeepNamesUnique
+                title: >-
+                  The AttachmentStore shall never overwrite a file or folder when it copies: a name that is taken gets a
+                  number in parentheses before its extension, also for names that become equal inside a copied folder.
+                justification: |
+                  Attachments of different messages, and files from different places, often have the same name; an
+                  attachment that replaced an earlier one would destroy the material of an earlier message.
+                tests:
+                  - AttachmentStore_StageForSend_NameTaken_AddsNumberAndNeverOverwrites
+                  - AttachmentNames_UniqueName_NamesInASet_GetNumbers
+
+              - id: CanvasPilot-AttachmentStore-ConfineToProject
+                title: >-
+                  The AttachmentStore shall create files and folders only in the attachments folder of the project and
+                  in the draft folder for pasted pictures, with names made safe (characters a name cannot hold replaced,
+                  device names changed, trailing dots and spaces removed, length limited), shall not follow symbolic
+                  links and junctions in a copied folder, and shall refuse to attach anything from the private data
+                  folder, except the pictures it saved there.
+                justification: |
+                  Names and folders from outside must never lead a file out of the project, onto a device, or to
+                  files that the user did not choose to attach, and the private data folder belongs to the application.
+                tests:
+                  - AttachmentStore_StageForSend_ManyKinds_OnlyAttachmentsFolderIsAddedToProject
+                  - AttachmentStore_StageForSend_FolderWithLink_SkipsTheLinkAndCopiesTheRest
+                  - AttachmentStore_StageForSend_ItemsThatCannotBeAttached_FailWithReasonNamingChip
+                  - AttachmentNames_SanitizeName_UnsafeNames_BecomeSafeNames
+                  - AttachmentNames_SanitizeName_LongName_IsShortenedKeepingExtension

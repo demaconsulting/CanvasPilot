@@ -245,6 +245,25 @@ sections:
         tests:
           - CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears
 
+      - id: CanvasPilot-System-AttachToMessage
+        title: >-
+          The application shall let the user attach files, folders, and pictures to the message by dropping them or
+          pasting them, shall treat everything that is attached strictly as data that is never opened or run, shall
+          copy nothing into the project while the message is a draft, and shall copy the attachments into the project
+          when the message is sent, within limits of size and number, without overwriting any file and without leaving
+          a partial copy.
+        tags: [system]
+        justification: |
+          Users explain a drawing with material: a sketch, a logo, a folder of photos, a screenshot. The assistant
+          works on the project, so the material must be in it, but dropped material comes from outside the user's
+          control and must never be given a chance to act, and a message that was never sent must leave nothing behind.
+        children:
+          - CanvasPilot-Composer-AcceptDroppedAndPastedContent
+          - CanvasPilot-Composer-TreatContentAsData
+          - CanvasPilot-Composer-StageAttachmentsAtSend
+        tests:
+          - CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend
+
       - id: CanvasPilot-System-DesktopShell
         title: >-
           The application shall present a main window with menus from which the user creates and opens

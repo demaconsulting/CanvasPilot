@@ -66,3 +66,60 @@ sections:
             tests:
               - ComposerSubsystem_Send_ClearsHistoryAndDocument
               - ComposerSubsystem_Send_SnapshotIsUnaffectedByNextDraft
+
+          - id: CanvasPilot-Composer-AcceptDroppedAndPastedContent
+            title: >-
+              The Composer subsystem shall turn dropped and pasted files, folders, pictures, and text into chips and
+              text for the message, referring to dropped files and folders where they are, saving pasted pictures in
+              the project's private data folder, and removing saved pictures that no chip refers to any more, without
+              copying anything into the project while the message is a draft.
+            justification: |
+              Users bring material to the assistant by dropping files and folders and by pasting screenshots. Copying
+              at drop time would fill the project with material for messages that are never sent, and undoing a drop
+              would have to undo the copy, so the drop only refers to the material and the copy happens when the
+              message is sent. A pasted picture has no file to refer to, so it is saved, and saved pictures that no
+              chip refers to must not pile up.
+            children:
+              - CanvasPilot-AttachmentIntake-ClassifyContent
+              - CanvasPilot-AttachmentIntake-ReferenceOriginalPaths
+              - CanvasPilot-AttachmentIntake-SanitizeDroppedText
+              - CanvasPilot-AttachmentStore-SavePastedImages
+              - CanvasPilot-AttachmentStore-RemoveLeftovers
+            tests:
+              - ComposerSubsystem_DropThenUndo_RemovesChipsAndCopiesNothing
+
+          - id: CanvasPilot-Composer-TreatContentAsData
+            title: >-
+              The Composer subsystem shall treat everything that is dropped or pasted strictly as data: it shall
+              never open, run, or render it, shall leave out paths that are not safe to refer to, and shall create
+              files only inside the project, with safe names and without following links.
+            justification: |
+              Dropped files come from the user's computer or from websites and mail, and may be programs, scripts,
+              or names built to reach devices, other drives, or other files than the ones shown. The application only
+              needs their bytes at the moment they are copied into the project, so nothing that is dropped may be
+              given a chance to act.
+            children:
+              - CanvasPilot-AttachmentIntake-RefuseUnsafeNames
+              - CanvasPilot-AttachmentStore-ConfineToProject
+            tests:
+              - ComposerSubsystem_Drop_ProgramsScriptsAndUnsafePaths_AreOnlyDataAndNeverRun
+
+          - id: CanvasPilot-Composer-StageAttachmentsAtSend
+            title: >-
+              The Composer subsystem shall, when the message is sent, copy the attachments from outside the project
+              into the project's attachments folder with names that never replace another file, refer to attachments
+              that are in the project where they are, move pasted pictures there, and either put all of them there
+              within the limits of 500 files and 200 MB for one message or none of them, saying which attachment
+              prevents it.
+            justification: |
+              The assistant works on the project and needs the attached material inside it. Limits keep one message
+              from filling the user's disk or the assistant's context, and a message that is only partly attached
+              would mislead the assistant. The user must be told which attachment is the problem, so that it can be
+              removed from the message.
+            children:
+              - CanvasPilot-AttachmentStore-CopyIntoProjectAtSend
+              - CanvasPilot-AttachmentStore-LimitCopiedSize
+              - CanvasPilot-AttachmentStore-CopyAllOrNothing
+              - CanvasPilot-AttachmentStore-KeepNamesUnique
+            tests:
+              - ComposerSubsystem_Send_CopiesExternalFilesIntoProjectAttachments

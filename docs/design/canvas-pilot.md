@@ -50,7 +50,14 @@ flowchart TD
         PathHelpers
     end
     RollingFileLogger --> PathHelpers
-    ComposerHistory --> ComposerDocument    ImageRenderService --> RollingFileLogger
+    ComposerHistory --> ComposerDocument
+    AttachmentIntake --> ComposerDocument
+    AttachmentIntake --> AttachmentStore
+    AttachmentIntake --> RollingFileLogger
+    AttachmentStore --> PathHelpers
+    AttachmentStore --> RollingFileLogger
+    AttachmentStore --> ProjectService
+    ImageRenderService --> RollingFileLogger
     PreviewPane --> ImageRenderService
     PreviewPane --> ProjectExplorer
     PreviewPane --> ProjectService
@@ -141,9 +148,16 @@ and does not refer to the main window.
 dictated text, and chips for attached files, folders, and images and for marks on the picture, and is the single source
 of truth about the message. `ComposerHistory` applies each change that the user makes to the message as one undo step,
 so that a typed character, a dictated block, a drop or paste of any number of items, an added mark, and a deleted chip
-are each one step, and clears the steps, together with the message, when the message is sent. Neither unit depends on
-the user interface, on another subsystem, or on the file system; the units that show the message and attach files to it
-are added later and build on them. No subsystem uses the `Composer` subsystem yet.
+are each one step, and clears the steps, together with the message, when the message is sent. Neither of these units
+depends on the user interface, on another subsystem, or on the file system. `AttachmentIntake` turns what the user drops
+or pastes into the message, files, folders, pictures, and text, into chips and text, and treats all of it strictly as
+data: it only looks at what a path is, never opens, runs, or copies it, and leaves out paths that are not safe to refer
+to. `AttachmentStore` is the only item that creates files for attachments, and only inside the project: it saves pasted
+pictures in the project's private data folder while the message is a draft, removes the ones that no chip refers to,
+and, when the message is sent, copies the attachments from outside the project into the project's `attachments` folder,
+all or none, within limits of 500 files and 200 MB for one message, with safe names that never replace another file,
+without following links. The units that show the message in an editing control are added later and build on these. No
+subsystem uses the `Composer` subsystem yet.
 
 ### Dependency Direction
 
@@ -253,6 +267,23 @@ works with its files.
   unhandled failure. Whether a particular program accepts the file, the bitmap, or both is checked by hand (see the
   verification of `ImageDragSource`).
 
+**Dropped and Pasted Content and Attachments**: What the user drops or pastes into the message, and the copies that are
+made in the project when the message is sent.
+
+- *Direction*: Input from the operating system's drag and drop and clipboard; output to files in the project folder.
+- *Type*: Paths of files and folders, PNG bytes of pictures, and plain text, read by the view and handed over as one
+  `DroppedContent`; files in the project's `attachments` folder and in `.canvaspilot/attachments`.
+- *Format*: A dropped path becomes a chip that refers to it. A pasted picture is saved as
+  `paste-{yyyyMMdd-HHmmss}-{n}.png` in `.canvaspilot/attachments` while the message is a draft. When the message is sent
+  a file or folder from outside the project is copied to `attachments/{name}`, with `{name} (2)` and so on when a name
+  is taken, a pasted picture is moved there, and a thing that is in the project already is referred to by its
+  project-relative path with forward slashes.
+- *Constraints*: Everything dropped is data, never opened or run. Paths that are not complete, that have `..`, device
+  names, alternate data streams, or the device namespace are left out with a reason. One drop accepts at most 200 items,
+  and one message copies at most 500 files, 500 folders, and 200 MB; a pasted picture is at most 50 MB. Nothing is
+  copied while the message is a draft, nothing is overwritten, links are not followed, and a failed copy leaves nothing
+  behind. The project explorer lists only image source files in the project root, so neither folder is listed.
+
 **Speech Settings, Audio Devices, and Model Store**: The speech choices, the audio system, and the downloaded models.
 
 - *Direction*: Input and output.
@@ -335,6 +366,23 @@ cannot pull unrelated files of the user's computer into a picture that is export
 reported as a note. Drawing runs in the background and can be cancelled, so a slow or hostile file cannot block the
 window.
 
+**Dropped content is data**: Files, folders, pictures, and text that the user drops or pastes may come from the internet
+or from mail and may be programs, scripts, or names built to reach devices, other drives, or other files.
+`AttachmentIntake` only asks the file system what a path is and how large a file is, which does not open it, so a
+program or script becomes a chip like any other file and nothing is run, rendered, or followed; it leaves out, with a
+reason, every path that is not a complete path or that has a `.` or `..` part, a device name, an alternate data stream,
+a trailing dot or space, or the device namespace, and a whole drive. Pasted pictures are saved only after the PNG
+signature and a limit of 50 MB are checked, and are never decoded. Nothing is copied while the message is a draft.
+
+**Confined attachment copies**: When the message is sent, `AttachmentStore` is the only item that creates files for
+attachments, and it creates them only in the project's `attachments` folder and in `.canvaspilot/attachments`. Every
+path is built with `PathHelpers.SafePathCombine` from names that were made safe (characters a name cannot hold replaced,
+device names changed, trailing dots and spaces removed, length limited), files are created exclusively and never replace
+another file, symbolic links and junctions in a dropped folder are not followed, a folder that holds the project is
+refused so that it cannot be copied into itself, the project's private data folder cannot be attached except for the
+pictures the store saved, and the copy is bounded by 500 files, 500 folders, and 200 MB for one message, checked before
+the copy and again during it. A failed copy removes everything it created. The originals are never changed or deleted.
+
 **Bounded drag files**: The files written for dragging a picture out are named from the source file's name with
 characters that a file name cannot hold replaced and the length limited, and are built with
 `PathHelpers.SafePathCombine`, so a file name cannot lead outside the drag folder. The unit deletes only files that
@@ -396,12 +444,21 @@ dropping, pasting, adding a mark, and deleting, is made as one `ComposerEdit` th
 the document and records. Undo and redo revert and apply whole edits and return the caret to restore. When the message
 is sent, `ComposerHistory.CompleteSend` returns a snapshot of the document, from which the message is built, and empties
 the document and the history.
-When the user opens Settings and chooses the Speech page, `SpeechSettingsPage` loads: `DeviceSelection` asks
-`AudioDeviceService` for the devices and selects the stored ones by name, `ModelCatalogPanel` asks
-`SpeechModelService` for the models and selects the stored ones by identifier, and `ModelParameterEditor` shows the
-parameters of the chosen models with their stored values. A download requested in the panel goes through
-`SpeechModelService` to the speech library, which reports progress to the row and ends as installed, canceled, or
-failed. On OK or Apply the page merges the choices into the speech section of the settings, which
+
+When the user drops files or folders on the message, or pastes a picture or text into it, the view reads the drop or the
+clipboard into a `DroppedContent` and gives it to `AttachmentIntake.Accept`. The intake checks the text of each path,
+asks the file system whether it is a file or a folder, saves pasted pictures through `AttachmentStore.SavePastedImage`,
+and returns chips and text, with notes for what it left out; the view inserts them as one `ComposerEdit.Drop`. Nothing
+is copied. When the message is sent, the chips of the snapshot are given to `AttachmentStore.StageForSend`, which plans
+the copies against the limits, copies the attachments from outside the project into the project's `attachments` folder,
+moves pasted pictures there, and returns for each chip its path in the project, or the chip that prevents the message
+from being sent and why. After sending, when a project is closed, and when a project is opened, `RemoveLeftovers`
+deletes the pasted pictures that no chip refers to. When the user opens Settings and chooses the Speech page,
+`SpeechSettingsPage` loads: `DeviceSelection` asks `AudioDeviceService` for the devices and selects the stored ones by
+name, `ModelCatalogPanel` asks `SpeechModelService` for the models and selects the stored ones by identifier, and
+`ModelParameterEditor` shows the parameters of the chosen models with their stored values. A download requested in the
+panel goes through `SpeechModelService` to the speech library, which reports progress to the row and ends as installed,
+canceled, or failed. On OK or Apply the page merges the choices into the speech section of the settings, which
 `SettingsService.Save` writes. When the dialog closes the page cancels downloads that are still running.
 
 ## Design Constraints
@@ -437,6 +494,9 @@ failed. On OK or Apply the page merges the choices into the speech section of th
 - Every change that the user makes to the message being composed shall be one `ComposerEdit` executed through
   `ComposerHistory`, so that the message and the undo steps never disagree; the units of the `Composer` subsystem that
   hold the message shall not write it anywhere.
+- Content that is dropped or pasted shall be treated as data: it shall never be opened, run, rendered, or followed,
+  and only `AttachmentStore` shall create files for attachments, only in `attachments` and `.canvaspilot/attachments`
+  of the project, never over an existing file, and, for one message, at most 500 files, 500 folders, and 200 MB.
 - Only `AudioDeviceService` shall use the audio system and only `SpeechModelService` shall use the speech model
   catalog; neither shall use its backend before it is first asked, and neither shall throw for a missing audio
   system, an unreadable model store, or a failed download.

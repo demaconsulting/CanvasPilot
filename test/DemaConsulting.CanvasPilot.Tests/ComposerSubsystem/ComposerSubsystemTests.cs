@@ -25,8 +25,123 @@ namespace DemaConsulting.CanvasPilot.Tests;
 /// <summary>
 ///     Subsystem tests for the Composer subsystem: the document and the history working together on one draft.
 /// </summary>
-public sealed class ComposerSubsystemTests
+public sealed class ComposerSubsystemTests : IDisposable
 {
+    /// <summary>
+    ///     The first bytes of a PNG file.
+    /// </summary>
+    private static readonly byte[] PngBytes = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 7, 8, 9];
+
+    /// <summary>
+    ///     Temporary folder that holds the project and the files that are dropped from outside it.
+    /// </summary>
+    private readonly string _root = Directory.CreateTempSubdirectory("canvaspilot-composer-tests-").FullName;
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        if (Directory.Exists(_root))
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that dropping files, a folder, and a pasted picture and then undoing the drop removes the chips and
+    ///     copies nothing into the project: the only thing that exists is the pasted picture in the draft folder, which
+    ///     is removed as a leftover when no chip refers to it.
+    /// </summary>
+    [Fact]
+    public void ComposerSubsystem_DropThenUndo_RemovesChipsAndCopiesNothing()
+    {
+        // Arrange: a project, a draft, and content from outside the project
+        var (store, intake, document, history, external) = CreateDraft();
+        var file = WriteFile(Path.Combine(external, "brief.txt"), [1, 2, 3]);
+        var folder = Path.Combine(external, "photos");
+        WriteFile(Path.Combine(folder, "a.png"), PngBytes);
+
+        // Act: drop everything in one operation, then undo it
+        var accepted = intake.Accept(new DroppedContent { Paths = [file, folder], Images = [PngBytes], Text = " for you" });
+        history.Execute(ComposerEdit.Drop(document, 0, accepted.Segments));
+        var chipsAfterDrop = document.Chips.Count();
+        var stepsAfterDrop = history.UndoCount;
+        history.Undo();
+        var leftoversRemoved = store.RemoveLeftovers([.. document.Chips.OfType<ImageChip>().Select(chip => chip.FullPath)]);
+
+        // Assert: one step held three chips and the text; after undo nothing is in the draft, nothing was copied into
+        // the project, and the pasted picture that no chip refers to was removed
+        Assert.Equal(3, chipsAfterDrop);
+        Assert.Equal(1, stepsAfterDrop);
+        Assert.Equal(0, document.Length);
+        Assert.False(Directory.Exists(store.AttachmentsFolder));
+        Assert.Equal(1, leftoversRemoved);
+        Assert.Empty(Directory.GetFiles(store.PastedImagesFolder));
+        Assert.True(File.Exists(file));
+    }
+
+    /// <summary>
+    ///     Test that sending copies what is attached from outside the project into the project's attachments folder,
+    ///     moves the pasted picture there, refers to things that are in the project in place, and leaves a clean draft.
+    /// </summary>
+    [Fact]
+    public void ComposerSubsystem_Send_CopiesExternalFilesIntoProjectAttachments()
+    {
+        // Arrange: a draft with a file and a folder from outside, a pasted picture, and a file in the project
+        var (store, intake, document, history, external) = CreateDraft();
+        var file = WriteFile(Path.Combine(external, "brief.txt"), [1, 2, 3]);
+        var folder = Path.Combine(external, "photos");
+        WriteFile(Path.Combine(folder, "a.png"), PngBytes);
+        var inside = WriteFile(Path.Combine(store.ProjectFolder, "flow.mmd"), [4]);
+        var accepted = intake.Accept(new DroppedContent { Paths = [file, folder, inside], Images = [PngBytes] });
+        history.Execute(ComposerEdit.Drop(document, 0, accepted.Segments));
+
+        // Act: send, then put the attachments into the project
+        var sent = history.CompleteSend();
+        var result = store.StageForSend([.. sent.Chips.OfType<AttachmentChip>()]);
+
+        // Assert: external things are in attachments, the project's own file is referred to in place, the pasted
+        // picture was moved out of the draft folder, and the draft is empty
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            ["attachments/brief.txt", "attachments/photos", "flow.mmd", "attachments/paste-"],
+            result.Attachments.Select(item => item.ProjectRelativePath.StartsWith("attachments/paste-", StringComparison.Ordinal) ? "attachments/paste-" : item.ProjectRelativePath));
+        Assert.Equal([true, true, false, true], result.Attachments.Select(item => item.WasCopied));
+        Assert.True(File.Exists(Path.Combine(store.AttachmentsFolder, "photos", "a.png")));
+        Assert.Empty(Directory.GetFiles(store.PastedImagesFolder));
+        Assert.Equal(0, document.Length);
+        Assert.True(File.Exists(file));
+    }
+
+    /// <summary>
+    ///     Test that dropped content is treated as data: a program and a script become chips, are copied byte for byte
+    ///     when sent, are not changed, and unsafe paths are left out, so nothing dropped is opened or run.
+    /// </summary>
+    [Fact]
+    public async Task ComposerSubsystem_Drop_ProgramsScriptsAndUnsafePaths_AreOnlyDataAndNeverRun()
+    {
+        // Arrange: a draft and dropped files with the content of a program and a script, and unsafe paths
+        var (store, intake, document, history, external) = CreateDraft();
+        var program = WriteFile(Path.Combine(external, "setup.exe"), [0x4D, 0x5A, 1, 2]);
+        var script = WriteFile(Path.Combine(external, "run.ps1"), "Remove-Item C:\\ -Recurse"u8.ToArray());
+        var unsafePaths = new[] { Path.Combine(external, "sub", "..", "setup.exe"), @"\\.\C:\", "relative.exe" };
+
+        // Act: drop everything, send, and stage
+        var accepted = intake.Accept(new DroppedContent { Paths = [program, script, .. unsafePaths] });
+        history.Execute(ComposerEdit.Drop(document, 0, accepted.Segments));
+        var result = store.StageForSend([.. history.CompleteSend().Chips.OfType<AttachmentChip>()]);
+
+        // Assert: both files are chips and are copied unchanged, every unsafe path was left out with a reason
+        Assert.Equal(2, accepted.Segments.Length);
+        Assert.Equal(3, accepted.Skipped.Length);
+        Assert.True(result.Succeeded);
+        Assert.Equal(
+            await File.ReadAllBytesAsync(program, TestContext.Current.CancellationToken),
+            await File.ReadAllBytesAsync(Path.Combine(store.AttachmentsFolder, "setup.exe"), TestContext.Current.CancellationToken));
+        Assert.Equal(
+            await File.ReadAllBytesAsync(script, TestContext.Current.CancellationToken),
+            await File.ReadAllBytesAsync(Path.Combine(store.AttachmentsFolder, "run.ps1"), TestContext.Current.CancellationToken));
+    }
+
     /// <summary>
     ///     Test that typed text, dictated text, and chips of every kind that are added in turn stay in the order they
     ///     were added, each with its origin and its kind.
@@ -157,5 +272,31 @@ public sealed class ComposerSubsystemTests
         // Assert: the sent snapshot still holds its one file chip
         Assert.IsType<FileChip>(Assert.Single(sent.Chips));
         Assert.Equal(2, document.Chips.Count());
+    }
+
+    /// <summary>
+    ///     Creates the units of a draft over a project folder and a folder for content from outside the project.
+    /// </summary>
+    /// <returns>The store, the intake, the document, the history, and the folder for outside content.</returns>
+    private (AttachmentStore Store, AttachmentIntake Intake, ComposerDocument Document, ComposerHistory History, string External) CreateDraft()
+    {
+        var project = Directory.CreateDirectory(Path.Combine(_root, "project")).FullName;
+        var external = Directory.CreateDirectory(Path.Combine(_root, "external")).FullName;
+        var store = new AttachmentStore(project);
+        var document = new ComposerDocument();
+        return (store, new AttachmentIntake(store), document, new ComposerHistory(document), external);
+    }
+
+    /// <summary>
+    ///     Writes a file, creating its folders.
+    /// </summary>
+    /// <param name="path">The full path of the file.</param>
+    /// <param name="bytes">The content.</param>
+    /// <returns>The path.</returns>
+    private static string WriteFile(string path, byte[] bytes)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, bytes);
+        return path;
     }
 }
