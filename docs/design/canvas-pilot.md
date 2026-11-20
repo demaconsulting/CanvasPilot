@@ -5,8 +5,8 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented so far are six subsystems, `AppShell`, `Logging`, `Preview`, `Project`, `Settings`, and
-`Utilities`; a further subsystem (speech) is added to this document as it is introduced.
+software items documented are seven subsystems, `AppShell`, `Logging`, `Preview`, `Project`, `Settings`, `Speech`, and
+`Utilities`.
 
 ```mermaid
 flowchart TD
@@ -34,6 +34,14 @@ flowchart TD
         SettingsDialog
         AiProviderSettingsPage
     end
+    subgraph Speech
+        AudioDeviceService
+        SpeechModelService
+        DeviceSelection
+        ModelCatalogPanel
+        ModelParameterEditor
+        SpeechSettingsPage
+    end
     subgraph Utilities
         PathHelpers
     end
@@ -58,6 +66,14 @@ flowchart TD
     SettingsService --> RollingFileLogger
     SettingsDialog --> SettingsService
     AiProviderSettingsPage --> SettingsDialog
+    AudioDeviceService --> RollingFileLogger
+    SpeechModelService --> RollingFileLogger
+    DeviceSelection --> AudioDeviceService
+    ModelCatalogPanel --> SpeechModelService
+    SpeechSettingsPage --> SettingsDialog
+    SpeechSettingsPage --> DeviceSelection
+    SpeechSettingsPage --> ModelCatalogPanel
+    SpeechSettingsPage --> ModelParameterEditor
     MainWindowShell --> ProjectService
     MainWindowShell --> RecentProjects
     MainWindowShell --> NewProjectDialog
@@ -92,6 +108,16 @@ settings: it runs the File, Image, Tools, and Help commands and shows its dialog
 the window implements. `ProjectWorkspace` holds the project explorer and the preview pane, and
 `AboutDialog` identifies the application. At startup the application builds all units in one place,
 `ApplicationComposition`, which system tests also use without a window.
+
+`AudioDeviceService` is the only item that uses the audio system and `SpeechModelService` the only item that uses
+the speech model catalog and its model store, both through the DemaConsulting.Speech library; each returns a machine
+without audio hardware, an unreadable model store, and a failed download as a result with an explanation, never as an
+exception. `DeviceSelection`, `ModelCatalogPanel`, and `ModelParameterEditor` are the view models and views of the
+device pickers, the model lists with their downloads, and the tunable settings of a model, and `SpeechSettingsPage`
+composes them into the "Speech" page of the settings dialog and maps them to and from the stored speech settings. The
+application adds the page to the dialog after the AI Provider page, so the `Settings` subsystem does not depend on
+speech. The speech choices are stored only; no speech engine is part of the current build, and one added later reads
+the stored choices through the settings service.
 
 `ImageRenderService` is the only item that draws files: it calls the CanvasNet viewer library in the background,
 confined to the project folder, and returns the pixels, notes, or a coded error. `PreviewPane` follows the
@@ -161,6 +187,20 @@ works with its files.
   drawn is explained with its error code, message, and hint, never an unhandled failure. Export and copy are
   enabled only while a picture is shown.
 
+**Speech Settings, Audio Devices, and Model Store**: The speech choices, the audio system, and the downloaded models.
+
+- *Direction*: Input and output.
+- *Type*: The speech section of the settings file; the operating system's audio system, through the
+  DemaConsulting.Speech library; the library's default model store on the local file system; and HTTPS downloads of
+  model files.
+- *Format*: Devices are stored by name, models by identifier, and each model's parameter values as
+  invariant-culture strings, in the `speech` section of `settings.json`. The model store is
+  `%LOCALAPPDATA%\DemaConsulting.Speech\Models` on Windows and is shared with other DEMA Consulting applications.
+- *Constraints*: The audio system and the model store are used only when the Speech page is opened. Downloads start
+  only when the user asks, verify checksums before installing, and are cancelled when the settings dialog closes. A
+  machine without audio hardware, a blocked network, or an unreadable store is explained on the page and never
+  causes a failure.
+
 **Main Window**: The application's window and menus.
 
 - *Direction*: Input and output.
@@ -173,12 +213,14 @@ works with its files.
 
 ## Dependencies
 
-The `AppShell`, `Logging`, `Preview`, `Project`, `Settings`, and `Utilities` subsystems use .NET base class library
-types, `System.Text.Json` for the settings and project files, and, for dialogs, pages, and lists, Avalonia and
+The `AppShell`, `Logging`, `Preview`, `Project`, `Settings`, `Speech`, and `Utilities` subsystems use .NET base class
+library types, `System.Text.Json` for the settings and project files, and, for dialogs, pages, and lists, Avalonia and
 CommunityToolkit.Mvvm, which are runtime third-party items. The `ImageRenderService` unit draws files and encodes PNG
 with the `DemaConsulting.CanvasNet.Viewer` library, and the `ProjectExplorer` unit uses its extension list to decide
-which files are image sources; the library is documented as an OTS item (see *OTS Dependencies*). Build,
-documentation, and quality tools are documented in the OTS design documents.
+which files are image sources. The `AudioDeviceService` and `SpeechModelService` units list audio devices and speech
+models and download models with the `DemaConsulting.Speech` library and its Sherpa model package, and the speech
+descriptor types are shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items
+(see *OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS design documents.
 
 ## Risk Control Measures
 
@@ -212,6 +254,13 @@ only from inside the project folder, through CanvasNet's `UnderRoots` file acces
 cannot pull unrelated files of the user's computer into a picture that is exported or shared. A denied file is
 reported as a note. Drawing runs in the background and can be cancelled, so a slow or hostile file cannot block the
 window.
+
+**Safe speech handling**: Downloads of speech models start only when the user asks, run over HTTPS, and are verified
+against checksums by the speech library before a model is installed completely or not at all, so a damaged or
+tampered download is discarded. A download never outlives the settings dialog that shows it. A choice that the page
+cannot show, such as a device that is not connected or a model while the model store cannot be read, is kept in the
+settings instead of being erased, and failures of the audio system and the model store are results, never
+unhandled exceptions.
 
 ## Data Flow
 
@@ -247,6 +296,14 @@ code and hint, is shown unless a newer render was started meanwhile. When files 
 renders again after a short delay. The Image menu runs `ImageExporter`, which encodes the shown picture as PNG and
 writes it where the user chooses, or hands it to the window to put on the clipboard.
 
+When the user opens Settings and chooses the Speech page, `SpeechSettingsPage` loads: `DeviceSelection` asks
+`AudioDeviceService` for the devices and selects the stored ones by name, `ModelCatalogPanel` asks
+`SpeechModelService` for the models and selects the stored ones by identifier, and `ModelParameterEditor` shows the
+parameters of the chosen models with their stored values. A download requested in the panel goes through
+`SpeechModelService` to the speech library, which reports progress to the row and ends as installed, canceled, or
+failed. On OK or Apply the page merges the choices into the speech section of the settings, which
+`SettingsService.Save` writes. When the dialog closes the page cancels downloads that are still running.
+
 ## Design Constraints
 
 - Log files shall be written only to local disk; no telemetry or remote transmission is performed.
@@ -273,3 +330,11 @@ writes it where the user chooses, or hands it to the window to put on the clipbo
 - Rendering shall never run on the user interface thread, and the result of a render that is no longer wanted shall
   never be shown.
 - The application's units shall be built only in `ApplicationComposition`.
+- Only `AudioDeviceService` shall use the audio system and only `SpeechModelService` shall use the speech model
+  catalog; neither shall use its backend before it is first asked, and neither shall throw for a missing audio
+  system, an unreadable model store, or a failed download.
+- Speech devices shall be stored by name, speech models by identifier, and model parameter values as
+  invariant-culture strings.
+- A speech model download shall start only on the user's request and shall be cancelled when the settings dialog
+  closes.
+- The application shall not reference the native speech engine runtime until a speech engine is loaded.

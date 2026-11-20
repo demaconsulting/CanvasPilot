@@ -25,6 +25,8 @@ services, or display is required.
   settings, a kept-aside copy of the file, and a log entry rather than a failure.
 - AI provider choices made in the settings dialog are stored and restored, and unrestricted agent tools
   remain off unless the user opts in.
+- Speech devices, models, and a model setting chosen in the Speech page of the settings dialog are stored by device
+  name and model identifier and restored by the next run, using substitute audio and model services.
 - A project created in a folder is reopened from the recent projects list, and a damaged project file is
   refused with a message and a log entry without changing the open project.
 - The project explorer lists the image source files of the open project and not other content.
@@ -57,6 +59,14 @@ and logs the corruption. This scenario is tested by
 over the AI provider page; Ollama, a model name, a context window, and an endpoint are chosen and OK is
 selected; a new service loads those choices and unrestricted agent tools are still off. This scenario is
 tested by `CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn`.
+
+**CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun**: The application is composed with
+substitute audio and model services that list two microphones, two speakers, a speech-to-text model, and a
+text-to-speech model with a voice choice. The user opens Settings, chooses the second microphone and speaker, both
+models, and the first voice on the Speech page, and chooses OK. After a restart the stored settings hold the device
+names, the model identifiers, and the voice, and a Speech page loaded from them shows the microphone and the voice.
+No hardware is used and nothing is downloaded. This scenario is tested by
+`CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun`.
 
 **CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject**: A project is created in a
 documents folder, added to the recent projects list, and closed; a new settings service loads the list and the

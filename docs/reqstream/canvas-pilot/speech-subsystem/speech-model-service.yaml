@@ -1,0 +1,59 @@
+---
+# Software Unit Requirements for the SpeechModelService Unit
+#
+# The SpeechModelService unit lists and downloads speech models through the Speech library's model catalog, which
+# is filled with the Sherpa models and uses the library's default model store that is shared with other DEMA
+# Consulting applications. Failures are returned as results and messages, never thrown.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        sections:
+          - title: SpeechModelService Requirements
+            requirements:
+              - id: CanvasPilot-SpeechModelService-ListModels
+                title: >-
+                  The SpeechModelService shall list the models of the Speech library's catalog, filled with the
+                  Sherpa models, with each model's role, parameters, and install state from the shared per-user
+                  model store, and shall create the catalog only when it is first needed.
+                justification: |
+                  The Speech page offers the models that exist and shows which are installed. A store shared with
+                  other DEMA Consulting applications means a model downloaded once is available to all of them,
+                  and creating the catalog on demand keeps application startup free of file system work.
+                children:
+                  - CanvasPilot-OTS-Speech-ListSherpaModels
+                tests:
+                  - SpeechModelService_Enumerate_CatalogWithModels_ListsModelsWithState
+                  - SpeechModelService_Catalog_IsCreatedOnFirstUseOnly
+
+              - id: CanvasPilot-SpeechModelService-DownloadModels
+                title: >-
+                  The SpeechModelService shall download, verify, and install a model through the catalog,
+                  pass the transfer progress to its caller, stop when the caller cancels, and return how the
+                  download ended as installed, canceled, or failed.
+                justification: |
+                  Models are large and are downloaded when the user asks. Progress and cancellation keep the
+                  user in control, and an outcome the page can show lets it tell an installed model from a
+                  canceled or failed download.
+                children:
+                  - CanvasPilot-OTS-Speech-DownloadModels
+                tests:
+                  - SpeechModelService_DownloadAsync_CancelledToken_ReturnsCanceled
+                  - SpeechModelDownloadReport_IsInstalled_OnlyForInstalledStatus
+                  - SpeechModelService_InvalidArguments_Throw
+
+              - id: CanvasPilot-SpeechModelService-ReportFailuresAsResults
+                title: >-
+                  The SpeechModelService shall return a catalog that cannot be read, a download that does not
+                  install the model, and use after disposal as results with an explanation, naming the reason
+                  for each outcome the library reports, record them in the log, and not throw.
+                justification: |
+                  The model store is files in the user's profile and downloads cross the network, so a blocked
+                  network, a bad checksum, or an unreadable store are ordinary events. Returning them with the
+                  library's reason lets the page explain the problem beside the model and carry on.
+                tests:
+                  - SpeechModelService_Enumerate_CatalogCannotBeCreated_ReturnsUnavailableWithProblem
+                  - SpeechModelService_DownloadAsync_UnknownModel_ReturnsFailedWithMessage
+                  - SpeechModelService_DescribeFailure_EachOutcome_GivesReasonAndDetail
+                  - SpeechModelService_Dispose_RefusesFurtherUseWithResults

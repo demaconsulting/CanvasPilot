@@ -1,0 +1,57 @@
+---
+# Software Unit Requirements for the DeviceSelection Unit
+#
+# The DeviceSelection unit is the view model and view of the audio device pickers on the Speech settings page: a
+# capture and a playback list, each with the system default first. Devices are chosen and stored by name.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        sections:
+          - title: DeviceSelection Requirements
+            requirements:
+              - id: CanvasPilot-DeviceSelection-ChooseDevicesByName
+                title: >-
+                  The DeviceSelection shall offer the system default and each reported capture and playback
+                  device, select the stored devices by name, keep a stored device that is not connected selected
+                  and marked as not connected, and report the chosen names, and shall read the devices only when
+                  loaded.
+                justification: |
+                  The device name is the only stable identity the audio library gives a device, so it is what is
+                  stored. A headset that is unplugged must not silently lose the user's choice, and reading
+                  devices only when the page loads keeps the audio system untouched at startup.
+                tests:
+                  - DeviceSelectionViewModel_New_OffersSystemDefaultOnlyAndDoesNotEnumerate
+                  - DeviceSelectionViewModel_Load_StoredDevicesPresent_SelectsThemByName
+                  - DeviceSelectionViewModel_Load_EmptyNames_SelectSystemDefault
+                  - DeviceSelectionViewModel_Load_StoredDeviceNotConnected_StaysSelectedAndMarked
+                  - DeviceSelectionViewModel_New_NullService_Throws
+                  - SpeechSettingsPageView_LoadedSettings_ShowDevicesModelsAndParameters
+
+              - id: CanvasPilot-DeviceSelection-ExplainMissingDevices
+                title: >-
+                  The DeviceSelection shall tell the user in text beside each list when no device of that kind
+                  was found and when the audio system could not be used, and shall keep the system default
+                  available.
+                justification: |
+                  An empty list with no explanation looks like a defect. Saying that no device was found, or why
+                  the audio system is unusable, tells the user what to do, and the default keeps the setting
+                  usable on any machine.
+                tests:
+                  - DeviceSelectionViewModel_Load_NoDevices_ExplainsAndKeepsDefault
+                  - DeviceSelectionViewModel_Load_AudioSystemUnavailable_ShowsProblem
+                  - SpeechSettingsPageView_NothingAvailable_ShowsExplanations
+
+              - id: CanvasPilot-DeviceSelection-RefreshDevices
+                title: >-
+                  The DeviceSelection shall, on request, make the audio system scan for changed hardware and list
+                  the devices again, keeping the user's choices and showing the reason when the scan is refused.
+                justification: |
+                  Devices are attached while the application runs. A refresh that keeps the choices lets the user
+                  plug in a headset and select it without losing other entries, and a refused scan is explained
+                  instead of ignored.
+                tests:
+                  - DeviceSelectionViewModel_Refresh_KeepsChoicesAndShowsNewDevices
+                  - DeviceSelectionViewModel_Refresh_Refused_ShowsProblem
+                  - SpeechSettingsPageView_RefreshDevicesButton_ScansAndShowsNewDevice

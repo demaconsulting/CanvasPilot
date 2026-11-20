@@ -1,0 +1,25 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.SpeechSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.SpeechSubsystem.SpeechSettingsPageView"
+             x:DataType="vm:SpeechSettingsPageViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="16" Margin="0,0,12,0">
+
+      <ContentControl AutomationProperties.AutomationId="SpeechDevices"
+                      Content="{Binding Devices}" />
+
+      <ContentControl AutomationProperties.AutomationId="SpeechModels"
+                      Content="{Binding Models}" />
+
+      <ContentControl AutomationProperties.AutomationId="SpeechSttParameters"
+                      Content="{Binding SttParameters}" />
+
+      <ContentControl AutomationProperties.AutomationId="SpeechTtsParameters"
+                      Content="{Binding TtsParameters}" />
+
+    </StackPanel>
+  </ScrollViewer>
+
+</UserControl>

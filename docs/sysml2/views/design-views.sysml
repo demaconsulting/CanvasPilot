@@ -53,6 +53,12 @@ package CanvasPilot {
         render asInterconnectionDiagram;
     }
 
+    view SpeechSubsystemView {
+        expose SpeechSubsystem;
+        expose SpeechSubsystem::*;
+        render asInterconnectionDiagram;
+    }
+
     view UtilitiesSubsystemView {
         expose UtilitiesSubsystem;
         expose UtilitiesSubsystem::*;

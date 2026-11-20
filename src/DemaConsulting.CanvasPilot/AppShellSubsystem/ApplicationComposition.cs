@@ -22,6 +22,7 @@ using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -39,6 +40,11 @@ public sealed class ApplicationComposition : IDisposable
     private bool _disposed;
 
     /// <summary>
+    ///     The speech model service this composition created and must dispose, or <see langword="null" />.
+    /// </summary>
+    private readonly IDisposable? _ownedModelService;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ApplicationComposition" /> class.
     /// </summary>
     /// <param name="logger">The application log.</param>
@@ -47,13 +53,15 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="recentProjects">The recent projects list.</param>
     /// <param name="preview">The preview pane view model.</param>
     /// <param name="shell">The main window view model.</param>
+    /// <param name="ownedModelService">The speech model service the composition created, or <see langword="null" />.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
         ISettingsService settings,
         IProjectService projects,
         IRecentProjects recentProjects,
         PreviewPaneViewModel preview,
-        MainWindowShell shell)
+        MainWindowShell shell,
+        IDisposable? ownedModelService)
     {
         Logger = logger;
         Settings = settings;
@@ -61,6 +69,7 @@ public sealed class ApplicationComposition : IDisposable
         RecentProjects = recentProjects;
         Preview = preview;
         Shell = shell;
+        _ownedModelService = ownedModelService;
     }
 
     /// <summary>
@@ -128,6 +137,15 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="renderService">
     ///     Draws the image source files, or <see langword="null" /> for the CanvasNet-based service.
     /// </param>
+    /// <param name="audioDevices">
+    ///     Lists the audio devices for the Speech settings page, or <see langword="null" /> for the service over the
+    ///     speech library. Not used when <paramref name="settingsPages" /> is given.
+    /// </param>
+    /// <param name="speechModels">
+    ///     Lists and downloads the speech models for the Speech settings page, or <see langword="null" /> for the
+    ///     service over the speech library's shared model store, which the composition then disposes. Not used when
+    ///     <paramref name="settingsPages" /> is given.
+    /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -136,7 +154,9 @@ public sealed class ApplicationComposition : IDisposable
         IReadOnlyList<ISettingsPage>? settingsPages = null,
         IImageExporter? imageExporter = null,
         string? defaultProjectsFolder = null,
-        IImageRenderService? renderService = null)
+        IImageRenderService? renderService = null,
+        IAudioDeviceService? audioDevices = null,
+        ISpeechModelService? speechModels = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -151,11 +171,35 @@ public sealed class ApplicationComposition : IDisposable
         var preview = new PreviewPaneViewModel(renderer, explorer, scheduler, logger: logger);
         var workspace = new ProjectWorkspaceViewModel(explorer) { Preview = preview };
         var exporter = imageExporter ?? new ImageExporter(preview, renderer, logger);
-        IReadOnlyList<ISettingsPage> pages = settingsPages ?? [new AiProviderSettingsPageViewModel()];
+
+        // The speech services are created only when the standard pages are, and the one created here is the
+        // composition's to dispose; it touches the model store and the audio system only when the Speech page loads.
+        IDisposable? ownedModelService = null;
+        IReadOnlyList<ISettingsPage> pages;
+        if (settingsPages is not null)
+        {
+            pages = settingsPages;
+        }
+        else
+        {
+            if (speechModels is null)
+            {
+                var modelService = new SpeechModelService(logger);
+                ownedModelService = modelService;
+                speechModels = modelService;
+            }
+
+            pages =
+            [
+                new AiProviderSettingsPageViewModel(),
+                new SpeechSettingsPageViewModel(audioDevices ?? new AudioDeviceService(logger), speechModels),
+            ];
+        }
+
         var shell = new MainWindowShell(projects, recentProjects, settings, workspace, pages, exporter, defaultProjectsFolder);
 
         logger.Log(LogLevel.Info, "Application started.");
-        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell);
+        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, ownedModelService);
     }
 
     /// <inheritdoc />
@@ -169,6 +213,7 @@ public sealed class ApplicationComposition : IDisposable
         _disposed = true;
         Shell.Dispose();
         Preview.Dispose();
+        _ownedModelService?.Dispose();
         Logger.Log(LogLevel.Info, "Application stopped.");
     }
 }

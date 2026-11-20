@@ -8,9 +8,9 @@
 #   without opening a window
 #
 # NOTE: This file currently covers only the capabilities delivered so far (operational logging,
-# safe file handling, persisted user settings, AI provider configuration, projects, image preview and export, the
-# desktop shell, and application startup). Additional system requirements are added as further subsystems are
-# introduced.
+# safe file handling, persisted user settings, AI provider and speech configuration, projects, image preview and
+# export, the desktop shell, and application startup). Additional system requirements are added as further
+# subsystems are introduced.
 
 sections:
   - title: CanvasPilot Requirements
@@ -74,6 +74,23 @@ sections:
           - CanvasPilot-Settings-ConfigureAiProvider
         tests:
           - CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn
+
+      - id: CanvasPilot-System-ConfigureSpeech
+        title: >-
+          The application shall let the user choose and store the microphone, speakers, and speech models it
+          uses, download the models with visible progress, and shall keep working on machines without audio
+          hardware or network access.
+        tags: [system]
+        justification: |
+          Conversation by speech needs devices and models that depend on the user's machine. Choosing them
+          before speech is used lets the user set it up once, and the application must stay usable on machines
+          that cannot use speech, so every problem is explained instead of causing a failure.
+        children:
+          - CanvasPilot-Speech-ConfigureSpeechSettings
+          - CanvasPilot-Speech-DownloadSpeechModels
+          - CanvasPilot-Speech-ToleratePoorMachines
+        tests:
+          - CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun
 
       - id: CanvasPilot-System-ManageProjects
         title: >-

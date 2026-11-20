@@ -1,0 +1,75 @@
+---
+# Speech OTS Software Requirements
+#
+# Requirements for the DemaConsulting.Speech library and its DemaConsulting.Speech.Sherpa model package as used by
+# CanvasPilot at run time. The libraries are runtime dependencies, so each requirement is a child of the
+# requirement of the unit that uses the feature (AudioDeviceService, SpeechModelService, and ModelParameterEditor)
+# and is not a root requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: Speech Requirements
+        requirements:
+          - id: CanvasPilot-OTS-Speech-ListSherpaModels
+            title: >-
+              The Speech library, filled with the models of the Sherpa package, shall list speech-to-text and
+              text-to-speech models, each with a unique identifier, a display name, and an install state, reading
+              only the local model store.
+            justification: |
+              The Speech settings page offers the models that the library knows and shows which are installed.
+              Listing from the local store lets the page open without the network, and the identifiers are what
+              the settings file stores.
+            tags: [ots]
+            tests:
+              - Speech_SherpaCatalog_Enumerate_ListsRecognitionAndSynthesisModels
+
+          - id: CanvasPilot-OTS-Speech-DescribeModelParameters
+            title: >-
+              The Speech library shall describe the tunable parameters of each model as typed numeric, choice, or
+              boolean descriptors with identifiers, bounds or options, and defaults that are consistent.
+            justification: |
+              The parameter editor builds its controls from the descriptors alone, so it needs the kind of each
+              parameter and a default inside its bounds or options to show a valid value before the user changes
+              anything.
+            tags: [ots]
+            tests:
+              - Speech_SherpaCatalog_ModelParameters_AreTypedWithUsableBoundsAndDefaults
+
+          - id: CanvasPilot-OTS-Speech-DownloadModels
+            title: >-
+              The Speech library shall refuse to download a model that is not in its catalog and shall stop a
+              download with an operation-cancelled exception when the cancellation token given to it is
+              cancelled, leaving the model not downloaded.
+            justification: |
+              The settings dialog starts downloads on request and cancels them when the user cancels or closes
+              the dialog. The library must therefore name an unknown model in its refusal and honor the token
+              instead of finishing a transfer nobody wants. The transfer itself needs the network and is checked
+              manually, not by an automated test.
+            tags: [ots]
+            tests:
+              - Speech_SherpaCatalog_Download_UnknownModelOrCancelledToken_IsRefusedWithoutTransfer
+
+          - id: CanvasPilot-OTS-Speech-EnumerateAudioDevices
+            title: >-
+              The Speech library shall list the capture and playback devices by name in the direction they
+              belong to, and shall list none when the machine has none.
+            justification: |
+              The settings page offers the devices by name, which is the only stable identity the library gives
+              them, and stores the chosen name. An empty list is the honest answer on a machine without audio
+              hardware.
+            tags: [ots]
+            tests:
+              - Speech_AudioDeviceFactory_Enumerate_ReturnsNamedDevicesOrAnEmptyList
+
+          - id: CanvasPilot-OTS-Speech-ToleratePoorAudioSystems
+            title: >-
+              The Speech library shall create the default capture and playback devices, scan the audio
+              hardware again, and list devices afterwards without throwing on a machine without audio hardware.
+            justification: |
+              Many machines the application runs on, such as build servers and virtual machines, have no audio
+              hardware. The application relies on the library to answer honestly instead of failing, so that the
+              Speech settings page works everywhere.
+            tags: [ots]
+            tests:
+              - Speech_AudioDeviceFactory_DefaultDevicesAndRefresh_ToleratesMissingHardware

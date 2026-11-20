@@ -62,7 +62,10 @@ and are described here because they only join the units together.
 1. At startup `App` calls `ApplicationComposition.CreateDefault`, which creates the logger, the settings service
    (and loads the settings), the project service, the recent projects list, the project explorer with its image
    source filter and refresh scheduler, the render service, the preview pane, the workspace (which shows the
-   preview pane), the image exporter, and the shell, in that order, and logs the start.
+   preview pane), the image exporter, the settings pages (the AI Provider page and the Speech page over the speech
+   services, which use neither the audio system nor the model store until the Speech page is loaded), and the
+   shell, in that order, and logs the start. The speech model service that the composition creates is disposed
+   with the composition.
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. `App` records unhandled errors in the log and disposes the composition when the application exits.
 3. The shell follows the project service: when the open project changes it updates the title and shows the

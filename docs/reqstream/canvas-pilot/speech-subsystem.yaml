@@ -1,0 +1,77 @@
+---
+# Speech Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Speech subsystem
+# - The Speech subsystem spans AudioDeviceService (IAudioDeviceService.cs, AudioDeviceService.cs),
+#   SpeechModelService (ISpeechModelService.cs, SpeechModelService.cs), DeviceSelection
+#   (DeviceSelectionViewModel.cs, DeviceSelectionView.axaml), ModelCatalogPanel (ModelCatalogPanelViewModel.cs,
+#   ModelListItemViewModel.cs, ModelCatalogPanelView.axaml), ModelParameterEditor
+#   (ModelParameterEditorViewModel.cs, ParameterViewModels.cs, ModelParameterEditorView.axaml), and
+#   SpeechSettingsPage (SpeechSettingsPageViewModel.cs, SpeechSettingsPageView.axaml)
+# - Subsystem requirements describe the speech configuration behavior that satisfies the system-level speech
+#   requirement
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Speech-ConfigureSpeechSettings
+            title: >-
+              The Speech subsystem shall provide a Speech page in the settings dialog on which the user chooses
+              the microphone and speakers by name, the speech-to-text and text-to-speech models, and the
+              tunable settings of those models, and shall store the choices with the other settings.
+            justification: |
+              Speech input and output need a microphone, speakers, and models, and the choices belong with the
+              other settings so the user configures the application in one place. Models differ in what can be
+              tuned, so the settings of the chosen models are offered as the models describe them.
+            children:
+              - CanvasPilot-SpeechSettingsPage-ProvideSpeechPage
+              - CanvasPilot-SpeechSettingsPage-MapSpeechSettings
+              - CanvasPilot-SpeechSettingsPage-ShowParametersOfChosenModels
+              - CanvasPilot-AudioDeviceService-ListDevices
+              - CanvasPilot-DeviceSelection-ChooseDevicesByName
+              - CanvasPilot-DeviceSelection-RefreshDevices
+              - CanvasPilot-ModelParameterEditor-BuildEditorsFromModelParameters
+              - CanvasPilot-ModelParameterEditor-KeepValuesValid
+              - CanvasPilot-ModelParameterEditor-StoreValuesAsInvariantStrings
+            tests:
+              - SpeechSubsystem_ConfigureSpeech_DialogOk_StoresDevicesModelsAndParameters
+
+          - id: CanvasPilot-Speech-DownloadSpeechModels
+            title: >-
+              The Speech subsystem shall list the available speech models with their install state and download
+              a chosen model with visible progress, cancellation, and an explanation of failures, and shall
+              cancel downloads that are still running when the settings dialog closes.
+            justification: |
+              Speech models are large files that are not shipped with the application. The user must be able to
+              fetch them from the settings, see that the download is working, stop it, and be told why it failed,
+              and a download must never outlive the dialog that shows it.
+            children:
+              - CanvasPilot-SpeechModelService-ListModels
+              - CanvasPilot-SpeechModelService-DownloadModels
+              - CanvasPilot-ModelCatalogPanel-ChooseModels
+              - CanvasPilot-ModelCatalogPanel-DownloadModels
+              - CanvasPilot-ModelCatalogPanel-CancelDownloads
+              - CanvasPilot-SpeechSettingsPage-CancelDownloadsOnClose
+            tests:
+              - SpeechSubsystem_CancelDownloadsOnClose_DialogCancelled_StopsRunningDownload
+
+          - id: CanvasPilot-Speech-ToleratePoorMachines
+            title: >-
+              The Speech subsystem shall keep the settings dialog working, explain what is missing, and keep the
+              stored choices when the machine has no audio hardware, the audio system or the model store cannot
+              be used, or a download fails.
+            justification: |
+              Users run the application on machines of every kind, including ones without a microphone or with a
+              restricted network. Speech is optional, so a machine that cannot use it must still be able to
+              change every other setting without losing what was stored.
+            children:
+              - CanvasPilot-AudioDeviceService-ToleratePoorAudioSystems
+              - CanvasPilot-AudioDeviceService-UseAudioOnDemand
+              - CanvasPilot-SpeechModelService-ReportFailuresAsResults
+              - CanvasPilot-DeviceSelection-ExplainMissingDevices
+              - CanvasPilot-ModelCatalogPanel-ExplainCatalogProblems
+            tests:
+              - SpeechSubsystem_ToleratePoorMachines_NoAudioNoModelStore_DialogStillWorks

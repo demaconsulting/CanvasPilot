@@ -411,6 +411,117 @@ reviews:
       - "test/**/SettingsSubsystem/AiProviderSettingsPageTests.cs"
       - "test/**/AiProviderSettingsPageViewTests.cs"
 
+  # CanvasPilot - Speech
+  - id: CanvasPilot-Speech
+    title: Review of CanvasPilot Speech subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem.md"
+      - "docs/verification/canvas-pilot/speech-subsystem.md"
+      - "test/**/SpeechSubsystem/SpeechSubsystemTests.cs"
+
+  - id: CanvasPilot-Speech-AudioDeviceService
+    title: Review of CanvasPilot AudioDeviceService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/audio-device-service.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/audio-device-service.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/audio-device-service.md"
+      - "src/**/SpeechSubsystem/IAudioDeviceService.cs"
+      - "src/**/SpeechSubsystem/AudioDeviceService.cs"
+      - "test/**/SpeechSubsystem/AudioDeviceServiceTests.cs"
+
+  - id: CanvasPilot-Speech-SpeechModelService
+    title: Review of CanvasPilot SpeechModelService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/speech-model-service.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/speech-model-service.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/speech-model-service.md"
+      - "src/**/SpeechSubsystem/ISpeechModelService.cs"
+      - "src/**/SpeechSubsystem/SpeechModelService.cs"
+      - "test/**/SpeechSubsystem/SpeechModelServiceTests.cs"
+
+  - id: CanvasPilot-Speech-DeviceSelection
+    title: Review of CanvasPilot DeviceSelection unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/device-selection.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/device-selection.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/device-selection.md"
+      - "src/**/SpeechSubsystem/DeviceSelectionViewModel.cs"
+      - "src/**/SpeechSubsystem/DeviceSelectionView.axaml"
+      - "src/**/SpeechSubsystem/DeviceSelectionView.axaml.cs"
+      - "test/**/SpeechSubsystem/DeviceSelectionTests.cs"
+
+  - id: CanvasPilot-Speech-ModelCatalogPanel
+    title: Review of CanvasPilot ModelCatalogPanel unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/model-catalog-panel.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/model-catalog-panel.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/model-catalog-panel.md"
+      - "src/**/SpeechSubsystem/ModelCatalogPanelViewModel.cs"
+      - "src/**/SpeechSubsystem/ModelListItemViewModel.cs"
+      - "src/**/SpeechSubsystem/ModelCatalogPanelView.axaml"
+      - "src/**/SpeechSubsystem/ModelCatalogPanelView.axaml.cs"
+      - "test/**/SpeechSubsystem/ModelCatalogPanelTests.cs"
+
+  - id: CanvasPilot-Speech-ModelParameterEditor
+    title: Review of CanvasPilot ModelParameterEditor unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/model-parameter-editor.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/model-parameter-editor.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/model-parameter-editor.md"
+      - "src/**/SpeechSubsystem/ModelParameterEditorViewModel.cs"
+      - "src/**/SpeechSubsystem/ParameterViewModels.cs"
+      - "src/**/SpeechSubsystem/ModelParameterEditorView.axaml"
+      - "src/**/SpeechSubsystem/ModelParameterEditorView.axaml.cs"
+      - "test/**/SpeechSubsystem/ModelParameterEditorTests.cs"
+
+  - id: CanvasPilot-Speech-SpeechSettingsPage
+    title: Review of CanvasPilot SpeechSettingsPage unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/speech-settings-page.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/speech-settings-page.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/speech-settings-page.md"
+      - "src/**/SpeechSubsystem/SpeechSettingsPageViewModel.cs"
+      - "src/**/SpeechSubsystem/SpeechSettingsPageView.axaml"
+      - "src/**/SpeechSubsystem/SpeechSettingsPageView.axaml.cs"
+      - "test/**/SpeechSubsystem/SpeechSettingsPageTests.cs"
+      - "test/**/SpeechSubsystem/SpeechSubsystemFakes.cs"
+      - "test/**/SpeechSettingsPageViewTests.cs"
+      - "test/**/SpeechUiTestSupport.cs"
+
   # CanvasPilot - Utilities
   - id: CanvasPilot-Utilities
     title: Review of CanvasPilot Utilities subsystem architecture and interfaces
@@ -452,6 +563,14 @@ reviews:
       - "docs/design/ots/canvasnet.md"
       - "docs/verification/ots/canvasnet.md"
       - "test/**/CanvasNetTests.cs"
+
+  - id: OTS-Speech
+    title: Review of Speech OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/speech.yaml"
+      - "docs/design/ots/speech.md"
+      - "docs/verification/ots/speech.md"
+      - "test/**/SpeechTests.cs"
 
   - id: OTS-Avalonia
     title: Review of Avalonia and CommunityToolkit.Mvvm OTS verification tests

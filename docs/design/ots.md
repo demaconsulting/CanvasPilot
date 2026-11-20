@@ -37,8 +37,8 @@ manifest and invoked as single, stateless process calls from the CI pipeline and
 directly as a package reference by the test project. Cross-cutting conventions are applied
 consistently: a non-zero exit code from any OTS tool fails the build, and generated outputs are
 written to `generated/` folders or the `artifacts/` folder and are never committed. Runtime libraries, such as
-CanvasNet, are NuGet package references of the application; they are called in process from a single unit that
-wraps them, so the rest of the application and its tests do not depend on them directly.
+CanvasNet and Speech, are NuGet package references of the application; they are called in process from the unit or
+units that wrap them, so the rest of the application and its tests do not depend on them directly.
 
 ## Qualification Strategy
 
@@ -69,6 +69,7 @@ The following OTS items have integration design documentation:
 - ReviewMark (*reviewmark.md*) — file review enforcement tool
 - SarifMark (*sarifmark.md*) — SARIF report conversion tool
 - SonarMark (*sonarmark.md*) — SonarCloud quality report tool
+- Speech (*speech.md*) — runtime library for audio devices, speech models, and their parameters
 - SysML2Tools (*sysml2tools.md*) — architecture model validation and diagram rendering tool
 - VersionMark (*versionmark.md*) — tool-version documentation tool
 - WeasyPrint (*weasyprint.md*) — HTML-to-PDF conversion tool

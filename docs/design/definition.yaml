@@ -5,8 +5,10 @@ resource-path:
   - docs/design/canvas-pilot
   - docs/design/canvas-pilot/app-shell-subsystem
   - docs/design/canvas-pilot/logging-subsystem
-  - docs/design/canvas-pilot/preview-subsystem  - docs/design/canvas-pilot/project-subsystem
+  - docs/design/canvas-pilot/preview-subsystem
+  - docs/design/canvas-pilot/project-subsystem
   - docs/design/canvas-pilot/settings-subsystem
+  - docs/design/canvas-pilot/speech-subsystem
   - docs/design/canvas-pilot/utilities-subsystem
   - docs/design/ots
   - docs/images
@@ -36,6 +38,13 @@ input-files:
   - docs/design/canvas-pilot/settings-subsystem/settings-service.md
   - docs/design/canvas-pilot/settings-subsystem/settings-dialog.md
   - docs/design/canvas-pilot/settings-subsystem/ai-provider-settings-page.md
+  - docs/design/canvas-pilot/speech-subsystem.md
+  - docs/design/canvas-pilot/speech-subsystem/audio-device-service.md
+  - docs/design/canvas-pilot/speech-subsystem/speech-model-service.md
+  - docs/design/canvas-pilot/speech-subsystem/device-selection.md
+  - docs/design/canvas-pilot/speech-subsystem/model-catalog-panel.md
+  - docs/design/canvas-pilot/speech-subsystem/model-parameter-editor.md
+  - docs/design/canvas-pilot/speech-subsystem/speech-settings-page.md
   - docs/design/canvas-pilot/utilities-subsystem.md
   - docs/design/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/design/ots.md
@@ -47,6 +56,7 @@ input-files:
   - docs/design/ots/reviewmark.md
   - docs/design/ots/sarifmark.md
   - docs/design/ots/sonarmark.md
+  - docs/design/ots/speech.md
   - docs/design/ots/sysml2tools.md
   - docs/design/ots/versionmark.md
   - docs/design/ots/weasyprint.md

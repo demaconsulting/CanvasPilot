@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.SpeechSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.SpeechSubsystem.DeviceSelectionView"
+             x:DataType="vm:DeviceSelectionViewModel">
+
+  <StackPanel Spacing="6">
+
+    <TextBlock Text="Audio devices" FontWeight="SemiBold" />
+
+    <TextBlock Text="Microphone (capture)" Margin="0,4,0,0" />
+    <ComboBox AutomationProperties.AutomationId="SpeechCaptureDeviceComboBox"
+              HorizontalAlignment="Stretch"
+              ItemsSource="{Binding CaptureDevices}"
+              SelectedItem="{Binding SelectedCaptureDevice}" />
+    <TextBlock AutomationProperties.AutomationId="SpeechCaptureStatus"
+               TextWrapping="Wrap"
+               Opacity="0.7"
+               Text="{Binding CaptureStatus}" />
+
+    <TextBlock Text="Speakers (playback)" Margin="0,4,0,0" />
+    <ComboBox AutomationProperties.AutomationId="SpeechPlaybackDeviceComboBox"
+              HorizontalAlignment="Stretch"
+              ItemsSource="{Binding PlaybackDevices}"
+              SelectedItem="{Binding SelectedPlaybackDevice}" />
+    <TextBlock AutomationProperties.AutomationId="SpeechPlaybackStatus"
+               TextWrapping="Wrap"
+               Opacity="0.7"
+               Text="{Binding PlaybackStatus}" />
+
+    <Button AutomationProperties.AutomationId="SpeechRefreshDevicesButton"
+            Content="Refresh devices"
+            HorizontalAlignment="Left"
+            Command="{Binding RefreshCommand}" />
+
+  </StackPanel>
+
+</UserControl>

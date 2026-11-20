@@ -1,9 +1,9 @@
 # Introduction
 
-This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on
-CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging, Preview,
-Project, Settings, and Utilities subsystems; further subsystems are added as they are introduced. It covers local
-software items (systems, subsystems, and units) and the OTS software items they consume.
+This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on CanvasNet. The
+current build is an Avalonia desktop application that contains the AppShell, Logging, Preview, Project, Settings,
+Speech, and Utilities subsystems; further subsystems are added as they are introduced. It covers local software items
+(systems, subsystems, and units) and the OTS software items they consume.
 
 ## Purpose
 
@@ -25,6 +25,8 @@ Local items:
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
     **ProjectExplorer** units.
   - **Settings** subsystem: **SettingsService**, **SettingsDialog**, and **AiProviderSettingsPage** units.
+  - **Speech** subsystem: **AudioDeviceService**, **SpeechModelService**, **DeviceSelection**,
+    **ModelCatalogPanel**, **ModelParameterEditor**, and **SpeechSettingsPage** units.
   - **Utilities** subsystem: **PathHelpers** unit.
 
 OTS items:
@@ -37,6 +39,7 @@ OTS items:
 - **ReviewMark**: integration and usage design.
 - **SarifMark**: integration and usage design.
 - **SonarMark**: integration and usage design.
+- **Speech**: integration and usage design (runtime library).
 - **SysML2Tools**: integration and usage design.
 - **VersionMark**: integration and usage design.
 - **WeasyPrint**: integration and usage design.
@@ -53,7 +56,8 @@ The software structure is modeled in SysML2 under `docs/sysml2/` and rendered to
 below by SysML2Tools as part of the build pipeline. AI agents should query the SysML2 model
 directly (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose
 elsewhere in this document. The model captures the shipped system's runtime composition, including
-CanvasNet, the one runtime OTS item modeled so far (its units' dependencies point to it); the other OTS items
+CanvasNet and Speech, the runtime OTS items modeled so far (the dependencies of the units that use them point to
+them); the other OTS items
 listed in Scope above are documented separately (see `docs/design/ots.md`) and are formalized in the model with
 their own documents.
 
@@ -68,6 +72,7 @@ their own documents.
     - **PreviewSubsystem/** - image rendering with CanvasNet, preview pane, and PNG and clipboard export
     - **ProjectSubsystem/** - projects, recent projects, New Project dialog, and project explorer
     - **SettingsSubsystem/** - persisted settings, settings dialog, and settings pages
+    - **SpeechSubsystem/** - audio devices, speech models and their downloads, and the Speech settings page
     - **UtilitiesSubsystem/** - shared utilities subsystem
   - **DemaConsulting.CanvasPilot.Desktop/** - thin desktop head that starts the Avalonia application
 

@@ -79,4 +79,5 @@ sections:
               in tests without a window, and settings that are stored are in effect from the first moment.
             tests:
               - AppShellSubsystem_ComposeApplication_LoadsSettingsListsRecentProjectsAndLogs
+              - AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages
               - AppShellSubsystem_Create_NullArguments_Throw

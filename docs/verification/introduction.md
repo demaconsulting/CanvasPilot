@@ -2,7 +2,7 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on
 CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging, Preview,
-Project, Settings, and Utilities subsystems; further subsystems are added as they are introduced.
+Project, Settings, Speech, and Utilities subsystems; further subsystems are added as they are introduced.
 
 ## Purpose
 
@@ -38,6 +38,13 @@ This document covers the verification design for the following software items:
     - **SettingsService** — versioned per-user settings file
     - **SettingsDialog** — modal settings window hosting settings pages
     - **AiProviderSettingsPage** — AI provider settings page
+  - **Speech** subsystem
+    - **AudioDeviceService** — audio device listing through the Speech library
+    - **SpeechModelService** — speech model listing and downloading through the Speech library
+    - **DeviceSelection** — microphone and speaker pickers
+    - **ModelCatalogPanel** — speech model lists with downloads
+    - **ModelParameterEditor** — editors for the tunable settings of a model
+    - **SpeechSettingsPage** — speech settings page
   - **Utilities** subsystem
     - **PathHelpers** — safe path combination utilities
 
@@ -51,6 +58,7 @@ This document covers the verification design for the following software items:
 - **ReviewMark** — file review enforcement tool
 - **SarifMark** — SARIF report conversion tool
 - **SonarMark** — SonarCloud quality report tool
+- **Speech** — audio device and speech model library
 - **SysML2Tools** — architecture model validation and diagram rendering tool
 - **VersionMark** — tool-version documentation tool
 - **WeasyPrint** — HTML-to-PDF conversion tool
@@ -76,6 +84,7 @@ test/
     ├── PreviewSubsystem/
     ├── ProjectSubsystem/
     ├── SettingsSubsystem/
+    ├── SpeechSubsystem/
     └── UtilitiesSubsystem/
 ```
 

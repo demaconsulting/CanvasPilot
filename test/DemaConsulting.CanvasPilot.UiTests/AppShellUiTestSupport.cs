@@ -118,7 +118,14 @@ internal static class AppShellUiHelpers
         var projects = Directory.CreateDirectory(Path.Combine(root, "projects")).FullName;
         var logger = new RollingFileLogger(Path.Combine(root, "logs"));
         var settings = new SettingsService(Path.Combine(root, "settings"), logger);
-        return ApplicationComposition.Create(logger, settings, new NeverRefreshScheduler(), imageExporter: exporter, defaultProjectsFolder: projects);
+        return ApplicationComposition.Create(
+            logger,
+            settings,
+            new NeverRefreshScheduler(),
+            imageExporter: exporter,
+            defaultProjectsFolder: projects,
+            audioDevices: new FakeAudioDeviceService(),
+            speechModels: new FakeSpeechModelService());
     }
 
     /// <summary>

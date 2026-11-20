@@ -21,6 +21,7 @@
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -182,7 +183,7 @@ public sealed class AppShellSubsystemTests : IDisposable
         var firstRun = Compose();
         _dialogs.OnSettings = dialog =>
         {
-            var page = Assert.IsType<AiProviderSettingsPageViewModel>(Assert.Single(dialog.Pages));
+            var page = Assert.IsType<AiProviderSettingsPageViewModel>(dialog.Pages[0]);
             page.ModelName = "gpt-test";
             dialog.OkCommand.Execute(null);
         };
@@ -194,6 +195,32 @@ public sealed class AppShellSubsystemTests : IDisposable
 
         // Assert: the choice was stored and the next run has it
         Assert.Equal("gpt-test", secondRun.Settings.Current.AiProvider.ModelName);
+    }
+
+    /// <summary>
+    ///     Test that the settings dialog of the composed application hosts the AI Provider page and the Speech page,
+    ///     in that order.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages()
+    {
+        // Arrange: a composed application whose settings dialog is inspected and closed
+        var composition = Compose();
+        string[] titles = [];
+        Type? secondPageType = null;
+        _dialogs.OnSettings = dialog =>
+        {
+            titles = dialog.Pages.Select(page => page.Title).ToArray();
+            secondPageType = dialog.Pages[1].GetType();
+            dialog.CancelCommand.Execute(null);
+        };
+
+        // Act: open Settings
+        await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+
+        // Assert: both pages are hosted
+        Assert.Equal(["AI Provider", "Speech"], titles);
+        Assert.Equal(typeof(SpeechSettingsPageViewModel), secondPageType);
     }
 
     /// <summary>
@@ -241,7 +268,13 @@ public sealed class AppShellSubsystemTests : IDisposable
         Directory.CreateDirectory(Projects);
         var logger = new RollingFileLogger(Path.Combine(_tempRoot, "logs"));
         var settings = new SettingsService(Path.Combine(_tempRoot, "settings"), logger);
-        var composition = ApplicationComposition.Create(logger, settings, new FakeRefreshScheduler(), defaultProjectsFolder: Projects);
+        var composition = ApplicationComposition.Create(
+            logger,
+            settings,
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: Projects,
+            audioDevices: SpeechTestData.AudioDevices([], []),
+            speechModels: SpeechTestData.Models());
         composition.Shell.AttachDialogService(_dialogs);
         _compositions.Add(composition);
         return composition;

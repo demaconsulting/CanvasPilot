@@ -23,7 +23,8 @@ services, or display are required.
 - A project created through the shell is titled in the window, listed in the explorer, saved, closed, and reopened
   from the Recent Projects menu with its files.
 - Renaming and deleting the selected file through the workspace changes the project folder and the explorer list.
-- Choices made in the settings dialog opened from the shell are stored and in effect in the next run.
+- Choices made in the settings dialog opened from the shell are stored and in effect in the next run, and the
+  dialog hosts the AI Provider page followed by the Speech page.
 - The About dialog opened from the composed shell shows the application name, a version, and the four libraries.
 
 ### Test Scenarios
@@ -46,6 +47,10 @@ each change and no message was shown. This scenario is tested by
 **AppShellSubsystem_Settings_DialogOk_StoresChoicesForNextRun**: The user edits the AI provider page in the
 settings dialog opened from the shell and chooses OK; a new composition has the model name in effect. This scenario
 is tested by `AppShellSubsystem_Settings_DialogOk_StoresChoicesForNextRun`.
+
+**AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages**: The Settings command of a composed
+shell shows a dialog whose pages are titled AI Provider and Speech, in that order, and the second page is the
+Speech page. This scenario is tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
 
 **AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries**: The About command of a composed shell
 shows a dialog with the application name, a non-blank version, and four libraries. This scenario is tested by

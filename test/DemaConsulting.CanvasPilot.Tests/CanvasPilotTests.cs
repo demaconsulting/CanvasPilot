@@ -22,7 +22,9 @@ using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 using DemaConsulting.CanvasPilot.UtilitiesSubsystem;
+using DemaConsulting.Speech.ModelManagementSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -315,6 +317,66 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user can choose audio devices, speech models, and a model setting in the Speech page of the
+    ///     settings dialog, with the choices stored by device name and model identifier and restored on the next run,
+    ///     using substitute audio and model services so no hardware or download is needed.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun()
+    {
+        // Arrange: the application composed with substitute speech services, and a user who edits the Speech page
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot");
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var audio = SpeechTestData.AudioDevices(["Desk mic", "Headset mic"], ["Speakers", "Headset"]);
+        var models = SpeechTestData.Models(
+            SpeechTestData.Descriptor("stt-fast", SpeechModelRole.Recognition),
+            SpeechTestData.Descriptor("tts-warm", SpeechModelRole.Synthesis, SpeechModelState.Downloaded, SpeechTestData.Choice()));
+        var dialogs = new FakeDialogService
+        {
+            OnSettings = dialog =>
+            {
+                var page = (SpeechSettingsPageViewModel)dialog.Pages[1];
+                page.Devices.SelectedCaptureDevice = page.Devices.CaptureDevices.Single(device => device.Name == "Headset mic");
+                page.Devices.SelectedPlaybackDevice = page.Devices.PlaybackDevices.Single(device => device.Name == "Headset");
+                page.Models.SelectedSttModel = page.Models.SttModels.Single();
+                page.Models.SelectedTtsModel = page.Models.TtsModels.Single();
+                var voice = (ChoiceParameterViewModel)page.TtsParameters.Parameters[0];
+                voice.SelectedOption = voice.Options[0];
+                dialog.OkCommand.Execute(null);
+            },
+        };
+        var composition = ApplicationComposition.Create(
+            logger,
+            new SettingsService(settingsFolder, logger),
+            new FakeRefreshScheduler(),
+            audioDevices: audio,
+            speechModels: models);
+        composition.Shell.AttachDialogService(dialogs);
+
+        // Act: open Settings and choose OK, then restart the application and open Settings again
+        await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        composition.Dispose();
+        using var restarted = ApplicationComposition.Create(
+            logger,
+            new SettingsService(settingsFolder, logger),
+            new FakeRefreshScheduler(),
+            audioDevices: audio,
+            speechModels: models);
+        var restoredPage = new SpeechSettingsPageViewModel(audio, models, SpeechTestData.Inline);
+        restoredPage.Load(restarted.Settings.Current);
+
+        // Assert: the choices were stored by name and identifier, and the page of the next run shows them
+        var speech = restarted.Settings.Current.Speech;
+        Assert.Equal("Headset mic", speech.CaptureDevice);
+        Assert.Equal("Headset", speech.PlaybackDevice);
+        Assert.Equal("stt-fast", speech.SttModelId);
+        Assert.Equal("tts-warm", speech.TtsModelId);
+        Assert.Equal("a", speech.ModelParameters["tts-warm"]["voice"]);
+        Assert.Equal("Headset mic", restoredPage.Devices.CaptureDeviceName);
+        Assert.Equal("a", restoredPage.TtsParameters.Parameters[0].ValueText);
+    }
+
+    /// <summary>
     ///     Test that a user can work from the main window shell: create a project, see its image files in the
     ///     explorer, find it in the recent projects, and change a setting that survives a restart.
     /// </summary>
@@ -340,7 +402,13 @@ public sealed class CanvasPilotTests : IDisposable
                 dialog.OkCommand.Execute(null);
             },
         };
-        var composition = ApplicationComposition.Create(logger, new SettingsService(settingsFolder, logger), new FakeRefreshScheduler(), defaultProjectsFolder: documents);
+        var composition = ApplicationComposition.Create(
+            logger,
+            new SettingsService(settingsFolder, logger),
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: documents,
+            audioDevices: SpeechTestData.AudioDevices([], []),
+            speechModels: SpeechTestData.Models());
         composition.Shell.AttachDialogService(dialogs);
 
         // Act: create the project, add images, refresh the explorer, change a setting, and restart the application

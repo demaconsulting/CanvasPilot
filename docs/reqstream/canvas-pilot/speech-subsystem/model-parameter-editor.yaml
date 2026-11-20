@@ -1,0 +1,60 @@
+---
+# Software Unit Requirements for the ModelParameterEditor Unit
+#
+# The ModelParameterEditor unit is the view model and view that edit the tunable parameters of one speech model.
+# It builds numeric, choice, and boolean editors from the parameter descriptors the model declares, and reads
+# and writes the values as invariant-culture strings, which is how the settings file stores them.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        sections:
+          - title: ModelParameterEditor Requirements
+            requirements:
+              - id: CanvasPilot-ModelParameterEditor-BuildEditorsFromModelParameters
+                title: >-
+                  The ModelParameterEditor shall show one editor for each numeric, choice, or boolean parameter
+                  that the chosen model declares, in the declared order and at the declared default, skip a
+                  parameter of an unknown kind, and explain when no model is chosen or the model has no
+                  parameters.
+                justification: |
+                  Models differ in what can be tuned, and new models arrive with the speech library. Building the
+                  editors from the model's own description means no model has to be known in advance, and the
+                  explanations stop an empty area from looking like a defect.
+                children:
+                  - CanvasPilot-OTS-Speech-DescribeModelParameters
+                tests:
+                  - ModelParameterEditorViewModel_Model_DeclaresAllKinds_BuildsEditorsAtDefaults
+                  - ModelParameterEditorViewModel_Model_NoneOrWithoutParametersOrUnknownKind_ExplainsOrSkips
+                  - ModelParameterEditorViewModel_InvalidArguments_Throw
+                  - SpeechSettingsPageView_LoadedSettings_ShowDevicesModelsAndParameters
+
+              - id: CanvasPilot-ModelParameterEditor-KeepValuesValid
+                title: >-
+                  The ModelParameterEditor shall keep every value inside what the model declared: a number is
+                  clamped to its range and rounded when it must be whole, a number that is not finite is
+                  ignored, a choice accepts only a declared option, and a stored text that is not a value is
+                  ignored.
+                justification: |
+                  Values come from controls, from the settings file, and from a model that may have changed since
+                  they were stored. A value the model did not declare could break speech synthesis later, so
+                  invalid input is turned away where it enters.
+                tests:
+                  - NumericParameterViewModel_Value_OutOfRangeOrFractionOrNotFinite_IsConstrained
+                  - ChoiceParameterViewModel_SelectedOption_UnknownOrNull_IsIgnored
+                  - ModelParameterEditorViewModel_SetValues_UnknownOrInvalid_AreIgnored
+                  - ModelParameterEditorViewModel_SetValues_OutOfRangeNumber_IsClamped
+
+              - id: CanvasPilot-ModelParameterEditor-StoreValuesAsInvariantStrings
+                title: >-
+                  The ModelParameterEditor shall write the value of each parameter as an invariant-culture string,
+                  such as 2.5, an option value, or true or false, whatever the user's culture is, and shall
+                  restore the same values from those strings.
+                justification: |
+                  The settings file is shared by every culture the application runs in and may be copied between
+                  machines. Culture-independent text means a value written on one machine reads back unchanged
+                  on another.
+                tests:
+                  - ModelParameterEditorViewModel_GetValues_GermanCulture_WritesInvariantStrings
+                  - ModelParameterEditorViewModel_GetSetValues_RoundTrips
