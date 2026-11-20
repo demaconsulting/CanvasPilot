@@ -1,14 +1,14 @@
 # Introduction
 
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
-CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. It is,
-for now, the application shell: folder-based projects, an explorer of the project's image source files, a
-preview of the selected file that is drawn by CanvasNet, PNG export and copy to the clipboard, persisted settings with
-AI provider and speech choices, the message composer with attachments, marks, and dictation, the chat panel with its
-transcript and payload inspector, and the installer. The AI agent that will answer the messages and use the stored
-choices is not part of this
-version. The document covers local software items (systems, subsystems, and units) and the OTS software items they
-consume.
+CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. It
+provides folder-based projects, an explorer of the project's image source files, a preview of the selected file that
+is drawn by CanvasNet, PNG export, copy to the clipboard, and drag-out of the shown picture, persisted settings with
+AI provider and speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders,
+and pictures, and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload
+inspector, and the installer. Messages are composed and sent without an agent: the AI agent that will answer them and
+use the stored choices is out of scope of this version. The document covers local software items (systems, subsystems,
+and units) and the OTS software items they consume.
 
 ## Purpose
 
@@ -58,9 +58,9 @@ The following topics are out of scope:
 
 - Design documents are not produced for the test projects, the executable project that starts the application, the
   installer project (which is covered by the WiX Toolset OTS design), or the build pipeline CI configuration
-- The AI agent that answers the messages is not part of this increment; the settings that it will read are
-  designed (see the *AI Provider Seam* section of the system design). The chat panel is built by the composition root
-  but is placed in the main window, with the Edit menu and the talk key, by a later step
+- The AI agent that answers the messages is not part of this version; the settings that it will read are
+  designed (see the *AI Provider Seam* section of the system design), and the payload that it will receive is built
+  and shown for every sent message, but nothing reads it and no answer comes back
 - The internal design of OTS software items is excluded; only integration and usage design is documented
 
 ## Software Structure
@@ -79,16 +79,19 @@ uses](SoftwareStructureView.svg)
 ## Architecture
 
 The next diagram shows how the parts fit together at run time. The small executable project only starts the Avalonia
-application. The application library holds the subsystems: the AppShell subsystem builds every unit in one place (the
-composition root) and hosts the others; Preview follows the file selected in the Project explorer, and Speech adds a
-page to the Settings dialog, as the arrows between neighbors show; every subsystem logs through Logging, and the
+application. The application library holds the subsystems: the AppShell subsystem builds every unit in one place
+(the composition root) and hosts the others, and nothing else refers to it. The Chat subsystem is the panel in which the
+user converses; it uses the Composer subsystem (the message, its undo steps, and the attachments), the Annotation
+subsystem (marks on the picture), the Payload subsystem (the message that is sent), and the Speech subsystem
+(dictation). Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in
+the Project explorer; Speech also adds a page to the Settings dialog. Every subsystem logs through Logging, and the
 subsystems that build file locations use Utilities. The third-party items are used inside the library, and the
 application reads and writes only the local data in the bottom row. Section *Architecture* of the system design
-explains the dependencies between the subsystems, including why AppShell depends on Preview and not the reverse.
+explains the dependencies between the subsystems, which run one way, and why no subsystem refers to AppShell.
 
 ![Architecture of CanvasPilot: the desktop head starts the application library, whose AppShell subsystem builds and
-hosts the Project, Preview, Settings, and Speech subsystems above Logging and Utilities, with the third-party items
-and the local data the application uses](architecture.svg)
+hosts the eleven subsystems, from Chat and Composer down to Logging and Utilities, with the third-party items and the
+local data the application uses](architecture.svg)
 
 ## Folder Layout
 

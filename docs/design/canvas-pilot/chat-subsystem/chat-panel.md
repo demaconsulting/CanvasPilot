@@ -96,5 +96,5 @@ without a payload, does nothing. A failed or cancelled task of the talk button i
 
 - The composition root (`ApplicationComposition`) builds the panel over the composer, the registry, the layer, the mark
   picture composer, and the dictation service, holds it as `Chat`, and disposes it.
-- The main window, in a later step, places the view in its workspace and sets `InspectorLauncher` to itself; the talk
+- The main window places the view in the chat column of its workspace and sets `InspectorLauncher` to itself; the talk
   key of the window calls `BeginPushToTalkAsync` and `EndPushToTalkAsync` on the panel.

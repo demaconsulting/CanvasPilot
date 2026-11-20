@@ -7,7 +7,7 @@
 #   of the messages that were sent, the composer below it with the buttons that send and that listen while held, the
 #   joining of the marks on the picture to the message, and the window that shows exactly what the assistant would
 #   receive for a message. It uses the Composer, Annotation, Payload, and Speech subsystems and holds none of their
-#   rules; it does not depend on the application shell and is not yet placed in the main window
+#   rules; it does not depend on the application shell, which places it in the chat column of the main window
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:

@@ -61,7 +61,7 @@ render service that encodes it), and uses CanvasNet to draw the marks.
 
 ### Design
 
-**The payload is a contract.** The payload is the input of the assistant that is added in a later increment, so it is
+**The payload is a contract.** The payload is the input of the assistant that is added later, so it is
 made of plain, immutable values with a version, not of the objects of the user interface or of the composer. A reader
 that is added later depends on this subsystem and on nothing of the chat. A change that a reader would notice changes
 the version.

@@ -3,7 +3,8 @@
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
 AppShell, Annotation, Chat, Composer, Logging, Payload, Preview, Project, Settings, Speech, and Utilities subsystems;
-further subsystems, such as the AI agent, are added as they are introduced.
+the AI agent that will answer the messages is not part of this version and is added as a further subsystem when it is
+introduced.
 
 ## Purpose
 
@@ -52,6 +53,7 @@ This document covers the verification design for the following software items:
     - **ImageRenderService** — background drawing of image source files with CanvasNet and PNG encoding
     - **PreviewPane** — preview of the selected file with busy, error, and note display
     - **ImageExporter** — PNG file and clipboard export of the shown picture
+    - **ImageDragSource** — the shown picture as a PNG file, ready to be dragged into another program
   - **Project** subsystem
     - **ProjectService** — project folders and versioned project files
     - **RecentProjects** — most-recently-used project list
@@ -97,9 +99,8 @@ The following topics are out of scope:
 - Verification documents are not produced for the test projects themselves — they are the
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
-- The AI agent is not part of this increment, and so is not verified; only the stored settings that it will read are.
-  The chat panel is verified on its own; its place in the main window, the Edit menu, and the talk key are added by a
-  later step
+- The AI agent is not part of this version, and so is not verified; the messages are composed and sent without an
+  agent, and only the stored settings that the agent will read, and the payload that it will receive, are verified
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified
@@ -147,8 +148,10 @@ Each requirement is verified at the level of the item that owns it:
 
 Checks that cannot be automated are described in the verification document of the item they concern and are performed
 before each release: the installed package (install, upgrade, shortcut, closing a running instance, and the native
-speech files in the installed folder), the operating system file pickers and clipboard, a real speech model download,
-and dictating with a real microphone and a real model. They are not evidence for a requirement.
+speech files in the installed folder), the operating system file pickers, clipboard, and drag and drop (including
+dragging the shown picture into other programs and pasting a screenshot), input method composition in the message
+editor, a real speech model download, and dictating with a real microphone and a real model. The checklist is in the
+system verification document. They are not evidence for a requirement.
 
 ## Companion Artifact Structure
 

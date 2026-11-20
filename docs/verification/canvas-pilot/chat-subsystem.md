@@ -21,8 +21,8 @@ microphone, speech model, or special permission is needed.
 **Checks by hand before a release** (they need a person, a real microphone, and a real model; they are not evidence for
 a requirement):
 
-1. *Real dictation.* With a speech model downloaded and chosen on the Speech page and a microphone connected, place the
-   panel in the window (a later step) or run the panel in the test harness, hold the talk button, say a sentence, and
+1. *Real dictation.* With a speech model downloaded and chosen on the Speech page and a microphone connected, open a
+   project in the installed application, hold the talk button or the F8 key, say a sentence, and
    let go: the words appear while holding, one dictated block is added at the caret on release, one Ctrl+Z removes it,
    and the sent message shows the words with the dictated background.
 2. *Windows microphone privacy.* Turn off "Let desktop apps access your microphone" in the Windows privacy settings and

@@ -5,7 +5,8 @@
 ### Overview
 
 The `Project` subsystem manages the user's projects. A project is a folder that holds a
-`{name}.canvaspilot` JSON project file, a hidden `.canvaspilot` folder reserved for future application data,
+`{name}.canvaspilot` JSON project file, a hidden `.canvaspilot` folder for application data (the pictures that the user
+pastes into a message while it is a draft),
 and the image source files the user works on. Its boundary starts with names, folders, and project files
 chosen by the user and ends with those folders and files on disk, the recent projects list in the
 application settings, and the list of image source files shown to the user. It contains four units:

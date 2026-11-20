@@ -45,6 +45,7 @@ flowchart TD
         ImageRenderService
         PreviewPane
         ImageExporter
+        ImageDragSource
     end
     subgraph Project
         ProjectService
@@ -85,6 +86,7 @@ flowchart TD
     ComposerViewModel --> DictationService
     ComposerViewModel --> RollingFileLogger
     ComposerEditor --> ComposerViewModel
+    ComposerEditor --> AttachmentIntake
     ChatPanel --> ComposerViewModel
     ChatPanel --> ComposerEditor
     ChatPanel --> MarkRegistry
@@ -94,9 +96,11 @@ flowchart TD
     ChatPanel --> DictationService
     ChatPanel --> PayloadInspector
     ChatPanel --> RollingFileLogger
+    ChatPanel --> PathHelpers
     PayloadInspector --> PayloadDescriber
     PayloadInspector --> MessagePayload
     MainWindowShell --> PayloadInspector
+    MainWindowShell --> ComposerViewModel
     MarkRegistry --> ImageRenderService
     AnnotationOverlay --> MarkRegistry
     AnnotationOverlay --> PreviewPane
@@ -112,14 +116,24 @@ flowchart TD
     PayloadBuilder --> MarkImageComposer
     PayloadBuilder --> MessagePayload
     PayloadBuilder --> ComposerViewModel
+    PayloadBuilder --> ImageRenderService
     PayloadDescriber --> MessagePayload
+    MessagePayload --> ComposerDocument
+    MessagePayload --> MarkRegistry
+    MessagePayload --> MarkSourceResolver
+    MessagePayload --> ImageRenderService
     ImageRenderService --> RollingFileLogger
     PreviewPane --> ImageRenderService
     PreviewPane --> ProjectExplorer
     PreviewPane --> ProjectService
+    PreviewPane --> ImageDragSource
     PreviewPane --> RollingFileLogger
     ImageExporter --> ImageRenderService
     ImageExporter --> RollingFileLogger
+    ImageDragSource --> ImageRenderService
+    ImageDragSource --> ImageExporter
+    ImageDragSource --> PathHelpers
+    ImageDragSource --> RollingFileLogger
     ProjectService --> PathHelpers
     ProjectService --> RollingFileLogger
     RecentProjects --> SettingsService
@@ -152,6 +166,7 @@ flowchart TD
     MainWindowShell --> ImageExporter
     MainWindowShell --> AboutDialog
     ProjectWorkspace --> ProjectExplorer
+    ProjectWorkspace --> ChatPanel
 ```
 
 `PathHelpers` provides safe path combination and has no dependencies on other local items.
@@ -167,16 +182,19 @@ contribute pages. The AI provider choices are stored only; no agent or provider 
 current build, and one added later reads the stored choices through the service.
 
 `ProjectService` owns projects: a project is a folder holding a `{name}.canvaspilot` project file, a hidden
-`.canvaspilot` folder reserved for future application data, and the image source files. It is the only item that
-writes project files. `RecentProjects` keeps the list of recently opened project files in the application
-settings through `SettingsService`. `NewProjectDialog` collects and validates a project name and location, using
-`ProjectService`, and `ProjectExplorer` lists, watches, selects, renames, and deletes the image source files in
-the root of the open project's folder. The application supplies the folder picker, the image source filter, and
-the refresh scheduler that these units use, so the `Project` subsystem does not depend on the main window.
+`.canvaspilot` folder for application data (the pictures that the user pastes into a message while it is a draft), and
+the image source files, and, once a message with attachments is sent, an `attachments` folder. It is the only item that
+writes project files. `RecentProjects` keeps the list of recently opened project files in the application settings
+through `SettingsService`. `NewProjectDialog` collects and validates a project name and location, using
+`ProjectService`, and `ProjectExplorer` lists, watches, selects, renames, and deletes the image source files in the root
+of the open project's folder. The application supplies the folder picker, the image source filter, and the refresh
+scheduler that these units use, so the `Project` subsystem does not depend on the main window.
 
 `MainWindowShell` is the view model of the main window and the only item that talks to the user about projects and
-settings: it runs the File, Image, Tools, and Help commands and shows its dialogs through an `IDialogService` that
-the window implements. `ProjectWorkspace` holds the project explorer and the preview pane, and
+settings: it runs the File, Edit, Image, Tools, and Help commands and shows its dialogs through an `IDialogService` that
+the window implements. The Edit commands, Undo and Redo, act on the part of the window that has the focus (the
+message editor), and the shell starts and stops the chat panel's dictation while the talk key (F8) is held.
+`ProjectWorkspace` holds the project explorer, the preview pane, and, while a project is open, the chat column, and
 `AboutDialog` identifies the application. At startup the application builds all units in one place,
 `ApplicationComposition`, which system tests also use without a window.
 
@@ -199,7 +217,7 @@ downloaded, no microphone, an engine that will not start, or native speech files
 own explanation, never an exception. The native speech runtime arrives with the speech library's packages and is
 shipped beside the application and in the installer; `DictationService` checks that it is there before it loads an
 engine, because an engine started without it can crash the process, which no code can catch. The talk button of the chat
-panel calls the service; the talk key is added by a later step.
+panel calls the service, and so does the talk key, F8, through the main window.
 
 `ImageRenderService` is the only item that draws files: it calls the CanvasNet viewer library in the background,
 confined to the project folder, and returns the pixels, notes, or a coded error. Each picture it returns also says
@@ -294,8 +312,9 @@ the payload of the message, which is exactly what the assistant would receive, a
 payload: the annotated picture of every marked file and the area around every mark, each with a caption. The window
 cannot change anything. The panel does not know what shows the inspector; it asks an `IPayloadInspectorLauncher`, which
 `IDialogService` extends, so the main window shows it as a dialog. The `Chat` subsystem depends on `Composer`,
-`Annotation`, `Payload`, `Speech`, and `Logging`, and not on `AppShell`. Placing the panel in the main window, with the
-menu and the talk key, is a later step; until then the composition builds the panel and holds it, and nothing shows it.
+`Annotation`, `Payload`, `Speech`, and `Logging`, and not on `AppShell`. The main window places the panel in the chat
+column of the workspace, which is shown while a project is open, and the shell makes the panel the target of the Edit
+menu (through the composer) and of the talk key.
 
 ### Dependency Direction
 
@@ -327,17 +346,21 @@ code that shows it interpret.
 
 ### AI Provider Seam
 
-The chat that will use an AI provider is not part of this increment and the application holds no reference to any AI
+The agent that will answer the messages and use an AI provider is out of scope of this version: message composition
+exists without an agent. The user can compose, dictate, attach, mark, send, and inspect a message, and the sent message
+is kept in the transcript, but nothing reads it and no answer comes back. The application holds no reference to any AI
 provider library, the GitHub Copilot SDK, Ollama, or an agent framework. What exists is the stored choice: the
 `AiProviderSettings` of the settings file (provider, model name, context window, reasoning level, Ollama endpoint,
 Copilot command-line tool path, and the opt-in for unrestricted agent tools, which is off by default) and the
-`AiProviderSettingsPage` that edits it. The seam for the later increment is `ISettingsService`: an agent that is added
-as a separate subsystem reads the stored `AiProviderSettings` through the service and reacts to its `Changed` event,
-and no existing unit has to change. The agent is to be built detached from the user interface: it receives its settings,
-the project folder, and the user's text through its own interfaces, and answers through them, so that it can be tested
-without a window and replaced by another provider. The model-name text box will then be replaced by a list that the
-provider supplies, and the opt-in will decide whether the agent's tools are limited to the project folder. None of this
-exists yet, no interface is declared for it, and no requirement depends on it.
+`AiProviderSettingsPage` that edits it. The input of the agent is `MessagePayload`, which is built for every sent
+message and shown in the payload inspector. The seam for a later increment is `ISettingsService` for the choices and the
+`SentMessage` that `ComposerViewModel` raises with `MessageSent` for the message: an agent that is added as a separate
+subsystem reads the stored `AiProviderSettings` through the service and reacts to its `Changed` event, and no existing
+unit has to change. The agent is to be built detached from the user interface: it receives its settings, the project
+folder, and the message payload through its own interfaces, and answers through them, so that it can be tested without a
+window and replaced by another provider. The model-name text box will then be replaced by a list that the provider
+supplies, and the opt-in will decide whether the agent's tools are limited to the project folder. None of this exists
+yet, no interface is declared for it, and no requirement depends on it.
 
 ## External Interfaces
 
@@ -475,12 +498,15 @@ made in the project when the message is sent.
 **Main Window**: The application's window and menus.
 
 - *Direction*: Input and output.
-- *Type*: Avalonia window with File, Image, Tools, and Help menus, a project explorer, a preview area, and modal
-  dialogs (New Project, Settings, About, and message, confirmation, and prompt dialogs).
+- *Type*: Avalonia window with File, Edit, Image, Tools, and Help menus, a project explorer, a preview area with a
+  layer for marks, a chat column with the message composer and the transcript, and modal dialogs (New Project,
+  Settings, About, payload inspector, and message, confirmation, and prompt dialogs).
 - *Format*: The window title is `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`.
-  Every menu item has a name and an automation identifier that are the same.
-- *Constraints*: Menu items are enabled only when their command can run. Problems are shown in a dialog, never
-  as an unhandled failure.
+  Every menu item has a name and an automation identifier that are the same. The F8 key is the talk key: dictation
+  listens while it is held.
+- *Constraints*: Menu items are enabled only when their command can run; Undo and Redo act on the part of the window
+  that has the focus and are disabled when that part has nothing to undo. The chat column is shown only while a project
+  is open. Problems are shown in a dialog, never as an unhandled failure.
 
 ## Dependencies
 
@@ -489,9 +515,8 @@ The `Annotation`, `AppShell`, `Chat`, `Composer`, `Logging`, `Payload`, `Preview
 description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm, which are runtime
 third-party items (the `Composer` editor view also uses the AvaloniaEdit editing control, which is a runtime
 third-party item too; the other `Annotation`, `Chat`, and `Composer` units use base class library types and Avalonia
-only, and the `Payload`
-units base
-class library types and CanvasNet). The `ImageRenderService` unit draws files and encodes PNG with the
+only, and the `Payload` units base class library types and CanvasNet). The `ImageRenderService` unit draws files and
+encodes PNG with the
 `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a picture with
 the same library, and the `ProjectExplorer` unit uses its extension list to decide which files are image sources. The
 `AudioDeviceService`, `SpeechModelService`, and `DictationService` units list audio devices and speech models, download
@@ -598,9 +623,11 @@ files, watches the folder, and refreshes the list after file changes.
 
 At startup `App` asks `ApplicationComposition` to build the units: the logger, the settings service (whose settings
 are loaded at once), the project service, the recent projects list, the project explorer, the render service, the
-image drag source (which deletes the files of earlier drags), the
-preview pane, the workspace, the image exporter, and the shell. The `MainWindowView` is created over the shell and
-gives itself to the shell as the dialog service. From
+image drag source (which deletes the files of earlier drags), the preview pane, the workspace, the image exporter, the
+speech services with the dictation service, the shell, the mark registry, the mark image composer and payload builder,
+the composer (with its attachment store and intake), the annotation overlay, and the chat panel, which it places in the
+workspace and makes the target of the talk key. The `MainWindowView` is created
+over the shell and gives itself to the shell as the dialog service. From
 then on the user's menu choices become shell commands, which call the `Project` and `Settings` subsystems, show
 dialogs through the dialog service, and, when the open project changes, update the window title and open or close
 the project in the workspace. On exit `App` disposes the composition.
@@ -697,8 +724,9 @@ showing `PayloadInspectorView` as a dialog.
 - Settings pages shall be supplied to the settings dialog, never referenced by it.
 - The settings subsystem shall hold no reference to any AI provider SDK or client.
 - The project file shall carry a format version, and a file with a newer version shall never be rewritten.
-- The hidden `.canvaspilot` folder of a project is reserved for application data; the project explorer shall
-  never list its content and nothing else shall be written there until a requirement defines it.
+- The `.canvaspilot` folder of a project is for application data; the project explorer shall never list its content,
+  and only `AttachmentStore` shall write there, only the pictures that the user pastes into a message
+  (`.canvaspilot/attachments`).
 - The project subsystem shall not depend on the main window; the folder picker and refresh scheduler are
   supplied by the application.
 - View models shall talk to the user only through `IDialogService`, which the main window implements, so no

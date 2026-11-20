@@ -4,9 +4,9 @@
 
 ### Overview
 
-The `Chat` subsystem is the panel in which the user converses with the assistant that a later increment adds: above, the
-transcript of the messages that were sent in the open project; below, the composer's editing control; and under it the
-button that sends and the button that listens while it is held. It also joins the layer on which the user marks the
+The `Chat` subsystem is the panel in which the user composes the messages for the assistant that is added later: above,
+the transcript of the messages that were sent in the open project; below, the composer's editing control; and under it
+the button that sends and the button that listens while it is held. It also joins the layer on which the user marks the
 picture to the message, so that every mark becomes a chip in it, and it opens the window that shows exactly what the
 assistant would receive for a message. It holds no rule of editing, sending, dictation, marking, or payload building;
 those belong to the `Composer`, `Speech`, `Annotation`, and `Payload` subsystems, and the `Chat` subsystem connects what
@@ -17,8 +17,8 @@ The subsystem contains two units: `ChatPanel`, the panel with the transcript, th
 editing view, and the chips), `Annotation` (the registry and the layer of marks), `Payload` (the payload, its describer,
 and the composer of mark pictures), `Speech` (dictation, only to prepare it), and `Logging`, and on nothing else of the
 application; in particular it does not depend on `AppShell`. `AppShell` depends on `Chat`: the composition root builds
-the panel, and the main window shows the inspector. The panel is not placed in the main window yet; that, the Edit menu,
-and the talk key are done by a later step.
+the panel, and the main window shows the inspector and places the panel in the chat column of the workspace. The Edit
+menu and the talk key of the main window reach the composer and the panel through the seams that `Composer` owns.
 
 ### Interfaces
 

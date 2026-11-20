@@ -2,9 +2,9 @@
 # Software Unit Requirements for the ProjectService Unit
 #
 # The ProjectService unit creates, opens, saves, and closes projects. A project is a folder holding a
-# {name}.canvaspilot JSON project file and a hidden .canvaspilot data folder reserved for future application
-# data. The ProjectDocument, ProjectInfo, and ProjectResult records and the IProjectService interface are part
-# of this unit, as are the rules for project and file names.
+# {name}.canvaspilot JSON project file and a hidden .canvaspilot data folder for application data (the pictures
+# that the user pastes into a message while it is a draft). The ProjectDocument, ProjectInfo, and ProjectResult
+# records and the IProjectService interface are part of this unit, as are the rules for project and file names.
 
 sections:
   - title: CanvasPilot Requirements

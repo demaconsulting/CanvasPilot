@@ -67,4 +67,4 @@ it. No I/O is performed.
 #### Callers
 
 - **ComposerEdit** and **ComposerHistory** - read slices to know what an edit removes, and apply and revert edits.
-- The attachment and chat units of later steps build chips and read snapshots.
+- The attachment, payload, and chat units build chips and read snapshots.

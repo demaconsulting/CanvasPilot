@@ -5,9 +5,11 @@ This document contains the requirements for the CanvasPilot project.
 ## Purpose
 
 CanvasPilot is an AI-powered desktop application that helps users create drawings and diagrams with the
-CanvasNet library. The current build is the Avalonia application shell: folder-based projects, an explorer and a
-preview of the project's image source files, PNG export and copy, persisted settings with AI provider and speech
-choices, and a Windows installer. The AI chat is added in a later increment.
+CanvasNet library. The current build is the Avalonia application for Windows: folder-based projects, an explorer and a
+preview of the project's image source files, PNG export, copy, and drag-out of the picture, persisted settings with
+AI provider and speech choices, a chat panel in which messages are composed (typed and dictated text, attached files,
+folders, and pictures, and marks drawn on the picture) and sent into a payload that can be inspected, and a Windows
+installer. The AI agent that will answer the messages is not part of this version.
 
 ## Scope
 

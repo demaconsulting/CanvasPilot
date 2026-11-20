@@ -19,9 +19,10 @@ Dictation is verified at this level over the speech library's own recognition pi
 written in managed code and a recorded sound file for the microphone, so no native speech runtime, model, or microphone
 is needed. Dictation with a real microphone and a real model, the native speech files in an installed application, and
 the reaction of the application to a blocked microphone or missing native files need a person and an installed package;
-they are checked by hand before each release as listed under *Manual Verification* in the verification of the Speech
-subsystem and of the Chat subsystem (the talk button of the chat panel with a real microphone and model, and the Windows
-microphone privacy setting), together with the checks of the installed package, and are not evidence for a requirement.
+they are checked by hand before each release as listed under *Manual Verification* below and in the verification of the
+Speech subsystem and of the Chat subsystem (the talk button of the chat panel with a real microphone and model, and the
+Windows microphone privacy setting), together with the checks of the installed package, and are not evidence for a
+requirement.
 
 ## Test Environment
 
@@ -89,6 +90,44 @@ services, or display is required.
   version; installing it is checked by hand before each release.
 - The main window shell creates a project, lists its image files, finds it in the recent projects after a
   restart, and keeps a changed setting across the restart.
+
+## Manual Verification
+
+These checks need a person, a physical machine, and programs or hardware that the automated tests cannot stand in for.
+They are performed on an installed package before each release and are not evidence for a requirement. **None of them
+has been performed on the machine on which this version was built and tested**: the automated tests prove the
+application's own behavior with substitutes (a managed recognition backend and a recorded sound file instead of a
+microphone, headless pointer and keyboard events instead of an operating system drag, and Avalonia's own clipboard
+and data objects instead of the Windows ones), so what follows is unverified until someone ticks it off. The detailed
+steps are in the verification of the unit or subsystem named at each check.
+
+1. *Real dictation.* On a machine with a microphone, install the MSI, download a speech-to-text model on the Speech
+   page, choose it and the microphone, open a project, and dictate with both the talk button and the F8 key: the words
+   show while the control is held, one dictated block is added at the caret on release, and one undo removes it. Also
+   try the reasons: no model chosen, a model not downloaded, the microphone unplugged. (Verification of the `Speech` and
+   `Chat` subsystems.)
+2. *Windows microphone privacy.* Turn off "Let desktop apps access your microphone" and hold the talk button: the panel
+   says that the microphone cannot be used and the application keeps running. (Verification of the `Chat` subsystem.)
+3. *Dragging the shown picture out.* Drag the shown picture into Windows Explorer, a PowerPoint slide, the body of an
+   Outlook message, and Paint: each should receive the picture, as a file or as a bitmap. Which of the two formats each
+   program takes is not known, because the drag was never tried against these programs; if a program refuses the
+   picture, record which, since the drag then needs another format. Also check that a drop on a program that refuses it
+   leaves the application working. (Verification of `ImageDragSource`.)
+4. *Real clipboard.* Press Print Screen or use the Snipping Tool, paste into the message, and check that a picture chip
+   shows the screenshot and is sent; copy files in Explorer and paste: file chips; copy text from another program and
+   paste: text. Check the same with a drag of a file, a folder, and a picture from Explorer and from a browser onto
+   the message. (Verification of `ComposerEditor`.)
+5. *Real input method.* With an input method that composes text (for example Japanese or Chinese), type into the
+   message with and without chips in it: composing shows in place, the committed text is one undo step, and chips are
+   not damaged. (Verification of `ComposerEditor`.)
+6. *Installed package.* Install, upgrade over an older version, start from the Start Menu shortcut, and close a running
+   instance by installing; and look at the installed folder, or the MSI file table (`Orca` or the Windows Installer
+   `File` table), for `sherpa-onnx-c-api.dll`, `onnxruntime.dll`, and `portaudio.dll` next to `CanvasPilot.exe`. The
+   build already fails when any of the three is missing from the published folder or the file table
+   (`Speech_NativeRuntimePublished`); this check confirms what a user gets. (Verification of the `Speech` subsystem and
+   of the WiX Toolset.)
+7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
+   the keyboard, and check the tool bar and the chips with a screen reader. (Verification of `AnnotationOverlay`.)
 
 ## Test Scenarios
 

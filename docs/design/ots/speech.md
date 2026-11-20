@@ -6,8 +6,8 @@ This document describes the integration and usage design for the `Speech` OTS so
 
 `DemaConsulting.Speech` is the DEMA Consulting library for speech recognition and synthesis, with its
 `DemaConsulting.Speech.Sherpa` package, which supplies the speech-to-text and text-to-speech models that run on the
-Sherpa speech engine. CanvasPilot converses with its user by speech: the Speech settings page uses the library for what
-the user must set up first, which audio devices to use and which models to download and how to tune them, and
+Sherpa speech engine. CanvasPilot lets its user dictate messages by speech: the Speech settings page uses the library
+for what the user must set up first, which audio devices to use and which models to download and how to tune them, and
 dictation uses it to turn what the user says into text. The two packages are pinned to one version in the application
 project. They are DEMA Consulting software from a separate repository and program, so they are treated as OTS, not as a
 shared package of this program.
