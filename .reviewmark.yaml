@@ -98,6 +98,50 @@ reviews:
     paths:
       - "docs/reqstream/canvas-pilot/**/*.yaml"
 
+  # CanvasPilot - Annotation
+  - id: CanvasPilot-Annotation
+    title: Review of CanvasPilot Annotation subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/annotation-subsystem.yaml"
+      - "docs/design/canvas-pilot/annotation-subsystem.md"
+      - "docs/verification/canvas-pilot/annotation-subsystem.md"
+      - "test/**/AnnotationSubsystem/AnnotationSubsystemTests.cs"
+
+  - id: CanvasPilot-Annotation-MarkRegistry
+    title: Review of CanvasPilot MarkRegistry unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/annotation-subsystem.md
+      - docs/reqstream/canvas-pilot/annotation-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/annotation-subsystem/mark-registry.yaml"
+      - "docs/design/canvas-pilot/annotation-subsystem/mark-registry.md"
+      - "docs/verification/canvas-pilot/annotation-subsystem/mark-registry.md"
+      - "src/**/AnnotationSubsystem/Mark.cs"
+      - "src/**/AnnotationSubsystem/MarkGeometry.cs"
+      - "src/**/AnnotationSubsystem/MarkRegistry.cs"
+      - "test/**/AnnotationSubsystem/AnnotationSubsystemFakes.cs"
+      - "test/**/AnnotationSubsystem/MarkRegistryTests.cs"
+
+  - id: CanvasPilot-Annotation-MarkSourceResolver
+    title: Review of CanvasPilot MarkSourceResolver unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/annotation-subsystem.md
+      - docs/reqstream/canvas-pilot/annotation-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/annotation-subsystem/mark-source-resolver.yaml"
+      - "docs/design/canvas-pilot/annotation-subsystem/mark-source-resolver.md"
+      - "docs/verification/canvas-pilot/annotation-subsystem/mark-source-resolver.md"
+      - "src/**/AnnotationSubsystem/MarkSourceResolver.cs"
+      - "src/**/AnnotationSubsystem/SourceElementReference.cs"
+      - "test/**/AnnotationSubsystem/MarkSourceResolverTests.cs"
+
   # CanvasPilot - AppShell
   - id: CanvasPilot-AppShell
     title: Review of CanvasPilot AppShell subsystem architecture, composition root, and interfaces

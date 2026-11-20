@@ -8,8 +8,9 @@
 #   without opening a window
 #
 # NOTE: The system requirements cover operational logging, safe file handling, persisted user settings, AI provider
-# and speech configuration, projects, image browsing and file management, preview and export, composing a message,
-# the desktop shell, the Windows installer, and application startup. The AI chat itself is not yet covered.
+# and speech configuration, projects, image browsing and file management, preview and export, marking pictures,
+# composing a message, the desktop shell, the Windows installer, and application startup. The AI chat itself is not yet
+# covered.
 
 sections:
   - title: CanvasPilot Requirements
@@ -169,33 +170,46 @@ sections:
       - id: CanvasPilot-System-BuildMessagePayload
         title: >-
           The application shall identify each picture that a chat message refers to by the file it was drawn from
-          and by fingerprints of that file and of the picture's pixels, and shall record where the diagram elements
-          and model anchors are in the picture, so that the message is tied to exactly what the user saw.
+          and by fingerprints of that file and of the picture's pixels, shall record where the diagram elements
+          and model anchors are in the picture, and shall tell, for each mark on the picture, which parts of the
+          source file lie under it, or that this kind of picture cannot say, so that the message is tied to exactly
+          what the user saw and pointed at.
         tags: [system]
         justification: |
           A message about a picture is only useful if the reader knows which picture it means. Files change while
           the user works, so a name alone is not enough: the exact file contents and pixels, and where the parts of
           a diagram are, let a later reader tell which version of the picture was meant and which parts of the
-          source the user pointed at.
+          source the user pointed at. Pointing at pixels alone leaves the reader to guess which node or bar was
+          meant, so the message names the parts under each mark where the picture knows them, and says plainly
+          where it does not.
         children:
           - CanvasPilot-Preview-ReportPictureFacts
+          - CanvasPilot-Annotation-FindSourceElements
         tests:
           - CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements
+          - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
 
       - id: CanvasPilot-System-MarkImage
         title: >-
           The application shall show the picture of the selected file with a layer over it, aligned with the
-          picture's pixels at every zoom, on which the user's marks on the picture are placed.
+          picture's pixels at every zoom, on which the user's marks on the picture are placed, and shall keep each
+          mark, numbered in the order the marks were made and with an optional short note, with the exact picture it
+          was made on, so that a mark never moves to another picture.
         tags: [system]
         justification: |
           Users point at parts of a picture to say what they mean. For a mark to mean the same part of the
           picture whatever size the window has or whether the picture is shrunk to fit, the layer must follow
-          the picture exactly. Later increments add the kinds of mark and how marks are kept with a message;
-          this requirement states the part of the capability that exists.
+          the picture exactly. When the file is edited and a new picture is shown, a mark that stayed where it was
+          would point at something else, so a mark belongs to the picture it was drawn on, and the numbers let the
+          user and the assistant talk about marks one by one. Later increments add drawing the marks with the
+          pointer; this requirement states the part of the capability that exists.
         children:
           - CanvasPilot-Preview-HostOverlay
+          - CanvasPilot-Annotation-KeepMarksOnTheirPicture
+          - CanvasPilot-Annotation-NumberMarks
         tests:
           - CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures
+          - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
 
       - id: CanvasPilot-System-DragImageOut
         title: >-

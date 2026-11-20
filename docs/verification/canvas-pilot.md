@@ -42,6 +42,9 @@ services, or display is required.
 - The shown picture of a diagram is identified by its file and by fingerprints of the file and the pixels, which
   change when the file is edited, and it locates the diagram's elements in picture pixels.
 - The preview pane has a layer over the shown picture that holds the content placed in it, beside every picture.
+- Marks drawn on the shown picture are numbered in order, keep their geometry in picture pixels and an optional note,
+  stay with the exact picture they were drawn on and are not shown on a picture of the edited file, and report the parts
+  of the diagram's source that lie under them.
 - The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
   earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
   the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
@@ -135,6 +138,13 @@ project that holds a 32 by 16 and an 8 by 8 SVG. Content is placed in the overla
 shows, which is the application's own pane. After the first SVG is selected the layer holds the content beside the 32
 pixel wide picture, and after the second SVG is selected it still holds the same content beside the 8 pixel wide
 picture. This scenario is tested by `CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures`.
+
+**CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture**: The composed application's user shows a
+two-node Mermaid diagram and draws a rectangle with a note around the node `Start`, and an arrow. The marks are numbered
+one and two, hold the shown picture, and the parts of the source under the rectangle include the node `Start`. After the
+diagram is edited and shown again, a third mark is drawn on the new picture and is number three. Each picture shows only
+its own marks while all three belong to the message. This scenario is tested by
+`CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture`.
 
 **CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile**: The composed application is started with a file of an
 earlier run in its drag folder, which is removed at start. Without a picture no file is offered. With a 32 by 16 SVG

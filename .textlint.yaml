@@ -59,6 +59,10 @@ words:
   - nestings
   - netstandard
   - Mvvm
+  - Barsky
+  - Liang
+  - Peucker
+  - Ramer
   - communitytoolkit
   - wixext
   - wixproj

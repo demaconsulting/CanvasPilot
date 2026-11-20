@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
@@ -410,6 +411,57 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Same(layer, pane.Overlay);
         Assert.Equal((true, 32), first);
         Assert.Equal((true, 8), second);
+    }
+
+    /// <summary>
+    ///     Test that a user who marks the shown diagram gets numbered marks that are pinned to the exact picture they were
+    ///     drawn on: they hold its pixels and fingerprints, they are not shown on the picture of the edited file, and the
+    ///     parts of the source under a mark are the ones the renderer reported for that picture.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var diagram = Path.Combine(folder, "flow.mmd");
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[End]\n", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        var before = composition.Preview.Image!;
+        var registry = new MarkRegistry();
+        var start = before.Positions.First(position => position is { Kind: "node", Text: "Start" }).Box!.Value;
+
+        // Act: draw two marks, the first around the node 'Start' with a note, edit the file, show the new picture, and
+        // draw a third mark
+        var first = registry.Add(before, MarkKind.Rectangle, [new RenderPoint(start.X - 2, start.Y - 2), new RenderPoint(start.X + start.Width + 2, start.Y + start.Height + 2)], "the start");
+        var second = registry.Add(before, MarkKind.Arrow, [new RenderPoint(1, 1), new RenderPoint(start.X + 1, start.Y + 1)]);
+        var found = MarkSourceResolver.Resolve(first);
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[Finish]\n", token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "other.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'/>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "other.svg"));
+        await composition.Preview.RenderCompletion;
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        var after = composition.Preview.Image!;
+        var third = registry.Add(after, MarkKind.Ellipse, [new RenderPoint(start.X, start.Y), new RenderPoint(start.X + start.Width, start.Y + start.Height)]);
+        var chips = new[] { first.Id, second.Id, third.Id };
+        composition.Dispose();
+
+        // Assert: numbered one to three; the first two hold the old picture, the third the new one; each picture shows
+        // only its own marks while all three belong to the message; the node was found under the first mark
+        Assert.Equal([1, 2, 3], new[] { first.Number, second.Number, third.Number });
+        Assert.Equal("the start", first.Note);
+        Assert.Same(before, first.Snapshot);
+        Assert.Same(after, third.Snapshot);
+        Assert.NotEqual(before.ContentHash, after.ContentHash);
+        Assert.Equal([first, second], registry.VisibleMarks(chips, before.SnapshotKey));
+        Assert.Equal([third], registry.VisibleMarks(chips, after.SnapshotKey));
+        Assert.Equal(3, registry.ActiveMarks(chips).Count);
+        Assert.Contains(found.Elements, element => element is { Kind: "node", Text: "Start" });
     }
 
     /// <summary>

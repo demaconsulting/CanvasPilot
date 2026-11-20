@@ -5,11 +5,15 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented are eight subsystems, `AppShell`, `Composer`, `Logging`, `Preview`, `Project`, `Settings`,
-`Speech`, and `Utilities`.
+software items documented are nine subsystems, `Annotation`, `AppShell`, `Composer`, `Logging`, `Preview`, `Project`,
+`Settings`, `Speech`, and `Utilities`.
 
 ```mermaid
 flowchart TD
+    subgraph Annotation
+        MarkRegistry
+        MarkSourceResolver
+    end
     subgraph AppShell
         MainWindowShell
         ProjectWorkspace
@@ -57,6 +61,9 @@ flowchart TD
     AttachmentStore --> PathHelpers
     AttachmentStore --> RollingFileLogger
     AttachmentStore --> ProjectService
+    MarkRegistry --> ImageRenderService
+    MarkSourceResolver --> MarkRegistry
+    MarkSourceResolver --> ImageRenderService
     ImageRenderService --> RollingFileLogger
     PreviewPane --> ImageRenderService
     PreviewPane --> ProjectExplorer
@@ -158,6 +165,17 @@ and, when the message is sent, copies the attachments from outside the project i
 all or none, within limits of 500 files and 200 MB for one message, with safe names that never replace another file,
 without following links. The units that show the message in an editing control are added later and build on these. No
 subsystem uses the `Composer` subsystem yet.
+
+`MarkRegistry` holds the marks that the user draws on the shown picture to say what they mean in a message. Each mark is
+pinned to the exact `RenderedImage` it was drawn on, numbered in the order the marks are made, and described by its
+shape, its geometry in the pixels of that picture in one normal form, and an optional note of one short line. A mark is
+part of the message exactly while its chip is in the composer's text, so the registry answers which marks belong to the
+message and which are shown on a given picture; the marks of an earlier version of a file are not shown on the new
+picture but stay in the message. `MarkSourceResolver` maps a mark to the parts of the source file that lie under it,
+from the element positions and anchors that the renderer reported with the picture, and says that the picture cannot
+tell, with the reason, when it reported none. Neither unit depends on the user interface or on the file system; the
+`Annotation` subsystem depends only on the picture and coordinate types of `Preview`, and the layer on which the user
+draws the marks is added later. No subsystem uses the `Annotation` subsystem yet.
 
 ### Dependency Direction
 
@@ -321,17 +339,17 @@ made in the project when the message is sent.
 
 ## Dependencies
 
-The `AppShell`, `Composer`, `Logging`, `Preview`, `Project`, `Settings`, `Speech`, and `Utilities` subsystems use .NET
-base class library types, `System.Text.Json` for the settings and project files, and, for dialogs, pages, and lists,
-Avalonia and CommunityToolkit.Mvvm, which are runtime third-party items (the `Composer` units so far use base class
-library types only). The `ImageRenderService` unit draws files and encodes PNG
+The `Annotation`, `AppShell`, `Composer`, `Logging`, `Preview`, `Project`, `Settings`, `Speech`, and `Utilities`
+subsystems use .NET base class library types, `System.Text.Json` for the settings and project files, and, for dialogs,
+pages, and lists, Avalonia and CommunityToolkit.Mvvm, which are runtime third-party items (the `Annotation` and
+`Composer` units so far use base class library types only). The `ImageRenderService` unit draws files and encodes PNG
 with the `DemaConsulting.CanvasNet.Viewer` library, and the `ProjectExplorer` unit uses its extension list to decide
 which files are image sources. The `AudioDeviceService` and `SpeechModelService` units list audio devices and speech
 models and download models with the `DemaConsulting.Speech` library and its Sherpa model package, and the speech
-descriptor types are shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items
-(see *OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS design documents. The
-Windows installer package is built from the published application by the WiX Toolset, also documented as an OTS
-item; no run-time item depends on it.
+descriptor types are shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items (see
+*OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS design documents. The Windows
+installer package is built from the published application by the WiX Toolset, also documented as an OTS item; no
+run-time item depends on it.
 
 ## Risk Control Measures
 
@@ -445,6 +463,15 @@ the document and records. Undo and redo revert and apply whole edits and return 
 is sent, `ComposerHistory.CompleteSend` returns a snapshot of the document, from which the message is built, and empties
 the document and the history.
 
+When the user draws a mark on the shown picture, the layer over the picture gives `MarkRegistry.Add` the picture, the
+shape, and the points of the pointer in the picture's pixels. The registry puts the points in normal form inside the
+picture, numbers the mark, and returns it; the chip of the mark is then added to the message as one
+`ComposerEdit.AddMark`, so that undoing it removes the chip and hides the mark. To show a picture, the layer asks
+`MarkRegistry.VisibleMarks` with the identities of the mark chips in the message and the key of the picture. To describe
+a mark to the assistant, `MarkSourceResolver.Resolve` reads the element positions or anchors of the mark's picture and
+returns the parts of the source file under the mark, or that the picture cannot tell. When the message is sent,
+`MarkRegistry.Clear` forgets the marks.
+
 When the user drops files or folders on the message, or pastes a picture or text into it, the view reads the drop or the
 clipboard into a `DroppedContent` and gives it to `AttachmentIntake.Accept`. The intake checks the text of each path,
 asks the file system whether it is a file or a folder, saves pasted pictures through `AttachmentStore.SavePastedImage`,
@@ -494,6 +521,8 @@ canceled, or failed. On OK or Apply the page merges the choices into the speech 
 - Every change that the user makes to the message being composed shall be one `ComposerEdit` executed through
   `ComposerHistory`, so that the message and the undo steps never disagree; the units of the `Composer` subsystem that
   hold the message shall not write it anywhere.
+- A mark shall hold the picture it was drawn on and shall be shown only on that picture; its geometry shall be in the
+  pixels of that picture, and the units of the `Annotation` subsystem shall not write anything anywhere.
 - Content that is dropped or pasted shall be treated as data: it shall never be opened, run, rendered, or followed,
   and only `AttachmentStore` shall create files for attachments, only in `attachments` and `.canvaspilot/attachments`
   of the project, never over an existing file, and, for one message, at most 500 files, 500 folders, and 200 MB.

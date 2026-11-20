@@ -2,8 +2,8 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
-AppShell, Composer, Logging, Preview, Project, Settings, Speech, and Utilities subsystems; further subsystems, such as
-the AI chat, are added as they are introduced.
+AppShell, Annotation, Composer, Logging, Preview, Project, Settings, Speech, and Utilities subsystems; further
+subsystems, such as the AI chat, are added as they are introduced.
 
 ## Purpose
 
@@ -20,6 +20,9 @@ This document covers the verification design for the following software items:
 **Local items:**
 
 - **CanvasPilot** — system, subsystem, and unit verification:
+  - **Annotation** subsystem
+    - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
+    - **MarkSourceResolver** — the parts of the source file under a mark
   - **AppShell** subsystem
     - **MainWindowShell** — main window, menus, and dialog service
     - **ProjectWorkspace** — explorer and preview content area
@@ -91,6 +94,7 @@ The test folder structure mirrors the source subsystem breakdown:
 ```text
 test/
 ├── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
+│   ├── AnnotationSubsystem/
 │   ├── AppShellSubsystem/
 │   ├── ComposerSubsystem/
 │   ├── LoggingSubsystem/

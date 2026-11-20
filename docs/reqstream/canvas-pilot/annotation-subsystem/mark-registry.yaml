@@ -1,0 +1,89 @@
+---
+# Software Unit Requirements for the MarkRegistry Unit
+#
+# The MarkRegistry unit holds the marks the user has drawn for the message being composed: each mark is pinned to the
+# exact picture it was drawn on, numbered in the order the marks were made, described by its geometry in the pixels of
+# its picture and an optional short note, and shown only on that picture while its chip is in the message. The unit has
+# no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Annotation Subsystem Requirements
+        sections:
+          - title: MarkRegistry Requirements
+            requirements:
+              - id: CanvasPilot-MarkRegistry-PinToSnapshot
+                title: >-
+                  The MarkRegistry shall give each mark it makes the exact picture it was drawn on, with the file, the
+                  fingerprints, and the pixels of that picture, and the time it was made, and shall keep the marks it
+                  holds in the order they were made, handing out copies of that list that later marks do not change.
+                justification: |
+                  A mark means the pixels under it. Holding the picture itself, and not only a file name, lets the
+                  message tell the assistant exactly which picture the mark was drawn on after the file has changed. A
+                  list that changed under a reader on another thread would give a message with marks that were not
+                  there when it was built.
+                tests:
+                  - MarkRegistry_Add_Rectangle_PinsMarkToPictureAndNumbersItOne
+                  - MarkRegistry_Marks_ReturnsCopyThatLaterAddsDoNotChange
+                  - Mark_New_InvalidArguments_Throw
+
+              - id: CanvasPilot-MarkRegistry-NumberSequentially
+                title: >-
+                  The MarkRegistry shall number each new mark with one more than the largest number it holds, starting
+                  at one, and shall not change the number of a mark or give one number to two marks until it is cleared.
+                justification: |
+                  The user and the assistant talk about marks by number. A number that changed when another mark was
+                  undone, or that was used for two marks, would make a sentence such as "move mark 2" mean something
+                  else than the user meant.
+                tests:
+                  - MarkRegistry_Add_SeveralMarks_NumbersThemInOrderOfCreation
+                  - MarkRegistry_Add_AfterMarkWasHidden_DoesNotReuseItsNumber
+
+              - id: CanvasPilot-MarkRegistry-ShowOnlyActiveMarksOfCurrentPicture
+                title: >-
+                  The MarkRegistry shall list as part of the message only the marks whose chips are in the message, in the
+                  order of their numbers, and shall list for a shown picture only those marks of the message that were
+                  drawn on exactly that picture, recognized by its file and the fingerprint of its pixels.
+                justification: |
+                  Undoing the addition of a mark removes its chip and must also make the mark disappear from the
+                  picture and from the message, and redoing must bring it back, without a second undo system. A mark
+                  that was drawn on an earlier version of the file would be drawn in the wrong place on the new
+                  picture, so it is not shown there; a picture that is drawn again with the same pixels shows its marks.
+                tests:
+                  - MarkRegistry_ActiveMarks_ChipsPresent_ReturnsOnlyThoseMarksInNumberOrder
+                  - MarkRegistry_VisibleMarks_NewPictureOfSameFile_HidesMarksOfTheEarlierPicture
+                  - MarkRegistry_VisibleMarks_SamePixelsDrawnAgain_ShowsTheMarks
+
+              - id: CanvasPilot-MarkRegistry-NormalizeGeometry
+                title: >-
+                  The MarkRegistry shall describe each mark in the pixels of its picture, in one form that does not
+                  depend on how it was drawn: the corners of a rectangle or ellipse top-left first, the tail and head of
+                  an arrow, and a freehand stroke simplified to at most 500 points that keeps its first and last point,
+                  with every point inside the picture; shall refuse a shape that is smaller than one pixel; and shall keep
+                  a note as one clean line of at most 200 characters.
+                justification: |
+                  The geometry is read by whatever draws the mark, by what finds the source parts under it, and by the
+                  assistant. It must mean the same pixels whether the user dragged to the right or to the left, whether
+                  the window was zoomed, and whether the pointer left the picture. A click is not a mark, and a stroke
+                  of thousands of points or a note of many lines would turn a pointer into a second message.
+                tests:
+                  - MarkRegistry_Add_ShapeDraggedUpAndLeft_NormalizesCorners
+                  - MarkRegistry_Add_PointsOutsidePicture_AreClampedToPictureBounds
+                  - MarkRegistry_Add_Arrow_KeepsTailAndHeadOnly
+                  - MarkRegistry_Add_LongFreehandStroke_IsSimplifiedKeepingEndPoints
+                  - MarkRegistry_Add_StraightFreehandStroke_CollapsesToItsEnds
+                  - MarkRegistry_Add_ShapeSmallerThanAPixel_ThrowsAndAddsNothing
+                  - MarkRegistry_Add_InvalidArguments_Throw
+                  - MarkRegistry_Add_Note_IsOneCleanLineOfAtMostTwoHundredCharacters
+                  - MarkRegistry_CleanNote_CutInsideSurrogatePair_DropsTheWholeCharacter
+
+              - id: CanvasPilot-MarkRegistry-ClearOnSend
+                title: >-
+                  The MarkRegistry shall forget every mark when it is cleared, which is done when a message is sent, and
+                  shall number the next mark one.
+                justification: |
+                  The marks of a sent message belong to that message. If they stayed, the next message would contain
+                  marks and numbers that the user did not make for it.
+                tests:
+                  - MarkRegistry_Clear_RemovesEveryMarkAndRestartsNumbering
