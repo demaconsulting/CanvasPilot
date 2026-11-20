@@ -127,8 +127,11 @@ the user saw. `PreviewPane` also provides a layer over the shown picture, laid o
 coordinates and scaled with it, which other items fill with content that refers to places in the picture. `PreviewPane`
 follows the selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders
 that are no longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture
-as a PNG file or copies it to the clipboard for the Image menu. The `Preview` subsystem owns the two interfaces that
-this needs, `IImageExporter` and `IExportDialogs`, and does not refer to the main window.
+as a PNG file or copies it to the clipboard for the Image menu. `ImageDragSource` prepares the shown picture for
+dragging it into another program, such as a presentation, a mail message, or a folder: it writes the picture as a PNG
+file in a folder of its own, and the preview view offers that file and the picture's bitmap to the program the user
+drops them on. The `Preview` subsystem owns the two interfaces that this needs, `IImageExporter` and `IExportDialogs`,
+and does not refer to the main window.
 
 ### Dependency Direction
 
@@ -223,6 +226,21 @@ works with its files.
   drawn is explained with its error code, message, and hint, never an unhandled failure. Export and copy are
   enabled only while a picture is shown.
 
+**Picture Drag-out**: The shown picture, dragged out of the preview into another program.
+
+- *Direction*: Output.
+- *Type*: The operating system's drag and drop, started from the preview in the main window, and PNG files in a
+  folder named `drag` in the application's folder of the per-user local application data folder.
+- *Format*: One drag carries one item that offers two formats: a file (a PNG named after the source file and the
+  first eight characters of the picture's pixel fingerprint, for example `flow-1a2b3c4d.png`) and a bitmap of the
+  same picture. The allowed effect is copy.
+- *Constraints*: A drag starts only with the left button, after the pointer has moved four pixels, while a picture is
+  shown and dragging out is not turned off. The application writes only files of that name pattern in its folder,
+  deletes the files of earlier runs when it starts and its own files when it ends, and never changes the file
+  the user dropped. A drop target that refuses the picture, or a file that cannot be written, is logged and never an
+  unhandled failure. Whether a particular program accepts the file, the bitmap, or both is checked by hand (see the
+  verification of `ImageDragSource`).
+
 **Speech Settings, Audio Devices, and Model Store**: The speech choices, the audio system, and the downloaded models.
 
 - *Direction*: Input and output.
@@ -304,6 +322,11 @@ cannot pull unrelated files of the user's computer into a picture that is export
 reported as a note. Drawing runs in the background and can be cancelled, so a slow or hostile file cannot block the
 window.
 
+**Bounded drag files**: The files written for dragging a picture out are named from the source file's name with
+characters that a file name cannot hold replaced and the length limited, and are built with
+`PathHelpers.SafePathCombine`, so a file name cannot lead outside the drag folder. The unit deletes only files that
+match its own name pattern, never folders or other files, so cleaning up cannot remove the user's files.
+
 **Safe speech handling**: Downloads of speech models start only when the user asks, run over HTTPS, and are verified
 against checksums by the speech library before a model is installed completely or not at all, so a damaged or
 tampered download is discarded. A download never outlives the settings dialog that shows it. A choice that the page
@@ -333,6 +356,7 @@ files, watches the folder, and refreshes the list after file changes.
 
 At startup `App` asks `ApplicationComposition` to build the units: the logger, the settings service (whose settings
 are loaded at once), the project service, the recent projects list, the project explorer, the render service, the
+image drag source (which deletes the files of earlier drags), the
 preview pane, the workspace, the image exporter, and the shell. The `MainWindowView` is created over the shell and
 gives itself to the shell as the dialog service. From
 then on the user's menu choices become shell commands, which call the `Project` and `Settings` subsystems, show
@@ -343,7 +367,10 @@ When the user selects a file in `ProjectExplorer`, `PreviewPane` cancels any ren
 `ImageRenderService` to draw the file in the background; the result, a picture with notes or an error with its
 code and hint, is shown unless a newer render was started meanwhile. When files in the project change, the pane
 renders again after a short delay. The Image menu runs `ImageExporter`, which encodes the shown picture as PNG and
-writes it where the user chooses, or hands it to the window to put on the clipboard.
+writes it where the user chooses, or hands it to the window to put on the clipboard. When the user presses the left
+button on the shown picture and moves the pointer, the preview view asks `PreviewPane` for the picture as a file;
+`ImageDragSource` writes the PNG in its folder, and the view starts the operating system's drag with that file and
+a bitmap of the picture.
 
 When the user opens Settings and chooses the Speech page, `SpeechSettingsPage` loads: `DeviceSelection` asks
 `AudioDeviceService` for the devices and selects the stored ones by name, `ModelCatalogPanel` asks
@@ -380,6 +407,8 @@ failed. On OK or Apply the page merges the choices into the speech section of th
   reads to the project folder.
 - Rendering shall never run on the user interface thread, and the result of a render that is no longer wanted shall
   never be shown.
+- Only `ImageDragSource` shall write the files for dragging a picture out, only in its own folder, and a failure to
+  prepare or to drag shall be logged and shall never reach the user as an unhandled failure.
 - The application's units shall be built only in `ApplicationComposition`.
 - Only `AudioDeviceService` shall use the audio system and only `SpeechModelService` shall use the speech model
   catalog; neither shall use its backend before it is first asked, and neither shall throw for a missing audio

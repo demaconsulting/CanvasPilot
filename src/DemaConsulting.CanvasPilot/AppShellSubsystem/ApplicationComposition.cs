@@ -117,7 +117,8 @@ public sealed class ApplicationComposition : IDisposable
             logger,
             settings,
             new DispatcherRefreshScheduler(),
-            defaultProjectsFolder: string.IsNullOrWhiteSpace(documents) ? null : documents);
+            defaultProjectsFolder: string.IsNullOrWhiteSpace(documents) ? null : documents,
+            dragFolder: ImageDragSource.DefaultFolder);
     }
 
     /// <summary>
@@ -146,6 +147,12 @@ public sealed class ApplicationComposition : IDisposable
     ///     service over the speech library's shared model store, which the composition then disposes. Not used when
     ///     <paramref name="settingsPages" /> is given.
     /// </param>
+    /// <param name="dragFolder">
+    ///     The folder in which the pictures that the user drags out of the preview are written, or
+    ///     <see langword="null" /> for a folder in the system's temporary folder (the running application passes
+    ///     the per-user local application data folder). Files of earlier runs in it are deleted at start and the
+    ///     files of this run when the composition is disposed.
+    /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -156,7 +163,8 @@ public sealed class ApplicationComposition : IDisposable
         string? defaultProjectsFolder = null,
         IImageRenderService? renderService = null,
         IAudioDeviceService? audioDevices = null,
-        ISpeechModelService? speechModels = null)
+        ISpeechModelService? speechModels = null,
+        string? dragFolder = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -168,7 +176,12 @@ public sealed class ApplicationComposition : IDisposable
         var recentProjects = new RecentProjects(settings);
         var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), scheduler, logger: logger);
         var renderer = renderService ?? new ImageRenderService(logger);
-        var preview = new PreviewPaneViewModel(renderer, explorer, scheduler, logger: logger);
+        var dragSource = new ImageDragSource(
+            renderer,
+            dragFolder ?? Path.Combine(Path.GetTempPath(), "CanvasPilot", "drag"),
+            logger);
+        dragSource.Purge();
+        var preview = new PreviewPaneViewModel(renderer, explorer, scheduler, logger: logger, dragSource: dragSource);
         var workspace = new ProjectWorkspaceViewModel(explorer) { Preview = preview };
         var exporter = imageExporter ?? new ImageExporter(preview, renderer, logger);
 
@@ -213,6 +226,7 @@ public sealed class ApplicationComposition : IDisposable
         _disposed = true;
         Shell.Dispose();
         Preview.Dispose();
+        Preview.DragSource?.Purge();
         _ownedModelService?.Dispose();
         Logger.Log(LogLevel.Info, "Application stopped.");
     }

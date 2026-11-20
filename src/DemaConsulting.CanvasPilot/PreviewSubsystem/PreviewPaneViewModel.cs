@@ -149,6 +149,13 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     private object? _overlay;
 
     /// <summary>
+    ///     Whether the user may drag the shown picture out of the pane. The host turns it off while the pointer is
+    ///     used for something else on the picture, such as drawing a mark.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isDragOutEnabled = true;
+
+    /// <summary>
     ///     The file that is rendered or was last rendered, or null.
     /// </summary>
     [ObservableProperty]
@@ -164,12 +171,17 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     /// <param name="scheduler">Delays renders after file system changes.</param>
     /// <param name="debounce">How long to wait after a change before rendering; <see cref="DefaultDebounce" /> by default.</param>
     /// <param name="logger">Optional logger for diagnostics.</param>
+    /// <param name="dragSource">
+    ///     Prepares the shown picture for dragging it into other programs, or <see langword="null" /> when the
+    ///     picture cannot be dragged out.
+    /// </param>
     public PreviewPaneViewModel(
         IImageRenderService renderer,
         ProjectExplorerViewModel explorer,
         IRefreshScheduler scheduler,
         TimeSpan? debounce = null,
-        RollingFileLogger? logger = null)
+        RollingFileLogger? logger = null,
+        ImageDragSource? dragSource = null)
     {
         ArgumentNullException.ThrowIfNull(renderer);
         ArgumentNullException.ThrowIfNull(explorer);
@@ -180,6 +192,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
         _scheduler = scheduler;
         _debounce = debounce ?? DefaultDebounce;
         _logger = logger;
+        DragSource = dragSource;
         Diagnostics = new ReadOnlyObservableCollection<RenderDiagnostic>(_diagnostics);
         _diagnostics.CollectionChanged += (_, _) =>
         {
@@ -198,6 +211,12 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
 
     /// <inheritdoc />
     public event EventHandler? CurrentImageChanged;
+
+    /// <summary>
+    ///     Gets what prepares the shown picture for dragging it into other programs, or <see langword="null" />
+    ///     when the picture cannot be dragged out.
+    /// </summary>
+    public ImageDragSource? DragSource { get; }
 
     /// <summary>
     ///     Gets the notes of the shown picture, or of nothing when no picture is shown.
@@ -338,6 +357,34 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
             var generation = _generation;
             _pendingRender = _scheduler.Schedule(_debounce, () => RunScheduledRender(generation));
         }
+    }
+
+    /// <summary>
+    ///     Prepares the shown picture for dragging it out of the pane: writes it as a PNG file in the drag folder.
+    /// </summary>
+    /// <returns>
+    ///     The full path of the PNG file, or <see langword="null" /> when nothing may be dragged: no picture is shown,
+    ///     dragging out is turned off (<see cref="IsDragOutEnabled" />), the pane has no drag source, or the file
+    ///     could not be written.
+    /// </returns>
+    public string? PrepareDragFile()
+    {
+        if (!IsDragOutEnabled || DragSource is null || Image is not { } image)
+        {
+            return null;
+        }
+
+        return DragSource.Prepare(image);
+    }
+
+    /// <summary>
+    ///     Records in the application log that dragging the picture out failed in the view.
+    /// </summary>
+    /// <param name="exception">The failure.</param>
+    public void ReportDragProblem(Exception exception)
+    {
+        ArgumentNullException.ThrowIfNull(exception);
+        Log(LogLevel.Warning, "Dragging the picture out of the preview failed.", exception);
     }
 
     /// <summary>

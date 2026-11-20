@@ -22,6 +22,8 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 
@@ -37,6 +39,11 @@ namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
 public sealed partial class PreviewPaneView : UserControl
 {
     /// <summary>
+    ///     How far, in device-independent pixels along either axis, the pointer must move with the left button down
+    ///     before a drag out of the application starts, so that a click does not start one.
+    /// </summary>
+    private const double DragThreshold = 4;
+    /// <summary>
     ///     The view model the view is currently showing, or null.
     /// </summary>
     private PreviewPaneViewModel? _viewModel;
@@ -47,12 +54,34 @@ public sealed partial class PreviewPaneView : UserControl
     private WriteableBitmap? _bitmap;
 
     /// <summary>
+    ///     The press of the left button on the picture that may become a drag, or null.
+    /// </summary>
+    private PointerPressedEventArgs? _dragPress;
+
+    /// <summary>
+    ///     Where the pointer was pressed, in the view's coordinates.
+    /// </summary>
+    private Point _dragOrigin;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="PreviewPaneView" /> class.
     /// </summary>
     public PreviewPaneView()
     {
         InitializeComponent();
+        PreviewSurface.PointerPressed += OnSurfacePointerPressed;
+        PreviewSurface.PointerMoved += OnSurfacePointerMoved;
+        PreviewSurface.PointerReleased += OnSurfacePointerEnded;
+        PreviewSurface.PointerCaptureLost += OnSurfacePointerEnded;
     }
+
+    /// <summary>
+    ///     Gets or sets the operation that starts the drag of the prepared data out of the application. It is the
+    ///     operating system's drag and drop by default, which cannot complete without a real window, so tests
+    ///     replace it to see what the view offers.
+    /// </summary>
+    internal Func<PointerPressedEventArgs, IDataTransfer, DragDropEffects, Task<DragDropEffects>> DragStarter { get; set; } =
+        (press, data, effects) => DragDrop.DoDragDropAsync(press, data, effects);
 
     /// <inheritdoc />
     protected override void OnDataContextChanged(EventArgs e)
@@ -122,6 +151,106 @@ public sealed partial class PreviewPaneView : UserControl
             case nameof(PreviewPaneViewModel.FitToWindow):
                 ApplyFit();
                 break;
+        }
+    }
+
+    /// <summary>
+    ///     Remembers a press of the left button on the picture, which becomes a drag out of the application when the
+    ///     pointer moves far enough while the button stays down.
+    /// </summary>
+    /// <param name="sender">The surface that holds the picture.</param>
+    /// <param name="e">The press.</param>
+    private void OnSurfacePointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        var canDrag = _viewModel is { IsDragOutEnabled: true, HasImage: true, DragSource: not null }
+                      && e.GetCurrentPoint(PreviewSurface).Properties.IsLeftButtonPressed;
+        _dragPress = canDrag ? e : null;
+        _dragOrigin = e.GetPosition(this);
+    }
+
+    /// <summary>
+    ///     Starts the drag when the pointer has moved by the threshold since the press.
+    /// </summary>
+    /// <param name="sender">The surface that holds the picture.</param>
+    /// <param name="e">The move.</param>
+    private void OnSurfacePointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_dragPress is not { } press)
+        {
+            return;
+        }
+
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            _dragPress = null;
+            return;
+        }
+
+        var moved = e.GetPosition(this) - _dragOrigin;
+        if (Math.Abs(moved.X) < DragThreshold && Math.Abs(moved.Y) < DragThreshold)
+        {
+            return;
+        }
+
+        _dragPress = null;
+        _ = StartDragAsync(press);
+    }
+
+    /// <summary>
+    ///     Forgets the press when the button is released or the pointer is taken away, so a click starts no drag.
+    /// </summary>
+    /// <param name="sender">The surface that holds the picture.</param>
+    /// <param name="e">The event data.</param>
+    private void OnSurfacePointerEnded(object? sender, RoutedEventArgs e)
+    {
+        _dragPress = null;
+    }
+
+    /// <summary>
+    ///     Prepares the shown picture as a PNG file and as a bitmap and offers both to the program the user drops
+    ///     them on. Problems are logged, never thrown, because nothing awaits this method.
+    /// </summary>
+    /// <param name="press">The press that started the drag.</param>
+    /// <returns>A task that completes when the drag has ended.</returns>
+    private async Task StartDragAsync(PointerPressedEventArgs press)
+    {
+        var viewModel = _viewModel;
+        if (viewModel is null)
+        {
+            return;
+        }
+
+        Bitmap? bitmap = null;
+        try
+        {
+            var path = viewModel.PrepareDragFile();
+            if (path is null)
+            {
+                return;
+            }
+
+            var item = new DataTransferItem();
+            var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
+            if (storage is not null && await storage.TryGetFileFromPathAsync(new Uri(path)) is { } file)
+            {
+                item.SetFile(file);
+            }
+
+            bitmap = new Bitmap(path);
+            item.SetBitmap(bitmap);
+            var data = new DataTransfer();
+            data.Add(item);
+            await DragStarter(press, data, DragDropEffects.Copy);
+        }
+        catch (Exception ex)
+        {
+            // The drag is started from a fire-and-forget call, so no failure may escape; whatever the operating
+            // system or the drop target does wrong, the user can still use the application.
+            viewModel.ReportDragProblem(ex);
+        }
+        finally
+        {
+            bitmap?.Dispose();
         }
     }
 

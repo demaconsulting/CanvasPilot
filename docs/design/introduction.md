@@ -24,7 +24,7 @@ Local items:
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
-  - **Preview** subsystem: **ImageRenderService**, **PreviewPane**, and **ImageExporter** units.
+  - **Preview** subsystem: **ImageRenderService**, **PreviewPane**, **ImageExporter**, and **ImageDragSource** units.
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
     **ProjectExplorer** units.
   - **Settings** subsystem: **SettingsService**, **SettingsDialog**, and **AiProviderSettingsPage** units.
@@ -85,7 +85,7 @@ and the local data the application uses](architecture.svg)
   - **DemaConsulting.CanvasPilot/** - main application library source
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
     - **LoggingSubsystem/** - local rolling log file subsystem
-    - **PreviewSubsystem/** - image rendering with CanvasNet, preview pane, and PNG and clipboard export
+    - **PreviewSubsystem/** - image rendering with CanvasNet, preview pane, PNG and clipboard export, and drag-out
     - **ProjectSubsystem/** - projects, recent projects, New Project dialog, and project explorer
     - **SettingsSubsystem/** - persisted settings, settings dialog, and settings pages
     - **SpeechSubsystem/** - audio devices, speech models and their downloads, and the Speech settings page

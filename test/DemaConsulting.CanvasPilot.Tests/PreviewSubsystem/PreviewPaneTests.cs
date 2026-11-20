@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
@@ -595,6 +596,71 @@ public sealed class PreviewPaneTests : IDisposable
         Assert.False(pane.HasOverlay);
         Assert.Equal(2, changed.Count(name => name == nameof(PreviewPaneViewModel.Overlay)));
         Assert.Equal(2, changed.Count(name => name == nameof(PreviewPaneViewModel.HasOverlay)));
+    }
+
+    /// <summary>
+    ///     Test that the pane prepares the shown picture for dragging only while a picture is shown and dragging out is
+    ///     turned on, and only when it has a drag source.
+    /// </summary>
+    [Fact]
+    public async Task PreviewPaneViewModel_PrepareDragFile_PictureShown_WritesPngOnlyWhenAllowed()
+    {
+        // Arrange: a pane with a drag source over a temporary folder, and one without a drag source
+        var dragFolder = Path.Combine(_folder, "drag-out");
+        var withSource = new PreviewPaneViewModel(_renderer, _explorer, _previewScheduler, dragSource: new ImageDragSource(_renderer, dragFolder));
+        _disposables.Insert(0, withSource);
+        var withoutSource = CreatePane();
+        _explorer.Open(_folder);
+
+        // Act: ask with no picture, then with a picture, then with dragging out turned off, then again turned on
+        var noPicture = withSource.PrepareDragFile();
+        _explorer.SelectFile(Path.Combine(_folder, "a.svg"));
+        foreach (var request in _renderer.Requests)
+        {
+            request.Succeed(8, 4);
+        }
+
+        await withSource.RenderCompletion;
+        await withoutSource.RenderCompletion;
+        var shown = withSource.PrepareDragFile();
+        withSource.IsDragOutEnabled = false;
+        var disabled = withSource.PrepareDragFile();
+        withSource.IsDragOutEnabled = true;
+        var enabledAgain = withSource.PrepareDragFile();
+        var noSource = withoutSource.PrepareDragFile();
+
+        // Assert: only the enabled pane that shows a picture and has a drag source gives the same existing PNG file
+        Assert.Null(noPicture);
+        Assert.NotNull(shown);
+        Assert.Equal(Path.Combine(dragFolder, $"a-{withSource.Image!.ContentHash[..8]}.png"), shown);
+        Assert.True(File.Exists(shown));
+        Assert.Null(disabled);
+        Assert.Equal(shown, enabledAgain);
+        Assert.Null(noSource);
+        Assert.True(withSource.IsDragOutEnabled);
+        Assert.NotNull(withSource.DragSource);
+        Assert.Null(withoutSource.DragSource);
+    }
+
+    /// <summary>
+    ///     Test that a failure of the drag in the view is written to the log, and a missing failure is refused.
+    /// </summary>
+    [Fact]
+    public async Task PreviewPaneViewModel_ReportDragProblem_Failure_IsLogged()
+    {
+        // Arrange: a pane with a logger
+        var logger = new RollingFileLogger(Path.Combine(_folder, "logs"));
+        var pane = new PreviewPaneViewModel(_renderer, _explorer, _previewScheduler, logger: logger);
+        _disposables.Insert(0, pane);
+
+        // Act: report a failure
+        pane.ReportDragProblem(new InvalidOperationException("drop target refused"));
+
+        // Assert: the log names the problem and the failure; a missing failure is refused
+        var log = await File.ReadAllTextAsync(logger.ActiveFilePath, TestContext.Current.CancellationToken);
+        Assert.Contains("Dragging the picture out of the preview failed", log, StringComparison.Ordinal);
+        Assert.Contains("drop target refused", log, StringComparison.Ordinal);
+        Assert.Throws<ArgumentNullException>(() => pane.ReportDragProblem(null!));
     }
 
     /// <summary>

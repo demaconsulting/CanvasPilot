@@ -37,6 +37,11 @@ temporary local folders and real file I/O; no network or external services are r
 - The overlay slot is empty and hidden by default, shows the content assigned to it exactly over the picture, has the
   picture's pixel size in its own coordinates at actual size and when the picture is scaled down to the pane, and is
   scaled on screen by the same factor as the picture.
+- A press of the left button on the shown picture followed by a move of at least four pixels starts one drag with the
+  copy effect that offers a PNG file and a bitmap of the picture's size; a click, a move of three pixels, a drag while
+  dragging out is off, and a drag from a pane without a drag source start nothing; a drag operation that fails is
+  logged and the next drag starts normally.
+- The pane gives a file for dragging only while a picture is shown, dragging out is on, and it has a drag source.
 
 #### Test Scenarios
 
@@ -165,6 +170,30 @@ keep the aspect ratio of 2 to 1, and cover the same rectangle in the window. Thi
 **PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown**: With a picture shown, the overlay host is hidden
 while the slot is empty, visible and holding exactly the assigned control after it is assigned, and hidden again after
 the slot is cleared. This scenario is tested by `PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown`.
+
+**PreviewPaneViewModel_PrepareDragFile_PictureShown_WritesPngOnlyWhenAllowed**: A pane with a drag source gives no file
+before a picture is shown, gives the PNG file named after the picture once one is shown, gives none while dragging out
+is off and the same file when it is on again, and a pane without a drag source gives none. This scenario is tested by
+`PreviewPaneViewModel_PrepareDragFile_PictureShown_WritesPngOnlyWhenAllowed`.
+
+**PreviewPaneViewModel_ReportDragProblem_Failure_IsLogged**: A failure reported by the view is written to the log with
+the text of the failure; a missing failure is refused. This scenario is tested by
+`PreviewPaneViewModel_ReportDragProblem_Failure_IsLogged`.
+
+**PreviewPaneView_DragFromImage_PictureShown_OffersPngFileAndBitmap**: With a 40 by 20 picture shown, pressing the left
+button on it and moving 10 pixels starts one drag operation, with the copy effect, whose data offers the file and the
+bitmap formats, a file named `red-` and the fingerprint start with the extension `.png` that starts with the PNG
+signature, and a bitmap of 40 by 20 pixels; releasing and moving again starts no further drag. The view's drag
+operation is replaced by a recording one, because the system's never completes under the headless platform. This
+scenario is tested by `PreviewPaneView_DragFromImage_PictureShown_OffersPngFileAndBitmap`.
+
+**PreviewPaneView_DragFromImage_ClickOrNotAllowed_StartsNothing**: A click, a press followed by a move of three pixels
+in each direction, and a drag while dragging out is turned off start nothing; neither does a drag from a pane that has
+no drag source. This scenario is tested by `PreviewPaneView_DragFromImage_ClickOrNotAllowed_StartsNothing`.
+
+**PreviewPaneView_DragFromImage_DragOperationFails_LogsAndKeepsWorking**: When the drag operation fails the first time,
+the log holds the problem and its text, and after the release a second drag starts normally. This scenario is tested by
+`PreviewPaneView_DragFromImage_DragOperationFails_LogsAndKeepsWorking`.
 
 **PreviewPaneView_ProjectClosed_ClearsPicture**: Closing the project removes the bitmap and shows the placeholder
 `No project is open.`. This scenario is tested by `PreviewPaneView_ProjectClosed_ClearsPicture`.

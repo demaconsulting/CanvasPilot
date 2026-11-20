@@ -2,7 +2,7 @@ package CanvasPilot {
     private import SoftwareItemMetadata::*;
 
     part def PreviewPane {
-        doc /* Follows the project explorer's selected file, renders it in the background, discards stale results, renders again when files change, shows the picture, busy state, errors, and notes, and hosts a layer over the picture in the picture's own pixel coordinates. */
+        doc /* Follows the project explorer's selected file, renders it in the background, discards stale results, renders again when files change, shows the picture, busy state, errors, and notes, hosts a layer over the picture in the picture's own pixel coordinates, and starts the drag of the picture out of the application. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -31,6 +31,9 @@ package CanvasPilot {
 
         // Ignores the project file and the hidden data folder when files change.
         dependency PreviewPane to ProjectService;
+
+        // Asks for the shown picture as a PNG file when the user drags it out.
+        dependency PreviewPane to ImageDragSource;
 
         // Reports unexpected render failures and watcher problems to the application log.
         dependency PreviewPane to RollingFileLogger;

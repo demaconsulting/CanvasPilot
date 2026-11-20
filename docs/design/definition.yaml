@@ -29,6 +29,7 @@ input-files:
   - docs/design/canvas-pilot/preview-subsystem/image-render-service.md
   - docs/design/canvas-pilot/preview-subsystem/preview-pane.md
   - docs/design/canvas-pilot/preview-subsystem/image-exporter.md
+  - docs/design/canvas-pilot/preview-subsystem/image-drag-source.md
   - docs/design/canvas-pilot/project-subsystem.md
   - docs/design/canvas-pilot/project-subsystem/project-service.md
   - docs/design/canvas-pilot/project-subsystem/recent-projects.md

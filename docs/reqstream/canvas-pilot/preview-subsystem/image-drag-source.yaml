@@ -1,0 +1,50 @@
+---
+# Software Unit Requirements for the ImageDragSource Unit
+#
+# The ImageDragSource unit prepares the shown picture for dragging it into another program. It writes the picture as a
+# PNG file, named after the source file and the start of the picture's pixel fingerprint, in a folder that belongs to
+# the application, and removes the files it wrote. It has no dependency on the user interface; the preview view offers
+# the file and the picture's bitmap to the program the user drops them on.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        sections:
+          - title: ImageDragSource Requirements
+            requirements:
+              - id: CanvasPilot-ImageDragSource-WritePngForDrag
+                title: >-
+                  The ImageDragSource shall write a picture as a valid PNG file in its folder, named after the
+                  picture's source file (without its image source extension, with characters that a file name
+                  cannot hold replaced and the length limited) and the first eight characters of the picture's
+                  pixel fingerprint, shall write the same picture only once, and shall give no file, and write
+                  the problem to the log, when the file cannot be written.
+                justification: |
+                  Programs that accept a dropped picture ask for a file or for image data, so the picture has
+                  to exist as a file the user can recognize. Naming it after the source file and the picture's
+                  fingerprint gives the user a meaningful name, keeps different versions of a picture apart,
+                  and avoids writing a file again for every drag. A folder that cannot be written is a
+                  condition of the user's computer and must not stop the application.
+                tests:
+                  - ImageDragSource_Prepare_Picture_WritesValidPngWithSuggestedName
+                  - ImageDragSource_Prepare_VegaLiteFile_NamesFileAfterStemWithoutCompoundExtension
+                  - ImageDragSource_Prepare_SamePicture_ReusesFile
+                  - ImageDragSource_Prepare_UnusualSourceName_ProducesSafeFileNameInsideFolder
+                  - ImageDragSource_Prepare_UnwritableFolder_ReturnsNullAndLogs
+                  - ImageDragSource_Prepare_EncoderFails_ReturnsNullAndLeavesNoFile
+                  - ImageDragSource_New_InvalidArguments_Throw
+
+              - id: CanvasPilot-ImageDragSource-ConfineToOwnFolder
+                title: >-
+                  The ImageDragSource shall write its files only directly in its own folder, and shall delete only
+                  files in that folder whose names match the pattern of the files it writes, leaving every other
+                  file and every folder untouched.
+                justification: |
+                  The application deletes its drag files when it starts and when it ends. If the folder was
+                  changed, or the user put files in it, deleting anything else would destroy the user's data, and
+                  a source file name must never lead a written file outside the folder.
+                tests:
+                  - ImageDragSource_Prepare_UnusualSourceName_ProducesSafeFileNameInsideFolder
+                  - ImageDragSource_Purge_FolderWithOtherFiles_RemovesOnlyOwnFiles
+                  - ImageDragSource_Purge_MissingFolder_ReturnsZero

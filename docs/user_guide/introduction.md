@@ -21,7 +21,7 @@ This user guide covers:
 - Installing CanvasPilot on Windows
 - Creating, opening, saving, and closing projects
 - The project explorer, the preview, and its notes and errors
-- Exporting a picture as a PNG file and copying it to the clipboard
+- Exporting a picture as a PNG file, copying it to the clipboard, and dragging it into another program
 - The Settings dialog, with the AI Provider and Speech pages
 - Where CanvasPilot keeps its settings, logs, and speech models
 - Troubleshooting
@@ -134,6 +134,19 @@ With a picture shown, the **Image** menu offers:
 
 Both items are disabled while no picture is shown.
 
+## Drag the Picture Into Another Program
+
+You can also drag the picture straight out of the preview. Press the left mouse button on the picture, move the pointer
+a few pixels, and drop it on a folder in Windows Explorer, on a presentation slide, in an email message, or in another
+program that accepts pictures. CanvasPilot offers the picture both as a PNG file, named after the source file, for
+example `flow-1a2b3c4d.png`, and as image data, so each program can take the form it accepts. A click on the picture
+does not start a drag, and nothing is dragged while no picture is shown.
+
+The files that CanvasPilot writes for dragging are kept in the `drag` folder of its folder in
+`%LOCALAPPDATA%\CanvasPilot`, and are deleted when CanvasPilot starts and when it ends, so drop the picture where you
+need it instead of keeping the dragged file. Not every program accepts a dropped picture in the same way; if a program
+rejects it, use **Image > Export as PNG...** or **Image > Copy Image** instead.
+
 # Settings
 
 Choose **Tools > Settings...** to open the Settings dialog. The page list at the left shows **AI Provider** and
@@ -185,6 +198,7 @@ third-party libraries that CanvasPilot uses. Include the version when you report
 | --- | --- |
 | Settings and recent projects | `%APPDATA%\CanvasPilot\settings.json` |
 | Log files | `%LOCALAPPDATA%\CanvasPilot\logs` |
+| Pictures prepared for dragging out (temporary) | `%LOCALAPPDATA%\CanvasPilot\drag` |
 | Downloaded speech models | `%LOCALAPPDATA%\DemaConsulting.Speech\Models` |
 | Your projects | The folder that you chose for each project |
 

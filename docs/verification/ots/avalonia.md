@@ -7,20 +7,23 @@ are defined in the Avalonia OTS Software Requirements document.
 
 Avalonia (the `Avalonia`, `Avalonia.Skia`, `Avalonia.Themes.Fluent`, `Avalonia.Fonts.Inter`, `Avalonia.Desktop`, and
 `Avalonia.Headless.XUnit` packages) shows modal dialogs over a window, shows menu items that follow their commands,
-keeps bound controls and view models in step, holds the bytes of a bitmap unchanged, and carries a bitmap through the
-clipboard. The application relies on each of these behaviors, so each has a requirement and a test.
+keeps bound controls and view models in step, holds the bytes of a bitmap unchanged, carries a bitmap through the
+clipboard, and carries a file and a bitmap together in one data transfer item. The application relies on each of these
+behaviors, so each has a requirement and a test.
 
 ### Verification Approach
 
 Avalonia has no self-validation mode. It is verified by integration tests in `test/OtsSoftwareTests/AvaloniaTests.cs`
-that run the framework's headless platform with the application's own `App` and call the framework with the same
-kinds of controls the application uses: windows, a menu item with a command, bound text boxes, a writable bitmap in an
-image control, and the clipboard of a window. The tests are the evidence that the framework behaves as the application
-relies on, and they are run again before a version upgrade is accepted. The user interface tests of the application
-(`test/DemaConsulting.CanvasPilot.UiTests`) repeat part of this evidence through the application's own views.
+that run the framework's headless platform with the application's own `App` and call the framework with the same kinds
+of controls the application uses: windows, a menu item with a command, bound text boxes, a writable bitmap in an image
+control, the clipboard of a window, and a data transfer item. The tests are the evidence that the framework behaves as
+the application relies on, and they are run again before a version upgrade is accepted. The user interface tests of the
+application (`test/DemaConsulting.CanvasPilot.UiTests`) repeat part of this evidence through the application's own
+views.
 
-The headless platform does not show a real window, does not use the operating system clipboard, and cannot show the
-file pickers. How the application looks on a real display, how a copied picture pastes into another program, and the
+The headless platform does not show a real window, does not use the operating system clipboard, cannot show the
+file pickers, and cannot complete a drag that leaves the window. How the application looks on a real display, how a
+copied picture pastes into another program, how a dragged picture is accepted by other programs, and the
 file pickers are checked by hand before a release. These checks are not automated and are not evidence for a
 requirement.
 
@@ -71,3 +74,13 @@ control holds the bitmap.
 **Expected**: A bitmap of the same size is returned.
 
 **Requirement coverage**: `CanvasPilot-OTS-Avalonia-TransferPicturesViaClipboard`.
+
+#### Avalonia_DataTransfer_ItemWithFileAndBitmap_CarriesBothFormats
+
+**Scenario**: A PNG file is written to a temporary path, the window's storage provider gives the storage file for it,
+and one data transfer item is given that file and a bitmap of 3 x 2 pixels and is added to a data transfer.
+
+**Expected**: The item and the transfer offer both the file format and the bitmap format, the transfer returns a file
+with the file's name, and it returns a bitmap of 3 x 2 pixels.
+
+**Requirement coverage**: `CanvasPilot-OTS-Avalonia-DataTransferFileAndBitmap`.

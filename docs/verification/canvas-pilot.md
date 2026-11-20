@@ -42,6 +42,9 @@ services, or display is required.
 - The shown picture of a diagram is identified by its file and by fingerprints of the file and the pixels, which
   change when the file is edited, and it locates the diagram's elements in picture pixels.
 - The preview pane has a layer over the shown picture that holds the content placed in it, beside every picture.
+- The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
+  earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
+  the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
@@ -126,6 +129,12 @@ project that holds a 32 by 16 and an 8 by 8 SVG. Content is placed in the overla
 shows, which is the application's own pane. After the first SVG is selected the layer holds the content beside the 32
 pixel wide picture, and after the second SVG is selected it still holds the same content beside the 8 pixel wide
 picture. This scenario is tested by `CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures`.
+
+**CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile**: The composed application is started with a file of an
+earlier run in its drag folder, which is removed at start. Without a picture no file is offered. With a 32 by 16 SVG
+shown the offered file is in the drag folder, is named `logo-` and the start of the pixel fingerprint, and is a PNG
+of width 32 and height 16; with dragging out turned off none is offered; after the composition is disposed the file is
+gone. This scenario is tested by `CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile`.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

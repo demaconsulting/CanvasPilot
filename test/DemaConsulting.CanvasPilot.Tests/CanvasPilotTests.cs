@@ -412,10 +412,55 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user who drags the shown picture out of the preview gives the other program a PNG file of exactly
+    ///     the picture shown, that no file is offered when the pointer is used for something else, and that the file
+    ///     does not outlive the application.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile()
+    {
+        // Arrange: the application with a project that holds an SVG, and a folder for dragged pictures that holds a
+        // file of an earlier run
+        var token = TestContext.Current.CancellationToken;
+        var dragFolder = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "dragged")).FullName;
+        var earlier = Path.Combine(dragFolder, "old-0123abcd.png");
+        await File.WriteAllBytesAsync(earlier, [1, 2, 3], token);
+        var (composition, _) = await ComposeWithProjectAsync(dragFolder);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "logo.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='16'><rect width='32' height='16' fill='#00ff00'/></svg>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        var earlierRemovedAtStart = !File.Exists(earlier);
+        var withoutPicture = composition.Preview.PrepareDragFile();
+
+        // Act: show the picture, prepare it for dragging, once while an annotation tool uses the pointer, and close
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "logo.svg"));
+        await composition.Preview.RenderCompletion;
+        var path = composition.Preview.PrepareDragFile();
+        var bytes = path is null ? [] : await File.ReadAllBytesAsync(path, token);
+        composition.Preview.IsDragOutEnabled = false;
+        var whileToolActive = composition.Preview.PrepareDragFile();
+        composition.Dispose();
+
+        // Assert: the file of the earlier run was removed at start; nothing is offered without a picture or while the
+        // tool is active; the offered file is a PNG of the picture in the drag folder; closing removes it
+        Assert.True(earlierRemovedAtStart);
+        Assert.Null(withoutPicture);
+        Assert.Null(whileToolActive);
+        Assert.NotNull(path);
+        Assert.Equal(dragFolder, Path.GetDirectoryName(path));
+        Assert.StartsWith("logo-", Path.GetFileName(path), StringComparison.Ordinal);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], bytes[..8]);
+        Assert.Equal(32, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(16, 4)));
+        Assert.Equal(16, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(20, 4)));
+        Assert.False(File.Exists(path));
+    }
+
+    /// <summary>
     ///     Composes the application on temporary folders and has a user create a project through the New Project dialog.
     /// </summary>
+    /// <param name="dragFolder">The folder for pictures dragged out, or <see langword="null" /> for one in the temporary root.</param>
     /// <returns>The composition, whose project is open, and the dialog service attached to its shell.</returns>
-    private async Task<(ApplicationComposition Composition, FakeDialogService Dialogs)> ComposeWithProjectAsync()
+    private async Task<(ApplicationComposition Composition, FakeDialogService Dialogs)> ComposeWithProjectAsync(string? dragFolder = null)
     {
         var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
         var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
@@ -431,7 +476,8 @@ public sealed class CanvasPilotTests : IDisposable
             logger,
             new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger),
             new FakeRefreshScheduler(),
-            defaultProjectsFolder: documents);
+            defaultProjectsFolder: documents,
+            dragFolder: dragFolder ?? PathHelpers.SafePathCombine(_tempRoot, "drag"));
         composition.Shell.AttachDialogService(dialogs);
         await composition.Shell.NewProjectCommand.ExecuteAsync(null);
         return (composition, dialogs);

@@ -134,3 +134,24 @@ sections:
                   - PreviewPaneView_FitOff_ImageAtNaturalSize_OverlayCoversImage
                   - PreviewPaneView_FitOn_OverlaySizeEqualsImagePixelSize
                   - PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown
+
+              - id: CanvasPilot-PreviewPane-StartImageDrag
+                title: >-
+                  The PreviewPane shall start a copy drag of the shown picture when the user presses the left
+                  button on it and moves the pointer four pixels, offering the picture in one item as a PNG
+                  file and as a bitmap, shall start none for a click, while no picture is shown, while dragging
+                  out is turned off, or when the pane has no drag source, and shall write a drag that fails to
+                  the log and keep working.
+                justification: |
+                  Pictures are made to be used in other programs, and dragging the picture from where it is
+                  seen into a presentation, a mail message, or a folder is the natural way to do it. Offering
+                  both a file and a bitmap lets each program take the form it accepts. A click must not start
+                  a drag, and the pointer must stay free for other uses of the picture, such as drawing a mark.
+                children:
+                  - CanvasPilot-OTS-Avalonia-DataTransferFileAndBitmap
+                tests:
+                  - PreviewPaneViewModel_PrepareDragFile_PictureShown_WritesPngOnlyWhenAllowed
+                  - PreviewPaneViewModel_ReportDragProblem_Failure_IsLogged
+                  - PreviewPaneView_DragFromImage_PictureShown_OffersPngFileAndBitmap
+                  - PreviewPaneView_DragFromImage_ClickOrNotAllowed_StartsNothing
+                  - PreviewPaneView_DragFromImage_DragOperationFails_LogsAndKeepsWorking

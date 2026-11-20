@@ -23,6 +23,9 @@ a third-party library from an unrelated program, so it is treated as OTS.
   boxes, and the data templates that the view locator uses to show a view for each view model.
 - Imaging: `WriteableBitmap` in blue, green, red, alpha order with premultiplied alpha, filled through its
   framebuffer.
+- Drag and drop out of the application: `DataTransfer` and `DataTransferItem` with a file (`SetFile`, from
+  `IStorageProvider.TryGetFileFromPathAsync`) and a bitmap (`SetBitmap`) in one item, and
+  `DragDrop.DoDragDropAsync`, which the preview starts when the user drags the shown picture.
 - Application startup: `AppBuilder` with the desktop platform, the Skia back end, and the Inter font.
 - The headless platform with `AvaloniaFact` tests, used by the user interface tests and by the OTS tests.
 
@@ -37,4 +40,6 @@ framework controls. Avalonia has no self-validation mode; the OTS tests in `Aval
 platform with the same kinds of controls and calls the application uses, and are the evidence that the framework
 behaves as the application relies on. The user interface tests of the application repeat part of this evidence
 through the application's own views. A framework upgrade re-runs both before it is accepted. How the application looks
-on a real display, and how the operating system clipboard behaves, are checked by hand before a release.
+on a real display, and how the operating system clipboard and drag and drop behave, are checked by hand before a
+release; `DragDrop.DoDragDropAsync` never completes under the headless platform, so the application calls it through a
+replaceable operation in the preview view and the tests check what is offered to it.

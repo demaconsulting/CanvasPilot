@@ -179,6 +179,45 @@ public sealed class PreviewSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the shown picture can be prepared for dragging into another program: the drag file is a real PNG
+    ///     of the picture, it is the same file the next time, and a different picture gets a different file.
+    /// </summary>
+    [Fact]
+    public async Task PreviewSubsystem_DragImageOut_ShownPicture_ProvidesPngFileAndBytes()
+    {
+        // Arrange: a project with two SVGs and a pane over the real render service with a drag folder
+        await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), WideSvg, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(_folder, "good.svg"), SquareSvg, TestContext.Current.CancellationToken);
+        var dragFolder = Path.Combine(_folder, "drag-out");
+        var (explorer, pane) = Create(dragFolder);
+        explorer.Open(_folder);
+
+        // Act: show the first picture and prepare it twice, then show the other and prepare it
+        explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
+        await pane.RenderCompletion;
+        var first = pane.PrepareDragFile();
+        var again = pane.PrepareDragFile();
+        var expected = new ImageRenderService().EncodePng(pane.Image!);
+        explorer.SelectFile(Path.Combine(_folder, "good.svg"));
+        await pane.RenderCompletion;
+        var second = pane.PrepareDragFile();
+
+        // Assert: the file is the PNG of the shown picture, with its size in the header, and is reused; the other
+        // picture has a file of its own
+        Assert.NotNull(first);
+        Assert.Equal(first, again);
+        var bytes = await File.ReadAllBytesAsync(first, TestContext.Current.CancellationToken);
+        Assert.Equal(expected, bytes);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], bytes[..8]);
+        Assert.Equal(40, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(16, 4)));
+        Assert.Equal(20, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(bytes.AsSpan(20, 4)));
+        Assert.StartsWith("wide-", Path.GetFileName(first), StringComparison.Ordinal);
+        Assert.NotNull(second);
+        Assert.NotEqual(first, second);
+        Assert.StartsWith("good-", Path.GetFileName(second), StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that a file that cannot be drawn shows an error and a file that can be drawn shows a picture again,
     ///     and that export follows whether a picture is shown.
     /// </summary>
@@ -271,10 +310,15 @@ public sealed class PreviewSubsystemTests : IDisposable
     ///     Creates an explorer and a preview pane over the real render service.
     /// </summary>
     /// <returns>The explorer and the pane.</returns>
-    private (ProjectExplorerViewModel Explorer, PreviewPaneViewModel Pane) Create()
+    private (ProjectExplorerViewModel Explorer, PreviewPaneViewModel Pane) Create(string? dragFolder = null)
     {
         var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), _explorerScheduler);
-        var pane = new PreviewPaneViewModel(new ImageRenderService(), explorer, _previewScheduler);
+        var renderer = new ImageRenderService();
+        var pane = new PreviewPaneViewModel(
+            renderer,
+            explorer,
+            _previewScheduler,
+            dragSource: dragFolder is null ? null : new ImageDragSource(renderer, dragFolder));
         _disposables.Add(pane);
         _disposables.Add(explorer);
         return (explorer, pane);

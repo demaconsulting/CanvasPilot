@@ -29,6 +29,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace OtsSoftwareTests;
@@ -204,6 +205,50 @@ public class AvaloniaTests
         Assert.Equal(new PixelSize(3, 2), readBack.PixelSize);
 
         window.Close();
+    }
+
+    /// <summary>
+    ///     Test that one data transfer item can carry a file and a bitmap at the same time, and that both come back
+    ///     from the transfer, which is what the preview offers to the program a picture is dragged to.
+    /// </summary>
+    /// <returns>A task that completes when the test finishes.</returns>
+    [AvaloniaFact]
+    public async Task Avalonia_DataTransfer_ItemWithFileAndBitmap_CarriesBothFormats()
+    {
+        // Arrange: a window, a PNG file on disk, and a 3 x 2 bitmap
+        var window = new Window { Content = new TextBlock { Text = "drag" } };
+        window.Show();
+        var path = Path.Combine(Path.GetTempPath(), $"canvaspilot-ots-drag-{Guid.NewGuid():N}.png");
+        using var bitmap = new WriteableBitmap(
+            new PixelSize(3, 2),
+            new Vector(96, 96),
+            PixelFormat.Bgra8888,
+            AlphaFormat.Premul);
+        await File.WriteAllBytesAsync(path, [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], TestContext.Current.CancellationToken);
+        try
+        {
+            // Act: get the storage file for the path and put it and the bitmap into one item of a transfer
+            var file = await window.StorageProvider.TryGetFileFromPathAsync(new Uri(path));
+            var item = new DataTransferItem();
+            item.SetFile(file!);
+            item.SetBitmap(bitmap);
+            var transfer = new DataTransfer();
+            transfer.Add(item);
+
+            // Assert: the item and the transfer offer the file format and the bitmap format, and give both back
+            Assert.NotNull(file);
+            Assert.Contains(DataFormat.File, item.Formats);
+            Assert.Contains(DataFormat.Bitmap, item.Formats);
+            Assert.Contains(DataFormat.File, transfer.Formats);
+            Assert.Contains(DataFormat.Bitmap, transfer.Formats);
+            Assert.Equal(Path.GetFileName(path), transfer.TryGetFile()?.Name);
+            Assert.Equal(new PixelSize(3, 2), transfer.TryGetBitmap()?.PixelSize);
+        }
+        finally
+        {
+            File.Delete(path);
+            window.Close();
+        }
     }
 
     /// <summary>

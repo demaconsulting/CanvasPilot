@@ -73,3 +73,17 @@ sections:
             tags: [ots]
             tests:
               - Avalonia_Clipboard_Bitmap_RoundTrips
+
+          - id: CanvasPilot-OTS-Avalonia-DataTransferFileAndBitmap
+            title: >-
+              Avalonia shall let one data transfer item carry a file and a bitmap at the same time, and shall
+              give both back from the transfer with the file's name and the bitmap's size unchanged.
+            justification: |
+              Dragging the shown picture out of the preview offers it to the program it is dropped on as a PNG
+              file and as a bitmap in one item, so that each program can take the form it accepts. The
+              application depends on the framework to keep both formats in the item and to return them
+              unchanged. The operating system's drag and drop, and which programs accept which format, are
+              checked by hand before a release, because they cannot run without a real desktop.
+            tags: [ots]
+            tests:
+              - Avalonia_DataTransfer_ItemWithFileAndBitmap_CarriesBothFormats

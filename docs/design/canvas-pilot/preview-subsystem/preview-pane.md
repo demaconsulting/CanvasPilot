@@ -37,6 +37,13 @@ picks the view of whatever view model the host assigns, and the pane never refer
 The slot belongs to the pane, not to a picture, so it keeps its content while pictures change, are rendered again, or
 fail to draw; the host decides what the content shows then.
 
+**IsDragOutEnabled** / **DragSource** / **PrepareDragFile()** / **ReportDragProblem(exception)**: `IsDragOutEnabled` is
+a `bool`, true by default, that the host turns off while the pointer is used on the picture for something else, such as
+drawing a mark. `DragSource` is the optional `ImageDragSource` that was passed to the constructor. `PrepareDragFile()`
+returns the path of a PNG file of the shown picture, written by the drag source, or `null` when no picture is shown,
+dragging out is off, the pane has no drag source, or the file could not be written. `ReportDragProblem` writes a
+failure of the view's drag to the log.
+
 **RenderCompletion**: a task that completes when every render started so far has applied or discarded its result,
 so tests and callers can wait.
 
@@ -63,6 +70,17 @@ and with it the picture and the overlay, as one. With **FitToWindow** the `Viewb
 `StretchDirection.DownOnly` and the scroll bars are disabled; otherwise it uses `Stretch.None` and the scroll bars are
 automatic. Because the grid has a transparent background, pointer input anywhere on the picture reaches the surface
 even where the overlay has no content of its own.
+
+**Dragging the picture out**: The surface remembers a press of the left button when a picture is shown, dragging out is
+on, and the pane has a drag source. When the pointer then moves four device-independent pixels along either axis with
+the button still down, the view starts one drag (`StartDragAsync`): it asks `PrepareDragFile()` for the PNG, gets the
+storage file for the path from the window's storage provider, loads the PNG as a bitmap, puts both into one
+`DataTransferItem` (`SetFile` when the storage file exists, and `SetBitmap`) of a `DataTransfer`, and calls the
+view's `DragStarter` with the press, the data, and `DragDropEffects.Copy`; the bitmap is disposed when the drag ends.
+A release or a lost pointer capture cancels the pending drag, so a click starts nothing. `DragStarter` is an internal,
+replaceable operation whose default is `DragDrop.DoDragDropAsync`, which never completes under the headless platform,
+so that tests replace it and check what is offered. Nothing awaits the drag, so any exception from it is caught and
+passed to `ReportDragProblem`, and the pane keeps working. See *ImageDragSource* for the file and the formats.
 
 #### Key Methods
 
@@ -105,6 +123,7 @@ entry are ignored.
 - **ImageRenderService** (through `IImageRenderService`) — draws the files.
 - **ProjectExplorer** — the selected file and project folder, and the `IRefreshScheduler` seam shared with it.
 - **ProjectService** — the project file extension and data folder name constants.
+- **ImageDragSource** — optional; writes the shown picture as a PNG file for dragging it out.
 - **RollingFileLogger** — optional; records unexpected failures and watcher problems.
 - **CommunityToolkit.Mvvm**, **Avalonia** — notification, source generators, controls, and bitmaps.
 
@@ -112,4 +131,4 @@ entry are ignored.
 
 - The workspace — shows the view through the view locator and disposes the view model.
 - `ImageExporter` — reads the shown picture through `IRenderedImageSource`.
-- `ApplicationComposition` — creates the pane over the explorer and the refresh scheduler.
+- `ApplicationComposition` — creates the pane over the explorer, the refresh scheduler, and the drag source.

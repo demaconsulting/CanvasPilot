@@ -5,13 +5,15 @@
 ### Overview
 
 The `Preview` subsystem turns the image source file that the user selects into a picture on the screen, and the
-picture into a PNG file or a clipboard image. Its boundary starts with the selection and the project folder of
-the project explorer and ends with the picture shown in the main window, files written where the user chooses,
-and the system clipboard. It contains three units: `ImageRenderService`, which draws a file with the CanvasNet
+picture into a PNG file, a clipboard image, or a picture dragged into another program. Its boundary starts with the
+selection and the project folder of the project explorer and ends with the picture shown in the main window, files
+written where the user chooses, the system clipboard, and the operating system's drag and drop. It contains four
+units: `ImageRenderService`, which draws a file with the CanvasNet
 viewer library in the background and encodes pictures as PNG; `PreviewPane`, the view model and view that follow
-the selection, show the picture, the busy state, errors, and notes, and render again when files change; and
-`ImageExporter`, which the Image menu uses to save or copy the shown picture. CanvasNet is used in exactly one
-unit, `ImageRenderService`, so the other units and their tests work with a substitute render service.
+the selection, show the picture, the busy state, errors, and notes, render again when files change, host a layer over
+the picture, and start the drag of the picture; `ImageExporter`, which the Image menu uses to save or copy the shown
+picture; and `ImageDragSource`, which writes the picture as a PNG file for dragging it out. CanvasNet is used in
+exactly one unit, `ImageRenderService`, so the other units and their tests work with a substitute render service.
 
 ### Interfaces
 
@@ -65,6 +67,15 @@ unit, `ImageRenderService`, so the other units and their tests work with a subst
   picture's own pixel coordinates and scaled together with the picture, so that the host's content needs no
   conversion between the screen and the picture; the slot is empty by default.
 
+**Image Drag-out**: How the shown picture leaves the application by drag and drop.
+
+- *Type*: In-process .NET API (`ImageDragSource`, and `PreviewPaneViewModel.PrepareDragFile`) and the operating
+  system's drag and drop, started by `PreviewPaneView`.
+- *Role*: Provider.
+- *Contract*: `ImageDragSource.Prepare(image)` writes the picture as a PNG file named after its source file and the
+  first eight characters of its pixel fingerprint in its folder and returns the path, or `null` when that fails;
+  `Purge()` deletes the files the unit wrote. The view offers the file and a bitmap of the picture in one drag item.
+
 ### Design
 
 1. The application composes one `ImageRenderService`, one `PreviewPaneViewModel` over the project explorer and the
@@ -85,6 +96,10 @@ unit, `ImageRenderService`, so the other units and their tests work with a subst
 5. The exporter is enabled while the pane shows a picture. Export asks the dialog service for a file name and
    writes the PNG that `EncodePng` produces from the shown pixels; Copy hands the picture to the dialog service,
    whose window implementation puts a bitmap on the clipboard.
+6. When the user presses the left button on the shown picture and moves the pointer, the view asks the pane for the
+   picture as a file; `ImageDragSource` writes it as a PNG in its own folder, and the view starts the system's drag
+   with that file and a bitmap of the picture. The application deletes the files in that folder when it starts and when
+   it ends.
 
 The subsystem does not depend on `AppShell`: the exporter asks the user only through `IExportDialogs`, which this
 subsystem defines and the main window implements; the application composes the units in `ApplicationComposition`.

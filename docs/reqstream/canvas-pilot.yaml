@@ -197,6 +197,22 @@ sections:
         tests:
           - CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures
 
+      - id: CanvasPilot-System-DragImageOut
+        title: >-
+          The application shall let the user drag the shown picture out of the preview and drop it into another
+          program, such as a presentation, a mail message, or a folder, as a PNG file and as a picture, and shall not
+          leave the files it wrote for this behind after it ends.
+        tags: [system]
+        justification: |
+          The pictures are composed to be used in email, presentations, and other media. Dragging a picture to where
+          it is needed is the quickest way to use it, and files the application wrote for the purpose should not
+          accumulate on the user's computer. Which programs take the file, the picture, or both is checked by hand,
+          because it depends on those programs.
+        children:
+          - CanvasPilot-Preview-DragImageOut
+        tests:
+          - CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile
+
       - id: CanvasPilot-System-DesktopShell
         title: >-
           The application shall present a main window with menus from which the user creates and opens

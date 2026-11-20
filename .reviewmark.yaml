@@ -264,6 +264,20 @@ reviews:
       - "src/**/PreviewSubsystem/IExportDialogs.cs"
       - "test/**/PreviewSubsystem/ImageExporterTests.cs"
       - "test/**/PreviewSubsystem/PreviewSubsystemFakes.cs"
+
+  - id: CanvasPilot-Preview-ImageDragSource
+    title: Review of CanvasPilot ImageDragSource unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/image-drag-source.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/image-drag-source.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/image-drag-source.md"
+      - "src/**/PreviewSubsystem/ImageDragSource.cs"
+      - "test/**/PreviewSubsystem/ImageDragSourceTests.cs"
   # CanvasPilot - Project
   - id: CanvasPilot-Project
     title: Review of CanvasPilot Project subsystem architecture and interfaces

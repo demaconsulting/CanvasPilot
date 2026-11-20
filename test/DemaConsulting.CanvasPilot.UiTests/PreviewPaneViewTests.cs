@@ -21,10 +21,14 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
+using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
@@ -397,6 +401,152 @@ public sealed class PreviewPaneViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that dragging the shown picture a few pixels offers the program the user drops it on a PNG file of the
+    ///     picture and the picture's bitmap, as a copy.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_DragFromImage_PictureShown_OffersPngFileAndBitmap()
+    {
+        // Arrange: a shown pane that can drag out, with a recording drag operation in place of the system's
+        await File.WriteAllTextAsync(Path.Combine(_folder, "red.svg"), HalfRedSvg, TestContext.Current.CancellationToken);
+        var (window, explorer, pane, view) = ShowPaneView(new ImageRenderService(), withDragSource: true);
+        var offered = new TaskCompletionSource<DragOffer>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var starts = 0;
+        view.DragStarter = (press, data, effects) =>
+        {
+            starts++;
+            offered.TrySetResult(DragOffer.Capture(press, data, effects));
+            return Task.FromResult(DragDropEffects.Copy);
+        };
+        explorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var center = Center(window, SettingsUiHelpers.Find<Image>(window, "PreviewImage"));
+
+        // Act: press the left button on the picture and move the pointer well beyond the threshold
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseMove(center + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
+        var offer = await WaitForAsync(offered.Task);
+        window.MouseUp(center + new Vector(10, 0), MouseButton.Left);
+        window.MouseMove(center + new Vector(40, 0), RawInputModifiers.None);
+        AppShellUiHelpers.Flush();
+
+        // Assert: one drag started by the press, for copying, with a PNG file named after the picture and a bitmap of
+        // the picture's size; moving again after the release starts nothing
+        Assert.Equal(1, starts);
+        Assert.True(offer.PressWasLeftButton);
+        Assert.Equal(DragDropEffects.Copy, offer.Effects);
+        Assert.Contains(DataFormat.File, offer.Formats);
+        Assert.Contains(DataFormat.Bitmap, offer.Formats);
+        Assert.StartsWith($"red-{pane.Image!.ContentHash[..8]}", offer.FileName, StringComparison.Ordinal);
+        Assert.EndsWith(".png", offer.FileName, StringComparison.Ordinal);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], offer.FileHeader);
+        Assert.Equal(new PixelSize(40, 20), offer.BitmapSize);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that a click, a press that moves less than the threshold, and a drag that starts while dragging out is
+    ///     turned off or the pane cannot drag out start nothing.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_DragFromImage_ClickOrNotAllowed_StartsNothing()
+    {
+        // Arrange: a shown pane that can drag out and one that cannot, each with a counting drag operation
+        await File.WriteAllTextAsync(Path.Combine(_folder, "red.svg"), HalfRedSvg, TestContext.Current.CancellationToken);
+        var (window, explorer, pane, view) = ShowPaneView(new ImageRenderService(), withDragSource: true);
+        var starts = 0;
+        view.DragStarter = (_, _, _) =>
+        {
+            starts++;
+            return Task.FromResult(DragDropEffects.None);
+        };
+        explorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var center = Center(window, SettingsUiHelpers.Find<Image>(window, "PreviewImage"));
+
+        // Act: click; press and move 3 pixels, then release; press and move far while dragging out is turned off
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseUp(center, MouseButton.Left);
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseMove(center + new Vector(3, 3), RawInputModifiers.LeftMouseButton);
+        window.MouseUp(center + new Vector(3, 3), MouseButton.Left);
+        pane.IsDragOutEnabled = false;
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseMove(center + new Vector(20, 0), RawInputModifiers.LeftMouseButton);
+        window.MouseUp(center + new Vector(20, 0), MouseButton.Left);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        AppShellUiHelpers.Flush();
+        var (otherWindow, otherExplorer, otherPane, otherView) = ShowPaneView(new ImageRenderService());
+        var otherStarts = 0;
+        otherView.DragStarter = (_, _, _) =>
+        {
+            otherStarts++;
+            return Task.FromResult(DragDropEffects.None);
+        };
+        otherExplorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await otherPane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var otherCenter = Center(otherWindow, SettingsUiHelpers.Find<Image>(otherWindow, "PreviewImage"));
+        otherWindow.MouseDown(otherCenter, MouseButton.Left);
+        otherWindow.MouseMove(otherCenter + new Vector(20, 0), RawInputModifiers.LeftMouseButton);
+        otherWindow.MouseUp(otherCenter + new Vector(20, 0), MouseButton.Left);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        AppShellUiHelpers.Flush();
+
+        // Assert: none of these started a drag
+        Assert.Equal(0, starts);
+        Assert.Equal(0, otherStarts);
+
+        window.Close();
+        otherWindow.Close();
+    }
+
+    /// <summary>
+    ///     Test that a drag operation that fails is written to the log and leaves the pane working, so that a drag can
+    ///     start again.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_DragFromImage_DragOperationFails_LogsAndKeepsWorking()
+    {
+        // Arrange: a shown pane with a logger and a drag operation that fails the first time
+        await File.WriteAllTextAsync(Path.Combine(_folder, "red.svg"), HalfRedSvg, TestContext.Current.CancellationToken);
+        var logger = new RollingFileLogger(Path.Combine(_folder, ".logs"));
+        var (window, explorer, pane, view) = ShowPaneView(new ImageRenderService(), withDragSource: true, logger: logger);
+        var starts = 0;
+        view.DragStarter = (_, _, _) =>
+        {
+            starts++;
+            return starts == 1
+                ? Task.FromException<DragDropEffects>(new InvalidOperationException("the drop target refused"))
+                : Task.FromResult(DragDropEffects.Copy);
+        };
+        explorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var center = Center(window, SettingsUiHelpers.Find<Image>(window, "PreviewImage"));
+
+        // Act: drag, wait for the failure to be logged, release, and drag again
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseMove(center + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
+        await WaitForAsync(() => File.Exists(logger.ActiveFilePath) && File.ReadAllText(logger.ActiveFilePath).Contains("the drop target refused", StringComparison.Ordinal));
+        window.MouseUp(center + new Vector(10, 0), MouseButton.Left);
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseMove(center + new Vector(10, 0), RawInputModifiers.LeftMouseButton);
+        await WaitForAsync(() => starts == 2);
+        window.MouseUp(center + new Vector(10, 0), MouseButton.Left);
+
+        // Assert: the failure was logged as a dragging problem and the second drag started normally
+        var log = await File.ReadAllTextAsync(logger.ActiveFilePath, TestContext.Current.CancellationToken);
+        Assert.Contains("Dragging the picture out of the preview failed", log, StringComparison.Ordinal);
+        Assert.Equal(2, starts);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the bitmap created for a picture has the picture's size and premultiplied BGRA pixels.
     /// </summary>
     [AvaloniaFact]
@@ -421,15 +571,34 @@ public sealed class PreviewPaneViewTests : IDisposable
     /// <returns>The window, the explorer, and the pane.</returns>
     private (Window Window, ProjectExplorerViewModel Explorer, PreviewPaneViewModel Pane) ShowPane(IImageRenderService renderer)
     {
+        var (window, explorer, pane, _) = ShowPaneView(renderer);
+        return (window, explorer, pane);
+    }
+
+    /// <summary>
+    ///     Shows a preview pane in a window, over an explorer that has the project folder open, and exposes the view
+    ///     so that a test can replace its drag operation.
+    /// </summary>
+    /// <param name="renderer">The render service.</param>
+    /// <param name="withDragSource">Whether the pane can prepare its picture for dragging out.</param>
+    /// <param name="logger">Optional logger of the pane.</param>
+    /// <returns>The window, the explorer, the pane, and the view.</returns>
+    private (Window Window, ProjectExplorerViewModel Explorer, PreviewPaneViewModel Pane, PreviewPaneView View) ShowPaneView(
+        IImageRenderService renderer,
+        bool withDragSource = false,
+        RollingFileLogger? logger = null)
+    {
         var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), new NeverRefreshScheduler());
-        var pane = new PreviewPaneViewModel(renderer, explorer, new NeverRefreshScheduler());
+        var dragSource = withDragSource ? new ImageDragSource(renderer, Path.Combine(_folder, ".drag-out"), logger) : null;
+        var pane = new PreviewPaneViewModel(renderer, explorer, new NeverRefreshScheduler(), logger: logger, dragSource: dragSource);
         _disposables.Add(pane);
         _disposables.Add(explorer);
         explorer.Open(_folder);
-        var window = new Window { Width = 400, Height = 300, Content = new PreviewPaneView { DataContext = pane } };
+        var view = new PreviewPaneView { DataContext = pane };
+        var window = new Window { Width = 400, Height = 300, Content = view };
         window.Show();
         AppShellUiHelpers.Flush();
-        return (window, explorer, pane);
+        return (window, explorer, pane, view);
     }
 
     /// <summary>
@@ -459,6 +628,92 @@ public sealed class PreviewPaneViewTests : IDisposable
         var topLeft = control.TranslatePoint(new Point(0, 0), window) ?? throw new InvalidOperationException("The control is not in the window.");
         var bottomRight = control.TranslatePoint(new Point(control.Bounds.Width, control.Bounds.Height), window) ?? throw new InvalidOperationException("The control is not in the window.");
         return new Rect(topLeft, bottomRight);
+    }
+
+    /// <summary>
+    ///     Gets the center of a control in a window's coordinates.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    /// <param name="control">The control.</param>
+    /// <returns>The point at the control's center.</returns>
+    private static Point Center(Window window, Control control)
+    {
+        return control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)
+               ?? throw new InvalidOperationException("The control is not in the window.");
+    }
+
+    /// <summary>
+    ///     Waits for a task while the window's dispatcher keeps running, and fails the test when it takes too long.
+    /// </summary>
+    /// <typeparam name="T">The result type.</typeparam>
+    /// <param name="task">The task to wait for.</param>
+    /// <returns>The task's result.</returns>
+    private static async Task<T> WaitForAsync<T>(Task<T> task)
+    {
+        var winner = await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken));
+        Assert.Same(task, winner);
+        return await task;
+    }
+
+    /// <summary>
+    ///     Waits until a condition holds while the window's dispatcher keeps running, and fails the test when it takes
+    ///     too long.
+    /// </summary>
+    /// <param name="condition">The condition.</param>
+    /// <returns>A task that completes when the condition holds.</returns>
+    private static async Task WaitForAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (!condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "The condition did not hold in time.");
+            AppShellUiHelpers.Flush();
+            await Task.Delay(20, TestContext.Current.CancellationToken);
+        }
+    }
+
+    /// <summary>
+    ///     What the view offered to the drag operation, read while the data was valid.
+    /// </summary>
+    /// <param name="PressWasLeftButton">Whether the press that started the drag was of the left button.</param>
+    /// <param name="Effects">The allowed drop effects.</param>
+    /// <param name="Formats">The formats the data offers.</param>
+    /// <param name="FileName">The name of the file the data offers, or <see langword="null" />.</param>
+    /// <param name="FileHeader">The first eight bytes of that file.</param>
+    /// <param name="BitmapSize">The size of the bitmap the data offers, or <see langword="null" />.</param>
+    private sealed record DragOffer(
+        bool PressWasLeftButton,
+        DragDropEffects Effects,
+        IReadOnlyList<DataFormat> Formats,
+        string? FileName,
+        byte[] FileHeader,
+        PixelSize? BitmapSize)
+    {
+        /// <summary>
+        ///     Reads what a drag operation was given.
+        /// </summary>
+        /// <param name="press">The press that started the drag.</param>
+        /// <param name="data">The data offered.</param>
+        /// <param name="effects">The allowed effects.</param>
+        /// <returns>What was offered.</returns>
+        public static DragOffer Capture(PointerPressedEventArgs press, IDataTransfer data, DragDropEffects effects)
+        {
+            var file = data.TryGetFile();
+            var header = new byte[8];
+            if (file?.TryGetLocalPath() is { } path)
+            {
+                using var stream = File.OpenRead(path);
+                stream.ReadExactly(header);
+            }
+
+            return new DragOffer(
+                press.GetCurrentPoint(null).Properties.PointerUpdateKind == PointerUpdateKind.LeftButtonPressed,
+                effects,
+                data.Formats.ToArray(),
+                file?.Name,
+                header,
+                data.TryGetBitmap()?.PixelSize);
+        }
     }
 
     /// <summary>

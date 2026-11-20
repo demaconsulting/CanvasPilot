@@ -29,6 +29,8 @@ watcher; no network, external services, or display are required.
   nodes inside the picture; a picture of an SVG has no element positions.
 - Content assigned to the pane's overlay slot stays there while different pictures are shown, a changed file is
   rendered again, and a file cannot be drawn.
+- The shown picture can be prepared for dragging out as a file that is a PNG of exactly that picture, which is reused
+  for the same picture and is another file for another picture.
 
 ### Test Scenarios
 
@@ -65,3 +67,11 @@ content assigned to its overlay slot before the project opens. One SVG is shown,
 and then the first SVG is edited and selected again. After each of these the slot holds the same object, and the pane
 shows the picture, the error, or the new picture next to it. This scenario is tested by
 `PreviewSubsystem_HostOverlay_ContentAssigned_StaysWhilePicturesChange`.
+
+**PreviewSubsystem_DragImageOut_ShownPicture_ProvidesPngFileAndBytes**: With the real render service and a pane that
+has a drag source over a temporary folder, the 40 by 20 picture of `wide.svg` is prepared twice, which gives the same
+file twice, and its bytes equal the encoding of the shown picture, start with the PNG signature, and hold width 40 and
+height 20. Showing `good.svg` gives another file named `good-`. The handling of the pointer and the data offered to the
+drag are verified with the `PreviewPane` unit, and which programs accept the dropped picture is checked by hand (see the
+verification of `ImageDragSource`). This scenario is tested by
+`PreviewSubsystem_DragImageOut_ShownPicture_ProvidesPngFileAndBytes`.
