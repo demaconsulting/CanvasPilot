@@ -65,6 +65,21 @@
                   Command="{Binding ExitCommand}" />
       </MenuItem>
 
+      <MenuItem Name="EditMenu"
+                AutomationProperties.AutomationId="EditMenu"
+                Header="_Edit">
+        <MenuItem Name="UndoMenuItem"
+                  AutomationProperties.AutomationId="UndoMenuItem"
+                  Header="_Undo"
+                  InputGesture="Ctrl+Z"
+                  Command="{Binding UndoCommand}" />
+        <MenuItem Name="RedoMenuItem"
+                  AutomationProperties.AutomationId="RedoMenuItem"
+                  Header="_Redo"
+                  InputGesture="Ctrl+Y"
+                  Command="{Binding RedoCommand}" />
+      </MenuItem>
+
       <MenuItem Name="ImageMenu"
                 AutomationProperties.AutomationId="ImageMenu"
                 Header="_Image">

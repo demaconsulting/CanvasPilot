@@ -304,6 +304,71 @@ public sealed class ProjectWorkspaceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the chat content is shown only while a project is open: not before one is shown, and not after it is
+    ///     closed, and that the changes are announced.
+    /// </summary>
+    [Fact]
+    public void ProjectWorkspace_Chat_ShownOnlyWhileProjectIsOpen()
+    {
+        // Arrange: a workspace with chat content and an observer of its changes
+        Touch("a.svg");
+        var workspace = CreateWorkspace();
+        var changed = new List<string?>();
+        workspace.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var content = new object();
+
+        // Act: supply the chat, show a project, and close it again
+        workspace.Chat = content;
+        var beforeProject = workspace.IsChatVisible;
+        workspace.ShowProject(Project());
+        var withProject = workspace.IsChatVisible;
+        workspace.ShowProject(null);
+        var afterClose = workspace.IsChatVisible;
+
+        // Assert: the chat was visible only with a project, and every change was announced
+        Assert.Same(content, workspace.Chat);
+        Assert.False(beforeProject);
+        Assert.True(withProject);
+        Assert.False(afterClose);
+        Assert.Contains(nameof(ProjectWorkspaceViewModel.IsChatVisible), changed);
+    }
+
+    /// <summary>
+    ///     Test that a workspace with no chat content never shows the chat column, even with a project open.
+    /// </summary>
+    [Fact]
+    public void ProjectWorkspace_Chat_NoContent_NotShownWithProject()
+    {
+        // Arrange: a workspace with a project and no chat content
+        Touch("a.svg");
+        var workspace = CreateWorkspace();
+
+        // Act: show the project
+        workspace.ShowProject(Project());
+
+        // Assert: the chat column is not shown
+        Assert.Null(workspace.Chat);
+        Assert.False(workspace.IsChatVisible);
+    }
+
+    /// <summary>
+    ///     Test that disposing the workspace leaves the chat content alone, because the composition root owns it.
+    /// </summary>
+    [Fact]
+    public void ProjectWorkspace_Dispose_DoesNotDisposeChatContent()
+    {
+        // Arrange: a workspace whose chat content needs disposal
+        var probe = new DisposeProbe();
+        var workspace = new ProjectWorkspaceViewModel(NewExplorer()) { Chat = probe };
+
+        // Act: dispose the workspace
+        workspace.Dispose();
+
+        // Assert: the chat content was not disposed
+        Assert.False(probe.IsDisposed);
+    }
+
+    /// <summary>
     ///     Creates a workspace with the dialog service attached.
     /// </summary>
     /// <returns>The workspace, disposed with the fixture.</returns>

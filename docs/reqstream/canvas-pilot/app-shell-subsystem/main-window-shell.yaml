@@ -1,10 +1,12 @@
 ---
 # Software Unit Requirements for the MainWindowShell Unit
 #
-# The MainWindowShell unit is the main window's view model and the window that shows it. It owns the File, Image,
-# Tools, and Help commands, follows the open project in the window title, lists the recent projects, and talks
+# The MainWindowShell unit is the main window's view model and the window that shows it. It owns the File, Edit,
+# Image, Tools, and Help commands, follows the open project in the window title, lists the recent projects, and talks
 # to the user only through an IDialogService that the window implements. The Image menu commands run through an
-# IImageExporter (owned by the Preview subsystem) that the image preview supplies.
+# IImageExporter (owned by the Preview subsystem) that the image preview supplies. The Edit menu runs through the
+# IUndoRedoTarget of the part of the window that has the focus, and the talk key runs through an IPushToTalkTarget
+# (both owned by the Composer subsystem).
 
 sections:
   - title: CanvasPilot Requirements
@@ -15,7 +17,7 @@ sections:
             requirements:
               - id: CanvasPilot-MainWindowShell-ExposeMenus
                 title: >-
-                  The MainWindowShell shall present File, Image, Tools, and Help menus whose items carry a name
+                  The MainWindowShell shall present File, Edit, Image, Tools, and Help menus whose items carry a name
                   and an automation identifier, and shall enable an item only when its command can run.
                 justification: |
                   A predictable menu structure is how users find the application's functions, and stable
@@ -28,6 +30,40 @@ sections:
                   - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
                   - MainWindowView_Menus_NoProject_EnabledStateFollowsCommands
                   - MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled
+
+              - id: CanvasPilot-MainWindowShell-RouteUndoRedoToFocusedTarget
+                title: >-
+                  The MainWindowShell shall offer Undo and Redo commands that act on the part of the window that has
+                  the focus, when that part can undo and redo, that are available only while that part has a step to
+                  undo or redo and follow it as its steps change, and that do nothing and are unavailable while the
+                  focus is in a part that has nothing to undo.
+                justification: |
+                  The Edit menu is one place for a function that belongs to the message being written. The window does
+                  not know what its parts are, so the part that has the focus is asked, which keeps Undo from touching
+                  a message the user is not working in and lets the menu show truthfully whether there is anything
+                  to undo.
+                tests:
+                  - MainWindowShell_UndoRedo_FocusedTarget_DelegatesAndFollowsTargetState
+                  - MainWindowShell_UndoRedo_NoTarget_DisabledAndReplacedTargetIgnored
+                  - MainWindowView_EditMenu_TypingInComposerEnablesUndoAndExplorerFocusDisables
+
+              - id: CanvasPilot-MainWindowShell-StartDictationFromKey
+                title: >-
+                  The MainWindowShell shall start listening on the push-to-talk target when the F8 key goes down, ignore
+                  the repeats of a key that is held, stop listening on the target that was started when the key goes up,
+                  when the window closes, or when the window stops being the active one, and do nothing while there
+                  is no target.
+                justification: |
+                  Holding a key lets the user dictate while the hands stay on the keyboard or pointer. The keyboard
+                  repeats a held key, which must not start the dictation again, and a key that is released in another
+                  window or after the window is gone would never be heard, which would leave the microphone open.
+                tests:
+                  - MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget
+                  - MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget
+                  - MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget
+                  - MainWindowView_PushToTalkKey_NoTarget_IsIgnored
+                  - MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget
+                  - MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget
 
               - id: CanvasPilot-MainWindowShell-TitleFollowsProject
                 title: >-

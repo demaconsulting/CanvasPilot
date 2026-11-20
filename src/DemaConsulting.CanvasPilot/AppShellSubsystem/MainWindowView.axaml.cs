@@ -19,10 +19,14 @@
 // SOFTWARE.
 
 using System.Runtime.InteropServices;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
+using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -32,7 +36,9 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 /// <summary>
 ///     The application main window, bound to a <see cref="MainWindowShell" />. It also implements
 ///     <see cref="IDialogService" />, because showing dialogs and platform pickers needs the window as owner.
-///     Exit closes the window.
+///     Exit closes the window. It also tells the shell what has the focus (for Edit > Undo and Redo), and passes the
+///     talk key and the loss of the active state on to it. The window is the payload inspector launcher of the chat
+///     panel, which the workspace connects when the dialog service is attached.
 /// </summary>
 public sealed partial class MainWindowView : Window, IDialogService
 {
@@ -71,6 +77,12 @@ public sealed partial class MainWindowView : Window, IDialogService
         DataContext = shell;
         shell.AttachDialogService(this);
         shell.ExitRequested += OnExitRequested;
+
+        // What has the focus decides what Edit > Undo and Redo reach; the talk key is watched before any control sees it
+        AddHandler(GotFocusEvent, OnFocusGained, RoutingStrategies.Bubble, handledEventsToo: true);
+        AddHandler(KeyDownEvent, OnKeyDownTunnel, RoutingStrategies.Tunnel);
+        AddHandler(KeyUpEvent, OnKeyUpTunnel, RoutingStrategies.Tunnel);
+        Deactivated += OnWindowDeactivated;
     }
 
     /// <inheritdoc />
@@ -201,9 +213,93 @@ public sealed partial class MainWindowView : Window, IDialogService
         if (_shell is not null)
         {
             _shell.ExitRequested -= OnExitRequested;
+            Deactivated -= OnWindowDeactivated;
+            _ = _shell.EndPushToTalkAsync();
         }
 
         base.OnClosed(e);
+    }
+
+    /// <summary>
+    ///     Finds what the Edit menu reaches: the nearest control from the one that took the focus, itself included, up
+    ///     through its parents, whose data context can undo and redo. A control that is part of a menu is skipped, so
+    ///     choosing a menu item does not change what the item acts on.
+    /// </summary>
+    /// <param name="sender">The window.</param>
+    /// <param name="e">The event data.</param>
+    private void OnFocusGained(object? sender, FocusChangedEventArgs e)
+    {
+        if (_shell is null || e.Source is not StyledElement source)
+        {
+            return;
+        }
+
+        IUndoRedoTarget? target = null;
+        for (var element = source; element is not null; element = element.Parent)
+        {
+            if (element is Menu or MenuItem)
+            {
+                return;
+            }
+
+            if (element.DataContext is IUndoRedoTarget found)
+            {
+                target = found;
+                break;
+            }
+        }
+
+        _shell.EditTarget = target;
+    }
+
+    /// <summary>
+    ///     Starts listening when the talk key goes down. The keyboard repeats a held key, which the shell ignores.
+    /// </summary>
+    /// <param name="sender">The window.</param>
+    /// <param name="e">The event data.</param>
+    private void OnKeyDownTunnel(object? sender, KeyEventArgs e)
+    {
+        if (_shell is not { PushToTalk: not null } || e.Key != MainWindowShell.PushToTalkKey)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        _ = _shell.BeginPushToTalkAsync();
+    }
+
+    /// <summary>
+    ///     Stops listening when the talk key goes up.
+    /// </summary>
+    /// <param name="sender">The window.</param>
+    /// <param name="e">The event data.</param>
+    private void OnKeyUpTunnel(object? sender, KeyEventArgs e)
+    {
+        if (_shell is null || e.Key != MainWindowShell.PushToTalkKey)
+        {
+            return;
+        }
+
+        if (_shell.IsPushToTalkActive)
+        {
+            e.Handled = true;
+        }
+
+        _ = _shell.EndPushToTalkAsync();
+    }
+
+    /// <summary>
+    ///     Stops listening when the window is no longer the active one, because the release of the key would go to
+    ///     another window.
+    /// </summary>
+    /// <param name="sender">The window.</param>
+    /// <param name="e">The event data.</param>
+    private void OnWindowDeactivated(object? sender, EventArgs e)
+    {
+        if (_shell is not null)
+        {
+            _ = _shell.EndPushToTalkAsync();
+        }
     }
 
     /// <summary>

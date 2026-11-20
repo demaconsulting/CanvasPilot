@@ -2,7 +2,7 @@ package CanvasPilot {
     private import SoftwareItemMetadata::*;
 
     part def ProjectWorkspace {
-        doc /* The main window's content area: the project explorer, the preview area, and the confirmed delete and rename of project files. */
+        doc /* The main window's content area: the project explorer, the preview area, the chat column, and the confirmed delete and rename of project files. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -18,5 +18,8 @@ package CanvasPilot {
 
         // Hosts the explorer and drives its selection, delete, and rename.
         dependency ProjectWorkspace to ProjectExplorer;
+
+        // Hosts the chat panel in the chat column and makes the dialog service its launcher of the payload inspector.
+        dependency ProjectWorkspace to ChatPanel;
     }
 }

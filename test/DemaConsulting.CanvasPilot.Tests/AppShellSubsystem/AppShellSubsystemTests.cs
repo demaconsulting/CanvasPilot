@@ -325,6 +325,39 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that composing the application places the chat panel in the workspace and the shell, the workspace shows it
+    ///     only while a project is open, the dialog service becomes the panel's launcher of the payload inspector, and the
+    ///     talk key of the shell reaches the panel.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_ChatIsTheChatColumnAndTheTalkKeyTarget()
+    {
+        // Arrange: a composition with no project open
+        var composition = Compose();
+        var beforeProject = composition.Shell.Workspace.IsChatVisible;
+
+        // Act: create a project and hold the talk key of the shell
+        await composition.Projects.CreateAsync(Projects, "Demo", TestContext.Current.CancellationToken);
+        var withProject = composition.Shell.Workspace.IsChatVisible;
+        await composition.Shell.BeginPushToTalkAsync();
+        var status = composition.Composer.StatusText;
+        await composition.Shell.EndPushToTalkAsync();
+        composition.Projects.Close();
+        var afterClose = composition.Shell.Workspace.IsChatVisible;
+
+        // Assert: the chat is in the workspace, shown only with a project, launches the inspector through the dialog
+        // service, and is what the talk key reached (no speech model is chosen, so the composer says why nothing started)
+        Assert.Same(composition.Chat, composition.Shell.Workspace.Chat);
+        Assert.Same(composition.Chat, composition.Shell.PushToTalk);
+        Assert.Same(_dialogs, composition.Chat.InspectorLauncher);
+        Assert.False(beforeProject);
+        Assert.True(withProject);
+        Assert.False(afterClose);
+        Assert.False(composition.Shell.IsPushToTalkActive);
+        Assert.NotEmpty(status);
+    }
+
+    /// <summary>
     ///     Test that composing the application refuses missing parts.
     /// </summary>
     [Fact]

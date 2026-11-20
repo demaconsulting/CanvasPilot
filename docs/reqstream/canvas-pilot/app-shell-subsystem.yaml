@@ -17,9 +17,10 @@ sections:
         requirements:
           - id: CanvasPilot-AppShell-ProvideMainWindow
             title: >-
-              The AppShell subsystem shall provide a main window with File, Image, Tools, and Help menus
-              through which the user creates, opens, saves, and closes projects, changes settings, views
-              information about the application, and exits, with the open project's name in the window title.
+              The AppShell subsystem shall provide a main window with File, Edit, Image, Tools, and Help menus
+              through which the user creates, opens, saves, and closes projects, undoes and redoes changes to the
+              message being written, changes settings, views information about the application, and exits, with the
+              open project's name in the window title.
             justification: |
               The main window is the user's way into every capability of the application. A familiar menu
               structure, a title that names the open project, and problems reported in dialogs rather than
@@ -50,6 +51,62 @@ sections:
               - CanvasPilot-ProjectWorkspace-FollowOpenProject
             tests:
               - AppShellSubsystem_ManageFiles_RenameAndDelete_UpdateFolderAndExplorer
+
+          - id: CanvasPilot-AppShell-ChatColumn
+            title: >-
+              The AppShell subsystem shall show the chat panel in a column on the right of the preview, with a
+              splitter between them, while a project is open, and show no chat column while no project is open.
+            justification: |
+              Writing a message needs a project, because the attachments and marks belong to it. Showing the
+              chat beside the picture, where the user can resize it, keeps what the message is about in view
+              while it is written, and hiding it without a project keeps the window to what can be used.
+            children:
+              - CanvasPilot-ProjectWorkspace-HostChatColumn
+            tests:
+              - MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns
+              - AppShellSubsystem_ComposeApplication_ChatIsTheChatColumnAndTheTalkKeyTarget
+
+          - id: CanvasPilot-AppShell-EditMenu
+            title: >-
+              The AppShell subsystem shall provide an Edit menu with Undo and Redo that act on the message being
+              written while its editor has the focus, and are unavailable while the focus is elsewhere or there is
+              nothing to undo or redo.
+            justification: |
+              Users look for Undo and Redo in the Edit menu and expect them to show whether they can be used. They
+              must reach the message the user is writing in and nothing else, so the menu follows what has the focus.
+            children:
+              - CanvasPilot-MainWindowShell-RouteUndoRedoToFocusedTarget
+            tests:
+              - MainWindowView_EditMenu_TypingInComposerEnablesUndoAndExplorerFocusDisables
+              - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
+
+          - id: CanvasPilot-AppShell-PushToTalkKey
+            title: >-
+              The AppShell subsystem shall let the user dictate into the message by holding the F8 key anywhere in the
+              main window: dictation starts when the key goes down, ignores the repeats of the key, and ends when the
+              key is released, the window is closed, or the window is no longer active.
+            justification: |
+              A talk key lets the user dictate without leaving the keyboard or the pointer. A session that is not ended
+              when the window loses the focus would keep the microphone open, because the release of the key goes to
+              another window.
+            children:
+              - CanvasPilot-MainWindowShell-StartDictationFromKey
+            tests:
+              - MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget
+              - MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget
+              - AppShellSubsystem_ComposeApplication_ChatIsTheChatColumnAndTheTalkKeyTarget
+
+          - id: CanvasPilot-AppShell-HostChat
+            title: >-
+              The AppShell subsystem shall place the chat panel in the workspace, make it what the talk key and the
+              Edit menu reach, and make the main window the place where the panel shows the payload inspector.
+            justification: |
+              The units of the chat are independent of the window that shows them, so one place has to join them: the
+              composition root puts the panel in the workspace and the shell, and the window, which owns the dialogs,
+              is what the panel asks to show the inspector.
+            tests:
+              - AppShellSubsystem_ComposeApplication_ChatIsTheChatColumnAndTheTalkKeyTarget
+              - MainWindowView_Show_ChatPanelLaunchesInspectorThroughWindow
 
           - id: CanvasPilot-AppShell-ManageProjectFiles
             title: >-

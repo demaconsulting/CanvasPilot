@@ -156,8 +156,8 @@ public sealed class ApplicationComposition : IDisposable
 
     /// <summary>
     ///     Gets the chat panel: the transcript of the sent messages, the message being composed with its send and
-    ///     hold-to-talk buttons, and the joining of the marks to the message. It is ready to be placed in the workspace
-    ///     but is not placed in it yet.
+    ///     hold-to-talk buttons, and the joining of the marks to the message. It is the chat column of the workspace,
+    ///     which shows it while a project is open, and the target of the talk key.
     /// </summary>
     public ChatPanelViewModel Chat { get; }
 
@@ -299,6 +299,11 @@ public sealed class ApplicationComposition : IDisposable
         // The chat panel joins the two: every mark that is drawn becomes a chip of the message, and the layer shows the
         // marks whose chips the message holds
         var chat = new ChatPanelViewModel(composer, marks, annotation, markImages, dictation, logger);
+
+        // The chat panel is the right-hand column of the workspace, which shows it while a project is open, and it is
+        // what the talk key of the window listens for
+        workspace.Chat = chat;
+        shell.PushToTalk = chat;
 
         logger.Log(LogLevel.Info, "Application started.");
         return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat, owned);

@@ -19,8 +19,10 @@
 // SOFTWARE.
 
 using System.Collections.ObjectModel;
+using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -58,8 +60,10 @@ public sealed class RecentProjectItem(string name, string filePath, IAsyncRelayC
 }
 
 /// <summary>
-///     View model of the application's main window: the File, Image, Tools, and Help menus, the open project, the
-///     recent projects list, the window title, and the workspace. It talks to the user only through an
+///     View model of the application's main window: the File, Edit, Image, Tools, and Help menus, the open project, the
+///     recent projects list, the window title, and the workspace. The Edit menu undoes and redoes in the part of the
+///     window that has the focus (<see cref="EditTarget" />), and the talk key starts and stops dictation in
+///     <see cref="PushToTalk" />. It talks to the user only through an
 ///     <see cref="IDialogService" />, which the main window supplies, so it can be tested without a window.
 /// </summary>
 public sealed partial class MainWindowShell : ObservableObject, IDisposable
@@ -68,6 +72,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     The application name shown in the window title.
     /// </summary>
     public const string ApplicationName = "CanvasPilot";
+
+    /// <summary>
+    ///     The key that is held to talk: while it is down the message is dictated.
+    /// </summary>
+    public const Key PushToTalkKey = Key.F8;
 
     /// <summary>
     ///     Creates and opens projects.
@@ -127,6 +136,19 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(HasProject))]
     [NotifyCanExecuteChangedFor(nameof(SaveProjectCommand), nameof(CloseProjectCommand))]
     private ProjectInfo? _currentProject;
+
+    /// <summary>
+    ///     What the Edit menu undoes and redoes: the part of the window that has the focus, or null when it has nothing
+    ///     to undo.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UndoCommand), nameof(RedoCommand))]
+    private IUndoRedoTarget? _editTarget;
+
+    /// <summary>
+    ///     The target that was told to start listening and is to be told to stop, or null while no key is held.
+    /// </summary>
+    private IPushToTalkTarget? _talkingTarget;
 
     /// <summary>
     ///     Creates the shell.
@@ -204,6 +226,51 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     public bool HasRecentProjects => _recentItems.Count > 0;
 
     /// <summary>
+    ///     Gets or sets what listens while <see cref="PushToTalkKey" /> is held, normally the chat panel, or null when
+    ///     nothing does, in which case the key does nothing.
+    /// </summary>
+    public IPushToTalkTarget? PushToTalk { get; set; }
+
+    /// <summary>
+    ///     Gets a value indicating whether the talk key is held and listening was started for it.
+    /// </summary>
+    public bool IsPushToTalkActive => _talkingTarget is not null;
+
+    /// <summary>
+    ///     Starts listening because the talk key went down. A key that is already down, which is the keyboard repeating it,
+    ///     and a key with no target are ignored.
+    /// </summary>
+    /// <returns>A task that completes when listening has started, or when it was found that it cannot.</returns>
+    public Task BeginPushToTalkAsync()
+    {
+        var target = PushToTalk;
+        if (target is null || _talkingTarget is not null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _talkingTarget = target;
+        return target.BeginPushToTalkAsync();
+    }
+
+    /// <summary>
+    ///     Stops listening because the talk key went up or the window lost the focus. The target that was told to start is
+    ///     told to stop, even when <see cref="PushToTalk" /> was changed in between; a release with no key down is ignored.
+    /// </summary>
+    /// <returns>A task that completes when what was said has been added to the message.</returns>
+    public Task EndPushToTalkAsync()
+    {
+        var target = _talkingTarget;
+        if (target is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        _talkingTarget = null;
+        return target.EndPushToTalkAsync();
+    }
+
+    /// <summary>
     ///     Gives the shell the dialog service it uses to talk to the user, and passes it on to the workspace.
     ///     Until this is called, commands that need the user do nothing. The main window calls it with itself.
     /// </summary>
@@ -228,7 +295,74 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _projectService.CurrentChanged -= OnProjectChanged;
         _recentProjects.Changed -= OnRecentProjectsChanged;
         ImageExporter.CanExportChanged -= OnCanExportChanged;
+        if (EditTarget is not null)
+        {
+            EditTarget.UndoRedoStateChanged -= OnUndoRedoStateChanged;
+        }
+
         Workspace.Dispose();
+    }
+
+    /// <summary>
+    ///     Undoes the latest step of the <see cref="EditTarget" />.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanUndoEdit))]
+    private void Undo()
+    {
+        EditTarget?.Undo();
+    }
+
+    /// <summary>
+    ///     Redoes the step of the <see cref="EditTarget" /> that was undone last.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRedoEdit))]
+    private void Redo()
+    {
+        EditTarget?.Redo();
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether the Undo command can run.
+    /// </summary>
+    /// <returns><see langword="true" /> when the edit target has a step to undo.</returns>
+    private bool CanUndoEdit() => EditTarget?.CanUndo == true;
+
+    /// <summary>
+    ///     Gets a value indicating whether the Redo command can run.
+    /// </summary>
+    /// <returns><see langword="true" /> when the edit target has a step to redo.</returns>
+    private bool CanRedoEdit() => EditTarget?.CanRedo == true;
+
+    /// <summary>
+    ///     Follows the state of the edit target, so the commands are re-evaluated when its steps change.
+    /// </summary>
+    /// <param name="oldValue">The previous target.</param>
+    /// <param name="newValue">The new target.</param>
+    partial void OnEditTargetChanged(IUndoRedoTarget? oldValue, IUndoRedoTarget? newValue)
+    {
+        if (oldValue is not null)
+        {
+            oldValue.UndoRedoStateChanged -= OnUndoRedoStateChanged;
+        }
+
+        if (newValue is not null)
+        {
+            newValue.UndoRedoStateChanged += OnUndoRedoStateChanged;
+        }
+    }
+
+    /// <summary>
+    ///     Re-evaluates the Undo and Redo commands when the steps of the edit target changed.
+    /// </summary>
+    /// <param name="sender">The edit target.</param>
+    /// <param name="e">The event data.</param>
+    private void OnUndoRedoStateChanged(object? sender, EventArgs e)
+    {
+        RunOnOwnerThread(() =>
+        {
+            UndoCommand.NotifyCanExecuteChanged();
+            RedoCommand.NotifyCanExecuteChanged();
+        });
     }
 
     /// <summary>

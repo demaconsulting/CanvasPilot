@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
@@ -571,6 +572,131 @@ public sealed class MainWindowShellTests : IDisposable
         // Assert: the shell did not change
         Assert.True(created.Succeeded, created.Error);
         Assert.Equal("CanvasPilot", shell.Title);
+    }
+
+    /// <summary>
+    ///     Test that Undo and Redo run on the edit target, are enabled only while it has a step to undo or redo, and
+    ///     follow it when its steps change.
+    /// </summary>
+    [Fact]
+    public void MainWindowShell_UndoRedo_FocusedTarget_DelegatesAndFollowsTargetState()
+    {
+        // Arrange: a shell and a target that can undo but not redo
+        var shell = CreateShell();
+        var target = Substitute.For<IUndoRedoTarget>();
+        target.CanUndo.Returns(true);
+        target.CanRedo.Returns(false);
+        var changes = 0;
+        shell.UndoCommand.CanExecuteChanged += (_, _) => changes++;
+
+        // Act: focus moves to the target, it is undone, and then it can redo and cannot undo
+        shell.EditTarget = target;
+        var undoEnabled = shell.UndoCommand.CanExecute(null);
+        var redoEnabled = shell.RedoCommand.CanExecute(null);
+        shell.UndoCommand.Execute(null);
+        target.CanUndo.Returns(false);
+        target.CanRedo.Returns(true);
+        target.UndoRedoStateChanged += Raise.Event();
+        var undoAfter = shell.UndoCommand.CanExecute(null);
+        var redoAfter = shell.RedoCommand.CanExecute(null);
+        shell.RedoCommand.Execute(null);
+
+        // Assert: Undo and Redo reached the target, and the commands followed its state
+        Assert.True(undoEnabled);
+        Assert.False(redoEnabled);
+        Assert.False(undoAfter);
+        Assert.True(redoAfter);
+        target.Received(1).Undo();
+        target.Received(1).Redo();
+        Assert.True(changes >= 2);
+    }
+
+    /// <summary>
+    ///     Test that with no edit target both commands are disabled and do nothing, and that a target that was replaced
+    ///     no longer changes the commands.
+    /// </summary>
+    [Fact]
+    public void MainWindowShell_UndoRedo_NoTarget_DisabledAndReplacedTargetIgnored()
+    {
+        // Arrange: a shell that had a target which can undo and redo, and then loses it
+        var shell = CreateShell();
+        var first = Substitute.For<IUndoRedoTarget>();
+        first.CanUndo.Returns(true);
+        first.CanRedo.Returns(true);
+        shell.EditTarget = first;
+        shell.EditTarget = null;
+        var changes = 0;
+        shell.UndoCommand.CanExecuteChanged += (_, _) => changes++;
+
+        // Act: the old target announces a change and the commands are run
+        first.UndoRedoStateChanged += Raise.Event();
+        shell.UndoCommand.Execute(null);
+        shell.RedoCommand.Execute(null);
+
+        // Assert: nothing is enabled, nothing reached the old target, and the commands were not re-evaluated
+        Assert.False(shell.UndoCommand.CanExecute(null));
+        Assert.False(shell.RedoCommand.CanExecute(null));
+        first.DidNotReceive().Undo();
+        first.DidNotReceive().Redo();
+        Assert.Equal(0, changes);
+    }
+
+    /// <summary>
+    ///     Test that the talk key is F8 and that pressing and releasing it starts and stops the push-to-talk target once.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget()
+    {
+        // Arrange: a shell with a push-to-talk target
+        var shell = CreateShell();
+        var target = Substitute.For<IPushToTalkTarget>();
+        target.BeginPushToTalkAsync().Returns(Task.CompletedTask);
+        target.EndPushToTalkAsync().Returns(Task.CompletedTask);
+        shell.PushToTalk = target;
+
+        // Act: press, repeat twice (the keyboard repeating the key), release, and release again
+        await shell.BeginPushToTalkAsync();
+        var activeWhileHeld = shell.IsPushToTalkActive;
+        await shell.BeginPushToTalkAsync();
+        await shell.BeginPushToTalkAsync();
+        await shell.EndPushToTalkAsync();
+        await shell.EndPushToTalkAsync();
+
+        // Assert: the target was started once and stopped once, and the key is F8
+        Assert.Equal(Avalonia.Input.Key.F8, MainWindowShell.PushToTalkKey);
+        Assert.True(activeWhileHeld);
+        Assert.False(shell.IsPushToTalkActive);
+        await target.Received(1).BeginPushToTalkAsync();
+        await target.Received(1).EndPushToTalkAsync();
+    }
+
+    /// <summary>
+    ///     Test that the talk key does nothing without a target, and that a release goes to the target that was started
+    ///     even when the target was replaced while the key was down.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget()
+    {
+        // Arrange: a shell with no target
+        var shell = CreateShell();
+        await shell.BeginPushToTalkAsync();
+        var activeWithoutTarget = shell.IsPushToTalkActive;
+        var first = Substitute.For<IPushToTalkTarget>();
+        var second = Substitute.For<IPushToTalkTarget>();
+        first.BeginPushToTalkAsync().Returns(Task.CompletedTask);
+        first.EndPushToTalkAsync().Returns(Task.CompletedTask);
+
+        // Act: start with the first target, replace it with the second, and release
+        shell.PushToTalk = first;
+        await shell.BeginPushToTalkAsync();
+        shell.PushToTalk = second;
+        await shell.EndPushToTalkAsync();
+
+        // Assert: the key without a target was not active, and the first target was the one stopped
+        Assert.False(activeWithoutTarget);
+        await first.Received(1).EndPushToTalkAsync();
+        await second.DidNotReceive().BeginPushToTalkAsync();
+        await second.DidNotReceive().EndPushToTalkAsync();
     }
 
     /// <summary>

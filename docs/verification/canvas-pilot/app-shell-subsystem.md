@@ -32,8 +32,17 @@ services, or display are required.
   only while a project is open.
 - The chat panel of the composition works with the composition's composer, can be used only while a project is open,
   keeps the message that was sent in its transcript, and has an empty transcript once the project is closed.
+- The chat panel is the chat content of the workspace (shown only while a project is open), the push-to-talk target
+  of the shell, and has the window's dialog service as its launcher of the payload inspector.
 
 ### Test Scenarios
+
+**AppShellSubsystem_ComposeApplication_ChatIsTheChatColumnAndTheTalkKeyTarget**: A composition starts with no
+project, and the workspace shows no chat. After a project is created the chat is shown; the talk key of the shell
+reaches the chat panel (with no speech model chosen the composer says why nothing started), and is no longer active
+after it is released. After the project is closed the chat is not shown. The chat panel is the workspace's chat
+content and the shell's push-to-talk target, and the attached dialog service is its inspector launcher. This
+scenario is tested by `AppShellSubsystem_ComposeApplication_ChatIsTheChatColumnAndTheTalkKeyTarget`.
 
 **AppShellSubsystem_ComposeApplication_ChatPanelFollowsTheOpenProject**: A composition starts with no project, and its
 chat panel cannot be used. After a project is created the panel works with the composition's composer; a message typed

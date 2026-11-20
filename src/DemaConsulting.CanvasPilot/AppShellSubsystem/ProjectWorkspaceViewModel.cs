@@ -21,14 +21,17 @@
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
 /// <summary>
-///     View model of the main window's content area: the project explorer on the left and, on the right, a
-///     content area that shows <see cref="Preview" /> when one is supplied and an explanation otherwise. The
-///     workspace also asks the user to confirm deleting a file and to enter a new name when renaming one.
+///     View model of the main window's content area, in three columns: the project explorer on the left, a
+///     content area in the middle that shows <see cref="Preview" /> when one is supplied and an explanation otherwise,
+///     and the chat column on the right, which shows <see cref="Chat" /> while a project is open. The workspace
+///     also asks the user to confirm deleting a file and to enter a new name when renaming one. It does not own
+///     <see cref="Chat" />; the composition root disposes it.
 /// </summary>
 public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDisposable
 {
@@ -43,6 +46,13 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPreview), nameof(PlaceholderText))]
     private object? _preview;
+
+    /// <summary>
+    ///     The content of the chat column on the right, or null while none is supplied.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsChatVisible))]
+    private object? _chat;
 
     /// <summary>
     ///     Creates the workspace around a project explorer. The workspace takes ownership of the explorer and
@@ -79,6 +89,12 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     public bool HasPreview => Preview is not null;
 
     /// <summary>
+    ///     Gets a value indicating whether the chat column is shown: <see cref="Chat" /> holds content and a project is
+    ///     open, because a message is written in the project and needs it for its attachments and marks.
+    /// </summary>
+    public bool IsChatVisible => Chat is not null && HasProject;
+
+    /// <summary>
     ///     Gets the text shown in the right-hand area while there is no preview content.
     /// </summary>
     public string PlaceholderText
@@ -113,6 +129,7 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     {
         ArgumentNullException.ThrowIfNull(dialogs);
         _dialogs = dialogs;
+        ConnectChat();
     }
 
     /// <summary>
@@ -145,6 +162,27 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
         Explorer.PropertyChanged -= OnExplorerPropertyChanged;
         (Preview as IDisposable)?.Dispose();
         Explorer.Dispose();
+    }
+
+    /// <summary>
+    ///     Gives the chat panel the dialog service as its launcher of the payload inspector, when both are there. It runs
+    ///     when the dialog service is attached and when the chat content is set, so the order of the two does not matter.
+    /// </summary>
+    private void ConnectChat()
+    {
+        if (_dialogs is not null && Chat is ChatPanelViewModel panel)
+        {
+            panel.InspectorLauncher = _dialogs;
+        }
+    }
+
+    /// <summary>
+    ///     Follows a change of the chat content.
+    /// </summary>
+    /// <param name="value">The new content.</param>
+    partial void OnChatChanged(object? value)
+    {
+        ConnectChat();
     }
 
     /// <summary>
@@ -222,6 +260,7 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
 
             case nameof(ProjectExplorerViewModel.HasProject):
                 OnPropertyChanged(nameof(HasProject));
+                OnPropertyChanged(nameof(IsChatVisible));
                 OnPropertyChanged(nameof(PlaceholderText));
                 OnPropertyChanged(nameof(HintText));
                 break;

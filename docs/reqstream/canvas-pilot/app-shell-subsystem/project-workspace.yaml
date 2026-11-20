@@ -1,10 +1,10 @@
 ---
 # Software Unit Requirements for the ProjectWorkspace Unit
 #
-# The ProjectWorkspace unit is the main window's content area: the project explorer on the left and, on the
-# right, an area that shows supplied preview content or explains what is missing. It is the extension point
-# where the image preview is plugged in, and it confirms deletions and asks for new names on behalf of the
-# explorer.
+# The ProjectWorkspace unit is the main window's content area, in three columns: the project explorer on the left, an
+# area in the middle that shows supplied preview content or explains what is missing, and, while a project is open,
+# the chat column on the right. It is the extension point where the image preview and the chat panel are plugged in,
+# and it confirms deletions and asks for new names on behalf of the explorer.
 
 sections:
   - title: CanvasPilot Requirements
@@ -31,6 +31,21 @@ sections:
                   - ProjectWorkspace_Dispose_DisposesExplorer
                   - ProjectWorkspace_Dispose_DisposesPreviewContent
                   - MainWindowView_Workspace_SelectionAndPreview_ChangePlaceholderAndContent
+
+              - id: CanvasPilot-ProjectWorkspace-HostChatColumn
+                title: >-
+                  The ProjectWorkspace shall host the supplied chat content in a column on the right of the preview,
+                  start it at 380 pixels wide and let the user resize it with a splitter, show it only while a project
+                  is open and content was supplied, and leave the disposal of that content to its owner.
+                justification: |
+                  A message is written in the project, because its attachments and marks belong to it, so the chat
+                  has no use while no project is open and would only take room from the picture. Placing the chat
+                  beside the picture keeps the picture and the marks in view while the user writes about them.
+                tests:
+                  - ProjectWorkspace_Chat_ShownOnlyWhileProjectIsOpen
+                  - ProjectWorkspace_Chat_NoContent_NotShownWithProject
+                  - ProjectWorkspace_Dispose_DoesNotDisposeChatContent
+                  - MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns
 
               - id: CanvasPilot-ProjectWorkspace-FollowOpenProject
                 title: >-

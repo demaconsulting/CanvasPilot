@@ -18,18 +18,53 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
+using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
+/// <summary>
+///     A push-to-talk target for the window tests that counts how often it was started and stopped.
+/// </summary>
+internal sealed class RecordingTalkTarget : IPushToTalkTarget
+{
+    /// <summary>
+    ///     Gets how many times listening was started.
+    /// </summary>
+    public int Begins { get; private set; }
+
+    /// <summary>
+    ///     Gets how many times listening was stopped.
+    /// </summary>
+    public int Ends { get; private set; }
+
+    /// <inheritdoc />
+    public Task BeginPushToTalkAsync()
+    {
+        Begins++;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task EndPushToTalkAsync()
+    {
+        Ends++;
+        return Task.CompletedTask;
+    }
+}
 /// <summary>
 ///     Headless UI tests for the main window: its menus, the dialogs it opens, the title, and the dialog service it
 ///     implements.
@@ -97,14 +132,15 @@ public sealed class MainWindowViewTests : IDisposable
             .Select(top => (Id: IdOf(top), Children: top.Items.OfType<MenuItem>().Select(IdOf).ToArray()))
             .ToArray();
 
-        // Assert: File, Image, Tools, and Help hold the expected items in order
-        Assert.Equal(["FileMenu", "ImageMenu", "ToolsMenu", "HelpMenu"], structure.Select(top => top.Id));
+        // Assert: File, Edit, Image, Tools, and Help hold the expected items in order
+        Assert.Equal(["FileMenu", "EditMenu", "ImageMenu", "ToolsMenu", "HelpMenu"], structure.Select(top => top.Id));
         Assert.Equal(
             ["NewProjectMenuItem", "OpenProjectMenuItem", "RecentProjectsMenuItem", "SaveProjectMenuItem", "CloseProjectMenuItem", "ExitMenuItem"],
             structure[0].Children);
-        Assert.Equal(["ExportPngMenuItem", "CopyImageMenuItem"], structure[1].Children);
-        Assert.Equal(["SettingsMenuItem"], structure[2].Children);
-        Assert.Equal(["AboutMenuItem"], structure[3].Children);
+        Assert.Equal(["UndoMenuItem", "RedoMenuItem"], structure[1].Children);
+        Assert.Equal(["ExportPngMenuItem", "CopyImageMenuItem"], structure[2].Children);
+        Assert.Equal(["SettingsMenuItem"], structure[3].Children);
+        Assert.Equal(["AboutMenuItem"], structure[4].Children);
         foreach (var item in structure.SelectMany(top => top.Children.Prepend(top.Id)))
         {
             var found = window.FindControl<MenuItem>(item);
@@ -113,8 +149,10 @@ public sealed class MainWindowViewTests : IDisposable
         }
 
         Assert.Equal(
-            ["_File", "_Image", "_Tools", "_Help"],
+            ["_File", "_Edit", "_Image", "_Tools", "_Help"],
             menu.Items.OfType<MenuItem>().Select(top => top.Header as string));
+        Assert.Equal("Ctrl+Z", window.FindControl<MenuItem>("UndoMenuItem")!.InputGesture?.ToString());
+        Assert.Equal("Ctrl+Y", window.FindControl<MenuItem>("RedoMenuItem")!.InputGesture?.ToString());
 
         window.Close();
     }
@@ -135,7 +173,7 @@ public sealed class MainWindowViewTests : IDisposable
             Assert.True(IsUsable(window.FindControl<MenuItem>(enabled)!), enabled);
         }
 
-        foreach (var disabled in new[] { "RecentProjectsMenuItem", "SaveProjectMenuItem", "CloseProjectMenuItem", "ExportPngMenuItem", "CopyImageMenuItem" })
+        foreach (var disabled in new[] { "RecentProjectsMenuItem", "SaveProjectMenuItem", "CloseProjectMenuItem", "UndoMenuItem", "RedoMenuItem", "ExportPngMenuItem", "CopyImageMenuItem" })
         {
             Assert.False(IsUsable(window.FindControl<MenuItem>(disabled)!), disabled);
         }
@@ -580,6 +618,230 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the chat column is hidden while no project is open and shown, to the right of the preview, with the
+    ///     chat panel in it once a project is open, and that the workspace has three columns with a splitter on each side
+    ///     of the preview.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns()
+    {
+        // Arrange: a shown window with no project open
+        var projectFile = await CreateRememberedProjectAsync("Layout", "a.svg");
+        var (composition, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var chatHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspaceChatHost");
+        var chatSplitter = SettingsUiHelpers.Find<GridSplitter>(window, "WorkspaceChatSplitter");
+        var chatVisibleBefore = chatHost.IsVisible;
+        var chatWidthBefore = chatHost.Bounds.Width;
+        var splitterVisibleBefore = chatSplitter.IsVisible;
+
+        // Act: open the project, then close it
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        LayOut(window);
+        var explorerHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspaceExplorerHost");
+        var previewHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspacePreviewHost");
+        var chatVisibleWith = chatHost.IsVisible;
+        var chatWidthWith = chatHost.Bounds.Width;
+        var explorerWidth = explorerHost.Bounds.Width;
+        var previewWidth = previewHost.Bounds.Width;
+        var explorerRight = LeftOf(explorerHost, window) + explorerHost.Bounds.Width;
+        var previewLeft = LeftOf(previewHost, window);
+        var previewRight = previewLeft + previewHost.Bounds.Width;
+        var chatLeft = LeftOf(chatHost, window);
+        var panels = window.GetVisualDescendants().OfType<ChatPanelView>().Count();
+        composition.Shell.CloseProjectCommand.Execute(null);
+        LayOut(window);
+        var chatVisibleAfter = chatHost.IsVisible;
+
+        // Assert: the chat column is 380 wide on the right of the preview only while a project is open
+        Assert.False(chatVisibleBefore);
+        Assert.Equal(0, chatWidthBefore);
+        Assert.False(splitterVisibleBefore);
+        Assert.True(chatVisibleWith);
+        Assert.Equal(1, panels);
+        Assert.Equal(380, chatWidthWith, 1);
+        Assert.Equal(260, explorerWidth, 1);
+        Assert.True(previewWidth > 200);
+        Assert.True(previewLeft > explorerRight);
+        Assert.True(chatLeft > previewRight);
+        Assert.False(chatVisibleAfter);
+        Assert.True(File.Exists(projectFile));
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that Undo is enabled after typing in the message, runs on the message, and is disabled again when the
+    ///     explorer has the focus.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_EditMenu_TypingInComposerEnablesUndoAndExplorerFocusDisables()
+    {
+        // Arrange: a window showing a project, with the message editor and the explorer list in it
+        await CreateRememberedProjectAsync("Editing", "a.svg");
+        var (composition, window) = CreateWindow();
+        window.Show();
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        LayOut(window);
+        var undo = window.FindControl<MenuItem>("UndoMenuItem")!;
+        var redo = window.FindControl<MenuItem>("RedoMenuItem")!;
+        var editor = window.GetVisualDescendants().OfType<ComposerEditorView>().Single();
+        var beforeTyping = IsUsable(undo);
+
+        // Act: type in the message, undo it from the menu, redo it, and move the focus to the explorer
+        editor.FocusEditor();
+        window.KeyTextInput("hello");
+        LayOut(window);
+        var afterTyping = (Undo: IsUsable(undo), Redo: IsUsable(redo), Target: composition.Shell.EditTarget);
+        undo.Command!.Execute(null);
+        LayOut(window);
+        var afterUndo = (Text: composition.Composer.Document.FlatText, Undo: IsUsable(undo), Redo: IsUsable(redo));
+        redo.Command!.Execute(null);
+        LayOut(window);
+        var afterRedo = composition.Composer.Document.FlatText;
+        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
+        var focused = list.ContainerFromIndex(0)!.Focus();
+        LayOut(window);
+        var afterExplorerFocus = (Target: composition.Shell.EditTarget, Undo: IsUsable(undo), Redo: IsUsable(redo));
+        Assert.True(focused);
+
+        // Assert: typing made Undo usable, the menu acted on the message, and the explorer has nothing to undo
+        Assert.False(beforeTyping);
+        Assert.True(afterTyping.Undo);
+        Assert.False(afterTyping.Redo);
+        Assert.Same(composition.Composer, afterTyping.Target);
+        Assert.NotEqual("hello", afterUndo.Text);
+        Assert.True(afterUndo.Redo);
+        Assert.Equal("hello", afterRedo);
+        Assert.Null(afterExplorerFocus.Target);
+        Assert.False(afterExplorerFocus.Undo);
+        Assert.False(afterExplorerFocus.Redo);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that holding F8 starts the push-to-talk target once, even when the key repeats, that releasing it stops the
+    ///     target, and that other keys do nothing.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget()
+    {
+        // Arrange: a shown window whose shell has a recording push-to-talk target
+        var (composition, window) = CreateWindow();
+        var target = new RecordingTalkTarget();
+        composition.Shell.PushToTalk = target;
+        window.Show();
+
+        // Act: press F8 and let it repeat, press another key, release F8, and release it again
+        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        var heldBegins = target.Begins;
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+
+        // Assert: one start while held, one stop at the release, and nothing for the other key
+        Assert.Equal(1, heldBegins);
+        Assert.Equal(1, target.Begins);
+        Assert.Equal(1, target.Ends);
+        Assert.False(composition.Shell.IsPushToTalkActive);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that F8 does nothing while the shell has no push-to-talk target.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_PushToTalkKey_NoTarget_IsIgnored()
+    {
+        // Arrange: a shown window whose shell has no push-to-talk target
+        var (composition, window) = CreateWindow();
+        composition.Shell.PushToTalk = null;
+        window.Show();
+
+        // Act: press and release F8
+        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        var active = composition.Shell.IsPushToTalkActive;
+        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+
+        // Assert: nothing started
+        Assert.False(active);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that closing the window while the talk key is held stops the listening.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget()
+    {
+        // Arrange: a shown window with the talk key held
+        var (composition, window) = CreateWindow();
+        var target = new RecordingTalkTarget();
+        composition.Shell.PushToTalk = target;
+        window.Show();
+        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+
+        // Act: close the window
+        window.Close();
+
+        // Assert: the target was stopped once
+        Assert.Equal(1, target.Begins);
+        Assert.Equal(1, target.Ends);
+    }
+
+    /// <summary>
+    ///     Test that the window stops listening when another window becomes the active one while the talk key is held.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget()
+    {
+        // Arrange: a shown, active window with the talk key held
+        var (composition, window) = CreateWindow();
+        var target = new RecordingTalkTarget();
+        composition.Shell.PushToTalk = target;
+        window.Show();
+        window.Activate();
+        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+
+        // Act: the platform tells the window that another window became the active one (the headless platform never does)
+        var deactivated = (Action?)typeof(Avalonia.Platform.IWindowBaseImpl)
+            .GetProperty("Deactivated", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)!
+            .GetValue(window.PlatformImpl);
+        deactivated!.Invoke();
+        AppShellUiHelpers.Flush();
+
+        // Assert: the target was stopped once when the window was deactivated, and the release that follows changes nothing
+        var endsAfterDeactivation = target.Ends;
+        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        Assert.Equal(1, target.Begins);
+        Assert.Equal(1, endsAfterDeactivation);
+        Assert.Equal(1, target.Ends);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the dialog service of the window is the launcher of the payload inspector of the composed chat panel.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_Show_ChatPanelLaunchesInspectorThroughWindow()
+    {
+        // Arrange & Act: compose the application and create its window
+        var (composition, window) = CreateWindow();
+
+        // Assert: the panel asks the window for the inspector
+        Assert.Same(window, composition.Chat.InspectorLauncher);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the platform pickers, which are not available headless, answer that the user cancelled instead
     ///     of failing.
     /// </summary>
@@ -601,6 +863,28 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Null(save);
 
         window.Close();
+    }
+
+    /// <summary>
+    ///     Finds where the left edge of a control is in the window.
+    /// </summary>
+    /// <param name="control">The control.</param>
+    /// <param name="window">The window.</param>
+    /// <returns>The distance of the left edge from the left edge of the window.</returns>
+    private static double LeftOf(Control control, Window window)
+    {
+        return control.TranslatePoint(new Point(0, 0), window)?.X ?? double.NaN;
+    }
+
+    /// <summary>
+    ///     Lays the window out and runs the work that is queued, so that what is shown is current.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    private static void LayOut(Window window)
+    {
+        window.UpdateLayout();
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
     }
 
     /// <summary>

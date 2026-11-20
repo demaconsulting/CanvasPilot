@@ -10,7 +10,10 @@ message dialog view model. Headless UI tests in `MainWindowViewTests.cs` (the `U
 headless platform) show the real `MainWindowView`, find controls by name and automation identifier, run the
 commands behind the menu items, and exercise the real message, About, Settings, and New Project dialogs by clicking
 their buttons. The platform pickers cannot be shown headless; the UI test confirms they answer as cancelled, and
-the real pickers are checked manually before a release.
+the real pickers are checked manually before a release. Likewise the real keyboard (the repeat of a held F8, the
+window losing the active state when the user switches to another program, and a screen reader's use of the Edit
+menu) is checked manually on a desktop before a release; the headless tests send key events and call the platform's
+deactivation callback.
 
 #### Test Environment
 
@@ -21,8 +24,13 @@ temporary local folders; no network or external services are required.
 #### Acceptance Criteria
 
 - All unit and UI tests pass with zero failures.
-- The window has the File, Image, Tools, and Help menus with the expected items in order; every item has a name
+- The window has the File, Edit, Image, Tools, and Help menus with the expected items in order; every item has a name
   and an automation identifier that are the same; with no project only the commands that need nothing are usable.
+- Undo and Redo act on the focused part that can undo and redo, are usable only while it has a step to undo or redo,
+  follow its changes, and are unusable and do nothing while the focus is in a part that cannot (for example the
+  explorer) or while there is no target; a target that was replaced is no longer followed.
+- The F8 key starts the push-to-talk target once while it is held (repeats are ignored), stops the target that was
+  started when the key goes up, the window closes, or the window is deactivated, and does nothing without a target.
 - The title is the application name, or the project name followed by the application name, and follows a project
   opened, closed, or created through the service, and stops following after disposal.
 - Accepting the New Project dialog creates, shows, and remembers the project; canceling creates nothing; a failed
@@ -134,16 +142,61 @@ announces the change. This scenario is tested by `MessageDialogViewModel_Prompt_
 **MessageDialogViewModel_Constructor_InvalidArguments_Throw**: Missing texts and a blank label are refused. This
 scenario is tested by `MessageDialogViewModel_Constructor_InvalidArguments_Throw`.
 
+**MainWindowShell_UndoRedo_FocusedTarget_DelegatesAndFollowsTargetState**: With a target that can undo but not redo,
+the Undo command is usable and Redo is not; running Undo reaches the target. When the target changes to one that can
+redo and not undo and announces it, the commands follow and announce their change, and Redo reaches the target. This
+scenario is tested by `MainWindowShell_UndoRedo_FocusedTarget_DelegatesAndFollowsTargetState`.
+
+**MainWindowShell_UndoRedo_NoTarget_DisabledAndReplacedTargetIgnored**: Without a target, or after the target was
+removed, neither command is usable and running them reaches no one; a notification from the removed target does
+not re-evaluate the commands. This scenario is tested by
+`MainWindowShell_UndoRedo_NoTarget_DisabledAndReplacedTargetIgnored`.
+
+**MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget**: The talk key is F8. A press starts the target, repeats
+of the key start nothing more, a release stops it once, and a second release is ignored. This scenario is tested by
+`MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget`.
+
+**MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget**: A press without a target starts
+nothing; when the target is replaced while the key is down, the release stops the target that was started and does
+not touch the new one. This scenario is tested by
+`MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget`.
+
 **MainWindowView_Show_OpensWithShellTitle**: The window opens headless and shows the shell title. This scenario is
 tested by `MainWindowView_Show_OpensWithShellTitle`.
 
-**MainWindowView_Menus_HaveExpectedStructureAndAutomationIds**: The four menus and their items are in the
-expected order and each has a matching name and automation identifier. This scenario is tested by
+**MainWindowView_Menus_HaveExpectedStructureAndAutomationIds**: The five menus and their items are in the
+expected order, each has a matching name and automation identifier, and the Undo and Redo items show Ctrl+Z and
+Ctrl+Y as text. This scenario is tested by
 `MainWindowView_Menus_HaveExpectedStructureAndAutomationIds`.
 
-**MainWindowView_Menus_NoProject_EnabledStateFollowsCommands**: With no project the New, Open, Exit, Settings, and
-About items are usable and the Recent, Save, Close, Export, and Copy items are not. This scenario is tested by
+**MainWindowView_Menus_NoProject_EnabledStateFollowsCommands**: With no project the New, Open, Exit, Settings, and About
+items are usable and the Recent, Save, Close, Undo, Redo, Export, and Copy items are not. This scenario is tested by
 `MainWindowView_Menus_NoProject_EnabledStateFollowsCommands`.
+
+**MainWindowView_EditMenu_TypingInComposerEnablesUndoAndExplorerFocusDisables**: With a project open, Undo is not
+usable; after typing in the message editor the shell's edit target is the composer and Undo is usable and Redo is
+not; the Undo item undoes the typing and then Redo is usable; the Redo item restores it; when the explorer list
+has the focus the edit target is empty and neither item is usable. This scenario is tested by
+`MainWindowView_EditMenu_TypingInComposerEnablesUndoAndExplorerFocusDisables`.
+
+**MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget**: Pressing F8 twice (a repeat) starts the target once; another
+key does nothing; releasing F8 stops it once and a second release is ignored. This scenario is tested by
+`MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget`.
+
+**MainWindowView_PushToTalkKey_NoTarget_IsIgnored**: Without a target F8 starts nothing. This scenario is tested by
+`MainWindowView_PushToTalkKey_NoTarget_IsIgnored`.
+
+**MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget**: Closing the window while F8 is held stops the
+target. This scenario is tested by `MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget`.
+
+**MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget**: When the platform reports that the window
+was deactivated while F8 is held, the target is stopped at once and the release that follows changes nothing. The
+headless platform never deactivates a window, so the test calls the platform's deactivation callback by reflection. This
+scenario is tested by `MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget`.
+
+**MainWindowView_Show_ChatPanelLaunchesInspectorThroughWindow**: The window of a composed application is the launcher
+of the payload inspector of the chat panel. This scenario is tested by
+`MainWindowView_Show_ChatPanelLaunchesInspectorThroughWindow`.
 
 **MainWindowView_ExitMenuItem_ClosesWindow**: The command behind Exit closes the window. This scenario is tested
 by `MainWindowView_ExitMenuItem_ClosesWindow`.

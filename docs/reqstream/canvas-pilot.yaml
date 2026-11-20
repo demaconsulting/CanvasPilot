@@ -234,6 +234,8 @@ sections:
           - CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures
           - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
           - CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture
+          - CanvasPilot_MarkImage_DrawOnShownPicture_AddsNumberedChipPinnedToSnapshot
+          - CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks
 
       - id: CanvasPilot-System-DragImageOut
         title: >-
@@ -271,8 +273,11 @@ sections:
           - CanvasPilot-Composer-ShowChipsInline
           - CanvasPilot-Chat-ShowTranscriptOfSentMessages
           - CanvasPilot-Chat-SendComposedMessage
+          - CanvasPilot-AppShell-ChatColumn
+          - CanvasPilot-AppShell-HostChat
         tests:
           - CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage
+          - CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript
           - CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload
 
       - id: CanvasPilot-System-UndoRedoMessage
@@ -289,8 +294,10 @@ sections:
           - CanvasPilot-Composer-UndoRedoPerAction
           - CanvasPilot-Composer-ForgetDraftOnSend
           - CanvasPilot-Composer-EditWithUndoRedoTarget
+          - CanvasPilot-AppShell-EditMenu
         tests:
           - CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears
+          - CanvasPilot_UndoRedoMessage_EachActionKind_StepsAsSpecified
 
       - id: CanvasPilot-System-AttachToMessage
         title: >-
@@ -310,6 +317,8 @@ sections:
           - CanvasPilot-Composer-StageAttachmentsAtSend
         tests:
           - CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend
+          - CanvasPilot_AttachToMessage_DropFileFolderImage_CopiedIntoProjectOnlyAtSend
+          - CanvasPilot_AttachToMessage_DroppedContent_IsNeverOpened
 
       - id: CanvasPilot-System-DictateMessage
         title: >-
@@ -324,15 +333,19 @@ sections:
           on the pointer while pointing at it. Showing the words as they come lets the user see at once that they are
           understood, and adding them as one block lets a mistake in a whole dictation be undone in one step. Speech
           depends on a downloaded model, a microphone, and files that the application ships, and any of them can be
-          missing on a user's machine, so each case must say what to do. The talk button of the chat panel calls this
-          capability; the talk key is added in a later step.
+          missing on a user's machine, so each case must say what to do. The talk button of the chat panel and the
+          talk key of the main window call this capability.
         children:
           - CanvasPilot-Speech-DictateWhileHeld
           - CanvasPilot-Speech-ExplainDictationUnavailable
           - CanvasPilot-Composer-AddDictatedWordsAsOneBlock
           - CanvasPilot-Chat-HoldToTalk
+          - CanvasPilot-AppShell-PushToTalkKey
+          - CanvasPilot-AppShell-HostChat
         tests:
           - CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable
+          - CanvasPilot_DictateMessage_HeldAndReleased_InsertsOneBlock
+          - CanvasPilot_DictateMessage_NoModel_ExplainsAndKeepsDraft
 
       - id: CanvasPilot-System-SelfContainedSpeechRuntime
         title: >-

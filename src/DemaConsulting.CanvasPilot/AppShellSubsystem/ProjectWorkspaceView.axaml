@@ -9,7 +9,17 @@
     <KeyBinding Gesture="Delete" Command="{Binding DeleteSelectedCommand}" />
   </UserControl.KeyBindings>
 
-  <Grid ColumnDefinitions="260,Auto,*">
+  <!-- Explorer | preview | chat. The chat column and its splitter get their widths from the code of the view, because a
+       column cannot be hidden by binding: they are 0 while no chat is shown. -->
+  <Grid Name="WorkspaceGrid">
+
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="260" MinWidth="140" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" MinWidth="200" />
+      <ColumnDefinition Width="0" />
+      <ColumnDefinition Width="0" MinWidth="0" />
+    </Grid.ColumnDefinitions>
 
     <ContentControl Grid.Column="0"
                     AutomationProperties.AutomationId="WorkspaceExplorerHost"
@@ -59,6 +69,17 @@
       </StackPanel>
 
     </Grid>
+
+    <GridSplitter Grid.Column="3"
+                  AutomationProperties.AutomationId="WorkspaceChatSplitter"
+                  Width="5"
+                  IsVisible="{Binding IsChatVisible}"
+                  ResizeDirection="Columns" />
+
+    <ContentControl Grid.Column="4"
+                    AutomationProperties.AutomationId="WorkspaceChatHost"
+                    IsVisible="{Binding IsChatVisible}"
+                    Content="{Binding Chat}" />
 
   </Grid>
 

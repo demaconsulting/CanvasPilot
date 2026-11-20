@@ -5,8 +5,9 @@
 #### Purpose
 
 `MainWindowShell` is the view model of the main window together with the window (`MainWindowView`) that shows it.
-It owns the File, Image, Tools, and Help commands, the window title, and the recent projects menu, and it follows
-the open project. It talks to the user only through an `IDialogService`, which the window implements, so the shell
+It owns the File, Edit, Image, Tools, and Help commands, the window title, and the recent projects menu, and it follows
+the open project. It routes Undo and Redo to the part of the window that has the focus and the talk key to the chat
+panel. It talks to the user only through an `IDialogService`, which the window implements, so the shell
 is tested without a window. The small message, confirmation, and prompt dialog that the window shows for
 `ShowMessageAsync`, `ConfirmAsync`, and `PromptAsync` (`MessageDialogViewModel` and `MessageDialogView`) belongs to
 this unit.
@@ -28,17 +29,30 @@ constructor; the application supplies the exporter of the `Preview` subsystem.
 
 **Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled
 while a project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can
-export), `OpenSettingsCommand`, and `ShowAboutCommand`.
+export), `OpenSettingsCommand`, and `ShowAboutCommand`, and `UndoCommand` and `RedoCommand` (enabled while
+`EditTarget` can undo or redo).
+
+**EditTarget**: `IUndoRedoTarget?` (a `Composer` seam) - what Edit > Undo and Redo act on: the part of the window
+that has the focus, or `null` while the focus is in a part that has nothing to undo. The window sets it. The shell
+follows `UndoRedoStateChanged` of the current target (a notification on another thread is posted to the user
+interface thread) and re-evaluates both commands, and it stops following a target that was replaced.
+
+**PushToTalk** / **PushToTalkKey** / **IsPushToTalkActive**: `PushToTalk` is the `IPushToTalkTarget?` that listens
+while the talk key is held, which the composition root sets to the chat panel. `PushToTalkKey` is the constant
+`Key.F8`. `IsPushToTalkActive` is true between a start and the stop that follows it.
 
 **ExitRequested**: event raised by Exit; the window closes itself in response.
 
 **MessageDialogViewModel**: `Title`, `Message`, `OkText`, `ShowCancel`, `IsPrompt`, `InputText`, `Accepted`, `OkCommand`
 (unavailable for a prompt whose entry is blank), `CancelCommand`, and `CloseRequested`.
 
-**Main window**: `MainWindowView` has a `Menu` (`MainMenu`) with the four menus and a host for the workspace. It
-implements `IDialogService` with `ShowDialog`, `StorageProvider`, the clipboard, and the message dialog. Its
+**Main window**: `MainWindowView` has a `Menu` (`MainMenu`) with the five menus (File, Edit, Image, Tools, Help) and a
+host for the workspace. The Edit menu has Undo and Redo, whose `InputGesture` (Ctrl+Z, Ctrl+Y) is only text,
+because the message editor handles those keys itself. The window implements `IDialogService` with `ShowDialog`,
+`StorageProvider`, the clipboard, and the message dialog. Its
 constructor passes
-itself to `AttachDialogService`, and `ExitRequested` closes it.
+itself to `AttachDialogService`, and `ExitRequested` closes it. It also tracks the focus and the talk key (see
+**Focus tracking** and **Talk key** below).
 
 #### Key Methods
 
@@ -70,7 +84,22 @@ thread that created the shell. Updating the title and the workspace is idempoten
 its own operations. `Dispose` unsubscribes and disposes the workspace.
 
 **Dialog service**: `AttachDialogService` gives the shell, and through it the workspace, the dialog service. Until
-it is attached the commands that need the user do nothing.
+it is attached the commands that need the user do nothing. The workspace passes it on to the chat panel as the
+launcher of the payload inspector, which the window implements with `ShowPayloadInspectorAsync`.
+
+**Undo and Redo**: `Undo` and `Redo` call the same method of `EditTarget`; they can run only while the target
+reports a step to undo or redo, and do nothing without a target.
+
+**Focus tracking** (window): a handler on the window for the `GotFocus` routed event, which also receives events
+that a control marked as handled, looks at the control that took the focus and then at its parents, and sets
+`EditTarget` to the first data context that is an `IUndoRedoTarget`, or to `null` when none is. A control that is
+part of a menu is ignored, so choosing a menu item does not change what the item acts on.
+
+**Talk key**: `BeginPushToTalkAsync` remembers the `PushToTalk` target and starts it, and does nothing when there is
+no target or a start is already in effect (so the repeats of a held key are ignored). `EndPushToTalkAsync` stops the
+target that was started, even when `PushToTalk` was replaced meanwhile, and does nothing when none was started. The
+window calls them from tunneling `KeyDown` and `KeyUp` handlers for `PushToTalkKey` (marking the key handled while
+there is a target) and from its `Deactivated` event and when it closes, so the microphone is never left open.
 
 **Clipboard image**: `IDialogService.CopyImageToClipboardAsync(image)` is implemented by the window: it creates a
 bitmap from the picture (`RenderedImageBitmap.Create`), puts it on the window's clipboard with `SetBitmapAsync`,
@@ -93,6 +122,8 @@ texts or a blank accepting label.
 - **ProjectWorkspace** and **AboutDialog** — the content area and the About dialog.
 - **ImageExporter** (through `IImageExporter` and `IExportDialogs`) — the Image menu commands run it, and the
   dialog service extends `IExportDialogs` so the exporter can ask the user through it.
+- **Composer** (through `IUndoRedoTarget` and `IPushToTalkTarget`) — what the Edit menu and the talk key reach; the
+  seams are owned by the `Composer` subsystem and the shell does not know what implements them.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.
 - **Avalonia** — the window, menus, dialogs, storage provider, and clipboard.
 
@@ -100,4 +131,5 @@ texts or a blank accepting label.
 
 - `App` (through `ApplicationComposition`) — creates the shell and shows `MainWindowView` over it.
 - `ApplicationComposition` — connects the `Preview` subsystem: `ImageExporter` is passed as the `IImageExporter`,
-  and the preview pane is the workspace's preview content.
+  and the preview pane is the workspace's preview content. It sets `PushToTalk` to the chat panel, which the talk
+  key of the window then starts and stops.

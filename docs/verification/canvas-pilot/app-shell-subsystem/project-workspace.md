@@ -18,6 +18,9 @@ test parallelization disabled; no display is required. Tests use temporary local
 - All unit and UI tests pass with zero failures.
 - The placeholder says `No project open`, then `No file selected`, then `No preview available`, and supplied
   preview content replaces it and is shown in the preview host.
+- The chat content is shown (in the column on the right of the preview) only while a project is open and content was
+  supplied; it is not disposed with the workspace. With a project open the explorer is 260 wide, the chat column is 380
+  wide, the preview is between them with a splitter on each side, and the chat column takes no room without a project.
 - Showing a project lists its image files; showing it again keeps the selection; showing none empties the list.
 - Delete asks first and deletes only when confirmed; Rename starts with the current name, renames when a name is
   entered, and shows a problem for an unacceptable name; both do nothing when cancelled or without a dialog service.
@@ -57,6 +60,22 @@ by `ProjectWorkspace_RenameSelected_CancelledOrInvalidName_ChangesNothingAndRepo
 
 **ProjectWorkspace_FileCommands_NoDialogService_DoNothing**: Without a dialog service both commands leave the file
 alone. This scenario is tested by `ProjectWorkspace_FileCommands_NoDialogService_DoNothing`.
+
+**ProjectWorkspace_Chat_ShownOnlyWhileProjectIsOpen**: With chat content set, the chat is not visible before a
+project is shown, is visible with a project, and is not visible after the project is closed; the changes are
+announced. This scenario is tested by `ProjectWorkspace_Chat_ShownOnlyWhileProjectIsOpen`.
+
+**ProjectWorkspace_Chat_NoContent_NotShownWithProject**: Without chat content the chat is not visible even with a
+project open. This scenario is tested by `ProjectWorkspace_Chat_NoContent_NotShownWithProject`.
+
+**ProjectWorkspace_Dispose_DoesNotDisposeChatContent**: Disposing the workspace leaves the chat content alone,
+because the composition root owns it. This scenario is tested by
+`ProjectWorkspace_Dispose_DoesNotDisposeChatContent`.
+
+**MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns**: In the window with no project the chat
+host and its splitter are not visible; once a project is open the chat panel is shown, 380 wide, to the right of the
+preview, which is to the right of the explorer, 260 wide; after the project is closed the chat host is hidden again.
+This scenario is tested by `MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns`.
 
 **ProjectWorkspace_Dispose_DisposesExplorer**: Disposing the workspace disposes the explorer. This scenario is
 tested by `ProjectWorkspace_Dispose_DisposesExplorer`.
