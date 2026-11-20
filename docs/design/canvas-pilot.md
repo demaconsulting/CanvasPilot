@@ -5,8 +5,8 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented are nine subsystems, `Annotation`, `AppShell`, `Composer`, `Logging`, `Preview`, `Project`,
-`Settings`, `Speech`, and `Utilities`.
+software items documented are ten subsystems, `Annotation`, `AppShell`, `Composer`, `Logging`, `Payload`, `Preview`,
+`Project`, `Settings`, `Speech`, and `Utilities`.
 
 ```mermaid
 flowchart TD
@@ -25,6 +25,12 @@ flowchart TD
     end
     subgraph Logging
         RollingFileLogger
+    end
+    subgraph Payload
+        MessagePayload
+        MarkImageComposer
+        PayloadBuilder
+        PayloadDescriber
     end
     subgraph Preview
         ImageRenderService
@@ -64,6 +70,15 @@ flowchart TD
     MarkRegistry --> ImageRenderService
     MarkSourceResolver --> MarkRegistry
     MarkSourceResolver --> ImageRenderService
+    MarkImageComposer --> ImageRenderService
+    MarkImageComposer --> MarkRegistry
+    PayloadBuilder --> ComposerDocument
+    PayloadBuilder --> AttachmentStore
+    PayloadBuilder --> MarkRegistry
+    PayloadBuilder --> MarkSourceResolver
+    PayloadBuilder --> MarkImageComposer
+    PayloadBuilder --> MessagePayload
+    PayloadDescriber --> MessagePayload
     ImageRenderService --> RollingFileLogger
     PreviewPane --> ImageRenderService
     PreviewPane --> ProjectExplorer
@@ -163,8 +178,9 @@ to. `AttachmentStore` is the only item that creates files for attachments, and o
 pictures in the project's private data folder while the message is a draft, removes the ones that no chip refers to,
 and, when the message is sent, copies the attachments from outside the project into the project's `attachments` folder,
 all or none, within limits of 500 files and 200 MB for one message, with safe names that never replace another file,
-without following links. The units that show the message in an editing control are added later and build on these. No
-subsystem uses the `Composer` subsystem yet.
+without following links. The units that show the message in an editing control are added later and build on these. Only
+the `Payload` subsystem uses the `Composer` subsystem so far, to read the snapshot of the message and the staged
+attachments.
 
 `MarkRegistry` holds the marks that the user draws on the shown picture to say what they mean in a message. Each mark is
 pinned to the exact `RenderedImage` it was drawn on, numbered in the order the marks are made, and described by its
@@ -175,7 +191,21 @@ picture but stay in the message. `MarkSourceResolver` maps a mark to the parts o
 from the element positions and anchors that the renderer reported with the picture, and says that the picture cannot
 tell, with the reason, when it reported none. Neither unit depends on the user interface or on the file system; the
 `Annotation` subsystem depends only on the picture and coordinate types of `Preview`, and the layer on which the user
-draws the marks is added later. No subsystem uses the `Annotation` subsystem yet.
+draws the marks is added later.
+
+`MessagePayload` and the values it is made of are the one form in which the message that the user sends reaches the
+assistant that is added later: the text with `[Mark n]` and `[Attachment n: name]` at the places of the marks and
+attachments, the same message as parts in order that keep typed text apart from dictated text, the attachments with the
+place where the user had them and their path in the project, and, for each picture that marks were drawn on, the picture
+with the marks drawn and numbered on it, an image of the area around each mark, the geometry and note of each mark in
+the pixels of the picture, and the parts of the source file under each mark. The values copy what they are given and
+never change. `PayloadBuilder` makes the payload from a snapshot of the composer, the marks, and the attachments that
+were put into the project, uses only the marks whose chips are in the message, and reads only values that cannot change,
+so it can run in the background. `MarkImageComposer` draws the marks on the picture with CanvasNet, from an SVG document
+that it builds in memory around the picture the user saw, and cuts the areas; it is the only item besides
+`ImageRenderService` that uses CanvasNet to draw, and it never writes a file. `PayloadDescriber` writes a payload as
+text for the user to read. No subsystem uses the `Payload` subsystem yet, and no subsystem uses the `Annotation`
+subsystem except `Payload`.
 
 ### Dependency Direction
 
@@ -339,11 +369,13 @@ made in the project when the message is sent.
 
 ## Dependencies
 
-The `Annotation`, `AppShell`, `Composer`, `Logging`, `Preview`, `Project`, `Settings`, `Speech`, and `Utilities`
-subsystems use .NET base class library types, `System.Text.Json` for the settings and project files, and, for dialogs,
-pages, and lists, Avalonia and CommunityToolkit.Mvvm, which are runtime third-party items (the `Annotation` and
-`Composer` units so far use base class library types only). The `ImageRenderService` unit draws files and encodes PNG
-with the `DemaConsulting.CanvasNet.Viewer` library, and the `ProjectExplorer` unit uses its extension list to decide
+The `Annotation`, `AppShell`, `Composer`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`, `Speech`, and
+`Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and project files and the
+description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm, which are runtime
+third-party items (the `Annotation` and `Composer` units use base class library types only, and the `Payload` units
+base class library types and CanvasNet). The `ImageRenderService` unit draws files and encodes PNG
+with the `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a
+picture with the same library, and the `ProjectExplorer` unit uses its extension list to decide
 which files are image sources. The `AudioDeviceService` and `SpeechModelService` units list audio devices and speech
 models and download models with the `DemaConsulting.Speech` library and its Sherpa model package, and the speech
 descriptor types are shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items (see
@@ -469,8 +501,15 @@ picture, numbers the mark, and returns it; the chip of the mark is then added to
 `ComposerEdit.AddMark`, so that undoing it removes the chip and hides the mark. To show a picture, the layer asks
 `MarkRegistry.VisibleMarks` with the identities of the mark chips in the message and the key of the picture. To describe
 a mark to the assistant, `MarkSourceResolver.Resolve` reads the element positions or anchors of the mark's picture and
-returns the parts of the source file under the mark, or that the picture cannot tell. When the message is sent,
-`MarkRegistry.Clear` forgets the marks.
+returns the parts of the source file under the mark, or that the picture cannot tell.
+
+When the message is sent, the chat takes the snapshot of the composer with `ComposerHistory.CompleteSend`, puts the
+attachments into the project with `AttachmentStore.StageForSend`, and gives the snapshot, the marks, and the staged
+attachments to `PayloadBuilder.BuildAsync`. The builder walks the snapshot once, writing the text with its references
+and the parts of the message in order, and keeps the marks whose chips are in it. It groups those marks by picture, has
+`MarkImageComposer` draw the marks of each picture and cut the area around each mark, asks `MarkSourceResolver` for the
+parts of the source under each mark, and returns a `MessagePayload` that nothing can change. `PayloadDescriber.Describe`
+writes the payload as text for the user. After sending, `MarkRegistry.Clear` forgets the marks.
 
 When the user drops files or folders on the message, or pastes a picture or text into it, the view reads the drop or the
 clipboard into a `DroppedContent` and gives it to `AttachmentIntake.Accept`. The intake checks the text of each path,
@@ -511,8 +550,9 @@ canceled, or failed. On OK or Apply the page merges the choices into the speech 
   and does not require changes to the shell's commands. `Preview` shall not depend on `AppShell`: it owns the
   exporter seam `IImageExporter` and the dialog seam `IExportDialogs`, and `AppShell` refers to `Preview` only for
   these interfaces, the picture type, and the composition root (see *Dependency Direction*).
-- Only `ImageRenderService` shall call the CanvasNet viewer to draw, and it shall confine the files a drawn file
-  reads to the project folder.
+- Only `ImageRenderService` shall call the CanvasNet viewer to draw files, and it shall confine the files a drawn file
+  reads to the project folder. `MarkImageComposer` shall draw only an SVG document that it made itself, from a stream,
+  which names no file, and shall write no file.
 - Rendering shall never run on the user interface thread, and the result of a render that is no longer wanted shall
   never be shown.
 - Only `ImageDragSource` shall write the files for dragging a picture out, only in its own folder, and a failure to
@@ -523,6 +563,8 @@ canceled, or failed. On OK or Apply the page merges the choices into the speech 
   hold the message shall not write it anywhere.
 - A mark shall hold the picture it was drawn on and shall be shown only on that picture; its geometry shall be in the
   pixels of that picture, and the units of the `Annotation` subsystem shall not write anything anywhere.
+- A payload shall be built only from values that cannot change and shall itself never change, and the units of the
+  `Payload` subsystem shall not write anything anywhere.
 - Content that is dropped or pasted shall be treated as data: it shall never be opened, run, rendered, or followed,
   and only `AttachmentStore` shall create files for attachments, only in `attachments` and `.canvaspilot/attachments`
   of the project, never over an existing file, and, for one message, at most 500 files, 500 folders, and 200 MB.

@@ -26,22 +26,25 @@ application project.
 - `ViewerImage.Anchors` (`SourceAnchor`: `Name`, `X`, `Y`, `Z`, `PixelX`, `PixelY`) — the anchors that an OpenSCAD model
   declares with `echo("anchor", name, [x, y, z])`. Their pixel positions are valid only while the render is not
   resized with `Width` or `Height`; the application renders at the natural size.
-- `CanvasNetViewer.Render(Stream, fileName, options)` — draws an SVG document held in memory. A later unit uses it to
-  draw marks over the picture the user saw: the SVG embeds the picture as a `data:image/png;base64` link and draws
-  rectangle, ellipse, polyline, and text elements over it, so no file is written and the picture is exactly the
+- `CanvasNetViewer.Render(Stream, fileName, options)` — draws an SVG document held in memory. `MarkImageComposer` uses
+  it to draw marks over the picture the user saw: the SVG embeds the picture as a `data:image/png;base64` link and draws
+  rectangle, ellipse, polyline, circle, and text elements over it, so no file is written and the picture is exactly the
   pixels that were shown. A render of a stream resolves no file the document names, because it has no folder.
 - `ViewerException` (`Code`, `Message`, `Hint`) and the other exceptions of `Render` (`ImageSourceException`,
   `ImageSourceBudgetException`, `FileNotFoundException`, `NotSupportedException`, `FileReferenceException`) — the
   failures the application turns into messages.
 - `Surface.GetRowSpanBytes` and `PngCodec.Save` — reading pixels and encoding a PNG.
+- `Surface.Crop` and `PngCodec.Save` — `MarkImageComposer` cuts the area around a mark from the picture it drew and
+  encodes it.
 
 ### Integration Pattern
 
-CanvasNet is consumed as a NuGet package reference of the application library. Only `ImageRenderService` calls
-`CanvasNetViewer.Render` and `PngCodec`; `CanvasNetImageSourceFilter` of the project explorer reads
-`CanvasNetViewer.Extensions`. The viewer is a static, stateless, thread-safe class, so each render is an
-independent call on a thread-pool thread, and the `ViewerImage` is disposed as soon as its pixels and notes are
-copied. The application never lets CanvasNet read outside the project folder and never draws on the user interface
-thread. CanvasNet has no self-validation mode; the OTS tests in `CanvasNetTests.cs` exercise the calls above
-directly and are the evidence that the library behaves as the application relies on, and a version upgrade
-re-runs them before it is accepted. The drawing libraries bundled with the viewer are not used separately.
+CanvasNet is consumed as a NuGet package reference of the application library. `ImageRenderService` calls
+`CanvasNetViewer.Render` for files and `PngCodec`; `MarkImageComposer` calls `CanvasNetViewer.Render` only for the SVG
+document it builds in memory, and `Surface.Crop` and `PngCodec`; `CanvasNetImageSourceFilter` of the project explorer
+reads `CanvasNetViewer.Extensions`. The viewer is a static, stateless, thread-safe class, so each render is an
+independent call on a thread-pool thread, and the `ViewerImage` is disposed as soon as its pixels and notes are copied.
+The application never lets CanvasNet read outside the project folder and never draws on the user interface thread.
+CanvasNet has no self-validation mode; the OTS tests in `CanvasNetTests.cs` exercise the calls above directly and are
+the evidence that the library behaves as the application relies on, and a version upgrade re-runs them before it is
+accepted. The drawing libraries bundled with the viewer are not used separately.

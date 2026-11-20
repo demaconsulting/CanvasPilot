@@ -5,18 +5,18 @@ are defined in the CanvasNet OTS Software Requirements document.
 
 ### Required Functionality
 
-CanvasNet (`DemaConsulting.CanvasNet.Viewer`, with the `DemaConsulting.CanvasNet` core library it depends on) draws
-the image source files of a project to pixels, lists the file types it can draw, confines the files a drawn file
-may read, reports problems with files as descriptive exceptions, honors cancellation, encodes PNG, reports where it
-drew the elements of diagrams, charts, and models, and draws an SVG document held in memory. The application relies
-on each of these behaviors, so each has a requirement and a test.
+CanvasNet (`DemaConsulting.CanvasNet.Viewer`, with the `DemaConsulting.CanvasNet` core library it depends on) draws the
+image source files of a project to pixels, lists the file types it can draw, confines the files a drawn file may read,
+reports problems with files as descriptive exceptions, honors cancellation, encodes PNG, reports where it drew the
+elements of diagrams, charts, and models, draws an SVG document held in memory, and copies a region of a picture. The
+application relies on each of these behaviors, so each has a requirement and a test.
 
 ### Verification Approach
 
 CanvasNet has no self-validation mode. It is verified by integration tests in `test/OtsSoftwareTests/CanvasNetTests.cs`
 that call the library directly, on temporary folders, with the same calls and options the application uses
 (`CanvasNetViewer.Render` with `FileAccessPolicy.UnderRoots` and `PositionSelection.All`, `CanvasNetViewer.Extensions`,
-`CanvasNetViewer.Render` of a stream, and `PngCodec.Save`).
+`CanvasNetViewer.Render` of a stream, `Surface.Crop`, and `PngCodec.Save`).
 The tests are the evidence that the library behaves as the application relies on, and they are run again before a
 version upgrade is accepted. The unit tests of the units that use the library repeat part of this evidence through
 the application's own calls.
@@ -123,10 +123,21 @@ element positions.
 #### CanvasNet_Render_SvgStream_WithDataUriImageAndShapes_DrawsAll
 
 **Scenario**: A 100 by 50 red PNG is embedded as a data link in an SVG document in a stream that also draws a blue
-rectangle outline, a green ellipse outline, a yellow polyline, and white text over it; the stream is rendered.
+rectangle outline, a green ellipse outline, a yellow polyline, a filled magenta circle, and white text over it; the
+stream is rendered.
 
 **Expected**: The picture is 100 by 50 with format `svg`; a pixel away from the shapes is red; a pixel on each of the
-rectangle, ellipse, and polyline strokes has that stroke's color; some pixel in the text's region is not red; and
-there are no notes.
+rectangle, ellipse, and polyline strokes has that stroke's color; a pixel in the circle is magenta; some pixel in the
+text's region is not red; and there are no notes.
 
 **Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ComposeSvgFromStream`.
+
+#### CanvasNet_Surface_Crop_CopiesTheRegionIntoAnIndependentSurface
+
+**Scenario**: A 20 by 10 surface with one distinct pixel is cropped to a region that holds that pixel, and the original
+pixel is then changed.
+
+**Expected**: The region has the size that was asked for, holds the distinct pixel at its place and the other pixels as
+they were, and does not change when the original changes.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-CropSurface`.

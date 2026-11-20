@@ -317,6 +317,80 @@ reviews:
       - "src/**/LoggingSubsystem/RollingFileLogger.cs"
       - "test/**/LoggingSubsystem/RollingFileLoggerTests.cs"
 
+  # CanvasPilot - Payload
+  - id: CanvasPilot-Payload
+    title: Review of CanvasPilot Payload subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem.md"
+      - "docs/verification/canvas-pilot/payload-subsystem.md"
+      - "test/**/PayloadSubsystem/PayloadSubsystemTests.cs"
+
+  - id: CanvasPilot-Payload-MessagePayload
+    title: Review of CanvasPilot MessagePayload unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/payload-subsystem.md
+      - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem/message-payload.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem/message-payload.md"
+      - "docs/verification/canvas-pilot/payload-subsystem/message-payload.md"
+      - "src/**/PayloadSubsystem/MessagePayload.cs"
+      - "src/**/PayloadSubsystem/PayloadAttachment.cs"
+      - "src/**/PayloadSubsystem/PayloadImage.cs"
+      - "src/**/PayloadSubsystem/PayloadMark.cs"
+      - "src/**/PayloadSubsystem/PayloadSegment.cs"
+      - "test/**/PayloadSubsystem/MessagePayloadTests.cs"
+
+  - id: CanvasPilot-Payload-MarkImageComposer
+    title: Review of CanvasPilot MarkImageComposer unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/payload-subsystem.md
+      - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem/mark-image-composer.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem/mark-image-composer.md"
+      - "docs/verification/canvas-pilot/payload-subsystem/mark-image-composer.md"
+      - "src/**/PayloadSubsystem/IMarkImageComposer.cs"
+      - "src/**/PayloadSubsystem/MarkImageComposer.cs"
+      - "test/**/PayloadSubsystem/MarkImageComposerTests.cs"
+      - "test/**/PayloadSubsystem/PayloadSubsystemFakes.cs"
+
+  - id: CanvasPilot-Payload-PayloadBuilder
+    title: Review of CanvasPilot PayloadBuilder unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/payload-subsystem.md
+      - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem/payload-builder.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem/payload-builder.md"
+      - "docs/verification/canvas-pilot/payload-subsystem/payload-builder.md"
+      - "src/**/PayloadSubsystem/PayloadBuilder.cs"
+      - "test/**/PayloadSubsystem/PayloadBuilderTests.cs"
+
+  - id: CanvasPilot-Payload-PayloadDescriber
+    title: Review of CanvasPilot PayloadDescriber unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/payload-subsystem.md
+      - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem/payload-describer.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem/payload-describer.md"
+      - "docs/verification/canvas-pilot/payload-subsystem/payload-describer.md"
+      - "src/**/PayloadSubsystem/PayloadDescriber.cs"
+      - "test/**/PayloadSubsystem/PayloadDescriberTests.cs"
+
   # CanvasPilot - Preview
   - id: CanvasPilot-Preview
     title: Review of CanvasPilot Preview subsystem architecture and interfaces

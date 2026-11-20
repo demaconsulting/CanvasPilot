@@ -173,7 +173,12 @@ sections:
           and by fingerprints of that file and of the picture's pixels, shall record where the diagram elements
           and model anchors are in the picture, and shall tell, for each mark on the picture, which parts of the
           source file lie under it, or that this kind of picture cannot say, so that the message is tied to exactly
-          what the user saw and pointed at.
+          what the user saw and pointed at; and shall build from the message that is sent one complete payload for the
+          assistant that cannot change afterwards: the text with the places of the marks and attachments in the order
+          the user placed them, the attachments with where they are in the project, and for each marked picture the
+          picture with the marks drawn and numbered on it, an image of the area around each mark, and the geometry and
+          note of each mark in the pixels of the picture; and shall show the user, as text, exactly what the payload
+          holds.
         tags: [system]
         justification: |
           A message about a picture is only useful if the reader knows which picture it means. Files change while
@@ -181,13 +186,25 @@ sections:
           a diagram are, let a later reader tell which version of the picture was meant and which parts of the
           source the user pointed at. Pointing at pixels alone leaves the reader to guess which node or bar was
           meant, so the message names the parts under each mark where the picture knows them, and says plainly
-          where it does not.
+          where it does not. The assistant receives everything the user meant in one place and in the order the user
+          meant it; the pictures show what the user saw and where they pointed, so that the assistant need not guess
+          from coordinates. The user goes on editing while the message is sent, so the payload must not change, and
+          the user must be able to see exactly what was sent.
         children:
           - CanvasPilot-Preview-ReportPictureFacts
           - CanvasPilot-Annotation-FindSourceElements
+          - CanvasPilot-Payload-DescribeTheMessage
+          - CanvasPilot-Payload-IncludeAnnotatedImage
+          - CanvasPilot-Payload-IncludeMarkCrops
+          - CanvasPilot-Payload-IncludeMarkGeometry
+          - CanvasPilot-Payload-IncludeSourceElements
+          - CanvasPilot-Payload-ReferenceAttachments
+          - CanvasPilot-Payload-BeImmutable
+          - CanvasPilot-Payload-ListWhatIsSent
         tests:
           - CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements
           - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
+          - CanvasPilot_BuildMessagePayload_MermaidWithMarks_ContainsImagesCropsGeometryAndSourceElements
 
       - id: CanvasPilot-System-MarkImage
         title: >-

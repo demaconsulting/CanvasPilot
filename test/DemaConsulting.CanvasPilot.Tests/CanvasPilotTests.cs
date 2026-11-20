@@ -22,6 +22,7 @@ using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
+using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -462,6 +463,75 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal([third], registry.VisibleMarks(chips, after.SnapshotKey));
         Assert.Equal(3, registry.ActiveMarks(chips).Count);
         Assert.Contains(found.Elements, element => element is { Kind: "node", Text: "Start" });
+    }
+
+    /// <summary>
+    ///     Test that a user who sends a message with marks on the shown diagram and an attached file gets a payload for the
+    ///     assistant that holds the text with its references, the picture with the marks drawn and numbered, the area
+    ///     around each mark, the geometry of each mark in picture pixels, the parts of the source under each mark, and the
+    ///     attachment with its path in the project, and that the draft is gone.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_BuildMessagePayload_MermaidWithMarks_ContainsImagesCropsGeometryAndSourceElements()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown, and a file outside the project
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var diagram = Path.Combine(folder, "flow.mmd");
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[End]\n", token);
+        var brief = Path.Combine(Directory.CreateDirectory(Path.Combine(_tempRoot, "external")).FullName, "brief.txt");
+        await File.WriteAllTextAsync(brief, "the brief", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        var picture = composition.Preview.Image!;
+        var start = picture.Positions.First(position => position is { Kind: "node", Text: "Start" }).Box!.Value;
+        var end = picture.Positions.First(position => position is { Kind: "node", Text: "End" }).Box!.Value;
+
+        // Act: mark both nodes, compose a message with text, both marks, the file, and dictated text, and send it the
+        // way the chat will: take the snapshot, put the attachment into the project, and build the payload
+        var registry = new MarkRegistry();
+        var first = registry.Add(picture, MarkKind.Rectangle, [new RenderPoint(start.X - 4, start.Y - 4), new RenderPoint(start.X + start.Width + 4, start.Y + start.Height + 4)], "bigger");
+        var second = registry.Add(picture, MarkKind.Ellipse, [new RenderPoint(end.X - 4, end.Y - 4), new RenderPoint(end.X + end.Width + 4, end.Y + end.Height + 4)]);
+        var document = new ComposerDocument();
+        var history = new ComposerHistory(document);
+        history.Execute(ComposerEdit.TypeText(document, 0, "Swap "));
+        history.Execute(ComposerEdit.AddMark(document, document.Length, new MarkChip(first.Id, first.Number)));
+        history.Execute(ComposerEdit.TypeText(document, document.Length, " and "));
+        history.Execute(ComposerEdit.AddMark(document, document.Length, new MarkChip(second.Id, second.Number)));
+        history.Execute(ComposerEdit.Drop(document, document.Length, [new TextSegment(" see ", TextOrigin.Typed), new FileChip(brief)]));
+        history.Execute(ComposerEdit.Dictate(document, document.Length, " please"));
+        var snapshot = history.CompleteSend();
+        var staging = new AttachmentStore(folder).StageForSend([.. snapshot.Chips.OfType<AttachmentChip>()]);
+        var renderer = new ImageRenderService();
+        var payload = await new PayloadBuilder(new MarkImageComposer(renderer)).BuildAsync(snapshot, registry.Marks, staging.Attachments, token);
+        composition.Dispose();
+
+        // Assert: the text and the attachment; one image with the facts of the shown picture, an annotated picture of its
+        // size, and two marks with their geometry, note, area, and source elements; the draft is empty
+        Assert.True(staging.Succeeded, staging.Failure?.Reason);
+        Assert.Equal("Swap [Mark 1] and [Mark 2] see [Attachment 1: brief.txt] please", payload.Text);
+        Assert.Equal("attachments/brief.txt", Assert.Single(payload.Attachments).ProjectRelativePath);
+        Assert.True(File.Exists(Path.Combine(folder, "attachments", "brief.txt")));
+        var image = Assert.Single(payload.Images);
+        Assert.Equal((picture.SourcePath, picture.SourceFileHash, picture.ContentHash), (image.SourcePath, image.SourceFileHash, image.ContentHash));
+        using var annotated = PayloadTestSupport.Decode(image.AnnotatedPng);
+        Assert.Equal((picture.Width, picture.Height), (annotated.Width, annotated.Height));
+        Assert.Equal([1, 2], image.Marks.Select(mark => mark.Number));
+        Assert.Equal([MarkKind.Rectangle, MarkKind.Ellipse], image.Marks.Select(mark => mark.Kind));
+        Assert.Equal(first.Geometry.Points, image.Marks[0].Points);
+        Assert.Equal("bigger", image.Marks[0].Note);
+        Assert.All(image.Marks, mark =>
+        {
+            using var crop = PayloadTestSupport.Decode(mark.CropPng);
+            Assert.Equal((int)mark.CropBox.Width, crop.Width);
+            Assert.Equal((int)mark.CropBox.Height, crop.Height);
+        });
+        Assert.Equal("Start", Assert.Single(image.Marks[0].SourceElements, element => element.Kind == "node").Text);
+        Assert.Equal("End", Assert.Single(image.Marks[1].SourceElements, element => element.Kind == "node").Text);
+        Assert.Equal(0, document.Length);
+        Assert.Equal(0, history.UndoCount);
     }
 
     /// <summary>

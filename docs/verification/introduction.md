@@ -2,7 +2,7 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
-AppShell, Annotation, Composer, Logging, Preview, Project, Settings, Speech, and Utilities subsystems; further
+AppShell, Annotation, Composer, Logging, Payload, Preview, Project, Settings, Speech, and Utilities subsystems; further
 subsystems, such as the AI chat, are added as they are introduced.
 
 ## Purpose
@@ -34,6 +34,11 @@ This document covers the verification design for the following software items:
     - **AttachmentStore** — pasted pictures in the draft folder and attachments copied into the project at send
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
+  - **Payload** subsystem
+    - **MessagePayload** — the immutable values of the message that is sent
+    - **MarkImageComposer** — the picture with the marks drawn and numbered, and the area around each mark
+    - **PayloadBuilder** — the payload from the message, the marks, and the attachments
+    - **PayloadDescriber** — the payload as text
   - **Preview** subsystem
     - **ImageRenderService** — background drawing of image source files with CanvasNet and PNG encoding
     - **PreviewPane** — preview of the selected file with busy, error, and note display
@@ -98,6 +103,7 @@ test/
 │   ├── AppShellSubsystem/
 │   ├── ComposerSubsystem/
 │   ├── LoggingSubsystem/
+│   ├── PayloadSubsystem/
 │   ├── PreviewSubsystem/
 │   ├── ProjectSubsystem/
 │   ├── SettingsSubsystem/

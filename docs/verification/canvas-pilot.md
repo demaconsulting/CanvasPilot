@@ -42,6 +42,9 @@ services, or display is required.
 - The shown picture of a diagram is identified by its file and by fingerprints of the file and the pixels, which
   change when the file is edited, and it locates the diagram's elements in picture pixels.
 - The preview pane has a layer over the shown picture that holds the content placed in it, beside every picture.
+- A message that is sent with marks on the shown diagram and an attached file gives a payload with the text and its
+  references in order, the attachment with its path in the project, the picture with the marks drawn and numbered, an
+  area image and the geometry for each mark, and the source elements under each mark, and the draft is empty afterwards.
 - Marks drawn on the shown picture are numbered in order, keep their geometry in picture pixels and an optional note,
   stay with the exact picture they were drawn on and are not shown on a picture of the edited file, and report the parts
   of the diagram's source that lie under them.
@@ -132,6 +135,17 @@ nodes' text is `Start` and `End`. After another file is shown, the diagram is ed
 `Finish`, and it is selected again: the file fingerprint, the pixel fingerprint, and the snapshot key all differ and
 the node text is `Start` and `Finish`. This scenario is tested by
 `CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements`.
+
+**CanvasPilot_BuildMessagePayload_MermaidWithMarks_ContainsImagesCropsGeometryAndSourceElements**: The composed
+application's user shows a two-node Mermaid diagram, marks the node `Start` with a rectangle with a note and the node
+`End` with an ellipse, and composes a message from typed text, both marks, an attached file from outside the project,
+and dictated text. The message is sent: the snapshot is taken, the file is copied into the project, and the payload is
+built. The text is `Swap [Mark 1] and [Mark 2] see [Attachment 1: brief.txt] please`; the attachment's project path is
+`attachments/brief.txt` and the file is there; there is one image with the file and fingerprints of the shown picture
+and an annotated picture of its size; the two marks have their kinds, the rectangle has its points and note, each has a
+cut-out of the size of its area, and the source elements of the marks are the nodes `Start` and `End`; the draft and
+what can be undone are empty. This scenario is tested by
+`CanvasPilot_BuildMessagePayload_MermaidWithMarks_ContainsImagesCropsGeometryAndSourceElements`.
 
 **CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures**: The composed application's user creates a
 project that holds a 32 by 16 and an 8 by 8 SVG. Content is placed in the overlay layer of the pane that the workspace

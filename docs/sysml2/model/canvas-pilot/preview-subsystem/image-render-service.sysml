@@ -19,7 +19,8 @@ package CanvasPilot {
             requirementFiles = ("docs/reqstream/canvas-pilot/preview-subsystem/image-render-service.yaml");
         }
 
-        // Draws files with the CanvasNet viewer and encodes PNG with its codec; no other unit uses the library to draw.
+        // Draws files with the CanvasNet viewer and encodes PNG with its codec; no other unit draws files with it (the
+        // MarkImageComposer draws only an SVG document of its own).
         dependency ImageRenderService to Ots::CanvasNet;
 
         // Reports files that could not be drawn to the application log.

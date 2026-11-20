@@ -7,6 +7,7 @@ resource-path:
   - docs/design/canvas-pilot/app-shell-subsystem
   - docs/design/canvas-pilot/composer-subsystem
   - docs/design/canvas-pilot/logging-subsystem
+  - docs/design/canvas-pilot/payload-subsystem
   - docs/design/canvas-pilot/preview-subsystem
   - docs/design/canvas-pilot/project-subsystem
   - docs/design/canvas-pilot/settings-subsystem
@@ -35,6 +36,11 @@ input-files:
   - docs/design/canvas-pilot/composer-subsystem/attachment-intake.md
   - docs/design/canvas-pilot/logging-subsystem.md
   - docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md
+  - docs/design/canvas-pilot/payload-subsystem.md
+  - docs/design/canvas-pilot/payload-subsystem/message-payload.md
+  - docs/design/canvas-pilot/payload-subsystem/mark-image-composer.md
+  - docs/design/canvas-pilot/payload-subsystem/payload-builder.md
+  - docs/design/canvas-pilot/payload-subsystem/payload-describer.md
   - docs/design/canvas-pilot/preview-subsystem.md
   - docs/design/canvas-pilot/preview-subsystem/image-render-service.md
   - docs/design/canvas-pilot/preview-subsystem/preview-pane.md

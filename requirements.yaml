@@ -23,6 +23,11 @@ includes:
   - docs/reqstream/canvas-pilot/composer-subsystem/attachment-intake.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml
+  - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+  - docs/reqstream/canvas-pilot/payload-subsystem/message-payload.yaml
+  - docs/reqstream/canvas-pilot/payload-subsystem/mark-image-composer.yaml
+  - docs/reqstream/canvas-pilot/payload-subsystem/payload-builder.yaml
+  - docs/reqstream/canvas-pilot/payload-subsystem/payload-describer.yaml
   - docs/reqstream/canvas-pilot/project-subsystem.yaml
   - docs/reqstream/canvas-pilot/project-subsystem/project-service.yaml
   - docs/reqstream/canvas-pilot/project-subsystem/recent-projects.yaml

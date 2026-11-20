@@ -4,7 +4,7 @@
 # Requirements for the DemaConsulting.CanvasNet viewer library (DemaConsulting.CanvasNet.Viewer, with the
 # DemaConsulting.CanvasNet core library it brings) as used by CanvasPilot at run time. The library is a runtime
 # dependency, so each requirement is a child of the requirement of the unit that uses the feature
-# (ImageRenderService and ProjectExplorer) and is not a root requirement.
+# (ImageRenderService, ProjectExplorer, and MarkImageComposer) and is not a root requirement.
 
 sections:
   - title: OTS Software Requirements
@@ -103,12 +103,25 @@ sections:
           - id: CanvasPilot-OTS-CanvasNet-ComposeSvgFromStream
             title: >-
               CanvasNet shall draw an SVG document given as a stream, including a PNG picture embedded as a data
-              link and rectangle, ellipse, polyline, and text elements drawn over it, to a picture of the
+              link and rectangle, ellipse, circle, polyline, and text elements drawn over it, to a picture of the
               document's size.
             justification: |
               The application composes a picture with its marks drawn on it by building an SVG document in memory
               that embeds the picture the user saw, so that no file has to be written and the picture is exactly
-              the pixels that were shown. The library must draw the embedded picture and every shape over it.
+              the pixels that were shown. The library must draw the embedded picture and every shape over it,
+              including the filled circle of the number badge of a mark.
             tags: [ots]
             tests:
               - CanvasNet_Render_SvgStream_WithDataUriImageAndShapes_DrawsAll
+
+          - id: CanvasPilot-OTS-CanvasNet-CropSurface
+            title: >-
+              CanvasNet shall copy a rectangular region of a surface into a new surface of the size of the region
+              that does not change when the original surface changes.
+            justification: |
+              The application cuts the area around a mark from the picture that has the marks drawn on it, and
+              gives the copy to the assistant while the original is disposed. The copy must hold exactly the
+              pixels of the region and must not depend on the original.
+            tags: [ots]
+            tests:
+              - CanvasNet_Surface_Crop_CopiesTheRegionIntoAnIndependentSurface

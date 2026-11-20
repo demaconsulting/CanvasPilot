@@ -47,6 +47,12 @@ package CanvasPilot {
         render asInterconnectionDiagram;
     }
 
+    view PayloadSubsystemView {
+        expose PayloadSubsystem;
+        expose PayloadSubsystem::*;
+        render asInterconnectionDiagram;
+    }
+
     view PreviewSubsystemView {
         expose PreviewSubsystem;
         expose PreviewSubsystem::*;

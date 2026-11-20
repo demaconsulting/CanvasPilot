@@ -4,8 +4,8 @@ package CanvasPilot {
     doc
     /*
      * CanvasPilot is an AI-assisted drawing application built on CanvasNet.
-     * The model contains the application shell, annotation, composer, logging, preview, project, settings, speech, and
-     * utility subsystems; the AI chat is not yet part of it.
+     * The model contains the application shell, annotation, composer, logging, payload, preview, project, settings,
+     * speech, and utility subsystems; the AI chat is not yet part of it.
      */
 
     part def CanvasPilotSystem {
@@ -22,6 +22,7 @@ package CanvasPilot {
         part appShell : AppShellSubsystem;
         part composer : ComposerSubsystem;
         part logging : LoggingSubsystem;
+        part payload : PayloadSubsystem;
         part preview : PreviewSubsystem;
         part project : ProjectSubsystem;
         part settings : SettingsSubsystem;
@@ -33,7 +34,7 @@ package CanvasPilot {
         part userInterface : Ots::Avalonia;
         part viewModelToolkit : Ots::CommunityToolkitMvvm;
 
-        // CanvasNet is consumed at run time by the Preview and Project subsystems.
+        // CanvasNet is consumed at run time by the Preview, Project, and Payload subsystems.
         part canvasNet : Ots::CanvasNet;
 
         // The speech library is consumed at run time by the Speech subsystem.

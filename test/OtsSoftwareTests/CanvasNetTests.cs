@@ -297,6 +297,7 @@ public sealed class CanvasNetTests : IDisposable
             $"<image href='data:image/png;base64,{Convert.ToBase64String(png.ToArray())}' x='0' y='0' width='100' height='50'/>" +
             "<rect x='10' y='10' width='40' height='30' fill='none' stroke='#0000ff' stroke-width='4'/>" +
             "<ellipse cx='75' cy='25' rx='15' ry='10' fill='none' stroke='#00ff00' stroke-width='4'/>" +
+            "<circle cx='30' cy='25' r='6' fill='#ff00ff'/>" +
             "<polyline points='55,45 95,45' fill='none' stroke='#ffff00' stroke-width='4'/>" +
             "<text x='12' y='9' font-size='8' fill='#ffffff'>1</text></svg>";
         using var stream = new MemoryStream(Encoding.UTF8.GetBytes(svg));
@@ -312,8 +313,34 @@ public sealed class CanvasNetTests : IDisposable
         Assert.Equal(new Rgba32(0, 0, 255, 255), image.Surface[10, 25]);
         Assert.Equal(new Rgba32(0, 255, 0, 255), image.Surface[90, 25]);
         Assert.Equal(new Rgba32(255, 255, 0, 255), image.Surface[75, 45]);
+        Assert.Equal(new Rgba32(255, 0, 255, 255), image.Surface[30, 25]);
         Assert.True(HasPixelOtherThan(image.Surface, new Rgba32(255, 0, 0, 255), 11, 1, 20, 9), "The text was not drawn.");
         Assert.Empty(image.Diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that CanvasNet copies a rectangular region of a surface into a new, independent surface, which is how
+    ///     the application cuts the area around a mark from the picture with the marks on it.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_Surface_Crop_CopiesTheRegionIntoAnIndependentSurface()
+    {
+        // Arrange: a 20 x 10 surface with one distinct pixel at (7, 4)
+        using var surface = new Surface(20, 10);
+        surface.Clear(new Rgba32(10, 20, 30, 255));
+        surface[7, 4] = new Rgba32(200, 100, 50, 255);
+
+        // Act: cut a 6 x 5 region that starts at (5, 2), then change the original
+        using var region = surface.Crop(5, 2, 6, 5);
+        surface[7, 4] = new Rgba32(0, 0, 0, 255);
+
+        // Assert: the size of the region, the distinct pixel at its place, the other pixels, and independence from the
+        // original
+        Assert.Equal(6, region.Width);
+        Assert.Equal(5, region.Height);
+        Assert.Equal(new Rgba32(200, 100, 50, 255), region[2, 2]);
+        Assert.Equal(new Rgba32(10, 20, 30, 255), region[0, 0]);
+        Assert.Equal(new Rgba32(10, 20, 30, 255), region[5, 4]);
     }
 
     /// <summary>
