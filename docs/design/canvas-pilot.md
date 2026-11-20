@@ -22,6 +22,9 @@ flowchart TD
     subgraph Composer
         ComposerDocument
         ComposerHistory
+        AttachmentIntake
+        AttachmentStore
+        ComposerViewModel
     end
     subgraph Logging
         RollingFileLogger
@@ -68,6 +71,13 @@ flowchart TD
     AttachmentStore --> PathHelpers
     AttachmentStore --> RollingFileLogger
     AttachmentStore --> ProjectService
+    ComposerViewModel --> ComposerDocument
+    ComposerViewModel --> ComposerHistory
+    ComposerViewModel --> AttachmentIntake
+    ComposerViewModel --> AttachmentStore
+    ComposerViewModel --> MarkRegistry
+    ComposerViewModel --> DictationService
+    ComposerViewModel --> RollingFileLogger
     MarkRegistry --> ImageRenderService
     MarkSourceResolver --> MarkRegistry
     MarkSourceResolver --> ImageRenderService
@@ -79,6 +89,7 @@ flowchart TD
     PayloadBuilder --> MarkSourceResolver
     PayloadBuilder --> MarkImageComposer
     PayloadBuilder --> MessagePayload
+    PayloadBuilder --> ComposerViewModel
     PayloadDescriber --> MessagePayload
     ImageRenderService --> RollingFileLogger
     PreviewPane --> ImageRenderService
@@ -194,9 +205,16 @@ to. `AttachmentStore` is the only item that creates files for attachments, and o
 pictures in the project's private data folder while the message is a draft, removes the ones that no chip refers to,
 and, when the message is sent, copies the attachments from outside the project into the project's `attachments` folder,
 all or none, within limits of 500 files and 200 MB for one message, with safe names that never replace another file,
-without following links. The units that show the message in an editing control are added later and build on these. Only
-the `Payload` subsystem uses the `Composer` subsystem so far, to read the snapshot of the message and the staged
-attachments.
+without following links. `ComposerViewModel` is the orchestration of the message without a window: it owns the document,
+the history, and the intake, receives what the editing control reports and turns each action of the user into exactly
+one undo step, offers undo and redo to the Edit menu and the keys, shows the words that dictation recognizes while a
+talk control is held and adds them as one dictated block when it is released, names what a drop left out, allows editing
+only while a project is open, and sends the message: it has the attachments put into the project, has the message built
+through `IMessageBuilder`, and then empties the draft, the history, and the marks and gives the immutable sent message
+to whoever shows the transcript. The units that show the message in an editing control are added later and build on
+these. The `Payload` subsystem uses the `Composer` subsystem to read the snapshot of the message and the staged
+attachments and to implement `IMessageBuilder`, which `Composer` owns; the `Composer` subsystem uses `Annotation` (the
+registry of marks) and `Speech` (dictation) and, to send a message, the `Payload` subsystem only through that interface.
 
 `MarkRegistry` holds the marks that the user draws on the shown picture to say what they mean in a message. Each mark is
 pinned to the exact `RenderedImage` it was drawn on, numbered in the order the marks are made, and described by its
@@ -240,6 +258,13 @@ Because the direction is fixed, a subsystem added later, such as the chat, depen
 never on `AppShell`; only the composition root and the window refer to every subsystem. The direction is shown in the
 model and in the diagram above, and the verification of `ImageExporter` uses a substitute for `IExportDialogs`, so no
 test of `Preview` needs the dialog service of `AppShell`.
+
+The same rule keeps `Composer` and `Payload` apart. The payload is built from the composer's snapshot, so `Payload`
+depends on `Composer`; the composer sends the messages, so it needs them built. The seam belongs to the lower
+subsystem: `Composer` owns `IMessageBuilder` and the `SentMessage` it returns, and `PayloadBuilder` implements the
+interface, so `ComposerViewModel` never refers to the `Payload` subsystem. The composition root hands the payload
+builder to the composer, and the sent message carries the payload as an object that only the `Payload` subsystem and the
+code that shows it interpret.
 
 ### AI Provider Seam
 
@@ -529,9 +554,11 @@ a bitmap of the picture.
 
 The message being composed is held by `ComposerDocument`, and every change the user makes to it, typing, dictating,
 dropping, pasting, adding a mark, and deleting, is made as one `ComposerEdit` that `ComposerHistory.Execute` applies to
-the document and records. Undo and redo revert and apply whole edits and return the caret to restore. When the message
-is sent, `ComposerHistory.CompleteSend` returns a snapshot of the document, from which the message is built, and empties
-the document and the history.
+the document and records. Undo and redo revert and apply whole edits and return the caret to restore. The editing
+control does not make edits itself: it reports what the user did to `ComposerViewModel`, whose methods
+(`ApplyTextChange`, `AddDictatedBlock`, `HandleDrop`, `HandlePaste`, `AddMark`, `DeleteChip`) each make exactly one edit
+and tell the control once that the message changed. When the message is sent, the history hands over a snapshot of the
+document, from which the message is built, and empties the document and the history.
 
 When the user draws a mark on the shown picture, the layer over the picture gives `MarkRegistry.Add` the picture, the
 shape, and the points of the pointer in the picture's pixels. The registry puts the points in normal form inside the
@@ -541,40 +568,48 @@ picture, numbers the mark, and returns it; the chip of the mark is then added to
 a mark to the assistant, `MarkSourceResolver.Resolve` reads the element positions or anchors of the mark's picture and
 returns the parts of the source file under the mark, or that the picture cannot tell.
 
-When the message is sent, the chat takes the snapshot of the composer with `ComposerHistory.CompleteSend`, puts the
-attachments into the project with `AttachmentStore.StageForSend`, and gives the snapshot, the marks, and the staged
-attachments to `PayloadBuilder.BuildAsync`. The builder walks the snapshot once, writing the text with its references
-and the parts of the message in order, and keeps the marks whose chips are in it. It groups those marks by picture, has
-`MarkImageComposer` draw the marks of each picture and cut the area around each mark, asks `MarkSourceResolver` for the
-parts of the source under each mark, and returns a `MessagePayload` that nothing can change. `PayloadDescriber.Describe`
-writes the payload as text for the user. After sending, `MarkRegistry.Clear` forgets the marks.
+When the message is sent, `ComposerViewModel.SendAsync` takes a snapshot of the document, puts the attachment chips of
+the snapshot into the project with `AttachmentStore.StageForSend` on a thread-pool thread, and gives the snapshot, the
+marks whose chips are in it, and the staged attachments to `IMessageBuilder.BuildAsync`, which `PayloadBuilder`
+implements. While this goes on the draft cannot be changed. Only when both steps worked does it empty the draft with
+`ComposerHistory.CompleteSend`, forget the marks with `MarkRegistry.Clear`, remove the saved pictures that no chip
+refers to, and raise `MessageSent` with the immutable `SentMessage`; when a step fails, the draft, the history, and the
+marks are left as they were and the status text says why. The builder walks the snapshot once, writing the text with
+its references and the parts of the message in order, and keeps the marks whose chips are in it. It groups those marks
+by picture, has `MarkImageComposer` draw the marks of each picture and cut the area around each mark, asks
+`MarkSourceResolver` for the parts of the source under each mark, and returns a `MessagePayload` that nothing can
+change. `PayloadDescriber.Describe` writes the payload as text for the user.
 
 When the user drops files or folders on the message, or pastes a picture or text into it, the view reads the drop or the
 clipboard into a `DroppedContent` and gives it to `AttachmentIntake.Accept`. The intake checks the text of each path,
 asks the file system whether it is a file or a folder, saves pasted pictures through `AttachmentStore.SavePastedImage`,
-and returns chips and text, with notes for what it left out; the view inserts them as one `ComposerEdit.Drop`. Nothing
-is copied. When the message is sent, the chips of the snapshot are given to `AttachmentStore.StageForSend`, which plans
-the copies against the limits, copies the attachments from outside the project into the project's `attachments` folder,
-moves pasted pictures there, and returns for each chip its path in the project, or the chip that prevents the message
-from being sent and why. After sending, when a project is closed, and when a project is opened, `RemoveLeftovers`
-deletes the pasted pictures that no chip refers to. When the user opens Settings and chooses the Speech page,
-`SpeechSettingsPage` loads: `DeviceSelection` asks `AudioDeviceService` for the devices and selects the stored ones by
-name, `ModelCatalogPanel` asks `SpeechModelService` for the models and selects the stored ones by identifier, and
-`ModelParameterEditor` shows the parameters of the chosen models with their stored values. A download requested in the
-panel goes through `SpeechModelService` to the speech library, which reports progress to the row and ends as installed,
-canceled, or failed. On OK or Apply the page merges the choices into the speech section of the settings, which
-`SettingsService.Save` writes. When the dialog closes the page cancels downloads that are still running.
+and returns chips and text, with notes for what it left out; `ComposerViewModel.HandleDrop` or `HandlePaste` inserts
+them as one `ComposerEdit.Drop` and names what was left out in its status text. Nothing is copied. When the message is
+sent, the chips of the snapshot are given to `AttachmentStore.StageForSend`, which plans the copies against the limits,
+copies the attachments from outside the project into the project's `attachments` folder, moves pasted pictures there,
+and returns for each chip its path in the project, or the chip that prevents the message from being sent and why. After
+sending, when a project is closed, and when a project is opened, `RemoveLeftovers` deletes the pasted pictures that no
+chip refers to. When the user opens Settings and chooses the Speech page, `SpeechSettingsPage` loads: `DeviceSelection`
+asks `AudioDeviceService` for the devices and selects the stored ones by name, `ModelCatalogPanel` asks
+`SpeechModelService` for the models and selects the stored ones by identifier, and `ModelParameterEditor` shows the
+parameters of the chosen models with their stored values. A download requested in the panel goes through
+`SpeechModelService` to the speech library, which reports progress to the row and ends as installed, canceled, or
+failed. On OK or Apply the page merges the choices into the speech section of the settings, which `SettingsService.Save`
+writes. When the dialog closes the page cancels downloads that are still running.
 
-When the user holds a talk control, the caller asks `DictationService.BeginAsync` to begin. The service reads the speech
-settings, asks `SpeechModelService.Enumerate` whether the chosen speech-to-text model is installed, checks the native
-speech files, and, the first time, has `SpeechModelService.LoadRecognizerAsync` load the engine with the stored
-parameter values converted to their types, and keeps it. It asks `AudioDeviceService.CreateCaptureDevice` for the chosen
-microphone, creates a recognition session over the engine and the device, starts reading its results, and starts the
-session. Each provisional result replaces the sentence being recognized and each final result ends it, and the words so
-far are available as `PartialText`. When the user lets go the caller ends the session: it keeps listening for a short
-moment, stops the recognition, which finishes the audio already received, releases the session and the microphone, and
-returns the final text, which `ComposerEdit.Dictate` adds to the message as one dictated block. If dictation cannot
-start, the same call returns the reason and the message, and nothing is loaded that could crash the process.
+When the user holds a talk control, the caller asks `ComposerViewModel.BeginPushToTalkAsync` to begin, which asks
+`DictationService.BeginAsync`; the composer shows why when there is no session, and the words as they are recognized
+when there is, moving them to the thread of the caller. The service reads the speech settings, asks
+`SpeechModelService.Enumerate` whether the chosen speech-to-text model is installed, checks the native speech files,
+and, the first time, has `SpeechModelService.LoadRecognizerAsync` load the engine with the stored parameter values
+converted to their types, and keeps it. It asks `AudioDeviceService.CreateCaptureDevice` for the chosen microphone,
+creates a recognition session over the engine and the device, starts reading its results, and starts the session. Each
+provisional result replaces the sentence being recognized and each final result ends it, and the words so far are
+available as `PartialText`. When the user lets go the caller ends the session through
+`ComposerViewModel.EndPushToTalkAsync`: it keeps listening for a short moment, stops the recognition, which finishes the
+audio already received, releases the session and the microphone, and returns the final text, which
+`ComposerEdit.Dictate` adds to the message at the caret as one dictated block. If dictation cannot start, the same call
+returns the reason and the message, and nothing is loaded that could crash the process.
 
 ## Design Constraints
 
@@ -610,6 +645,8 @@ start, the same call returns the reason and the message, and nothing is loaded t
 - Every change that the user makes to the message being composed shall be one `ComposerEdit` executed through
   `ComposerHistory`, so that the message and the undo steps never disagree; the units of the `Composer` subsystem that
   hold the message shall not write it anywhere.
+- The `Composer` subsystem shall not depend on the `Payload` subsystem: the composer owns `IMessageBuilder` and the
+  payload builder implements it, so the dependency runs from `Payload` to `Composer` only.
 - A mark shall hold the picture it was drawn on and shall be shown only on that picture; its geometry shall be in the
   pixels of that picture, and the units of the `Annotation` subsystem shall not write anything anywhere.
 - A payload shall be built only from values that cannot change and shall itself never change, and the units of the

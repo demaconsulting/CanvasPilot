@@ -10,16 +10,33 @@ drawn on the shown picture, in the order the user placed them. The subsystem kee
 redo changes to it one action at a time, and forgets it when the message is sent. It has no dependency on the user
 interface, so all of its rules are tested without a window.
 
-The subsystem contains four units: `ComposerDocument`, the sequence of segments, `ComposerHistory`, the undo and redo of
-the changes made to it, `AttachmentIntake`, which turns dropped and pasted content into chips and text, and
-`AttachmentStore`, which keeps the files that belong to attachments in the project. `AttachmentIntake` and
+The subsystem contains five units: `ComposerDocument`, the sequence of segments, `ComposerHistory`, the undo and redo of
+the changes made to it, `AttachmentIntake`, which turns dropped and pasted content into chips and text,
+`AttachmentStore`, which keeps the files that belong to attachments in the project, and `ComposerViewModel`, which
+orchestrates all of them with the marks, dictation, and sending, without a window. `AttachmentIntake` and
 `AttachmentStore` work with the file system, but only to look at paths, to save pasted pictures, and to copy attachments
 into the project when the message is sent; the document and the history have no file access. The units that show the
 message in an editing control are added with the later steps of the chat; their design is described with them. The
-subsystem depends on `Utilities` (safe path combination), `Logging` (diagnostics), and, for the name of the project's
-data folder only, `Project`.
+subsystem depends on `Utilities` (safe path combination), `Logging` (diagnostics), `Annotation` (the registry of marks),
+`Speech` (dictation), and, for the name of the project's data folder only, `Project`. It does not depend on `Payload`:
+it owns the `IMessageBuilder` interface through which it has a sent message built, and `Payload` implements it.
 
 ### Interfaces
+
+**ComposerViewModel**: The message as the user works on it.
+
+- *Type*: In-process .NET class, with the interfaces `IUndoRedoTarget` and `IPushToTalkTarget`, which it implements,
+  and `IMessageBuilder`, which it uses and the payload builder implements.
+- *Role*: Provider to the editing control, the menu, and the talk key; consumer of the intake, the store, the marks, and
+  dictation.
+- *Contract*: Methods that report the user's actions (`ApplyTextChange`, `InsertTyped`, `Delete`, `DeleteBackward`,
+  `DeleteForward`, `AddDictatedBlock`, `HandleDrop`, `HandlePaste`, `AddMark`, `DeleteChip`), each exactly one undo
+  step; `Undo`, `Redo`, and their commands; `SetProject` and `ClearDraft`; `SendAsync`, which puts the attachments into
+  the project, has the message built, empties the draft, and raises `MessageSent` with an immutable `SentMessage`, or
+  keeps the draft and says why; `BeginPushToTalkAsync` and `EndPushToTalkAsync`; and observable state with a `Changed`
+  event once for each action.
+- *Constraints*: Owned by the interface thread, not safe for concurrent use. The message can be edited only while a
+  project is open and no message is being sent.
 
 **AttachmentIntake**: Dropped and pasted content as chips and text.
 
@@ -111,7 +128,20 @@ message and then empties the document and both stacks, so nothing of the sent me
 the next draft. The draft and the history are never written anywhere: the document and history units have no file or
 network access, and a history that is started over a document with content starts with nothing to undo.
 
-**Marks.** The composer knows a mark only as a `MarkChip` (identity and number). A mark is part of the message exactly
+**The view model.** `ComposerViewModel` is the one place where the user's actions become edits. The editing control
+reports what the user did, and the view model makes the matching `ComposerEdit`, executes it through the history, moves
+the caret, and tells the control once that the message changed, so the granularity table above holds for the whole
+subsystem and is tested without a window. It sends the message in two phases so that nothing is lost: first the
+attachments are put into the project and the message is built, both without changing the draft, which cannot be edited
+meanwhile; only when both worked is the draft emptied. Dictation is a small state machine (`Idle`, `Starting`,
+`Listening`, `Finishing`) over the dictation service, which handles a release before listening has started and a
+project change in the middle of a dictation without adding anything or leaving the microphone in use. The send is built
+through `IMessageBuilder`, an interface that the composer owns and the payload builder implements, so the composer
+needs no reference to the payload subsystem, which depends on the composer.
+
+**Marks.** The composer knows a mark only as a `MarkChip` (identity and number), except that the view model holds the
+registry of marks, so that it can check the mark it adds, pass the marks that are part of the message to the builder,
+and clear them when the message is sent. A mark is part of the message exactly
 while its chip is in the sequence, so undoing the addition of a mark, or deleting its chip, removes the mark from the
 message, and redoing brings it back, with one undo system for text, chips, and marks.
 
@@ -129,21 +159,22 @@ limited to 200 items.
 picture has no file, so the store saves it in the project's private data folder (`.canvaspilot/attachments`) as
 `paste-{yyyyMMdd-HHmmss}-{n}.png` after checking that it is a PNG of at most 50 MB; the bytes are never decoded. Undoing
 a drop removes chips and copies nothing. Saved pictures that no chip refers to are removed with `RemoveLeftovers`, which
-the chat is to call after a message is sent, when a project is closed, and when a project is opened; it deletes only
+`ComposerViewModel` calls after a message is sent, when a draft is cleared, when a project is closed, and when a project
+is opened; it deletes only
 files with the paste name pattern in that one folder.
 
-**Copy at send.** When the message is sent the chat gives the attachment chips of the snapshot to `StageForSend`. The
-call works in three passes. First every chip is planned: its path is checked again, it must exist and be what the chip
-says, a folder that contains the project is refused (it would be copied into itself), the private data folder is refused
-except for pictures the store saved, a file or folder that is inside the project is referred to in place, and everything
-else is measured against the limits for the whole message (500 files, 500 folders, 200 MB), counting only what is
-copied; a dropped folder is listed with an early stop, so a huge folder is never enumerated to its end. Symbolic links
-and junctions are skipped and counted, never followed. Second, if everything fits, the copies are made: each file is
-created exclusively (never over an existing file), the bytes are counted again as they are copied so that a file that
-grew cannot pass the limit, names are made safe (characters a name cannot hold replaced, device names prefixed, trailing
-dots and spaces removed, length limited to 100 characters with the extension kept) and unique (`photo.png`,
-`photo (2).png`), and every path is built with `PathHelpers.SafePathCombine` so that it cannot leave the folder it is
-built for. A failure removes everything the call created, newest first, and the failure names the chip and the reason.
-Third, pasted pictures that were copied are deleted from the draft folder. The same thing attached twice is copied once.
-The result gives each chip its project-relative path with forward slashes, its size, its number of files, whether it was
-copied, and how many links were skipped; the originals are never changed or deleted.
+**Copy at send.** When the message is sent `ComposerViewModel` gives the attachment chips of the snapshot to
+`StageForSend`. The call works in three passes. First every chip is planned: its path is checked again, it must exist
+and be what the chip says, a folder that contains the project is refused (it would be copied into itself), the private
+data folder is refused except for pictures the store saved, a file or folder that is inside the project is referred to
+in place, and everything else is measured against the limits for the whole message (500 files, 500 folders, 200 MB),
+counting only what is copied; a dropped folder is listed with an early stop, so a huge folder is never enumerated to its
+end. Symbolic links and junctions are skipped and counted, never followed. Second, if everything fits, the copies are
+made: each file is created exclusively (never over an existing file), the bytes are counted again as they are copied so
+that a file that grew cannot pass the limit, names are made safe (characters a name cannot hold replaced, device names
+prefixed, trailing dots and spaces removed, length limited to 100 characters with the extension kept) and unique
+(`photo.png`, `photo (2).png`), and every path is built with `PathHelpers.SafePathCombine` so that it cannot leave the
+folder it is built for. A failure removes everything the call created, newest first, and the failure names the chip and
+the reason. Third, pasted pictures that were copied are deleted from the draft folder. The same thing attached twice is
+copied once. The result gives each chip its project-relative path with forward slashes, its size, its number of files,
+whether it was copied, and how many links were skipped; the originals are never changed or deleted.

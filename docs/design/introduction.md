@@ -24,8 +24,8 @@ Local items:
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
   - **Annotation** subsystem: **MarkRegistry** and **MarkSourceResolver** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
-  - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, and **AttachmentStore**
-    units.
+  - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**, and
+    **ComposerViewModel** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Payload** subsystem: **MessagePayload**, **MarkImageComposer**, **PayloadBuilder**, and **PayloadDescriber**
     units.
@@ -93,8 +93,8 @@ and the local data the application uses](architecture.svg)
     - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, and mapped to the parts
       of the source file under them
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
-    - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, and the
-      intake and copying of attachments
+    - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, the
+      intake and copying of attachments, and the view model that orchestrates them with dictation and sending
     - **LoggingSubsystem/** - local rolling log file subsystem
     - **PayloadSubsystem/** - the message that is sent as one immutable payload: text with references, attachments,
       annotated pictures, mark crops, mark geometry, and source elements, and its description

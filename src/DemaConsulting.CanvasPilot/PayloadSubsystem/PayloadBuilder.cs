@@ -46,7 +46,7 @@ namespace DemaConsulting.CanvasPilot.PayloadSubsystem;
 ///         safe for concurrent use when its collaborators are.
 ///     </para>
 /// </remarks>
-public sealed class PayloadBuilder
+public sealed class PayloadBuilder : IMessageBuilder
 {
     /// <summary>
     ///     Makes the annotated pictures and the areas around the marks.
@@ -172,6 +172,30 @@ public sealed class PayloadBuilder
         ArgumentNullException.ThrowIfNull(attachments);
 
         return Task.Run(() => Build(message, marks, attachments), cancellationToken);
+    }
+
+    /// <summary>
+    ///     Builds the payload of a message and returns it as the sent message that the composer keeps: the message, the
+    ///     marks whose chips are in it, the attachments, and the payload. This is how the composer, which the payload
+    ///     subsystem uses and which therefore cannot use the payload subsystem, has its messages built.
+    /// </summary>
+    /// <param name="message">What the composer held when the message was sent.</param>
+    /// <param name="marks">All marks that were made for the draft; only those whose chips are in the message are kept.</param>
+    /// <param name="attachments">The attachments as they are in the project, in the order of the chips.</param>
+    /// <param name="cancellationToken">Cancels the build before it starts.</param>
+    /// <returns>A task with the sent message, whose payload is a <see cref="MessagePayload" />.</returns>
+    async Task<SentMessage> IMessageBuilder.BuildAsync(
+        ComposerSnapshot message,
+        IReadOnlyList<Mark> marks,
+        IReadOnlyList<StagedAttachment> attachments,
+        CancellationToken cancellationToken)
+    {
+        var payload = await BuildAsync(message, marks, attachments, cancellationToken);
+
+        // Keep the marks that are part of the message, in the order of their numbers
+        var chipIds = message.Chips.OfType<MarkChip>().Select(chip => chip.MarkId).ToHashSet();
+        var used = marks.Where(mark => chipIds.Contains(mark.Id)).OrderBy(mark => mark.Number);
+        return new SentMessage(message, used, attachments, payload, payload.CreatedUtc);
     }
 
     /// <summary>

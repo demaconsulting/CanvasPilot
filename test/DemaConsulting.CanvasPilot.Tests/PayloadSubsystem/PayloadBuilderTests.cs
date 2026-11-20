@@ -426,6 +426,41 @@ public sealed class PayloadBuilderTests
     }
 
     /// <summary>
+    ///     Test that the builder builds the messages of the composer through the interface that the composer owns: it
+    ///     returns the sent message with the payload, the attachments, and only the marks whose chips are in the message.
+    /// </summary>
+    [Fact]
+    public async Task PayloadBuilder_BuildAsyncAsMessageBuilder_ReturnsSentMessageWithPayloadAndMarksOfChips()
+    {
+        // Arrange: a message with the chip of the second of two marks and a file
+        var token = TestContext.Current.CancellationToken;
+        var picture = Diagram();
+        _ = MarkNodeA(picture);
+        var withChip = MarkNodeA(picture, "note");
+        var file = new FileChip(@"C:\notes\brief.txt");
+        var document = new ComposerDocument();
+        document.InsertText(0, "Look: ", TextOrigin.Typed);
+        document.InsertChip(document.Length, ChipOf(withChip));
+        document.InsertChip(document.Length, file);
+        var snapshot = document.Snapshot();
+        var staged = new[] { PayloadTestSupport.Staged(file, "attachments/brief.txt") };
+        IMessageBuilder builder = CreateBuilder();
+
+        // Act: build through the composer's interface
+        var sent = await builder.BuildAsync(snapshot, _registry.Marks, staged, token);
+
+        // Assert: the sent message holds the message, the used mark, the attachment, and the payload of the builder
+        var payload = Assert.IsType<MessagePayload>(sent.Payload);
+        Assert.Same(snapshot, sent.Message);
+        Assert.Equal([withChip], sent.Marks);
+        Assert.Equal(staged, sent.Attachments);
+        Assert.Equal("Look: [Mark 2][Attachment 1: brief.txt]", payload.Text);
+        Assert.Equal(Now, sent.SentUtc);
+        Assert.Equal(payload.CreatedUtc, sent.SentUtc);
+        Assert.Single(payload.Images);
+    }
+
+    /// <summary>
     ///     Test that building on a background thread gives the same payload as building directly, and that a canceled
     ///     build does not start.
     /// </summary>

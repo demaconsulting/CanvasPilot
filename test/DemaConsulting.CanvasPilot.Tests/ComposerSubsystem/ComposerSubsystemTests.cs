@@ -18,7 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.PayloadSubsystem;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -272,6 +275,189 @@ public sealed class ComposerSubsystemTests : IDisposable
         // Assert: the sent snapshot still holds its one file chip
         Assert.IsType<FileChip>(Assert.Single(sent.Chips));
         Assert.Equal(2, document.Chips.Count());
+    }
+
+    /// <summary>
+    ///     Test that a message written through the view model, with typed text, a mark, a dropped file, and a pasted picture,
+    ///     is sent with the real store and the real payload builder: the attachments are in the project, the payload holds
+    ///     the text with its references and the picture with the mark, and nothing is left in the draft.
+    /// </summary>
+    [Fact]
+    public async Task ComposerSubsystem_SendThroughViewModel_CopiesAttachmentsBuildsPayloadAndClearsDraft()
+    {
+        // Arrange: a project, a view model over the real store and payload builder, and content from outside
+        var project = Directory.CreateDirectory(Path.Combine(_root, "project")).FullName;
+        var external = Directory.CreateDirectory(Path.Combine(_root, "external")).FullName;
+        var file = WriteFile(Path.Combine(external, "brief.txt"), [1, 2, 3]);
+        var marks = new MarkRegistry();
+        using var viewModel = new ComposerViewModel(new PayloadBuilder(new FakeMarkImageComposer()), marks, new FakeDictationService());
+        viewModel.SetProject(project);
+        var picture = AnnotationTestPictures.Picture();
+        var mark = marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(10, 10), new RenderPoint(60, 40)]);
+        var sentMessages = new List<SentMessage>();
+        viewModel.MessageSent += (_, e) => sentMessages.Add(e.Message);
+
+        // Act: write the message, send it, and try to undo it
+        viewModel.InsertTyped("See ");
+        viewModel.AddMark(mark);
+        viewModel.AddDictatedBlock(" and this");
+        viewModel.HandleDrop(new DroppedContent { Paths = [file], Images = [PngBytes] });
+        var pastedPicture = viewModel.Document.Chips.OfType<ImageChip>().Single().FullPath;
+        var sent = await viewModel.SendAsync(TestContext.Current.CancellationToken);
+        viewModel.Undo();
+
+        // Assert: the message was sent once, with a payload that has the references, the attachments, and the picture
+        Assert.True(sent);
+        var message = Assert.Single(sentMessages);
+        var payload = Assert.IsType<MessagePayload>(message.Payload);
+        Assert.StartsWith("See [Mark 1] and this[Attachment 1: brief.txt][Attachment 2: paste-", payload.Text, StringComparison.Ordinal);
+        Assert.Equal(["attachments/brief.txt", "attachments/" + Path.GetFileName(pastedPicture)], payload.Attachments.Select(item => item.ProjectRelativePath));
+        var image = Assert.Single(payload.Images);
+        Assert.Equal(picture.SourcePath, image.SourcePath);
+        Assert.Equal(1, Assert.Single(image.Marks).Number);
+        Assert.Equal([mark], message.Marks);
+
+        // Assert: the files are in the project, the saved picture was moved out of the draft folder, and the draft is empty
+        Assert.True(File.Exists(Path.Combine(project, "attachments", "brief.txt")));
+        Assert.True(File.Exists(Path.Combine(project, "attachments", Path.GetFileName(pastedPicture))));
+        Assert.False(File.Exists(pastedPicture));
+        Assert.True(File.Exists(file));
+        Assert.Equal(0, viewModel.Document.Length);
+        Assert.False(viewModel.CanUndo);
+        Assert.Empty(marks.Marks);
+    }
+
+    /// <summary>
+    ///     Test that a message that cannot be attached because a file is too large is not sent: the draft, the history,
+    ///     and the marks stay, nothing is left in the project, and removing the chip lets the message go.
+    /// </summary>
+    [Fact]
+    public async Task ComposerSubsystem_SendThroughViewModel_AttachmentTooLarge_KeepsDraftAndLeavesProjectUntouched()
+    {
+        // Arrange: a project and a dropped file that is one byte larger than a message may carry
+        var project = Directory.CreateDirectory(Path.Combine(_root, "project")).FullName;
+        var external = Directory.CreateDirectory(Path.Combine(_root, "external")).FullName;
+        var huge = Path.Combine(external, "huge.bin");
+        using (var stream = new FileStream(huge, FileMode.Create))
+        {
+            stream.SetLength(AttachmentStore.MaximumBytes + 1);
+        }
+
+        using var viewModel = new ComposerViewModel(new PayloadBuilder(new FakeMarkImageComposer()), new MarkRegistry(), new FakeDictationService());
+        viewModel.SetProject(project);
+        viewModel.InsertTyped("here it is");
+        viewModel.HandleDrop(new DroppedContent { Paths = [huge] });
+
+        // Act: send, then remove the chip and send again
+        var firstTry = await viewModel.SendAsync(TestContext.Current.CancellationToken);
+        var statusAfterFirstTry = viewModel.StatusText;
+        var attachmentsFolderExists = Directory.Exists(Path.Combine(project, "attachments"));
+        var hasChipBefore = viewModel.Document.Chips.Any();
+        viewModel.DeleteChip(viewModel.Document.Length - 1);
+        var secondTry = await viewModel.SendAsync(TestContext.Current.CancellationToken);
+
+        // Assert: the first send kept the draft and said which attachment is the problem, the project has no copy, and the
+        // second send worked
+        Assert.False(firstTry);
+        Assert.True(hasChipBefore);
+        Assert.Contains("huge.bin", statusAfterFirstTry, StringComparison.Ordinal);
+        Assert.False(attachmentsFolderExists);
+        Assert.True(secondTry);
+        Assert.Equal(0, viewModel.Document.Length);
+    }
+
+    /// <summary>
+    ///     Test that a message written through the view model with every kind of action, over the real store and intake,
+    ///     is undone and redone one step at a time with every step passing through the state it had when it was made.
+    /// </summary>
+    [Fact]
+    public void ComposerSubsystem_EditThroughViewModel_MixedActionsUndoAndRedoOneStepEach()
+    {
+        // Arrange: a project, a view model over the real store and intake, and files from outside
+        var project = Directory.CreateDirectory(Path.Combine(_root, "project")).FullName;
+        var external = Directory.CreateDirectory(Path.Combine(_root, "external")).FullName;
+        var marks = new MarkRegistry();
+        using var viewModel = new ComposerViewModel(new PayloadBuilder(new FakeMarkImageComposer()), marks, new FakeDictationService());
+        viewModel.SetProject(project);
+        var mark = marks.Add(AnnotationTestPictures.Picture(), MarkKind.Rectangle, [new RenderPoint(10, 10), new RenderPoint(60, 40)]);
+        var states = new List<ComposerSnapshot> { viewModel.Document.Snapshot() };
+
+        // Act: type two characters, dictate a block, drop two files and a pasted picture, add a mark, delete a chip, and
+        // delete the character before the caret, each as the user's action
+        viewModel.InsertTyped("H");
+        states.Add(viewModel.Document.Snapshot());
+        viewModel.InsertTyped("i");
+        states.Add(viewModel.Document.Snapshot());
+        viewModel.AddDictatedBlock(" there my friend");
+        states.Add(viewModel.Document.Snapshot());
+        viewModel.HandleDrop(new DroppedContent
+        {
+            Paths = [WriteFile(Path.Combine(external, "a.txt"), [1]), WriteFile(Path.Combine(external, "b.txt"), [2])],
+            Images = [PngBytes],
+        });
+        states.Add(viewModel.Document.Snapshot());
+        viewModel.AddMark(mark);
+        states.Add(viewModel.Document.Snapshot());
+        viewModel.DeleteChip(viewModel.Document.Length - 1);
+        states.Add(viewModel.Document.Snapshot());
+        viewModel.DeleteBackward();
+        states.Add(viewModel.Document.Snapshot());
+
+        // Assert: undo walks back through every state, redo walks forward through the same ones, and nothing was copied
+        // into the project while drafting
+        for (var index = states.Count - 2; index >= 0; index--)
+        {
+            viewModel.Undo();
+            Assert.True(viewModel.Document.Snapshot().HasSameContentAs(states[index]), $"state {index} after undo");
+        }
+
+        for (var index = 1; index < states.Count; index++)
+        {
+            viewModel.Redo();
+            Assert.True(viewModel.Document.Snapshot().HasSameContentAs(states[index]), $"state {index} after redo");
+        }
+
+        Assert.False(viewModel.CanRedo);
+        Assert.False(Directory.Exists(Path.Combine(project, "attachments")));
+    }
+
+    /// <summary>
+    ///     Test that dictating through the view model adds the words as one dictated block at the caret that one undo
+    ///     removes, and that sending it keeps the origin of the words.
+    /// </summary>
+    [Fact]
+    public async Task ComposerSubsystem_DictateThroughViewModel_HoldAndRelease_AddsOneDictatedBlockAsOneStep()
+    {
+        // Arrange: a project, a view model with a dictation service that hears words, and a typed start
+        var project = Directory.CreateDirectory(Path.Combine(_root, "project")).FullName;
+        var dictation = new FakeDictationService();
+        dictation.Session.FinalText = "make the second box blue";
+        using var viewModel = new ComposerViewModel(new PayloadBuilder(new FakeMarkImageComposer()), new MarkRegistry(), dictation);
+        viewModel.SetProject(project);
+        viewModel.InsertTyped("Please ");
+        SentMessage? sentMessage = null;
+        viewModel.MessageSent += (_, e) => sentMessage = e.Message;
+
+        // Act: hold the talk button, hear words, and let go
+        await viewModel.BeginPushToTalkAsync();
+        dictation.Session.Say("make the second");
+        var live = viewModel.LivePartialText;
+        await viewModel.EndPushToTalkAsync();
+        var afterRelease = viewModel.Document.Snapshot();
+        viewModel.Undo();
+        var afterUndo = viewModel.Document.FlatText;
+        viewModel.Redo();
+        await viewModel.SendAsync(TestContext.Current.CancellationToken);
+
+        // Assert: the live words were shown, the block is dictated text after the typed text, undo removed it as one step,
+        // and the payload keeps the origin of the words
+        Assert.Equal("make the second", live);
+        Assert.Equal(new TextSegment("make the second box blue", TextOrigin.Dictated), afterRelease.Segments[1]);
+        Assert.Equal("Please ", afterUndo);
+        var payload = Assert.IsType<MessagePayload>(Assert.IsType<SentMessage>(sentMessage).Payload);
+        Assert.Equal(
+            [new PayloadTextPart("Please ", TextOrigin.Typed), new PayloadTextPart("make the second box blue", TextOrigin.Dictated)],
+            payload.Segments);
     }
 
     /// <summary>

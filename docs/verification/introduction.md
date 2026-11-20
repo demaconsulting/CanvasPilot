@@ -32,6 +32,8 @@ This document covers the verification design for the following software items:
     - **ComposerHistory** — undo and redo of the user's changes, one action at a time
     - **AttachmentIntake** — dropped and pasted content as chips and text, treated as data
     - **AttachmentStore** — pasted pictures in the draft folder and attachments copied into the project at send
+    - **ComposerViewModel** — the message without a window: one undo step per action, dictation, drop and paste, and
+      send
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
   - **Payload** subsystem

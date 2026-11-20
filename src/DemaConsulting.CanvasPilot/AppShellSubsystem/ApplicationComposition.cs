@@ -18,7 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
+using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
+using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -45,6 +48,11 @@ public sealed class ApplicationComposition : IDisposable
     private readonly IReadOnlyList<IDisposable> _ownedServices;
 
     /// <summary>
+    ///     The handler that moves the composer to the project that is open, kept so that it can be removed.
+    /// </summary>
+    private readonly EventHandler _projectChanged;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ApplicationComposition" /> class.
     /// </summary>
     /// <param name="logger">The application log.</param>
@@ -54,6 +62,8 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="preview">The preview pane view model.</param>
     /// <param name="shell">The main window view model.</param>
     /// <param name="dictation">The dictation service.</param>
+    /// <param name="composer">The composer of the message.</param>
+    /// <param name="marks">The marks made for the draft message.</param>
     /// <param name="ownedServices">The services the composition created and must dispose.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
@@ -63,6 +73,8 @@ public sealed class ApplicationComposition : IDisposable
         PreviewPaneViewModel preview,
         MainWindowShell shell,
         IDictationService dictation,
+        ComposerViewModel composer,
+        MarkRegistry marks,
         IReadOnlyList<IDisposable> ownedServices)
     {
         Logger = logger;
@@ -72,7 +84,14 @@ public sealed class ApplicationComposition : IDisposable
         Preview = preview;
         Shell = shell;
         Dictation = dictation;
+        Composer = composer;
+        Marks = marks;
         _ownedServices = ownedServices;
+
+        // The message is written in the open project: follow it, and start with the one that is open now
+        _projectChanged = (_, _) => Composer.SetProject(Projects.Current?.FolderPath);
+        Projects.CurrentChanged += _projectChanged;
+        Composer.SetProject(Projects.Current?.FolderPath);
     }
 
     /// <summary>
@@ -109,6 +128,17 @@ public sealed class ApplicationComposition : IDisposable
     ///     Gets the dictation service, which turns speech held to talk into text with the speech settings in effect.
     /// </summary>
     public IDictationService Dictation { get; }
+
+    /// <summary>
+    ///     Gets the composer of the message to the assistant: its text, attachments, marks, dictation, undo history, and
+    ///     sending. It works in the open project and has no message while none is open.
+    /// </summary>
+    public ComposerViewModel Composer { get; }
+
+    /// <summary>
+    ///     Gets the marks that are drawn on the shown picture for the message being composed.
+    /// </summary>
+    public MarkRegistry Marks { get; }
 
     /// <summary>
     ///     Creates the units for the running application: the log under the per-user local application data
@@ -166,6 +196,10 @@ public sealed class ApplicationComposition : IDisposable
     ///     models, and the audio devices, which the composition then disposes. It touches neither the model store, the
     ///     audio system, nor the speech engine until dictation is first used.
     /// </param>
+    /// <param name="messageBuilder">
+    ///     What turns a sent message into what is kept and given to the assistant, or <see langword="null" /> for the
+    ///     payload builder, which draws the marks with the render service.
+    /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -178,7 +212,8 @@ public sealed class ApplicationComposition : IDisposable
         IAudioDeviceService? audioDevices = null,
         ISpeechModelService? speechModels = null,
         string? dragFolder = null,
-        IDictationService? dictation = null)
+        IDictationService? dictation = null,
+        IMessageBuilder? messageBuilder = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -226,8 +261,16 @@ public sealed class ApplicationComposition : IDisposable
 
         var shell = new MainWindowShell(projects, recentProjects, settings, workspace, pages, exporter, defaultProjectsFolder);
 
+        // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project
+        var marks = new MarkRegistry();
+        var composer = new ComposerViewModel(
+            messageBuilder ?? new PayloadBuilder(new MarkImageComposer(renderer)),
+            marks,
+            dictation,
+            logger: logger);
+
         logger.Log(LogLevel.Info, "Application started.");
-        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, owned);
+        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, owned);
     }
 
     /// <inheritdoc />
@@ -239,6 +282,8 @@ public sealed class ApplicationComposition : IDisposable
         }
 
         _disposed = true;
+        Projects.CurrentChanged -= _projectChanged;
+        Composer.Dispose();
         Shell.Dispose();
         Preview.Dispose();
         Preview.DragSource?.Purge();

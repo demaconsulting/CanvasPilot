@@ -257,6 +257,8 @@ sections:
           typing does not.
         children:
           - CanvasPilot-Composer-HoldOrderedSegments
+          - CanvasPilot-Composer-SendComposedMessage
+          - CanvasPilot-Composer-WorkInsideAnOpenProject
         tests:
           - CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage
 
@@ -273,6 +275,7 @@ sections:
         children:
           - CanvasPilot-Composer-UndoRedoPerAction
           - CanvasPilot-Composer-ForgetDraftOnSend
+          - CanvasPilot-Composer-EditWithUndoRedoTarget
         tests:
           - CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears
 
@@ -313,6 +316,7 @@ sections:
         children:
           - CanvasPilot-Speech-DictateWhileHeld
           - CanvasPilot-Speech-ExplainDictationUnavailable
+          - CanvasPilot-Composer-AddDictatedWordsAsOneBlock
         tests:
           - CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable
 

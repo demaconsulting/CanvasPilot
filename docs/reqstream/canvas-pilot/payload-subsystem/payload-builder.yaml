@@ -100,3 +100,16 @@ sections:
                 tests:
                   - PayloadBuilder_BuildAsync_GivesTheSamePayloadAsBuildAndHonorsCancellation
                   - PayloadBuilder_Build_Payload_IsNotChangedByLaterChangesToDraftAndRegistry
+
+              - id: CanvasPilot-PayloadBuilder-BuildSentMessage
+                title: >-
+                  The PayloadBuilder shall build, through the message builder interface that the composer owns, the sent
+                  message of the composer: the snapshot of the message, only the marks whose chips are in it in the order of
+                  their numbers, the staged attachments, the payload that it builds from them, and the time of the payload.
+                justification: |
+                  The composer sends the messages and the payload subsystem uses the composer, so the composer cannot use
+                  the payload builder directly. The interface lets the composer have its messages built without the two
+                  subsystems depending on each other, and the transcript needs the marks and attachments that belong to the
+                  message next to its payload.
+                tests:
+                  - PayloadBuilder_BuildAsyncAsMessageBuilder_ReturnsSentMessageWithPayloadAndMarksOfChips

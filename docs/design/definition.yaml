@@ -34,6 +34,7 @@ input-files:
   - docs/design/canvas-pilot/composer-subsystem/composer-history.md
   - docs/design/canvas-pilot/composer-subsystem/attachment-store.md
   - docs/design/canvas-pilot/composer-subsystem/attachment-intake.md
+  - docs/design/canvas-pilot/composer-subsystem/composer-view-model.md
   - docs/design/canvas-pilot/logging-subsystem.md
   - docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/design/canvas-pilot/payload-subsystem.md

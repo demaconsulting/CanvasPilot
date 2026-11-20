@@ -4,10 +4,12 @@
 
 The `Composer` subsystem is verified by integration tests defined in `ComposerSubsystemTests.cs`. The tests use the real
 `ComposerDocument`, `ComposerEdit`, `ComposerHistory`, `AttachmentIntake`, and `AttachmentStore` together on one draft,
-the way the chat panel will use them, and check the observable result after each user action: the segments of the
-message, their order, their origins, what undo and redo give, and, for attachments, the files in a temporary project
-folder. The subsystem has no dependency on the user interface or on another subsystem except `Utilities`, `Logging`, and
-the name of the data folder of `Project`, so no substitute is needed.
+and, through the `ComposerViewModel`, with a real `MarkRegistry` and `PayloadBuilder` (over a composer of mark pictures
+that draws nothing) and a controllable fake of the dictation service. The tests check the observable result after each
+user action: the segments of the message, their order, their origins, what undo and redo give, and, for attachments, the
+files in a temporary project folder. The subsystem has no dependency on the user interface; the open project that
+`ComposerViewModel` follows is checked together with the composition root by the `AppShell` subsystem test
+`AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject`.
 
 ### Test Environment
 
@@ -28,6 +30,9 @@ project. No network, display, or special permission is needed.
 - Sending copies the attachments from outside the project into the project's attachments folder byte for byte, refers
   to files that are in the project in place, moves pasted pictures, and leaves the draft folder empty.
 - Programs, scripts, and unsafe paths that are dropped are only chips or are left out; nothing is opened or run.
+- Through the view model every kind of action is one undo step over the real units, dictation adds one block as one undo
+  step, and sending puts the attachments into the project, builds the payload, and empties the draft, or keeps the draft
+  and names the attachment that prevents it.
 
 ### Test Scenarios
 
@@ -61,6 +66,29 @@ file inside the project, and a pasted picture are dropped and sent. The file and
 attachments folder, the project's own file is referred to as `flow.mmd` and not copied, the pasted picture is moved into
 the attachments folder and removed from the draft folder, the draft is empty, and the dropped file is unchanged. This
 scenario is tested by `ComposerSubsystem_Send_CopiesExternalFilesIntoProjectAttachments`.
+
+**ComposerSubsystem_EditThroughViewModel_MixedActionsUndoAndRedoOneStepEach**: Through the view model over the real
+store, intake, and payload builder, two typed characters, a dictated block, a drop of two files and a pasted picture, a
+mark, a deleted chip, and a Backspace are undone one step at a time through every earlier snapshot to the empty draft
+and redone through the same snapshots; nothing is copied into the project while drafting. This scenario is tested by
+`ComposerSubsystem_EditThroughViewModel_MixedActionsUndoAndRedoOneStepEach`.
+
+**ComposerSubsystem_DictateThroughViewModel_HoldAndRelease_AddsOneDictatedBlockAsOneStep**: The talk button is held, the
+live words are shown, and on release the words are one dictated block after the typed text that one undo removes; after
+redo and sending, the payload keeps the typed and the dictated parts apart. This scenario is tested by
+`ComposerSubsystem_DictateThroughViewModel_HoldAndRelease_AddsOneDictatedBlockAsOneStep`.
+
+**ComposerSubsystem_SendThroughViewModel_CopiesAttachmentsBuildsPayloadAndClearsDraft**: A message with typed text, a
+mark, dictated text, a dropped file, and a pasted picture is sent with the real store and payload builder. The payload
+text has `[Mark 1]` and the two attachment references in order, the attachments' paths are in the project and the files
+are there byte for byte, the pasted picture was moved out of the draft folder, the payload has the picture with its one
+mark, and the draft, the history, and the marks are empty afterwards. This scenario is tested by
+`ComposerSubsystem_SendThroughViewModel_CopiesAttachmentsBuildsPayloadAndClearsDraft`.
+
+**ComposerSubsystem_SendThroughViewModel_AttachmentTooLarge_KeepsDraftAndLeavesProjectUntouched**: A dropped file that
+is one byte over the limit of a message stops the send with a status that names it; the draft, its history, and the
+chips stay, the project has no attachments folder, and after the chip is deleted the same message is sent. This scenario
+is tested by `ComposerSubsystem_SendThroughViewModel_AttachmentTooLarge_KeepsDraftAndLeavesProjectUntouched`.
 
 **ComposerSubsystem_Drop_ProgramsScriptsAndUnsafePaths_AreOnlyDataAndNeverRun**: A program, a script, and three unsafe
 paths (a path with `..`, a path into the device namespace, and a relative path) are dropped. The program and the script

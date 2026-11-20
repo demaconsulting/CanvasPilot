@@ -27,7 +27,8 @@ render service that encodes it), and uses CanvasNet to draw the marks.
 - *Role*: Provider.
 - *Contract*: `Build` takes the `ComposerSnapshot` of the message, the marks that were made, and the `StagedAttachment`
   values that `AttachmentStore.StageForSend` returned, and returns the `MessagePayload`. `BuildAsync` does the same on a
-  thread-pool thread.
+  thread-pool thread. It also implements `IMessageBuilder`, which `Composer` owns: the same build returned as the
+  `SentMessage` that `ComposerViewModel` keeps, so that `Composer` does not depend on this subsystem.
 - *Constraints*: Reads only values that cannot change, so it needs no lock on the draft. Throws `ArgumentException` for
   attachments that are not those of the chips and for a chip of a mark that was not made, and
   `InvalidOperationException` when the marks cannot be drawn.

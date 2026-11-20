@@ -243,6 +243,34 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the composer of the message follows the project that is open: it works in the folder of a project
+    ///     that is created, and has no message and refuses editing after the project is closed.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject()
+    {
+        // Arrange: a composition with no project open
+        var composition = Compose();
+        var beforeProject = composition.Composer.HasProject;
+
+        // Act: create a project, write in the composer, then close the project
+        var created = await composition.Projects.CreateAsync(Projects, "Demo", TestContext.Current.CancellationToken);
+        var folder = created.Project!.FolderPath;
+        var typed = composition.Composer.InsertTyped("hello");
+        var projectFolder = composition.Composer.ProjectFolder;
+        composition.Projects.Close();
+
+        // Assert: it had no project, then the project folder and the typed text, and no project and no text after the close
+        Assert.False(beforeProject);
+        Assert.True(typed);
+        Assert.Equal(folder, projectFolder);
+        Assert.False(composition.Composer.HasProject);
+        Assert.Equal(0, composition.Composer.Document.Length);
+        Assert.False(composition.Composer.InsertTyped("more"));
+        Assert.Empty(composition.Marks.Marks);
+    }
+
+    /// <summary>
     ///     Test that composing the application refuses missing parts.
     /// </summary>
     [Fact]

@@ -40,6 +40,11 @@ marks, and the parts of the source under them come together.
 **BuildAsync(message, marks, attachments, cancellationToken)**: validates the arguments at once and runs `Build` on a
 thread-pool thread; a token that is canceled before the work starts cancels the task.
 
+**IMessageBuilder.BuildAsync(message, marks, attachments, cancellationToken)** (explicit implementation): the interface
+that `Composer` owns for having a sent message built. It builds the payload with `BuildAsync` and returns a
+`SentMessage` with the snapshot, the marks whose chips are in the snapshot in the order of their numbers, the
+attachments, the payload, and the time of the payload. It adds no rules of its own, and fails as `BuildAsync` fails.
+
 #### Error Handling
 
 Missing arguments throw `ArgumentNullException`. Attachments that are not those of the chips, and chips of marks that
@@ -53,10 +58,14 @@ so the chat can keep the draft and show the failure. The unit performs no I/O an
 - **AttachmentStore** unit of `Composer`: `StagedAttachment`.
 - **MarkRegistry** and **MarkSourceResolver** units of `Annotation`: the marks and the parts of the source under them.
 - **MarkImageComposer** unit: draws the marks and cuts the areas.
+- **ComposerViewModel** of `Composer`: builds the sent messages of the composer through the `IMessageBuilder` that
+  `PayloadBuilder` implements; the builder uses it only for that interface and for `SentMessage`.
 - **MessagePayload** unit: the values it makes.
 - **ImageRenderService** unit of `Preview`: the facts of the pictures.
 
 #### Callers
 
-- The chat panel of a later step builds the payload when the user sends a message, after it took the snapshot of the
-  composer and put the attachments into the project.
+- **ComposerViewModel**, through `IMessageBuilder.BuildAsync`, builds the sent message when the user sends a message,
+  after it took the snapshot of the composer and put the attachments into the project; the implementation builds the
+  payload with `BuildAsync` and returns it with the snapshot, the marks whose chips are in the message, the attachments,
+  and the time of the payload as a `SentMessage`.

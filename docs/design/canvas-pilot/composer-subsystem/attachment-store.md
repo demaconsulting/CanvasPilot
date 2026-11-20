@@ -66,5 +66,5 @@ rollback ignore, and log, files that cannot be deleted. Failing to log is ignore
 #### Callers
 
 - **AttachmentIntake** - saves pasted pictures through `IAttachmentStore`.
-- The chat panel of a later step calls `StageForSend` with the attachment chips of the message when it is sent, and
-  `RemoveLeftovers` after sending, when a project is closed, and when a project is opened.
+- **ComposerViewModel** calls `StageForSend` with the attachment chips of the message when it is sent, and
+  `RemoveLeftovers` after sending, when a draft is cleared, when a project is closed, and when a project is opened.

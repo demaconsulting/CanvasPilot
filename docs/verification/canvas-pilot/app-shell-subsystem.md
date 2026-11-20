@@ -26,8 +26,15 @@ services, or display are required.
 - Choices made in the settings dialog opened from the shell are stored and in effect in the next run, and the
   dialog hosts the AI Provider page followed by the Speech page.
 - The About dialog opened from the composed shell shows the application name, a version, and the four libraries.
+- The composer of the message created by the composition works in the folder of the project that is open, and has no
+  project and no draft once the project is closed.
 
 ### Test Scenarios
+
+**AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject**: A composition starts with no project, and its
+composer has none. After a project is created the composer works in the project's folder and accepts typed text; after
+the project is closed it has no project, no draft, no marks, and refuses typing. This scenario is tested by
+`AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject`.
 
 **AppShellSubsystem_ComposeApplication_LoadsSettingsListsRecentProjectsAndLogs**: A first run creates a project and
 stores a model name, then ends. A second composition over the same folders has the stored model name in effect,

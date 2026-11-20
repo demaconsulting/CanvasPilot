@@ -27,6 +27,7 @@ sections:
               order lets the assistant read the message and also use its structure without parsing the text.
             children:
               - CanvasPilot-PayloadBuilder-KeepOrderOfParts
+              - CanvasPilot-PayloadBuilder-BuildSentMessage
             tests:
               - PayloadSubsystem_Build_MessageText_HasReferencesInOrderWithOrigins
 

@@ -291,6 +291,25 @@ reviews:
       - "src/**/ComposerSubsystem/StagedAttachment.cs"
       - "test/**/ComposerSubsystem/AttachmentStoreTests.cs"
 
+  - id: CanvasPilot-Composer-ComposerViewModel
+    title: Review of CanvasPilot ComposerViewModel unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/composer-view-model.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/composer-view-model.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/composer-view-model.md"
+      - "src/**/ComposerSubsystem/ComposerViewModel.cs"
+      - "src/**/ComposerSubsystem/IMessageBuilder.cs"
+      - "src/**/ComposerSubsystem/IPushToTalkTarget.cs"
+      - "src/**/ComposerSubsystem/IUndoRedoTarget.cs"
+      - "src/**/ComposerSubsystem/SentMessage.cs"
+      - "test/**/ComposerSubsystem/ComposerViewModelTests.cs"
+      - "test/**/ComposerSubsystem/ComposerViewModelFakes.cs"
+
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
     title: Review of CanvasPilot Logging subsystem architecture and interfaces

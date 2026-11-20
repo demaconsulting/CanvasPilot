@@ -25,6 +25,8 @@ N/A - standard test environment.
 - Attachments that are not the chips', unknown marks, and a wrong number are refused; a composer that gives the wrong
   number of areas fails the build; the background build gives the same payload and honors cancellation.
 - The payload is not changed by later changes to the draft and the registry.
+- Built through the composer's `IMessageBuilder`, the builder returns the sent message with the snapshot, only the marks
+  whose chips are in the message, the attachments, the payload, and its time.
 
 #### Test Scenarios
 
@@ -73,6 +75,12 @@ the same text, parts, and image as the direct one, and a canceled token cancels 
 **PayloadBuilder_Build_Payload_IsNotChangedByLaterChangesToDraftAndRegistry**: After the draft is cleared and written
 again and the registry is cleared, the payload has its text, area, and note. This scenario is tested by
 `PayloadBuilder_Build_Payload_IsNotChangedByLaterChangesToDraftAndRegistry`.
+
+**PayloadBuilder_BuildAsyncAsMessageBuilder_ReturnsSentMessageWithPayloadAndMarksOfChips**: Of two marks, one has a chip
+in the message, which also holds a file. Built through `IMessageBuilder`, the result holds the same snapshot, only the
+mark with the chip, the attachments, a payload with the text `Look: [Mark 2][Attachment 1: brief.txt]`, one image, and
+the time of the payload. This scenario is tested by
+`PayloadBuilder_BuildAsyncAsMessageBuilder_ReturnsSentMessageWithPayloadAndMarksOfChips`.
 
 **PayloadBuilder_Build_MissingArguments_ThrowArgumentNullException**: A missing composer, snapshot, marks, or
 attachments is refused. This scenario is tested by `PayloadBuilder_Build_MissingArguments_ThrowArgumentNullException`.

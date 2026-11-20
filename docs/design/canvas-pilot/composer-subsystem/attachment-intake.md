@@ -49,5 +49,5 @@ a path or saving a picture are caught per item and reported as the reason. A nul
 
 #### Callers
 
-- The chat panel and the editing control of later steps call `Accept` with what a drop or a paste brought and insert the
-  segments as one `ComposerEdit.Drop`; they show the notes to the user.
+- **ComposerViewModel** calls `Accept` with what a drop or a paste brought and inserts the segments as one
+  `ComposerEdit.Drop`; it shows the notes to the user in its status text.

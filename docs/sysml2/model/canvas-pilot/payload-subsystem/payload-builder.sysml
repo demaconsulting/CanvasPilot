@@ -35,5 +35,8 @@ package CanvasPilot {
 
         // Reads the facts of the pictures: file, fingerprints, format, and size.
         dependency PayloadBuilder to ImageRenderService;
+
+        // Implements the message builder interface that the composer owns, so that the composer has its messages built.
+        dependency PayloadBuilder to ComposerViewModel;
     }
 }

@@ -63,9 +63,11 @@ sections:
             children:
               - CanvasPilot-ComposerHistory-ClearOnDemand
               - CanvasPilot-ComposerHistory-StartEmpty
+              - CanvasPilot-ComposerViewModel-ResetAfterSend
             tests:
               - ComposerSubsystem_Send_ClearsHistoryAndDocument
               - ComposerSubsystem_Send_SnapshotIsUnaffectedByNextDraft
+              - ComposerSubsystem_SendThroughViewModel_CopiesAttachmentsBuildsPayloadAndClearsDraft
 
           - id: CanvasPilot-Composer-AcceptDroppedAndPastedContent
             title: >-
@@ -85,6 +87,7 @@ sections:
               - CanvasPilot-AttachmentIntake-SanitizeDroppedText
               - CanvasPilot-AttachmentStore-SavePastedImages
               - CanvasPilot-AttachmentStore-RemoveLeftovers
+              - CanvasPilot-ComposerViewModel-ReportIntakeProblems
             tests:
               - ComposerSubsystem_DropThenUndo_RemovesChipsAndCopiesNothing
 
@@ -123,3 +126,62 @@ sections:
               - CanvasPilot-AttachmentStore-KeepNamesUnique
             tests:
               - ComposerSubsystem_Send_CopiesExternalFilesIntoProjectAttachments
+
+          - id: CanvasPilot-Composer-EditWithUndoRedoTarget
+            title: >-
+              The Composer subsystem shall apply every action that the editing control reports through one view model,
+              as exactly one undo step, and shall offer undo and redo to the Edit menu and the keys through an interface
+              that does not depend on what has the focus.
+            justification: |
+              The editing control only knows what the user typed, deleted, dropped, or pasted; the rule that gives each
+              action its place in undo must be in one place that is tested without a window, and the menu must work with
+              whatever part of the window has the focus.
+            children:
+              - CanvasPilot-ComposerViewModel-MapEditsToHistorySteps
+              - CanvasPilot-ComposerViewModel-ExposeUndoRedo
+            tests:
+              - ComposerSubsystem_EditThroughViewModel_MixedActionsUndoAndRedoOneStepEach
+
+          - id: CanvasPilot-Composer-AddDictatedWordsAsOneBlock
+            title: >-
+              The Composer subsystem shall, while a talk button or key is held, show the words recognized so far, and when
+              it is released add the final words at the caret as one block of dictated text that one undo removes, and
+              when dictation cannot work shall say why and leave the message as it is.
+            justification: |
+              Dictation is part of the message and must be as easy to take back as a pasted paragraph. The state of the
+              button, the live words, and the reasons why nothing was heard are the behavior of the composer, whatever
+              button or key starts them, so they are decided and tested here.
+            children:
+              - CanvasPilot-ComposerViewModel-InsertDictatedBlockAtCaret
+              - CanvasPilot-ComposerViewModel-ExplainDictationProblems
+            tests:
+              - ComposerSubsystem_DictateThroughViewModel_HoldAndRelease_AddsOneDictatedBlockAsOneStep
+
+          - id: CanvasPilot-Composer-SendComposedMessage
+            title: >-
+              The Composer subsystem shall send the message by putting its attachments into the project and having the
+              message built with the marks that are part of it, shall then give the immutable sent message and empty the
+              draft, and shall keep the draft unchanged and say why when any step fails.
+            justification: |
+              Sending turns a draft into a message that the transcript shows and the assistant is given. It must be all
+              or nothing: a message that was sent but still sits in the draft would be sent twice, and a draft that was
+              lost by a failure would cost the user their work.
+            children:
+              - CanvasPilot-ComposerViewModel-SendMessage
+              - CanvasPilot-ComposerViewModel-KeepDraftWhenSendFails
+            tests:
+              - ComposerSubsystem_SendThroughViewModel_CopiesAttachmentsBuildsPayloadAndClearsDraft
+              - ComposerSubsystem_SendThroughViewModel_AttachmentTooLarge_KeepsDraftAndLeavesProjectUntouched
+
+          - id: CanvasPilot-Composer-WorkInsideAnOpenProject
+            title: >-
+              The Composer subsystem shall let the message be written only in an open project, shall follow the project
+              that is open, and shall drop the draft with its history, marks, and saved pictures when the project changes
+              or is closed.
+            justification: |
+              Attachments are copied into the project and marks are drawn on its pictures, so a message that outlived its
+              project could send files into another one or refer to marks of a picture that is no longer there.
+            children:
+              - CanvasPilot-ComposerViewModel-RequireOpenProject
+            tests:
+              - AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject
