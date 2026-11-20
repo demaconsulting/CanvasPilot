@@ -1,0 +1,75 @@
+---
+# Avalonia OTS Software Requirements
+#
+# Requirements for the Avalonia UI framework (the Avalonia, Avalonia.Skia, Avalonia.Themes.Fluent, and
+# Avalonia.Fonts.Inter packages in the application, Avalonia.Desktop in the executable project, and
+# Avalonia.Headless.XUnit in the tests) as used by CanvasPilot at run time. The framework is a runtime
+# dependency, so each requirement is a child of the requirement of the unit that uses the feature
+# (MainWindowShell, PreviewPane, and ImageExporter) and is not a root requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: Avalonia Requirements
+        requirements:
+          - id: CanvasPilot-OTS-Avalonia-ShowModalDialogs
+            title: >-
+              Avalonia shall show a window modally over an owner window and complete the pending dialog with
+              the result the window is closed with.
+            justification: |
+              The settings, About, New Project, and message dialogs are shown over the main window and hand
+              their outcome back to the code that opened them. The application depends on the dialog task
+              completing with the close result, and on the dialog being visible while it is open.
+            tags: [ots]
+            tests:
+              - Avalonia_Window_ShowDialog_CompletesWithCloseResult
+
+          - id: CanvasPilot-OTS-Avalonia-ShowMenusThatFollowCommands
+            title: >-
+              Avalonia shall show a menu item that is enabled only while the command bound to it can run,
+              keeps the automation identifier it was given, and runs the command when the item is chosen.
+            justification: |
+              The main window's menus are bound to commands, and the application relies on the framework to
+              disable items whose commands cannot run and to run the command when the user chooses an item.
+              Stable automation identifiers let assistive technology and automated tests find each item.
+            tags: [ots]
+            tests:
+              - Avalonia_MenuItem_FollowsCommandAndRunsIt
+
+          - id: CanvasPilot-OTS-Avalonia-BindControlsToViewModels
+            title: >-
+              Avalonia shall keep a control property that is bound to a view model property in step with it,
+              and shall pass an edit made in a text box back to the view model when the binding is two-way.
+            justification: |
+              The views show the state of their view models, such as the window title that names the open
+              project, and the New Project and Settings dialogs collect the user's entries through bound text
+              boxes. The application depends on the framework to move values in both directions.
+            tags: [ots]
+            tests:
+              - Avalonia_DataBinding_FollowsViewModelInBothDirections
+
+          - id: CanvasPilot-OTS-Avalonia-DisplayPixelBuffers
+            title: >-
+              Avalonia shall provide a writable bitmap of a given size in blue, green, red, alpha order with
+              premultiplied alpha whose pixels can be written and read through its framebuffer, and shall show
+              it in an image control.
+            justification: |
+              The preview converts the drawn picture's pixels into a bitmap and shows it. The framework must
+              keep the bytes written to the framebuffer unchanged and accept the pixel format that the
+              conversion produces.
+            tags: [ots]
+            tests:
+              - Avalonia_WriteableBitmap_KeepsWrittenPixelsAndIsShownByImageControl
+
+          - id: CanvasPilot-OTS-Avalonia-TransferPicturesViaClipboard
+            title: >-
+              Avalonia shall put a bitmap on the clipboard of a window and give back a bitmap of the same size
+              when it is read from the clipboard.
+            justification: |
+              Copy Image puts the shown picture on the clipboard so that other programs can paste it. The
+              application depends on the framework's clipboard to take a bitmap and to return its size
+              unchanged. The behavior of the operating system clipboard on a real desktop is checked by hand
+              before a release.
+            tags: [ots]
+            tests:
+              - Avalonia_Clipboard_Bitmap_RoundTrips

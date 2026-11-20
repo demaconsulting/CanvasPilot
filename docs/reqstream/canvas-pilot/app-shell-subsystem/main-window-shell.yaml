@@ -21,6 +21,9 @@ sections:
                   A predictable menu structure is how users find the application's functions, and stable
                   identifiers let automated tests and assistive technology find each item. Disabled items tell
                   the user what is not available yet, such as saving without a project.
+                children:
+                  - CanvasPilot-OTS-Avalonia-ShowMenusThatFollowCommands
+                  - CanvasPilot-OTS-CommunityToolkitMvvm-FollowCommandAvailability
                 tests:
                   - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
                   - MainWindowView_Menus_NoProject_EnabledStateFollowsCommands
@@ -35,6 +38,8 @@ sections:
                   The title tells the user which project they are working on, including when a project is
                   closed or opened by another part of the application, and a shell that has been disposed
                   must not keep reacting to services it no longer owns.
+                children:
+                  - CanvasPilot-OTS-Avalonia-BindControlsToViewModels
                 tests:
                   - MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled
                   - MainWindowShell_ProjectServiceChanges_TitleFollows
@@ -52,6 +57,8 @@ sections:
                   Creating and opening projects are the first things a user does. Remembering each project and
                   starting the pickers where the projects live saves repeated navigation, and explaining a
                   problem such as a damaged file keeps the user informed and the application running.
+                children:
+                  - CanvasPilot-OTS-CommunityToolkitMvvm-RunAsyncCommandsOnce
                 tests:
                   - MainWindowShell_NewProject_DialogAccepted_CreatesAndShowsProject
                   - MainWindowShell_NewProject_DialogCancelled_CreatesNothing
@@ -100,6 +107,8 @@ sections:
                 justification: |
                   Settings and information about the application are reached from the Tools and Help menus.
                   Pages that are told when the dialog closes can release resources such as running downloads.
+                children:
+                  - CanvasPilot-OTS-Avalonia-ShowModalDialogs
                 tests:
                   - MainWindowShell_OpenSettings_ShowsDialogWithPagesAndNotifiesClose
                   - MainWindowShell_ShowAbout_ShowsAboutDialog

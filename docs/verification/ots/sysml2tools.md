@@ -33,8 +33,9 @@ assertions on its actual pipeline output:
   omits the diagram silently - so a successful Pandoc/WeasyPrint build is not sufficient evidence
   that render succeeded. Instead, `SysML2Tools_DesignDiagramsSvg` is a FileAssert test that runs
   immediately after the render step and directly asserts that each expected SVG file
-  (`SoftwareStructureView.svg`, `CanvasPilotView.svg`, `LoggingSubsystemView.svg`,
-  `UtilitiesSubsystemView.svg`) exists in `docs/design/generated/`, has a non-trivial size, and is
+  (`SoftwareStructureView.svg`, `CanvasPilotView.svg`, and the view of each of the AppShell, Logging, Preview,
+  Project, Settings, Speech, and Utilities subsystems, such as `LoggingSubsystemView.svg`) exists in
+  `docs/design/generated/`, has a non-trivial size, and is
   well-formed XML with an `<svg>` root element. This is the only evidence that render actually
   produced the required diagrams against the real model.
 

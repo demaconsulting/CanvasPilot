@@ -41,11 +41,10 @@ body:
       label: Usage Examples
       description: If applicable, provide examples of how this feature would be used
       placeholder: |
-        ```csharp
-        // Example usage
-        canvaspilot --input report.json --output report.md --feature-flag
+        ```text
+        Example: select a file in the project explorer and choose Image > Export as PNG... to save the picture
         ```
-      render: csharp
+      render: text
 
   - type: textarea
     id: benefits

@@ -1,25 +1,30 @@
 # Introduction
 
-The workflow below is a placeholder: replace its TODO boxes to show how users prepare inputs, run your
-tool locally or in a CI pipeline, get its outputs, and use them.
+CanvasPilot helps you create pictures from image source files such as SVG drawings, Mermaid diagrams, Vega-Lite
+charts, and OpenSCAD models. You keep the files of a drawing together in a project folder, see each file's picture
+as you work, and save the picture as a PNG file or copy it for use in email, presentations, and other documents.
 
-![Placeholder workflow diagram: replace the TODO boxes to show how users prepare inputs, run your tool, get
-its outputs, and use them](workflow.svg)
+![The workflow of CanvasPilot: create or open a project, add image sources, preview them, and export or copy the
+picture](workflow.svg)
 
 ## Purpose
 
-CanvasPilot is an AI-powered application that helps users create drawings and diagrams with the
-CanvasNet library. The current build is a command-line scaffold providing version and help display
-and self-validation.
+CanvasPilot is an AI-powered desktop application that helps users create drawings and diagrams with the
+CanvasNet library. This version, Increment 1, is the application shell. You can manage projects, browse and preview
+their image files, export pictures, and set the AI provider and speech preferences that the assistant will use. The AI
+chat is not available yet.
 
 ## Scope
 
 This user guide covers:
 
-- Installation instructions
-- Usage examples for common tasks
-- Command-line options reference
-- Practical examples for various scenarios
+- Installing CanvasPilot on Windows
+- Creating, opening, saving, and closing projects
+- The project explorer, the preview, and its notes and errors
+- Exporting a picture as a PNG file and copying it to the clipboard
+- The Settings dialog, with the AI Provider and Speech pages
+- Where CanvasPilot keeps its settings, logs, and speech models
+- Troubleshooting
 
 # Continuous Compliance
 
@@ -38,167 +43,187 @@ compliance evidence is generated automatically on every CI run.
 
 # Installation
 
-Install the tool globally using the .NET CLI:
+CanvasPilot is installed with a Windows Installer (MSI) package for 64-bit Windows. The package contains the
+application and everything it needs to run, so no other software has to be installed first.
 
-```bash
-dotnet tool install -g DemaConsulting.CanvasPilot
-```
+1. Download `CanvasPilot-{version}-win-x64.msi` from the
+   [CanvasPilot releases page](https://github.com/demaconsulting/CanvasPilot/releases).
+2. Run the file. Installing for all users needs administrator rights, and Windows asks for them.
+3. Start CanvasPilot from the Start Menu.
 
-# Usage
+Windows SmartScreen can warn that the publisher is unknown because the package is not signed yet. Choose
+*More info* and then *Run anyway* if you downloaded the package from the releases page.
 
-## Display Version
+Installing a newer (or older) package replaces the installed version. If CanvasPilot is running, the installer asks it
+to close first. Uninstalling removes the application and leaves your projects, settings, and logs in place.
 
-Display the tool version:
+# Projects
 
-```bash
-canvaspilot --version
-```
+A project is a folder. It contains a project file named `{name}.canvaspilot` and the image source files of your
+drawing. Put the files you want to preview in the project folder itself, and keep supporting files such as data or
+embedded models in sub-folders. CanvasPilot reserves a hidden `.canvaspilot` folder inside the project for its own
+use and never lists it.
 
-## Default Behavior
+## Create a Project
 
-When invoked with no arguments, the tool displays the banner and copyright notice:
+Choose **File > New Project...** (Ctrl+N), enter a **Project name**, and choose the **Location**. The Browse button
+opens a folder picker, and the dialog starts in your Documents folder. The dialog shows the folder that will be
+created, and OK is available only when the project can be created. A project name cannot be empty, cannot contain the
+characters `< > : " / \ | ? *`, cannot start or end with a period, and cannot be a reserved Windows device name. A
+project is created only in a new or empty folder; a folder that already has content is refused.
 
-```bash
-canvaspilot
-```
+## Open a Project
 
-## Display Help
+Choose **File > Open Project...** (Ctrl+O) and select the `.canvaspilot` file of the project. A file that cannot be
+read, or that was written by a newer version of CanvasPilot, is not opened, and a message tells you why.
 
-Display usage information:
+**File > Recent Projects** lists the projects you used last, most recent first. Choose one to open it. A project whose
+file no longer exists is removed from the list after a message.
 
-```bash
-canvaspilot --help
-```
+## Save and Close a Project
 
-## Self-Validation
+**File > Save Project** (Ctrl+S) writes the project file. The image source files are ordinary files that you edit with
+the tool of your choice, so saving updates only the project file. **File > Close Project** closes the project and
+clears the explorer and the preview. **File > Exit** closes CanvasPilot.
 
-Self-validation produces a report demonstrating that CanvasPilot is functioning
-correctly. This is useful in regulated industries where tool validation evidence is required.
+The title bar shows the name of the open project followed by CanvasPilot.
 
-### Running Validation
+# Working with Images
 
-To perform self-validation:
+## The Project Explorer
 
-```bash
-canvaspilot --validate
-```
+When a project is open, the left pane lists the image source files in the project folder. It lists a file only when
+CanvasPilot can draw its type, which includes SVG drawings, Mermaid diagrams (`.mmd`), Vega-Lite charts (`.vl.json`
+and `.vl`), OpenSCAD models (`.scad`), pages of PDF and PowerPoint documents, and the other formats that the
+bundled CanvasNet library draws.
+Files in sub-folders and hidden files are not listed.
 
-To save validation results to a file:
+The list follows the folder: files that you add, change, rename, or delete with other tools appear in it after a
+moment. Right-click a file, or select it and press F2 or Delete, to **Rename...** or **Delete...** it. Deleting asks
+you to confirm first.
 
-```bash
-canvaspilot --validate --results results.trx
-```
+## The Preview
 
-The `--result` option is an accepted alias for `--results`.
+Select a file to see its picture in the right pane. CanvasPilot draws the file in the background, so the window stays
+responsive while a large file is drawn, and a busy indicator with the file's name shows while it runs. When you select
+another file, or the file changes, the picture is drawn again and a result that is no longer wanted is discarded. The
+picture is also redrawn when a file that it uses changes.
 
-The results file format is determined by the file extension: `.trx` for TRX (MSTest) format,
-or `.xml` for JUnit format.
+The **Fit to window** check box scales the picture to the pane. Without it the picture is shown at its own size with
+scroll bars.
 
-### Heading Depth
+A file that references other files, such as an SVG that embeds a picture, can read them only from inside the project
+folder. A file outside it is left out of the picture and reported as a note.
 
-Use `--depth <#>` to control the heading level of the validation output (default: `1`).
-This is useful when embedding the validation report into a larger markdown document:
+## Notes and Errors
 
-```bash
-# Embed validation at heading level 2
-canvaspilot --validate --depth 2
-```
+Below the picture, the diagnostics list shows the notes that the drawing reported, with their number, for example that
+a feature is not supported or that an embedded file was denied. The picture is still shown when there are notes.
 
-### Validation Report
+When a file cannot be drawn, the preview shows an error with a short code, a message, and, where one exists, a hint
+about what to fix. An unfinished file that you are editing often produces such an error; correct the file and the
+preview updates.
 
-The validation report contains the tool version, machine name, operating system version,
-.NET runtime version, timestamp, and test results.
+## Export and Copy
 
-Example validation report:
+With a picture shown, the **Image** menu offers:
 
-```text
-# DEMA Consulting CanvasPilot
+- **Export as PNG...** asks where to save the file and writes the picture, with its transparency, as a PNG file.
+- **Copy Image** puts the picture on the clipboard, so you can paste it into email, a presentation, or another
+  program.
 
-| Information         | Value                                              |
-| :------------------ | :------------------------------------------------- |
-| Tool Version        | 1.0.0                                              |
-| Machine Name        | BUILD-SERVER                                       |
-| OS Version          | Ubuntu 22.04.3 LTS                                 |
-| DotNet Runtime      | .NET 10.0.0                                        |
-| Time Stamp          | 2024-01-15 10:30:00 UTC                            |
+Both items are disabled while no picture is shown.
 
-✓ CanvasPilot_VersionDisplay - Passed
-✓ CanvasPilot_HelpDisplay - Passed
+# Settings
 
-Total Tests: 2
-Passed: 2
-Failed: 0
-```
+Choose **Tools > Settings...** to open the Settings dialog. The page list at the left shows **AI Provider** and
+**Speech**. **OK** saves the changes from all pages and closes the dialog, **Apply** saves them and keeps the dialog
+open, and **Cancel** closes it without saving. OK and Apply are unavailable while an entry is invalid, and the page
+shows what is wrong.
 
-### Validation Tests
+## AI Provider
 
-Each test proves specific functionality works correctly:
+The AI Provider page stores your preferences for the assistant. This version only stores them; there is no chat that
+uses them yet, and nothing is sent to a provider.
 
-- **`CanvasPilot_VersionDisplay`** - `--version` outputs a valid version string.
-- **`CanvasPilot_HelpDisplay`** - `--help` outputs usage and options information.
+- **Provider**: GitHub Copilot or Ollama.
+- **Model name**: The model to use. Leave it empty for the provider's default model.
+- **Context window (tokens)**: The size of the context window, from 512 to 2,000,000 tokens (default 8192).
+- **Reasoning level**: Auto, Low, Medium, or High.
+- **Ollama endpoint**: The address of the Ollama server (default `http://localhost:11434`). It is used when the
+  provider is Ollama.
+- **GitHub Copilot command-line tool path**: The path of the Copilot command-line tool. Leave it empty to locate the
+  tool automatically. It is used when the provider is GitHub Copilot.
+- **Allow unrestricted agent tools**: Off by default. When it is on, the future agent may use tools that are not
+  limited to the project folder. Leave it off unless you trust the agent's instructions.
 
-## Silent Mode
+## Speech
 
-Suppress console output:
+The Speech page stores which audio devices and speech models CanvasPilot is to use. This version only stores the
+choices; speech is not used yet.
 
-```bash
-canvaspilot --silent
-```
+- **Audio devices** shows the microphone (capture) and speakers (playback) that the computer has, and the buttons
+  **Refresh devices** to look again. A computer without audio hardware shows a message instead of devices, and the
+  rest of the page still works.
+- **Speech models** lists the speech-to-text and text-to-speech models, each with its state. A model must be
+  downloaded before it can be used: choose **Download** and watch the progress bar, or **Cancel** to stop. Downloads
+  start at once, are not undone by canceling the dialog, and stop when the Settings dialog closes. A model that has
+  tunable settings, such as a voice or a speaker number, shows editors for them below the lists.
 
-## Logging
+Models are downloaded over HTTPS into a store that is shared with other DEMA Consulting applications that use the speech
+library (see *Where CanvasPilot Keeps Its Files*). A downloaded model is checked before it is installed, and an
+interrupted download leaves no half-installed model.
 
-Write output to a log file:
+# About CanvasPilot
 
-```bash
-canvaspilot --log output.log
-```
+Choose **Help > About CanvasPilot** to see the application name, the version, the copyright notice, and the
+third-party libraries that CanvasPilot uses. Include the version when you report a problem.
 
-## Error Handling
+# Where CanvasPilot Keeps Its Files
 
-Unrecognized arguments cause the tool to print an error message to standard error and exit
-with a non-zero exit code. For example:
-
-```text
-Error: Unsupported argument '--unknown'
-```
-
-This behavior enables automated scripts and CI/CD pipelines to detect and surface
-misconfiguration failures automatically.
-
-# Command-Line Options
-
-The following command-line options are supported:
-
-| Option | Description |
+| What | Location |
 | --- | --- |
-| `-v`, `--version` | Display version information |
-| `-?`, `-h`, `--help` | Display help message |
-| `--silent` | Suppress console output |
-| `--validate` | Run self-validation |
-| `--results <file>`, `--result <file>` | Write validation results to file (TRX or JUnit format) |
-| `--depth <#>` | Set heading depth for markdown output (default: 1) |
-| `--log <file>` | Write output to log file |
+| Settings and recent projects | `%APPDATA%\CanvasPilot\settings.json` |
+| Log files | `%LOCALAPPDATA%\CanvasPilot\logs` |
+| Downloaded speech models | `%LOCALAPPDATA%\DemaConsulting.Speech\Models` |
+| Your projects | The folder that you chose for each project |
 
-# Examples
+The settings file never contains credentials. The log files stay on your computer and are never sent anywhere; they
+roll over when they reach a size limit and old ones are removed, so they cannot fill the disk. To reset all settings,
+close CanvasPilot and delete `settings.json`.
 
-## Example 1: Basic Usage
+# Troubleshooting
 
-```bash
-canvaspilot
-```
+**A file is missing from the explorer.** Only files in the root of the project folder are listed, and only types that
+CanvasPilot can draw. Move the file into the project folder, or check its extension.
 
-## Example 2: Self-Validation with Results
+**The preview shows an error.** Read the code, message, and hint. Typical causes are a syntax error in the file, a
+referenced file that is missing, and a file type that is not supported. The log has the details.
 
-```bash
-canvaspilot --validate --results validation-results.trx
-```
+**An embedded picture is not drawn.** Files that a drawing references must be inside the project folder. Move the
+picture into the project folder or one of its sub-folders and refer to it by a relative path.
 
-## Example 3: Silent Mode with Logging
+**A project does not open.** The message names the problem. A project file that was written by a newer version of
+CanvasPilot cannot be opened by an older one, and a damaged project file must be repaired or replaced.
 
-```bash
-canvaspilot --silent --log tool-output.log
-```
+**CanvasPilot started with default settings.** A settings file that cannot be read is kept as `settings.json.bad` next
+to the original, the problem is written to the log, and CanvasPilot starts with default settings. Your projects are
+not affected.
+
+**The Speech page shows no audio devices.** The computer has no audio hardware, or its audio system cannot be used. The
+rest of the page still works, and you can choose devices later.
+
+**A model download fails.** The message on the model says why, for example that the network is blocked. Check the
+connection and choose Download again. Keep the Settings dialog open while a download runs.
+
+**Copy Image does not paste.** Some programs accept only certain clipboard formats. Export the picture as a PNG file and
+insert the file instead.
+
+**Reporting a problem.** Open an issue on the
+[CanvasPilot issues page](https://github.com/demaconsulting/CanvasPilot/issues) and attach the newest file from the log
+folder, after you have checked that it holds nothing private.
 
 ## References
 
-N/A
+- [CanvasPilot repository](https://github.com/demaconsulting/CanvasPilot)
+- [CanvasPilot releases](https://github.com/demaconsulting/CanvasPilot/releases)

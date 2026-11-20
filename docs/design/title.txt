@@ -7,7 +7,8 @@ lang: en-US
 keywords:
   - CanvasPilot
   - .NET
-  - Command-Line Tool
+  - Avalonia
+  - Desktop Application
   - Design
   - Software Design Document
 ---

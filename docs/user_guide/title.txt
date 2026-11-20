@@ -6,8 +6,8 @@ description: AI-assisted drawing creation with CanvasNet
 lang: en-US
 keywords:
   - CanvasPilot
-  - .NET
-  - Command-Line Tool
+  - Avalonia
+  - Desktop Application
   - Documentation
   - CanvasNet
 ---

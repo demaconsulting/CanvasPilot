@@ -47,10 +47,11 @@ We follow a standard GitHub workflow for contributions:
 
 ### Prerequisites
 
-- [.NET SDK][dotnet-download] 10.0 and 11.0 (both are required: the 11.0 SDK builds the
-  `net11.0` target and the .NET 10 runtime runs the `net10.0` tests)
+- [.NET SDK][dotnet-download] 10.0 or later (the projects target `net10.0`)
 - Git
 - A code editor (Visual Studio, VS Code, or Rider recommended)
+- Windows is needed only to build the MSI installer (WiX); everything else builds and tests on Windows, Linux, and
+  macOS
 
 ### Getting Started
 
@@ -68,16 +69,16 @@ We follow a standard GitHub workflow for contributions:
    dotnet restore
    ```
 
-3. Build the project:
+3. Build and run the tests (zero warnings and all tests must pass):
 
    ```bash
-   dotnet build --configuration Release
+   pwsh ./build.ps1
    ```
 
-4. Run unit tests:
+4. Start the application:
 
    ```bash
-   dotnet test --configuration Release
+   dotnet run --project src/DemaConsulting.CanvasPilot.Desktop
    ```
 
 ## Coding Standards
@@ -127,7 +128,10 @@ Note the spaces after `///` for proper indentation in summary blocks.
 
 ### Test Framework
 
-We use MSTest v4 for unit and integration tests.
+We use xUnit v3 (`xunit.v3`) with the Visual Studio test runner for unit, user interface, and OTS tests, NSubstitute
+for substitute collaborators, and the Avalonia headless platform for user interface tests. There are three test
+projects: `DemaConsulting.CanvasPilot.Tests` (unit, subsystem, and system tests), `DemaConsulting.CanvasPilot.UiTests`
+(headless user interface tests), and `OtsSoftwareTests` (tests of the runtime OTS libraries).
 
 ### Test Naming Convention
 
@@ -135,41 +139,29 @@ Use the pattern: `ClassName_MethodUnderTest_Scenario_ExpectedBehavior`
 
 Examples:
 
-- `Program_Main_NoArguments_ReturnsSuccess`
-- `Context_Create_WithInvalidFlag_ThrowsArgumentException`
-- `Validation_Run_AllTests_ReturnsSuccess`
+- `PathHelpers_SafePathCombine_ValidPaths_CombinesCorrectly`
+- `RollingFileLogger_Constructor_NonPositiveMaximumFileSize_ThrowsArgumentException`
+- `MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled`
 
 ### Writing Tests
 
 - Write tests that are clear and focused
-- Use modern MSTest v4 assertions:
-  - `Assert.HasCount(expectedCount, collection)`
-  - `Assert.IsEmpty(collection)`
-  - `Assert.DoesNotContain(item, collection)`
-- Always clean up resources (use `try/finally` for console redirection)
-- Link tests to requirements in `requirements.yaml` when applicable
+- Use xUnit assertions such as `Assert.Equal`, `Assert.Empty`, and `Assert.Throws`
+- Pass `TestContext.Current.CancellationToken` to asynchronous calls in tests
+- Always clean up resources (temporary folders and files) when a test ends
+- Link tests to requirements in `docs/reqstream/` when applicable
 
 ### Running Tests
 
-#### Unit Tests
-
 ```bash
-# Run all unit tests
-dotnet test --configuration Release
+# Build and run all tests
+pwsh ./build.ps1
 
-# Run specific unit test
+# Run a specific test
 dotnet test --filter "FullyQualifiedName~YourTestName"
 
 # Run with coverage
 dotnet test --collect "XPlat Code Coverage"
-```
-
-#### Self-Validation Tests
-
-```bash
-# Run self-validation tests
-dotnet run --project src/DemaConsulting.CanvasPilot \
-  --configuration Release --framework net10.0 --no-build -- --validate
 ```
 
 ## Documentation
@@ -183,7 +175,7 @@ All markdown files must follow these rules (enforced by LintMark):
 - Lists must be surrounded by blank lines
 - Use reference-style links: `[text][ref]` with `[ref]: url` at document end
 - **Exceptions**:
-  - `README.md` uses absolute URLs (it's included in the NuGet package)
+  - `README.md` uses absolute URLs for its images (it is shown on GitHub and other sites outside the repository)
   - AI agent markdown files (`.github/agents/*.agent.md`) use inline links
     `[text](url)` so URLs are visible in agent context
 
@@ -238,9 +230,9 @@ Write clear, concise commit messages:
 
 Examples:
 
-- `Add support for custom report headers`
-- `Fix crash when results file path is invalid`
-- `Update documentation for --report-depth option`
+- `Add support for custom export file names`
+- `Fix crash when the project file path is invalid`
+- `Update documentation for the Export as PNG command`
 - `Refactor argument parsing for better testability`
 
 ## Pull Request Process
@@ -271,7 +263,7 @@ When creating a pull request, include:
 
 CanvasPilot uses [DemaConsulting.ReqStream][reqstream] for requirements traceability:
 
-- All requirements are defined in `requirements.yaml`
+- All requirements are defined in the files under `docs/reqstream/`, included from `requirements.yaml`
 - Each requirement should be linked to test cases
 - Run `dotnet reqstream` to generate requirements documentation
 - Use the `--enforce` flag to ensure all requirements have test coverage
@@ -283,8 +275,8 @@ Releases are managed by project maintainers. The process includes:
 1. Version bump in project files
 2. Tag the release in Git
 3. Build and test across all supported platforms
-4. Publish NuGet package
-5. Create GitHub release with artifacts and release notes
+4. Build the Windows installer (MSI) package
+5. Create GitHub release with the installer package, documents, and release notes
 
 ## Getting Help
 

@@ -45,8 +45,10 @@ input-files:
   - docs/verification/canvas-pilot/utilities-subsystem.md
   - docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/verification/ots.md
+  - docs/verification/ots/avalonia.md
   - docs/verification/ots/buildmark.md
   - docs/verification/ots/canvasnet.md
+  - docs/verification/ots/communitytoolkit-mvvm.md
   - docs/verification/ots/fileassert.md
   - docs/verification/ots/pandoc.md
   - docs/verification/ots/reqstream.md

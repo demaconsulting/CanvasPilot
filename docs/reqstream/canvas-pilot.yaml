@@ -7,10 +7,9 @@
 # - System requirements are validated through system-level tests that compose real units
 #   without opening a window
 #
-# NOTE: This file currently covers only the capabilities delivered so far (operational logging,
-# safe file handling, persisted user settings, AI provider and speech configuration, projects, image preview and
-# export, the desktop shell, the Windows installer, and application startup). Additional system requirements are added as further
-# subsystems are introduced.
+# NOTE: The system requirements cover the capabilities of Increment 1 (operational logging, safe file handling,
+# persisted user settings, AI provider and speech configuration, projects, image browsing, preview and export, the
+# desktop shell, the Windows installer, and application startup). The AI chat is added with a later increment.
 
 sections:
   - title: CanvasPilot Requirements

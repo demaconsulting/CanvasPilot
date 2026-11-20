@@ -22,20 +22,14 @@
       }
     },
     {
-      "label": "validate",
+      "label": "test",
       "command": "dotnet",
       "type": "process",
       "args": [
-        "run",
-        "--project",
-        "${workspaceFolder}/src/DemaConsulting.CanvasPilot",
+        "test",
         "--configuration",
         "Release",
-        "--framework",
-        "net10.0",
-        "--no-build",
-        "--",
-        "--validate"
+        "${workspaceFolder}/DemaConsulting.CanvasPilot.slnx"
       ],
       "problemMatcher": "$msCompile",
       "group": {
@@ -48,10 +42,10 @@
       }
     },
     {
-      "label": "build and validate",
+      "label": "build and test",
       "dependsOn": [
         "build",
-        "validate"
+        "test"
       ],
       "dependsOrder": "sequence",
       "problemMatcher": [],

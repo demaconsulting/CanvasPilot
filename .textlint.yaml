@@ -56,6 +56,7 @@ words:
   - nestings
   - netstandard
   - Mvvm
+  - communitytoolkit
   - wixext
   - wixproj
   - premul

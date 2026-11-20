@@ -53,6 +53,8 @@ sections:
                   A render can take noticeable time, and a file that cannot be drawn is the usual result of
                   an edit in progress. The user needs to see that work is going on, and then either the
                   picture or what to fix.
+                children:
+                  - CanvasPilot-OTS-CommunityToolkitMvvm-NotifyPropertyChanges
                 tests:
                   - PreviewPaneViewModel_RenderFails_ShowsCodeMessageAndHintAndClearsImage
                   - PreviewPaneViewModel_RenderFailsWithoutHint_ShowsNoHint
@@ -101,6 +103,8 @@ sections:
                   Showing a picture with the wrong channel order or alpha representation gives wrong colors
                   and dark fringes around transparent areas. Fitting large pictures to the pane makes them
                   viewable at a glance, while actual size lets the user inspect detail.
+                children:
+                  - CanvasPilot-OTS-Avalonia-DisplayPixelBuffers
                 tests:
                   - RenderedImageBitmap_Convert_OpaquePixels_SwapsRedAndBlueOnly
                   - RenderedImageBitmap_Convert_SemiTransparentPixel_MultipliesColorByAlpha

@@ -126,6 +126,40 @@ longer wanted, and renders again when files in the project change. `ImageExporte
 file or copies it to the clipboard for the Image menu. The `Preview` subsystem reaches the main window only through
 `IImageExporter` and `IDialogService`, which `MainWindowShell` owns.
 
+### Dependency Between AppShell and Preview
+
+The two subsystems refer to each other, and the design accepts this on purpose. The seams belong to the consumer:
+`AppShell` owns `IDialogService` and `IImageExporter`, and `ImageExporter` in `Preview` implements the exporter seam and
+asks the user through the dialog service, so the `Preview` units depend on `AppShell` only through these two
+interfaces. In the other direction `AppShell` refers to `Preview` in three places: `ApplicationComposition`, the
+composition root, builds the render service, the preview pane, and the exporter, which is its job for every subsystem;
+`IDialogService.CopyImageToClipboardAsync` takes the `RenderedImage` data type of `Preview`; and `MainWindowView` turns
+that picture into an Avalonia bitmap with `RenderedImageBitmap` when it puts it on the clipboard. `MainWindowShell` and
+`ProjectWorkspace` do not refer to `Preview` types: the workspace holds the preview as an untyped content object, found
+by the view locator, so the shell works without a preview (it then uses a disabled `NullImageExporter`).
+
+All of this is one assembly, so the cycle is a matter of namespaces, not of deployment. Removing it would need the
+two seam interfaces and the picture type moved into a neutral place that both subsystems refer to, with a matching
+change of their requirements, design, verification, and review-sets; this was judged larger than the benefit while
+there is a single exporter and a single dialog service. A later increment that adds more consumers of the dialog
+service, such as the chat, should do it then. The dependency of `ImageExporter` on `MainWindowShell` is shown in the
+model and in the diagram above, and the verification of `ImageExporter` uses a substitute dialog service, so the
+cycle does not complicate any test.
+
+### AI Provider Seam
+
+The chat that will use an AI provider is not part of this increment and the application holds no reference to any AI
+provider library, the GitHub Copilot SDK, Ollama, or an agent framework. What exists is the stored choice: the
+`AiProviderSettings` of the settings file (provider, model name, context window, reasoning level, Ollama endpoint,
+Copilot command-line tool path, and the opt-in for unrestricted agent tools, which is off by default) and the
+`AiProviderSettingsPage` that edits it. The seam for the later increment is `ISettingsService`: an agent that is added
+as a separate subsystem reads the stored `AiProviderSettings` through the service and reacts to its `Changed` event,
+and no existing unit has to change. The agent is to be built detached from the user interface: it receives its settings,
+the project folder, and the user's text through its own interfaces, and answers through them, so that it can be tested
+without a window and replaced by another provider. The model-name text box will then be replaced by a list that the
+provider supplies, and the opt-in will decide whether the agent's tools are limited to the project folder. None of this
+exists yet, no interface is declared for it, and no requirement depends on it.
+
 ## External Interfaces
 
 **Log Files**: Local diagnostic output written by the application.
@@ -337,7 +371,9 @@ failed. On OK or Apply the page merges the choices into the speech section of th
   view model references a window.
 - Every control that a test or assistive technology must find shall carry an automation identifier.
 - The image preview plugs into the shell through `IImageExporter` and `ProjectWorkspaceViewModel.Preview`
-  and does not require changes to the shell's commands.
+  and does not require changes to the shell's commands. The two seam interfaces and the picture type are the only
+  links between `AppShell` and `Preview` other than the composition root (see *Dependency Between AppShell and
+  Preview*).
 - Only `ImageRenderService` shall call the CanvasNet viewer to draw, and it shall confine the files a drawn file
   reads to the project folder.
 - Rendering shall never run on the user interface thread, and the result of a render that is no longer wanted shall

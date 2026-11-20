@@ -20,6 +20,7 @@
 │   ├── code_review_plan/
 │   ├── code_review_report/
 │   ├── design/
+│   ├── images/
 │   ├── requirements_doc/
 │   ├── requirements_report/
 │   ├── reqstream/
@@ -27,10 +28,17 @@
 │   ├── user_guide/
 │   └── verification/
 ├── src/
-│   └── DemaConsulting.CanvasPilot/
+│   ├── DemaConsulting.CanvasPilot/            # application library (Avalonia views, view models, services)
+│   ├── DemaConsulting.CanvasPilot.Desktop/    # thin executable project (CanvasPilot.exe)
+│   └── DemaConsulting.CanvasPilot.Installer/  # WiX MSI project (not part of the solution)
 └── test/
-    └── DemaConsulting.CanvasPilot.Tests/
+    ├── DemaConsulting.CanvasPilot.Tests/      # unit, subsystem, and system tests
+    ├── DemaConsulting.CanvasPilot.UiTests/    # headless Avalonia user interface tests
+    └── OtsSoftwareTests/                      # tests of the runtime OTS libraries
 ```
+
+The application library holds one folder per subsystem (`AppShellSubsystem`, `LoggingSubsystem`, `PreviewSubsystem`,
+`ProjectSubsystem`, `SettingsSubsystem`, `SpeechSubsystem`, and `UtilitiesSubsystem`).
 
 # Language and Spelling (ALL Agents)
 

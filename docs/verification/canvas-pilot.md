@@ -8,6 +8,13 @@ and asserts on observable outcomes such as the files written to disk and the exc
 tests use real file I/O and no mocks for the units themselves; where a user would act in a dialog, a hand-written
 dialog service plays the user, and a hand-written refresh scheduler replaces timed refreshes so no test waits.
 
+The `AppShell` and `Preview` subsystems refer to each other (see *Dependency Between AppShell and Preview* in the
+design). Verification keeps the cycle from complicating the tests: the `Preview` units are verified with a substitute
+dialog service, the shell is verified with a substitute image exporter and with the disabled default exporter, and only
+the system tests and the user interface tests compose the real shell with the real preview, which is also what proves
+that the two work together. The stored AI provider choices are verified through the settings service and the settings
+dialog; the agent that will use them does not exist yet and has no verification.
+
 ## Test Environment
 
 System tests run under the standard .NET test runner on Windows, Linux, and macOS with the .NET 10

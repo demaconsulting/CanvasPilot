@@ -582,15 +582,21 @@ reviews:
       - "src/DemaConsulting.CanvasPilot.Installer/Package.wxs"
 
   - id: OTS-Avalonia
-    title: Review of Avalonia and CommunityToolkit.Mvvm OTS verification tests
-    context:
-      - docs/design/ots.md
-      - docs/verification/ots.md
+    title: Review of Avalonia OTS verification evidence
     paths:
-      # The requirements, design, and verification documents of these runtime items are formalized with the
-      # dedicated OTS step; until then their self-validation tests are reviewed here.
+      - "docs/reqstream/ots/avalonia.yaml"
+      - "docs/design/ots/avalonia.md"
+      - "docs/verification/ots/avalonia.md"
       - "test/OtsSoftwareTests/AvaloniaTests.cs"
       - "test/OtsSoftwareTests/TestAppBuilder.cs"
+
+  - id: OTS-CommunityToolkitMvvm
+    title: Review of CommunityToolkit.Mvvm OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/communitytoolkit-mvvm.yaml"
+      - "docs/design/ots/communitytoolkit-mvvm.md"
+      - "docs/verification/ots/communitytoolkit-mvvm.md"
+      - "test/OtsSoftwareTests/CommunityToolkitMvvmTests.cs"
 
   - id: OTS-FileAssert
     title: Review of FileAssert OTS verification evidence

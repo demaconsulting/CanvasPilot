@@ -1,8 +1,9 @@
 # Introduction
 
-This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on
-CanvasNet. The current build is an Avalonia desktop application that contains the AppShell, Logging, Preview,
-Project, Settings, Speech, and Utilities subsystems; further subsystems are added as they are introduced.
+This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
+The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
+AppShell, Logging, Preview, Project, Settings, Speech, and Utilities subsystems; further subsystems, such as the AI
+chat, are added as they are introduced.
 
 ## Purpose
 
@@ -50,8 +51,10 @@ This document covers the verification design for the following software items:
 
 **OTS items:**
 
+- **Avalonia** — user interface framework
 - **BuildMark** — build-notes documentation tool
 - **CanvasNet** — image source rendering library
+- **CommunityToolkit.Mvvm** — view model source generators
 - **FileAssert** — document assertion tool
 - **Pandoc** — Markdown-to-HTML conversion tool
 - **ReqStream** — requirements traceability tool
@@ -62,6 +65,7 @@ This document covers the verification design for the following software items:
 - **SysML2Tools** — architecture model validation and diagram rendering tool
 - **VersionMark** — tool-version documentation tool
 - **WeasyPrint** — HTML-to-PDF conversion tool
+- **WiX Toolset** — Windows installer package build tool
 - **xUnit** — unit-testing framework
 
 The following topics are out of scope:
@@ -69,6 +73,9 @@ The following topics are out of scope:
 - Verification documents are not produced for the test projects themselves — they are the
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
+- The AI chat, the agent, and the speech engines are not part of this increment, and so are not verified; only the
+  stored settings that they will read are
+- Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified
 
@@ -78,18 +85,39 @@ The test folder structure mirrors the source subsystem breakdown:
 
 ```text
 test/
-└── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
-    ├── AppShellSubsystem/
-    ├── LoggingSubsystem/
-    ├── PreviewSubsystem/
-    ├── ProjectSubsystem/
-    ├── SettingsSubsystem/
-    ├── SpeechSubsystem/
-    └── UtilitiesSubsystem/
+├── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
+│   ├── AppShellSubsystem/
+│   ├── LoggingSubsystem/
+│   ├── PreviewSubsystem/
+│   ├── ProjectSubsystem/
+│   ├── SettingsSubsystem/
+│   ├── SpeechSubsystem/
+│   ├── UtilitiesSubsystem/
+│   └── CanvasPilotTests.cs            — system tests
+├── DemaConsulting.CanvasPilot.UiTests/ — headless user interface tests of the views
+└── OtsSoftwareTests/                  — tests of the runtime OTS libraries
 ```
 
 Headless user-interface tests for the views live in `test/DemaConsulting.CanvasPilot.UiTests/` and are
-referenced by the unit verification documents of the items that own the views.
+referenced by the unit verification documents of the items that own the views. The tests of the runtime OTS libraries
+(Avalonia, CommunityToolkit.Mvvm, CanvasNet, and Speech) live in `test/OtsSoftwareTests/` and are referenced by the OTS
+verification documents.
+
+## Verification Layers
+
+Each requirement is verified at the level of the item that owns it:
+
+- **Unit tests** exercise one unit with hand-written or substitute collaborators, including boundary and error cases.
+- **Subsystem tests** exercise the units of one subsystem together on temporary folders.
+- **System tests** (`CanvasPilotTests.cs`) compose the real units without a window, and the platform requirements are
+  proven by running the startup test on each supported platform and runtime.
+- **User interface tests** run the real views in the Avalonia headless platform.
+- **OTS tests and assertions** qualify the OTS items: the OTS tests of the runtime libraries, FileAssert assertions for
+  generated documents, diagrams, and the MSI package, and the self-validation of the tools that have it.
+
+Checks that cannot be automated are described in the verification document of the item they concern and are performed
+before each release: the installed package (install, upgrade, shortcut, and closing a running instance), the operating
+system file pickers and clipboard, and a real speech model download. They are not evidence for a requirement.
 
 ## Companion Artifact Structure
 

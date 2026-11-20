@@ -171,7 +171,37 @@ tests:
         xml:
           - query: "//*[local-name()='svg']"
             count: 1
+      - pattern: "docs/design/generated/AppShellSubsystemView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
       - pattern: "docs/design/generated/LoggingSubsystemView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
+      - pattern: "docs/design/generated/PreviewSubsystemView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
+      - pattern: "docs/design/generated/ProjectSubsystemView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
+      - pattern: "docs/design/generated/SettingsSubsystemView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
+      - pattern: "docs/design/generated/SpeechSubsystemView.svg"
         count: 1
         min-size: 100
         xml:

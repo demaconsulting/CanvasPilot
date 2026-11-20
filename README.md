@@ -7,141 +7,58 @@
 [![Build][badge-build]][link-build]
 [![Quality Gate][badge-quality]][link-quality]
 [![Security][badge-security]][link-security]
-[![NuGet][badge-nuget]][link-nuget]
 
 ## Overview
 
 CanvasPilot is an AI-powered desktop application that helps users create drawings and diagrams with the CanvasNet
 library — composing SVG, Mermaid, Vega-Lite, OpenSCAD, and other image sources into standalone images for use in
-email, presentations, and other media. It supports conversational interaction by text or speech, using GitHub
-Copilot SDK or Ollama as the language model backend.
+email, presentations, and other media. It is planned to support conversational interaction by text or speech, using
+GitHub Copilot SDK or Ollama as the language model backend.
 
-CanvasPilot is in early development. The current build contains only the command-line scaffold: version and help
-display, and self-validation.
+**Status: Increment 1 - AI chat not yet available.** This version is the application shell: you can manage projects,
+browse and preview their image files, export pictures, and store your AI provider and speech preferences. The
+assistant that will use those preferences is not part of this version.
 
-The diagram below is a placeholder workflow diagram: replace its TODO boxes (in `docs/images/workflow.svg`,
-then re-render `docs/images/workflow.png`) to show how users prepare inputs, run your tool, get its outputs,
-and use them.
-
-![Placeholder workflow diagram: replace the TODO boxes to show how users prepare inputs, run your tool, get
-its outputs, and use them][workflow]
+![Workflow of CanvasPilot: create or open a project, add image sources, preview them, and export or copy the
+picture][workflow]
 
 ## Features
 
-The current command-line scaffold provides:
-
-- **Standardized Command-Line Interface**: Context class handling common arguments
-  (`--version`, `--help`, `--silent`, `--validate`, `--results`, `--depth`, `--log`)
-- **Self-Validation**: Built-in validation tests with TRX/JUnit output
-- **Multi-Platform Support**: Builds and runs on Windows, Linux, and macOS
-- **Multi-Runtime Support**: Targets .NET 10 and 11
-- **Comprehensive CI/CD**: GitHub Actions workflows with quality checks, builds, and
-  integration tests
+- **Project Shell**: A project is a folder with a `{name}.canvaspilot` file and your image source files; create,
+  open, save, and close projects, and return to recent projects from the File menu
+- **Explorer and Preview**: List the image files of the open project, with the list following changes made by other
+  tools, and see the picture of the selected file as drawn by CanvasNet, with notes and errors explained
+- **Export and Copy**: Export the picture as a PNG file or copy it to the clipboard for email and presentations
+- **Settings**: AI provider preferences (GitHub Copilot or Ollama, model, context window, reasoning level, and an
+  opt-in for unrestricted agent tools that is off by default) and speech preferences (audio devices and speech
+  models with downloads)
+- **Windows Installer**: One per-machine MSI package for 64-bit Windows that includes everything needed to run
+- **Local and Private**: Settings and logs are stored on your computer only; there is no telemetry
+- **Comprehensive CI/CD**: GitHub Actions workflows with quality checks, builds, and tests on Windows, Linux, and macOS
 - **Linting Enforcement**: LintMark, TextLint, and yamllint enforced on every CI run
 - **Continuous Compliance**: Compliance evidence generated automatically on every CI run, following
   the [Continuous Compliance][link-continuous-compliance] methodology
 - **SonarCloud Integration**: Quality gate and security analysis on every build
-- **Documentation Generation**: Automated build notes, user guide, code quality reports,
-  requirements, justifications, and trace matrix
+- **Documentation Generation**: Automated build notes, user guide, design and verification documents, code quality
+  reports, requirements, justifications, and trace matrix
 - **Requirements Traceability**: Requirements linked to passing tests with auto-generated trace matrix
 
 ## Installation
 
-Install the tool globally using the .NET CLI:
-
-```bash
-dotnet tool install -g DemaConsulting.CanvasPilot
-```
+Download `CanvasPilot-{version}-win-x64.msi` from the
+[releases page][link-releases], run it, and start CanvasPilot from the Start Menu. The package is for 64-bit Windows,
+installs for all users, and replaces any installed version. See the [User Guide][link-guide] for details.
 
 ## Usage
 
-```bash
-# Default behavior (no arguments) — displays banner and copyright
-canvaspilot
+1. Choose **File > New Project...** and name your project, or **File > Open Project...** to open a
+   `.canvaspilot` file.
+2. Put image source files (SVG, Mermaid, Vega-Lite, OpenSCAD, and others) in the project folder.
+3. Select a file in the explorer to see its picture, and read the notes and errors below it.
+4. Choose **Image > Export as PNG...** or **Image > Copy Image**.
+5. Choose **Tools > Settings...** for the AI provider and speech preferences.
 
-# Display version
-canvaspilot --version
-
-# Display help
-canvaspilot --help
-
-# Run self-validation
-canvaspilot --validate
-
-# Save validation results (--result is an accepted alias for --results)
-canvaspilot --validate --results results.trx
-canvaspilot --validate --result results.xml
-
-# Set heading depth for embedded validation output
-canvaspilot --validate --depth 2
-
-# Silent mode with logging
-canvaspilot --silent --log output.log
-```
-
-## Command-Line Options
-
-| Option | Description |
-| --- | --- |
-| `-v`, `--version` | Display version information |
-| `-?`, `-h`, `--help` | Display help message |
-| `--silent` | Suppress console output |
-| `--validate` | Run self-validation |
-| `--results <file>`, `--result <file>` | Write results to `.trx` (TRX) or `.xml` (JUnit XML) file. |
-| `--depth <#>` | Set heading depth for markdown output (default: 1) |
-| `--log <file>` | Write output to log file |
-
-## Error Handling
-
-Unrecognized arguments cause the tool to print an error message to standard error and exit
-with a non-zero exit code. For example:
-
-```text
-Error: Unsupported argument '--unknown'
-```
-
-This behavior enables CI/CD pipelines to detect and surface misconfiguration failures
-automatically.
-
-## Self Validation
-
-Running self-validation produces a report containing the following information:
-
-```text
-# DEMA Consulting CanvasPilot
-
-| Information         | Value                                              |
-| :------------------ | :------------------------------------------------- |
-| Tool Version        | <version>                                          |
-| Machine Name        | <machine-name>                                     |
-| OS Version          | <os-version>                                       |
-| DotNet Runtime      | <dotnet-runtime-version>                           |
-| Time Stamp          | <timestamp> UTC                                    |
-
-✓ CanvasPilot_VersionDisplay - Passed
-✓ CanvasPilot_HelpDisplay - Passed
-
-Total Tests: 2
-Passed: 2
-Failed: 0
-```
-
-Each test in the report proves:
-
-- **`CanvasPilot_VersionDisplay`** - `--version` outputs a valid version string.
-- **`CanvasPilot_HelpDisplay`** - `--help` outputs usage and options information.
-
-Use `--depth <#>` to control the heading level of the validation output (default: `1`).
-This is useful when embedding validation output into a larger markdown document:
-
-```bash
-# Embed validation at heading level 2
-canvaspilot --validate --depth 2
-```
-
-See the [User Guide][link-guide] for more details on the self-validation tests.
-
-On validation failure the tool will exit with a non-zero exit code.
+Settings are kept in `%APPDATA%\CanvasPilot\settings.json` and logs in `%LOCALAPPDATA%\CanvasPilot\logs`.
 
 ## Documentation
 
@@ -149,6 +66,7 @@ Generated documentation includes:
 
 - **Build Notes**: Release information and changes
 - **User Guide**: Comprehensive usage documentation
+- **Software Design and Verification Design**: Architecture and how each requirement is verified
 - **Code Quality Report**: CodeQL and SonarCloud analysis results
 - **Requirements**: Functional and non-functional requirements
 - **Requirements Justifications**: Detailed requirement rationale
@@ -160,14 +78,17 @@ Generated documentation includes:
 pwsh ./build.ps1
 ```
 
+The build needs the .NET 10 SDK. The MSI installer is built by the Windows job of the CI pipeline from the published
+application; see [CONTRIBUTING.md][link-contributing] for the development setup.
+
 ## User Guide
 
 The CanvasPilot User Guide is available on the
-[CanvasPilot releases page](https://github.com/demaconsulting/CanvasPilot/releases).
+[CanvasPilot releases page][link-releases].
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/demaconsulting/CanvasPilot/blob/main/CONTRIBUTING.md) for
+See [CONTRIBUTING.md][link-contributing] for
 guidelines on reporting bugs, suggesting features, and submitting pull requests.
 
 ## License
@@ -190,7 +111,6 @@ By contributing to this project, you agree that your contributions will be licen
 [badge-build]: https://img.shields.io/github/actions/workflow/status/demaconsulting/CanvasPilot/build_on_push.yaml?style=plastic
 [badge-quality]: https://sonarcloud.io/api/project_badges/measure?project=demaconsulting_CanvasPilot&metric=alert_status
 [badge-security]: https://sonarcloud.io/api/project_badges/measure?project=demaconsulting_CanvasPilot&metric=security_rating
-[badge-nuget]: https://img.shields.io/nuget/v/DemaConsulting.CanvasPilot?style=plastic
 
 <!-- Link References -->
 [link-forks]: https://github.com/demaconsulting/CanvasPilot/network/members
@@ -200,6 +120,7 @@ By contributing to this project, you agree that your contributions will be licen
 [link-build]: https://github.com/demaconsulting/CanvasPilot/actions/workflows/build_on_push.yaml
 [link-quality]: https://sonarcloud.io/dashboard?id=demaconsulting_CanvasPilot
 [link-security]: https://sonarcloud.io/dashboard?id=demaconsulting_CanvasPilot
-[link-nuget]: https://www.nuget.org/packages/DemaConsulting.CanvasPilot
+[link-releases]: https://github.com/demaconsulting/CanvasPilot/releases
+[link-contributing]: https://github.com/demaconsulting/CanvasPilot/blob/main/CONTRIBUTING.md
 [link-guide]: https://github.com/demaconsulting/CanvasPilot/blob/main/docs/user_guide/introduction.md
 [link-continuous-compliance]: https://github.com/demaconsulting/ContinuousCompliance

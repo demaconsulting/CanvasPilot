@@ -64,7 +64,8 @@ When using CanvasPilot, we recommend following these security best practices:
 
 ### Input Validation
 
-- Validate command-line arguments and file paths before processing
+- Validate file paths of image sources before opening them in a project, and keep the files that a drawing
+  references inside the project folder (CanvasPilot refuses to read other files for a drawing)
 - Be cautious when processing data from untrusted sources
 - Use the latest version of CanvasPilot to benefit from security updates
 
@@ -78,16 +79,18 @@ When using CanvasPilot, we recommend following these security best practices:
 
 - Run CanvasPilot with the minimum required permissions
 - Avoid running CanvasPilot as a privileged user unless necessary
-- Validate API tokens and credentials are stored securely
+- Leave the AI provider setting "Allow unrestricted agent tools" off unless you trust the agent's instructions
+- Do not put credentials in project files; CanvasPilot stores none in its settings file
 
 ## Known Security Considerations
 
 ### File System Access
 
-CanvasPilot reads and writes files on the local file system. Users should:
+CanvasPilot reads and writes files on the local file system: its projects, its settings file, its log files, and
+downloaded speech models. Users should:
 
-- Ensure appropriate file permissions are set on output files
-- Be cautious when processing files in shared directories
+- Ensure appropriate file permissions are set on project folders
+- Be cautious when opening projects from shared directories or from untrusted sources
 - Validate file paths to prevent directory traversal attacks
 
 ## Security Disclosure Policy

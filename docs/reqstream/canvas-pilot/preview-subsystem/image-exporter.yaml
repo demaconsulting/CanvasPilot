@@ -49,6 +49,8 @@ sections:
                   Pasting a picture straight into another program is the quickest way to use it. The
                   clipboard belongs to the platform and can be unavailable, in which case the user needs to
                   know that nothing was copied.
+                children:
+                  - CanvasPilot-OTS-Avalonia-TransferPicturesViaClipboard
                 tests:
                   - ImageExporter_CopyImageAsync_PictureShown_CopiesPictureToClipboard
                   - ImageExporter_CopyImageAsync_ClipboardUnavailableOrNoPicture_ShowsMessageOrDoesNothing
