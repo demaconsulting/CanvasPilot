@@ -1,0 +1,177 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "build",
+        "--configuration",
+        "Release",
+        "${workspaceFolder}/DemaConsulting.TemplateDotNetTool.slnx"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "validate",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "run",
+        "--project",
+        "${workspaceFolder}/src/DemaConsulting.TemplateDotNetTool",
+        "--configuration",
+        "Release",
+        "--framework",
+        "net10.0",
+        "--no-build",
+        "--",
+        "--validate"
+      ],
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "build and validate",
+      "dependsOn": [
+        "build",
+        "validate"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "format",
+      "command": "dotnet",
+      "type": "process",
+      "args": [
+        "format"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "lint markdown",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "lintmark"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "spell check",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "textlint"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "create python venv",
+      "detail": "Creates .venv for the Python lint tools, as lint.ps1 and fix.ps1 do",
+      "type": "process",
+      "command": "python3",
+      "windows": {
+        "command": "python"
+      },
+      "args": ["-m", "venv", ".venv"],
+      "problemMatcher": []
+    },
+    {
+      "label": "setup python venv",
+      "detail": "Installs pip-requirements.txt into .venv, as lint.ps1 and fix.ps1 do",
+      "dependsOn": "create python venv",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
+      },
+      "args": ["-m", "pip", "install", "-r", "pip-requirements.txt", "--quiet", "--disable-pip-version-check"],
+      "problemMatcher": []
+    },
+    {
+      "label": "lint yaml",
+      "dependsOn": "setup python venv",
+      "command": "${workspaceFolder}/.venv/bin/yamllint",
+      "windows": {
+        "command": "${workspaceFolder}\\.venv\\Scripts\\yamllint.exe"
+      },
+      "detail": "Uses the .venv that lint.ps1 and fix.ps1 create from pip-requirements.txt",
+      "type": "shell",
+      "args": [
+        "."
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "lint all",
+      "dependsOn": [
+        "format",
+        "lint markdown",
+        "spell check",
+        "lint yaml"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "verify requirements",
+      "command": "dotnet",
+      "type": "shell",
+      "args": [
+        "reqstream",
+        "--requirements",
+        "requirements.yaml",
+        "--tests",
+        "\"test-results/**/*.trx\"",
+        "--enforce"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    }
+  ]
+}
