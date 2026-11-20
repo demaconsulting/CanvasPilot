@@ -91,6 +91,13 @@ public sealed class PreviewPaneViewTests : IDisposable
         "<rect width='40' height='20' fill='#ff0000' fill-opacity='0.5'/></svg>";
 
     /// <summary>
+    ///     An 800 x 400 SVG with a blue rectangle, larger than the pane the tests show it in.
+    /// </summary>
+    private const string LargeSvg =
+        "<svg xmlns='http://www.w3.org/2000/svg' width='800' height='400'>" +
+        "<rect width='800' height='400' fill='#0000ff'/></svg>";
+
+    /// <summary>
     ///     Temporary project folder removed on disposal.
     /// </summary>
     private readonly string _folder = Directory.CreateTempSubdirectory("canvaspilot-ui-preview-").FullName;
@@ -253,21 +260,112 @@ public sealed class PreviewPaneViewTests : IDisposable
         await pane.RenderCompletion;
         AppShellUiHelpers.Flush();
         var image = SettingsUiHelpers.Find<Image>(window, "PreviewImage");
+        var viewbox = SettingsUiHelpers.Find<Viewbox>(window, "PreviewViewbox");
         var scroller = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
-        var fitted = (image.Stretch, scroller.HorizontalScrollBarVisibility);
+        var fitted = (viewbox.Stretch, viewbox.StretchDirection, scroller.HorizontalScrollBarVisibility);
 
         // Act: turn fitting off with the check box, then on again
         var check = SettingsUiHelpers.Find<CheckBox>(window, "PreviewFitToWindow");
         check.IsChecked = false;
         AppShellUiHelpers.Flush();
-        var actual = (image.Stretch, scroller.HorizontalScrollBarVisibility, pane.FitToWindow);
+        var actual = (viewbox.Stretch, viewbox.StretchDirection, scroller.HorizontalScrollBarVisibility, pane.FitToWindow);
         check.IsChecked = true;
         AppShellUiHelpers.Flush();
 
-        // Assert: fitted scales down without scroll bars; actual size has none-stretch with auto scroll bars
-        Assert.Equal((Stretch.Uniform, ScrollBarVisibility.Disabled), fitted);
-        Assert.Equal((Stretch.None, ScrollBarVisibility.Auto, false), actual);
-        Assert.Equal(Stretch.Uniform, image.Stretch);
+        // Assert: fitted scales down without scroll bars; actual size does not scale and has auto scroll bars; the
+        // picture itself is never stretched, because the Viewbox scales it together with the overlay
+        Assert.Equal((Stretch.Uniform, StretchDirection.DownOnly, ScrollBarVisibility.Disabled), fitted);
+        Assert.Equal((Stretch.None, StretchDirection.Both, ScrollBarVisibility.Auto, false), actual);
+        Assert.Equal(Stretch.Uniform, viewbox.Stretch);
+        Assert.Equal(Stretch.None, image.Stretch);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that at actual size the overlay slot covers the picture exactly, in the picture's own pixels and
+    ///     without scaling.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_FitOff_ImageAtNaturalSize_OverlayCoversImage()
+    {
+        // Arrange: a shown pane with an overlay, over a picture that is larger than the pane, at actual size
+        var (window, pane, overlay) = await ShowLargePictureWithOverlayAsync();
+        pane.FitToWindow = false;
+        AppShellUiHelpers.Flush();
+        var image = SettingsUiHelpers.Find<Image>(window, "PreviewImage");
+
+        // Act: measure the overlay and the picture in their own coordinates and in the window's
+        var overlayExtent = ScreenExtent(window, overlay);
+        var imageExtent = ScreenExtent(window, image);
+
+        // Assert: both are 800 x 400 pixels in their own coordinates, unscaled, and in the same place
+        Assert.Equal(new Size(800, 400), overlay.Bounds.Size);
+        Assert.Equal(new Size(800, 400), image.Bounds.Size);
+        Assert.Equal(new Size(800, 400), overlayExtent.Size);
+        Assert.Equal(imageExtent, overlayExtent);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that when the picture is fitted to a smaller pane the overlay is still laid out in the picture's
+    ///     pixels and is scaled with the picture, so it covers the picture exactly.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_FitOn_OverlaySizeEqualsImagePixelSize()
+    {
+        // Arrange: a shown pane with an overlay, over a picture that is larger than the pane, fitted to the pane
+        var (window, _, overlay) = await ShowLargePictureWithOverlayAsync();
+        var image = SettingsUiHelpers.Find<Image>(window, "PreviewImage");
+
+        // Act: measure the overlay and the picture in their own coordinates and in the window's
+        var overlayExtent = ScreenExtent(window, overlay);
+        var imageExtent = ScreenExtent(window, image);
+
+        // Assert: the overlay's own size is the picture's pixel size, while on screen both are scaled down by the same
+        // factor, keeping the aspect ratio, and cover the same area
+        Assert.Equal(new Size(800, 400), overlay.Bounds.Size);
+        Assert.Equal(new Size(800, 400), image.Bounds.Size);
+        Assert.True(overlayExtent.Width < 800);
+        Assert.Equal(2.0, overlayExtent.Width / overlayExtent.Height, 3);
+        Assert.Equal(imageExtent.X, overlayExtent.X, 3);
+        Assert.Equal(imageExtent.Y, overlayExtent.Y, 3);
+        Assert.Equal(imageExtent.Width, overlayExtent.Width, 3);
+        Assert.Equal(imageExtent.Height, overlayExtent.Height, 3);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the overlay slot is hidden while it is empty, shows the content assigned to it, and is hidden
+    ///     again when the slot is cleared.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown()
+    {
+        // Arrange: a shown pane with a picture and no overlay
+        await File.WriteAllTextAsync(Path.Combine(_folder, "red.svg"), HalfRedSvg, TestContext.Current.CancellationToken);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        explorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var host = SettingsUiHelpers.Find<ContentControl>(window, "PreviewOverlay");
+        var hiddenBefore = !host.IsVisible;
+
+        // Act: assign a control, then clear the slot
+        var content = new Border { Background = Brushes.Transparent };
+        pane.Overlay = content;
+        AppShellUiHelpers.Flush();
+        var shown = (host.IsVisible, host.Content);
+        pane.Overlay = null;
+        AppShellUiHelpers.Flush();
+
+        // Assert: hidden when empty, showing exactly the assigned content, and hidden again after clearing
+        Assert.True(hiddenBefore);
+        Assert.True(shown.IsVisible);
+        Assert.Same(content, shown.Content);
+        Assert.False(host.IsVisible);
 
         window.Close();
     }
@@ -332,6 +430,35 @@ public sealed class PreviewPaneViewTests : IDisposable
         window.Show();
         AppShellUiHelpers.Flush();
         return (window, explorer, pane);
+    }
+
+    /// <summary>
+    ///     Shows a picture of 800 x 400 pixels, which is larger than the pane, with a transparent overlay on it.
+    /// </summary>
+    /// <returns>The window, the pane view model, and the overlay control.</returns>
+    private async Task<(Window Window, PreviewPaneViewModel Pane, Border Overlay)> ShowLargePictureWithOverlayAsync()
+    {
+        await File.WriteAllTextAsync(Path.Combine(_folder, "large.svg"), LargeSvg, TestContext.Current.CancellationToken);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        var overlay = new Border { Background = Brushes.Transparent };
+        pane.Overlay = overlay;
+        explorer.SelectFile(Path.Combine(_folder, "large.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        return (window, pane, overlay);
+    }
+
+    /// <summary>
+    ///     Measures where a control is in a window, including every scale between them.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    /// <param name="control">The control.</param>
+    /// <returns>The rectangle the control covers in the window's coordinates.</returns>
+    private static Rect ScreenExtent(Window window, Control control)
+    {
+        var topLeft = control.TranslatePoint(new Point(0, 0), window) ?? throw new InvalidOperationException("The control is not in the window.");
+        var bottomRight = control.TranslatePoint(new Point(control.Bounds.Width, control.Bounds.Height), window) ?? throw new InvalidOperationException("The control is not in the window.");
+        return new Rect(topLeft, bottomRight);
     }
 
     /// <summary>

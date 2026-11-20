@@ -41,6 +41,7 @@ services, or display is required.
   its code, and the shown picture can be exported as a valid PNG file.
 - The shown picture of a diagram is identified by its file and by fingerprints of the file and the pixels, which
   change when the file is edited, and it locates the diagram's elements in picture pixels.
+- The preview pane has a layer over the shown picture that holds the content placed in it, beside every picture.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
@@ -119,6 +120,12 @@ nodes' text is `Start` and `End`. After another file is shown, the diagram is ed
 `Finish`, and it is selected again: the file fingerprint, the pixel fingerprint, and the snapshot key all differ and
 the node text is `Start` and `Finish`. This scenario is tested by
 `CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements`.
+
+**CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures**: The composed application's user creates a
+project that holds a 32 by 16 and an 8 by 8 SVG. Content is placed in the overlay layer of the pane that the workspace
+shows, which is the application's own pane. After the first SVG is selected the layer holds the content beside the 32
+pixel wide picture, and after the second SVG is selected it still holds the same content beside the 8 pixel wide
+picture. This scenario is tested by `CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures`.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

@@ -4,7 +4,8 @@
 # The PreviewPane unit is the preview pane's view model and view. It follows the file selected in the project
 # explorer, renders it in the background through the image render service, keeps stale renders from replacing
 # newer ones, renders again when files change on disk, converts the picture for display, and shows the picture,
-# the busy state, the render error with its code and hint, and the notes of the render.
+# the busy state, the render error with its code and hint, and the notes of the render. It also provides the
+# slot for the layer shown exactly over the picture, in the picture's own pixel coordinates.
 
 sections:
   - title: CanvasPilot Requirements
@@ -115,3 +116,21 @@ sections:
                   - PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars
                   - PreviewPaneViewModel_New_NoProject_ShowsPlaceholderAndFitsWindow
                   - PreviewPaneViewModel_New_NullArguments_Throw
+
+              - id: CanvasPilot-PreviewPane-HostOverlay
+                title: >-
+                  The PreviewPane shall provide a slot for content that it shows exactly over the shown picture,
+                  laid out in the picture's own pixel coordinates at any zoom, so that the content's size is
+                  the picture's pixel size and it is scaled together with the picture when the picture is
+                  fitted to the pane, and shall show nothing there while the slot is empty.
+                justification: |
+                  Marks drawn on a picture must stay on the same spot of the picture whatever the pane's size
+                  or the zoom. Laying the content out in picture pixels, and scaling picture and content
+                  together, removes any conversion between what the user points at and the picture's pixels, so
+                  that a mark means the same thing at every zoom. The pane keeps no knowledge of the content, so
+                  it can be reused for other layers.
+                tests:
+                  - PreviewPaneViewModel_Overlay_AssignedContent_IsExposedAndAnnounced
+                  - PreviewPaneView_FitOff_ImageAtNaturalSize_OverlayCoversImage
+                  - PreviewPaneView_FitOn_OverlaySizeEqualsImagePixelSize
+                  - PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown

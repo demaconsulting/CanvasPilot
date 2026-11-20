@@ -182,6 +182,21 @@ sections:
         tests:
           - CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements
 
+      - id: CanvasPilot-System-MarkImage
+        title: >-
+          The application shall show the picture of the selected file with a layer over it, aligned with the
+          picture's pixels at every zoom, on which the user's marks on the picture are placed.
+        tags: [system]
+        justification: |
+          Users point at parts of a picture to say what they mean. For a mark to mean the same part of the
+          picture whatever size the window has or whether the picture is shrunk to fit, the layer must follow
+          the picture exactly. Later increments add the kinds of mark and how marks are kept with a message;
+          this requirement states the part of the capability that exists.
+        children:
+          - CanvasPilot-Preview-HostOverlay
+        tests:
+          - CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures
+
       - id: CanvasPilot-System-DesktopShell
         title: >-
           The application shall present a main window with menus from which the user creates and opens

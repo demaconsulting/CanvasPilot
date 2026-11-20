@@ -20,6 +20,7 @@
 
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
@@ -374,6 +375,40 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.NotEqual(before.SourceFileHash, after.SourceFileHash);
         Assert.NotEqual(before.ContentHash, after.ContentHash);
         Assert.NotEqual(before.SnapshotKey, after.SnapshotKey);
+    }
+
+    /// <summary>
+    ///     Test that the picture the user sees has a layer over it, in the workspace's preview pane, that marks can be
+    ///     placed on, and that the layer stays while another picture is shown.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures()
+    {
+        // Arrange: the application with a project that holds two pictures, and some content for the layer
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='16'/>", token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "b.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'/>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        var layer = new object();
+
+        // Act: put content in the layer of the workspace's preview pane, then show one picture and then the other
+        var pane = Assert.IsType<PreviewPaneViewModel>(composition.Shell.Workspace.Preview);
+        pane.Overlay = layer;
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "a.svg"));
+        await composition.Preview.RenderCompletion;
+        var first = (pane.HasOverlay, pane.Image?.Width);
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "b.svg"));
+        await composition.Preview.RenderCompletion;
+        var second = (pane.HasOverlay, pane.Image?.Width);
+        composition.Dispose();
+
+        // Assert: the pane in the workspace is the application's pane, and its layer holds the content over both pictures
+        Assert.Same(composition.Preview, pane);
+        Assert.Same(layer, pane.Overlay);
+        Assert.Equal((true, 32), first);
+        Assert.Equal((true, 8), second);
     }
 
     /// <summary>

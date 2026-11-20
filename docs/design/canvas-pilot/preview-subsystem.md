@@ -60,7 +60,10 @@ unit, `ImageRenderService`, so the other units and their tests work with a subst
 - *Type*: Avalonia control (`PreviewPaneView`) hosted by the main window's workspace.
 - *Role*: Provider.
 - *Contract*: A scrollable picture that is scaled to fit or shown at its own size, a busy indicator, an error
-  panel with the error code, message, and hint, a status line, and an expandable list of notes.
+  panel with the error code, message, and hint, a status line, and an expandable list of notes. The pane view
+  model's `Overlay` property is a slot for content that the view shows exactly over the picture, laid out in the
+  picture's own pixel coordinates and scaled together with the picture, so that the host's content needs no
+  conversion between the screen and the picture; the slot is empty by default.
 
 ### Design
 
@@ -74,6 +77,9 @@ unit, `ImageRenderService`, so the other units and their tests work with a subst
    The view converts the picture's pixels to an Avalonia bitmap and shows it. The picture also carries its
    identity (file, file fingerprint, pixel fingerprint, snapshot key) and the positions of its elements, which later
    units use to tie marks and messages to exactly this picture; the pane itself does not use them.
+   The picture and the overlay slot share one surface of the picture's pixel size inside a `Viewbox`, so content the
+   host assigns to `Overlay` is laid out in picture pixels at any zoom. The slot keeps its content while pictures
+   change, are rendered again, or fail to draw.
 4. When files in the project folder change, the pane asks the scheduler for a render after a short delay. The
    current picture stays visible until the new result arrives.
 5. The exporter is enabled while the pane shows a picture. Export asks the dialog service for a file name and

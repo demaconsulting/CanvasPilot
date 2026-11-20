@@ -27,6 +27,8 @@ watcher; no network, external services, or display are required.
   clipboard of the export dialogs.
 - The shown picture of a diagram names its file, holds fingerprints of the file and the pixels, and locates its
   nodes inside the picture; a picture of an SVG has no element positions.
+- Content assigned to the pane's overlay slot stays there while different pictures are shown, a changed file is
+  rendered again, and a file cannot be drawn.
 
 ### Test Scenarios
 
@@ -57,3 +59,9 @@ fingerprint, has the snapshot key made of the path and the pixel fingerprint, an
 `End` that lie inside the picture. After the SVG is selected its picture has a different pixel fingerprint and no
 positions and no anchors. This scenario is tested by
 `PreviewSubsystem_ReportPictureFacts_DiagramAndSvg_ShowsIdentityAndPositions`.
+
+**PreviewSubsystem_HostOverlay_ContentAssigned_StaysWhilePicturesChange**: A pane over the real render service has
+content assigned to its overlay slot before the project opens. One SVG is shown, then another, then a broken file,
+and then the first SVG is edited and selected again. After each of these the slot holds the same object, and the pane
+shows the picture, the error, or the new picture next to it. This scenario is tested by
+`PreviewSubsystem_HostOverlay_ContentAssigned_StaysWhilePicturesChange`.

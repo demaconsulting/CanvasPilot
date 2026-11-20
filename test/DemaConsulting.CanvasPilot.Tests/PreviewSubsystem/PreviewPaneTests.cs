@@ -570,6 +570,34 @@ public sealed class PreviewPaneTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that content assigned to the overlay slot is exposed and announced, that the pane does not interpret
+    ///     it, and that clearing the slot is announced too.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_Overlay_AssignedContent_IsExposedAndAnnounced()
+    {
+        // Arrange: a pane with an empty overlay slot that records which properties change
+        var pane = CreatePane();
+        var changed = new List<string?>();
+        pane.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var emptyBefore = (pane.Overlay, pane.HasOverlay);
+        var content = new object();
+
+        // Act: assign content, then clear it
+        pane.Overlay = content;
+        var assigned = (pane.Overlay, pane.HasOverlay);
+        pane.Overlay = null;
+
+        // Assert: the slot starts empty, holds exactly what was assigned, and announces both changes
+        Assert.Equal((null, false), emptyBefore);
+        Assert.Same(content, assigned.Overlay);
+        Assert.True(assigned.HasOverlay);
+        Assert.False(pane.HasOverlay);
+        Assert.Equal(2, changed.Count(name => name == nameof(PreviewPaneViewModel.Overlay)));
+        Assert.Equal(2, changed.Count(name => name == nameof(PreviewPaneViewModel.HasOverlay)));
+    }
+
+    /// <summary>
     ///     Test that the constructor rejects missing collaborators.
     /// </summary>
     [Fact]

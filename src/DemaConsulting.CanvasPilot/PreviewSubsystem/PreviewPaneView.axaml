@@ -27,12 +27,28 @@
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Disabled"
                     IsVisible="{Binding HasImage}">
-        <Image Name="PreviewImage"
-               AutomationProperties.AutomationId="PreviewImage"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center"
-               Stretch="Uniform"
-               StretchDirection="DownOnly" />
+        <!-- The Viewbox scales the whole surface, so everything on it, picture and overlay alike, is laid out in
+             picture pixels whatever the zoom is. -->
+        <Viewbox Name="PreviewViewbox"
+                 AutomationProperties.AutomationId="PreviewViewbox"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 Stretch="Uniform"
+                 StretchDirection="DownOnly">
+          <Grid Name="PreviewSurface"
+                AutomationProperties.AutomationId="PreviewSurface"
+                Background="Transparent">
+            <Image Name="PreviewImage"
+                   AutomationProperties.AutomationId="PreviewImage"
+                   Stretch="None" />
+            <ContentControl Name="PreviewOverlay"
+                            AutomationProperties.AutomationId="PreviewOverlay"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
+                            IsVisible="{Binding HasOverlay}"
+                            Content="{Binding Overlay}" />
+          </Grid>
+        </Viewbox>
       </ScrollViewer>
 
       <StackPanel Name="ErrorPanel"

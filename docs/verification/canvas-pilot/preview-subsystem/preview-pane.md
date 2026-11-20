@@ -32,7 +32,11 @@ temporary local folders and real file I/O; no network or external services are r
   requests a render for changes in the project folder and its sub-folders but not while nothing is selected.
 - Changes in the hidden data folder and to the project file are not relevant; all other paths are.
 - Straight-alpha RGBA converts to premultiplied BGRA with rounding, honoring the row size; the created bitmap has the
-  picture's size and pixels; fit and actual size change the stretch and scroll bars.
+  picture's size and pixels; fit and actual size change the stretch of the `Viewbox` around the picture and the scroll
+  bars.
+- The overlay slot is empty and hidden by default, shows the content assigned to it exactly over the picture, has the
+  picture's pixel size in its own coordinates at actual size and when the picture is scaled down to the pane, and is
+  scaled on screen by the same factor as the picture.
 
 #### Test Scenarios
 
@@ -138,9 +142,29 @@ finishes. This scenario is tested by `PreviewPaneView_RenderRunning_ShowsBusyInd
 expander with the header `1 note` and a list that holds the `image-access-denied` note. This scenario is tested by
 `PreviewPaneView_RenderWithNotes_ListsDiagnostics`.
 
-**PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars**: Fitting scales down without scroll bars;
-clearing the check box shows the actual size with automatic scroll bars; checking it again restores fitting. This
-scenario is tested by `PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars`.
+**PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars**: Fitting scales down without scroll bars (the
+`Viewbox` stretches uniformly, down only); clearing the check box shows the actual size (no scaling) with automatic
+scroll bars; checking it again restores fitting; the `Image` itself is never stretched. This scenario is tested by
+`PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars`.
+
+**PreviewPaneViewModel_Overlay_AssignedContent_IsExposedAndAnnounced**: The overlay slot of a new pane is empty;
+assigning an object exposes exactly that object and sets `HasOverlay`; clearing it again resets both; each change
+raises `PropertyChanged` for `Overlay` and `HasOverlay`. This scenario is tested by
+`PreviewPaneViewModel_Overlay_AssignedContent_IsExposedAndAnnounced`.
+
+**PreviewPaneView_FitOff_ImageAtNaturalSize_OverlayCoversImage**: A pane shows an 800 by 400 picture in a window
+smaller than the picture, with a transparent border assigned as the overlay, and Fit to window cleared. The overlay
+and the picture are each 800 by 400 in their own coordinates, 800 by 400 in the window, and cover the same rectangle.
+This scenario is tested by `PreviewPaneView_FitOff_ImageAtNaturalSize_OverlayCoversImage`.
+
+**PreviewPaneView_FitOn_OverlaySizeEqualsImagePixelSize**: With the same picture and overlay fitted to the pane, the
+overlay and the picture are still 800 by 400 in their own coordinates, but on screen are smaller than 800 pixels wide,
+keep the aspect ratio of 2 to 1, and cover the same rectangle in the window. This scenario is tested by
+`PreviewPaneView_FitOn_OverlaySizeEqualsImagePixelSize`.
+
+**PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown**: With a picture shown, the overlay host is hidden
+while the slot is empty, visible and holding exactly the assigned control after it is assigned, and hidden again after
+the slot is cleared. This scenario is tested by `PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown`.
 
 **PreviewPaneView_ProjectClosed_ClearsPicture**: Closing the project removes the bitmap and shows the placeholder
 `No project is open.`. This scenario is tested by `PreviewPaneView_ProjectClosed_ClearsPicture`.

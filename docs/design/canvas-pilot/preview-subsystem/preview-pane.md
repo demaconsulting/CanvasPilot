@@ -8,7 +8,9 @@
 file selected in the project explorer. It starts a render whenever the selection or project changes, cancels the
 render that is still running, ignores results of renders that are no longer wanted, renders again after a delay
 when files in the project change, and shows the picture, the busy state, the error with its code and hint, and the
-notes of the render. The view model has no dependency on Avalonia's imaging; the view converts the pixels.
+notes of the render. The view model has no dependency on Avalonia's imaging; the view converts the pixels. The pane
+also hosts one overlay slot over the picture, so that other units can place content on the picture in its own pixel
+coordinates without the pane knowing them.
 
 #### Data Model
 
@@ -29,6 +31,12 @@ that no project is open or that a file is to be selected.
 **FitToWindow**: `bool`, true by default; scale the picture down to the pane, otherwise show it at its own size
 with scroll bars.
 
+**Overlay** / **HasOverlay**: `object?`, a slot for the content that is shown exactly over the picture; `null` by
+default. The pane does not interpret it: the view shows it in a `ContentControl`, so the application's view locator
+picks the view of whatever view model the host assigns, and the pane never refers to the code that fills the slot.
+The slot belongs to the pane, not to a picture, so it keeps its content while pictures change, are rendered again, or
+fail to draw; the host decides what the content shows then.
+
 **RenderCompletion**: a task that completes when every render started so far has applied or discarded its result,
 so tests and callers can wait.
 
@@ -40,11 +48,21 @@ row size. `Create` makes a 96 dpi `WriteableBitmap` (`Bgra8888`, `AlphaFormat.Pr
 `Lock`.
 
 **View**: `PreviewPaneView` has a check box (`PreviewFitToWindow`), a busy `ProgressBar` (`PreviewBusy`), a
-`ScrollViewer` (`PreviewScroller`) with the `Image` (`PreviewImage`), an error panel (`PreviewErrorPanel`,
+`ScrollViewer` (`PreviewScroller`) that holds a `Viewbox` (`PreviewViewbox`), an error panel (`PreviewErrorPanel`,
 `PreviewErrorTitle`, `PreviewErrorMessage`, `PreviewErrorHint`), a placeholder (`PreviewPlaceholder`), a status
 line (`PreviewStatus`), and an `Expander` (`PreviewDiagnosticsExpander`) with the list of notes
 (`PreviewDiagnostics`). The view creates the bitmap when the view model's picture changes, disposes the previous
 one, and releases it when detached.
+
+**Layout in picture pixels**: The `Viewbox` holds one `Grid` (`PreviewSurface`) that has the exact pixel size of the
+shown picture, and the grid holds the `Image` (`PreviewImage`, never stretched, because the bitmap is 96 dpi and so
+one device-independent pixel per picture pixel) and, over it, a `ContentControl` (`PreviewOverlay`) bound to
+`Overlay`, which is visible only while the slot has content and stretches to the size of the grid. The overlay's own
+coordinate system is therefore the picture's pixel coordinates, whatever the zoom is: the `Viewbox` scales the grid,
+and with it the picture and the overlay, as one. With **FitToWindow** the `Viewbox` uses `Stretch.Uniform` and
+`StretchDirection.DownOnly` and the scroll bars are disabled; otherwise it uses `Stretch.None` and the scroll bars are
+automatic. Because the grid has a transparent background, pointer input anywhere on the picture reaches the surface
+even where the overlay has no content of its own.
 
 #### Key Methods
 

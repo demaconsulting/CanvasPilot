@@ -123,11 +123,12 @@ the stored choices through the settings service.
 confined to the project folder, and returns the pixels, notes, or a coded error. Each picture it returns also says
 exactly which picture it is (the file, a fingerprint of the file, and a fingerprint of the pixels) and where the
 elements of a diagram, chart, or model were drawn, so that something said about the picture later can be tied to what
-the user saw. `PreviewPane` follows the
-selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders that are no
-longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture as a PNG
-file or copies it to the clipboard for the Image menu. The `Preview` subsystem owns the two interfaces that this needs,
-`IImageExporter` and `IExportDialogs`, and does not refer to the main window.
+the user saw. `PreviewPane` also provides a layer over the shown picture, laid out in the picture's own pixel
+coordinates and scaled with it, which other items fill with content that refers to places in the picture. `PreviewPane`
+follows the selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders
+that are no longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture
+as a PNG file or copies it to the clipboard for the Image menu. The `Preview` subsystem owns the two interfaces that
+this needs, `IImageExporter` and `IExportDialogs`, and does not refer to the main window.
 
 ### Dependency Direction
 

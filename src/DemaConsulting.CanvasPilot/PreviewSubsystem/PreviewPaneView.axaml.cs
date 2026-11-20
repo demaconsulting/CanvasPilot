@@ -29,9 +29,10 @@ namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 /// <summary>
 ///     View of the preview pane, bound to a <see cref="PreviewPaneViewModel" /> by the view locator: the picture
-///     (fitted to the pane or scrollable at its own size), a busy indicator, the render error with its hint, a
-///     status line, and the list of notes. It converts the view model's pixels to an Avalonia bitmap, because the
-///     view model itself has no dependency on Avalonia's imaging.
+///     (fitted to the pane or scrollable at its own size), the overlay slot placed exactly over the picture in the
+///     picture's own pixel coordinates, a busy indicator, the render error with its hint, a status line, and the
+///     list of notes. It converts the view model's pixels to an Avalonia bitmap, because the view model itself has
+///     no dependency on Avalonia's imaging.
 /// </summary>
 public sealed partial class PreviewPaneView : UserControl
 {
@@ -98,6 +99,8 @@ public sealed partial class PreviewPaneView : UserControl
         }
 
         PreviewImage.Source = null;
+        PreviewSurface.Width = double.NaN;
+        PreviewSurface.Height = double.NaN;
         _bitmap?.Dispose();
         _bitmap = null;
         base.OnDetachedFromVisualTree(e);
@@ -130,28 +133,34 @@ public sealed partial class PreviewPaneView : UserControl
         var previous = _bitmap;
         _bitmap = _viewModel?.Image is { } image ? RenderedImageBitmap.Create(image) : null;
         PreviewImage.Source = _bitmap;
+
+        // The surface has the size of the picture in pixels, so the picture and the overlay on it share one
+        // coordinate system, which the Viewbox scales.
+        PreviewSurface.Width = _viewModel?.Image is { } shown ? shown.Width : double.NaN;
+        PreviewSurface.Height = _viewModel?.Image is { } shownImage ? shownImage.Height : double.NaN;
         previous?.Dispose();
         ApplyFit();
     }
 
     /// <summary>
     ///     Applies the fit mode: scaled down to the pane without scroll bars, or at its own size with scroll
-    ///     bars when it is larger than the pane.
+    ///     bars when it is larger than the pane. The picture itself is never stretched; the Viewbox around the
+    ///     picture and its overlay scales both together.
     /// </summary>
     private void ApplyFit()
     {
         var fit = _viewModel?.FitToWindow ?? true;
         if (fit)
         {
-            PreviewImage.Stretch = Stretch.Uniform;
-            PreviewImage.StretchDirection = StretchDirection.DownOnly;
+            PreviewViewbox.Stretch = Stretch.Uniform;
+            PreviewViewbox.StretchDirection = StretchDirection.DownOnly;
             ImageScroller.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
             ImageScroller.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
         }
         else
         {
-            PreviewImage.Stretch = Stretch.None;
-            PreviewImage.StretchDirection = StretchDirection.Both;
+            PreviewViewbox.Stretch = Stretch.None;
+            PreviewViewbox.StretchDirection = StretchDirection.Both;
             ImageScroller.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
             ImageScroller.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }

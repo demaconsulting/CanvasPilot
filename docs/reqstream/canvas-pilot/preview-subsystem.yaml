@@ -90,3 +90,18 @@ sections:
               - CanvasPilot-ImageRenderService-ReportElementPositions
             tests:
               - PreviewSubsystem_ReportPictureFacts_DiagramAndSvg_ShowsIdentityAndPositions
+
+          - id: CanvasPilot-Preview-HostOverlay
+            title: >-
+              The Preview subsystem shall provide a layer over the shown picture that the host fills with its own
+              content, laid out in the picture's pixel coordinates at any zoom and scaled together with the
+              picture, and that stays the same while pictures are shown, change, or fail to draw.
+            justification: |
+              Marks and other content that refer to places in the picture need a surface whose coordinates are
+              the picture's pixels. Keeping the layer in the preview and its content outside keeps the preview
+              free of any knowledge of what is drawn on it, and keeping it across renders lets the owner of the
+              content decide what happens to it when the picture changes.
+            children:
+              - CanvasPilot-PreviewPane-HostOverlay
+            tests:
+              - PreviewSubsystem_HostOverlay_ContentAssigned_StaysWhilePicturesChange

@@ -70,6 +70,7 @@ words:
   - thirdparty
   - unidirectionality
   - venv
+  - Viewbox
   - yamlfix
 
 # Exclude common build artifacts, dependencies, and vendored third-party code

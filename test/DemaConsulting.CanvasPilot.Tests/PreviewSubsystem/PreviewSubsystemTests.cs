@@ -141,6 +141,44 @@ public sealed class PreviewSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that content placed in the overlay slot stays there while the pane shows different pictures, renders
+    ///     a changed file again, and fails to draw a file, because the layer belongs to the pane and not to a picture.
+    /// </summary>
+    [Fact]
+    public async Task PreviewSubsystem_HostOverlay_ContentAssigned_StaysWhilePicturesChange()
+    {
+        // Arrange: a project with two SVGs and a broken one, a pane with content in its overlay slot
+        await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), WideSvg, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(_folder, "good.svg"), SquareSvg, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(_folder, "broken.svg"), "<svg><not closed", TestContext.Current.CancellationToken);
+        var (explorer, pane) = Create();
+        var layer = new object();
+        pane.Overlay = layer;
+        explorer.Open(_folder);
+
+        // Act: show one picture, another, the broken file, and then the first picture again after it was edited
+        explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
+        await pane.RenderCompletion;
+        var wide = (pane.Overlay, pane.HasOverlay, pane.Image?.Width);
+        explorer.SelectFile(Path.Combine(_folder, "good.svg"));
+        await pane.RenderCompletion;
+        var good = (pane.Overlay, pane.HasOverlay, pane.Image?.Width);
+        explorer.SelectFile(Path.Combine(_folder, "broken.svg"));
+        await pane.RenderCompletion;
+        var broken = (pane.Overlay, pane.HasOverlay, pane.HasError);
+        await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), SquareSvg, TestContext.Current.CancellationToken);
+        explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
+        await pane.RenderCompletion;
+        var edited = (pane.Overlay, pane.HasOverlay, pane.Image?.Width);
+
+        // Assert: the same content is in the slot every time, next to whatever the pane shows
+        Assert.Equal((layer, true, 40), wide);
+        Assert.Equal((layer, true, 10), good);
+        Assert.Equal((layer, true, true), broken);
+        Assert.Equal((layer, true, 10), edited);
+    }
+
+    /// <summary>
     ///     Test that a file that cannot be drawn shows an error and a file that can be drawn shows a picture again,
     ///     and that export follows whether a picture is shown.
     /// </summary>

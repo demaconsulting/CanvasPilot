@@ -140,6 +140,15 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     private bool _fitToWindow = true;
 
     /// <summary>
+    ///     The content shown over the picture, or null. It is a slot that the pane does not interpret: the view
+    ///     lets the view locator pick the view of whatever the host assigns, and places that view exactly over the
+    ///     picture, at the picture's own pixel size, scaled together with the picture.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasOverlay))]
+    private object? _overlay;
+
+    /// <summary>
     ///     The file that is rendered or was last rendered, or null.
     /// </summary>
     [ObservableProperty]
@@ -208,6 +217,11 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     Gets a value indicating whether a picture is shown.
     /// </summary>
     public bool HasImage => Image is not null;
+
+    /// <summary>
+    ///     Gets a value indicating whether content is assigned to the overlay slot.
+    /// </summary>
+    public bool HasOverlay => Overlay is not null;
 
     /// <summary>
     ///     Gets a value indicating whether the render failed.
