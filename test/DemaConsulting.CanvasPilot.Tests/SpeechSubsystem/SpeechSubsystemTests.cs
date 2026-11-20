@@ -20,7 +20,9 @@
 
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
+using DemaConsulting.Speech.AudioSubsystem;
 using DemaConsulting.Speech.ModelManagementSubsystem;
+using DemaConsulting.Speech.RecognitionSubsystem;
 using NSubstitute;
 
 namespace DemaConsulting.CanvasPilot.Tests;
@@ -156,6 +158,85 @@ public sealed class SpeechSubsystemTests : IDisposable
         Assert.True(runningBeforeClose);
         Assert.True(received.IsCancellationRequested);
         Assert.Equal(SpeechModelState.NotDownloaded, page.Models.SttModels.Single().State);
+    }
+
+    /// <summary>
+    ///     Test that holding to talk with the real model service, audio service, and speech library pipeline over a
+    ///     managed fake engine and a recorded sound file streams text and, on release, returns the final text. No
+    ///     native speech runtime, model download, or microphone is used.
+    /// </summary>
+    [Fact]
+    public async Task SpeechSubsystem_Dictation_FakeEngine_ReturnsFinalTextAfterRelease()
+    {
+        // Arrange: a settings file that chooses the fake model, the model installed in a temporary store, and a
+        // recorded sound file standing in for the microphone
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        settings.Save(new AppSettings { Speech = new SpeechSettings { SttModelId = "stt-fake" } });
+        var model = new FakeRecognitionModel(
+            "stt-fake",
+            () => new FakeRecognitionBackend(
+                [new SpeechRecognitionResult("hello", IsFinal: false), new SpeechRecognitionResult("hello wor", IsFinal: false)],
+                new SpeechRecognitionResult("Hello world.", IsFinal: true)));
+        DictationTestFiles.InstallModel(Path.Combine(_tempRoot, "models"), "stt-fake");
+        var wave = Path.Combine(_tempRoot, "speech.wav");
+        DictationTestFiles.WriteSilentWave(wave, seconds: 1, sampleRate: 16000);
+        using var models = new SpeechModelService(
+            () => new SpeechModelCatalog(new SpeechModelStoreOptions { RootPathOverride = Path.Combine(_tempRoot, "models") }).AddModels(model));
+        var audio = new AudioDeviceService(
+            () => [SpeechTestData.Capture("Recorded")],
+            () => [],
+            () => { },
+            captureCreator: _ => new WavFileAudioCaptureDevice(wave, 1600));
+        using var dictation = new DictationService(settings, models, audio, logger: null, findMissingRuntimeFiles: () => [], releaseTail: TimeSpan.Zero);
+
+        // Act: the user presses and holds, words appear, and the user lets go
+        var availability = dictation.CheckAvailability();
+        var start = await dictation.BeginAsync(TestContext.Current.CancellationToken);
+        var text = await start.Session!.EndAsync(TestContext.Current.CancellationToken);
+
+        // Assert: dictation was available, the real library pipeline produced the final sentence, and the next hold
+        // can start because everything was released
+        Assert.True(availability.IsAvailable);
+        Assert.Equal("Hello world.", text);
+        Assert.Equal(string.Empty, start.Session.Problem);
+        var next = await dictation.BeginAsync(TestContext.Current.CancellationToken);
+        Assert.True(next.IsListening);
+        await next.Session!.EndAsync(TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    ///     Test that every state in which dictation cannot work is explained through the real services without
+    ///     loading an engine, including the missing native speech runtime, whose engine would crash the process.
+    /// </summary>
+    [Fact]
+    public async Task SpeechSubsystem_Dictation_UnavailableStates_AreExplainedWithoutLoadingAnEngine()
+    {
+        // Arrange: an installed model whose backend must never be built, and a settings service to change the choice
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var model = new FakeRecognitionModel("stt-fake", () => throw new InvalidOperationException("an engine was loaded"));
+        var other = new FakeRecognitionModel("stt-absent", () => throw new InvalidOperationException("an engine was loaded"));
+        DictationTestFiles.InstallModel(Path.Combine(_tempRoot, "models"), "stt-fake");
+        using var models = new SpeechModelService(
+            () => new SpeechModelCatalog(new SpeechModelStoreOptions { RootPathOverride = Path.Combine(_tempRoot, "models") }).AddModels(model, other));
+        var audio = new AudioDeviceService(() => [SpeechTestData.Capture("Mic")], () => [], () => { });
+        using var runtimePresent = new DictationService(settings, models, audio, logger: null, findMissingRuntimeFiles: () => []);
+        using var runtimeMissing = new DictationService(settings, models, audio, logger: null, findMissingRuntimeFiles: () => ["onnxruntime.dll"]);
+
+        // Act: ask in each state
+        var noModel = runtimePresent.CheckAvailability();
+        settings.Save(new AppSettings { Speech = new SpeechSettings { SttModelId = "stt-absent" } });
+        var notInstalled = runtimePresent.CheckAvailability();
+        settings.Save(new AppSettings { Speech = new SpeechSettings { SttModelId = "stt-fake" } });
+        var noRuntime = runtimeMissing.CheckAvailability();
+        var begun = await runtimeMissing.BeginAsync(TestContext.Current.CancellationToken);
+        var prepared = await runtimeMissing.PrepareAsync(TestContext.Current.CancellationToken);
+
+        // Assert: each state has its own reason, and the backend factory, which would have thrown, was never reached
+        Assert.Equal(DictationAvailabilityReason.NoModelChosen, noModel.Reason);
+        Assert.Equal(DictationAvailabilityReason.ModelNotInstalled, notInstalled.Reason);
+        Assert.Equal(DictationAvailabilityReason.SpeechRuntimeMissing, noRuntime.Reason);
+        Assert.Equal(DictationAvailabilityReason.SpeechRuntimeMissing, begun.Availability.Reason);
+        Assert.Equal(DictationAvailabilityReason.SpeechRuntimeMissing, prepared.Reason);
     }
 
     /// <summary>

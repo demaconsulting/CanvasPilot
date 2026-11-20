@@ -53,11 +53,49 @@ public sealed record AudioDeviceSnapshot(
 }
 
 /// <summary>
-///     Lists the machine's audio devices. A machine without audio hardware, or without a working audio backend, is
-///     an ordinary state that is reported in the result, never thrown.
+///     The outcome of asking for a capture device: the device, or the reason there is none.
+/// </summary>
+/// <param name="Device">
+///     The capture device, which the caller must stop and, when it is <see cref="IDisposable" />, dispose, or
+///     <see langword="null" /> when no usable device could be created.
+/// </param>
+/// <param name="Problem">The explanation when there is no device, or <see langword="null" />.</param>
+public sealed record CaptureDeviceResult(IAudioCaptureDevice? Device, string? Problem = null)
+{
+    /// <summary>
+    ///     Gets a value indicating whether a usable device was created.
+    /// </summary>
+    public bool IsAvailable => Device is not null;
+
+    /// <summary>
+    ///     Creates a result for a device that could not be created.
+    /// </summary>
+    /// <param name="problem">The explanation.</param>
+    /// <returns>A result with no device and the explanation.</returns>
+    public static CaptureDeviceResult Unavailable(string problem)
+    {
+        return new CaptureDeviceResult(null, problem);
+    }
+}
+
+/// <summary>
+///     Lists the machine's audio devices and creates the capture device that dictation listens through. A machine
+///     without audio hardware, or without a working audio backend, is an ordinary state that is reported in the
+///     result, never thrown.
 /// </summary>
 public interface IAudioDeviceService
 {
+    /// <summary>
+    ///     Creates a capture device that delivers audio in the mono format that speech recognition needs. The device
+    ///     is created, not started: the recognition session that is given the device starts and stops it.
+    /// </summary>
+    /// <param name="deviceName">
+    ///     The name of the chosen microphone, or <see langword="null" /> or an empty string for the system default. A
+    ///     name that no device has any more also selects the system default.
+    /// </param>
+    /// <returns>The device, or no device with the problem when the audio system or the microphone cannot be used.</returns>
+    CaptureDeviceResult CreateCaptureDevice(string? deviceName);
+
     /// <summary>
     ///     Lists the audio devices the audio backend currently knows.
     /// </summary>

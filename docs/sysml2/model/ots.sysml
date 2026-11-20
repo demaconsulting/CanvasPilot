@@ -38,7 +38,7 @@ package CanvasPilot {
         }
 
         part def Speech {
-            doc /* DemaConsulting.Speech NuGet dependency, with its DemaConsulting.Speech.Sherpa model package, that lists audio devices, lists and downloads speech models, and describes their tunable parameters. */
+            doc /* DemaConsulting.Speech NuGet dependency, with its DemaConsulting.Speech.Sherpa model package, that lists audio devices, creates capture devices, lists and downloads speech models, describes their tunable parameters, and streams speech recognition; the native inference, Sherpa, and audio runtime arrives with its packages and is shipped beside the application. */
 
             metadata info : SoftwareInfo {
                 testFiles = ("test/OtsSoftwareTests/SpeechTests.cs");

@@ -45,6 +45,7 @@ includes:
   - docs/reqstream/canvas-pilot/speech-subsystem.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/audio-device-service.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/speech-model-service.yaml
+  - docs/reqstream/canvas-pilot/speech-subsystem/dictation-service.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/device-selection.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/model-catalog-panel.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/model-parameter-editor.yaml

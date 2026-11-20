@@ -51,6 +51,7 @@ flowchart TD
     subgraph Speech
         AudioDeviceService
         SpeechModelService
+        DictationService
         DeviceSelection
         ModelCatalogPanel
         ModelParameterEditor
@@ -100,6 +101,10 @@ flowchart TD
     AiProviderSettingsPage --> SettingsDialog
     AudioDeviceService --> RollingFileLogger
     SpeechModelService --> RollingFileLogger
+    DictationService --> SettingsService
+    DictationService --> SpeechModelService
+    DictationService --> AudioDeviceService
+    DictationService --> RollingFileLogger
     DeviceSelection --> AudioDeviceService
     ModelCatalogPanel --> SpeechModelService
     SpeechSettingsPage --> SettingsDialog
@@ -149,8 +154,19 @@ exception. `DeviceSelection`, `ModelCatalogPanel`, and `ModelParameterEditor` ar
 device pickers, the model lists with their downloads, and the tunable settings of a model, and `SpeechSettingsPage`
 composes them into the "Speech" page of the settings dialog and maps them to and from the stored speech settings. The
 application adds the page to the dialog after the AI Provider page, so the `Settings` subsystem does not depend on
-speech. The speech choices are stored only; no speech engine is part of the current build, and one added later reads
-the stored choices through the settings service.
+speech.
+
+`DictationService` turns speech into text for the message. While the user holds a talk control it listens through the
+microphone and the speech-to-text model that were stored by the Speech page, shows the words recognized so far, and,
+when the control is released, returns the final text, which the chat adds to the message as one dictated block. It is
+the only item that holds a loaded speech engine and creates recognition sessions: `SpeechModelService` loads the engine
+from the stored choices, `AudioDeviceService` creates the capture device of the chosen microphone, and the engine is
+loaded once and reused. Every state in which dictation cannot work, such as no model chosen, a model that is not
+downloaded, no microphone, an engine that will not start, or native speech files that are missing, is a result with its
+own explanation, never an exception. The native speech runtime arrives with the speech library's packages and is
+shipped beside the application and in the installer; `DictationService` checks that it is there before it loads an
+engine, because an engine started without it can crash the process, which no code can catch. The talk button and key
+and the chat that uses the service are added by a later step.
 
 `ImageRenderService` is the only item that draws files: it calls the CanvasNet viewer library in the background,
 confined to the project folder, and returns the pixels, notes, or a coded error. Each picture it returns also says
@@ -341,18 +357,33 @@ made in the project when the message is sent.
 - *Format*: Devices are stored by name, models by identifier, and each model's parameter values as
   invariant-culture strings, in the `speech` section of `settings.json`. The model store is
   `%LOCALAPPDATA%\DemaConsulting.Speech\Models` on Windows and is shared with other DEMA Consulting applications.
-- *Constraints*: The audio system and the model store are used only when the Speech page is opened. Downloads start
-  only when the user asks, verify checksums before installing, and are cancelled when the settings dialog closes. A
-  machine without audio hardware, a blocked network, or an unreadable store is explained on the page and never
-  causes a failure.
+- *Constraints*: The audio system and the model store are used only when the Speech page is opened or dictation is used.
+  Downloads start only when the user asks, verify checksums before installing, and are cancelled when the settings
+  dialog closes. A machine without audio hardware, a blocked network, or an unreadable store is explained on the page
+  and never causes a failure.
+
+**Microphone and Speech Engine**: What dictation listens through and recognizes with.
+
+- *Direction*: Input.
+- *Type*: The operating system's audio input, through the audio library of the DemaConsulting.Speech library, and the
+  native speech inference runtime and Sherpa interface that arrive with the library's packages.
+- *Format*: Mono audio at the sample rate of the speech model, converted by the audio system from the format of the
+  hardware; the output is text.
+- *Constraints*: The microphone is open only while the talk control is held and a short moment after it is released, and
+  is released when the session ends. The audio is never stored, and neither is the recognized text, except in the
+  message that the user is composing; the application log holds events but never words. The native runtime files must be
+  beside the application, and the speech engine is not loaded unless they are. Windows can block desktop applications
+  from using the microphone; dictation then says so.
 
 **Windows Installer Package**: The way the application is delivered.
 
 - *Direction*: Output (built by the release pipeline) and input (to the user's Windows Installer).
 - *Type*: One per-machine, 64-bit MSI file named `CanvasPilot-{version}-win-x64.msi`, built by the WiX Toolset from the
   installer project, which is not part of the solution.
-- *Format*: The package carries the self-contained single-file `CanvasPilot.exe` publish output, a Start Menu
-  shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version.
+- *Format*: The package carries the self-contained single-file `CanvasPilot.exe` publish output, the native libraries
+  that stay beside it (the Skia, text shaping, and ANGLE graphics libraries and the speech inference runtime, Sherpa
+  interface, and audio library), a Start Menu shortcut, and the Add/Remove Programs icon and links; its version is the
+  numeric part of the build version.
 - *Constraints*: Installing a package replaces any installed version, older or newer, and asks a running
   `CanvasPilot.exe` to close first. The package contains no user data, and uninstalling leaves the user's settings,
   logs, and projects in place.
@@ -372,16 +403,16 @@ made in the project when the message is sent.
 The `Annotation`, `AppShell`, `Composer`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`, `Speech`, and
 `Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and project files and the
 description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm, which are runtime
-third-party items (the `Annotation` and `Composer` units use base class library types only, and the `Payload` units
-base class library types and CanvasNet). The `ImageRenderService` unit draws files and encodes PNG
-with the `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a
-picture with the same library, and the `ProjectExplorer` unit uses its extension list to decide
-which files are image sources. The `AudioDeviceService` and `SpeechModelService` units list audio devices and speech
-models and download models with the `DemaConsulting.Speech` library and its Sherpa model package, and the speech
-descriptor types are shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items (see
-*OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS design documents. The Windows
-installer package is built from the published application by the WiX Toolset, also documented as an OTS item; no
-run-time item depends on it.
+third-party items (the `Annotation` and `Composer` units use base class library types only, and the `Payload` units base
+class library types and CanvasNet). The `ImageRenderService` unit draws files and encodes PNG with the
+`DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a picture with
+the same library, and the `ProjectExplorer` unit uses its extension list to decide which files are image sources. The
+`AudioDeviceService`, `SpeechModelService`, and `DictationService` units list audio devices and speech models, download
+models, create capture devices, and load and run the speech engine with the `DemaConsulting.Speech` library and its
+Sherpa model package, whose native speech runtime is shipped with the application, and the speech descriptor types are
+shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items (see *OTS Dependencies*).
+Build, documentation, and quality tools are documented in the OTS design documents. The Windows installer package is
+built from the published application by the WiX Toolset, also documented as an OTS item; no run-time item depends on it.
 
 ## Risk Control Measures
 
@@ -451,7 +482,14 @@ cannot show, such as a device that is not connected or a model while the model s
 settings instead of being erased, and failures of the audio system and the model store are results, never
 unhandled exceptions.
 
-## Data Flow
+**Safe speech runtime**: Starting the speech engine without its native runtime beside the application does not fail
+cleanly: Windows then loads an older inference runtime from its system folder and the process crashes inside the native
+library, which cannot be caught and would lose the message that the user has not sent. `DictationService` is therefore
+the only item that loads an engine, it checks that the runtime files exist before it does, and it reports that the
+speech runtime is missing instead when they do not. The files are in the published output, which the installer harvests,
+and the build verifies both the published output and the file table of the installer package. Dictation also listens
+only while the talk control is held, releases the microphone when it ends, keeps neither audio nor recognized text
+outside the message, and writes events but never words to the log.
 
 Application subsystems call `RollingFileLogger.Log` with a severity, a message, and optional exception
 context. `RollingFileLogger` asks `PathHelpers` to resolve the active file path inside the log folder,
@@ -527,6 +565,17 @@ panel goes through `SpeechModelService` to the speech library, which reports pro
 canceled, or failed. On OK or Apply the page merges the choices into the speech section of the settings, which
 `SettingsService.Save` writes. When the dialog closes the page cancels downloads that are still running.
 
+When the user holds a talk control, the caller asks `DictationService.BeginAsync` to begin. The service reads the speech
+settings, asks `SpeechModelService.Enumerate` whether the chosen speech-to-text model is installed, checks the native
+speech files, and, the first time, has `SpeechModelService.LoadRecognizerAsync` load the engine with the stored
+parameter values converted to their types, and keeps it. It asks `AudioDeviceService.CreateCaptureDevice` for the chosen
+microphone, creates a recognition session over the engine and the device, starts reading its results, and starts the
+session. Each provisional result replaces the sentence being recognized and each final result ends it, and the words so
+far are available as `PartialText`. When the user lets go the caller ends the session: it keeps listening for a short
+moment, stops the recognition, which finishes the audio already received, releases the session and the microphone, and
+returns the final text, which `ComposerEdit.Dictate` adds to the message as one dictated block. If dictation cannot
+start, the same call returns the reason and the message, and nothing is loaded that could crash the process.
+
 ## Design Constraints
 
 - Log files shall be written only to local disk; no telemetry or remote transmission is performed.
@@ -568,14 +617,19 @@ canceled, or failed. On OK or Apply the page merges the choices into the speech 
 - Content that is dropped or pasted shall be treated as data: it shall never be opened, run, rendered, or followed,
   and only `AttachmentStore` shall create files for attachments, only in `attachments` and `.canvaspilot/attachments`
   of the project, never over an existing file, and, for one message, at most 500 files, 500 folders, and 200 MB.
-- Only `AudioDeviceService` shall use the audio system and only `SpeechModelService` shall use the speech model
-  catalog; neither shall use its backend before it is first asked, and neither shall throw for a missing audio
-  system, an unreadable model store, or a failed download.
+- Only `AudioDeviceService` shall use the audio system, only `SpeechModelService` shall use the speech model
+  catalog, and only `DictationService` shall hold a loaded speech engine and create recognition sessions; no
+  backend shall be used before it is first asked, and none of them shall throw for a missing audio system, an
+  unreadable model store, a failed download, or a speech engine that cannot start.
 - Speech devices shall be stored by name, speech models by identifier, and model parameter values as
   invariant-culture strings.
 - A speech model download shall start only on the user's request and shall be cancelled when the settings dialog
   closes.
-- The application shall not reference the native speech engine runtime until a speech engine is loaded.
+- The native speech runtime shall be shipped beside the application and in the installer, and no speech engine shall be
+  loaded unless the inference runtime and the Sherpa interface are present; the published output and the installer's
+  file table shall be verified for it with every Windows build.
+- Dictation shall listen only while a talk control is held and for a short moment afterwards, shall release the
+  microphone when the session ends, and shall never write what was recognized to the log.
 - The installer project shall stay outside the solution so that building and restoring the solution never needs the
   WiX Toolset or Windows; it shall be built only by the Windows build job from the published win-x64 output.
 - The installer shall replace any installed version and shall not write or remove user data.

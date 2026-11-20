@@ -28,7 +28,9 @@ using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
 using DemaConsulting.CanvasPilot.UtilitiesSubsystem;
+using DemaConsulting.Speech.AudioSubsystem;
 using DemaConsulting.Speech.ModelManagementSubsystem;
+using DemaConsulting.Speech.RecognitionSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -701,6 +703,65 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(["cover.svg"], explorer.Items.Select(item => item.Name));
         Assert.Empty(Directory.GetFiles(store.PastedImagesFolder));
         Assert.True(File.Exists(brief));
+    }
+
+    /// <summary>
+    ///     Test that a user who holds to talk with a speech model chosen in the settings gets the words that were
+    ///     recognized as one dictated block of the message, with the application composed as it is at startup over a
+    ///     managed speech engine and a recorded sound file, and that a user without a model is told what to do.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable()
+    {
+        // Arrange: the application composed over a model service whose model is installed in a temporary store and
+        // an audio service whose microphone is a recorded sound file
+        var token = TestContext.Current.CancellationToken;
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var settings = new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger);
+        var modelStore = PathHelpers.SafePathCombine(_tempRoot, "models");
+        DictationTestFiles.InstallModel(modelStore, "stt-fake");
+        var wave = PathHelpers.SafePathCombine(_tempRoot, "speech.wav");
+        DictationTestFiles.WriteSilentWave(wave, seconds: 1, sampleRate: 16000);
+        using var models = new SpeechModelService(
+            () => new SpeechModelCatalog(new SpeechModelStoreOptions { RootPathOverride = modelStore }).AddModels(
+                new FakeRecognitionModel(
+                    "stt-fake",
+                    () => new FakeRecognitionBackend(
+                        [new SpeechRecognitionResult("make the", IsFinal: false)],
+                        new SpeechRecognitionResult("Make the second box blue.", IsFinal: true)))));
+        var audio = new AudioDeviceService(
+            () => [SpeechTestData.Capture("Desk mic")],
+            () => [],
+            () => { },
+            captureCreator: _ => new WavFileAudioCaptureDevice(wave, 1600));
+        using var composition = ApplicationComposition.Create(
+            logger,
+            settings,
+            new FakeRefreshScheduler(),
+            audioDevices: audio,
+            speechModels: models);
+
+        // Act: ask before a model is chosen, choose the model as the settings page does, ask again, then hold to
+        // talk, let go, and add the words to the message as the chat will
+        var withoutModel = composition.Dictation.CheckAvailability();
+        settings.Update(current => current with { Speech = current.Speech with { SttModelId = "stt-fake" } });
+        var withModel = composition.Dictation.CheckAvailability();
+        var start = await composition.Dictation.BeginAsync(token);
+        var text = await start.Session!.EndAsync(token);
+        var document = new ComposerDocument();
+        var history = new ComposerHistory(document);
+        history.Execute(ComposerEdit.TypeText(document, 0, "Please "));
+        history.Execute(ComposerEdit.Dictate(document, document.Length, text));
+
+        // Assert: the first answer says to choose a model, the second is ready, and the message holds the typed text
+        // and one dictated block
+        Assert.Equal(DictationAvailabilityReason.NoModelChosen, withoutModel.Reason);
+        Assert.Contains("Speech page", withoutModel.Message, StringComparison.Ordinal);
+        Assert.True(withModel.IsAvailable);
+        Assert.Equal("Make the second box blue.", text);
+        Assert.Equal(
+            [new TextSegment("Please ", TextOrigin.Typed), new TextSegment("Make the second box blue.", TextOrigin.Dictated)],
+            document.Snapshot().Segments);
     }
 
     /// <summary>

@@ -662,6 +662,22 @@ reviews:
       - "src/**/SpeechSubsystem/SpeechModelService.cs"
       - "test/**/SpeechSubsystem/SpeechModelServiceTests.cs"
 
+  - id: CanvasPilot-Speech-DictationService
+    title: Review of CanvasPilot DictationService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/dictation-service.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/dictation-service.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/dictation-service.md"
+      - "src/**/SpeechSubsystem/IDictationService.cs"
+      - "src/**/SpeechSubsystem/DictationService.cs"
+      - "test/**/SpeechSubsystem/DictationServiceTests.cs"
+      - "test/**/SpeechSubsystem/DictationTestSupport.cs"
+
   - id: CanvasPilot-Speech-DeviceSelection
     title: Review of CanvasPilot DeviceSelection unit implementation
     context:

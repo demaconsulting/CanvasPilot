@@ -31,5 +31,7 @@ version from the build version (a prerelease suffix cannot be represented and is
 project with that version and the publish folder as properties, and copies the package to
 `CanvasPilot-{version}-win-x64.msi`. The properties reach `Package.wxs` as preprocessor variables. WiX has no
 self-validation mode, so the evidence that it works is the FileAssert test `WiX_MsiPackage` (tag `installer`), run
-against the copied package in the same job; its results file is an input of requirements enforcement. What the
+against the copied package in the same job; its results file is an input of requirements enforcement. The same job
+asserts, with another FileAssert test of the same tag, that the published folder holds the native speech runtime, and a
+step reads the file table of the package to check that the installer took those files. What the
 installed package does is checked by hand before a release. The package is never built or installed by the tests.

@@ -58,6 +58,7 @@ input-files:
   - docs/design/canvas-pilot/speech-subsystem.md
   - docs/design/canvas-pilot/speech-subsystem/audio-device-service.md
   - docs/design/canvas-pilot/speech-subsystem/speech-model-service.md
+  - docs/design/canvas-pilot/speech-subsystem/dictation-service.md
   - docs/design/canvas-pilot/speech-subsystem/device-selection.md
   - docs/design/canvas-pilot/speech-subsystem/model-catalog-panel.md
   - docs/design/canvas-pilot/speech-subsystem/model-parameter-editor.md

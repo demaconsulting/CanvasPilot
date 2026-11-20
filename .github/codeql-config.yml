@@ -18,6 +18,7 @@ query-filters:
       - src/DemaConsulting.CanvasPilot/ProjectSubsystem/RecentProjects.cs
       - src/DemaConsulting.CanvasPilot/SettingsSubsystem/SettingsService.cs
       - src/DemaConsulting.CanvasPilot/SpeechSubsystem/AudioDeviceService.cs
+      - src/DemaConsulting.CanvasPilot/SpeechSubsystem/DictationService.cs
       - src/DemaConsulting.CanvasPilot/SpeechSubsystem/ModelCatalogPanelViewModel.cs
       - src/DemaConsulting.CanvasPilot/SpeechSubsystem/SpeechModelService.cs
   # Exclude path-combine warnings in PathHelpers (validated safe usage)

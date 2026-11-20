@@ -23,6 +23,9 @@ display are required.
   that could be listed and names the refusal, and failures are written to the log.
 - Creating the service does not use the backend, and missing operations are refused.
 - The service over the real backend returns snapshots and does not throw.
+- A usable microphone is returned as the device, with the chosen name passed on; an unavailable device, a backend that
+  throws, and a service without a way to create devices are results with an explanation and no device, and the failure
+  is logged; the real backend creates a device or explains why it cannot, and never throws.
 
 #### Test Scenarios
 
@@ -60,3 +63,22 @@ the audio devices failed." and the failure's message. This scenario is tested by
 **AudioDeviceService_RealBackend_EnumerateAndRefresh_NeverThrow**: The service over the real backend enumerates and
 refreshes. Both calls return snapshots, and a snapshot that is unavailable has no devices and a problem text. This
 scenario is tested by `AudioDeviceService_RealBackend_EnumerateAndRefresh_NeverThrow`.
+
+**AudioDeviceService_CreateCaptureDevice_UsableMicrophone_ReturnsDeviceForChosenName**: A backend creates a working
+device for any name and remembers the name. A microphone is asked for by name. The result has the device, no problem,
+and the name reached the backend unchanged. This scenario is tested by
+`AudioDeviceService_CreateCaptureDevice_UsableMicrophone_ReturnsDeviceForChosenName`.
+
+**AudioDeviceService_CreateCaptureDevice_UnavailableDeviceOrBackendFailure_ReturnsProblem**: One backend hands back the
+library's unavailable device and another throws a missing native library error, the second with a log. Both results have
+no device and an explanation, the first saying that no microphone could be used and the second naming the missing
+library, and the failure is in the log. This scenario is tested by
+`AudioDeviceService_CreateCaptureDevice_UnavailableDeviceOrBackendFailure_ReturnsProblem`.
+
+**AudioDeviceService_CreateCaptureDevice_NoCreatorConfigured_ReturnsProblem**: A service built over operations that only
+list devices is asked for a microphone. The result has no device and an explanation. This scenario is tested by
+`AudioDeviceService_CreateCaptureDevice_NoCreatorConfigured_ReturnsProblem`.
+
+**AudioDeviceService_RealBackend_CreateCaptureDevice_NeverThrows**: The service over the real backend is asked for the
+default microphone. The result has either a device or an explanation, never both and never neither, and the device is
+disposed again. This scenario is tested by `AudioDeviceService_RealBackend_CreateCaptureDevice_NeverThrows`.

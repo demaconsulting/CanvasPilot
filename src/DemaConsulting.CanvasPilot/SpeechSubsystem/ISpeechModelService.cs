@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.Speech.ModelManagementSubsystem;
+using DemaConsulting.Speech.RecognitionSubsystem;
 
 namespace DemaConsulting.CanvasPilot.SpeechSubsystem;
 
@@ -74,11 +75,87 @@ public sealed record SpeechModelDownloadReport(SpeechModelDownloadStatus Status,
 }
 
 /// <summary>
-///     Lists the speech models and downloads them into the shared per-user model store. Failures are results and
-///     messages, never exceptions, so a blocked network or a damaged store cannot crash the application.
+///     Why a speech recognizer could not be loaded.
+/// </summary>
+public enum RecognizerLoadStatus
+{
+    /// <summary>The recognizer is loaded and can create sessions.</summary>
+    Loaded,
+
+    /// <summary>
+    ///     The model is not in the catalog, is not a speech-to-text model, or is not installed in the model store.
+    /// </summary>
+    ModelNotInstalled,
+
+    /// <summary>
+    ///     The model is installed but its speech engine could not be started, for example because the speech runtime
+    ///     failed to load.
+    /// </summary>
+    EngineUnavailable,
+}
+
+/// <summary>
+///     The outcome of loading a speech recognizer: the engine, or the reason there is none.
+/// </summary>
+/// <param name="Status">How the load ended.</param>
+/// <param name="Engine">
+///     The loaded engine, which the caller owns and must dispose, or <see langword="null" /> when
+///     <paramref name="Status" /> is not <see cref="RecognizerLoadStatus.Loaded" />.
+/// </param>
+/// <param name="Problem">The explanation when there is no engine, or an empty string.</param>
+public sealed record RecognizerLoadResult(RecognizerLoadStatus Status, ISpeechRecognizerEngine? Engine, string Problem = "")
+{
+    /// <summary>
+    ///     Gets a value indicating whether an engine was loaded.
+    /// </summary>
+    public bool IsLoaded => Status == RecognizerLoadStatus.Loaded;
+
+    /// <summary>
+    ///     Creates a result for a loaded engine.
+    /// </summary>
+    /// <param name="engine">The engine.</param>
+    /// <returns>The result.</returns>
+    public static RecognizerLoadResult Success(ISpeechRecognizerEngine engine)
+    {
+        return new RecognizerLoadResult(RecognizerLoadStatus.Loaded, engine);
+    }
+
+    /// <summary>
+    ///     Creates a result for an engine that could not be loaded.
+    /// </summary>
+    /// <param name="status">Why; not <see cref="RecognizerLoadStatus.Loaded" />.</param>
+    /// <param name="problem">The explanation.</param>
+    /// <returns>The result.</returns>
+    public static RecognizerLoadResult Failure(RecognizerLoadStatus status, string problem)
+    {
+        return new RecognizerLoadResult(status, null, problem);
+    }
+}
+
+/// <summary>
+///     Lists the speech models, downloads them into the shared per-user model store, and loads the installed
+///     speech-to-text models. Failures are results and messages, never exceptions, so a blocked network, a damaged
+///     store, or a missing speech runtime cannot crash the application.
 /// </summary>
 public interface ISpeechModelService
 {
+    /// <summary>
+    ///     Loads the speech engine of an installed speech-to-text model. Loading is the expensive step of speech
+    ///     recognition, so the caller keeps the engine for as long as it may recognize speech.
+    /// </summary>
+    /// <param name="modelId">The identifier of the speech-to-text model.</param>
+    /// <param name="storedParameters">
+    ///     The stored values of the model's tunable settings as invariant-culture strings, by parameter identifier, or
+    ///     <see langword="null" /> for the model's defaults. A value that is not a value of the parameter is ignored.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the load.</param>
+    /// <returns>The engine, or no engine with the reason; a cancelled token ends in an exception.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken" /> is cancelled.</exception>
+    Task<RecognizerLoadResult> LoadRecognizerAsync(
+        string modelId,
+        IReadOnlyDictionary<string, string>? storedParameters,
+        CancellationToken cancellationToken);
+
     /// <summary>
     ///     Lists the models the catalog knows with their current install state. This reads the local store only and
     ///     does not use the network.

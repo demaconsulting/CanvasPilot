@@ -215,6 +215,104 @@ public sealed class AudioDeviceServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a usable microphone is returned as the device, and that the chosen name reaches the backend
+    ///     unchanged.
+    /// </summary>
+    [Fact]
+    public void AudioDeviceService_CreateCaptureDevice_UsableMicrophone_ReturnsDeviceForChosenName()
+    {
+        // Arrange: a backend that creates a working device for any name, and remembers the name
+        var device = new FakeCaptureDevice();
+        string? requested = null;
+        var service = new AudioDeviceService(
+            () => [],
+            () => [],
+            () => { },
+            captureCreator: name =>
+            {
+                requested = name;
+                return device;
+            });
+
+        // Act: ask for a named microphone
+        var result = service.CreateCaptureDevice("Mic B");
+
+        // Assert: the device is returned and the name was passed on
+        Assert.True(result.IsAvailable);
+        Assert.Same(device, result.Device);
+        Assert.Null(result.Problem);
+        Assert.Equal("Mic B", requested);
+    }
+
+    /// <summary>
+    ///     Test that a device that reports itself unavailable, and a backend that throws, are both a result with an
+    ///     explanation and no device, and that the failure is logged.
+    /// </summary>
+    [Fact]
+    public void AudioDeviceService_CreateCaptureDevice_UnavailableDeviceOrBackendFailure_ReturnsProblem()
+    {
+        // Arrange: one backend that hands back the library's unavailable device and one that throws, with a log
+        var logger = new RollingFileLogger(Path.Combine(_tempRoot, "logs"));
+        var unavailable = new AudioDeviceService(
+            () => [],
+            () => [],
+            () => { },
+            captureCreator: _ => UnavailableAudioCaptureDevice.Instance);
+        var failing = new AudioDeviceService(
+            () => [],
+            () => [],
+            () => { },
+            logger,
+            _ => throw new DllNotFoundException("portaudio is missing"));
+
+        // Act: ask each for the default microphone
+        var noDevice = unavailable.CreateCaptureDevice(null);
+        var failed = failing.CreateCaptureDevice(string.Empty);
+
+        // Assert: no device, an explanation for each, and the failure in the log
+        Assert.False(noDevice.IsAvailable);
+        Assert.Contains("No microphone could be used", noDevice.Problem, StringComparison.Ordinal);
+        Assert.False(failed.IsAvailable);
+        Assert.Contains("portaudio is missing", failed.Problem, StringComparison.Ordinal);
+        Assert.Contains("Creating the capture device failed.", File.ReadAllText(logger.ActiveFilePath), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a service built without a way to create capture devices says that none can be created.
+    /// </summary>
+    [Fact]
+    public void AudioDeviceService_CreateCaptureDevice_NoCreatorConfigured_ReturnsProblem()
+    {
+        // Arrange: a service over backend operations that only list devices
+        var service = new AudioDeviceService(() => [], () => [], () => { });
+
+        // Act: ask for a microphone
+        var result = service.CreateCaptureDevice(null);
+
+        // Assert: no device and an explanation
+        Assert.False(result.IsAvailable);
+        Assert.False(string.IsNullOrWhiteSpace(result.Problem));
+    }
+
+    /// <summary>
+    ///     Test that the service over the real audio backend never throws when asked for a microphone, whatever
+    ///     hardware the machine has, and that a device it returns is released again.
+    /// </summary>
+    [Fact]
+    public void AudioDeviceService_RealBackend_CreateCaptureDevice_NeverThrows()
+    {
+        // Arrange: the service over the real backend
+        var service = new AudioDeviceService();
+
+        // Act: ask for the default microphone
+        var result = service.CreateCaptureDevice(null);
+
+        // Assert: either a usable device or a problem, never both and never neither
+        Assert.True(result.IsAvailable ^ !string.IsNullOrEmpty(result.Problem));
+        (result.Device as IDisposable)?.Dispose();
+    }
+
+    /// <summary>
     ///     Test that the service over the real audio backend never throws, whatever hardware or native library
     ///     the machine has.
     /// </summary>

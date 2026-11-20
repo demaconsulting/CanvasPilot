@@ -2,7 +2,7 @@ package CanvasPilot {
     private import SoftwareItemMetadata::*;
 
     part def SpeechModelService {
-        doc /* Lists the speech library's models with their install state and downloads them into the shared model store, returning every failure as a result. */
+        doc /* Lists the speech library's models with their install state, downloads them into the shared model store, and loads the speech engine of an installed speech-to-text model, returning every failure as a result. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

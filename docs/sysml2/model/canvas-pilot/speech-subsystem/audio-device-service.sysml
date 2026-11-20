@@ -2,7 +2,7 @@ package CanvasPilot {
     private import SoftwareItemMetadata::*;
 
     part def AudioDeviceService {
-        doc /* Lists capture and playback devices through the speech library on demand and returns a missing or unusable audio system as a result with an explanation. */
+        doc /* Lists capture and playback devices through the speech library on demand, creates the capture device of the chosen microphone, and returns a missing or unusable audio system as a result with an explanation. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

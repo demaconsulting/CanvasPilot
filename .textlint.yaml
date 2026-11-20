@@ -67,6 +67,9 @@ words:
   - wixext
   - wixproj
   - premul
+  - onnx
+  - onnxruntime
+  - portaudio
   - sarif
   - Setext
   - shopt

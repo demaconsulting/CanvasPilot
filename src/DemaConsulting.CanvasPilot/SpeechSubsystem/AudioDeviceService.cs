@@ -37,6 +37,19 @@ public sealed class AudioDeviceService : IAudioDeviceService
     private const string UnavailableMessage = "The audio system could not be used.";
 
     /// <summary>
+    ///     Message used when the audio system answered but offered no usable microphone.
+    /// </summary>
+    private const string NoMicrophoneMessage =
+        "No microphone could be used. Connect one, and check that the operating system allows desktop applications "
+        + "to use the microphone.";
+
+    /// <summary>
+    ///     The sample rate, in Hz, that capture devices are asked for. Speech models take 16 kHz mono audio, so asking
+    ///     for it lets the audio system do the conversion from the hardware's own format.
+    /// </summary>
+    private const int CaptureSampleRate = 16000;
+
+    /// <summary>
     ///     Lists the capture devices.
     /// </summary>
     private readonly Func<IReadOnlyList<AudioDeviceDescription>> _captureLister;
@@ -50,6 +63,11 @@ public sealed class AudioDeviceService : IAudioDeviceService
     ///     Makes the backend scan for changed hardware.
     /// </summary>
     private readonly Action _refresher;
+
+    /// <summary>
+    ///     Creates a capture device for a chosen device name.
+    /// </summary>
+    private readonly Func<string?, IAudioCaptureDevice> _captureCreator;
 
     /// <summary>
     ///     The application log, or <see langword="null" /> for none.
@@ -71,6 +89,7 @@ public sealed class AudioDeviceService : IAudioDeviceService
         _captureLister = () => Factory.CaptureProbe.Enumerate();
         _playbackLister = () => Factory.PlaybackProbe.Enumerate();
         _refresher = () => Factory.RefreshDevices();
+        _captureCreator = CreateLibraryCaptureDevice;
     }
 
     /// <summary>
@@ -81,11 +100,16 @@ public sealed class AudioDeviceService : IAudioDeviceService
     /// <param name="playbackLister">Lists the playback devices.</param>
     /// <param name="refresher">Makes the backend scan for changed hardware.</param>
     /// <param name="logger">The application log, or <see langword="null" /> for none.</param>
+    /// <param name="captureCreator">
+    ///     Creates a capture device for a device name, or <see langword="null" /> when the test does not create
+    ///     capture devices; the service then reports that no capture device can be created.
+    /// </param>
     internal AudioDeviceService(
         Func<IReadOnlyList<AudioDeviceDescription>> captureLister,
         Func<IReadOnlyList<AudioDeviceDescription>> playbackLister,
         Action refresher,
-        RollingFileLogger? logger = null)
+        RollingFileLogger? logger = null,
+        Func<string?, IAudioCaptureDevice>? captureCreator = null)
     {
         ArgumentNullException.ThrowIfNull(captureLister);
         ArgumentNullException.ThrowIfNull(playbackLister);
@@ -95,6 +119,8 @@ public sealed class AudioDeviceService : IAudioDeviceService
         _playbackLister = playbackLister;
         _refresher = refresher;
         _logger = logger;
+        _captureCreator = captureCreator
+            ?? (_ => throw new NotSupportedException("This audio backend cannot create capture devices."));
     }
 
     /// <summary>
@@ -106,6 +132,31 @@ public sealed class AudioDeviceService : IAudioDeviceService
     public AudioDeviceSnapshot Enumerate()
     {
         return ListDevices(earlierProblem: null);
+    }
+
+    /// <inheritdoc />
+    public CaptureDeviceResult CreateCaptureDevice(string? deviceName)
+    {
+        try
+        {
+            var device = _captureCreator(deviceName);
+
+            // The library never throws for a missing microphone: it hands back a device that says it is unavailable,
+            // and starting such a device would throw. Turning it into a result here keeps that out of the caller.
+            if (device is { IsAvailable: true })
+            {
+                return new CaptureDeviceResult(device);
+            }
+
+            return CaptureDeviceResult.Unavailable(NoMicrophoneMessage);
+        }
+        catch (Exception ex)
+        {
+            // The native audio library can fail in ways that differ by platform and machine; dictation must still
+            // be able to say what is wrong instead of failing.
+            LogProblem("Creating the capture device failed.", ex);
+            return CaptureDeviceResult.Unavailable(Describe(ex));
+        }
     }
 
     /// <inheritdoc />
@@ -126,6 +177,21 @@ public sealed class AudioDeviceService : IAudioDeviceService
         }
 
         return ListDevices(problem);
+    }
+
+    /// <summary>
+    ///     Creates a capture device through the library factory for the chosen device name.
+    /// </summary>
+    /// <param name="deviceName">The chosen device name, or <see langword="null" /> or empty for the system default.</param>
+    /// <returns>The device, which may report that it is unavailable.</returns>
+    private IAudioCaptureDevice CreateLibraryCaptureDevice(string? deviceName)
+    {
+        // An empty name is how the settings file says "system default", which the library spells as a selection
+        // without a name; a name that no device has any more falls back to the default inside the library.
+        var selection = string.IsNullOrWhiteSpace(deviceName)
+            ? AudioDeviceSelection.SystemDefault
+            : new AudioDeviceSelection(deviceName);
+        return Factory.CreateCaptureDevice(selection, AudioFormat.Mono(CaptureSampleRate));
     }
 
     /// <summary>

@@ -2,8 +2,9 @@
 # Software Unit Requirements for the AudioDeviceService Unit
 #
 # The AudioDeviceService unit lists the machine's audio devices through the Speech library's audio device
-# factory. It is the one place in the application that talks to the audio system. A machine without audio
-# hardware is an ordinary state that is returned as a result, never thrown.
+# factory and creates the capture device that dictation listens through. It is the one place in the application that
+# talks to the audio system. A machine without audio hardware is an ordinary state that is returned as a result,
+# never thrown.
 
 sections:
   - title: CanvasPilot Requirements
@@ -57,3 +58,32 @@ sections:
                 tests:
                   - AudioDeviceService_Constructed_DoesNotTouchAudioSystem
                   - AudioDeviceService_InvalidArguments_Throw
+
+              - id: CanvasPilot-AudioDeviceService-CreateCaptureDevice
+                title: >-
+                  The AudioDeviceService shall create the capture device of the microphone that the user chose by
+                  name, or of the system default microphone when no name is chosen or the chosen one is no longer
+                  connected, in the mono format that speech recognition needs, and shall hand it over not yet started for
+                  the recognition session to start and stop.
+                justification: |
+                  Dictation listens through the microphone that the user chose on the Speech page. A headset that
+                  was unplugged since then must not stop dictation, and speech models take mono audio, so the audio
+                  system is asked for that format and converts from the hardware's own.
+                children:
+                  - CanvasPilot-OTS-Speech-CreateCaptureDevice
+                tests:
+                  - AudioDeviceService_CreateCaptureDevice_UsableMicrophone_ReturnsDeviceForChosenName
+                  - AudioDeviceService_RealBackend_CreateCaptureDevice_NeverThrows
+
+              - id: CanvasPilot-AudioDeviceService-ExplainMissingMicrophone
+                title: >-
+                  The AudioDeviceService shall return a microphone that cannot be used, because the audio system
+                  fails or offers none, as a result with an explanation that names what to check, shall record the
+                  failure in the log, and shall not throw.
+                justification: |
+                  Dictation is pressed in the middle of work, so a machine without a microphone, or one where the
+                  operating system blocks desktop applications from using it, must be answered with what to do and
+                  not with an error.
+                tests:
+                  - AudioDeviceService_CreateCaptureDevice_UnavailableDeviceOrBackendFailure_ReturnsProblem
+                  - AudioDeviceService_CreateCaptureDevice_NoCreatorConfigured_ReturnsProblem

@@ -53,8 +53,9 @@ This document covers the verification design for the following software items:
     - **SettingsDialog** — modal settings window hosting settings pages
     - **AiProviderSettingsPage** — AI provider settings page
   - **Speech** subsystem
-    - **AudioDeviceService** — audio device listing through the Speech library
-    - **SpeechModelService** — speech model listing and downloading through the Speech library
+    - **AudioDeviceService** — audio device listing and capture device creation through the Speech library
+    - **SpeechModelService** — speech model listing, downloading, and engine loading through the Speech library
+    - **DictationService** — dictation: speech held to talk into text, with the native runtime checked first
     - **DeviceSelection** — microphone and speaker pickers
     - **ModelCatalogPanel** — speech model lists with downloads
     - **ModelParameterEditor** — editors for the tunable settings of a model
@@ -74,7 +75,7 @@ This document covers the verification design for the following software items:
 - **ReviewMark** — file review enforcement tool
 - **SarifMark** — SARIF report conversion tool
 - **SonarMark** — SonarCloud quality report tool
-- **Speech** — audio device and speech model library
+- **Speech** — audio device, speech model, and speech recognition library, with its native runtime
 - **SysML2Tools** — architecture model validation and diagram rendering tool
 - **VersionMark** — tool-version documentation tool
 - **WeasyPrint** — HTML-to-PDF conversion tool
@@ -86,8 +87,8 @@ The following topics are out of scope:
 - Verification documents are not produced for the test projects themselves — they are the
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
-- The AI chat, the agent, and the speech engines are not part of this increment, and so are not verified; only the
-  stored settings that they will read are
+- The AI chat and the agent are not part of this increment, and so are not verified; only the stored settings that they
+  will read are. The talk button and key that call dictation are added by a later step
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified
@@ -129,11 +130,13 @@ Each requirement is verified at the level of the item that owns it:
   proven by running the startup test on each supported platform and runtime.
 - **User interface tests** run the real views in the Avalonia headless platform.
 - **OTS tests and assertions** qualify the OTS items: the OTS tests of the runtime libraries, FileAssert assertions for
-  generated documents, diagrams, and the MSI package, and the self-validation of the tools that have it.
+  generated documents, diagrams, the MSI package, and the native speech runtime in the published application, and the
+  self-validation of the tools that have it.
 
 Checks that cannot be automated are described in the verification document of the item they concern and are performed
-before each release: the installed package (install, upgrade, shortcut, and closing a running instance), the operating
-system file pickers and clipboard, and a real speech model download. They are not evidence for a requirement.
+before each release: the installed package (install, upgrade, shortcut, closing a running instance, and the native
+speech files in the installed folder), the operating system file pickers and clipboard, a real speech model download,
+and dictating with a real microphone and a real model. They are not evidence for a requirement.
 
 ## Companion Artifact Structure
 

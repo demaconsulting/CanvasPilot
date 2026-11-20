@@ -6,7 +6,7 @@ specifics of each individual OTS item. The OTS items are:
 
 - **Runtime libraries** that are part of the delivered application: Avalonia (user interface framework),
   CommunityToolkit.Mvvm (view model source generators), CanvasNet (draws image source files), and Speech
-  (audio devices and speech models).
+  (audio devices, speech models, and speech recognition).
 - **Packaging tool**: WiX Toolset, which builds the Windows installer package.
 - **Test framework**: xUnit, which runs the unit, user interface, and OTS tests.
 - **Compliance, documentation, and analysis tools** that run in the build pipeline: BuildMark, FileAssert, Pandoc,
@@ -82,7 +82,8 @@ The following OTS items have integration design documentation:
 - ReviewMark (*reviewmark.md*) — file review enforcement tool
 - SarifMark (*sarifmark.md*) — SARIF report conversion tool
 - SonarMark (*sonarmark.md*) — SonarCloud quality report tool
-- Speech (*speech.md*) — runtime library for audio devices, speech models, and their parameters
+- Speech (*speech.md*) — runtime library for audio devices, speech models, speech recognition, and the native speech
+  runtime
 - SysML2Tools (*sysml2tools.md*) — architecture model validation and diagram rendering tool
 - VersionMark (*versionmark.md*) — tool-version documentation tool
 - WeasyPrint (*weasyprint.md*) — HTML-to-PDF conversion tool

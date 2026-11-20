@@ -9,8 +9,8 @@
 #
 # NOTE: The system requirements cover operational logging, safe file handling, persisted user settings, AI provider
 # and speech configuration, projects, image browsing and file management, preview and export, marking pictures,
-# composing a message, the desktop shell, the Windows installer, and application startup. The AI chat itself is not yet
-# covered.
+# composing a message, dictating a message, the speech runtime in the installed application, the desktop shell, the
+# Windows installer, and application startup. The AI chat itself is not yet covered.
 
 sections:
   - title: CanvasPilot Requirements
@@ -294,6 +294,42 @@ sections:
           - CanvasPilot-Composer-StageAttachmentsAtSend
         tests:
           - CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend
+
+      - id: CanvasPilot-System-DictateMessage
+        title: >-
+          The application shall let the user dictate part of a message by holding a talk button or key: while it is
+          held the application listens with the speech model and microphone chosen in the settings and shows the
+          words as they are recognized, and when it is released the words are added to the message as one block of
+          dictated text; when dictation cannot work, the application shall say why and what to do about it instead
+          of failing.
+        tags: [system]
+        justification: |
+          Speaking is quicker than typing for describing what is wrong with a picture, and the user's hands are often
+          on the pointer while pointing at it. Showing the words as they come lets the user see at once that they are
+          understood, and adding them as one block lets a mistake in a whole dictation be undone in one step. Speech
+          depends on a downloaded model, a microphone, and files that the application ships, and any of them can be
+          missing on a user's machine, so each case must say what to do. The chat panel and the talk key that call
+          this capability are added in a later step; this requirement states the part that exists.
+        children:
+          - CanvasPilot-Speech-DictateWhileHeld
+          - CanvasPilot-Speech-ExplainDictationUnavailable
+        tests:
+          - CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable
+
+      - id: CanvasPilot-System-SelfContainedSpeechRuntime
+        title: >-
+          The installed Windows application shall contain everything that is needed to run the speech model the user
+          chooses, so that only the download of the model itself remains for the user to do.
+        tags: [system]
+        justification: |
+          Users install the application with one installer and cannot be expected to find and install native speech
+          libraries. A speech engine that is started without them can fail without an explanation or can even bring
+          the whole application down, so the installed application must carry them and the delivery must be checked
+          with every build.
+        children:
+          - CanvasPilot-Speech-ShipSpeechRuntime
+        tests:
+          - windows@Speech_NativeRuntimePublished
 
       - id: CanvasPilot-System-DesktopShell
         title: >-

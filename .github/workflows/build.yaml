@@ -196,7 +196,9 @@ jobs:
       # This section publishes the self-contained win-x64 application and builds the MSI installer.
       # It runs on the Windows leg only, because the Windows Installer format is a Windows-only
       # dependency. The installer project is not part of the solution, so it is built explicitly.
-      # FileAssert asserts the package, and its TRX is the WiX OTS evidence that ReqStream consumes.
+      # FileAssert asserts the package and the native speech runtime in the published output (both are tagged
+      # "installer" and run by one step), and its TRX is the WiX OTS evidence and the speech runtime evidence that
+      # ReqStream consumes. A separate step reads the MSI file table, which proves that the files are in the package.
       # Downstream projects: Add any additional packaging steps here.
 
       - name: Publish self-contained build (win-x64)
@@ -248,7 +250,37 @@ jobs:
           Copy-Item "src/DemaConsulting.CanvasPilot.Installer/bin/x64/Release/*.msi" `
             "package/CanvasPilot-${{ inputs.version }}-win-x64.msi"
 
-      - name: Assert MSI installer with FileAssert
+      - name: Check MSI file table for the native speech runtime
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # The speech engine cannot run, and can even crash the process, without the native inference,
+          # Sherpa, and audio libraries beside the application, so the delivered package must contain
+          # them. The installer harvests publish/win-x64, and this reads what the MSI actually lists in
+          # its File table (names are stored as "short|long", so the long name is the one that counts).
+          $required = @('onnxruntime.dll', 'sherpa-onnx-c-api.dll', 'portaudio.dll')
+          $msi = (Resolve-Path "package/CanvasPilot-${{ inputs.version }}-win-x64.msi").Path
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $database = $installer.GetType().InvokeMember('OpenDatabase', 'InvokeMethod', $null, $installer, @($msi, 0))
+          $view = $database.GetType().InvokeMember('OpenView', 'InvokeMethod', $null, $database, @('SELECT FileName FROM File'))
+          $view.GetType().InvokeMember('Execute', 'InvokeMethod', $null, $view, $null)
+          $files = @()
+          while ($true) {
+            $record = $view.GetType().InvokeMember('Fetch', 'InvokeMethod', $null, $view, $null)
+            if ($null -eq $record) { break }
+            $name = $record.GetType().InvokeMember('StringData', 'GetProperty', $null, $record, @(1))
+            $files += ($name -split '\|')[-1]
+          }
+          $view.GetType().InvokeMember('Close', 'InvokeMethod', $null, $view, $null)
+          Write-Host "MSI file table lists $($files.Count) files: $($files -join ', ')"
+          $missing = $required | Where-Object { $files -notcontains $_ }
+          if ($missing) {
+            Write-Error "The MSI does not contain the native speech runtime file(s): $($missing -join ', ')"
+            exit 1
+          }
+          Write-Host "✓ MSI contains the native speech runtime: $($required -join ', ')"
+
+      - name: Assert MSI installer and native speech runtime with FileAssert
         if: matrix.os == 'windows-latest'
         run: >
           dotnet fileassert

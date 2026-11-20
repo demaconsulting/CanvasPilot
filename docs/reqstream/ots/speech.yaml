@@ -1,10 +1,12 @@
 ---
 # Speech OTS Software Requirements
 #
-# Requirements for the DemaConsulting.Speech library and its DemaConsulting.Speech.Sherpa model package as used by
-# CanvasPilot at run time. The libraries are runtime dependencies, so each requirement is a child of the
-# requirement of the unit that uses the feature (AudioDeviceService, SpeechModelService, and ModelParameterEditor)
-# and is not a root requirement.
+# Requirements for the DemaConsulting.Speech library and its DemaConsulting.Speech.Sherpa model package, and the
+# native speech and audio runtime that arrives with them, as used by CanvasPilot at run time. The libraries are runtime
+# dependencies, so each requirement is a child of the requirement of the unit that uses the feature
+# (AudioDeviceService, SpeechModelService, DictationService, and ModelParameterEditor) or, for the native runtime that
+# the installed application must contain, of the Speech subsystem requirement for shipping it, and is not a root
+# requirement.
 
 sections:
   - title: OTS Software Requirements
@@ -73,3 +75,62 @@ sections:
             tags: [ots]
             tests:
               - Speech_AudioDeviceFactory_DefaultDevicesAndRefresh_ToleratesMissingHardware
+
+          - id: CanvasPilot-OTS-Speech-CreateCaptureDevice
+            title: >-
+              The Speech library shall create a capture device for a chosen microphone name, or for the system
+              default, in a requested mono format, and shall answer a name that no device has, or a machine without
+              audio hardware, with a device that reports whether it is usable and not with an exception.
+            justification: |
+              Dictation listens through the microphone that the user chose, which can have been unplugged since. The
+              application relies on the library to fall back to the default microphone, or to say honestly that there
+              is none, so that pressing the talk control always ends in either listening or an explanation.
+            tags: [ots]
+            tests:
+              - Speech_AudioDeviceFactory_CreateCaptureDevice_UnknownNameInMonoFormat_ReturnsDeviceWithoutThrowing
+
+          - id: CanvasPilot-OTS-Speech-RecognizeStreamingSpeech
+            title: >-
+              The Speech library shall stream the results of recognizing audio from a capture device as provisional
+              results that are followed by a final result, shall finish the audio that it has already received when
+              its session is stopped, and shall end the stream of results after the stop.
+            justification: |
+              Dictation shows the words while the user holds the talk control and adds the final text when the user
+              lets go. This depends on the library delivering the provisional results as they arise, on the stop
+              finishing what was heard instead of discarding it, and on the stream ending so that the release can
+              complete. The test drives the library's own recognition pipeline with a recognition backend written in
+              managed code and a sound file as the microphone, so it needs no model, no microphone, and no native
+              speech runtime; recognizing real speech with a real model is checked by hand before a release.
+            tags: [ots]
+            tests:
+              - Speech_RecognizerFactory_ManagedBackend_StreamsProvisionalThenFinalResultsAndDrainsOnStop
+
+          - id: CanvasPilot-OTS-Speech-DegradeWithoutModelOrRuntime
+            title: >-
+              The Speech library shall answer a request for a recognizer of a model that is not installed with an
+              unavailable engine and an unavailable session, and shall not throw and shall load no native speech
+              runtime for it.
+            justification: |
+              The application tells the user that the model is missing instead of failing, and relies on a missing
+              model never reaching the native speech runtime, which is where a damaged installation can crash the
+              process. The case of a model that is installed while the native files are missing is prevented by the
+              application's own check of the files, because the library cannot be asked to survive it.
+            tags: [ots]
+            tests:
+              - Speech_RecognizerFactory_ModelNotInstalled_ReturnsUnavailableEngineWithoutThrowing
+
+          - id: CanvasPilot-OTS-Speech-DeliverNativeRuntime
+            title: >-
+              The packages of the Speech library shall deliver the native speech inference runtime, the Sherpa
+              interface to it, and the native audio library for 64-bit Windows to the output folder of a build of the
+              application, and they shall load from there as the modules of the process.
+            justification: |
+              The application ships no native speech files of its own. The installed application is as complete as the
+              output folder of its build, so the packages must put the files there. The test loads each file from the
+              output folder and checks that the process then holds that copy of each, because Windows has an older
+              inference runtime in its system folder that crashes the process when it is loaded instead of the
+              application's. The installed layout is asserted separately on the published output and in the
+              installer.
+            tags: [ots]
+            tests:
+              - windows@Speech_NativeRuntime_WindowsLibraries_AreDeliveredAndLoadFromTheApplicationFolder

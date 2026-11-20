@@ -18,14 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Globalization;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
+using DemaConsulting.Speech.Diagnostics;
 using DemaConsulting.Speech.ModelManagementSubsystem;
+using DemaConsulting.Speech.RecognitionSubsystem;
 using DemaConsulting.Speech.Sherpa;
 
 namespace DemaConsulting.CanvasPilot.SpeechSubsystem;
 
 /// <summary>
-///     Lists and downloads speech models through the DemaConsulting.Speech library's
+///     Lists, downloads, and loads speech models through the DemaConsulting.Speech library's
 ///     <see cref="SpeechModelCatalog" />, filled with the models of the Sherpa package. The catalog uses the
 ///     library's default model store, which is shared with other DEMA Consulting applications. The catalog is
 ///     created on first use and released by <see cref="Dispose" />.
@@ -36,6 +39,12 @@ public sealed class SpeechModelService : ISpeechModelService, IDisposable
     ///     Creates the catalog on first use.
     /// </summary>
     private readonly Func<SpeechModelCatalog> _catalogFactory;
+
+    /// <summary>
+    ///     Loads the engine of an installed speech-to-text model; the library's recognizer factory in the running
+    ///     application.
+    /// </summary>
+    private readonly Func<IRecognitionModel, SpeechModelCatalog, ISpeechDiagnostics, IReadOnlyDictionary<string, object>?, CancellationToken, Task<ISpeechRecognizerEngine>> _recognizerLoader;
 
     /// <summary>
     ///     The application log, or <see langword="null" /> for none.
@@ -67,12 +76,20 @@ public sealed class SpeechModelService : ISpeechModelService, IDisposable
     /// </summary>
     /// <param name="catalogFactory">Creates the catalog.</param>
     /// <param name="logger">The application log, or <see langword="null" /> for none.</param>
-    internal SpeechModelService(Func<SpeechModelCatalog> catalogFactory, RollingFileLogger? logger = null)
+    /// <param name="recognizerLoader">
+    ///     Loads the engine of a speech-to-text model, or <see langword="null" /> for the library's recognizer
+    ///     factory. Tests substitute it so that no native speech runtime is loaded.
+    /// </param>
+    internal SpeechModelService(
+        Func<SpeechModelCatalog> catalogFactory,
+        RollingFileLogger? logger = null,
+        Func<IRecognitionModel, SpeechModelCatalog, ISpeechDiagnostics, IReadOnlyDictionary<string, object>?, CancellationToken, Task<ISpeechRecognizerEngine>>? recognizerLoader = null)
     {
         ArgumentNullException.ThrowIfNull(catalogFactory);
 
         _catalogFactory = catalogFactory;
         _logger = logger;
+        _recognizerLoader = recognizerLoader ?? SpeechRecognizerFactory.LoadAsync;
     }
 
     /// <inheritdoc />
@@ -120,6 +137,92 @@ public sealed class SpeechModelService : ISpeechModelService, IDisposable
         }
     }
 
+    /// <inheritdoc />
+    public async Task<RecognizerLoadResult> LoadRecognizerAsync(
+        string modelId,
+        IReadOnlyDictionary<string, string>? storedParameters,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(modelId);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // Step 1: find the model and make sure it is a speech-to-text model that is installed, because the library
+        // answers a missing model with an unavailable engine that says nothing about why.
+        SpeechModelCatalog catalog;
+        SpeechModelDescriptor? descriptor;
+        try
+        {
+            catalog = GetCatalog();
+            descriptor = catalog.Enumerate().FirstOrDefault(model => string.Equals(model.Id, modelId, StringComparison.Ordinal));
+        }
+        catch (Exception ex)
+        {
+            LogProblem("Listing the speech models to load a recognizer failed.", ex);
+            return RecognizerLoadResult.Failure(
+                RecognizerLoadStatus.ModelNotInstalled,
+                $"The speech models could not be listed. {ex.Message}".TrimEnd());
+        }
+
+        if (descriptor is null)
+        {
+            return RecognizerLoadResult.Failure(
+                RecognizerLoadStatus.ModelNotInstalled,
+                $"The speech model '{modelId}' is not known.");
+        }
+
+        if (descriptor.Model is not IRecognitionModel model)
+        {
+            return RecognizerLoadResult.Failure(
+                RecognizerLoadStatus.ModelNotInstalled,
+                $"The speech model '{descriptor.DisplayName}' is not a speech-to-text model.");
+        }
+
+        if (descriptor.State != SpeechModelState.Downloaded)
+        {
+            return RecognizerLoadResult.Failure(
+                RecognizerLoadStatus.ModelNotInstalled,
+                $"The speech model '{descriptor.DisplayName}' is not downloaded.");
+        }
+
+        // Step 2: load the engine. The library reports an absent native runtime as an unavailable engine, but a
+        // damaged model or an invalid parameter can still throw, and none of that may reach the user as a crash.
+        ISpeechRecognizerEngine engine;
+        try
+        {
+            engine = await _recognizerLoader(
+                model,
+                catalog,
+                new LogSpeechDiagnostics(_logger),
+                ToParameterValues(model, storedParameters),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Only the caller's own cancellation is a cancellation; anything else is a failure to load.
+            throw;
+        }
+        catch (Exception ex)
+        {
+            LogProblem($"Loading the speech model '{modelId}' failed.", ex);
+            return RecognizerLoadResult.Failure(
+                RecognizerLoadStatus.EngineUnavailable,
+                $"The speech engine of '{descriptor.DisplayName}' could not be loaded. {ex.Message}".TrimEnd());
+        }
+
+        // Step 3: an engine that says it is unavailable cannot recognize anything, so it is not handed on.
+        if (!engine.IsAvailable)
+        {
+            await DisposeEngineAsync(engine).ConfigureAwait(false);
+            LogProblem($"The speech engine of '{modelId}' is unavailable.", null);
+            return RecognizerLoadResult.Failure(
+                RecognizerLoadStatus.EngineUnavailable,
+                $"The speech engine of '{descriptor.DisplayName}' could not be started. "
+                + "The speech runtime may be missing or damaged.");
+        }
+
+        return RecognizerLoadResult.Success(engine);
+    }
+
     /// <summary>
     ///     Releases the catalog if it was created.
     /// </summary>
@@ -133,6 +236,52 @@ public sealed class SpeechModelService : ISpeechModelService, IDisposable
         _disposed = true;
         _catalog?.Dispose();
         _catalog = null;
+    }
+
+    /// <summary>
+    ///     Converts the stored parameter values, which are invariant-culture strings, into the typed values that the
+    ///     library takes, by the same rules as the model parameter editor: a number is clamped to its range and
+    ///     rounded when it is a whole number, a choice must be one of the options, and a switch must be true or
+    ///     false. A value that is none of these is left out, so that the model's default applies.
+    /// </summary>
+    /// <param name="model">The model, whose declared parameters decide each value's type.</param>
+    /// <param name="stored">The stored values by parameter identifier, or <see langword="null" />.</param>
+    /// <returns>The typed values, or <see langword="null" /> when there are none.</returns>
+    internal static IReadOnlyDictionary<string, object>? ToParameterValues(
+        ISpeechModel model,
+        IReadOnlyDictionary<string, string>? stored)
+    {
+        if (stored is null || stored.Count == 0)
+        {
+            return null;
+        }
+
+        var values = new Dictionary<string, object>(StringComparer.Ordinal);
+        foreach (var parameter in model.Parameters)
+        {
+            if (!stored.TryGetValue(parameter.Id, out var text) || text is null)
+            {
+                continue;
+            }
+
+            switch (parameter)
+            {
+                case NumericParameter numeric
+                    when double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)
+                         && double.IsFinite(number):
+                    var clamped = Math.Clamp(number, numeric.Minimum, numeric.Maximum);
+                    values[parameter.Id] = numeric.IsInteger ? Math.Round(clamped, MidpointRounding.AwayFromZero) : clamped;
+                    break;
+                case ChoiceParameter choice when choice.Options.Any(option => string.Equals(option.Value, text, StringComparison.Ordinal)):
+                    values[parameter.Id] = text;
+                    break;
+                case BooleanParameter when bool.TryParse(text, out var flag):
+                    values[parameter.Id] = flag;
+                    break;
+            }
+        }
+
+        return values.Count == 0 ? null : values;
     }
 
     /// <summary>
@@ -192,8 +341,8 @@ public sealed class SpeechModelService : ISpeechModelService, IDisposable
     ///     Writes a warning to the log when there is one; logging never fails the caller.
     /// </summary>
     /// <param name="message">The message.</param>
-    /// <param name="exception">The failure.</param>
-    private void LogProblem(string message, Exception exception)
+    /// <param name="exception">The failure, or <see langword="null" /> when the problem is not an exception.</param>
+    private void LogProblem(string message, Exception? exception)
     {
         try
         {
@@ -202,6 +351,52 @@ public sealed class SpeechModelService : ISpeechModelService, IDisposable
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Best effort: diagnostics must not make a model problem worse.
+        }
+    }
+
+    /// <summary>
+    ///     Releases an engine that is not handed on; a failure to release it is only logged.
+    /// </summary>
+    /// <param name="engine">The engine.</param>
+    /// <returns>A task that completes when the engine is released.</returns>
+    private async Task DisposeEngineAsync(ISpeechRecognizerEngine engine)
+    {
+        try
+        {
+            await engine.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            // The engine is being thrown away because it cannot work; a second failure adds nothing for the user.
+            LogProblem("Releasing an unavailable speech engine failed.", ex);
+        }
+    }
+
+    /// <summary>
+    ///     Forwards the speech library's structural diagnostics to the application log. The library promises never to
+    ///     report audio or recognized text through this channel, so it is safe to write to a log that users attach to
+    ///     bug reports.
+    /// </summary>
+    /// <param name="logger">The application log, or <see langword="null" /> for none.</param>
+    private sealed class LogSpeechDiagnostics(RollingFileLogger? logger) : ISpeechDiagnostics
+    {
+        /// <inheritdoc />
+        public void Report(SpeechDiagnosticLevel level, string category, string message)
+        {
+            try
+            {
+                var mapped = level switch
+                {
+                    SpeechDiagnosticLevel.Error => LogLevel.Error,
+                    SpeechDiagnosticLevel.Warning => LogLevel.Warning,
+                    _ => LogLevel.Info,
+                };
+                logger?.Log(mapped, $"Speech library ({category}): {message}");
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Best effort: a full disk must not make speech recognition fail.
+            }
         }
     }
 }

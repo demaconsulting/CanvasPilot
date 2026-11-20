@@ -11,7 +11,9 @@ tests:
 
   # --- INSTALLER ---
   # Runs in the Windows build leg after the MSI is built and copied to package/. The TRX it
-  # produces is consumed by ReqStream as evidence for the WiX Toolset OTS requirement.
+  # produces is consumed by ReqStream as evidence for the WiX Toolset OTS requirement and for the
+  # self-contained speech runtime requirement. The installer harvests every file of publish/win-x64,
+  # so the files asserted there are the files in the MSI; the build also reads the MSI file table.
 
   - name: WiX_MsiPackage
     description: "Windows MSI installer was built by the WiX Toolset"
@@ -20,6 +22,20 @@ tests:
       - pattern: "package/CanvasPilot-*-win-x64.msi"
         count: 1
         min-size: 10000000
+
+  - name: Speech_NativeRuntimePublished
+    description: "Published win-x64 application contains the native speech and audio runtime"
+    tags: [installer]
+    files:
+      - pattern: "publish/win-x64/sherpa-onnx-c-api.dll"
+        count: 1
+        min-size: 1000000
+      - pattern: "publish/win-x64/onnxruntime.dll"
+        count: 1
+        min-size: 10000000
+      - pattern: "publish/win-x64/portaudio.dll"
+        count: 1
+        min-size: 100000
 
   # --- BUILD NOTES ---
 

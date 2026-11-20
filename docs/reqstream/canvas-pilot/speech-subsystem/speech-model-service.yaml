@@ -1,8 +1,8 @@
 ---
 # Software Unit Requirements for the SpeechModelService Unit
 #
-# The SpeechModelService unit lists and downloads speech models through the Speech library's model catalog, which
-# is filled with the Sherpa models and uses the library's default model store that is shared with other DEMA
+# The SpeechModelService unit lists, downloads, and loads speech models through the Speech library's model catalog,
+# which is filled with the Sherpa models and uses the library's default model store that is shared with other DEMA
 # Consulting applications. Failures are returned as results and messages, never thrown.
 
 sections:
@@ -57,3 +57,36 @@ sections:
                   - SpeechModelService_DownloadAsync_UnknownModel_ReturnsFailedWithMessage
                   - SpeechModelService_DescribeFailure_EachOutcome_GivesReasonAndDetail
                   - SpeechModelService_Dispose_RefusesFurtherUseWithResults
+
+              - id: CanvasPilot-SpeechModelService-LoadRecognizer
+                title: >-
+                  The SpeechModelService shall load the speech engine of an installed speech-to-text model with the
+                  values of the model's tunable settings that the user stored, converted to the type of each setting
+                  and kept within its range, shall leave out stored values that are not values of their setting, and
+                  shall hand the engine to its caller to keep, without loading anything for a model that is not
+                  installed.
+                justification: |
+                  Loading the engine is the expensive step of speech recognition, so the caller keeps it. The
+                  settings file stores every value as text, and a value that was valid for an earlier version of a
+                  model must not stop the model from loading, so stored values are converted and brought into range
+                  rather than refused.
+                tests:
+                  - SpeechModelService_LoadRecognizerAsync_InstalledModel_ReturnsEngineWithTypedParameters
+                  - SpeechModelService_ToParameterValues_InvalidOrMissingValues_AreLeftOut
+
+              - id: CanvasPilot-SpeechModelService-ExplainRecognizerFailures
+                title: >-
+                  The SpeechModelService shall return a speech-to-text model that is unknown, of the wrong kind, or not
+                  downloaded, and a speech engine that cannot be started or reports itself unavailable, as a result
+                  that names the reason, shall release an engine that is unavailable, shall write what the speech
+                  library reports to the log, shall end with a cancellation only when the caller cancels, and shall not
+                  throw otherwise.
+                justification: |
+                  Starting the native speech engine can fail in ways that differ by machine. Dictation must tell the
+                  user which of them happened and must not leak an engine that cannot be used, and the library's own
+                  report, which never contains speech, is what support needs to diagnose a machine.
+                tests:
+                  - SpeechModelService_LoadRecognizerAsync_UnknownWrongKindOrNotDownloaded_ReturnsModelNotInstalled
+                  - SpeechModelService_LoadRecognizerAsync_EngineUnavailableOrLoaderThrows_ReturnsEngineUnavailable
+                  - SpeechModelService_LoadRecognizerAsync_LibraryDiagnostics_AreWrittenToTheLog
+                  - SpeechModelService_LoadRecognizerAsync_CancelledOrCatalogBroken_CancelsOrReturnsProblem

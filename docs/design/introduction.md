@@ -33,7 +33,7 @@ Local items:
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
     **ProjectExplorer** units.
   - **Settings** subsystem: **SettingsService**, **SettingsDialog**, and **AiProviderSettingsPage** units.
-  - **Speech** subsystem: **AudioDeviceService**, **SpeechModelService**, **DeviceSelection**,
+  - **Speech** subsystem: **AudioDeviceService**, **SpeechModelService**, **DictationService**, **DeviceSelection**,
     **ModelCatalogPanel**, **ModelParameterEditor**, and **SpeechSettingsPage** units.
   - **Utilities** subsystem: **PathHelpers** unit.
 
@@ -42,7 +42,8 @@ OTS items:
 - **Avalonia**: integration and usage design (runtime user interface framework).
 - **CommunityToolkit.Mvvm**: integration and usage design (runtime view model source generators).
 - **CanvasNet**: integration and usage design (runtime library that draws image source files).
-- **Speech**: integration and usage design (runtime library for audio devices and speech models).
+- **Speech**: integration and usage design (runtime library for audio devices, speech models, and speech recognition,
+  and the native speech runtime that comes with it).
 - **WiX Toolset**: integration and usage design (builds the Windows installer package).
 - **xUnit**: integration and usage design (test framework).
 - **BuildMark**, **FileAssert**, **Pandoc**, **ReqStream**, **ReviewMark**, **SarifMark**, **SonarMark**,
@@ -53,8 +54,9 @@ The following topics are out of scope:
 
 - Design documents are not produced for the test projects, the executable project that starts the application, the
   installer project (which is covered by the WiX Toolset OTS design), or the build pipeline CI configuration
-- The AI chat, the agent, and the speech engines are not part of this increment; the settings that they will read are
-  designed (see the *AI Provider Seam* section of the system design)
+- The AI chat and the agent are not part of this increment; the settings that they will read are
+  designed (see the *AI Provider Seam* section of the system design). The talk button and key and the chat that use
+  dictation are added by a later step
 - The internal design of OTS software items is excluded; only integration and usage design is documented
 
 ## Software Structure

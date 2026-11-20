@@ -40,9 +40,9 @@ public sealed class ApplicationComposition : IDisposable
     private bool _disposed;
 
     /// <summary>
-    ///     The speech model service this composition created and must dispose, or <see langword="null" />.
+    ///     The services this composition created and must dispose, in the order they are disposed.
     /// </summary>
-    private readonly IDisposable? _ownedModelService;
+    private readonly IReadOnlyList<IDisposable> _ownedServices;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ApplicationComposition" /> class.
@@ -53,7 +53,8 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="recentProjects">The recent projects list.</param>
     /// <param name="preview">The preview pane view model.</param>
     /// <param name="shell">The main window view model.</param>
-    /// <param name="ownedModelService">The speech model service the composition created, or <see langword="null" />.</param>
+    /// <param name="dictation">The dictation service.</param>
+    /// <param name="ownedServices">The services the composition created and must dispose.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
         ISettingsService settings,
@@ -61,7 +62,8 @@ public sealed class ApplicationComposition : IDisposable
         IRecentProjects recentProjects,
         PreviewPaneViewModel preview,
         MainWindowShell shell,
-        IDisposable? ownedModelService)
+        IDictationService dictation,
+        IReadOnlyList<IDisposable> ownedServices)
     {
         Logger = logger;
         Settings = settings;
@@ -69,7 +71,8 @@ public sealed class ApplicationComposition : IDisposable
         RecentProjects = recentProjects;
         Preview = preview;
         Shell = shell;
-        _ownedModelService = ownedModelService;
+        Dictation = dictation;
+        _ownedServices = ownedServices;
     }
 
     /// <summary>
@@ -101,6 +104,11 @@ public sealed class ApplicationComposition : IDisposable
     ///     Gets the view model of the main window.
     /// </summary>
     public MainWindowShell Shell { get; }
+
+    /// <summary>
+    ///     Gets the dictation service, which turns speech held to talk into text with the speech settings in effect.
+    /// </summary>
+    public IDictationService Dictation { get; }
 
     /// <summary>
     ///     Creates the units for the running application: the log under the per-user local application data
@@ -139,19 +147,24 @@ public sealed class ApplicationComposition : IDisposable
     ///     Draws the image source files, or <see langword="null" /> for the CanvasNet-based service.
     /// </param>
     /// <param name="audioDevices">
-    ///     Lists the audio devices for the Speech settings page, or <see langword="null" /> for the service over the
-    ///     speech library. Not used when <paramref name="settingsPages" /> is given.
+    ///     Lists the audio devices for the Speech settings page and creates the microphone for dictation, or
+    ///     <see langword="null" /> for the service over the speech library.
     /// </param>
     /// <param name="speechModels">
-    ///     Lists and downloads the speech models for the Speech settings page, or <see langword="null" /> for the
-    ///     service over the speech library's shared model store, which the composition then disposes. Not used when
-    ///     <paramref name="settingsPages" /> is given.
+    ///     Lists and downloads the speech models for the Speech settings page and loads the speech engine for
+    ///     dictation, or <see langword="null" /> for the service over the speech library's shared model store, which
+    ///     the composition then disposes.
     /// </param>
     /// <param name="dragFolder">
     ///     The folder in which the pictures that the user drags out of the preview are written, or
     ///     <see langword="null" /> for a folder in the system's temporary folder (the running application passes
     ///     the per-user local application data folder). Files of earlier runs in it are deleted at start and the
     ///     files of this run when the composition is disposed.
+    /// </param>
+    /// <param name="dictation">
+    ///     The dictation service, or <see langword="null" /> for the service over the speech settings, the speech
+    ///     models, and the audio devices, which the composition then disposes. It touches neither the model store, the
+    ///     audio system, nor the speech engine until dictation is first used.
     /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
@@ -164,7 +177,8 @@ public sealed class ApplicationComposition : IDisposable
         IImageRenderService? renderService = null,
         IAudioDeviceService? audioDevices = null,
         ISpeechModelService? speechModels = null,
-        string? dragFolder = null)
+        string? dragFolder = null,
+        IDictationService? dictation = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -185,34 +199,35 @@ public sealed class ApplicationComposition : IDisposable
         var workspace = new ProjectWorkspaceViewModel(explorer) { Preview = preview };
         var exporter = imageExporter ?? new ImageExporter(preview, renderer, logger);
 
-        // The speech services are created only when the standard pages are, and the one created here is the
-        // composition's to dispose; it touches the model store and the audio system only when the Speech page loads.
-        IDisposable? ownedModelService = null;
-        IReadOnlyList<ISettingsPage> pages;
-        if (settingsPages is not null)
+        // The speech services are shared by the Speech settings page and by dictation. They touch the model store
+        // and the audio system only when they are first used, so creating them costs nothing at startup; the ones
+        // created here are the composition's to dispose, the dictation service before the model service it uses.
+        var owned = new List<IDisposable>();
+        if (speechModels is null)
         {
-            pages = settingsPages;
+            var modelService = new SpeechModelService(logger);
+            speechModels = modelService;
+            owned.Add(modelService);
         }
-        else
-        {
-            if (speechModels is null)
-            {
-                var modelService = new SpeechModelService(logger);
-                ownedModelService = modelService;
-                speechModels = modelService;
-            }
 
-            pages =
-            [
-                new AiProviderSettingsPageViewModel(),
-                new SpeechSettingsPageViewModel(audioDevices ?? new AudioDeviceService(logger), speechModels),
-            ];
+        audioDevices ??= new AudioDeviceService(logger);
+        if (dictation is null)
+        {
+            var dictationService = new DictationService(settings, speechModels, audioDevices, logger);
+            dictation = dictationService;
+            owned.Insert(0, dictationService);
         }
+
+        IReadOnlyList<ISettingsPage> pages = settingsPages ??
+        [
+            new AiProviderSettingsPageViewModel(),
+            new SpeechSettingsPageViewModel(audioDevices, speechModels),
+        ];
 
         var shell = new MainWindowShell(projects, recentProjects, settings, workspace, pages, exporter, defaultProjectsFolder);
 
         logger.Log(LogLevel.Info, "Application started.");
-        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, ownedModelService);
+        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, owned);
     }
 
     /// <inheritdoc />
@@ -227,7 +242,11 @@ public sealed class ApplicationComposition : IDisposable
         Shell.Dispose();
         Preview.Dispose();
         Preview.DragSource?.Purge();
-        _ownedModelService?.Dispose();
+        foreach (var service in _ownedServices)
+        {
+            service.Dispose();
+        }
+
         Logger.Log(LogLevel.Info, "Application stopped.");
     }
 }

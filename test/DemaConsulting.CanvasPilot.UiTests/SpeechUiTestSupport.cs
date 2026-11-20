@@ -51,6 +51,12 @@ internal sealed class FakeAudioDeviceService : IAudioDeviceService
         Refreshes++;
         return Snapshot;
     }
+
+    /// <inheritdoc />
+    public CaptureDeviceResult CreateCaptureDevice(string? deviceName)
+    {
+        return CaptureDeviceResult.Unavailable("The fake audio system has no microphone.");
+    }
 }
 
 /// <summary>
@@ -135,6 +141,15 @@ internal sealed class FakeSpeechModelService : ISpeechModelService
         _pending = pending;
         cancellationToken.Register(() => pending.TrySetResult(new SpeechModelDownloadReport(SpeechModelDownloadStatus.Canceled, "Download canceled.")));
         return pending.Task;
+    }
+
+    /// <inheritdoc />
+    public Task<RecognizerLoadResult> LoadRecognizerAsync(
+        string modelId,
+        IReadOnlyDictionary<string, string>? storedParameters,
+        CancellationToken cancellationToken)
+    {
+        return Task.FromResult(RecognizerLoadResult.Failure(RecognizerLoadStatus.ModelNotInstalled, "The fake service loads no engines."));
     }
 
     /// <summary>

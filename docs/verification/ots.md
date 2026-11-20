@@ -52,7 +52,8 @@ The following OTS items have verification evidence in this section:
 - ReviewMark (*reviewmark.md*) — file review enforcement tool
 - SarifMark (*sarifmark.md*) — SARIF report conversion tool
 - SonarMark (*sonarmark.md*) — SonarCloud quality report tool
-- Speech (*speech.md*) — runtime library for audio devices, speech models, and their parameters
+- Speech (*speech.md*) — runtime library for audio devices, speech models, speech recognition, and the native speech
+  runtime
 - SysML2Tools (*sysml2tools.md*) — architecture model validation and diagram rendering tool
 - VersionMark (*versionmark.md*) — tool-version documentation tool
 - WeasyPrint (*weasyprint.md*) — HTML-to-PDF conversion tool

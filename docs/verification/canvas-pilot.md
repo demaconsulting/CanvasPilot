@@ -15,6 +15,13 @@ disabled default exporter, and only the system tests and the user interface test
 preview, which is also what proves that the two work together. The stored AI provider choices are verified through the
 settings service and the settings dialog; the agent that will use them does not exist yet and has no verification.
 
+Dictation is verified at this level over the speech library's own recognition pipeline with a recognition backend
+written in managed code and a recorded sound file for the microphone, so no native speech runtime, model, or microphone
+is needed. Dictation with a real microphone and a real model, the native speech files in an installed application, and
+the reaction of the application to a blocked microphone or missing native files need a person and an installed package;
+they are checked by hand before each release as listed under *Manual Verification* in the verification of the Speech
+subsystem, together with the checks of the installed package, and are not evidence for a requirement.
+
 ## Test Environment
 
 System tests run under the standard .NET test runner on Windows, Linux, and macOS with the .NET 10
@@ -57,6 +64,11 @@ services, or display is required.
 - Files, folders, pictures, and text that are dropped or pasted become chips and text without anything being opened or
   copied; sending copies them into the project's attachments folder byte for byte, never over another file, within the
   limits of one message; the explorer does not list them.
+- With the speech settings composed as at startup, dictation tells a user who has no model chosen to choose one, and a
+  user who holds the talk control with a model chosen gets the recognized words as text that is added to the message as
+  one dictated block, in order after the typed text.
+- The published win-x64 application contains the native speech and audio runtime libraries and so does the installer
+  package, so that the installed application needs nothing but the model download to run a chosen speech model.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
@@ -186,6 +198,22 @@ and redo brings them back; after sending, the text file, the program, the folder
 in the attachments folder with their exact bytes, the original text file is unchanged, the explorer lists only the
 project's image, and the folder for pasted pictures is empty. This scenario is tested by
 `CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend`.
+
+**CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable**: The application is composed as
+at startup over a model service whose model is installed in a temporary store, with a recognition backend written in
+managed code, and an audio service whose microphone is a recorded sound file. Before a model is chosen, dictation
+reports that none is chosen and names the Speech page. After the model is chosen the way the settings page stores it,
+dictation is available; the user holds the talk control and lets go, and the final text is "Make the second box blue."
+Added to a message after typed text with the dictation edit, the message holds the typed text and one block of dictated
+text, in that order. This scenario is tested by
+`CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable`.
+
+**Speech_NativeRuntimePublished**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the published folder, which the installer takes whole, holds exactly one each of
+`sherpa-onnx-c-api.dll`, `onnxruntime.dll`, and `portaudio.dll`, each of a plausible size, and a following step reads
+the installer package's file table and fails when any of the three is missing. This scenario is tested by
+`Speech_NativeRuntimePublished`, which is run in CI only on Windows and is described in the verification of the Speech
+subsystem and of the Speech OTS item.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the
