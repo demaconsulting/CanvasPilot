@@ -1,0 +1,78 @@
+---
+# Software Unit Requirements for the SettingsDialog Unit
+#
+# The SettingsDialog unit is the modal settings window and its view model. It hosts injected settings
+# pages behind the ISettingsPage contract, so the Settings subsystem does not depend on the subsystems that
+# contribute pages, and saves the pages' working copies only when the user chooses OK or Apply.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Settings Subsystem Requirements
+        sections:
+          - title: SettingsDialog Requirements
+            requirements:
+              - id: CanvasPilot-SettingsDialog-HostPages
+                title: >-
+                  The SettingsDialog shall list the settings pages it is given in a page list, show
+                  the selected page beside it, and load every page from the settings in effect.
+                justification: |
+                  A page list keeps related settings together and lets each subsystem add its own page
+                  without changes to the dialog. Pages are supplied by the caller so the dialog does
+                  not depend on the subsystems that own them.
+                tests:
+                  - SettingsDialogViewModel_New_Pages_LoadsEachPageAndSelectsFirst
+                  - SettingsDialogViewModel_New_NoPages_HasNoSelectionAndIsValid
+                  - SettingsDialogView_Show_ListsPagesAndShowsFirstPageContent
+                  - SettingsDialogView_SelectOtherPage_ShowsItsContent
+
+              - id: CanvasPilot-SettingsDialog-ApplyOrDiscardChanges
+                title: >-
+                  The SettingsDialog shall save the pages' entries merged into the latest settings
+                  when the user chooses OK, which also closes the dialog, or Apply, which leaves it
+                  open, and shall save nothing when the user chooses Cancel.
+                justification: |
+                  Users expect to be able to back out of changes. Merging into the latest settings,
+                  rather than the settings seen when the dialog opened, keeps values changed elsewhere
+                  while the dialog was open.
+                tests:
+                  - SettingsDialogViewModel_Ok_ValidPages_SavesMergedSettingsAndRequestsClose
+                  - SettingsDialogViewModel_Apply_ValidPages_SavesAndKeepsDialogOpen
+                  - SettingsDialogViewModel_Cancel_PendingEdits_DoesNotSaveAndRequestsClose
+                  - SettingsDialogView_OkButton_SavesAndClosesWindow
+                  - SettingsDialogView_ApplyButton_SavesAndKeepsWindowOpen
+                  - SettingsDialogView_CancelButton_ClosesWithoutSaving
+
+              - id: CanvasPilot-SettingsDialog-BlockInvalidSettings
+                title: >-
+                  The SettingsDialog shall disable OK and Apply and save nothing while any page
+                  reports invalid entries, and shall enable them again when every page is valid.
+                justification: |
+                  Invalid values must be corrected at the dialog, where the page can explain the
+                  problem, rather than being stored and failing later.
+                tests:
+                  - SettingsDialogViewModel_Commands_InvalidPage_AreDisabledAndDoNotSave
+                  - SettingsDialogViewModel_PageBecomesValid_EnablesCommands
+                  - SettingsDialogView_InvalidPage_DisablesOkAndApply
+
+              - id: CanvasPilot-SettingsDialog-ReportSaveFailure
+                title: >-
+                  The SettingsDialog shall show a message and stay open when the settings cannot be
+                  saved.
+                justification: |
+                  A user whose settings could not be written must be told, and must keep their
+                  entries so they can retry or cancel.
+                tests:
+                  - SettingsDialogViewModel_Ok_SaveFails_ShowsErrorAndStaysOpen
+
+              - id: CanvasPilot-SettingsDialog-NotifyPagesOnClose
+                title: >-
+                  The SettingsDialog shall tell every page exactly once when the dialog closes, however
+                  it was closed.
+                justification: |
+                  Pages may start background work, such as model downloads, that must stop when the
+                  dialog goes away, whether the user chose OK or Cancel or closed the window.
+                tests:
+                  - SettingsDialogViewModel_Cancel_NotifiesPagesOnce
+                  - SettingsDialogViewModel_NotifyClosed_CalledTwice_NotifiesPagesOnce
+                  - SettingsDialogView_CloseWindow_NotifiesPages

@@ -20,6 +20,10 @@ services, or display is required.
   folder.
 - A file location built from a name that attempts to leave its intended folder is rejected, while a
   name inside the folder is accepted.
+- Settings saved by one run are restored by the next run, and a damaged settings file yields default
+  settings, a kept-aside copy of the file, and a log entry rather than a failure.
+- AI provider choices made in the settings dialog are stored and restored, and unrestricted agent tools
+  remain off unless the user opts in.
 
 ## Test Scenarios
 
@@ -32,6 +36,17 @@ detail. This scenario is tested by `CanvasPilot_OperationalLogging_ApplicationEv
 traversal is combined with a base folder and an `ArgumentException` is thrown; a name inside the folder
 is combined successfully and the result stays under the base folder. This scenario is tested by
 `CanvasPilot_SafeFileHandling_TraversalName_IsRejected`.
+
+**CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage**: Settings with a recent
+project are saved by one service, loaded by a second, and restored; the settings file is then replaced by
+invalid text and loaded by a third service, which yields default settings, leaves a `settings.json.bad` copy,
+and logs the corruption. This scenario is tested by
+`CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage`.
+
+**CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn**: The settings dialog is composed
+over the AI provider page; Ollama, a model name, a context window, and an endpoint are chosen and OK is
+selected; a new service loads those choices and unrestricted agent tools are still off. This scenario is
+tested by `CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn`.
 
 **MainWindowShell_New_TitleIsApplicationName**: The application shell is created on each supported
 platform and runtime and reports the application name as its title, proving the application's managed

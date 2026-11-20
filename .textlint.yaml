@@ -45,6 +45,7 @@ enableGlobDot: true
 # Project-specific technical terms and tool names
 words:
   - Avalonia
+  - axaml
   - canvaspilot
   - Dema
   - demaconsulting

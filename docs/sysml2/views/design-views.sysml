@@ -29,6 +29,12 @@ package CanvasPilot {
         render asInterconnectionDiagram;
     }
 
+    view SettingsSubsystemView {
+        expose SettingsSubsystem;
+        expose SettingsSubsystem::*;
+        render asInterconnectionDiagram;
+    }
+
     view UtilitiesSubsystemView {
         expose UtilitiesSubsystem;
         expose UtilitiesSubsystem::*;

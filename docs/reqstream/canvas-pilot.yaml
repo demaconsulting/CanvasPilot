@@ -7,9 +7,9 @@
 # - System requirements are validated through system-level tests that compose real units
 #   without opening a window
 #
-# NOTE: This file currently covers only the capabilities delivered so far (operational logging
-# and safe file handling). Additional system requirements are added as further subsystems are
-# introduced.
+# NOTE: This file currently covers only the capabilities delivered so far (operational logging,
+# safe file handling, persisted user settings, and AI provider configuration). Additional system
+# requirements are added as further subsystems are introduced.
 
 sections:
   - title: CanvasPilot Requirements
@@ -43,3 +43,33 @@ sections:
           - CanvasPilot-Utilities-SafePaths
         tests:
           - CanvasPilot_SafeFileHandling_TraversalName_IsRejected
+
+      - id: CanvasPilot-System-PersistUserSettings
+        title: >-
+          The application shall remember the user's settings between runs and shall keep working when
+          the stored settings are damaged.
+        tags: [system]
+        justification: |
+          Users expect to configure the application once. A settings file that is damaged, edited by
+          hand, or written by another version must never stop the application from starting or the
+          user from changing settings.
+        children:
+          - CanvasPilot-Settings-PersistUserSettings
+          - CanvasPilot-Settings-ToleratePoorSettingsFiles
+          - CanvasPilot-Settings-EditSettingsInDialog
+        tests:
+          - CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage
+
+      - id: CanvasPilot-System-ConfigureAiProvider
+        title: >-
+          The application shall let the user choose and store which AI provider and model it uses,
+          with unrestricted agent tools off unless the user opts in.
+        tags: [system]
+        justification: |
+          The application's AI assistance can use different providers, and the choice, with its
+          model and limits, belongs to the user. Storing the choices lets them be configured before
+          the assistant is used, and the safe default for unrestricted tools protects the user's files.
+        children:
+          - CanvasPilot-Settings-ConfigureAiProvider
+        tests:
+          - CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn

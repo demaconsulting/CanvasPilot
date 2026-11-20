@@ -1,8 +1,8 @@
 # Introduction
 
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on
-CanvasNet. The current build is an Avalonia desktop application skeleton that contains the Logging
-and Utilities subsystems; further subsystems are added as they are introduced. It covers local
+CanvasNet. The current build is an Avalonia desktop application skeleton that contains the Logging,
+Settings, and Utilities subsystems; further subsystems are added as they are introduced. It covers local
 software items (systems, subsystems, and units) and the OTS software items they consume.
 
 ## Purpose
@@ -20,6 +20,7 @@ Local items:
 
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
   - **Logging** subsystem: **RollingFileLogger** unit.
+  - **Settings** subsystem: **SettingsService**, **SettingsDialog**, and **AiProviderSettingsPage** units.
   - **Utilities** subsystem: **PathHelpers** unit.
 
 OTS items:
@@ -57,6 +58,7 @@ the OTS items listed in Scope above are build-time/pipeline tooling, documented 
 - **src/** - source files and projects
   - **DemaConsulting.CanvasPilot/** - main application library source
     - **LoggingSubsystem/** - local rolling log file subsystem
+    - **SettingsSubsystem/** - persisted settings, settings dialog, and settings pages
     - **UtilitiesSubsystem/** - shared utilities subsystem
 
 ## Document Conventions

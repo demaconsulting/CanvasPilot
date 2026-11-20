@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
+using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.UtilitiesSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
@@ -77,5 +78,59 @@ public sealed class CanvasPilotTests : IDisposable
         // Act / Assert: the location is refused, and a name within the folder is accepted
         Assert.Throws<ArgumentException>(() => PathHelpers.SafePathCombine(_tempRoot, suppliedName));
         Assert.StartsWith(_tempRoot, PathHelpers.SafePathCombine(_tempRoot, "inside.log"), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that user settings written by one run are restored by the next run, and that a damaged settings
+    ///     file does not stop the application from starting.
+    /// </summary>
+    [Fact]
+    public void CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage()
+    {
+        // Arrange: the application's per-user settings folder and log, composed as at startup
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot");
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        new SettingsService(settingsFolder, logger).Save(new AppSettings { RecentProjects = ["C:\\Work\\a.canvaspilot"] });
+
+        // Act: a second run loads the settings, then the file is damaged and a third run loads again
+        var restored = new SettingsService(settingsFolder, logger).Load();
+        File.WriteAllText(Path.Combine(settingsFolder, SettingsService.FileName), "not json");
+        var afterDamage = new SettingsService(settingsFolder, logger).Load();
+
+        // Assert: the saved settings were restored, and the damaged file produced defaults, a kept-aside copy,
+        // and a log entry
+        Assert.Equal(["C:\\Work\\a.canvaspilot"], restored.RecentProjects);
+        Assert.Empty(afterDamage.RecentProjects);
+        Assert.True(File.Exists(Path.Combine(settingsFolder, SettingsService.FileName + ".bad")));
+        Assert.Contains("corrupt", File.ReadAllText(logger.ActiveFilePath));
+    }
+
+    /// <summary>
+    ///     Test that AI provider choices made in the settings dialog are stored with the opt-in tools off by
+    ///     default, and restored on the next run.
+    /// </summary>
+    [Fact]
+    public void CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn()
+    {
+        // Arrange: the settings dialog over the AI provider page, as the application composes it
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot");
+        var service = new SettingsService(settingsFolder);
+        var page = new AiProviderSettingsPageViewModel();
+        var dialog = new SettingsDialogViewModel(service, [page]);
+        page.SelectedProvider = page.Providers[1];
+        page.ModelName = "llama3";
+        page.ContextWindowText = "32768";
+        page.OllamaEndpoint = "http://ollama.example.test:11434";
+
+        // Act: the user chooses OK, and a later run loads the settings
+        dialog.OkCommand.Execute(null);
+        var restored = new SettingsService(settingsFolder).Load().AiProvider;
+
+        // Assert: the choices were stored, and unrestricted agent tools remain off because the user never opted in
+        Assert.Equal(AiProviderKind.Ollama, restored.Provider);
+        Assert.Equal("llama3", restored.ModelName);
+        Assert.Equal(32768, restored.ContextWindowTokens);
+        Assert.Equal("http://ollama.example.test:11434", restored.OllamaEndpoint);
+        Assert.False(restored.UnrestrictedAgentTools);
     }
 }

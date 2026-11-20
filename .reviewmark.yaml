@@ -124,6 +124,72 @@ reviews:
       - "src/**/LoggingSubsystem/RollingFileLogger.cs"
       - "test/**/LoggingSubsystem/RollingFileLoggerTests.cs"
 
+  # CanvasPilot - Settings
+  - id: CanvasPilot-Settings
+    title: Review of CanvasPilot Settings subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem.md"
+      - "docs/verification/canvas-pilot/settings-subsystem.md"
+      - "test/**/SettingsSubsystem/SettingsSubsystemTests.cs"
+
+  - id: CanvasPilot-Settings-SettingsService
+    title: Review of CanvasPilot SettingsService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/settings-subsystem.md
+      - docs/reqstream/canvas-pilot/settings-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem/settings-service.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem/settings-service.md"
+      - "docs/verification/canvas-pilot/settings-subsystem/settings-service.md"
+      - "src/**/SettingsSubsystem/AppSettings.cs"
+      - "src/**/SettingsSubsystem/ISettingsService.cs"
+      - "src/**/SettingsSubsystem/SettingsService.cs"
+      - "test/**/SettingsSubsystem/SettingsServiceTests.cs"
+
+  - id: CanvasPilot-Settings-SettingsDialog
+    title: Review of CanvasPilot SettingsDialog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/settings-subsystem.md
+      - docs/reqstream/canvas-pilot/settings-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem/settings-dialog.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem/settings-dialog.md"
+      - "docs/verification/canvas-pilot/settings-subsystem/settings-dialog.md"
+      - "src/**/SettingsSubsystem/ISettingsPage.cs"
+      - "src/**/SettingsSubsystem/SettingsChoice.cs"
+      - "src/**/SettingsSubsystem/SettingsDialogViewModel.cs"
+      - "src/**/SettingsSubsystem/SettingsDialogView.axaml"
+      - "src/**/SettingsSubsystem/SettingsDialogView.axaml.cs"
+      - "test/**/SettingsSubsystem/SettingsDialogTests.cs"
+      - "test/**/SettingsSubsystem/FakeSettingsPage.cs"
+      - "test/**/SettingsDialogViewTests.cs"
+      - "test/**/SettingsUiTestSupport.cs"
+
+  - id: CanvasPilot-Settings-AiProviderSettingsPage
+    title: Review of CanvasPilot AiProviderSettingsPage unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/settings-subsystem.md
+      - docs/reqstream/canvas-pilot/settings-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem/ai-provider-settings-page.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem/ai-provider-settings-page.md"
+      - "docs/verification/canvas-pilot/settings-subsystem/ai-provider-settings-page.md"
+      - "src/**/SettingsSubsystem/AiProviderSettingsPageViewModel.cs"
+      - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml"
+      - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml.cs"
+      - "test/**/SettingsSubsystem/AiProviderSettingsPageTests.cs"
+      - "test/**/AiProviderSettingsPageViewTests.cs"
+
   # CanvasPilot - Utilities
   - id: CanvasPilot-Utilities
     title: Review of CanvasPilot Utilities subsystem architecture and interfaces
