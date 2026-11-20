@@ -6,7 +6,7 @@ resource-path:
   - docs/verification/canvas-pilot/app-shell-subsystem
   - docs/verification/canvas-pilot/chat-subsystem
   - docs/verification/canvas-pilot/composer-subsystem
-  - docs/verification/canvas-pilot/logging-subsystem
+  - docs/verification/canvas-pilot/knowledge-subsystem  - docs/verification/canvas-pilot/logging-subsystem
   - docs/verification/canvas-pilot/payload-subsystem
   - docs/verification/canvas-pilot/preview-subsystem
   - docs/verification/canvas-pilot/project-subsystem
@@ -38,6 +38,8 @@ input-files:
   - docs/verification/canvas-pilot/composer-subsystem/attachment-intake.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-view-model.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-editor.md
+  - docs/verification/canvas-pilot/knowledge-subsystem.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-catalog.md
   - docs/verification/canvas-pilot/logging-subsystem.md
   - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/verification/canvas-pilot/payload-subsystem.md

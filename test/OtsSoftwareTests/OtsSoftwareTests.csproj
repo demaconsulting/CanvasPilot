@@ -24,6 +24,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- A small help card that the tests of the CanvasNet help catalog add to the library cards, in the layout that
+         the catalog reads from an assembly. WithCulture="false" keeps MSBuild from reading a dotted name as a
+         satellite-resource culture. -->
+    <EmbeddedResource Include="HelpCards\*.md" WithCulture="false"
+                      LogicalName="OtsSoftwareTests.HelpCards/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\DemaConsulting.CanvasPilot\DemaConsulting.CanvasPilot.csproj" />
   </ItemGroup>
 

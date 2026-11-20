@@ -38,7 +38,7 @@ package CanvasPilot {
             }
         }
         part def CanvasNet {
-            doc /* DemaConsulting.CanvasNet.Viewer NuGet dependency (with the DemaConsulting.CanvasNet core library it brings) that draws SVG, diagram, chart, model, document, and raster files to pixels and encodes PNG. */
+            doc /* DemaConsulting.CanvasNet.Viewer NuGet dependency (with the DemaConsulting.CanvasNet core library it brings) that draws SVG, diagram, chart, model, document, and raster files to pixels, encodes PNG, and provides its help as cards that can be filtered by tag and extended. */
 
             metadata info : SoftwareInfo {
                 testFiles = ("test/OtsSoftwareTests/CanvasNetTests.cs");

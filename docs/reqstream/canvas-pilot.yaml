@@ -9,8 +9,9 @@
 #
 # NOTE: The system requirements cover operational logging, safe file handling, persisted user settings, AI provider
 # and speech configuration, projects, image browsing and file management, preview and export, marking pictures,
-# composing a message, dictating a message, the speech runtime in the installed application, the desktop shell, the
-# Windows installer, and application startup. The AI agent that will answer the messages is not covered.
+# composing a message, dictating a message, the speech runtime in the installed application, the drawing knowledge,
+# the desktop shell, the Windows installer, and application startup. The AI agent that will answer the messages is
+# not covered.
 
 sections:
   - title: CanvasPilot Requirements
@@ -407,3 +408,31 @@ sections:
           - CanvasPilot-AppShell-ComposeApplication
         tests:
           - CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell
+
+      - id: CanvasPilot-System-ProvideDrawingKnowledge
+        title: >-
+          The application shall hold, in the program and without a network or an assistant, the knowledge of how to draw
+          with the formats CanvasNet draws and how to work in a CanvasPilot project, as cards that can be looked up by
+          name, searched by words, and written as text for a prompt of an assistant, without the cards about what the
+          program that hosts CanvasNet controls, and without depending on any language model or agent library.
+        tags: [system]
+        justification: |
+          A language model writes good drawing files only when it knows how the drawing library reads them, and the
+          people who use the application want to read the same advice. Taking the cards from the drawing library keeps
+          the advice as current as the library, and adding the application's own cards tells the assistant where files go
+          and how to read the marks the user makes. The assistant is added later and may come from more than one
+          provider, so the knowledge is kept apart from every provider and offered as plain values and text.
+        children:
+          - CanvasPilot-Knowledge-OfferDrawingCards
+          - CanvasPilot-Knowledge-StayProviderNeutral
+
+      - id: CanvasPilot-System-BrowseDrawingKnowledge
+        title: >-
+          The application shall let the user open the drawing knowledge from the Help menu in a window that stays open
+          beside the work, to browse the cards as a tree, search them, read a card with the cards below it and those
+          related to it, and copy its examples.
+        tags: [system]
+        justification: |-
+          The cards are written for the assistant, but they also explain how each format works, and a user who can read
+          them can tell the assistant exactly what is wanted. A window that does not block the application lets the user
+          read a card while working.

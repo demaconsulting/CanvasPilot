@@ -4,7 +4,7 @@
 # Requirements for the DemaConsulting.CanvasNet viewer library (DemaConsulting.CanvasNet.Viewer, with the
 # DemaConsulting.CanvasNet core library it brings) as used by CanvasPilot at run time. The library is a runtime
 # dependency, so each requirement is a child of the requirement of the unit that uses the feature
-# (ImageRenderService, ProjectExplorer, and MarkImageComposer) and is not a root requirement.
+# (ImageRenderService, ProjectExplorer, MarkImageComposer, and KnowledgeCatalog) and is not a root requirement.
 
 sections:
   - title: OTS Software Requirements
@@ -126,3 +126,44 @@ sections:
             tags: [ots]
             tests:
               - CanvasNet_Surface_Crop_CopiesTheRegionIntoAnIndependentSurface
+
+          - id: CanvasPilot-OTS-CanvasNet-ProvideHelpCards
+            title: >-
+              CanvasNet shall provide its help as a tree of cards that is the same on every read, in which each card has a
+              title, a one-line summary, tags, other names, a body that links to other cards and examples, related cards,
+              and examples with their text, and shall find a card by its path or by one of its other names, ignoring case.
+            justification: |
+              The application tells the user and the assistant how to write each drawing format from the help of the
+              drawing library itself, so that the advice is exactly as current as the library that draws the files. It
+              reads the cards through the interface of the library and relies on their parts and on the way cards are
+              found.
+            tags: [ots]
+            tests:
+              - CanvasNet_HelpCatalog_Default_ProvidesCardsWithBodiesRelatedCardsAndExamples
+
+          - id: CanvasPilot-OTS-CanvasNet-FilterHelpCardsByTag
+            title: >-
+              CanvasNet shall give a view of its help cards without the cards that carry given tags, promoting the visible
+              cards below a hidden card, without changing the catalog it was made from, and shall refuse a tag that it
+              does not know.
+            justification: |
+              The help of the library also covers what the program that hosts it controls. The application is that
+              program, so it leaves those cards out of what it offers, and relies on the cards below a hidden card staying
+              available and on a mistyped tag being an error and not an empty result.
+            tags: [ots]
+            tests:
+              - CanvasNet_HelpCatalog_Filter_ExcludedTag_HidesTheCardsAndRefusesUnknownTagsAndExtension
+
+          - id: CanvasPilot-OTS-CanvasNet-ExtendHelpCards
+            title: >-
+              CanvasNet shall add the cards that are embedded in another assembly to its help cards as new trees after
+              its own, resolving their links against the cards of both, without changing the catalog it was made from, and
+              shall refuse to extend a catalog that is filtered.
+            justification: |
+              The application adds its own cards, about working in a project, to the cards of the library and offers them
+              together. They must follow the cards of the library, link to them, and leave the library catalog as it was,
+              and because a filtered view cannot be extended the application has to extend first and filter second.
+            tags: [ots]
+            tests:
+              - CanvasNet_HelpCatalog_Extend_EmbeddedCard_AddsANewRootAndLeavesTheLibraryUnchanged
+              - CanvasNet_HelpCatalog_Filter_ExcludedTag_HidesTheCardsAndRefusesUnknownTagsAndExtension

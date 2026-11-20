@@ -25,6 +25,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The knowledge cards and examples of CanvasPilot, in the layout that CanvasNet's help catalog reads from an
+         assembly: a card is named by its path under Cards, an example by its file name under Examples.
+         WithCulture="false" keeps MSBuild from reading a dotted name as a satellite-resource culture. -->
+    <EmbeddedResource Include="KnowledgeSubsystem\Cards\**\*.md" WithCulture="false"
+                      LogicalName="DemaConsulting.CanvasPilot.Knowledge/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="KnowledgeSubsystem\Examples\*" WithCulture="false"
+                      LogicalName="DemaConsulting.CanvasPilot.Knowledge.Examples.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Expose internal members (e.g. PathHelpers) to the test projects that exercise them
          directly, so tests can reuse the same reviewed helpers as production code. -->
     <InternalsVisibleTo Include="DemaConsulting.CanvasPilot.Tests" />

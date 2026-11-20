@@ -8,15 +8,16 @@ are defined in the CanvasNet OTS Software Requirements document.
 CanvasNet (`DemaConsulting.CanvasNet.Viewer`, with the `DemaConsulting.CanvasNet` core library it depends on) draws the
 image source files of a project to pixels, lists the file types it can draw, confines the files a drawn file may read,
 reports problems with files as descriptive exceptions, honors cancellation, encodes PNG, reports where it drew the
-elements of diagrams, charts, and models, draws an SVG document held in memory, and copies a region of a picture. The
-application relies on each of these behaviors, so each has a requirement and a test.
+elements of diagrams, charts, and models, draws an SVG document held in memory, copies a region of a picture, and
+provides its help as cards that can be filtered by tag and extended with the cards of the application. The application
+relies on each of these behaviors, so each has a requirement and a test.
 
 ### Verification Approach
 
 CanvasNet has no self-validation mode. It is verified by integration tests in `test/OtsSoftwareTests/CanvasNetTests.cs`
 that call the library directly, on temporary folders, with the same calls and options the application uses
 (`CanvasNetViewer.Render` with `FileAccessPolicy.UnderRoots` and `PositionSelection.All`, `CanvasNetViewer.Extensions`,
-`CanvasNetViewer.Render` of a stream, `Surface.Crop`, and `PngCodec.Save`).
+`CanvasNetViewer.Render` of a stream, `Surface.Crop`, `PngCodec.Save`, and `HelpCatalog` with `Filter` and `Extend`).
 The tests are the evidence that the library behaves as the application relies on, and they are run again before a
 version upgrade is accepted. The unit tests of the units that use the library repeat part of this evidence through
 the application's own calls.
@@ -149,3 +150,35 @@ pixel is then changed.
 they were, and does not change when the original changes.
 
 **Requirement coverage**: `CanvasPilot-OTS-CanvasNet-CropSurface`.
+
+#### CanvasNet_HelpCatalog_Default_ProvidesCardsWithBodiesRelatedCardsAndExamples
+
+**Scenario**: The default help catalog is read, and the card of framed figures is found by its path and by its other
+name in another case.
+
+**Expected**: Both ways give the same card, which has a title, a summary, the tag `svg`, a body, related cards, and an
+example named `framed` whose text is an SVG document; the card is below the root card `svg`, and the tree holds the card
+of the flowchart.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ProvideHelpCards`.
+
+#### CanvasNet_HelpCatalog_Filter_ExcludedTag_HidesTheCardsAndRefusesUnknownTagsAndExtension
+
+**Scenario**: The cards that carry the tag for what the host program controls are filtered out of the default catalog,
+an unknown tag is given to the filter, and the filtered view is extended.
+
+**Expected**: The card of errors is found in the library catalog and not in the view, no card of the view has the tag,
+the view is smaller, the card of the codes of errors that is below the hidden card is a root of the view, the unknown
+tag is an argument exception, and the extension of the view is an invalid operation exception.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-FilterHelpCardsByTag` and
+`CanvasPilot-OTS-CanvasNet-ExtendHelpCards`.
+
+#### CanvasNet_HelpCatalog_Extend_EmbeddedCard_AddsANewRootAndLeavesTheLibraryUnchanged
+
+**Scenario**: A small card that is embedded in the test assembly is added to the default catalog.
+
+**Expected**: The card is found by its other name, is the last root, has one related card, and its body has the links to
+a card and to an example written by the function that was given; the catalog that was extended does not hold the card.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ExtendHelpCards`.

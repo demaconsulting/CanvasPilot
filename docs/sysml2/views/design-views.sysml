@@ -47,6 +47,12 @@ package CanvasPilot {
         render asInterconnectionDiagram;
     }
 
+    view KnowledgeSubsystemView {
+        expose KnowledgeSubsystem;
+        expose KnowledgeSubsystem::*;
+        render asInterconnectionDiagram;
+    }
+
     view LoggingSubsystemView {
         expose LoggingSubsystem;
         expose LoggingSubsystem::*;

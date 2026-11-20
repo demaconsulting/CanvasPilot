@@ -1,0 +1,51 @@
+---
+# Knowledge Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Knowledge subsystem
+# - The Knowledge subsystem holds what the drawing assistant and the user need to know to draw with the formats CanvasNet
+#   draws and to work in a CanvasPilot project: a catalog of cards that is taken from the help of CanvasNet and extended
+#   with cards of CanvasPilot, a search of the cards, and the text of cards for the prompt of an assistant. It is kept
+#   apart from every provider of a language model
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Knowledge-OfferDrawingCards
+            title: >-
+              The Knowledge subsystem shall offer, as one tree of cards that is read once and shared, the cards of CanvasNet
+              that tell how to write each drawing format, without the cards about what the program that hosts CanvasNet
+              controls, together with the cards of CanvasPilot about where files go in a project, how to make the picture
+              the user uses, how to read the marks and attachments of a message, and what the user sees.
+            justification: |
+              The assistant writes files, and the user reads the same advice. The cards of CanvasNet are the advice of the
+              library that draws the files, so they are as current as the library; the cards about the options that the
+              program that hosts the library sets would only take room in a prompt, because CanvasPilot is that program.
+              The cards of CanvasPilot say what the library cannot know: the project folder, the picture the user uses, and
+              the marks. Reading the cards once and sharing them keeps the cost of the start low and the answers the same.
+            children:
+              - CanvasPilot-KnowledgeCatalog-ExcludeHostingCards
+              - CanvasPilot-KnowledgeCatalog-ExtendWithApplicationCards
+              - CanvasPilot-KnowledgeCatalog-FindByPathOrAlias
+              - CanvasPilot-KnowledgeCatalog-RewriteLinksToCardIds
+              - CanvasPilot-KnowledgeCatalog-ListExamplesByName
+              - CanvasPilot-KnowledgeCatalog-AgreeWithApplication
+            tests:
+              - KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostingCards
+              - KnowledgeSubsystem_Default_IsOneSharedCatalogReadableFromManyThreads
+
+          - id: CanvasPilot-Knowledge-StayProviderNeutral
+            title: >-
+              The Knowledge subsystem shall offer the knowledge as values and text of its own, with no reference to the
+              help types of CanvasNet in what it offers and to no package of a language model or agent library.
+            justification: |
+              The assistant that will use the knowledge is added later, and which provider it uses is a choice of the user.
+              Knowledge that is tied to a provider could not be offered to another one, and knowledge that exposes the types
+              of the help library would tie every reader to it. Plain values and text can be given to any provider.
+            children:
+              - CanvasPilot-KnowledgeCatalog-ExposeOwnValues
+            tests:
+              - KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage

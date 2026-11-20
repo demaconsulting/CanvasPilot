@@ -9,6 +9,7 @@ needs-review:
   - "README.md"                   # Root README file
   - "requirements.yaml"           # Root requirements file
   - "**/*.cs"                     # All C# source and test files
+  - "src/**/KnowledgeSubsystem/Cards/**/*.md"  # Knowledge cards: they steer the drawing assistant
   - "docs/reqstream/**/*.yaml"    # Requirements files
   - "docs/design/**/*.md"         # Design documentation files
   - "docs/verification/**/*.md"   # Verification documentation files
@@ -410,6 +411,37 @@ reviews:
       - "test/**/ComposerEditorViewTests.cs"
       - "test/**/ComposerEditorSupportTests.cs"
       - "test/**/ComposerUiTestSupport.cs"
+
+  # CanvasPilot - Knowledge
+  - id: CanvasPilot-Knowledge
+    title: Review of CanvasPilot Knowledge subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem.md"
+      - "test/**/KnowledgeSubsystem/KnowledgeSubsystemTests.cs"
+
+  - id: CanvasPilot-Knowledge-KnowledgeCatalog
+    title: Review of CanvasPilot KnowledgeCatalog unit implementation and cards
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-catalog.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-catalog.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-catalog.md"
+      - "src/**/KnowledgeSubsystem/IKnowledgeCatalog.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeCard.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeCatalog.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeExample.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeExampleReference.cs"
+      - "src/**/KnowledgeSubsystem/Cards/**/*.md"
+      - "test/**/KnowledgeSubsystem/KnowledgeCatalogTests.cs"
 
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging

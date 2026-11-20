@@ -1,0 +1,113 @@
+---
+# Software Unit Requirements for the KnowledgeCatalog Unit
+#
+# The KnowledgeCatalog unit builds the tree of knowledge cards of the application: the help cards of CanvasNet extended
+# with the cards of CanvasPilot and then filtered, copied into values of its own, with the links of each body written as
+# the identifiers of cards. It reads only embedded resources and has no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        sections:
+          - title: KnowledgeCatalog Requirements
+            requirements:
+              - id: CanvasPilot-KnowledgeCatalog-ExcludeHostingCards
+                title: >-
+                  The KnowledgeCatalog shall leave out every card that carries the tag of CanvasNet for what the program
+                  that hosts it controls, shall keep the cards below a left-out card as cards of the top level, shall keep
+                  the other cards, and shall refuse a tag that CanvasNet does not know.
+                justification: |
+                  CanvasPilot is the program that hosts CanvasNet and sets those options itself, and the assistant writes
+                  files, so the cards would only take room in a prompt. The cards below a left-out card, such as the codes
+                  of errors below the card of errors, still tell the assistant what it needs, and a mistyped tag must be
+                  an error, not a catalog that keeps everything.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-FilterHelpCardsByTag
+                tests:
+                  - KnowledgeCatalog_Default_NoCardCarriesAnExcludedTag
+                  - KnowledgeCatalog_Default_HostingCardsAreAbsentAndAuthoringCardsRemain
+                  - KnowledgeCatalog_Default_VisibleCardsBelowAHiddenCardArePromotedToRoots
+                  - KnowledgeCatalog_Create_UnknownExcludedTag_ThrowsArgumentException
+                  - KnowledgeCatalog_Create_NullArguments_ThrowArgumentNullException
+
+              - id: CanvasPilot-KnowledgeCatalog-ExtendWithApplicationCards
+                title: >-
+                  The KnowledgeCatalog shall add the cards that are embedded in the application to the cards of CanvasNet
+                  as one tree after the trees of CanvasNet, with every file of the folder of the cards a card of the tree,
+                  and with a title, a summary, tags, and a body for every card.
+                justification: |
+                  The cards of CanvasPilot say where files go, how to make the picture the user uses, how to read the marks
+                  of a message, and what the user sees, which CanvasNet cannot know. A card file that is left out of the
+                  tree, or a card without its parts, would leave the assistant without what the card is for.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ProvideHelpCards
+                  - CanvasPilot-OTS-CanvasNet-ExtendHelpCards
+                tests:
+                  - KnowledgeCatalog_Default_HasTheCanvasPilotCardsAsOneTreeAfterTheLibraryRoots
+                  - KnowledgeCatalog_Default_EveryCardIsComplete
+
+              - id: CanvasPilot-KnowledgeCatalog-FindByPathOrAlias
+                title: >-
+                  The KnowledgeCatalog shall find a card by its path, with segments separated by a slash or by white space,
+                  each the name or another name of a card, ignoring case, shall find no card for a path that names no card
+                  or a card that is left out, and shall give the cards below a card and the cards related to it in order.
+                justification: |
+                  An assistant and a user name cards in the way that comes to mind: a path, a name, a shorter name. Finding
+                  the card in each way, and nothing for a name that is not offered, lets a request be answered or refused
+                  exactly.
+                tests:
+                  - KnowledgeCatalog_Find_PathNameAliasAndCase_FindTheCard
+                  - KnowledgeCatalog_Find_UnknownHiddenOrBlankPath_FindsNothing
+                  - KnowledgeCatalog_GetChildrenAndGetSeeAlso_ReturnTheNamedCardsInOrder
+
+              - id: CanvasPilot-KnowledgeCatalog-RewriteLinksToCardIds
+                title: >-
+                  The KnowledgeCatalog shall write each link in the body of a card as the identifier of the card in code
+                  quotes, or as the name of the example and the identifier of the card that holds it, and shall write a
+                  link to a card that is left out as the plain title of that card.
+                justification: |
+                  A reader of a body that is given to an assistant can follow an identifier with the tool that gives a card,
+                  and cannot follow the bracket syntax of CanvasNet. A link to a card that is not offered must not send the
+                  reader to a place it cannot go.
+                tests:
+                  - KnowledgeCatalog_Default_BodiesHaveLinksWrittenAsCardIds
+                  - KnowledgeCatalog_Default_LinksToHiddenCardsAreNotCardIds
+
+              - id: CanvasPilot-KnowledgeCatalog-ListExamplesByName
+                title: >-
+                  The KnowledgeCatalog shall find the examples of a name in all cards, in a card and the cards below it, or
+                  in the card that a name with a card in front of it selects, ignoring case, shall find every example of
+                  that name where several cards hold one, and shall give the text of each example as the library holds it.
+                justification: |
+                  Examples are named within one tree of cards, so a name such as the sequence diagram is the name of an
+                  example of two formats. The reader must be able to see that and to choose, and the text of an example
+                  must be exactly the file that the library has tested, because a copy that differs is of no use.
+                tests:
+                  - KnowledgeCatalog_FindExamples_SharedNameCardPrefixAndScope_SelectTheExamples
+                  - KnowledgeCatalog_FindExamples_UnknownNameOrCard_FindsNothing
+                  - KnowledgeCatalog_FindExamples_CanvasPilotExamples_AreTheEmbeddedFiles
+                  - KnowledgeCatalog_Default_LibraryExamples_EqualTheLibraryFiles
+
+              - id: CanvasPilot-KnowledgeCatalog-AgreeWithApplication
+                title: >-
+                  The KnowledgeCatalog shall hold cards of CanvasPilot whose statements about the project file, the data
+                  folder, the folder of attachments, the kinds of mark, and the references of a message are those of the
+                  application.
+                justification: |
+                  A card that says where the attachments go, or what a mark is called, steers the assistant. If the
+                  application changes and the card does not, the assistant is steered wrongly, so the statements are
+                  checked against the constants of the application.
+                tests:
+                  - KnowledgeCatalog_Default_CanvasPilotCards_AgreeWithTheApplication
+
+              - id: CanvasPilot-KnowledgeCatalog-ExposeOwnValues
+                title: >-
+                  The KnowledgeCatalog shall offer its cards, examples, and results as values of its own that refer to no
+                  type of the help of CanvasNet, and shall not change after they are built.
+                justification: |
+                  What searches the cards, writes them for a prompt, and shows them must not depend on the help library, so
+                  that it can be tested with small catalogs and used with any provider. Values that cannot change can be
+                  shared between threads without a lock.
+                tests:
+                  - KnowledgeCatalog_Default_PublicTypesReferToNoHelpTypeOfCanvasNetAndCannotBeChanged
