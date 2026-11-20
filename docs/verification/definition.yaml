@@ -57,6 +57,7 @@ input-files:
   - docs/verification/ots/sysml2tools.md
   - docs/verification/ots/versionmark.md
   - docs/verification/ots/weasyprint.md
+  - docs/verification/ots/wix.md
   - docs/verification/ots/xunit.md
 template: template.html
 table-of-contents: true

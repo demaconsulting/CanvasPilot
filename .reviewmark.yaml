@@ -572,6 +572,15 @@ reviews:
       - "docs/verification/ots/speech.md"
       - "test/**/SpeechTests.cs"
 
+  - id: OTS-WiX
+    title: Review of WiX Toolset OTS verification evidence and installer project
+    paths:
+      - "docs/reqstream/ots/wix.yaml"
+      - "docs/design/ots/wix.md"
+      - "docs/verification/ots/wix.md"
+      - "src/DemaConsulting.CanvasPilot.Installer/DemaConsulting.CanvasPilot.Installer.wixproj"
+      - "src/DemaConsulting.CanvasPilot.Installer/Package.wxs"
+
   - id: OTS-Avalonia
     title: Review of Avalonia and CommunityToolkit.Mvvm OTS verification tests
     context:

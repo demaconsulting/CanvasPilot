@@ -94,6 +94,10 @@ coverage.opencover.xml
 # VersionMark captures (generated during CI/CD)
 versionmark-*.json
 
+# Packaging outputs (self-contained publish output and installer packages)
+publish/
+package/
+
 # Temporary files
 *.tmp
 *.temp

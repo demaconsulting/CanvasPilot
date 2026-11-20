@@ -22,5 +22,18 @@ package CanvasPilot {
                 requirementFiles = ("docs/reqstream/ots/speech.yaml");
             }
         }
+        part def WiX {
+            doc /* WiX Toolset v5 (WixToolset.Sdk and the Util extension) that builds the published win-x64 application into the Windows Installer (MSI) package; the installer project is built by CI and is not part of the solution. */
+
+            metadata info : SoftwareInfo {
+                sourceFiles = (
+                    "src/DemaConsulting.CanvasPilot.Installer/DemaConsulting.CanvasPilot.Installer.wixproj",
+                    "src/DemaConsulting.CanvasPilot.Installer/Package.wxs"
+                );
+                designFiles = ("docs/design/ots/wix.md");
+                verificationFiles = ("docs/verification/ots/wix.md");
+                requirementFiles = ("docs/reqstream/ots/wix.yaml");
+            }
+        }
     }
 }

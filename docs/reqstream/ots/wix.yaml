@@ -1,0 +1,26 @@
+---
+# WiX Toolset OTS Software Requirements
+#
+# Requirements for the WiX Toolset (WiX v5 MSBuild SDK) used to build the Windows Installer package of
+# CanvasPilot. WiX is a build-time item that puts the application into the delivered package, so its requirement is a
+# child of the system installer requirement and is not a root requirement. WiX has no self-validation mode; the
+# evidence is the FileAssert test that asserts the package it built.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: WiX Toolset Requirements
+        requirements:
+          - id: CanvasPilot-OTS-WiX-BuildMsiPackage
+            title: >-
+              The WiX Toolset shall build the published self-contained win-x64 application output and the package
+              definition of the installer project into one Windows Installer (MSI) package file.
+            justification: |
+              The Windows installer is the way the application is delivered, and WiX turns the published files and
+              the package definition (per-machine scope, upgrade code, Start Menu shortcut, closing of a running
+              application) into the package. The FileAssert test run in the Windows build leg proves that the
+              package file exists and is not trivially small. What the installed package does is checked by hand
+              before a release.
+            tags: [ots]
+            tests:
+              - WiX_MsiPackage

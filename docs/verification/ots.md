@@ -52,4 +52,5 @@ The following OTS items have verification evidence in this section:
 - SysML2Tools (*sysml2tools.md*) — architecture model validation and diagram rendering tool
 - VersionMark (*versionmark.md*) — tool-version documentation tool
 - WeasyPrint (*weasyprint.md*) — HTML-to-PDF conversion tool
+- WiX Toolset (*wix.md*) — Windows installer package build tool
 - xUnit (*xunit.md*) — unit-testing framework

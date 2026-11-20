@@ -201,6 +201,17 @@ works with its files.
   machine without audio hardware, a blocked network, or an unreadable store is explained on the page and never
   causes a failure.
 
+**Windows Installer Package**: The way the application is delivered.
+
+- *Direction*: Output (built by the release pipeline) and input (to the user's Windows Installer).
+- *Type*: One per-machine, 64-bit MSI file named `CanvasPilot-{version}-win-x64.msi`, built by the WiX Toolset from the
+  installer project, which is not part of the solution.
+- *Format*: The package carries the self-contained single-file `CanvasPilot.exe` publish output, a Start Menu
+  shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version.
+- *Constraints*: Installing a package replaces any installed version, older or newer, and asks a running
+  `CanvasPilot.exe` to close first. The package contains no user data, and uninstalling leaves the user's settings,
+  logs, and projects in place.
+
 **Main Window**: The application's window and menus.
 
 - *Direction*: Input and output.
@@ -220,7 +231,9 @@ with the `DemaConsulting.CanvasNet.Viewer` library, and the `ProjectExplorer` un
 which files are image sources. The `AudioDeviceService` and `SpeechModelService` units list audio devices and speech
 models and download models with the `DemaConsulting.Speech` library and its Sherpa model package, and the speech
 descriptor types are shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items
-(see *OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS design documents.
+(see *OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS design documents. The
+Windows installer package is built from the published application by the WiX Toolset, also documented as an OTS
+item; no run-time item depends on it.
 
 ## Risk Control Measures
 
@@ -338,3 +351,6 @@ failed. On OK or Apply the page merges the choices into the speech section of th
 - A speech model download shall start only on the user's request and shall be cancelled when the settings dialog
   closes.
 - The application shall not reference the native speech engine runtime until a speech engine is loaded.
+- The installer project shall stay outside the solution so that building and restoring the solution never needs the
+  WiX Toolset or Windows; it shall be built only by the Windows build job from the published win-x64 output.
+- The installer shall replace any installed version and shall not write or remove user data.

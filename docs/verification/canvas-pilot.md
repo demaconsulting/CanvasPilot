@@ -34,6 +34,8 @@ services, or display is required.
   its code, and the shown picture can be exported as a valid PNG file.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
+- The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
+  version; installing it is checked by hand before each release.
 - The main window shell creates a project, lists its image files, finds it in the recent projects after a
   restart, and keeps a changed setting across the restart.
 
@@ -100,3 +102,8 @@ creates a project through the New Project dialog; two files are added, one an im
 image and the title names the project. The user changes the AI model name in the settings dialog and the
 application is restarted: the project is in the recent projects menu and the model name is in effect. This
 scenario is tested by `CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip`.
+
+**WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64, builds the
+installer project with the numeric build version, and copies the package, FileAssert asserts that exactly one
+`package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by `WiX_MsiPackage`, which
+is run in CI only and is described in the WiX Toolset OTS verification document.

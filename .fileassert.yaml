@@ -9,6 +9,18 @@
 
 tests:
 
+  # --- INSTALLER ---
+  # Runs in the Windows build leg after the MSI is built and copied to package/. The TRX it
+  # produces is consumed by ReqStream as evidence for the WiX Toolset OTS requirement.
+
+  - name: WiX_MsiPackage
+    description: "Windows MSI installer was built by the WiX Toolset"
+    tags: [installer]
+    files:
+      - pattern: "package/CanvasPilot-*-win-x64.msi"
+        count: 1
+        min-size: 10000000
+
   # --- BUILD NOTES ---
 
   - name: Pandoc_BuildNotesHtml

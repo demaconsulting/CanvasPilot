@@ -9,7 +9,7 @@
 #
 # NOTE: This file currently covers only the capabilities delivered so far (operational logging,
 # safe file handling, persisted user settings, AI provider and speech configuration, projects, image preview and
-# export, the desktop shell, and application startup). Additional system requirements are added as further
+# export, the desktop shell, the Windows installer, and application startup). Additional system requirements are added as further
 # subsystems are introduced.
 
 sections:
@@ -167,6 +167,21 @@ sections:
           - CanvasPilot-AppShell-ShowApplicationInformation
         tests:
           - CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip
+
+      - id: CanvasPilot-System-WindowsInstaller
+        title: >-
+          The application shall be delivered for 64-bit Windows as one self-contained Windows Installer (MSI)
+          package that installs it for all users, adds a Start Menu shortcut, closes a running instance, and
+          replaces earlier versions in place.
+        tags: [system]
+        justification: |
+          Users install a desktop application with the installer their organization already understands. One
+          package that carries the application with its runtime, needs no separate setup, and upgrades in place
+          lets users install and update without administrator knowledge of the application's parts.
+        children:
+          - CanvasPilot-OTS-WiX-BuildMsiPackage
+        tests:
+          - WiX_MsiPackage
 
       - id: CanvasPilot-System-StartApplication
         title: >-

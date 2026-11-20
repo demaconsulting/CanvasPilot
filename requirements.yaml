@@ -41,6 +41,7 @@ includes:
   - docs/reqstream/ots/xunit.yaml
   - docs/reqstream/ots/canvasnet.yaml
   - docs/reqstream/ots/speech.yaml
+  - docs/reqstream/ots/wix.yaml
   - docs/reqstream/ots/reqstream.yaml
   - docs/reqstream/ots/buildmark.yaml
   - docs/reqstream/ots/versionmark.yaml

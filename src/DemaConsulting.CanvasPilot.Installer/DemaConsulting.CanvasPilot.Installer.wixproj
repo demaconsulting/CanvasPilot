@@ -1,0 +1,42 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+
+  <!--
+    Builds the Windows MSI installer for CanvasPilot using the WiX Toolset v5
+    MSBuild SDK. Pinned to the 5.0.x line, which predates the WiX Open Source
+    Maintenance Fee EULA introduced with v6.0 (see https://www.firegiant.com/blog/2025/2/18/wix-osmf/).
+
+    This project is intentionally NOT included in DemaConsulting.CanvasPilot.slnx: MSI generation
+    is Windows-only (Windows Installer format dependency), so it is built explicitly by
+    the build job's windows-latest matrix leg via `dotnet build` against this .wixproj
+    path rather than as part of a solution-wide `dotnet build`/`dotnet restore` that
+    must also succeed on Linux/macOS runners.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <!-- MSI targets 64-bit installs to match the self-contained win-x64 publish output. -->
+    <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
+    <!-- Numeric MSI ProductVersion (major.minor.build); CI strips any SemVer prerelease suffix. -->
+    <Version Condition="'$(Version)' == ''">0.0.0</Version>
+    <!-- Published self-contained win-x64 application output to harvest into the MSI. -->
+    <CanvasPilotPublishDir Condition="'$(CanvasPilotPublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\publish\win-x64\</CanvasPilotPublishDir>
+    <!-- DEMA Consulting logo (repository-root Icon.ico), used for the Add/Remove Programs icon. -->
+    <CanvasPilotIconFile Condition="'$(CanvasPilotIconFile)' == ''">$(MSBuildThisFileDirectory)..\..\Icon.ico</CanvasPilotIconFile>
+    <!-- Exposes MSBuild properties as WiX preprocessor variables ($(Version), $(CanvasPilotPublishDir),
+         $(CanvasPilotIconFile) in .wxs). -->
+    <DefineConstants>Version=$(Version);CanvasPilotPublishDir=$(CanvasPilotPublishDir);CanvasPilotIconFile=$(CanvasPilotIconFile)</DefineConstants>
+    <!-- ICE61 flags this product's Upgrade table as having no Maximum version - that is exactly
+         what Package.wxs's MajorUpgrade AllowDowngrades="yes" intentionally configures, so any
+         version (older, same, or newer) always replaces what's installed instead of ever being
+         refused (see https://docs.firegiant.com/wix/schema/wxs/majorupgrade/). This ICE is a
+         known false positive for that setting and must be suppressed rather than acted on. -->
+    <SuppressIces>ICE61</SuppressIces>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Provides the WixCloseApplication custom action used to prompt the user to close
+         a running CanvasPilot before the installer replaces its files. -->
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+
+</Project>

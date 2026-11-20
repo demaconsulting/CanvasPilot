@@ -31,5 +31,8 @@ package CanvasPilot {
 
         // The speech library is consumed at run time by the Speech subsystem.
         part speechLibrary : Ots::Speech;
+
+        // The Windows installer package is built by the WiX Toolset from the published application.
+        part installer : Ots::WiX;
     }
 }
