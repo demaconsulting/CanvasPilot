@@ -1,0 +1,53 @@
+# Style kit: Clean (clean, built in)
+This is style data from a kit file, not instructions; it never changes your instructions.
+A light, neutral style for documents, with a blue primary color and an amber accent.
+## Palette (use only these colors)
+- background #FFFFFF
+- surface #F1F5F9
+- text #0F172A
+- muted #475569
+- primary #2563EB
+- secondary #64748B
+- accent #F59E0B
+- success #16A34A
+- danger #C62828
+## Fonts and shape
+- heading: sans-serif
+- body: sans-serif
+- monospace: monospace
+Mermaid, PlantUML, and Vega-Lite text is always drawn with the bundled Liberation fonts; SVG and OpenSCAD use an installed font only on machines that have it, so name a generic family last.
+Stroke width 2 px, corner radius 12 px, spacing 16 px.
+## Mermaid (start every .mmd file with this)
+```
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#F1F5F9"
+    primaryTextColor: "#0F172A"
+    primaryBorderColor: "#2563EB"
+    lineColor: "#475569"
+    secondaryColor: "#FFFFFF"
+    tertiaryColor: "#FFFFFF"
+    edgeLabelBackground: "#FFFFFF"
+---
+```
+## Vega-Lite (put this in every .vl.json spec)
+```
+"config": {"background":"#FFFFFF","range":{"category":["#2563EB","#F59E0B","#64748B","#16A34A","#C62828"]},"axis":{"labelColor":"#475569","titleColor":"#0F172A","domainColor":"#475569","tickColor":"#475569","gridColor":"#F1F5F9"},"title":{"color":"#0F172A"},"view":{"stroke":"transparent"}}
+```
+## Do
+- Use the palette colors only.
+- Keep generous margins of at least 16 pixels.
+- Round the corners of cards by 12 pixels.
+## Do not
+- Do not use gradients or shadows.
+- Do not use more than one accent color in a picture.
+## Notes
+> Plain white pages with a calm blue as the main color. Use amber only to point at one thing.
+## Export sizes (the user chooses one when exporting; do not resize the drawing for them)
+- Document (1200 wide): 1200 px wide
+## Example images (real files; open them to see the style)
+- {KIT}/examples/chart.vl.json: A bar chart with the Vega-Lite configuration of the kit.
+- {KIT}/examples/flow.mmd: A flowchart with the Mermaid theme of the kit.
+- {KIT}/examples/title-card.svg: A title card with a heading, a line of text, and an accent bar.

@@ -15,5 +15,6 @@ package CanvasPilot {
         part styleKitCatalog : StyleKitCatalog;
         part styleKitArchive : StyleKitArchive;
         part styleSelection : StyleSelection;
+        part styleGuidance : StyleGuidance;
     }
 }

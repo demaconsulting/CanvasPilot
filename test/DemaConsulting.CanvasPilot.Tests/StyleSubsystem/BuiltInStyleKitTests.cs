@@ -89,6 +89,10 @@ public sealed class BuiltInStyleKitTests : IDisposable
         Assert.All(kit.Examples, e => Assert.True(File.Exists(e.FullPath), e.FullPath));
         Assert.DoesNotContain(kit.Guidance.Do, string.IsNullOrWhiteSpace);
         Assert.NotEmpty(kit.Guidance.Notes);
+
+        // The block that tells an assistant the style of the kit fits the budget whole
+        var entry = new StyleKitEntry(kit, StyleKitLocation.BuiltIn, Path.Combine(BuiltInFolder, id), null, true, false, null, []);
+        Assert.True(StyleGuidance.Build(entry).Length <= StyleGuidance.BudgetCharacters);
     }
 
     /// <summary>

@@ -112,6 +112,10 @@ sections:
               of a kit may come from a source that is not trusted, so it must not be taken for an instruction. A tool that
               reads a file for the assistant must not be made to read other files on the computer, and a tool that answers
               a mistaken call with a message lets the assistant correct itself.
+            children:
+              - CanvasPilot-StyleGuidance-WriteGuidanceBlock
+              - CanvasPilot-StyleGuidance-StayWithinBudget
+              - CanvasPilot-StyleGuidance-ListExampleImagePaths
 
           - id: CanvasPilot-Style-CheckPictures
             title: >-

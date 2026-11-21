@@ -165,8 +165,9 @@ that is found for the id, the shared kit is overridden, and a second copy is ref
 
 **BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning**: Each kit folder beside the test assembly (`clean`,
 `slides-dark`, and `dema`) is read with no issue at all, has the id and the name of the design, the `base` Mermaid
-theme, a Vega-Lite configuration, notes, three examples with captions that are files, and the example names of the
-design. This scenario is tested by `BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning`.
+theme, a Vega-Lite configuration, notes, three examples with captions that are files, the example names of the design,
+and a block of guidance for an assistant that fits its budget. This scenario is tested by
+`BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning`.
 
 **BuiltInStyleKits_ExampleFiles_AreDrawnWithoutErrorOrNote**: The nine example files are drawn by the real render
 service with the folder of their kit as the only folder they may read. Each draw succeeds, has no note, and is larger

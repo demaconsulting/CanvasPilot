@@ -1121,6 +1121,21 @@ reviews:
       - "src/**/StyleSubsystem/StyleSelection.cs"
       - "test/**/StyleSubsystem/StyleSelectionTests.cs"
 
+  - id: CanvasPilot-Style-StyleGuidance
+    title: Review of CanvasPilot StyleGuidance unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-guidance.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-guidance.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-guidance.md"
+      - "src/**/StyleSubsystem/StyleGuidance.cs"
+      - "test/**/StyleSubsystem/StyleGuidanceTests.cs"
+      - "test/**/StyleSubsystem/Golden/clean-guidance.txt"
+
   - id: CanvasPilot-Style-BuiltInStyleKits
     title: Review of CanvasPilot built-in style kits
     context:

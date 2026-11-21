@@ -29,6 +29,11 @@
     <ProjectReference Include="..\..\src\DemaConsulting.CanvasPilot\DemaConsulting.CanvasPilot.csproj" />
   </ItemGroup>
 
+  <!-- Expected texts that tests compare with what the code writes -->
+  <ItemGroup>
+    <None Include="StyleSubsystem\Golden\*.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Makes the test projects run one after the other when `dotnet test` starts their hosts together -->
   <ItemGroup>
     <Compile Include="..\SerializedTestRun.cs" Link="SerializedTestRun.cs" />
