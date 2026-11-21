@@ -493,6 +493,7 @@ sections:
           not silently look different.
         children:
           - CanvasPilot-Style-ChooseActiveKit
+          - CanvasPilot-Project-KeepTheStyleChoice
 
       - id: CanvasPilot-System-ExportAtPresetSizes
         title: >-

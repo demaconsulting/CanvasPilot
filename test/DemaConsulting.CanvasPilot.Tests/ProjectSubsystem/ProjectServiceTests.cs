@@ -615,6 +615,187 @@ public sealed class ProjectServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that setting the style kit of the open project writes its id into the project file, makes it part of the
+    ///     open project, raises the change once, and that reopening the file reads it back.
+    /// </summary>
+    [Fact]
+    public async Task ProjectService_SetActiveStyleKitAsync_ValidId_IsWrittenAndReadBackAfterReopen()
+    {
+        // Arrange: a created project, a later time, and a handler that counts changes
+        Directory.CreateDirectory(Parent);
+        var service = CreateService();
+        var created = (await service.CreateAsync(Parent, "Styled", Ct)).Project!;
+        var later = CreatedTime.AddHours(1);
+        _clock.UtcNow = later;
+        var changes = 0;
+        service.CurrentChanged += (_, _) => changes++;
+
+        // Act: set the kit and open the file again with a second service
+        var result = await service.SetActiveStyleKitAsync("slides-dark", Ct);
+        var reopened = await CreateService().OpenAsync(created.FilePath, Ct);
+
+        // Assert: the file, the open project, the event, and the reopened project all say the same
+        Assert.True(result.Succeeded, result.Error);
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(created.FilePath, Ct));
+        Assert.Equal("slides-dark", json.RootElement.GetProperty("activeStyleKit").GetString());
+        Assert.Equal(later, json.RootElement.GetProperty("modifiedUtc").GetDateTimeOffset());
+        Assert.Equal("slides-dark", service.Current!.Document.ActiveStyleKit);
+        Assert.Equal("slides-dark", result.Project!.Document.ActiveStyleKit);
+        Assert.Equal(1, changes);
+        Assert.Equal("slides-dark", reopened.Project!.Document.ActiveStyleKit);
+        Assert.Equal(
+            [Path.Combine(created.FolderPath, ".canvaspilot"), created.FilePath],
+            Directory.GetFileSystemEntries(created.FolderPath).Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    ///     Test that setting no style removes the property from the project file, and that setting the style that the
+    ///     project already has changes nothing and raises nothing.
+    /// </summary>
+    [Fact]
+    public async Task ProjectService_SetActiveStyleKitAsync_NullOrSameId_RemovesPropertyOrDoesNothing()
+    {
+        // Arrange: a project that uses a kit
+        Directory.CreateDirectory(Parent);
+        var service = CreateService();
+        var created = (await service.CreateAsync(Parent, "Plain", Ct)).Project!;
+        await service.SetActiveStyleKitAsync("clean", Ct);
+        _clock.UtcNow = CreatedTime.AddHours(3);
+        var changes = 0;
+        service.CurrentChanged += (_, _) => changes++;
+
+        // Act: set the same kit, then none, then none again
+        var same = await service.SetActiveStyleKitAsync("clean", Ct);
+        var sameText = await File.ReadAllTextAsync(created.FilePath, Ct);
+        var none = await service.SetActiveStyleKitAsync(null, Ct);
+        var noneText = await File.ReadAllTextAsync(created.FilePath, Ct);
+        var noneAgain = await service.SetActiveStyleKitAsync(null, Ct);
+
+        // Assert: the same kit wrote nothing, none removed the property, and none again wrote nothing
+        Assert.True(same.Succeeded && none.Succeeded && noneAgain.Succeeded);
+        Assert.Contains("\"activeStyleKit\": \"clean\"", sameText, StringComparison.Ordinal);
+        Assert.DoesNotContain("activeStyleKit", noneText, StringComparison.Ordinal);
+        Assert.Null(service.Current!.Document.ActiveStyleKit);
+        Assert.Equal(1, changes);
+        Assert.Equal(CreatedTime.AddHours(3), service.Current.Document.ModifiedUtc);
+    }
+
+    /// <summary>
+    ///     Test that a project file from before style kits, which has no such property, is read as having no style, and
+    ///     that setting a style keeps the properties of the file that this version does not know.
+    /// </summary>
+    [Fact]
+    public async Task ProjectService_SetActiveStyleKitAsync_OlderFileWithUnknownProperty_ReadsAsNoStyleAndKeepsProperty()
+    {
+        // Arrange: a project file written by an earlier version and one that has an unknown property
+        var file = WriteProjectFile("Old", """{ "formatVersion": 1, "name": "Old", "futureThing": { "a": 7 } }""");
+        var service = CreateService();
+        var opened = await service.OpenAsync(file, Ct);
+
+        // Act: set a style
+        var result = await service.SetActiveStyleKitAsync("dema", Ct);
+
+        // Assert: it read as having no style, and the file has the style and the unknown property
+        Assert.Null(opened.Project!.Document.ActiveStyleKit);
+        Assert.True(result.Succeeded, result.Error);
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(file, Ct));
+        Assert.Equal("dema", json.RootElement.GetProperty("activeStyleKit").GetString());
+        Assert.Equal(7, json.RootElement.GetProperty("futureThing").GetProperty("a").GetInt32());
+    }
+
+    /// <summary>
+    ///     Test that an id that no style kit can have is refused with a message that says what is allowed, and that the
+    ///     file and the open project stay as they were.
+    /// </summary>
+    /// <param name="id">The id to refuse.</param>
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData("Clean")]
+    [InlineData("-clean")]
+    [InlineData("has space")]
+    [InlineData("under_score")]
+    [InlineData("../evil")]
+    [InlineData("a\\b")]
+    [InlineData("clean\n")]
+    [InlineData("0123456789012345678901234567890123456789012345678")]
+    public async Task ProjectService_SetActiveStyleKitAsync_InvalidId_IsRefused(string id)
+    {
+        // Arrange: an open project
+        Directory.CreateDirectory(Parent);
+        var service = CreateService();
+        var created = (await service.CreateAsync(Parent, "Strict", Ct)).Project!;
+        var before = await File.ReadAllTextAsync(created.FilePath, Ct);
+
+        // Act
+        var result = await service.SetActiveStyleKitAsync(id, Ct);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains("not a valid style kit id", result.Error, StringComparison.Ordinal);
+        Assert.Equal(before, await File.ReadAllTextAsync(created.FilePath, Ct));
+        Assert.Same(created, service.Current);
+    }
+
+    /// <summary>
+    ///     Test that an id of 48 characters is accepted.
+    /// </summary>
+    [Fact]
+    public async Task ProjectService_SetActiveStyleKitAsync_LongestId_IsAccepted()
+    {
+        // Arrange
+        Directory.CreateDirectory(Parent);
+        var service = CreateService();
+        await service.CreateAsync(Parent, "Long", Ct);
+        var id = "9" + new string('a', 47);
+
+        // Act
+        var result = await service.SetActiveStyleKitAsync(id, Ct);
+
+        // Assert
+        Assert.True(result.Succeeded, result.Error);
+        Assert.Equal(id, service.Current!.Document.ActiveStyleKit);
+    }
+
+    /// <summary>
+    ///     Test that changing the style with no open project fails with a message and writes nothing.
+    /// </summary>
+    [Fact]
+    public async Task ProjectService_SetActiveStyleKitAsync_NoProject_Fails()
+    {
+        // Arrange / Act
+        var result = await CreateService().SetActiveStyleKitAsync("clean", Ct);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains("no open project", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    ///     Test that a change that cannot be written is a failed result that is logged, and that the open project keeps
+    ///     the style it had.
+    /// </summary>
+    [Fact]
+    public async Task ProjectService_SetActiveStyleKitAsync_FolderRemoved_FailsAndKeepsTheOpenProject()
+    {
+        // Arrange: an open project whose folder was deleted
+        Directory.CreateDirectory(Parent);
+        var logger = new RollingFileLogger(Path.Combine(_tempRoot, "logs"));
+        var service = new ProjectService(logger, _clock);
+        var project = (await service.CreateAsync(Parent, "Gone", Ct)).Project!;
+        Directory.Delete(project.FolderPath, recursive: true);
+
+        // Act
+        var result = await service.SetActiveStyleKitAsync("clean", Ct);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains("could not be saved", result.Error, StringComparison.Ordinal);
+        Assert.Same(project, service.Current);
+        Assert.Null(service.Current!.Document.ActiveStyleKit);
+    }
+
+    /// <summary>
     ///     Test that closing clears the open project and announces the change once, and that closing again does
     ///     nothing.
     /// </summary>

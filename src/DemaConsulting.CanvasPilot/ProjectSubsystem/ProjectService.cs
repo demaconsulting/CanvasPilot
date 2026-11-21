@@ -255,33 +255,44 @@ public sealed class ProjectService : IProjectService
             return Fail("There is no open project to save.", "Save refused: no project is open.");
         }
 
-        var document = project.Document with
-        {
-            FormatVersion = ProjectDocument.CurrentFormatVersion,
-            Name = project.Name,
-            ModifiedUtc = _timeProvider.GetUtcNow(),
-        };
+        return await PersistAsync(project, project.Document, announce: false, cancellationToken).ConfigureAwait(false);
+    }
 
-        try
+    /// <inheritdoc />
+    public async Task<ProjectResult> SetActiveStyleKitAsync(string? styleKitId, CancellationToken cancellationToken = default)
+    {
+        // Refuse an id that no kit can have before anything is written, so the project file never names a kit that cannot
+        // exist; null is allowed and means no style
+        if (styleKitId is not null && !IsValidStyleKitId(styleKitId))
         {
-            await WriteDocumentAsync(project.FilePath, document, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            return Fail($"The project could not be saved: {ex.Message}", $"Project file '{project.FilePath}' could not be saved.", ex);
-        }
-
-        var saved = project with { Document = document };
-        lock (_syncRoot)
-        {
-            if (ReferenceEquals(_current, project))
-            {
-                _current = saved;
-            }
+            return Fail(
+                $"'{styleKitId}' is not a valid style kit id; use 1 to 48 lower-case letters, digits, and dashes, starting with a letter or a digit.",
+                $"Style kit change refused: '{styleKitId}' is not a valid id.");
         }
 
-        Log(LogLevel.Info, $"Saved project '{project.Name}' to '{project.FilePath}'.");
-        return ProjectResult.Success(saved);
+        var project = Current;
+        if (project is null)
+        {
+            return Fail("There is no open project to change.", "Style kit change refused: no project is open.");
+        }
+
+        // A change to what is already there writes nothing, so the file is not touched and its modified time stays
+        if (string.Equals(project.Document.ActiveStyleKit, styleKitId, StringComparison.Ordinal))
+        {
+            return ProjectResult.Success(project);
+        }
+
+        var result = await PersistAsync(
+            project,
+            project.Document with { ActiveStyleKit = styleKitId },
+            announce: true,
+            cancellationToken).ConfigureAwait(false);
+        if (result.Succeeded)
+        {
+            Log(LogLevel.Info, $"Project '{project.Name}' now uses the style kit '{styleKitId ?? "(none)"}'.");
+        }
+
+        return result;
     }
 
     /// <inheritdoc />
@@ -301,6 +312,77 @@ public sealed class ProjectService : IProjectService
 
         Log(LogLevel.Info, $"Closed project '{closed.Name}'.");
         CurrentChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    ///     Writes a document as the project file of an open project and, when the project is still open, makes the saved
+    ///     document part of it.
+    /// </summary>
+    /// <param name="project">The open project that the document belongs to.</param>
+    /// <param name="edited">The document to write, with the changes the caller made; the format version, name, and
+    ///     modified time are set here.</param>
+    /// <param name="announce">Whether to raise <see cref="CurrentChanged" /> when the saved project replaced the open one.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    /// <returns>The saved project, or the reason it could not be saved.</returns>
+    private async Task<ProjectResult> PersistAsync(ProjectInfo project, ProjectDocument edited, bool announce, CancellationToken cancellationToken)
+    {
+        var document = edited with
+        {
+            FormatVersion = ProjectDocument.CurrentFormatVersion,
+            Name = project.Name,
+            ModifiedUtc = _timeProvider.GetUtcNow(),
+        };
+
+        try
+        {
+            await WriteDocumentAsync(project.FilePath, document, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return Fail($"The project could not be saved: {ex.Message}", $"Project file '{project.FilePath}' could not be saved.", ex);
+        }
+
+        // Replace the open project only when it is still the one that was saved, because another project may have been
+        // opened while the file was written
+        var saved = project with { Document = document };
+        var replaced = false;
+        lock (_syncRoot)
+        {
+            if (ReferenceEquals(_current, project))
+            {
+                _current = saved;
+                replaced = true;
+            }
+        }
+
+        Log(LogLevel.Info, $"Saved project '{project.Name}' to '{project.FilePath}'.");
+        if (announce && replaced)
+        {
+            CurrentChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        return ProjectResult.Success(saved);
+    }
+
+    /// <summary>
+    ///     Tells whether a text can be the identifier of a style kit: 1 to 48 lower-case letters, digits, and dashes that
+    ///     start with a letter or a digit.
+    /// </summary>
+    /// <remarks>
+    ///     The rule is the one the style kits follow. It is kept here as a plain check because the project subsystem does
+    ///     not depend on the style subsystem; the identifier is only text to it.
+    /// </remarks>
+    /// <param name="id">The text to test.</param>
+    /// <returns><see langword="true" /> when the text can be the identifier of a style kit.</returns>
+    private static bool IsValidStyleKitId(string id)
+    {
+        if (id.Length is < 1 or > 48)
+        {
+            return false;
+        }
+
+        // The first character may not be a dash; every character is a lower-case ASCII letter, a digit, or a dash
+        return id[0] != '-' && id.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
     }
 
     /// <summary>

@@ -132,3 +132,34 @@ raises one change event. This scenario is tested by
 
 **ProjectService_CloseThenOpen_SameFile_OpensAgain**: A closed project is opened again and saved. This
 scenario is tested by `ProjectService_CloseThenOpen_SameFile_OpensAgain`.
+
+**ProjectService_SetActiveStyleKitAsync_ValidId_IsWrittenAndReadBackAfterReopen**: Setting the kit `slides-dark` on a
+created project writes `activeStyleKit` and the later modified time into the file, makes the kit part of the open project
+and of the returned project, raises one change event, leaves no temporary file, and a second service that opens the file
+reads the same kit. This scenario is tested by
+`ProjectService_SetActiveStyleKitAsync_ValidId_IsWrittenAndReadBackAfterReopen`.
+
+**ProjectService_SetActiveStyleKitAsync_NullOrSameId_RemovesPropertyOrDoesNothing**: Setting the kit that the project
+already has writes nothing and raises nothing, setting none removes the property from the file and raises one event, and
+setting none again writes nothing. This scenario is tested by
+`ProjectService_SetActiveStyleKitAsync_NullOrSameId_RemovesPropertyOrDoesNothing`.
+
+**ProjectService_SetActiveStyleKitAsync_OlderFileWithUnknownProperty_ReadsAsNoStyleAndKeepsProperty**: A project file
+with no style property and an unknown property is read as having no style, and after a kit is set the file has the kit
+and the unknown property. This scenario is tested by
+`ProjectService_SetActiveStyleKitAsync_OlderFileWithUnknownProperty_ReadsAsNoStyleAndKeepsProperty`.
+
+**ProjectService_SetActiveStyleKitAsync_InvalidId_IsRefused**: An empty id, a blank id, an id with an upper-case letter,
+a leading dash, a space, an underscore, `..`, a backslash, a line feed, or 49 characters is refused with the message that
+says what an id is, and the file and the open project stay as they were. This scenario is tested by
+`ProjectService_SetActiveStyleKitAsync_InvalidId_IsRefused`.
+
+**ProjectService_SetActiveStyleKitAsync_LongestId_IsAccepted**: An id of 48 characters that starts with a digit is
+accepted. This scenario is tested by `ProjectService_SetActiveStyleKitAsync_LongestId_IsAccepted`.
+
+**ProjectService_SetActiveStyleKitAsync_NoProject_Fails**: Setting a kit with nothing open fails with a message. This
+scenario is tested by `ProjectService_SetActiveStyleKitAsync_NoProject_Fails`.
+
+**ProjectService_SetActiveStyleKitAsync_FolderRemoved_FailsAndKeepsTheOpenProject**: Setting a kit after the project
+folder was deleted fails with the message that the project could not be saved, and the open project keeps the style it
+had. This scenario is tested by `ProjectService_SetActiveStyleKitAsync_FolderRemoved_FailsAndKeepsTheOpenProject`.

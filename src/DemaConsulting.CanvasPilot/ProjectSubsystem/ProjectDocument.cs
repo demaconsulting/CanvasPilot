@@ -66,6 +66,15 @@ public sealed record ProjectDocument
     public DateTimeOffset? ModifiedUtc { get; init; }
 
     /// <summary>
+    ///     Gets the id of the style kit that the project uses, or <see langword="null" /> when the project has no style.
+    /// </summary>
+    /// <remarks>
+    ///     It is only text to the project: which kit it names, and whether that kit exists, is the business of the style
+    ///     subsystem. A project file that lacks the property, such as one made by an earlier version, has no style.
+    /// </remarks>
+    public string? ActiveStyleKit { get; init; }
+
+    /// <summary>
     ///     Gets the properties of the file that this version does not know.
     /// </summary>
     [JsonExtensionData]

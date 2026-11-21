@@ -122,3 +122,24 @@ sections:
                   - ProjectService_CreateAsync_InvalidName_LogsWarning
                   - ProjectService_SaveAsync_FolderRemoved_FailsAndLogsError
                   - ProjectService_OpenAsync_NotAProjectFile_FailsAndLogs
+
+              - id: CanvasPilot-ProjectService-StoreTheActiveStyleKit
+                title: >-
+                  The ProjectService shall keep the id of the style kit that the open project uses in the project file, as
+                  text that is absent when the project has no style, read it back when the project is opened, treat a project
+                  file that lacks it as having no style, keep the properties of the file that it does not know, announce the
+                  change, write nothing when the kit is the one the project already has, and refuse an id that no style kit
+                  can have and a change when no project is open, with a message.
+                justification: |
+                  The style belongs to the project, so the choice is kept in the project file and is the same for everyone who
+                  opens it. A project file from before style kits must still open, and a file that a later version added
+                  properties to must not lose them when the choice is saved. An id that cannot name a kit must never reach the
+                  file, because other parts use it to build the name of a folder.
+                tests:
+                  - ProjectService_SetActiveStyleKitAsync_ValidId_IsWrittenAndReadBackAfterReopen
+                  - ProjectService_SetActiveStyleKitAsync_NullOrSameId_RemovesPropertyOrDoesNothing
+                  - ProjectService_SetActiveStyleKitAsync_OlderFileWithUnknownProperty_ReadsAsNoStyleAndKeepsProperty
+                  - ProjectService_SetActiveStyleKitAsync_InvalidId_IsRefused
+                  - ProjectService_SetActiveStyleKitAsync_LongestId_IsAccepted
+                  - ProjectService_SetActiveStyleKitAsync_NoProject_Fails
+                  - ProjectService_SetActiveStyleKitAsync_FolderRemoved_FailsAndKeepsTheOpenProject

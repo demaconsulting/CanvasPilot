@@ -97,3 +97,16 @@ sections:
               - CanvasPilot-ProjectExplorer-RenameSelectedFile
             tests:
               - ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources
+
+          - id: CanvasPilot-Project-KeepTheStyleChoice
+            title: >-
+              The Project subsystem shall keep the style kit that a project uses in the project file, so that reopening the
+              project, also with another instance of the application, gives the same choice and leaves the other properties
+              of the file and the files of the project as they were.
+            justification: |
+              The style belongs to the project and not to the machine, so the choice must travel with the project file. It
+              must not disturb the image files, the other properties of the file, or the settings of the user.
+            children:
+              - CanvasPilot-ProjectService-StoreTheActiveStyleKit
+            tests:
+              - ProjectSubsystem_KeepTheStyleChoice_SetAndReopen_GivesTheSameChoiceAndKeepsTheProject

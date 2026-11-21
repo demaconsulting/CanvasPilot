@@ -149,4 +149,41 @@ public sealed class ProjectSubsystemTests : IDisposable
         Assert.True(File.Exists(Path.Combine(project.FolderPath, "assets", "model.svg")));
         Assert.True(File.Exists(project.FilePath));
     }
+
+    /// <summary>
+    ///     Test that the style kit chosen for a project is kept in the project file, that a second service that opens the
+    ///     file reads the same choice, and that the choice leaves the other properties of the file, the image files, and
+    ///     the data folder as they were.
+    /// </summary>
+    [Fact]
+    public async Task ProjectSubsystem_KeepTheStyleChoice_SetAndReopen_GivesTheSameChoiceAndKeepsTheProject()
+    {
+        // Arrange: a created project with an image file and a property that this version does not know in its file
+        Directory.CreateDirectory(Projects);
+        var service = new ProjectService();
+        var project = (await service.CreateAsync(Projects, "Styled Set", TestContext.Current.CancellationToken)).Project!;
+        await File.WriteAllTextAsync(Path.Combine(project.FolderPath, "logo.svg"), "<svg/>", TestContext.Current.CancellationToken);
+        var text = await File.ReadAllTextAsync(project.FilePath, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(project.FilePath, text.Replace("\"formatVersion\": 1,", "\"formatVersion\": 1, \"futureThing\": 7,", StringComparison.Ordinal), TestContext.Current.CancellationToken);
+        await service.OpenAsync(project.FilePath, TestContext.Current.CancellationToken);
+
+        // Act: choose a style, open the file with a second service as after a restart, and then choose none
+        var chosen = await service.SetActiveStyleKitAsync("slides-dark", TestContext.Current.CancellationToken);
+        var second = new ProjectService();
+        var reopened = await second.OpenAsync(project.FilePath, TestContext.Current.CancellationToken);
+        var chosenText = await File.ReadAllTextAsync(project.FilePath, TestContext.Current.CancellationToken);
+        var cleared = await second.SetActiveStyleKitAsync(null, TestContext.Current.CancellationToken);
+        var clearedText = await File.ReadAllTextAsync(project.FilePath, TestContext.Current.CancellationToken);
+
+        // Assert: the choice is in the file and is read back, the unknown property and the files are untouched, and
+        // choosing none removes the property
+        Assert.True(chosen.Succeeded, chosen.Error);
+        Assert.Equal("slides-dark", reopened.Project!.Document.ActiveStyleKit);
+        Assert.Contains("futureThing", chosenText, StringComparison.Ordinal);
+        Assert.True(cleared.Succeeded, cleared.Error);
+        Assert.DoesNotContain("activeStyleKit", clearedText, StringComparison.Ordinal);
+        Assert.Contains("futureThing", clearedText, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(project.FolderPath, "logo.svg")));
+        Assert.True(Directory.Exists(Path.Combine(project.FolderPath, ".canvaspilot")));
+    }
 }

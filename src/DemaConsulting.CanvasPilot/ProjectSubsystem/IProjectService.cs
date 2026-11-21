@@ -28,7 +28,8 @@ namespace DemaConsulting.CanvasPilot.ProjectSubsystem;
 public interface IProjectService
 {
     /// <summary>
-    ///     Raised after <see cref="Current" /> changed because a project was created, opened, or closed.
+    ///     Raised after <see cref="Current" /> changed because a project was created, opened, or closed, or because the
+    ///     open project was saved with a change that others need to know (the style kit it uses).
     /// </summary>
     event EventHandler? CurrentChanged;
 
@@ -84,6 +85,23 @@ public interface IProjectService
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>The saved project, or the reason it could not be saved.</returns>
     Task<ProjectResult> SaveAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Sets the style kit that the open project uses and writes the project file, so the choice is the same for everyone
+    ///     who opens the project.
+    /// </summary>
+    /// <remarks>
+    ///     The id is only text to the project subsystem. Setting the id the project already has writes nothing. The write
+    ///     is atomic like <see cref="SaveAsync" />, and <see cref="CurrentChanged" /> is raised when the open project's
+    ///     document changed.
+    /// </remarks>
+    /// <param name="styleKitId">
+    ///     The id of the style kit: 1 to 48 lower-case letters, digits, and dashes that start with a letter or a digit; or
+    ///     <see langword="null" /> for no style, which removes the property from the project file.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>The saved project, or the reason it could not be changed (no project is open, an invalid id, or a file that cannot be written).</returns>
+    Task<ProjectResult> SetActiveStyleKitAsync(string? styleKitId, CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Closes the open project, if any.

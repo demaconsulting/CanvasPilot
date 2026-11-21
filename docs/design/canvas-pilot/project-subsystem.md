@@ -23,8 +23,10 @@ shell, which supplies the folder picker and the refresh scheduler.
 - *Type*: In-process .NET API (`IProjectService`).
 - *Role*: Provider.
 - *Contract*: `CreateAsync(parentFolder, name)`, `OpenAsync(projectFile)`, and `SaveAsync()` return a
-  `ProjectResult` that holds the `ProjectInfo` or a user-readable error; `Close()` closes the project;
-  `Current` is the open project or `null`; `CurrentChanged` is raised after the open project changes;
+  `ProjectResult` that holds the `ProjectInfo` or a user-readable error; `SetActiveStyleKitAsync(id)` keeps the id of the
+  style kit of the project (or none) in the project file and returns the same kind of result; `Close()` closes the
+  project; `Current` is the open project or `null`; `CurrentChanged` is raised after the open project changes, and after
+  the style kit that it uses changes;
   `ValidateProjectName`, `ValidateParentFolder`, and `ValidateNewProject` return a problem text or `null`.
 - *Constraints*: Ordinary user problems are returned, never thrown. A failed open leaves the open project
   unchanged.
@@ -41,8 +43,9 @@ shell, which supplies the folder picker and the refresh scheduler.
 
 - *Type*: File system.
 - *Role*: Consumer.
-- *Contract*: A UTF-8 JSON file `{name}.canvaspilot` with `formatVersion` (1), `name`, `createdUtc`, and an
-  optional `modifiedUtc`. Reading ignores unknown properties and keeps them when the file is saved. The
+- *Contract*: A UTF-8 JSON file `{name}.canvaspilot` with `formatVersion` (1), `name`, `createdUtc`, an
+  optional `modifiedUtc`, and an optional `activeStyleKit` (the id of the style kit the project uses; absent for no
+  style). Reading ignores unknown properties and keeps them when the file is saved. The
   hidden `.canvaspilot` folder is created empty.
 - *Constraints*: File paths are resolved with the `Utilities` subsystem. Problems are reported through the
   `Logging` subsystem.
