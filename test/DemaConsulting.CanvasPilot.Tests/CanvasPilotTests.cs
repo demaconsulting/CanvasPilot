@@ -29,6 +29,7 @@ using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 using DemaConsulting.CanvasPilot.UtilitiesSubsystem;
 using DemaConsulting.Speech.AudioSubsystem;
 using DemaConsulting.Speech.ModelManagementSubsystem;
@@ -1713,5 +1714,487 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(["menu.svg"], listed);
         Assert.Equal(["Menu Board"], restarted.Shell.RecentProjects.Select(item => item.Name));
         Assert.Equal("shell-model", restarted.Settings.Current.AiProvider.ModelName);
+    }
+
+    /// <summary>
+    ///     Test that style kits are found in the program, the folder of the user, the project, and the shared folders
+    ///     of a team, that the most local copy of a kit wins, that a shared folder that cannot be reached and a kit
+    ///     with a wrong value are reported without hiding the others, and that the message names the wrong property.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_DefineStyleKits_BuiltInUserProjectAndSharedKits_ResolveByPrecedence()
+    {
+        // Arrange: the application composed with a kit of the same id in the shared folder and the folder of the user,
+        // a shared folder that is not there, and a project
+        var shared = Path.Combine(_tempRoot, "team-kits");
+        var offline = Path.Combine(_tempRoot, "offline-kits");
+        var userFolder = Path.Combine(_tempRoot, "my-kits");
+        WriteKit(shared, "clean", "team copy");
+        WriteKit(shared, "team-look", "team look");
+        WriteKit(userFolder, "clean", "my copy");
+        var (composition, _) = await ComposeStylesAsync(userFolder, string.Empty, [offline, shared]);
+        var catalog = composition.StyleCatalog;
+        var projectKits = Path.Combine(composition.Shell.CurrentProject!.FolderPath, StyleKitCatalog.ProjectFolderName);
+
+        // Act: look which copy of the kit wins as the copy in the project is added and the more local copies are taken
+        // away one by one, and add a kit with a wrong color to the project
+        var userWins = Description(catalog, "clean");
+        WriteKit(projectKits, "clean", "project copy");
+        var brokenFolder = Directory.CreateDirectory(Path.Combine(projectKits, "broken-kit")).FullName;
+        await File.WriteAllTextAsync(
+            Path.Combine(brokenFolder, StyleKitSerializer.FileName),
+            """{"formatVersion":1,"id":"broken-kit","name":"Broken","palette":{"background":"#FFFFFF","text":"#000000","primary":"#12"}}""",
+            TestContext.Current.CancellationToken);
+        await catalog.RefreshAsync(TestContext.Current.CancellationToken);
+        var projectWins = Description(catalog, "clean");
+        var all = catalog.Entries.Where(e => e.Kit.Id == "clean").Select(e => (e.Location, e.IsOverridden)).ToList();
+        var builtIns = catalog.Entries.Where(e => e.Location == StyleKitLocation.BuiltIn).Select(e => e.Kit.Id).Order().ToList();
+        var places = catalog.Locations.ToList();
+        Directory.Delete(Path.Combine(projectKits, "clean"), recursive: true);
+        await catalog.RefreshAsync(TestContext.Current.CancellationToken);
+        var userWinsAgain = Description(catalog, "clean");
+        Directory.Delete(Path.Combine(userFolder, "clean"), recursive: true);
+        await catalog.RefreshAsync(TestContext.Current.CancellationToken);
+        var sharedWins = Description(catalog, "clean");
+        Directory.Delete(Path.Combine(shared, "clean"), recursive: true);
+        await catalog.RefreshAsync(TestContext.Current.CancellationToken);
+        var builtInWins = catalog.Resolve("clean")!;
+
+        // Assert: precedence is project, then user, then shared, then the program; every copy is listed and the ones that
+        // do not win are marked; the program has its three kits; the missing folder and the broken kit are reported
+        Assert.Equal("my copy", userWins);
+        Assert.Equal("project copy", projectWins);
+        Assert.Equal(
+            [(StyleKitLocation.Project, false), (StyleKitLocation.User, true), (StyleKitLocation.Shared, true), (StyleKitLocation.BuiltIn, true)],
+            all);
+        Assert.Equal(["clean", "dema", "slides-dark"], builtIns);
+        Assert.Equal("my copy", userWinsAgain);
+        Assert.Equal("team copy", sharedWins);
+        Assert.Equal(StyleKitLocation.BuiltIn, builtInWins.Location);
+        Assert.True(builtInWins.IsReadOnly);
+        Assert.NotEqual("team copy", builtInWins.Kit.Description);
+        var missing = Assert.Single(places, place => !place.IsAvailable);
+        Assert.Equal(offline, missing.Path);
+        Assert.Equal(StyleKitLocation.Shared, missing.Location);
+        Assert.NotNull(catalog.Resolve("team-look"));
+        var broken = Assert.Single(Assert.Single(places, place => place.Location == StyleKitLocation.Project).Broken);
+        Assert.Contains(broken.Issues, issue => issue.IsError && issue.Path.Contains("palette.primary", StringComparison.Ordinal));
+        Assert.Null(catalog.Resolve("broken-kit"));
+    }
+
+    /// <summary>
+    ///     Test that a user can open the Style Kits window from the Tools menu command and make, export, delete, import,
+    ///     copy into the project, and choose kits, that the kits of the program cannot be changed, and that the files on
+    ///     disk are what the window said.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ManageStyleKits_ShellCommandAndManager_CreateEditExportImportAndDelete()
+    {
+        // Arrange: the application with a project, and a user who names a new kit, describes it in the editor, and picks
+        // files for the export and the import
+        var token = TestContext.Current.CancellationToken;
+        var userFolder = Path.Combine(_tempRoot, "my-kits");
+        var (composition, dialogs) = await ComposeStylesAsync(userFolder);
+        var zip = Path.Combine(_tempRoot, "brand-look.zip");
+        dialogs.PromptResult = "Brand Look";
+        dialogs.OnStyleKitEditor = editor =>
+        {
+            editor.Description = "Our brand.";
+            editor.SaveCommand.Execute(null);
+        };
+
+        // Act: open the window, make a kit of the user, export it, delete it, and import it again; then try to change a
+        // kit of the program, copy it into the project, and make the copy the style of the project
+        await composition.Shell.ShowStyleKitsCommand.ExecuteAsync(null);
+        var manager = dialogs.LastStyleKitManager!;
+        var titles = manager.Groups.Select(group => group.Title).ToList();
+        var programKits = manager.Groups.Single(group => group.Location == StyleKitLocation.BuiltIn).Items.Select(item => item.Id).Order().ToList();
+        await manager.NewCommand.ExecuteAsync(null);
+        var made = ReadKitFile(userFolder, "brand-look");
+        var selectedAfterNew = manager.SelectedItem?.Id;
+        dialogs.ZipToExport = zip;
+        await manager.ExportCommand.ExecuteAsync(null);
+        List<string> zipEntries;
+        await using (var archive = await System.IO.Compression.ZipFile.OpenReadAsync(zip, token))
+        {
+            zipEntries = archive.Entries.Select(entry => entry.FullName).ToList();
+        }
+        dialogs.ConfirmResult = true;
+        await manager.DeleteCommand.ExecuteAsync(null);
+        var deleted = !Directory.Exists(Path.Combine(userFolder, "brand-look"));
+        dialogs.ZipToImport = zip;
+        await manager.ImportCommand.ExecuteAsync(null);
+        var imported = ReadKitFile(userFolder, "brand-look");
+        manager.SelectItemCommand.Execute(manager.Groups.Single(group => group.Location == StyleKitLocation.BuiltIn).Items.Single(item => item.Id == "clean"));
+        var programKitIsProtected = (manager.EditCommand.CanExecute(null), manager.DeleteCommand.CanExecute(null), manager.CopyIntoProjectCommand.CanExecute(null));
+        await manager.CopyIntoProjectCommand.ExecuteAsync(null);
+        var copy = manager.SelectedItem!;
+        await manager.UseInProjectCommand.ExecuteAsync(null);
+        var projectFolder = composition.Shell.CurrentProject!.FolderPath;
+
+        // Assert: the window had the groups and the three kits of the program; each action changed the files as said; the
+        // kits of the program were protected and the copy in the project is what the project now uses
+        Assert.Equal(["This project", "My kits", "Shared", "Built-in"], titles);
+        Assert.Equal(["clean", "dema", "slides-dark"], programKits);
+        Assert.Contains("Our brand.", made, StringComparison.Ordinal);
+        Assert.Equal("brand-look", selectedAfterNew);
+        Assert.Contains("style.json", zipEntries);
+        Assert.True(deleted);
+        Assert.Single(dialogs.Confirmations);
+        Assert.Equal(made, imported);
+        Assert.Equal((false, false, true), programKitIsProtected);
+        Assert.True(File.Exists(Path.Combine(projectFolder, StyleKitCatalog.ProjectFolderName, "clean", StyleKitSerializer.FileName)));
+        Assert.Equal(StyleKitLocation.Project, copy.Entry.Location);
+        Assert.Equal("clean", composition.ActiveStyle.ActiveId);
+        Assert.Equal(StyleKitLocation.Project, composition.ActiveStyle.Active!.Location);
+        Assert.Contains("\"activeStyleKit\": \"clean\"", await File.ReadAllTextAsync(composition.Shell.CurrentProject.FilePath, token), StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a user chooses the style of a project in the status bar, that a new project starts with the default
+    ///     kit of the user, that the choice is in the project file and is the same after the application is started
+    ///     again, that a project that never had a style stays without one, and that a kit that cannot be found is said.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ChooseProjectStyle_PickerAndNewProject_KeepTheChoiceInTheProjectFile()
+    {
+        // Arrange: the application with the default kit set, and a user who creates a project
+        var token = TestContext.Current.CancellationToken;
+        var userFolder = Path.Combine(_tempRoot, "my-kits");
+        var (composition, dialogs) = await ComposeStylesAsync(userFolder, "dema");
+        var projectFile = composition.Shell.CurrentProject!.FilePath;
+        var picker = composition.Shell.StylePicker!;
+
+        // Act: read what the new project says, choose another kit, choose no style, choose a kit again, and start the
+        // application again on the same files and open the project
+        var started = (picker.IsVisible, picker.SelectedItem?.Id, await ActiveKitInFileAsync(projectFile));
+        picker.SelectedItem = picker.Items.Single(item => item.Id == "clean");
+        await picker.ChangeTask;
+        var chosen = (picker.SelectedItem?.Id, await ActiveKitInFileAsync(projectFile));
+        picker.SelectedItem = picker.Items.Single(item => item.Id is null);
+        await picker.ChangeTask;
+        var none = (picker.SelectedItem?.Id, await ActiveKitInFileAsync(projectFile));
+        picker.SelectedItem = picker.Items.Single(item => item.Id == "slides-dark");
+        await picker.ChangeTask;
+        composition.Dispose();
+        var (restarted, restartedDialogs) = await ComposeStylesAsync(userFolder, "dema", createProject: false);
+        restartedDialogs.ProjectFileToPick = projectFile;
+        await restarted.Shell.OpenProjectCommand.ExecuteAsync(null);
+        await restarted.StyleCatalog.RefreshAsync(token);
+        var reopened = (restarted.Shell.StylePicker!.SelectedItem?.Id, restarted.ActiveStyle.Active?.Kit.Name);
+        await restarted.ActiveStyle.SetActiveAsync("gone-kit");
+        var lost = (restarted.Shell.StylePicker.SelectedItem, restarted.ActiveStyle.IsMissing, restarted.ActiveStyle.Active);
+        var documents = Path.Combine(_tempRoot, "Documents");
+        var plain = await restarted.Projects.CreateAsync(documents, "Plain", token);
+        await restarted.StyleCatalog.RefreshAsync(token);
+        var unmarked = (restarted.Shell.StylePicker.SelectedItem?.Id, restarted.ActiveStyle.Active, await ActiveKitInFileAsync(plain.Project!.FilePath));
+
+        // Assert: the default was written into the new project, each choice was written to the file and removed again by
+        // no style, the choice was kept over a restart rather than replaced by the default, the lost kit was said, and the
+        // project with no style stays with none
+        Assert.Equal((true, "dema", "dema"), started);
+        Assert.Equal(("clean", "clean"), chosen);
+        Assert.Equal((null, null), none);
+        Assert.Equal(("slides-dark", "Slides Dark"), reopened);
+        Assert.True(lost.IsMissing);
+        Assert.Null(lost.Active);
+        Assert.Equal("gone-kit", lost.SelectedItem!.Id);
+        Assert.True(lost.SelectedItem.IsMissing);
+        Assert.Contains("not found", lost.SelectedItem.Label, StringComparison.Ordinal);
+        Assert.Equal((null, null, null), unmarked);
+        Assert.Empty(dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that a user can export the shown picture as a PNG at the sizes of the style kit of the project and of the
+    ///     application, that the size, the background, and the resolution are what the size says, that the sizes of the kit
+    ///     are not offered when the project has no style, and that the picture as it is drawn is still offered.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ExportAtPresetSizes_ComposedExporter_WritesPngOfThePresetSize()
+    {
+        // Arrange: the application with a project that uses a kit with two sizes and a dark background, and a small
+        // picture that leaves the corners empty
+        var token = TestContext.Current.CancellationToken;
+        var (composition, dialogs) = await ComposeStylesAsync(Path.Combine(_tempRoot, "my-kits"), "slides-dark");
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var file = Path.Combine(folder, "badge.svg");
+        await File.WriteAllTextAsync(file, "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect x='10' y='5' width='20' height='10' fill='#60A5FA'/></svg>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(file);
+        await composition.Preview.RenderCompletion;
+
+        // Act: export at the size of the kit, at the size of the application with a resolution, and as drawn; then take the
+        // style away and export at a size of the application
+        var kitPng = await ExportAsync(composition, dialogs, "Slide 720p", "kit.png");
+        var kitOffers = dialogs.OfferedPresets.Select(preset => preset.Name).ToList();
+        var a4Png = await ExportAsync(composition, dialogs, "A4 portrait @150 DPI", "a4.png");
+        var drawnPng = await ExportAsync(composition, dialogs, "As rendered", "drawn.png");
+        await composition.ActiveStyle.SetActiveAsync(null);
+        var plainPng = await ExportAsync(composition, dialogs, "Email (800 wide)", "email.png");
+        var plainOffers = dialogs.OfferedPresets.Select(preset => preset.Name).ToList();
+
+        // Assert: the kit's size has the size and the background of the kit; the A4 size has its size and its resolution
+        // in the file; the drawn picture is as drawn; with no style the sizes of the kit are gone and the background is white
+        Assert.Equal(["As rendered", "Slide 16:9", "Slide 720p", "PowerPoint 16:9", "Email (800 wide)", "A4 portrait @150 DPI"], kitOffers);
+        var kit = DecodePng(kitPng);
+        Assert.Equal((1280, 720), (kit.Width, kit.Height));
+        Assert.Equal(new DemaConsulting.CanvasNet.Canvas.Rgba32(15, 23, 42, 255), kit[0, 0]);
+        var a4 = DecodePng(a4Png);
+        Assert.Equal((1240, 1754), (a4.Width, a4.Height));
+        Assert.Equal(5906, PixelsPerMeter(a4Png));
+        Assert.Equal((40, 20), (DecodePng(drawnPng).Width, DecodePng(drawnPng).Height));
+        Assert.Equal(["As rendered", "PowerPoint 16:9", "Email (800 wide)", "A4 portrait @150 DPI"], plainOffers);
+        var plain = DecodePng(plainPng);
+        Assert.Equal((800, 400), (plain.Width, plain.Height));
+        Assert.Equal(new DemaConsulting.CanvasNet.Canvas.Rgba32(255, 255, 255, 255), plain[0, 0]);
+        Assert.Empty(dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that the parts that are given to an assistant agree: the guidance of the style of the project is within its
+    ///     size budget, the two tools read the style and check a picture of the project, a file outside the project is
+    ///     refused, a project with no style is told how to choose one, and the knowledge catalog has the card that names the
+    ///     two tools and still fits its index budget.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree()
+    {
+        // Arrange: the application with a project that uses a built-in kit, one picture on its palette and one off it, and
+        // a picture outside the project
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeStylesAsync(Path.Combine(_tempRoot, "my-kits"), "dema");
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        const string Head = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'>";
+        await File.WriteAllTextAsync(Path.Combine(folder, "on.svg"), Head + "<rect width='40' height='40' fill='#070B1F'/><rect width='20' height='40' fill='#7C3AED'/></svg>", token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "off.svg"), Head + "<rect width='40' height='40' fill='#070B1F'/><rect width='20' height='40' fill='#84CC16'/></svg>", token);
+        var outside = Path.Combine(_tempRoot, "outside.svg");
+        await File.WriteAllTextAsync(outside, Head + "</svg>", token);
+        var get = Assert.Single(composition.StyleToolDescriptors, tool => tool.Name == StyleTools.GetToolName);
+        var check = Assert.Single(composition.StyleToolDescriptors, tool => tool.Name == StyleTools.CheckToolName);
+        var prompts = new KnowledgePromptBuilder(KnowledgeCatalog.Default);
+
+        // Act: ask for the style, check the two pictures and the one outside, then take the style away and ask again
+        var style = get.Invoke("{}");
+        var onPalette = check.Invoke("{\"path\":\"on.svg\"}");
+        var offPalette = check.Invoke("{\"path\":\"off.svg\"}");
+        var refused = check.Invoke(System.Text.Json.JsonSerializer.Serialize(new { path = outside }));
+        await composition.ActiveStyle.SetActiveAsync(null);
+        var noStyle = get.Invoke("{}");
+        var card = KnowledgeCatalog.Default.Find("canvaspilot/styles");
+
+        // Assert: the style is the kit of the project and within the budget; the check passes and fails as the pictures do;
+        // the outside file is refused; with no style the answer says how to choose; the card names what the tools are
+        // called and the index still fits
+        Assert.Contains("#7C3AED", style, StringComparison.Ordinal);
+        Assert.True(style.Length <= StyleGuidance.BudgetCharacters, $"The guidance has {style.Length} characters.");
+        Assert.Contains("Result: PASSED", onPalette, StringComparison.Ordinal);
+        Assert.Contains("Result: FAILED", offPalette, StringComparison.Ordinal);
+        Assert.Contains("#84CC16", offPalette, StringComparison.Ordinal);
+        Assert.StartsWith("Error:", refused, StringComparison.Ordinal);
+        Assert.Contains("Ask the user to choose", noStyle, StringComparison.Ordinal);
+        Assert.NotNull(card);
+        Assert.Contains(StyleTools.GetToolName, card.Body, StringComparison.Ordinal);
+        Assert.Contains(StyleTools.CheckToolName, card.Body, StringComparison.Ordinal);
+        Assert.True(prompts.BuildIndex().Length <= KnowledgePromptBuilder.IndexBudgetCharacters);
+    }
+
+    /// <summary>
+    ///     Test that a user who chooses Check Against Style in the Image menu sees which colors of the shown picture are on
+    ///     the palette and which are off it in the notes of the preview, that the notes go when the picture is drawn
+    ///     again, and that a project with no style is told to choose one.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_CheckPictureAgainstStyle_ImageMenuCommand_ShowsNotesInTheDiagnosticsArea()
+    {
+        // Arrange: the application with a project that uses the Clean kit, one picture on its palette and one off it
+        var token = TestContext.Current.CancellationToken;
+        var (composition, dialogs) = await ComposeStylesAsync(Path.Combine(_tempRoot, "my-kits"), "clean");
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        const string Head = "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'>";
+        var good = Path.Combine(folder, "good.svg");
+        var bad = Path.Combine(folder, "bad.svg");
+        await File.WriteAllTextAsync(good, Head + "<rect width='40' height='40' fill='#FFFFFF'/><rect x='10' y='10' width='20' height='20' fill='#2563EB'/></svg>", token);
+        await File.WriteAllTextAsync(bad, Head + "<rect width='40' height='40' fill='#FFFFFF'/><rect width='20' height='40' fill='#84CC16'/></svg>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        var checkCommand = composition.Shell.CheckAgainstStyleCommand;
+        var canCheckWithNoPicture = checkCommand.CanExecute(null);
+
+        // Act: check the picture that is on the palette, then the one that is off it, then draw the first again, then take
+        // the style away and check
+        composition.Shell.Workspace.Explorer.SelectFile(good);
+        await composition.Preview.RenderCompletion;
+        var canCheck = checkCommand.CanExecute(null);
+        await checkCommand.ExecuteAsync(null);
+        var goodNotes = composition.Preview.Diagnostics.ToList();
+        composition.Shell.Workspace.Explorer.SelectFile(bad);
+        await composition.Preview.RenderCompletion;
+        await checkCommand.ExecuteAsync(null);
+        var badNotes = composition.Preview.Diagnostics.ToList();
+        composition.Shell.Workspace.Explorer.SelectFile(good);
+        await composition.Preview.RenderCompletion;
+        var afterRedraw = composition.Preview.Diagnostics.ToList();
+        await composition.ActiveStyle.SetActiveAsync(null);
+        await checkCommand.ExecuteAsync(null);
+
+        // Assert: nothing could be checked without a picture; the first picture passes with a summary and the palette; the
+        // second fails and names its color as a warning; drawing again clears the notes; with no style the user is told
+        Assert.False(canCheckWithNoPicture);
+        Assert.True(canCheck);
+        Assert.Contains(goodNotes, note => note is { Code: "style-summary", Severity: RenderDiagnosticSeverity.Info } && note.Message.Contains("PASSED", StringComparison.Ordinal));
+        Assert.Contains(goodNotes, note => note.Code == "style-ok");
+        Assert.DoesNotContain(goodNotes, note => note.Code == "style-off-palette");
+        Assert.Contains(badNotes, note => note.Code == "style-summary" && note.Message.Contains("FAILED", StringComparison.Ordinal));
+        Assert.Contains(badNotes, note => note is { Code: "style-off-palette", Severity: RenderDiagnosticSeverity.Warning } && note.Message.Contains("#84CC16", StringComparison.Ordinal));
+        Assert.DoesNotContain(afterRedraw, note => note.Code.StartsWith("style-", StringComparison.Ordinal));
+        var message = Assert.Single(dialogs.Messages);
+        Assert.Equal("Check Against Style", message.Title);
+        Assert.Contains("no style kit", message.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Composes the application on temporary folders with the given style settings and has a user create a project
+    ///     through the New Project dialog. The kits of the user are in a folder of the test, never in the data folder of
+    ///     whoever runs the test.
+    /// </summary>
+    /// <param name="userFolder">The folder of the style kits of the user.</param>
+    /// <param name="defaultKit">The id of the default style kit of the user, or an empty string for none.</param>
+    /// <param name="sharedFolders">The shared folders of kits, in the order of the settings, or <see langword="null" /> for none.</param>
+    /// <param name="createProject">Whether the user creates a project.</param>
+    /// <returns>The composition and the dialog service attached to its shell.</returns>
+    private async Task<(ApplicationComposition Composition, FakeDialogService Dialogs)> ComposeStylesAsync(
+        string userFolder,
+        string defaultKit = "",
+        IReadOnlyList<string>? sharedFolders = null,
+        bool createProject = true)
+    {
+        var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var settings = new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger);
+        if (sharedFolders is not null || defaultKit.Length > 0)
+        {
+            settings.Save(new AppSettings { Styles = new StyleSettings { SharedKitFolders = sharedFolders ?? [], DefaultKitId = defaultKit } });
+        }
+
+        var dialogs = new FakeDialogService
+        {
+            OnNewProject = dialog =>
+            {
+                dialog.ProjectName = "Poster";
+                dialog.OkCommand.Execute(null);
+            },
+        };
+        var composition = ApplicationComposition.Create(
+            logger,
+            settings,
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: documents,
+            dragFolder: PathHelpers.SafePathCombine(_tempRoot, "drag"),
+            audioDevices: SpeechTestData.AudioDevices([], []),
+            speechModels: SpeechTestData.Models(),
+            styleUserFolder: userFolder);
+        _disposables.Add(composition);
+        composition.Shell.AttachDialogService(dialogs);
+        await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
+        if (createProject)
+        {
+            await composition.Shell.NewProjectCommand.ExecuteAsync(null);
+            await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
+        }
+
+        return (composition, dialogs);
+    }
+
+    /// <summary>
+    ///     Writes a small valid style kit into a folder of kits.
+    /// </summary>
+    /// <param name="root">The folder that holds the kit folders.</param>
+    /// <param name="id">The id of the kit, which is also the name of its folder.</param>
+    /// <param name="description">The description, which tells the copies of a kit apart.</param>
+    private static void WriteKit(string root, string id, string description)
+    {
+        var kit = new StyleKit(
+            id,
+            id,
+            description,
+            new Dictionary<string, string> { ["background"] = "#FFFFFF", ["text"] = "#0F172A", ["primary"] = "#2563EB" },
+            new StyleFonts("sans-serif", "sans-serif", "monospace"),
+            2,
+            8,
+            16,
+            null,
+            null,
+            new StyleGuidanceText(string.Empty, [], []),
+            [],
+            []);
+        var folder = Directory.CreateDirectory(Path.Combine(root, id)).FullName;
+        File.WriteAllText(Path.Combine(folder, StyleKitSerializer.FileName), StyleKitSerializer.Write(kit));
+    }
+
+    /// <summary>
+    ///     Gets the description of the kit that wins for an id.
+    /// </summary>
+    /// <param name="catalog">The kits.</param>
+    /// <param name="id">The id.</param>
+    /// <returns>The description of the winner.</returns>
+    private static string Description(IStyleKitCatalog catalog, string id) => catalog.Resolve(id)!.Kit.Description;
+
+    /// <summary>
+    ///     Reads the file of a kit of the user.
+    /// </summary>
+    /// <param name="root">The folder that holds the kit folders.</param>
+    /// <param name="id">The id of the kit.</param>
+    /// <returns>The text of its <c>style.json</c>.</returns>
+    private static string ReadKitFile(string root, string id) =>
+        File.ReadAllText(Path.Combine(root, id, StyleKitSerializer.FileName));
+
+    /// <summary>
+    ///     Reads the style kit that the project file names.
+    /// </summary>
+    /// <param name="projectFile">The project file.</param>
+    /// <returns>The id, or <see langword="null" /> when the file does not name a kit.</returns>
+    private static async Task<string?> ActiveKitInFileAsync(string projectFile)
+    {
+        using var json = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(projectFile, TestContext.Current.CancellationToken));
+        return json.RootElement.TryGetProperty("activeStyleKit", out var value) ? value.GetString() : null;
+    }
+
+    /// <summary>
+    ///     Exports the shown picture through the Image menu command at a named size.
+    /// </summary>
+    /// <param name="composition">The application.</param>
+    /// <param name="dialogs">The dialogs of its window.</param>
+    /// <param name="presetName">The name of the size the user picks.</param>
+    /// <param name="fileName">The name of the file the user saves to, in the temporary folder.</param>
+    /// <returns>The bytes of the file.</returns>
+    private async Task<byte[]> ExportAsync(ApplicationComposition composition, FakeDialogService dialogs, string presetName, string fileName)
+    {
+        var target = Path.Combine(_tempRoot, fileName);
+        dialogs.SaveFileToPick = target;
+        dialogs.ExportPresetNameToPick = presetName;
+        await composition.Shell.ExportPngCommand.ExecuteAsync(null);
+        return await File.ReadAllBytesAsync(target, TestContext.Current.CancellationToken);
+    }
+
+    /// <summary>
+    ///     Decodes a PNG file.
+    /// </summary>
+    /// <param name="png">The bytes of the file.</param>
+    /// <returns>The picture.</returns>
+    private static DemaConsulting.CanvasNet.Canvas.Surface DecodePng(byte[] png)
+    {
+        using var stream = new MemoryStream(png);
+        return DemaConsulting.CanvasNet.Codecs.PngCodec.Load(stream);
+    }
+
+    /// <summary>
+    ///     Reads the horizontal resolution that the <c>pHYs</c> chunk of a PNG file says, in pixels per meter.
+    /// </summary>
+    /// <param name="png">The bytes of the file.</param>
+    /// <returns>The resolution, or 0 when the file has no such chunk.</returns>
+    private static int PixelsPerMeter(byte[] png)
+    {
+        var offset = png.AsSpan().IndexOf("pHYs"u8);
+        return offset < 0 ? 0 : System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(offset + 4, 4));
     }
 }

@@ -59,7 +59,9 @@ false.
 #### Error Handling
 
 The constructor throws `ArgumentNullException` for a missing collaborator. A choice that cannot be kept is not an
-exception to the caller: it is shown and logged. Failures to write a log entry are ignored.
+exception to the caller: it is shown and logged. Failures to write a log entry are ignored. The list is rebuilt under a
+lock, because outside a user interface two reads of the kits can announce a change on different threads at once; inside
+the user interface the announcements are posted to its thread and never overlap.
 
 #### Dependencies
 

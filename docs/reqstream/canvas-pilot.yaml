@@ -465,6 +465,8 @@ sections:
         children:
           - CanvasPilot-Style-DefineKits
           - CanvasPilot-Style-FindKitsInLocations
+        tests:
+          - CanvasPilot_DefineStyleKits_BuiltInUserProjectAndSharedKits_ResolveByPrecedence
 
       - id: CanvasPilot-System-ManageStyleKits
         title: >-
@@ -482,6 +484,8 @@ sections:
           - CanvasPilot-Style-ManageKitsInWindow
           - CanvasPilot-Style-ExchangeKitsAsZipFiles
           - CanvasPilot-AppShell-OpenStyleKitsWindow
+        tests:
+          - CanvasPilot_ManageStyleKits_ShellCommandAndManager_CreateEditExportImportAndDelete
 
       - id: CanvasPilot-System-ChooseProjectStyle
         title: >-
@@ -498,6 +502,8 @@ sections:
           - CanvasPilot-AppShell-ChooseStyleInStatusBar
           - CanvasPilot-Project-KeepTheStyleChoice
           - CanvasPilot-Settings-KeepStyleSettings
+        tests:
+          - CanvasPilot_ChooseProjectStyle_PickerAndNewProject_KeepTheChoiceInTheProjectFile
 
       - id: CanvasPilot-System-ExportAtPresetSizes
         title: >-
@@ -512,6 +518,8 @@ sections:
         children:
           - CanvasPilot-Style-OfferExportPresets
           - CanvasPilot-Preview-ExportAtRequestedSize
+        tests:
+          - CanvasPilot_ExportAtPresetSizes_ComposedExporter_WritesPngOfThePresetSize
 
       - id: CanvasPilot-System-GuideAssistantStyle
         title: >-
@@ -528,6 +536,8 @@ sections:
         children:
           - CanvasPilot-Style-GuideTheAssistant
           - CanvasPilot-Style-StayProviderNeutral
+        tests:
+          - CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree
 
       - id: CanvasPilot-System-CheckPictureAgainstStyle
         title: >-
@@ -543,3 +553,5 @@ sections:
           - CanvasPilot-Style-CheckPictures
           - CanvasPilot-Preview-ShowNotesOfOtherParts
           - CanvasPilot-AppShell-CheckAgainstStyleMenu
+        tests:
+          - CanvasPilot_CheckPictureAgainstStyle_ImageMenuCommand_ShowsNotesInTheDiagnosticsArea

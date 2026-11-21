@@ -110,6 +110,12 @@ public sealed partial class StyleKitManagerViewModel : ObservableObject, IDispos
     private readonly ObservableCollection<StyleKitGroupViewModel> _groups = [];
 
     /// <summary>
+    ///     Keeps two rebuilds apart: outside a user interface the announcements of the catalog arrive on the thread that
+    ///     read the kits, and two reads can finish at the same time.
+    /// </summary>
+    private readonly object _rebuildLock = new();
+
+    /// <summary>
     ///     Cancels the drawing of the pictures of the kit that was chosen before.
     /// </summary>
     private CancellationTokenSource? _thumbnailCancellation;
@@ -580,6 +586,17 @@ public sealed partial class StyleKitManagerViewModel : ObservableObject, IDispos
     ///     which kit the project uses.
     /// </summary>
     private void Rebuild()
+    {
+        lock (_rebuildLock)
+        {
+            RebuildGroups();
+        }
+    }
+
+    /// <summary>
+    ///     Does the work of <see cref="Rebuild" /> while no other rebuild runs.
+    /// </summary>
+    private void RebuildGroups()
     {
         var previous = SelectedItem;
         var entries = _catalog.Entries;

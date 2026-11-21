@@ -67,6 +67,23 @@ public sealed class FakeDialogService : IDialogService
     public ExportPreset? ExportPresetToPick { get; set; }
 
     /// <summary>
+    ///     Gets or sets the name of the export preset the user picks from the ones that are offered, which takes
+    ///     the place of <see cref="ExportPresetToPick" /> when it is set.
+    /// </summary>
+    public string? ExportPresetNameToPick { get; set; }
+
+    /// <summary>
+    ///     Gets the export presets that were offered the last time the user was asked to pick one.
+    /// </summary>
+    public IReadOnlyList<ExportPreset> OfferedPresets { get; private set; } = [];
+
+    /// <summary>
+    ///     Gets or sets what the user does in an editor of a style kit, for example changing a field and saving. When
+    ///     null, the editor is cancelled at once.
+    /// </summary>
+    public Action<StyleKitEditorViewModel>? OnStyleKitEditor { get; set; }
+
+    /// <summary>
     ///     Gets the number of times the user was asked to pick an export preset.
     /// </summary>
     public int PresetOfferCount { get; private set; }
@@ -252,7 +269,15 @@ public sealed class FakeDialogService : IDialogService
     public Task ShowStyleKitEditorAsync(StyleKitEditorViewModel viewModel)
     {
         StyleKitEditors.Add(viewModel);
-        viewModel.CancelCommand.Execute(null);
+        if (OnStyleKitEditor is null)
+        {
+            viewModel.CancelCommand.Execute(null);
+        }
+        else
+        {
+            OnStyleKitEditor(viewModel);
+        }
+
         return Task.CompletedTask;
     }
 
@@ -290,6 +315,12 @@ public sealed class FakeDialogService : IDialogService
     public Task<ExportPreset?> PickExportPresetAsync(IReadOnlyList<ExportPreset> presets, ExportPreset? last)
     {
         PresetOfferCount++;
+        OfferedPresets = presets;
+        if (ExportPresetNameToPick is { } name)
+        {
+            return Task.FromResult(presets.FirstOrDefault(preset => preset.Name == name));
+        }
+
         return Task.FromResult(ExportPresetToPick);
     }
 

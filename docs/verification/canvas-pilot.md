@@ -88,6 +88,19 @@ services, or display is required.
   program controls is offered.
 - Drawing Knowledge in the Help menu of the composed application gives a browser over that catalog, in which the user
   can search, open a card, follow a related card, and copy an example.
+- Style kits are found in the program, the folder of the user, the project, and the shared folders, the most local copy
+  of a kit wins, an unreachable shared folder and a kit with a wrong value are reported without hiding the other kits,
+  and the Style Kits window makes, exports, deletes, imports, and copies kits into the project, and chooses the style of
+  the project, while the kits of the program cannot be changed.
+- The style of a project is chosen in the status bar, is kept in the project file, comes from the default kit for a new
+  project only, is the same after a restart, is said to be missing when the kit is not found, and stays empty for a
+  project that never had one.
+- The shown picture is exported at the sizes of the style kit and of the application with the size, the background, and
+  the resolution that the size says, and as drawn; a project with no style is offered the sizes of the application only.
+- The guidance, the two tools, and the card about style kits agree: the guidance is within its budget, the tools read
+  the style and check a picture of the project and refuse a file outside it, and the index of the knowledge fits.
+- Check Against Style in the Image menu shows the colors on the palette and off it as notes of the preview, the notes go
+  when the picture is drawn again, and a project with no style is told to choose one.
 - The published win-x64 application contains the native speech and audio runtime libraries and so does the installer
   package, so that the installed application needs nothing but the model download to run a chosen speech model.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
@@ -134,6 +147,13 @@ steps are in the verification of the unit or subsystem named at each check.
    of the WiX Toolset.)
 7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
    the keyboard, and check the tool bar and the chips with a screen reader. (Verification of `AnnotationOverlay`.)
+8. *Style kits with the real pickers.* On the installed package, open Tools > Style Kits, choose Import and Export with
+   the system zip pickers, add example images with the image picker in the editor, change a color with the flyout and
+   its sliders, and add a shared folder on the Style Kits page of the settings with the folder picker, including a
+   network path that is not reachable; then check that the three kits that come with the program are listed, that the
+   status bar of a project shows the chosen kit, and that exporting at a size writes the file that the window said.
+   (Verification of the `Style` subsystem and of the units `StyleKitManager`, `StyleKitEditor`, and
+   `StyleSettingsPage`.)
 
 ## Test Scenarios
 
@@ -366,6 +386,57 @@ and counts one hidden mark, the message still holds the chip, and the mark still
 points. The message that is sent has a picture with the fingerprints of the first picture, the mark with the same
 points, and the node `Start` as the source element under it. This scenario is tested by
 `CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks`.
+
+**CanvasPilot_DefineStyleKits_BuiltInUserProjectAndSharedKits_ResolveByPrecedence**: The application is composed with a
+kit `clean` in a shared folder and in the folder of the user, a second shared folder that does not exist, and a project.
+The kit of the user wins over the shared and built-in copies. A copy added to the project then wins and the other three
+are listed as hidden; the program has its three kits; a kit of the project with a wrong color is listed as broken with
+the message that names `palette.primary` and is not offered. As the more local copies are deleted the user's copy, the
+shared copy, and the copy of the program win in turn, and the missing shared folder is reported while the other places
+are still read. This scenario is tested by
+`CanvasPilot_DefineStyleKits_BuiltInUserProjectAndSharedKits_ResolveByPrecedence`.
+
+**CanvasPilot_ManageStyleKits_ShellCommandAndManager_CreateEditExportImportAndDelete**: The Style Kits command of the
+shell gives a window with the groups of the project, the user, the shared folders, and the program. The user makes a
+kit, describes it in the editor, and saves it; the file is in the folder of the user. The kit is exported to a zip file
+that holds its `style.json`, deleted after a confirmation, and imported again with the same file. For a kit of the
+program the edit and delete commands are not available and copying into the project is; the copy has its folder in the
+project, wins over the kit of the program, and is made the style of the project, which the project file says. This
+scenario is tested by `CanvasPilot_ManageStyleKits_ShellCommandAndManager_CreateEditExportImportAndDelete`.
+
+**CanvasPilot_ChooseProjectStyle_PickerAndNewProject_KeepTheChoiceInTheProjectFile**: With a default kit in the
+settings, a new project says that kit in its file and the status bar shows it. The user chooses another kit, no style,
+and a kit again, and the file follows each choice. After the application is started again on the same files the project
+shows the chosen kit and not the default. A kit that is not found is shown as missing with the reason, and a project
+created without the shell has no style, shows none, and its file has no style property. This scenario is tested by
+`CanvasPilot_ChooseProjectStyle_PickerAndNewProject_KeepTheChoiceInTheProjectFile`.
+
+**CanvasPilot_ExportAtPresetSizes_ComposedExporter_WritesPngOfThePresetSize**: A project uses a kit with two sizes and a
+dark background and shows a small picture with empty corners. The export offers the picture as drawn, the two sizes of
+the kit, and the three of the application. The size of the kit gives a PNG of exactly that size with the background of
+the kit in the corner; the A4 size gives its size and a resolution of 5906 pixels per meter in the `pHYs` chunk; the
+picture as drawn has its own size. With the style taken away only the picture as drawn and the sizes of the application
+are offered, and the background is white. This scenario is tested by
+`CanvasPilot_ExportAtPresetSizes_ComposedExporter_WritesPngOfThePresetSize`.
+
+**CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree**: For a project that uses a built-in kit, the
+style tool answers the guidance of the kit, within the budget, with its palette; the check tool passes a picture that
+uses only palette colors and fails one with another color and names it, and refuses a file outside the project. With the
+style taken away the style tool says to ask the user to choose a kit. The card about style kits names both tools and the
+index of the knowledge is within its budget. This scenario is tested by
+`CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree`.
+
+**CanvasPilot_CheckPictureAgainstStyle_ImageMenuCommand_ShowsNotesInTheDiagnosticsArea**: The Check Against Style
+command is not available before a picture is shown. For a picture on the palette it adds a summary that says passed and
+a note of the palette colors; for one with another color it adds a summary that says failed and a warning that names the
+color; drawing a picture again removes the notes. With the style taken away the command shows a message that says there
+is no style kit. This scenario is tested by
+`CanvasPilot_CheckPictureAgainstStyle_ImageMenuCommand_ShowsNotesInTheDiagnosticsArea`.
+
+**StyleKits_BuiltInPublished**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the `StyleKits` folder beside the executable holds three `style.json` files and, for each kit,
+the three example images, and a following step reads the file table of the installer package; the installer takes the
+published folder whole. This scenario is tested by `StyleKits_BuiltInPublished`, which is run in CI only.
 
 **Speech_NativeRuntimePublished**: After the Windows build job publishes the application self-contained for win-x64,
 FileAssert asserts that the published folder, which the installer takes whole, holds exactly one each of

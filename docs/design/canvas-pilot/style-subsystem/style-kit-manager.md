@@ -86,7 +86,8 @@ design of `MainWindowShell`).
 
 The constructors throw `ArgumentNullException` for a missing argument. Everything that can go wrong in a command,
 including a failure of the catalog, the archive, the active style, and the file system, is caught and said in
-`StatusMessage`. A drawing that fails is a placeholder text, not an exception.
+`StatusMessage`. A drawing that fails is a placeholder text, not an exception. The groups are rebuilt under a lock, for
+the reason that is given in the design of `StylePicker`.
 
 #### Dependencies
 

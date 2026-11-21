@@ -78,6 +78,12 @@ public sealed partial class StylePickerViewModel : ObservableObject, IDisposable
     private readonly ObservableCollection<StylePickerItem> _items = [];
 
     /// <summary>
+    ///     Keeps two rebuilds apart: outside a user interface the announcements of the catalog arrive on the thread that
+    ///     read the kits, and two reads can finish at the same time.
+    /// </summary>
+    private readonly object _rebuildLock = new();
+
+    /// <summary>
     ///     Whether the list and the selection are being rebuilt, so that the change of selection that this causes is not
     ///     taken for a choice of the user.
     /// </summary>
@@ -264,6 +270,17 @@ public sealed partial class StylePickerViewModel : ObservableObject, IDisposable
     ///     only when it is not the same, so a control that shows it is not reset without need.
     /// </summary>
     private void Rebuild()
+    {
+        lock (_rebuildLock)
+        {
+            RebuildItems();
+        }
+    }
+
+    /// <summary>
+    ///     Does the work of <see cref="Rebuild" /> while no other rebuild runs.
+    /// </summary>
+    private void RebuildItems()
     {
         var items = new List<StylePickerItem>
         {
