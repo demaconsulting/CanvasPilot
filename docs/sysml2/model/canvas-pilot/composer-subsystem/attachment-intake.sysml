@@ -1,5 +1,8 @@
-package CanvasPilot {
+package CanvasPilot_AttachmentIntake {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AttachmentStore::*;
+    private import CanvasPilot_ComposerDocument::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def AttachmentIntake {
         doc /* Turns dropped and pasted content into chips and text for the message: decides what each dropped path is without opening it, leaves out unsafe, missing, repeated, and excessive items with a reason, saves pasted pictures through the attachment store, and cleans and limits text. Everything dropped is treated as data. The view-neutral content and result records are documented as supporting value types in this unit's design. */

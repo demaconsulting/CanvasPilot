@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_ModelCatalogPanel {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_SpeechModelService::*;
+    private import OtsDependencies::*;
 
     part def ModelCatalogPanel {
         doc /* The speech-to-text and text-to-speech model lists of the Speech page; chooses models and runs downloads with progress and cancellation. */
@@ -21,6 +23,6 @@ package CanvasPilot {
         dependency ModelCatalogPanel to SpeechModelService;
 
         // Shows the library's model identity and install state types.
-        dependency ModelCatalogPanel to Ots::Speech;
+        dependency ModelCatalogPanel to Speech;
     }
 }

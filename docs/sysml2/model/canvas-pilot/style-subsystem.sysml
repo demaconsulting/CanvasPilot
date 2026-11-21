@@ -1,5 +1,16 @@
-package CanvasPilot {
+package CanvasPilot_StyleSubsystem {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_StyleChecker::*;
+    private import CanvasPilot_StyleGuidance::*;
+    private import CanvasPilot_StyleKitArchive::*;
+    private import CanvasPilot_StyleKitCatalog::*;
+    private import CanvasPilot_StyleKitDocument::*;
+    private import CanvasPilot_StyleKitEditor::*;
+    private import CanvasPilot_StyleKitManager::*;
+    private import CanvasPilot_StylePicker::*;
+    private import CanvasPilot_StyleSelection::*;
+    private import CanvasPilot_StyleSettingsPage::*;
+    private import CanvasPilot_StyleTools::*;
 
     part def StyleSubsystem {
         doc /* Holds the look that pictures should have as style kits: folders with a style file and example images that are found in the places that ship with the program, that the user keeps, that a project holds, and that a team shares, the kit that a project uses, the export sizes, the guidance and tools for an assistant, and a check of a picture against the palette of a kit. It is kept apart from every provider of a language model. */

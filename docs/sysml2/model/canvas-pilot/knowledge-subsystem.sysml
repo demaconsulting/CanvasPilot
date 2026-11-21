@@ -1,5 +1,12 @@
-package CanvasPilot {
+package CanvasPilot_KnowledgeSubsystem {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_KnowledgeBrowser::*;
+    private import CanvasPilot_KnowledgeCatalog::*;
+    private import CanvasPilot_KnowledgeMarkdown::*;
+    private import CanvasPilot_KnowledgePromptBuilder::*;
+    private import CanvasPilot_KnowledgeSearch::*;
+    private import CanvasPilot_KnowledgeSkills::*;
+    private import CanvasPilot_KnowledgeTools::*;
 
     part def KnowledgeSubsystem {
         doc /* Holds the knowledge of how to draw with the formats CanvasNet draws and how to work in a CanvasPilot project, as a tree of cards taken from the help of CanvasNet, without the cards about what the host program controls, and extended with cards of CanvasPilot. It is kept apart from every provider of a language model, and only its browser window has a user interface. */

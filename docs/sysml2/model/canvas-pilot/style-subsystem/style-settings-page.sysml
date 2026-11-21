@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_StyleSettingsPage {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_SettingsDialog::*;
+    private import CanvasPilot_StyleKitCatalog::*;
+    private import CanvasPilot_StylePicker::*;
 
     part def StyleSettingsPage {
         doc /* The Style Kits page of the settings dialog: the shared folders in which a team keeps style kits, in the order in which they win, each with whether the kits in it could be read, added by a typed full path or by the folder picker, removed, and moved, and the kit that a new project starts with, merging only the style settings into the settings when applied. */

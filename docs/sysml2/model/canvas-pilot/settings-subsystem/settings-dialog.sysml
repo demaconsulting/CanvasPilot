@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_SettingsDialog {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_SettingsService::*;
 
     part def SettingsDialog {
         doc /* Modal settings window that hosts injected settings pages and saves them on OK or Apply. */

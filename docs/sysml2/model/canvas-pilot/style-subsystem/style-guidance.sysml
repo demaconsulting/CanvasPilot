@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_StyleGuidance {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_StyleKitCatalog::*;
+    private import CanvasPilot_StyleKitDocument::*;
 
     part def StyleGuidance {
         doc /* Writes the style of a kit as a block of Markdown text of at most 4,000 characters for an assistant, cut in a fixed order of steps when the kit is large and ending with a line that says so, and as single whole sections, with the colors, the fonts, the snippets for Mermaid and Vega-Lite, the lists, the export sizes, and the full paths of the example images, and with free text of the kit made safe. */

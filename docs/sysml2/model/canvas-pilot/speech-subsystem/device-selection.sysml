@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_DeviceSelection {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AudioDeviceService::*;
 
     part def DeviceSelection {
         doc /* The capture and playback device pickers of the Speech page; chooses devices by name and explains missing devices. */

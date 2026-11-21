@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_KnowledgeBrowser {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_KnowledgeCatalog::*;
+    private import CanvasPilot_KnowledgeMarkdown::*;
+    private import CanvasPilot_KnowledgeSearch::*;
+    private import CanvasPilot_RollingFileLogger::*;
     private import ScalarValues::Integer;
 
     part def KnowledgeBrowser {

@@ -1,4 +1,4 @@
-package CanvasPilot {
+package CanvasPilot_ExportPresetDialog {
     private import SoftwareItemMetadata::*;
 
     part def ExportPresetDialog {

@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_AudioDeviceService {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_RollingFileLogger::*;
+    private import OtsDependencies::*;
 
     part def AudioDeviceService {
         doc /* Lists capture and playback devices through the speech library on demand, creates the capture device of the chosen microphone, and returns a missing or unusable audio system as a result with an explanation. */
@@ -16,7 +18,7 @@ package CanvasPilot {
         }
 
         // Lists devices and scans for changed hardware with the speech library's audio device factory.
-        dependency AudioDeviceService to Ots::Speech;
+        dependency AudioDeviceService to Speech;
 
         // Reports audio system problems to the application log.
         dependency AudioDeviceService to RollingFileLogger;

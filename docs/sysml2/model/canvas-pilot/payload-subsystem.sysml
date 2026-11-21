@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_PayloadSubsystem {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_MarkImageComposer::*;
+    private import CanvasPilot_MessagePayload::*;
+    private import CanvasPilot_PayloadBuilder::*;
+    private import CanvasPilot_PayloadDescriber::*;
 
     part def PayloadSubsystem {
         doc /* Builds, from the message that the user sends, the immutable payload for the assistant: the text with its references in order, the attachments with their paths, and for each picture that marks were drawn on the annotated picture, the area around each mark, the geometry and note of each mark, and the parts of the source file under it. It also describes a payload as text. */

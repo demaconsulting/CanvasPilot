@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_PayloadInspector {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_MessagePayload::*;
+    private import CanvasPilot_PayloadDescriber::*;
 
     part def PayloadInspector {
         doc /* The window that shows the user exactly what the assistant would receive for a sent message: the description that the payload describer writes, as read-only text, and the pictures of the payload, each marked picture with its marks drawn on it and the area around each mark, each with a caption. It changes nothing, releases its decoded pictures when it closes, and is shown through a launcher seam that the main window implements as a dialog it owns. */

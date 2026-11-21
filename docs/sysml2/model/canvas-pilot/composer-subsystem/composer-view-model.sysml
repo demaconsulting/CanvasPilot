@@ -1,5 +1,12 @@
-package CanvasPilot {
+package CanvasPilot_ComposerViewModel {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AttachmentIntake::*;
+    private import CanvasPilot_AttachmentStore::*;
+    private import CanvasPilot_ComposerDocument::*;
+    private import CanvasPilot_ComposerHistory::*;
+    private import CanvasPilot_DictationService::*;
+    private import CanvasPilot_MarkRegistry::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def ComposerViewModel {
         doc /* The orchestration of the message being composed, without a window: owns the document, its undo history, the intake of dropped and pasted content, and push-to-talk dictation, connects the marks and the attachments of the open project to the message, and sends it. It makes each action of the user exactly one undo step, offers undo and redo to the Edit menu and the keys, shows the live words while the talk button is held and adds the final words as one dictated block, names what a drop left out, allows editing only in an open project, and sends the message by putting the attachments into the project and having the message built, keeping the draft when anything fails. The message builder, the undo and redo target, and the push-to-talk target are interfaces that it owns or implements and are documented as supporting types in this unit's design. */

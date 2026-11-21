@@ -1,5 +1,8 @@
-package CanvasPilot {
+package CanvasPilot_AppShellSubsystem {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AboutDialog::*;
+    private import CanvasPilot_MainWindowShell::*;
+    private import CanvasPilot_ProjectWorkspace::*;
 
     part def AppShellSubsystem {
         doc /* The main window with its menus, the project workspace, the About dialog, and the composition root that builds the application's units at startup. */

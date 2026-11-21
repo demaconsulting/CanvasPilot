@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_LoggingSubsystem {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def LoggingSubsystem {
         doc /* Local rolling log files for user-attachable bug reports. */

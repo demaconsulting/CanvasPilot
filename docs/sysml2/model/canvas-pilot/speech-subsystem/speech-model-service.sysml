@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_SpeechModelService {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_RollingFileLogger::*;
+    private import OtsDependencies::*;
 
     part def SpeechModelService {
         doc /* Lists the speech library's models with their install state, downloads them into the shared model store, and loads the speech engine of an installed speech-to-text model, returning every failure as a result. */
@@ -16,7 +18,7 @@ package CanvasPilot {
         }
 
         // Uses the speech library's model catalog filled with the Sherpa models.
-        dependency SpeechModelService to Ots::Speech;
+        dependency SpeechModelService to Speech;
 
         // Reports catalog and download problems to the application log.
         dependency SpeechModelService to RollingFileLogger;

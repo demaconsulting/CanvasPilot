@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_StyleSelection {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageExporter::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_SettingsService::*;
+    private import CanvasPilot_StyleKitCatalog::*;
 
     part def StyleSelection {
         doc /* Finds the style kit that the open project uses from the id in the project file through the catalog of kits, keeps a new choice in the project file, starts a new project with the default kit of the user, and supplies the export sizes of the kit and of the application to the export dialog of the Preview subsystem. */

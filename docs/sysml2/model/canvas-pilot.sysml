@@ -1,5 +1,19 @@
 package CanvasPilot {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AnnotationSubsystem::*;
+    private import CanvasPilot_AppShellSubsystem::*;
+    private import CanvasPilot_ChatSubsystem::*;
+    private import CanvasPilot_ComposerSubsystem::*;
+    private import CanvasPilot_KnowledgeSubsystem::*;
+    private import CanvasPilot_LoggingSubsystem::*;
+    private import CanvasPilot_PayloadSubsystem::*;
+    private import CanvasPilot_PreviewSubsystem::*;
+    private import CanvasPilot_ProjectSubsystem::*;
+    private import CanvasPilot_SettingsSubsystem::*;
+    private import CanvasPilot_SpeechSubsystem::*;
+    private import CanvasPilot_StyleSubsystem::*;
+    private import CanvasPilot_UtilitiesSubsystem::*;
+    private import OtsDependencies::*;
 
     doc
     /*
@@ -35,17 +49,17 @@ package CanvasPilot {
 
         // The user interface framework, its text editing control, and the view model source generators are consumed at
         // run time by the subsystems that have views and view models.
-        part userInterface : Ots::Avalonia;
-        part textEditor : Ots::AvaloniaEdit;
-        part viewModelToolkit : Ots::CommunityToolkitMvvm;
+        part userInterface : Avalonia;
+        part textEditor : AvaloniaEdit;
+        part viewModelToolkit : CommunityToolkitMvvm;
 
         // CanvasNet is consumed at run time by the Preview, Project, Payload, Knowledge, and Style subsystems.
-        part canvasNet : Ots::CanvasNet;
+        part canvasNet : CanvasNet;
 
         // The speech library is consumed at run time by the Speech subsystem.
-        part speechLibrary : Ots::Speech;
+        part speechLibrary : Speech;
 
         // The Windows installer package is built by the WiX Toolset from the published application.
-        part installer : Ots::WiX;
+        part installer : WiX;
     }
 }

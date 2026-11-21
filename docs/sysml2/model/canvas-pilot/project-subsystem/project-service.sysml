@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_ProjectService {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def ProjectService {
         doc /* Creates, opens, saves, and closes projects stored as a folder with a versioned project file. */

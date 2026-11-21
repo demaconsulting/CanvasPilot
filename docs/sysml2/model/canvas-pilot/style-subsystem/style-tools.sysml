@@ -1,5 +1,12 @@
-package CanvasPilot {
+package CanvasPilot_StyleTools {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageRenderService::*;
+    private import CanvasPilot_KnowledgeTools::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_StyleChecker::*;
+    private import CanvasPilot_StyleGuidance::*;
+    private import CanvasPilot_StyleKitCatalog::*;
+    private import CanvasPilot_StyleSelection::*;
 
     part def StyleTools {
         doc /* Describes the tools style_get and style_check as plain values with a function from the arguments as text to an answer as text: style_get gives the guidance or one section of a kit, and style_check draws a picture file that is confined to the folder of the open project and checks it against the palette of the kit of the project; no tool throws. */

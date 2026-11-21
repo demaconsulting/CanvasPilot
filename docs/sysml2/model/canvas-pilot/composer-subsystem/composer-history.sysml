@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_ComposerHistory {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ComposerDocument::*;
     private import ScalarValues::Integer;
 
     part def ComposerHistory {

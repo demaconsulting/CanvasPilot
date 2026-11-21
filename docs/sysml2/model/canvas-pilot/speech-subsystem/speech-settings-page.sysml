@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_SpeechSettingsPage {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_DeviceSelection::*;
+    private import CanvasPilot_ModelCatalogPanel::*;
+    private import CanvasPilot_ModelParameterEditor::*;
+    private import CanvasPilot_SettingsDialog::*;
 
     part def SpeechSettingsPage {
         doc /* The Speech page of the settings dialog; composes the device pickers, model catalog, and parameter editors and maps them to and from the stored speech settings. */

@@ -1,5 +1,10 @@
-package CanvasPilot {
+package CanvasPilot_DictationService {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AudioDeviceService::*;
+    private import CanvasPilot_RollingFileLogger::*;
+    private import CanvasPilot_SettingsService::*;
+    private import CanvasPilot_SpeechModelService::*;
+    private import OtsDependencies::*;
 
     part def DictationService {
         doc /* Turns what the user says while holding a talk control into text through the speech library's recognition engine, with the model, settings, and microphone chosen in the settings; loads the engine once, checks the native speech files before it loads one, and returns every state in which dictation cannot work as a result with an explanation. */
@@ -28,7 +33,7 @@ package CanvasPilot {
         dependency DictationService to AudioDeviceService;
 
         // Streams the recognition results of a capture device through the speech library's recognition session.
-        dependency DictationService to Ots::Speech;
+        dependency DictationService to Speech;
 
         // Reports dictation events and problems, never the recognized text, to the application log.
         dependency DictationService to RollingFileLogger;

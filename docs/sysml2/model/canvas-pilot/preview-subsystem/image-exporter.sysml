@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_ImageExporter {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageRenderService::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def ImageExporter {
         doc /* Saves the shown picture as a PNG file the user chooses or copies it to the clipboard, and is available only while a picture is shown. */

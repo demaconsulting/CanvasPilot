@@ -1,5 +1,19 @@
-package CanvasPilot {
+package CanvasPilot_MainWindowShell {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AboutDialog::*;
+    private import CanvasPilot_ComposerViewModel::*;
+    private import CanvasPilot_ExportPresetDialog::*;
+    private import CanvasPilot_ImageExporter::*;
+    private import CanvasPilot_KnowledgeBrowser::*;
+    private import CanvasPilot_NewProjectDialog::*;
+    private import CanvasPilot_PayloadInspector::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_ProjectWorkspace::*;
+    private import CanvasPilot_RecentProjects::*;
+    private import CanvasPilot_SettingsDialog::*;
+    private import CanvasPilot_StyleChecker::*;
+    private import CanvasPilot_StyleKitManager::*;
+    private import CanvasPilot_StylePicker::*;
 
     part def MainWindowShell {
         doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands (Help shows the About dialog and the browser of the drawing knowledge), the window title, the recent projects menu, Undo and Redo of the focused part, the talk key, and the dialog service the window implements. */

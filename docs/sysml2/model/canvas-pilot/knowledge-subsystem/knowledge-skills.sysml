@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_KnowledgeSkills {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_KnowledgeCatalog::*;
+    private import CanvasPilot_KnowledgePromptBuilder::*;
     private import ScalarValues::String;
 
     part def KnowledgeSkills {

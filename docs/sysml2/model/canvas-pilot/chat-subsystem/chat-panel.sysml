@@ -1,5 +1,15 @@
-package CanvasPilot {
+package CanvasPilot_ChatPanel {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AnnotationOverlay::*;
+    private import CanvasPilot_ComposerEditor::*;
+    private import CanvasPilot_ComposerViewModel::*;
+    private import CanvasPilot_DictationService::*;
+    private import CanvasPilot_MarkImageComposer::*;
+    private import CanvasPilot_MarkRegistry::*;
+    private import CanvasPilot_MessagePayload::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_PayloadInspector::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def ChatPanel {
         doc /* The panel in which the user converses: the transcript of the messages that were sent in the open project, oldest first, each with its words in the order they were written, its chips with their pictures, and a button that shows its payload; the composer's editing control; a button that sends the message exactly when the composer can; and a button that listens exactly while it is held, however the hold ends, and shows why when dictation cannot work. It joins the layer on which the user marks the picture to the message, so that every mark becomes a chip as one undo step and the layer shows the marks whose chips the message holds, prepares dictation when it is shown, gives chips their pictures, and keeps the transcript only in memory, dropping it when the project changes. */

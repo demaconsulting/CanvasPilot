@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_ImageRenderService {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_RollingFileLogger::*;
+    private import OtsDependencies::*;
 
     part def ImageRenderService {
         doc /* Draws an image source file with the CanvasNet viewer in the background, confined to the project folder and at a requested size, background, or page resolution, returns the pixels, notes, or a coded error, and encodes pictures as PNG with a resolution when asked. */
@@ -24,7 +26,7 @@ package CanvasPilot {
 
         // Draws files with the CanvasNet viewer and encodes PNG with its codec; no other unit draws files with it (the
         // MarkImageComposer draws only an SVG document of its own).
-        dependency ImageRenderService to Ots::CanvasNet;
+        dependency ImageRenderService to CanvasNet;
 
         // Reports files that could not be drawn to the application log.
         dependency ImageRenderService to RollingFileLogger;

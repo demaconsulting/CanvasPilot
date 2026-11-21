@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_StyleKitDocument {
     private import SoftwareItemMetadata::*;
+    private import OtsDependencies::*;
 
     part def StyleKitDocument {
         doc /* Holds the values of a style kit and the format of its file: reads a kit from a style file and from its folder with a message for each wrong property, checks a kit that is built in memory with the same rules, warns about fonts that not every format draws, bounds the size of every part of a kit, and writes a kit as canonical text. */
@@ -26,6 +27,6 @@ package CanvasPilot {
         }
 
         // Classifies the first family of a font list as a family that CanvasNet draws the same on every machine or not.
-        dependency StyleKitDocument to Ots::CanvasNet;
+        dependency StyleKitDocument to CanvasNet;
     }
 }

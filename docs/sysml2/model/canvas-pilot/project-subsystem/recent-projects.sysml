@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_RecentProjects {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_SettingsService::*;
 
     part def RecentProjects {
         doc /* Keeps the most-recently-used project file list in the application settings. */

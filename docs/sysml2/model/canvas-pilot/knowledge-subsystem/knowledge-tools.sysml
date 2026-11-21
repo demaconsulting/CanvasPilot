@@ -1,5 +1,8 @@
-package CanvasPilot {
+package CanvasPilot_KnowledgeTools {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_KnowledgeCatalog::*;
+    private import CanvasPilot_KnowledgePromptBuilder::*;
+    private import CanvasPilot_KnowledgeSearch::*;
     private import ScalarValues::String;
 
     part def KnowledgeTools {

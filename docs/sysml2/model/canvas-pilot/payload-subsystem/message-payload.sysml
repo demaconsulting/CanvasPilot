@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_MessagePayload {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ComposerDocument::*;
+    private import CanvasPilot_ImageRenderService::*;
+    private import CanvasPilot_MarkRegistry::*;
+    private import CanvasPilot_MarkSourceResolver::*;
     private import ScalarValues::Integer;
 
     part def MessagePayload {

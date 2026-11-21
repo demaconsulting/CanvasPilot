@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_KnowledgeCatalog {
     private import SoftwareItemMetadata::*;
+    private import OtsDependencies::*;
 
     part def KnowledgeCatalog {
         doc /* Builds the tree of knowledge cards of the application from the help cards of CanvasNet, extended with the cards of CanvasPilot that are embedded in the application and filtered to leave out the cards about what the host program controls, copies them into values of its own with the links of each body written as card identifiers, and finds cards by path or other name and examples by name. */
@@ -19,6 +20,6 @@ package CanvasPilot {
         }
 
         // Reads the help cards of the library, extends them with the cards of the application, and filters them by tag.
-        dependency KnowledgeCatalog to Ots::CanvasNet;
+        dependency KnowledgeCatalog to CanvasNet;
     }
 }

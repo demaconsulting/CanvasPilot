@@ -1,5 +1,8 @@
-package CanvasPilot {
+package CanvasPilot_AttachmentStore {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def AttachmentStore {
         doc /* Keeps the files of attachments in one project folder: saves pictures pasted from the clipboard in the project's private data folder, removes the ones no chip refers to, and, when a message is sent, copies the attachments from outside the project into the project's attachments folder, all or none, within limits of files, folders, and bytes, with safe unique names, without following links. The attachment content is data and is never opened or run. The staged attachment and result records are documented as supporting value types in this unit's design. */

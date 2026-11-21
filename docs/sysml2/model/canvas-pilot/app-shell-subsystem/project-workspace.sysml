@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_ProjectWorkspace {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ChatPanel::*;
+    private import CanvasPilot_ProjectExplorer::*;
 
     part def ProjectWorkspace {
         doc /* The main window's content area: the project explorer, the preview area, the chat column, and the confirmed delete and rename of project files. */
