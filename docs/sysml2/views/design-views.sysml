@@ -89,6 +89,12 @@ package CanvasPilot {
         render asInterconnectionDiagram;
     }
 
+    view StyleSubsystemView {
+        expose StyleSubsystem;
+        expose StyleSubsystem::*;
+        render asInterconnectionDiagram;
+    }
+
     view UtilitiesSubsystemView {
         expose UtilitiesSubsystem;
         expose UtilitiesSubsystem::*;

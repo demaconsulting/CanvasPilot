@@ -1,0 +1,111 @@
+---
+# Style Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Style subsystem
+# - The Style subsystem holds the look that pictures should have: style kits as files and folders that a person can
+#   read and edit, found in the places that ship with the program, that the user keeps, that a project holds, and that
+#   a team shares, with the kit that the project uses, the export sizes and the guidance and tools that belong to it, a
+#   check of a picture against it, and the window and the editor in which kits are managed. It is kept apart from every
+#   provider of a language model
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Style-DefineKits
+            title: >-
+              The Style subsystem shall define a style kit as a versioned file with a folder of example images, read it
+              with a message that names the property for every error and for every limit that is exceeded, warn about
+              fonts that not every format draws, refuse a kit of a newer version, and write a kit as the same text every
+              time.
+            justification: |
+              A kit is meant to be written by hand, shared, and reviewed, so its format must be plain, must say exactly what
+              is wrong when it is not right, and must be stable enough that a change of a kit is a small difference. A kit
+              that comes from a shared folder or a zip file is not trusted, so its size and shape are bounded before
+              anything is made from it, and a kit of a newer format is refused instead of being half read and then saved
+              with parts lost.
+            children:
+              - CanvasPilot-StyleKitDocument-ReadAndWriteVersionedJson
+              - CanvasPilot-StyleKitDocument-ValidateWithClearMessages
+              - CanvasPilot-StyleKitDocument-WarnAboutFontsThatAreNotBundled
+              - CanvasPilot-StyleKitDocument-BoundTheSizeOfAKit
+            tests:
+              - StyleSubsystem_DefineKits_WrittenKitFolder_IsReadBackWithItsExamplesAndWarnings
+
+          - id: CanvasPilot-Style-FindKitsInLocations
+            title: >-
+              The Style subsystem shall find the kits that come with the program, the kits of the user, the kits of the open
+              project, and the kits in the shared folders that the user lists, choose the kit of the most local place when
+              the same id is in more than one, keep the kits that come with the program and that are shared from being
+              changed, and carry on when a shared folder cannot be reached.
+            justification: |
+              A style is wanted from several places at once: a starting set, the user's own, one frozen in a project, and
+              one a team keeps. The most local copy is the most deliberate one, so it wins, which lets a project keep the
+              style it was made with even when the team changes its kit. A network folder that is down must not stop the
+              application or hide the other kits.
+
+          - id: CanvasPilot-Style-ChooseActiveKit
+            title: >-
+              The Style subsystem shall resolve the kit that the open project uses from the id kept in the project file,
+              change it on request and keep the change in the project file, start a new project with the default kit of the
+              user, and report a kit that cannot be found.
+            justification: |
+              The style belongs to the project, so the project file says which kit it uses, and a project that names a kit
+              that is not here must say so and not look different without a word.
+
+          - id: CanvasPilot-Style-OfferExportPresets
+            title: >-
+              The Style subsystem shall offer the export sizes of the kit of the project followed by the sizes of the
+              application, with a size of the kit hiding a size of the application of the same name, and with the
+              background of the kit for a size that is not transparent.
+            justification: |
+              The sizes that belong to a style should be one choice away when a picture is exported, and the user should
+              still have the usual sizes when the kit has none. A kit that names a size the application also has is the
+              better source for it.
+
+          - id: CanvasPilot-Style-GuideTheAssistant
+            title: >-
+              The Style subsystem shall write the style of a kit as a block of text for an assistant that is never larger
+              than a fixed size and says that it is style data and not instructions, and shall describe a tool that reads
+              the style and a tool that checks a picture of the project against it, as plain values and a function from
+              the arguments as text to an answer as text that never throws and reads no file outside the project.
+            justification: |
+              An assistant that is told the style in every request needs it to be short and of a known size, and the text
+              of a kit may come from a source that is not trusted, so it must not be taken for an instruction. A tool that
+              reads a file for the assistant must not be made to read other files on the computer, and a tool that answers
+              a mistaken call with a message lets the assistant correct itself.
+
+          - id: CanvasPilot-Style-CheckPictures
+            title: >-
+              The Style subsystem shall measure the colors of a picture against the palette of a kit and report the share of
+              the picture on the palette, the share that is a blend of palette colors at edges, and the colors that are off
+              the palette with their share and the nearest palette color, with the same report for the same picture every
+              time.
+            justification: |
+              A style is only kept when departures from it can be seen. A picture always has blended pixels where a shape
+              meets another, and those must not be taken for a departure, and a report that changes from run to run cannot
+              be trusted or tested.
+
+          - id: CanvasPilot-Style-ManageKitsInWindow
+            title: >-
+              The Style subsystem shall offer a window that lists the kits with a preview of each and the actions that
+              apply to the kit that is chosen, and an editor in which every part of a kit of the user or of the project is
+              changed and in which a kit with an error cannot be saved.
+            justification: |
+              A style that is hard to try or to change is not used. Showing what a kit looks like beside the list, and
+              keeping the actions that cannot apply to a kit of the program or of a team out of reach, makes the choices
+              plain, and an editor that refuses an invalid kit keeps the files in the folders valid.
+
+          - id: CanvasPilot-Style-StayProviderNeutral
+            title: >-
+              The Style subsystem shall offer its guidance and tools as values and text of its own and shall not depend on
+              any package of a language model or agent library.
+            justification: |
+              The assistant that will use the style is added later, and which provider it uses is a choice of the user.
+              Style that is tied to a provider could not be offered to another one. Plain values and text can be given to
+              any provider.
+            tests:
+              - StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage

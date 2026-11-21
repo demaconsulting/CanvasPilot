@@ -22,6 +22,7 @@ using System.Text;
 using DemaConsulting.CanvasNet.Canvas;
 using DemaConsulting.CanvasNet.Codecs;
 using DemaConsulting.CanvasNet.Files;
+using DemaConsulting.CanvasNet.Fonts;
 using DemaConsulting.CanvasNet.ImageSources;
 using DemaConsulting.CanvasNet.Positions;
 using DemaConsulting.CanvasNet.Viewer;
@@ -447,6 +448,50 @@ public sealed class CanvasNetTests : IDisposable
         Assert.Contains("<framed@svg/framed-figure>", body, StringComparison.Ordinal);
         Assert.Null(library.Find("ots-sample"));
         Assert.DoesNotContain(library.Cards, c => c.Id == "ots-sample");
+    }
+
+    /// <summary>
+    ///     Test that CanvasNet classifies the generic CSS font families, the common aliases of them, and the bundled
+    ///     Liberation families, and does not recognize an arbitrary family, and splits a font-family list, so the
+    ///     application can tell which fonts of a style are drawn the same on every machine.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_GenericFontFamilies_ClassifiesBundledAliasesAndUnknownFamilies()
+    {
+        // Act: classify each family the way the application does, with the common aliases included
+        bool Classify(string name, out bool serif, out bool fixedPitch) =>
+            GenericFontFamilies.TryClassify(name, includeCommonAliases: true, out serif, out fixedPitch);
+        var sans = Classify("sans-serif", out var sansSerif, out var sansFixed);
+        var segoe = Classify("Segoe UI", out var segoeSerif, out var segoeFixed);
+        var serifKeyword = Classify("serif", out var serifSerif, out var serifFixed);
+        var mono = Classify("monospace", out var monoSerif, out var monoFixed);
+        var consolas = Classify("Consolas", out _, out var consolasFixed);
+        var liberationMono = Classify("liberation mono", out _, out var liberationFixed);
+        var inter = Classify("Inter", out _, out _);
+        var comic = Classify("Comic Sans MS", out _, out _);
+        var withoutAliases = GenericFontFamilies.TryClassify("Arial", includeCommonAliases: false, out _, out _);
+        var families = GenericFontFamilies.SplitFamilyList("\"Segoe UI\", Arial, sans-serif");
+
+        // Assert: the keywords and the aliases are recognized with their design, other families are not, and an alias is
+        // recognized only when the aliases are asked for
+        Assert.True(sans);
+        Assert.False(sansSerif || sansFixed);
+        Assert.True(segoe);
+        Assert.False(segoeSerif || segoeFixed);
+        Assert.True(serifKeyword);
+        Assert.True(serifSerif);
+        Assert.False(serifFixed);
+        Assert.True(mono);
+        Assert.True(monoFixed);
+        Assert.False(monoSerif);
+        Assert.True(consolas);
+        Assert.True(consolasFixed);
+        Assert.True(liberationMono);
+        Assert.True(liberationFixed);
+        Assert.False(inter);
+        Assert.False(comic);
+        Assert.False(withoutAliases);
+        Assert.Equal(["Segoe UI", "Arial", "sans-serif"], families);
     }
 
     /// <summary>

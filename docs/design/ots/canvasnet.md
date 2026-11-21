@@ -45,6 +45,12 @@ whole set always moves to one version together.
   identifier instead); `Find`, `GetChildren`, `GetSeeAlso`, `Roots`, and `Cards` read the tree;
   `FormatMarkdown(card, formatLink)` writes the body of a card with the links in the caller's words. `HelpCard` and
   `HelpExample` carry the parts of a card.
+- `GenericFontFamilies` (namespace `DemaConsulting.CanvasNet.Fonts`) — `TryClassify(name, includeCommonAliases: true, ...)`
+  says whether a font family name is a generic CSS family, a common alias of one (such as `Arial` or `Segoe UI`), or a
+  bundled Liberation family, and which bundled design stands in for it; `SplitFamilyList` splits a CSS `font-family` list.
+  `StyleKitDocument` classifies the first family of each font list of a style kit with it, so that the warning about a font
+  that is not bundled agrees with what the library draws. CanvasNet draws SVG and OpenSCAD text with an installed font when
+  the machine has it, and Mermaid, PlantUML, and Vega-Lite text with the bundled fonts only.
 
 ### Integration Pattern
 
@@ -52,7 +58,9 @@ CanvasNet is consumed as a NuGet package reference of the application library. `
 `CanvasNetViewer.Render` for files and `PngCodec`; `MarkImageComposer` calls `CanvasNetViewer.Render` only for the SVG
 document it builds in memory, and `Surface.Crop` and `PngCodec`; `KnowledgeCatalog` extends `HelpCatalog.Default` with
 the cards embedded in the application, leaves out the cards that are only about the host program (by identifier), and
-copies the cards into values of its own, once, on first use; `CanvasNetImageSourceFilter` of the project explorer reads
+copies the cards into values of its own, once, on first use; `StyleKitDocument` asks `GenericFontFamilies` whether the first
+family of a font list is one that CanvasNet draws the same on every machine; `CanvasNetImageSourceFilter` of the project
+explorer reads
 `CanvasNetViewer.Extensions`. The viewer is a static, stateless, thread-safe class, so each render is an independent
 call on a thread-pool thread, and the `ViewerImage` is disposed as soon as its pixels and notes are copied. The
 application never lets CanvasNet read outside the project folder and never draws on the user interface thread. CanvasNet

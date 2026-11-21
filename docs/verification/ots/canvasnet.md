@@ -9,7 +9,8 @@ CanvasNet (`DemaConsulting.CanvasNet.Viewer`, with the `DemaConsulting.CanvasNet
 image source files of a project to pixels, lists the file types it can draw, confines the files a drawn file may read,
 reports problems with files as descriptive exceptions, honors cancellation, encodes PNG, reports where it drew the
 elements of diagrams, charts, and models, draws an SVG document held in memory, copies a region of a picture, and
-provides its help as cards that can be extended with the cards of the application. The application
+provides its help as cards that can be extended with the cards of the application, and tells which font families it draws
+the same on every machine. The application
 relies on each of these behaviors, so each has a requirement and a test.
 
 ### Verification Approach
@@ -170,3 +171,15 @@ of the flowchart.
 a card and to an example written by the function that was given; the catalog that was extended does not hold the card.
 
 **Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ExtendHelpCards`.
+
+#### CanvasNet_GenericFontFamilies_ClassifiesBundledAliasesAndUnknownFamilies
+
+**Scenario**: The family names `sans-serif`, `Segoe UI`, `serif`, `monospace`, `Consolas`, `liberation mono`, `Inter`, and
+`Comic Sans MS` are classified with the common aliases included, `Arial` is classified without them, and the list
+`"Segoe UI", Arial, sans-serif` is split.
+
+**Expected**: The keywords, `Segoe UI`, `Consolas`, and `liberation mono` are recognized, with the serif design for `serif`
+and the monospace design for `monospace`, `Consolas`, and `liberation mono`; `Inter` and `Comic Sans MS` are not recognized;
+`Arial` is not recognized when the aliases are not asked for; and the list has the three names without quotes.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ClassifyFontFamilies`.

@@ -1008,6 +1008,42 @@ reviews:
       - "test/**/SpeechSettingsPageViewTests.cs"
       - "test/**/SpeechUiTestSupport.cs"
 
+  # CanvasPilot - Style
+  - id: CanvasPilot-Style
+    title: Review of CanvasPilot Style subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem.yaml"
+      - "docs/design/canvas-pilot/style-subsystem.md"
+      - "docs/verification/canvas-pilot/style-subsystem.md"
+      - "test/**/StyleSubsystem/StyleSubsystemTests.cs"
+
+  - id: CanvasPilot-Style-StyleKitDocument
+    title: Review of CanvasPilot StyleKitDocument unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-document.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-document.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-document.md"
+      - "src/**/StyleSubsystem/StyleColors.cs"
+      - "src/**/StyleSubsystem/StyleExample.cs"
+      - "src/**/StyleSubsystem/StyleFonts.cs"
+      - "src/**/StyleSubsystem/StyleGuidanceText.cs"
+      - "src/**/StyleSubsystem/StyleIssue.cs"
+      - "src/**/StyleSubsystem/StyleKit.cs"
+      - "src/**/StyleSubsystem/StyleKitLocation.cs"
+      - "src/**/StyleSubsystem/StyleKitParseResult.cs"
+      - "src/**/StyleSubsystem/StyleKitReader.cs"
+      - "src/**/StyleSubsystem/StyleKitSerializer.cs"
+      - "src/**/StyleSubsystem/StyleMermaid.cs"
+      - "src/**/StyleSubsystem/StyleSizePreset.cs"
+      - "test/**/StyleSubsystem/StyleKitDocumentTests.cs"
   # CanvasPilot - Utilities
   - id: CanvasPilot-Utilities
     title: Review of CanvasPilot Utilities subsystem architecture and interfaces

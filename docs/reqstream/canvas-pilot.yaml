@@ -10,8 +10,8 @@
 # NOTE: The system requirements cover operational logging, safe file handling, persisted user settings, AI provider
 # and speech configuration, projects, image browsing and file management, preview and export, marking pictures,
 # composing a message, dictating a message, the speech runtime in the installed application, the drawing knowledge,
-# the desktop shell, the Windows installer, and application startup. The AI agent that will answer the messages is
-# not covered.
+# style kits, the desktop shell, the Windows installer, and application startup. The AI agent that will answer the
+# messages is not covered.
 
 sections:
   - title: CanvasPilot Requirements
@@ -447,3 +447,91 @@ sections:
           - CanvasPilot-AppShell-DrawingKnowledgeMenu
         tests:
           - CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog
+
+      - id: CanvasPilot-System-DefineStyleKits
+        title: >-
+          The application shall let the user describe how pictures should look as a style kit, with a palette of named
+          colors, fonts, a line width, a corner radius, a spacing, a Mermaid theme, a Vega-Lite configuration, written
+          advice, sizes to export at, and example images, kept as a file and a folder of examples that a person can read
+          and edit, checked with a message for each wrong property, and found in the places that ship with the program,
+          that the user keeps, that a project holds, and that a team shares, with the most local copy of a kit winning.
+        tags: [system]
+        justification: |
+          A person or a team wants every picture to look the same: the same colors, the same type, the same sizes. A kit
+          that is a plain file can be shared by a folder, kept with the project, reviewed, and fixed by hand, and a kit
+          that reports exactly which value is wrong can be repaired without guessing. Kits come from more than one place,
+          so which copy applies must be defined, and the copy that is nearest to the work must win, so that a project can
+          freeze the style it was made with.
+        children:
+          - CanvasPilot-Style-DefineKits
+          - CanvasPilot-Style-FindKitsInLocations
+
+      - id: CanvasPilot-System-ManageStyleKits
+        title: >-
+          The application shall let the user see the style kits it has found with a preview of each, create, duplicate,
+          edit, and delete the kits of the user and of the project, copy a kit into the project, and import and export a
+          kit as a zip file, in a window that stays open beside the work, without changing the kits that come with the
+          program or that a team shares.
+        tags: [system]
+        justification: |
+          A style is useful only when it is easy to see what there is, to try a kit, and to make a variation of it. Zip
+          files let a kit travel by mail or a download, which means a file of unknown origin is opened, so the import must
+          not write outside the place it was asked to write. The kits of the program and of a team are not the user's to
+          change, so they are changed by making a copy.
+        children:
+          - CanvasPilot-Style-ManageKitsInWindow
+
+      - id: CanvasPilot-System-ChooseProjectStyle
+        title: >-
+          The application shall let the user choose the style kit of a project from the main window, keep the choice in
+          the project file so that it is the same for everyone who opens the project, start a new project with the kit
+          that the user chose as the default, and say so when the chosen kit cannot be found.
+        tags: [system]
+        justification: |
+          The style belongs to the project, not to the machine, so the choice is kept with the project and a later change
+          of the default does not move projects that exist. A project that names a kit that is not on this machine must
+          not silently look different.
+        children:
+          - CanvasPilot-Style-ChooseActiveKit
+
+      - id: CanvasPilot-System-ExportAtPresetSizes
+        title: >-
+          The application shall let the user export the shown picture as a PNG at a named size, from the sizes of the
+          style kit of the project and from sizes of the application, with a background or transparency as the size says
+          and with the resolution written into the file, as well as exactly as it is drawn.
+        tags: [system]
+        justification: |
+          A picture is used on a slide, in an email, and on paper, each at its own size. Drawing the file again at the
+          size, not stretching the shown picture, keeps the lines sharp, and the sizes that belong to the style are
+          offered with it so that the user does not have to remember them.
+        children:
+          - CanvasPilot-Style-OfferExportPresets
+
+      - id: CanvasPilot-System-GuideAssistantStyle
+        title: >-
+          The application shall offer the style of the project to an assistant as a block of text of a known size and as
+          two tools, one to read the style and one to check a picture of the project against it, as plain values and text
+          that can be given to any provider of a language model, with the text of a kit marked as data and not as
+          instructions, and without depending on any language model or agent library.
+        tags: [system]
+        justification: |
+          An assistant that writes drawing files should use the colors and fonts of the project without being told every
+          time, and should be able to check what it drew. The text of a kit may come from a shared folder or a zip file,
+          so it must not be taken for an instruction, and its size must be bounded because it is paid for in every
+          request. The assistant is added later and may come from more than one provider, so the parts are plain.
+        children:
+          - CanvasPilot-Style-GuideTheAssistant
+          - CanvasPilot-Style-StayProviderNeutral
+
+      - id: CanvasPilot-System-CheckPictureAgainstStyle
+        title: >-
+          The application shall let the user check the shown picture against the style kit of the project from the Image
+          menu, and shall show which colors of the picture are on the palette, which are blended edges, and which are off
+          the palette, with their share of the picture, in the notes of the preview.
+        tags: [system]
+        justification: |
+          A style is only kept if departures from it can be seen. Telling the user which colors are off the palette, and how
+          much of the picture they cover, turns a feeling that something is wrong into something that can be fixed, and an
+          anti-aliased edge must not be taken for a departure.
+        children:
+          - CanvasPilot-Style-CheckPictures

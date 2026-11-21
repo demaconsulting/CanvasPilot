@@ -14,6 +14,7 @@ resource-path:
   - docs/design/canvas-pilot/project-subsystem
   - docs/design/canvas-pilot/settings-subsystem
   - docs/design/canvas-pilot/speech-subsystem
+  - docs/design/canvas-pilot/style-subsystem
   - docs/design/canvas-pilot/utilities-subsystem
   - docs/design/ots
   - docs/images
@@ -79,6 +80,8 @@ input-files:
   - docs/design/canvas-pilot/speech-subsystem/model-catalog-panel.md
   - docs/design/canvas-pilot/speech-subsystem/model-parameter-editor.md
   - docs/design/canvas-pilot/speech-subsystem/speech-settings-page.md
+  - docs/design/canvas-pilot/style-subsystem.md
+  - docs/design/canvas-pilot/style-subsystem/style-kit-document.md
   - docs/design/canvas-pilot/utilities-subsystem.md
   - docs/design/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/design/ots.md

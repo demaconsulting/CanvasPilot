@@ -4,7 +4,8 @@
 # Requirements for the DemaConsulting.CanvasNet viewer library (DemaConsulting.CanvasNet.Viewer, with the
 # DemaConsulting.CanvasNet core library it brings) as used by CanvasPilot at run time. The library is a runtime
 # dependency, so each requirement is a child of the requirement of the unit that uses the feature
-# (ImageRenderService, ProjectExplorer, MarkImageComposer, and KnowledgeCatalog) and is not a root requirement.
+# (ImageRenderService, ProjectExplorer, MarkImageComposer, KnowledgeCatalog, and StyleKitDocument) and is not a root
+# requirement.
 
 sections:
   - title: OTS Software Requirements
@@ -153,3 +154,16 @@ sections:
             tags: [ots]
             tests:
               - CanvasNet_HelpCatalog_Extend_EmbeddedCard_AddsANewRootAndLeavesTheLibraryUnchanged
+
+          - id: CanvasPilot-OTS-CanvasNet-ClassifyFontFamilies
+            title: >-
+              CanvasNet shall tell whether a font family name is a generic CSS family, a common alias of one, or one of
+              the bundled Liberation families, and which bundled design (sans-serif, serif, or monospace) stands in for
+              it, shall not recognize any other name, and shall split a CSS font-family list into its names.
+            justification: |
+              The application warns the author of a style kit when a font is drawn differently by different formats or on
+              different machines. Only the drawing library knows which names it stands in for with its bundled fonts, so
+              the application asks it and does not keep a list of its own that could drift from the library.
+            tags: [ots]
+            tests:
+              - CanvasNet_GenericFontFamilies_ClassifiesBundledAliasesAndUnknownFamilies
