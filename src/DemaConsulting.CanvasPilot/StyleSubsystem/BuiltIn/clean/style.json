@@ -1,0 +1,84 @@
+{
+  "formatVersion": 1,
+  "id": "clean",
+  "name": "Clean",
+  "description": "A light, neutral style for documents, with a blue primary color and an amber accent.",
+  "palette": {
+    "background": "#FFFFFF",
+    "surface": "#F1F5F9",
+    "text": "#0F172A",
+    "muted": "#475569",
+    "primary": "#2563EB",
+    "secondary": "#64748B",
+    "accent": "#F59E0B",
+    "success": "#16A34A",
+    "danger": "#C62828"
+  },
+  "fonts": {
+    "heading": "sans-serif",
+    "body": "sans-serif",
+    "monospace": "monospace"
+  },
+  "stroke": {
+    "width": 2
+  },
+  "cornerRadius": 12,
+  "spacing": 16,
+  "mermaid": {
+    "theme": "base",
+    "themeVariables": {
+      "primaryColor": "#F1F5F9",
+      "primaryTextColor": "#0F172A",
+      "primaryBorderColor": "#2563EB",
+      "lineColor": "#475569",
+      "secondaryColor": "#FFFFFF",
+      "tertiaryColor": "#FFFFFF",
+      "edgeLabelBackground": "#FFFFFF"
+    }
+  },
+  "vegaLite": {
+    "config": {
+      "background": "#FFFFFF",
+      "range": {
+        "category": ["#2563EB", "#F59E0B", "#64748B", "#16A34A", "#C62828"]
+      },
+      "axis": {
+        "labelColor": "#475569",
+        "titleColor": "#0F172A",
+        "domainColor": "#475569",
+        "tickColor": "#475569",
+        "gridColor": "#F1F5F9"
+      },
+      "title": {
+        "color": "#0F172A"
+      },
+      "view": {
+        "stroke": "transparent"
+      }
+    }
+  },
+  "guidance": {
+    "notes": "Plain white pages with a calm blue as the main color. Use amber only to point at one thing.",
+    "do": [
+      "Use the palette colors only.",
+      "Keep generous margins of at least 16 pixels.",
+      "Round the corners of cards by 12 pixels."
+    ],
+    "dont": [
+      "Do not use gradients or shadows.",
+      "Do not use more than one accent color in a picture."
+    ]
+  },
+  "sizePresets": [
+    {
+      "name": "Document (1200 wide)",
+      "width": 1200,
+      "transparent": false
+    }
+  ],
+  "examples": {
+    "examples/title-card.svg": "A title card with a heading, a line of text, and an accent bar.",
+    "examples/flow.mmd": "A flowchart with the Mermaid theme of the kit.",
+    "examples/chart.vl.json": "A bar chart with the Vega-Lite configuration of the kit."
+  }
+}

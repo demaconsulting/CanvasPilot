@@ -85,6 +85,40 @@ is open.
 place as it is now (a crafted entry with another folder, with `..`, or of another project is an
 `InvalidOperationException`), and then it is removed with its contents.
 
+#### Built-In Kits
+
+The kits that come with the program are the folders of `StyleSubsystem/BuiltIn` in the source: `clean`, `slides-dark`, and
+`dema`, each with a `style.json` and the examples `title-card.svg`, `flow.mmd`, and `chart.vl.json`.
+
+- **Clean** is light and neutral: a white background, a light grey surface, dark text, a blue primary color, a grey
+  secondary color, an amber accent, and a green and a red for status; stroke 2, radius 12, spacing 16; one size of 1200
+  pixels wide.
+- **Slides Dark** is dark for slides: a deep blue background, a lighter surface, light text, a soft blue primary, grey
+  secondary and muted colors, and an amber accent; stroke 3, radius 16, spacing 24; the sizes 1920 by 1080 and 1280 by 720.
+- **DEMA** is the look of the project picture of DEMA Consulting: a deep navy background, a violet surface and primary
+  color, cyan as the second color, amber as the accent, and pink, light pink, indigo, and bright cyan as named colors;
+  stroke 3, radius 16, spacing 24; the sizes of a banner (1600 by 640) and of a slide.
+- All three use only the generic font families, which every format draws the same on every machine, so a built-in kit has
+  no warning about a font. The Mermaid part is the `base` theme with the variables of the palette, and the Vega-Lite part
+  is the configuration of the colors of the marks, axes, title, and background.
+- Each example is a small file that uses only the colors of its kit, written with generic fonts: the SVG with style
+  classes, the flowchart with the theme variables of the kit in its front matter (the same text as the Mermaid part of the
+  kit), and the chart with the configuration of the kit in the `config` of its specification. The examples are therefore
+  also the examples of how to write a file that follows a kit. They are drawn by CanvasNet when they are shown, so no
+  binary picture is kept in the source.
+- **Packaging.** The files are marked as content of the library project and are copied, with the link
+  `StyleKits/{kit}/...`, to the output folder of every project that refers to the library and to the publish folder of the
+  executable, beside `CanvasPilot.exe`. They are not embedded, because an assistant needs real file paths for the example
+  pictures, and because the one reader of kit folders then serves every place. A single-file publish keeps content files
+  loose, so the folder `StyleKits` is next to the executable in the published folder. The installer harvests the whole
+  published folder, with its folders (the harvest pattern of `Package.wxs` is `**\*`; the pattern `**` alone would have
+  left the folders out, which the first check of the packaging showed), so the files are in the package. The build checks
+  the published folder with FileAssert (`StyleKits_BuiltInPublished`) and the file table of the package, which lists
+  `style.json` and the three example files. The catalog finds them in `StyleKits` beside the program, which the tests
+  read from the folder of the test assembly, where the same content files are copied.
+- A kit of the user, of the project, or of a shared folder with the same id hides a built-in kit, which is how a built-in
+  kit is made to look different.
+
 #### Error Handling
 
 Constructors and methods throw `ArgumentNullException` for missing arguments. A change of a read-only place, a project place

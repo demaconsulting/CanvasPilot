@@ -18,7 +18,10 @@ The subsystem is built up unit by unit. It now contains two units, `StyleKitDocu
 folder with a message for each wrong property, checks a kit that is built in memory with the same rules, and writes a kit
 as canonical text. `StyleKitCatalog` finds the kits in the four places, chooses the kit of the most local place for an id,
 reads shared folders on workers with a time limit, keeps the kits of the program and the shared kits read only, and
-creates, saves, duplicates, copies, and deletes the kits of the user and of the project. The units that move kits as zip
+creates, saves, duplicates, copies, and deletes the kits of the user and of the project. The kits of the program are three
+folders of files, `clean`, `slides-dark`, and `dema`, that are copied beside the executable as loose files (content files of
+the library project) and are in the published folder and the installer package; each has three example files that use
+only the colors of the kit. The units that move kits as zip
 files, choose the kit of a project, write the guidance for an assistant, check a picture, describe the tools of an
 assistant, and show and edit kits in windows follow in later steps, and this document grows with them. The subsystem
 depends on CanvasNet for the classification of font families, and on `Project`, `Settings`, `Utilities`, and `Logging` for

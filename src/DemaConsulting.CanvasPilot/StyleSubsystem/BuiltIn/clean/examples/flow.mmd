@@ -1,0 +1,17 @@
+---
+config:
+  theme: base
+  themeVariables:
+    primaryColor: "#F1F5F9"
+    primaryTextColor: "#0F172A"
+    primaryBorderColor: "#2563EB"
+    lineColor: "#475569"
+    secondaryColor: "#FFFFFF"
+    tertiaryColor: "#FFFFFF"
+    edgeLabelBackground: "#FFFFFF"
+---
+flowchart LR
+  A[Idea] --> B[Draft]
+  B --> C{Review}
+  C -->|approved| D[Publish]
+  C -->|changes| B

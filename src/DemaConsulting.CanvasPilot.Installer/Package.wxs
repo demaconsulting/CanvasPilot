@@ -62,10 +62,12 @@
     </StandardDirectory>
   </Fragment>
 
-  <!-- Harvests the entire published self-contained win-x64 output into INSTALLFOLDER. -->
+  <!-- Harvests the entire published self-contained win-x64 output into INSTALLFOLDER, including the sub-folders such as
+       StyleKits (the kits that come with the program). The pattern must end in \*: a pattern that ends in ** alone
+       harvests only the files of the top folder. -->
   <Fragment>
     <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
-      <Files Include="$(CanvasPilotPublishDir)**" />
+      <Files Include="$(CanvasPilotPublishDir)**\*" />
     </ComponentGroup>
   </Fragment>
 

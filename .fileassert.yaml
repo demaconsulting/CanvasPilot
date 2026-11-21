@@ -37,6 +37,25 @@ tests:
         count: 1
         min-size: 100000
 
+  # The kits that come with the program are loose files in the StyleKits folder beside the executable. The installer
+  # harvests every file of publish/win-x64 with its folder, so the files asserted here are the files in the MSI.
+  - name: StyleKits_BuiltInPublished
+    description: "Published win-x64 application contains the style kits that come with the program"
+    tags: [installer]
+    files:
+      - pattern: "publish/win-x64/StyleKits/*/style.json"
+        count: 3
+        min-size: 500
+      - pattern: "publish/win-x64/StyleKits/*/examples/title-card.svg"
+        count: 3
+        min-size: 200
+      - pattern: "publish/win-x64/StyleKits/*/examples/flow.mmd"
+        count: 3
+        min-size: 100
+      - pattern: "publish/win-x64/StyleKits/*/examples/chart.vl.json"
+        count: 3
+        min-size: 300
+
   # --- BUILD NOTES ---
 
   - name: Pandoc_BuildNotesHtml

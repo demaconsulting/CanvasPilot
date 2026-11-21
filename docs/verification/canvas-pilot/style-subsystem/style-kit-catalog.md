@@ -30,6 +30,10 @@ N/A - standard test environment with temporary local folders.
 - A change of the open project or of the shared folders refreshes the catalog, and a change of another setting does not;
   one refresh raises one change event; a cancelled refresh changes nothing; more than the limit of kit folders in a place
   is read up to the limit with a note.
+- The kits of the program, as copied beside the test assembly, load with no issue, have the colors and sizes of the design,
+  have text that can be read on the background and surface, have three examples that are drawn without a note and that
+  carry the theme and chart configuration of their kit, and are found by a catalog in its default place; the same files are
+  in the published folder and the installer package, which the build asserts.
 - The kits of the program and the shared kits cannot be saved, created, duplicated into, or deleted, and their folders
   stay.
 - A saved kit is in the folder named as its id with its examples kept and is returned as an entry; a kit with an error and
@@ -155,6 +159,41 @@ empty, and the folder beside them is intact. This scenario is tested by
 with the project open the copy is in the styles folder of the project with its id and example, it is the kit that is found
 for the id, the shared kit is overridden, and a second copy is refused. This scenario is tested by
 `StyleKitCatalog_CopyIntoProject_SharedKit_FreezesItInTheProject`.
+
+**BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning**: Each kit folder beside the test assembly (`clean`,
+`slides-dark`, and `dema`) is read with no issue at all, has the id and the name of the design, the `base` Mermaid theme, a
+Vega-Lite configuration, notes, three examples with captions that are files, and the example names of the design. This
+scenario is tested by `BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning`.
+
+**BuiltInStyleKits_ExampleFiles_AreDrawnWithoutErrorOrNote**: The nine example files are drawn by the real render service
+with the folder of their kit as the only folder they may read. Each draw succeeds, has no note, and is larger than 100 by 50
+pixels. This scenario is tested by `BuiltInStyleKits_ExampleFiles_AreDrawnWithoutErrorOrNote`.
+
+**BuiltInStyleKits_Palette_TextIsReadableOnBackgroundAndSurface**: In each kit the text color on the background, the text
+color on the surface, and the muted color on the background each have a contrast of at least 4.5 to 1. This scenario is
+tested by `BuiltInStyleKits_Palette_TextIsReadableOnBackgroundAndSurface`.
+
+**BuiltInStyleKits_Values_AreTheOnesOfTheDesign**: The palettes of the three kits equal the colors of the design, in the same
+order, the fonts are the generic families, the stroke, radius, and spacing are 2, 12, 16 for Clean and 3, 16, 24 for the two
+dark kits, and the size presets are those of the design. This scenario is tested by
+`BuiltInStyleKits_Values_AreTheOnesOfTheDesign`.
+
+**BuiltInStyleKits_Examples_CarryTheThemeAndChartConfigurationOfTheirKit**: The flowchart of each kit has the front matter
+with the `base` theme and every theme variable of the kit with its value, and the chart of each kit has the same color
+range and background in its configuration as the Vega-Lite part of the kit. This scenario is tested by
+`BuiltInStyleKits_Examples_CarryTheThemeAndChartConfigurationOfTheirKit`.
+
+**BuiltInStyleKits_OutputFolder_HoldsTheStyleFilesAndAllNineExamples**: The folder `StyleKits` beside the test assembly has
+three style files and the nine example files, three in the `examples` folder of each kit. This is the evidence that the
+content files reach the output folder; the published folder and the package are asserted by the build with FileAssert
+(`StyleKits_BuiltInPublished`) and the file table of the package. This scenario is tested by
+`BuiltInStyleKits_OutputFolder_HoldsTheStyleFilesAndAllNineExamples` and, for the published folder, by
+`StyleKits_BuiltInPublished`.
+
+**BuiltInStyleKits_Catalog_DefaultPlace_FindsTheThreeKitsAsReadOnlyAndTheUserCanOverrideThem**: A catalog that is made
+without a folder for the kits of the program finds the three kits in the folder beside the program, all of the built-in
+place and read only; after a kit of the user with the id `clean` is written the kit of the user is the one that is found.
+This scenario is tested by `BuiltInStyleKits_Catalog_DefaultPlace_FindsTheThreeKitsAsReadOnlyAndTheUserCanOverrideThem`.
 
 **StyleKitCatalog_Constructor_NullServices_ThrowArgumentNullException**: A missing project service or settings service is
 refused. This scenario is tested by `StyleKitCatalog_Constructor_NullServices_ThrowArgumentNullException`.

@@ -97,6 +97,30 @@ sections:
                   - StyleKitCatalog_CopyIntoProject_SharedKit_FreezesItInTheProject
                   - StyleKitCatalog_Constructor_NullServices_ThrowArgumentNullException
 
+              - id: CanvasPilot-StyleKitCatalog-OfferBuiltInKits
+                title: >-
+                  The StyleKitCatalog shall find, in the folder beside the program, three kits that come with it, Clean, Slides
+                  Dark, and DEMA, each a style file with no error and no warning that has a readable text on its background and
+                  its surface, the colors, fonts, numbers, and sizes of its design, and the three examples of a title card, a
+                  flowchart, and a chart that carry the theme and the chart configuration of the kit and are drawn without an
+                  error or a note, as files that are in the folder of the program, in the published folder, and in the
+                  installer package, and a kit of the user with the same id shall hide them.
+                justification: |
+                  A person who has made no kit must still be able to give a picture a style, and the kits that come with the
+                  program are also the examples of how a kit is written and of how a file uses it. An assistant is given the
+                  real paths of the example pictures, so they must be files in the folder of the program and not data inside
+                  it, and they must be in the package that is delivered, which a test of the published folder and of the
+                  installer checks. A user who wants another version of a kit makes a copy, which hides the original.
+                tests:
+                  - BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning
+                  - BuiltInStyleKits_ExampleFiles_AreDrawnWithoutErrorOrNote
+                  - BuiltInStyleKits_Palette_TextIsReadableOnBackgroundAndSurface
+                  - BuiltInStyleKits_Values_AreTheOnesOfTheDesign
+                  - BuiltInStyleKits_Examples_CarryTheThemeAndChartConfigurationOfTheirKit
+                  - BuiltInStyleKits_OutputFolder_HoldsTheStyleFilesAndAllNineExamples
+                  - BuiltInStyleKits_Catalog_DefaultPlace_FindsTheThreeKitsAsReadOnlyAndTheUserCanOverrideThem
+                  - windows@StyleKits_BuiltInPublished
+
               - id: CanvasPilot-StyleKitCatalog-KeepBuiltInAndSharedKitsReadOnly
                 title: >-
                   The StyleKitCatalog shall mark the kits that come with the program and the shared kits as read only, and shall

@@ -1,0 +1,94 @@
+{
+  "formatVersion": 1,
+  "id": "dema",
+  "name": "DEMA",
+  "description": "The dark corporate look of DEMA Consulting: deep navy, violet and cyan, with pink and amber highlights.",
+  "palette": {
+    "background": "#070B1F",
+    "surface": "#130F3B",
+    "text": "#F8FAFC",
+    "muted": "#94A3B8",
+    "primary": "#7C3AED",
+    "secondary": "#06B6D4",
+    "accent": "#FBBF24",
+    "pink": "#DB2777",
+    "highlight": "#F472B6",
+    "indigo": "#A5B4FC",
+    "cyan-bright": "#22D3EE"
+  },
+  "fonts": {
+    "heading": "sans-serif",
+    "body": "sans-serif",
+    "monospace": "monospace"
+  },
+  "stroke": {
+    "width": 3
+  },
+  "cornerRadius": 16,
+  "spacing": 24,
+  "mermaid": {
+    "theme": "base",
+    "themeVariables": {
+      "background": "#070B1F",
+      "primaryColor": "#130F3B",
+      "primaryTextColor": "#F8FAFC",
+      "primaryBorderColor": "#7C3AED",
+      "lineColor": "#06B6D4",
+      "secondaryColor": "#130F3B",
+      "tertiaryColor": "#130F3B",
+      "edgeLabelBackground": "#130F3B"
+    }
+  },
+  "vegaLite": {
+    "config": {
+      "background": "#070B1F",
+      "range": {
+        "category": ["#7C3AED", "#06B6D4", "#FBBF24", "#DB2777", "#A5B4FC"]
+      },
+      "axis": {
+        "labelColor": "#94A3B8",
+        "titleColor": "#F8FAFC",
+        "domainColor": "#94A3B8",
+        "tickColor": "#94A3B8",
+        "gridColor": "#130F3B"
+      },
+      "title": {
+        "color": "#F8FAFC"
+      },
+      "view": {
+        "stroke": "transparent"
+      }
+    }
+  },
+  "guidance": {
+    "notes": "Deep navy pages with violet as the main color and cyan as the second. Pink and amber are highlights for one thing at a time.",
+    "do": [
+      "Use the palette colors only.",
+      "Use light text on the dark background.",
+      "Use violet for the main shapes and cyan for the lines that connect them."
+    ],
+    "dont": [
+      "Do not use more than one highlight color in a picture.",
+      "Do not use gradients or shadows."
+    ]
+  },
+  "sizePresets": [
+    {
+      "name": "Banner",
+      "width": 1600,
+      "height": 640,
+      "transparent": false
+    },
+    {
+      "name": "Slide 16:9",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false
+    }
+  ],
+  "examples": {
+    "examples/title-card.svg": "A title card with a heading, a line of text, and an accent bar.",
+    "examples/flow.mmd": "A flowchart with the Mermaid theme of the kit.",
+    "examples/chart.vl.json": "A bar chart with the Vega-Lite configuration of the kit."
+  }
+}

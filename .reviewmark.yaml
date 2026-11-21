@@ -10,6 +10,7 @@ needs-review:
   - "requirements.yaml"           # Root requirements file
   - "**/*.cs"                     # All C# source and test files
   - "src/**/KnowledgeSubsystem/Cards/**/*.md"  # Knowledge cards: they steer the drawing assistant
+  - "src/**/StyleSubsystem/BuiltIn/**/style.json"  # Built-in style kits: they steer the drawing assistant
   - "docs/reqstream/**/*.yaml"    # Requirements files
   - "docs/design/**/*.md"         # Design documentation files
   - "docs/verification/**/*.md"   # Verification documentation files
@@ -1067,6 +1068,19 @@ reviews:
       - "src/**/StyleSubsystem/StyleLocationStatus.cs"
       - "test/**/StyleSubsystem/StyleKitCatalogTests.cs"
       - "test/**/StyleSubsystem/StyleSubsystemFakes.cs"
+
+  - id: CanvasPilot-Style-BuiltInStyleKits
+    title: Review of CanvasPilot built-in style kits
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+      - docs/design/canvas-pilot/style-subsystem/style-kit-catalog.md
+      - docs/reqstream/canvas-pilot/style-subsystem/style-kit-catalog.yaml
+    paths:
+      - "src/**/StyleSubsystem/BuiltIn/**/style.json"
+      - "test/**/StyleSubsystem/BuiltInStyleKitTests.cs"
   # CanvasPilot - Utilities
   - id: CanvasPilot-Utilities
     title: Review of CanvasPilot Utilities subsystem architecture and interfaces

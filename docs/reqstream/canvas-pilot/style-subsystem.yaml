@@ -52,6 +52,7 @@ sections:
               - CanvasPilot-StyleKitCatalog-TolerateUnreachableLocations
               - CanvasPilot-StyleKitCatalog-ManageUserAndProjectKits
               - CanvasPilot-StyleKitCatalog-KeepBuiltInAndSharedKitsReadOnly
+              - CanvasPilot-StyleKitCatalog-OfferBuiltInKits
             tests:
               - StyleSubsystem_FindKitsInLocations_AllPlaces_ResolveByPrecedenceAndSurviveAnUnreachableFolder
 

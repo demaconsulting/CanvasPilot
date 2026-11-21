@@ -35,6 +35,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The style kits that come with the program, as loose files so that an assistant can be given real paths of the
+         example pictures. They are copied beside the executable in the folder StyleKits (build output and publish
+         output), which a single-file publish leaves as loose files. -->
+    <Content Include="StyleSubsystem\BuiltIn\**\*" Link="StyleKits\%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Expose internal members (e.g. PathHelpers) to the test projects that exercise them
          directly, so tests can reuse the same reviewed helpers as production code. -->
     <InternalsVisibleTo Include="DemaConsulting.CanvasPilot.Tests" />

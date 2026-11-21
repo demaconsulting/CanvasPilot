@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">
+  <style>
+    .page { fill: #070B1F; }
+    .card { fill: #130F3B; stroke: #7C3AED; stroke-width: 3; }
+    .bar { fill: #06B6D4; }
+    .dot { fill: #DB2777; }
+    .heading { font-family: sans-serif; font-size: 46px; font-weight: bold; fill: #F8FAFC; }
+    .body { font-family: sans-serif; font-size: 22px; fill: #94A3B8; }
+    .tag { font-family: monospace; font-size: 18px; fill: #22D3EE; }
+  </style>
+  <rect class="page" width="800" height="400"/>
+  <rect class="card" x="32" y="32" width="736" height="336" rx="16" ry="16"/>
+  <rect class="bar" x="72" y="76" width="96" height="8" rx="4" ry="4"/>
+  <circle class="dot" cx="188" cy="80" r="6"/>
+  <text class="heading" x="72" y="172">Quarterly review</text>
+  <text class="body" x="72" y="220">What went well, what did not, and what is next.</text>
+  <text class="tag" x="72" y="316">style kit: dema</text>
+</svg>
