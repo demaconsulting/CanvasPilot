@@ -39,7 +39,7 @@
 
 The application library holds one folder per subsystem (`AnnotationSubsystem`, `AppShellSubsystem`, `ChatSubsystem`,
 `ComposerSubsystem`, `KnowledgeSubsystem`, `LoggingSubsystem`, `PayloadSubsystem`, `PreviewSubsystem`,
-`ProjectSubsystem`, `SettingsSubsystem`, `SpeechSubsystem`, and `UtilitiesSubsystem`).
+`ProjectSubsystem`, `SettingsSubsystem`, `SpeechSubsystem`, `StyleSubsystem`, and `UtilitiesSubsystem`).
 
 # Language and Spelling (ALL Agents)
 
