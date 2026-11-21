@@ -1,5 +1,7 @@
 # OTS Dependencies
 
+![The runtime third-party items that CanvasPilot uses](OtsView.svg)
+
 This document provides the integration and usage design for all Off-The-Shelf (OTS) software
 items used by CanvasPilot. The per-item files under `docs/design/ots/` cover the
 specifics of each individual OTS item. The OTS items are:

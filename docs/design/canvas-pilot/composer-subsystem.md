@@ -205,3 +205,17 @@ folder it is built for. A failure removes everything the call created, newest fi
 the reason. Third, pasted pictures that were copied are deleted from the draft folder. The same thing attached twice is
 copied once. The result gives each chip its project-relative path with forward slashes, its size, its number of files,
 whether it was copied, and how many links were skipped; the originals are never changed or deleted.
+
+### Dependencies
+
+The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`). The hub suppliers
+`RollingFileLogger`, `PathHelpers`, and `ProjectService`, which many units use, are left out of the view.
+
+- `ComposerHistory` depends on `ComposerDocument`.
+- `AttachmentIntake` depends on `ComposerDocument` and `AttachmentStore`.
+- `ComposerViewModel` depends on `ComposerDocument`, `ComposerHistory`, `AttachmentIntake`, `AttachmentStore`,
+  `MarkRegistry` (`Annotation`), and `DictationService` (`Speech`).
+- `ComposerEditor` depends on `ComposerViewModel`, `AttachmentIntake`, and AvaloniaEdit (OTS).
+- `ComposerDocument` and `AttachmentStore` depend on no other unit that the view shows.
+
+![Composer dependencies](ComposerSubsystemDependencyView.svg)

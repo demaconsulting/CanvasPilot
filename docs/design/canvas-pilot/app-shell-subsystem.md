@@ -127,3 +127,20 @@ and are described here because they only join the units together.
 
 The composition is deliberately plain construction code with no container, so the dependencies of every unit are
 visible in one place. System tests call the same composition with temporary folders and no window.
+
+### Dependencies
+
+The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`) and are split into two
+views. The hub supplier `ProjectService` is left out of both; it is described with the `Project` subsystem.
+
+The first view shows what the main window and the workspace host. `MainWindowShell` depends on `ProjectWorkspace`,
+`AboutDialog`, `PayloadInspector` (`Chat`), `KnowledgeBrowser` (`Knowledge`), and `ComposerViewModel` (`Composer`);
+`ProjectWorkspace` depends on `ProjectExplorer` (`Project`) and `ChatPanel` (`Chat`).
+
+![AppShell workspace dependencies](AppShellSubsystemWorkspaceView.svg)
+
+The second view shows the dialogs and actions that the main window opens. `MainWindowShell` depends on
+`RecentProjects` and `NewProjectDialog` (`Project`), `SettingsDialog` (`Settings`), `ImageExporter` and
+`ExportPresetDialog` (`Preview`), and `StylePicker`, `StyleKitManager`, and `StyleChecker` (`Style`).
+
+![AppShell dialog and action dependencies](AppShellSubsystemActionsView.svg)

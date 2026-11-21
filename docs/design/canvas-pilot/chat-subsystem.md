@@ -88,3 +88,18 @@ output of `PayloadDescriber.Describe`, and its pictures are the PNG bytes of the
 marked file followed by the area around each of its marks, each with a caption. The window is read-only. It is shown
 through `IPayloadInspectorLauncher`, the seam that the subsystem owns and that `IDialogService` of the shell extends, so
 the panel needs no window and the dependency runs from `AppShell` to `Chat`.
+
+### Dependencies
+
+The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`) and are split into two
+views. The hub suppliers `RollingFileLogger` and `PathHelpers`, which many units use, are left out of the first.
+
+`ChatPanel` depends on `ComposerViewModel` and `ComposerEditor` (`Composer`), `MarkRegistry` and `AnnotationOverlay`
+(`Annotation`), `MarkImageComposer` and `MessagePayload` (`Payload`), `DictationService` (`Speech`), and
+`PayloadInspector`.
+
+![Chat panel dependencies](ChatSubsystemPanelView.svg)
+
+`PayloadInspector` depends on `MessagePayload` and `PayloadDescriber` (`Payload`).
+
+![Payload inspector dependencies](ChatSubsystemInspectorView.svg)
