@@ -122,7 +122,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal("tts-1", loaded.Speech.TtsModelId);
         Assert.Equal("0.75", loaded.Speech.ModelParameters["tts-1"]["speed"]);
         Assert.Equal("true", loaded.Speech.ModelParameters["tts-1"]["normalize"]);
-        Assert.Equal(["C:\\Team\\Styles", "\\\\server\\share\\styles"], loaded.Styles.SharedKitFolders);
+        Assert.Equal([TestPlatformPaths.FullPath("Team", "Styles"), TestPlatformPaths.NetworkFolder], loaded.Styles.SharedKitFolders);
         Assert.Equal("slides-dark", loaded.Styles.DefaultKitId);
     }
 
@@ -155,7 +155,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal("mic", speech.GetProperty("captureDevice").GetString());
         Assert.Equal("0.75", speech.GetProperty("modelParameters").GetProperty("tts-1").GetProperty("speed").GetString());
         var styles = root.GetProperty("styles");
-        Assert.Equal("C:\\Team\\Styles", styles.GetProperty("sharedKitFolders")[0].GetString());
+        Assert.Equal(TestPlatformPaths.FullPath("Team", "Styles"), styles.GetProperty("sharedKitFolders")[0].GetString());
         Assert.Equal("slides-dark", styles.GetProperty("defaultKitId").GetString());
     }
 
@@ -594,7 +594,7 @@ public sealed class SettingsServiceTests : IDisposable
             },
             Styles = new StyleSettings
             {
-                SharedKitFolders = ["C:\\Team\\Styles", "\\\\server\\share\\styles"],
+                SharedKitFolders = [TestPlatformPaths.FullPath("Team", "Styles"), TestPlatformPaths.NetworkFolder],
                 DefaultKitId = "slides-dark",
             },
         };

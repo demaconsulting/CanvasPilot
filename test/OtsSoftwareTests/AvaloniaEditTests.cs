@@ -262,9 +262,9 @@ public class AvaloniaEditTests
         editor.Select(0, 2);
 
         // Act: press the three keys and call the control's paste method
-        Press(window, PhysicalKey.V, RawInputModifiers.Control);
-        Press(window, PhysicalKey.C, RawInputModifiers.Control);
-        Press(window, PhysicalKey.X, RawInputModifiers.Control);
+        Press(window, PhysicalKey.V, CommandModifier);
+        Press(window, PhysicalKey.C, CommandModifier);
+        Press(window, PhysicalKey.X, CommandModifier);
         editor.Paste();
 
         // Assert: every call reached the application and the text was not changed
@@ -381,6 +381,12 @@ public class AvaloniaEditTests
         Dispatcher.UIThread.RunJobs();
         window.UpdateLayout();
     }
+
+    /// <summary>
+    ///     Gets the modifier of the control's clipboard shortcuts: the Command key on macOS and the Control key
+    ///     elsewhere, which is the rule the control applies to its own copy, cut, and paste commands.
+    /// </summary>
+    private static RawInputModifiers CommandModifier => OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
 
     /// <summary>
     ///     Presses and releases a key.

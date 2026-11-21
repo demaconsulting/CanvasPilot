@@ -44,7 +44,9 @@ seconds; it was measured at about 0.5 seconds in a debug build on the developmen
 - The notes of a failing picture are `style-summary`, `style-ok`, `style-blend` (information) and `style-off-palette` (a
   warning), and the text has the four lines of the design; a passing picture has no line for colors off the palette and
   says "the picture" when it has no file name.
-- The picture of 8192 by 8000 pixels is checked in under two seconds.
+- The picture of 8192 by 8000 pixels is checked in under two seconds. The three per-pixel methods are excluded from code
+  coverage, because the coverage run counts every branch of them and would make the check a hundred times slower than
+  the requirement allows; the unit tests still run every line of them.
 - Each of the nine example pictures of the kits that come with the program passes against its own kit with less than a
   thousandth of its pixels off the palette. The largest value measured was 0.045 percent (the flowchart of the kit DEMA,
   with 13.5 percent of blended edges, which is the share of the anti-aliased text and lines); the bound is that value

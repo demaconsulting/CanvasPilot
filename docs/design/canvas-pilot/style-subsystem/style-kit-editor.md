@@ -54,9 +54,10 @@ writing a value writes the text; text that is not a color keeps what the user ty
 
 **Examples**: `AddExampleFiles` adds files that the user chose. A file that is not there, or is larger than the limit of
 an example (16 MiB), is not added and `ExampleMessage` says why. A file gets a name that no example has, made from its
-own name with characters that a file name cannot have replaced and a number before the extension when needed. A file
-that is added is only a row until the kit is saved. `AddExamplesCommand` asks the function `PickExampleFiles`, which the
-window supplies, and adds what it returns; with no function it does nothing.
+own name with characters that a file name cannot have on any platform (the rule of the kit document) replaced and a
+number before the extension when needed. A file that is added is only a row until the kit is saved. `AddExamplesCommand`
+asks the function `PickExampleFiles`, which the window supplies, and adds what it returns; with no function it does
+nothing.
 
 **Save**: `SaveCommand` is usable while `CanSave`. It runs in this order. First the files that the user chose are copied
 into the `examples` folder of the kit, under names that do not take the name of an example that stays or of a file that

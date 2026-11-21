@@ -98,6 +98,12 @@ internal sealed class FixedThumbnailProvider : IChipThumbnailProvider
 internal sealed class ComposerHarness : IDisposable
 {
     /// <summary>
+    ///     Gets the modifier of the platform's command shortcuts, such as copy, paste, and undo: the Command key on
+    ///     macOS and the Control key elsewhere, as the editing control itself chooses it.
+    /// </summary>
+    public static RawInputModifiers Command => OperatingSystem.IsMacOS() ? RawInputModifiers.Meta : RawInputModifiers.Control;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ComposerHarness" /> class and shows the window.
     /// </summary>
     /// <param name="openProject"><see langword="true" /> to open the project, which makes the message editable.</param>

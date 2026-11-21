@@ -79,7 +79,7 @@ public static class StyleKitArchive
     ///     The characters that no part of a name may hold, besides the control characters; they are those that a Windows
     ///     file name cannot have, which the application would otherwise write on one platform and not on another.
     /// </summary>
-    private const string InvalidNameCharacters = ":*?\"<>|";
+    private const string InvalidNameCharacters = StyleKitSerializer.NonPortableNameCharacters;
 
     /// <summary>
     ///     The table of the CRC-32 that a zip file keeps of each file.

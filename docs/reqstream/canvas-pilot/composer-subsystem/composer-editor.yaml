@@ -110,8 +110,8 @@ sections:
 
               - id: CanvasPilot-ComposerEditor-HandleUndoRedoKeys
                 title: >-
-                  The ComposerEditor shall undo with Ctrl+Z and redo with Ctrl+Y and Ctrl+Shift+Z through the view model,
-                  one step each, shall keep no history of its own, and shall give the Edit menu the view model as the
+                  The ComposerEditor shall undo with Ctrl+Z and redo with Ctrl+Y and Ctrl+Shift+Z (the Command key in place of
+                  Ctrl on macOS) through the view model, one step each, shall keep no history of its own, and shall give the Edit menu the view model as the
                   target of undo and redo for the editing surface.
                 justification: |
                   Users reach for the keyboard to undo. The undo of the message must be the only one, because a second

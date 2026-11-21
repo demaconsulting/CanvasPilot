@@ -48,7 +48,8 @@ document is in progress.
 #### Key Methods
 
 **Setup.** The surface is configured once: its own undo stack is limited to zero and its undo and redo commands are
-removed, so that the message's history is the only one; key bindings for Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z call the view
+removed, so that the message's history is the only one; key bindings for Ctrl+Z, Ctrl+Y, and Ctrl+Shift+Z (with the
+Command key in place of Ctrl on macOS, the rule that the surface applies to its own clipboard keys) call the view
 model's `Undo` and `Redo`; the surface's drag of text inside itself, hyperlinks, the overwrite toggle, whole-line cut
 and copy, and Tab input are switched off (a drag of text inside the surface would be a removal and an insertion that
 breaks the chips); the chip generator and the dictated-text renderer are added to the text view; the paste, copy, and

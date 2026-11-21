@@ -322,6 +322,16 @@ public sealed class SpeechTests : IDisposable
             },
             TestContext.Current.CancellationToken);
         await session.StartAsync(TestContext.Current.CancellationToken);
+
+        // Wait until the audio has been received and both provisional results have been reported: the sound file is
+        // read on a background thread, so stopping straight away would race with the first chunk reaching the
+        // backend, and a slow machine would stop before any audio had been received
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (events.Count < 2 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
         await session.StopAsync(TestContext.Current.CancellationToken);
         await pump.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
         var results = events.ToArray();

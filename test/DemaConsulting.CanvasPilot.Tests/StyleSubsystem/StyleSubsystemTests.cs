@@ -331,7 +331,7 @@ public sealed class StyleSubsystemTests : IDisposable
         // Act: ask for the style, check the shown picture, and try the picture outside the project
         var style = tools[0].Invoke("{}");
         var checkedPicture = tools[1].Invoke("{}");
-        var outside = tools[1].Invoke("{\"path\":\"..\\\\outside.svg\"}");
+        var outside = tools[1].Invoke("{\"path\":\"../outside.svg\"}");
 
         // Assert: the block is the guidance of the kit within the budget, the check fails the red, and the outside file is refused
         Assert.Equal(StyleGuidance.Build(catalog.Resolve("guided")!), style);

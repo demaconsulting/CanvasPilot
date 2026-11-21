@@ -911,6 +911,16 @@ public sealed partial class StyleKitEditorViewModel : ObservableObject
     }
 
     /// <summary>
+    ///     Replaces the characters that a kit's file name may not hold, on any platform, by a hyphen.
+    /// </summary>
+    /// <param name="text">The part of a file name.</param>
+    /// <returns>The text with each such character replaced.</returns>
+    private static string MakePortable(string text)
+    {
+        return string.Concat(text.Select(c => StyleKitSerializer.HasNonPortableNameCharacter(c.ToString()) ? '-' : c));
+    }
+
+    /// <summary>
     ///     Makes the name of a new example from a file name: a name that is not in use, with characters that a name may
     ///     have and at most 100 characters, with a number before the extension when needed.
     /// </summary>
@@ -922,11 +932,8 @@ public sealed partial class StyleKitEditorViewModel : ObservableObject
         var used = new HashSet<string>(taken, StringComparer.OrdinalIgnoreCase);
         var extension = Path.GetExtension(fileName);
         var stem = Path.GetFileNameWithoutExtension(fileName);
-        foreach (var invalid in Path.GetInvalidFileNameChars())
-        {
-            stem = stem.Replace(invalid, '-');
-            extension = extension.Replace(invalid, '-');
-        }
+        stem = MakePortable(stem);
+        extension = MakePortable(extension);
 
         if (extension.Length > 20)
         {

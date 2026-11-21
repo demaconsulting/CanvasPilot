@@ -58,20 +58,21 @@ window exists.
 (unavailable for a prompt whose entry is blank), `CancelCommand`, and `CloseRequested`.
 
 **Main window**: `MainWindowView` has a `Menu` (`MainMenu`) with the five menus (File, Edit, Image, Tools, Help) and a
-host for the workspace. The Edit menu has Undo and Redo, whose `InputGesture` (Ctrl+Z, Ctrl+Y) is only text, because the
-message editor handles those keys itself. The window implements `IDialogService` with `ShowDialog`, `StorageProvider`,
-the clipboard, and the message dialog. Its constructor passes itself to `AttachDialogService`, and `ExitRequested`
-closes it. It also tracks the focus and the talk key (see **Focus tracking** and **Talk key** below). Its Help menu has
-`DrawingKnowledgeMenuItem` (`_Drawing Knowledge...`), a separator, and `AboutMenuItem`. The window shows the browser of
-the drawing knowledge with `Show` and itself as the owner, so that it does not block the window, and keeps the one that
-is open. Its Tools menu has `StyleKitsMenuItem` (`Style _Kits...`) above `SettingsMenuItem`. The window also implements
-`IStyleKitDialogs`, which `IDialogService` includes: it shows the window that manages style kits with `Show` and itself
-as the owner, one at a time (a request while it is open brings it to the front, restored if it was minimized, and
-disposes the view model that was made for the request), shows the editor of a kit modally over that window (or over
-itself when that is not open), and shows the pickers of a zip file to import, of a zip file to write, and of example
-images (which offers the file types that CanvasNet draws). Below the content the window has a status bar (`StatusBar`, a
-`Border` docked at the bottom) whose only content is the style picker (`StylePickerHost`); the bar is shown only while
-`ShowStatusBar` is true.
+host for the workspace. The Edit menu has Undo and Redo, whose `InputGesture` (Ctrl+Z, Ctrl+Y; Cmd+Z, Cmd+Shift+Z on
+macOS, chosen with `OnPlatform`) is only text, because the message editor handles those keys itself. The `HotKey` of New
+Project, Open Project, and Save Project is Ctrl+N, Ctrl+O, and Ctrl+S, or Cmd+N, Cmd+O, and Cmd+S on macOS. The window
+implements `IDialogService` with `ShowDialog`, `StorageProvider`, the clipboard, and the message dialog. Its constructor
+passes itself to `AttachDialogService`, and `ExitRequested` closes it. It also tracks the focus and the talk key (see
+**Focus tracking** and **Talk key** below). Its Help menu has `DrawingKnowledgeMenuItem` (`_Drawing Knowledge...`), a
+separator, and `AboutMenuItem`. The window shows the browser of the drawing knowledge with `Show` and itself as the
+owner, so that it does not block the window, and keeps the one that is open. Its Tools menu has `StyleKitsMenuItem`
+(`Style _Kits...`) above `SettingsMenuItem`. The window also implements `IStyleKitDialogs`, which `IDialogService`
+includes: it shows the window that manages style kits with `Show` and itself as the owner, one at a time (a request
+while it is open brings it to the front, restored if it was minimized, and disposes the view model that was made for the
+request), shows the editor of a kit modally over that window (or over itself when that is not open), and shows the
+pickers of a zip file to import, of a zip file to write, and of example images (which offers the file types that
+CanvasNet draws). Below the content the window has a status bar (`StatusBar`, a `Border` docked at the bottom) whose
+only content is the style picker (`StylePickerHost`); the bar is shown only while `ShowStatusBar` is true.
 
 #### Key Methods
 

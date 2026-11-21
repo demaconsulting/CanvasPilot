@@ -83,8 +83,9 @@ scenario is tested by `StyleKitDocument_Parse_NotAnObjectNotJsonTooDeepOrTooLarg
 
 **StyleKitDocument_Parse_ExamplePathOutsideTheExamplesFolder_IsAnError**: Captions whose path climbs with `..`, is
 rooted by a slash or a drive, uses a backslash, goes into a sub-folder, is not in the examples folder, is the folder
-alone, or has a character that a file name cannot have each give one error that names the path. This scenario is tested
-by `StyleKitDocument_Parse_ExamplePathOutsideTheExamplesFolder_IsAnError`.
+alone, or has a character that a file name cannot have on any platform (`|` is one, though Linux and macOS accept it)
+each give one error that names the path. This scenario is tested by
+`StyleKitDocument_Parse_ExamplePathOutsideTheExamplesFolder_IsAnError`.
 
 **StyleKitDocument_Parse_UnknownProperty_IsAWarningAndIsDroppedOnWrite**: A property that the format does not know is
 one warning, the kit is read, and the written text does not have it. This scenario is tested by

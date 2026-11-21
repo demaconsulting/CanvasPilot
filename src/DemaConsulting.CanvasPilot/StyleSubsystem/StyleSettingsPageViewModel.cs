@@ -481,14 +481,14 @@ public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISett
 
     /// <summary>
     ///     Tells whether two paths name the same folder: they are the same text after the full path is taken and a closing
-    ///     separator is dropped, without regard to case on Windows.
+    ///     separator is dropped, without regard to case on Windows and macOS, whose usual file systems ignore case.
     /// </summary>
     /// <param name="first">The first path.</param>
     /// <param name="second">The second path.</param>
     /// <returns><see langword="true" /> when they name the same folder.</returns>
     private static bool SamePath(string first, string second)
     {
-        var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+        var comparison = OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
         return string.Equals(Normalize(first), Normalize(second), comparison);
     }
 

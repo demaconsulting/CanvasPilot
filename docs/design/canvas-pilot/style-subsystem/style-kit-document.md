@@ -77,7 +77,10 @@ example file that is a link, or that is hidden, is ignored.
 
 **Example paths.** The path of an example is used to build a file name below the folder of the kit, so a path that is
 rooted, has a drive, uses a backslash, has a `.` or `..` segment, goes into a sub-folder, or has a character that a file
-name cannot have is an error, both as a caption and as an example in memory.
+name cannot have is an error, both as a caption and as an example in memory. The characters that a file name cannot have
+are the same on every platform, whatever the platform that reads the kit would accept: the control characters, the
+delete character, the slashes, and `: * ? " < > |`. A kit is shared between computers, so a name such as `a|b.png` that
+Linux would accept is refused there too, instead of being written on one computer and failing on another.
 
 #### Dependencies
 

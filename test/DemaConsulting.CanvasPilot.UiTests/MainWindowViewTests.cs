@@ -153,8 +153,8 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal(
             ["_File", "_Edit", "_Image", "_Tools", "_Help"],
             menu.Items.OfType<MenuItem>().Select(top => top.Header as string));
-        Assert.Equal("Ctrl+Z", window.FindControl<MenuItem>("UndoMenuItem")!.InputGesture?.ToString());
-        Assert.Equal("Ctrl+Y", window.FindControl<MenuItem>("RedoMenuItem")!.InputGesture?.ToString());
+        Assert.Equal(OperatingSystem.IsMacOS() ? new KeyGesture(Key.Z, KeyModifiers.Meta) : new KeyGesture(Key.Z, KeyModifiers.Control), window.FindControl<MenuItem>("UndoMenuItem")!.InputGesture);
+        Assert.Equal(OperatingSystem.IsMacOS() ? new KeyGesture(Key.Z, KeyModifiers.Meta | KeyModifiers.Shift) : new KeyGesture(Key.Y, KeyModifiers.Control), window.FindControl<MenuItem>("RedoMenuItem")!.InputGesture);
         Assert.Equal("_Drawing Knowledge...", window.FindControl<MenuItem>("DrawingKnowledgeMenuItem")!.Header);
         Assert.Equal("Style _Kits...", window.FindControl<MenuItem>("StyleKitsMenuItem")!.Header);
         Assert.Single(window.FindControl<MenuItem>("HelpMenu")!.Items.OfType<Separator>());

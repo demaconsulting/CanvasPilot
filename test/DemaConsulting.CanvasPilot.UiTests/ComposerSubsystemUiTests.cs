@@ -77,7 +77,7 @@ public sealed class ComposerSubsystemUiTests
             // Typing is one step per character, so the steps of a typed word are taken together
             while (harness.ReadableMessage != states[index])
             {
-                harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+                harness.Press(PhysicalKey.Z, ComposerHarness.Command);
                 harness.AssertConsistent();
             }
         }
@@ -87,7 +87,7 @@ public sealed class ComposerSubsystemUiTests
         // Act and assert: redo everything with Ctrl+Y, ending at the same message
         while (harness.ViewModel.CanRedo)
         {
-            harness.Press(PhysicalKey.Y, RawInputModifiers.Control);
+            harness.Press(PhysicalKey.Y, ComposerHarness.Command);
             harness.AssertConsistent();
         }
 
@@ -127,10 +127,10 @@ public sealed class ComposerSubsystemUiTests
         harness.AssertConsistent();
 
         // Act and assert: undo brings the middle chip back in its place, and redo removes it again
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal(["plan.txt", "refs", "logo.png"], Labels(harness));
         harness.AssertConsistent();
-        harness.Press(PhysicalKey.Y, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Y, ComposerHarness.Command);
         Assert.Equal(["plan.txt", "logo.png"], Labels(harness));
         harness.AssertConsistent();
     }

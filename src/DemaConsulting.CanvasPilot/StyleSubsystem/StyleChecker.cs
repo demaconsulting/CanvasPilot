@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Diagnostics.CodeAnalysis;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 namespace DemaConsulting.CanvasPilot.StyleSubsystem;
@@ -56,6 +57,13 @@ public static class StyleChecker
     ///     The number of bits of each channel that make the key of a bucket.
     /// </summary>
     private const int BucketBits = 5;
+
+    /// <summary>
+    ///     Why the per-pixel methods are left out of the measure of code coverage: the coverage tool counts every branch of
+    ///     them, which slows a picture of 65 million pixels by a factor of a hundred, so the run that measures coverage could
+    ///     not show that the check is as quick as its requirement says. The unit tests run every line of them.
+    /// </summary>
+    private const string HotLoopJustification = "Per-pixel loop; instrumenting it makes the check too slow to measure its speed in a coverage run.";
 
     /// <summary>
     ///     The number of buckets: 32 levels for each of the three channels.
@@ -184,6 +192,7 @@ public static class StyleChecker
     /// <param name="bucketCounts">Receives the number of pixels in each bucket.</param>
     /// <param name="sums">Receives the sums of the red, green, and blue channels of the pixels of each bucket, three numbers a bucket.</param>
     /// <returns>The number of pixels that were counted and the number that were empty.</returns>
+    [ExcludeFromCodeCoverage(Justification = HotLoopJustification)]
     private static (long Considered, long Transparent) CountPixels(
         ReadOnlySpan<byte> rgba,
         byte backgroundRed,
@@ -243,6 +252,7 @@ public static class StyleChecker
     /// <param name="run">The number of pixels in the run.</param>
     /// <param name="bucketCounts">The number of pixels in each bucket.</param>
     /// <param name="sums">The sums of the channels of each bucket.</param>
+    [ExcludeFromCodeCoverage(Justification = HotLoopJustification)]
     private static void Flush(int packed, long run, long[] bucketCounts, long[] sums)
     {
         if (packed < 0 || run == 0)
@@ -267,6 +277,7 @@ public static class StyleChecker
     /// <param name="background">The same channel of the background.</param>
     /// <param name="alpha">The alpha of the pixel, 16 to 254.</param>
     /// <returns>The channel that the pixel has over the background.</returns>
+    [ExcludeFromCodeCoverage(Justification = HotLoopJustification)]
     private static int Flatten(int channel, int background, int alpha) => ((channel * alpha) + (background * (255 - alpha)) + 127) / 255;
 
     /// <summary>

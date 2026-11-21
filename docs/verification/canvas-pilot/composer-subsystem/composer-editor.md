@@ -11,11 +11,12 @@ over a temporary project folder, and the real AvaloniaEdit editing surface, beca
 the rule under test is that the surface and the message agree. Only what has no place in a view test is replaced:
 `IdleDictationService` (always ready, never listens), `SimpleMessageBuilder`, and `FixedThumbnailProvider` and a
 throwing provider for the pictures of chips. Input is sent through the window as the platform delivers it: text input
-for typing and for the commit of an input method, physical key presses for Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, Backspace,
-Delete, Enter, Ctrl+C, Ctrl+X, and Ctrl+V, pointer presses for the delete button of a chip, and drag events for drops.
-Files and folders for drops come from the window's storage provider, pictures are bitmaps in data transfer items, and
-the clipboard is the window's in-memory clipboard. After every operation the harness checks the central rule: the text
-of the surface equals the flat text of the message, and the number of placeholder characters equals the number of chips.
+for typing and for the commit of an input method, physical key presses (where Ctrl is the command key of the platform
+that runs the tests: the Command key on macOS) for Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, Backspace, Delete, Enter, Ctrl+C,
+Ctrl+X, and Ctrl+V, pointer presses for the delete button of a chip, and drag events for drops. Files and folders for
+drops come from the window's storage provider, pictures are bitmaps in data transfer items, and the clipboard is the
+window's in-memory clipboard. After every operation the harness checks the central rule: the text of the surface equals
+the flat text of the message, and the number of placeholder characters equals the number of chips.
 
 #### Test Environment
 

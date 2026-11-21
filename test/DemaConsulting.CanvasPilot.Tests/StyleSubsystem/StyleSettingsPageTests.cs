@@ -150,7 +150,7 @@ public sealed class StyleSettingsPageTests : IDisposable
         var canAdd = page.AddTypedFolderCommand.CanExecute(null);
         page.AddTypedFolderCommand.Execute(null);
         var afterAdd = (Paths: page.Folders.Select(row => row.Path).ToArray(), Selected: page.SelectedFolder?.Path, page.NewFolderText, page.HasFolderError);
-        page.NewFolderText = _places.Shared1.ToUpperInvariant() + Path.DirectorySeparatorChar;
+        page.NewFolderText = (TestPlatformPaths.IgnoresCase ? _places.Shared1.ToUpperInvariant() : _places.Shared1) + Path.DirectorySeparatorChar;
         page.AddTypedFolderCommand.Execute(null);
 
         // Assert
@@ -434,7 +434,7 @@ public sealed class StyleSettingsPageTests : IDisposable
     {
         // Act / Assert
         Assert.True(StyleSettingsPageViewModel.IsFullPath(_places.Root));
-        Assert.True(StyleSettingsPageViewModel.IsFullPath("\\\\server\\share\\kits"));
+        Assert.True(StyleSettingsPageViewModel.IsFullPath(TestPlatformPaths.NetworkFolder));
         Assert.False(StyleSettingsPageViewModel.IsFullPath(null));
         Assert.False(StyleSettingsPageViewModel.IsFullPath("   "));
         Assert.False(StyleSettingsPageViewModel.IsFullPath("kits"));

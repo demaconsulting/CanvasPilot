@@ -334,8 +334,8 @@ public sealed class ChatPanelViewTests
 
         // Act: undo with the keyboard in the editing control
         harness.Editor.FocusEditor();
-        harness.Window.KeyPressQwerty(PhysicalKey.Z, RawInputModifiers.Control);
-        harness.Window.KeyReleaseQwerty(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Window.KeyPressQwerty(PhysicalKey.Z, ComposerHarness.Command);
+        harness.Window.KeyReleaseQwerty(PhysicalKey.Z, ComposerHarness.Command);
         harness.Layout();
 
         // Assert: the chip is gone and the mark is no longer shown

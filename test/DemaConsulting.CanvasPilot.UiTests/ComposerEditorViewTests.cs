@@ -60,13 +60,13 @@ public sealed class ComposerEditorViewTests
         Assert.True(harness.ViewModel.CanUndo);
 
         // Act and assert: each Ctrl+Z takes one character back, and the surface follows
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("ab", harness.Message);
         harness.AssertConsistent();
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("a", harness.Message);
         harness.AssertConsistent();
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal(string.Empty, harness.Message);
         harness.AssertConsistent();
         Assert.False(harness.ViewModel.CanUndo);
@@ -83,14 +83,14 @@ public sealed class ComposerEditorViewTests
         harness.TypeEach("abc");
         for (var i = 0; i < 3; i++)
         {
-            harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+            harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         }
 
         // Act: redo with Ctrl+Y, then with Ctrl+Shift+Z
-        harness.Press(PhysicalKey.Y, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Y, ComposerHarness.Command);
         var afterFirst = harness.Message;
         harness.AssertConsistent();
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control | RawInputModifiers.Shift);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command | RawInputModifiers.Shift);
         var afterSecond = harness.Message;
         harness.AssertConsistent();
 
@@ -113,7 +113,7 @@ public sealed class ComposerEditorViewTests
 
         // Act: look at the surface's own stack and press Ctrl+Z, which would bring the text back from a built-in history
         var surfaceCanUndo = harness.Editor.CanUndo;
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
 
         // Assert: the surface keeps no history, and nothing came back
         Assert.False(surfaceCanUndo);
@@ -155,7 +155,7 @@ public sealed class ComposerEditorViewTests
         // Act: commit five characters at once, as an input method does
         harness.Type("hello");
         var typed = harness.Message;
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
 
         // Assert: one undo took all five back
         Assert.Equal("a" + "hello", typed);
@@ -183,9 +183,9 @@ public sealed class ComposerEditorViewTests
         harness.AssertConsistent();
 
         // Act and assert: two Ctrl+Z put both back, in turn
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("acd", harness.Message);
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("abcd", harness.Message);
         harness.AssertConsistent();
         Assert.Equal("acd", afterBackspace);
@@ -207,7 +207,7 @@ public sealed class ComposerEditorViewTests
         harness.Type("X");
         var typed = harness.Message;
         harness.AssertConsistent();
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
 
         // Assert: one step replaced the selection and one step restored it
         Assert.Equal("hXo", typed);
@@ -230,8 +230,8 @@ public sealed class ComposerEditorViewTests
         harness.TypeEach("x");
         var typed = harness.Message;
         harness.AssertConsistent();
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
 
         // Assert: the message has a line break, and undo took it away again
         Assert.Contains('\n', typed);
@@ -293,7 +293,7 @@ public sealed class ComposerEditorViewTests
         Assert.Empty(harness.Chips);
 
         // Act: undo
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
 
         // Assert: the chip is back between the letters, drawn again
         Assert.Equal("a#b", harness.ReadableMessage);
@@ -330,9 +330,9 @@ public sealed class ComposerEditorViewTests
         harness.AssertConsistent();
 
         // Act and assert: each removal is one step, undone one at a time
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("a#b", harness.ReadableMessage);
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("a#b#", harness.ReadableMessage);
         harness.AssertConsistent();
         Assert.Equal("a#b", afterBackspace);
@@ -412,7 +412,7 @@ public sealed class ComposerEditorViewTests
         var chipsAfterDrop = harness.ViewModel.Document.Chips.Count();
         harness.AssertConsistent();
         var drawn = harness.Chips.Count;
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
 
         // Assert: four chips were added and drawn, and one undo removed all of them
         Assert.Equal(4, chipsAfterDrop);
@@ -448,7 +448,7 @@ public sealed class ComposerEditorViewTests
             first => Assert.IsType<FileChip>(first),
             second => Assert.IsType<FolderChip>(second),
             third => Assert.IsType<ImageChip>(third));
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("hello", harness.Message);
         harness.AssertConsistent();
     }
@@ -605,11 +605,11 @@ public sealed class ComposerEditorViewTests
         harness.AssertConsistent();
 
         // Act and assert: three Ctrl+Z take the three pastes back, one each
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("###", harness.ReadableMessage);
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("##", harness.ReadableMessage);
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal(string.Empty, harness.Message);
         harness.AssertConsistent();
     }
@@ -627,14 +627,14 @@ public sealed class ComposerEditorViewTests
         harness.MoveCaret(1);
 
         // Act: press Ctrl+V and wait for the asynchronous paste
-        harness.Press(PhysicalKey.V, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.V, ComposerHarness.Command);
         var pasted = harness.WaitFor(() => harness.Message.Contains("PASTED", StringComparison.Ordinal));
 
         // Assert: the text is in, the surface agrees, and one undo takes it out again
         Assert.True(pasted);
         Assert.Equal("aPASTEDb", harness.Message);
         harness.AssertConsistent();
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("ab", harness.Message);
         harness.AssertConsistent();
     }
@@ -651,7 +651,7 @@ public sealed class ComposerEditorViewTests
         await harness.Window.Clipboard!.SetFileAsync(file!);
 
         // Act: press Ctrl+V and wait for the asynchronous paste
-        harness.Press(PhysicalKey.V, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.V, ComposerHarness.Command);
         var pasted = harness.WaitFor(() => harness.ViewModel.Document.Chips.Any());
 
         // Assert: one chip and no text
@@ -676,13 +676,13 @@ public sealed class ComposerEditorViewTests
         harness.Select(0, harness.Message.Length);
 
         // Act: copy with Ctrl+C
-        harness.Press(PhysicalKey.C, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.C, ComposerHarness.Command);
         var copied = harness.WaitFor(() => harness.Window.Clipboard!.TryGetTextAsync().GetAwaiter().GetResult() is { Length: > 0 } text && text.Contains("copy.txt", StringComparison.Ordinal));
         var copiedText = await harness.Window.Clipboard!.TryGetTextAsync();
 
         // Act: cut with Ctrl+X
         harness.Select(0, harness.Message.Length);
-        harness.Press(PhysicalKey.X, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.X, ComposerHarness.Command);
         var cut = harness.WaitFor(() => harness.Message.Length == 0);
 
         // Assert: the clipboard text is readable, the cut removed everything, and undo brings it back as one step
@@ -690,7 +690,7 @@ public sealed class ComposerEditorViewTests
         Assert.Equal("ab[copy.txt]cd", copiedText);
         Assert.True(cut);
         harness.AssertConsistent();
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         Assert.Equal("ab#cd", harness.ReadableMessage);
         harness.AssertConsistent();
     }
@@ -717,8 +717,8 @@ public sealed class ComposerEditorViewTests
         Assert.Equal([new DictatedRange(2, 11)], ranges);
 
         // Act: undo the typed letter and the block
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
-        harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
 
         // Assert: the block was one step
         Assert.Equal("ab", harness.Message);
@@ -848,7 +848,7 @@ public sealed class ComposerEditorViewTests
         // Act: undo every step with the keyboard
         for (var i = 0; i < steps; i++)
         {
-            harness.Press(PhysicalKey.Z, RawInputModifiers.Control);
+            harness.Press(PhysicalKey.Z, ComposerHarness.Command);
         }
 
         // Assert: ten chips were drawn, and everything was undone with the surface equal to the message at the end

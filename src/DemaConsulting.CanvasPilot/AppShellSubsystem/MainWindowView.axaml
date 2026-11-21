@@ -32,14 +32,14 @@
         <MenuItem Name="NewProjectMenuItem"
                   AutomationProperties.AutomationId="NewProjectMenuItem"
                   Header="_New Project..."
-                  HotKey="Ctrl+N"
-                  InputGesture="Ctrl+N"
+                  HotKey="{OnPlatform 'Ctrl+N', macOS='Cmd+N'}"
+                  InputGesture="{OnPlatform 'Ctrl+N', macOS='Cmd+N'}"
                   Command="{Binding NewProjectCommand}" />
         <MenuItem Name="OpenProjectMenuItem"
                   AutomationProperties.AutomationId="OpenProjectMenuItem"
                   Header="_Open Project..."
-                  HotKey="Ctrl+O"
-                  InputGesture="Ctrl+O"
+                  HotKey="{OnPlatform 'Ctrl+O', macOS='Cmd+O'}"
+                  InputGesture="{OnPlatform 'Ctrl+O', macOS='Cmd+O'}"
                   Command="{Binding OpenProjectCommand}" />
         <MenuItem Name="RecentProjectsMenuItem"
                   AutomationProperties.AutomationId="RecentProjectsMenuItem"
@@ -51,8 +51,8 @@
         <MenuItem Name="SaveProjectMenuItem"
                   AutomationProperties.AutomationId="SaveProjectMenuItem"
                   Header="_Save Project"
-                  HotKey="Ctrl+S"
-                  InputGesture="Ctrl+S"
+                  HotKey="{OnPlatform 'Ctrl+S', macOS='Cmd+S'}"
+                  InputGesture="{OnPlatform 'Ctrl+S', macOS='Cmd+S'}"
                   Command="{Binding SaveProjectCommand}" />
         <MenuItem Name="CloseProjectMenuItem"
                   AutomationProperties.AutomationId="CloseProjectMenuItem"
@@ -71,12 +71,12 @@
         <MenuItem Name="UndoMenuItem"
                   AutomationProperties.AutomationId="UndoMenuItem"
                   Header="_Undo"
-                  InputGesture="Ctrl+Z"
+                  InputGesture="{OnPlatform 'Ctrl+Z', macOS='Cmd+Z'}"
                   Command="{Binding UndoCommand}" />
         <MenuItem Name="RedoMenuItem"
                   AutomationProperties.AutomationId="RedoMenuItem"
                   Header="_Redo"
-                  InputGesture="Ctrl+Y"
+                  InputGesture="{OnPlatform 'Ctrl+Y', macOS='Cmd+Shift+Z'}"
                   Command="{Binding RedoCommand}" />
       </MenuItem>
 

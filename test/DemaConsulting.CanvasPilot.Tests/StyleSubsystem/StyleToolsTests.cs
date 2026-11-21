@@ -389,12 +389,19 @@ public sealed class StyleToolsTests : IDisposable
         var secret = Path.Combine(_outside, "secret.svg");
 
         // Act and assert: each way of writing a path out of the project, or to nothing, is an error that says why
-        Refused(check, "..\\elsewhere\\secret.svg", "is not a path inside the project folder");
         Refused(check, "../elsewhere/secret.svg", "is not a path inside the project folder");
-        Refused(check, "sub\\..\\..\\elsewhere\\secret.svg", "is not a path inside the project folder");
+        Refused(check, "sub/../../elsewhere/secret.svg", "is not a path inside the project folder");
         Refused(check, secret, "is not a path inside the project folder");
-        Refused(check, "\\\\server\\share\\picture.svg", "is not a path inside the project folder");
-        Refused(check, ".canvaspilot\\cache.svg", "data folder of the application");
+        Refused(check, ".canvaspilot/cache.svg", "data folder of the application");
+        if (OperatingSystem.IsWindows())
+        {
+            // A backslash and a network path are separators and a root only on Windows; elsewhere they are file name characters
+            Refused(check, "..\\elsewhere\\secret.svg", "is not a path inside the project folder");
+            Refused(check, "sub\\..\\..\\elsewhere\\secret.svg", "is not a path inside the project folder");
+            Refused(check, "\\\\server\\share\\picture.svg", "is not a path inside the project folder");
+            Refused(check, ".canvaspilot\\cache.svg", "data folder of the application");
+        }
+
         Refused(check, ".CanvasPilot/cache.svg", "data folder of the application");
         Refused(check, "sub", "is a folder");
         Refused(check, "missing.svg", "no file 'missing.svg'");

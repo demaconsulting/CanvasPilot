@@ -280,6 +280,13 @@ public sealed partial class ComposerEditorView : UserControl
     }
 
     /// <summary>
+    ///     Gets the modifier of the platform's command shortcuts, such as undo and paste: the Command key on macOS and
+    ///     the Control key elsewhere. It is the rule that the editing control applies to its own clipboard shortcuts, so
+    ///     the shortcuts that the view adds are the same keys as the ones the control has.
+    /// </summary>
+    private static KeyModifiers CommandModifier => OperatingSystem.IsMacOS() ? KeyModifiers.Meta : KeyModifiers.Control;
+
+    /// <summary>
     ///     Finds the text change that turns one text into another, as the part that differs between a common start and a
     ///     common end.
     /// </summary>
@@ -320,9 +327,9 @@ public sealed partial class ComposerEditorView : UserControl
             area.CommandBindings.Remove(binding);
         }
 
-        Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Z, KeyModifiers.Control), Command = new RelayCommand(() => _viewModel?.Undo()) });
-        Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Y, KeyModifiers.Control), Command = new RelayCommand(() => _viewModel?.Redo()) });
-        Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Z, KeyModifiers.Control | KeyModifiers.Shift), Command = new RelayCommand(() => _viewModel?.Redo()) });
+        Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Z, CommandModifier), Command = new RelayCommand(() => _viewModel?.Undo()) });
+        Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Y, CommandModifier), Command = new RelayCommand(() => _viewModel?.Redo()) });
+        Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Z, CommandModifier | KeyModifiers.Shift), Command = new RelayCommand(() => _viewModel?.Redo()) });
 
         // A drag of text inside the surface would be a removal and an insertion that breaks the chips, so it is off
         var options = Editor.Options;

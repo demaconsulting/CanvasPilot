@@ -102,7 +102,7 @@ internal static class ChatTestPayloads
             sourceElementsAvailable: false,
             sourceElementsUnavailableReason: "svg provides no element positions",
             sourceElementsTruncated: false));
-        var image = new PayloadImage(@"C:\project\flow.svg", "file-hash", "pixel-hash", "svg", 200, 100, PngBytes, marks);
+        var image = new PayloadImage(TestPlatformPaths.FullPath("project", "flow.svg"), "file-hash", "pixel-hash", "svg", 200, 100, PngBytes, marks);
         return new MessagePayload(
             string.Join(' ', markNumbers.Select(number => $"[Mark {number}]")),
             markNumbers.Select(number => (PayloadSegment)new PayloadMarkPart(number)),

@@ -152,6 +152,12 @@ public static partial class StyleKitSerializer
     public const int MaxPresetPixels = 8192;
 
     /// <summary>
+    ///     The characters, besides the control characters and the slashes, that no file name of a kit may hold: those that
+    ///     a Windows file name cannot have, so a kit can be used on every platform.
+    /// </summary>
+    internal const string NonPortableNameCharacters = ":*?\"<>|";
+
+    /// <summary>
     ///     The palette roles that every kit must have.
     /// </summary>
     public static IReadOnlyList<string> RequiredRoles { get; } = ["background", "text", "primary"];
@@ -774,9 +780,25 @@ public static partial class StyleKitSerializer
         }
 
         var name = path[prefix.Length..];
-        return name.Length > 100 || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+        return name.Length > 100 || HasNonPortableNameCharacter(name)
             ? "has a file name that is too long or holds a character that a file name cannot have"
             : null;
+    }
+
+    /// <summary>
+    ///     Tells whether a file name holds a character that cannot be in a file name on every platform.
+    /// </summary>
+    /// <remarks>
+    ///     The rule is the same on every platform, whatever the platform that checks it accepts: a kit is shared between
+    ///     computers (a zip file, a shared folder), so a name that Linux accepts but Windows does not, such as
+    ///     <c>a|b.png</c>, must not be written on one and fail to be read on the other. The characters are the control
+    ///     characters, the delete character, the two slashes, and <c>: * ? " &lt; &gt; |</c>.
+    /// </remarks>
+    /// <param name="name">The file name, without a folder.</param>
+    /// <returns><see langword="true" /> when the name holds such a character.</returns>
+    internal static bool HasNonPortableNameCharacter(string name)
+    {
+        return name.Any(c => c < ' ' || c == '\u007f' || c is '/' or '\\' || NonPortableNameCharacters.Contains(c, StringComparison.Ordinal));
     }
 
     /// <summary>

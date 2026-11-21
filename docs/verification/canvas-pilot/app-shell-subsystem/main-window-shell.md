@@ -195,7 +195,7 @@ tested by `MainWindowView_Show_OpensWithShellTitle`.
 **MainWindowView_Menus_HaveExpectedStructureAndAutomationIds**: The five menus and their items are in the
 expected order (the Help menu has Drawing Knowledge, a separator, and About), each has a matching name and automation
 identifier, and the Undo and Redo items show Ctrl+Z and
-Ctrl+Y as text. This scenario is tested by
+Ctrl+Y as text (Cmd+Z and Cmd+Shift+Z on macOS). This scenario is tested by
 `MainWindowView_Menus_HaveExpectedStructureAndAutomationIds`.
 
 **MainWindowView_Menus_NoProject_EnabledStateFollowsCommands**: With no project the New, Open, Exit, Settings, Drawing

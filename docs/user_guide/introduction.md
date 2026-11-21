@@ -199,7 +199,8 @@ Click in the message box and type. Enter starts a new line; a message is sent on
 copy, cut, and paste work as in any text box, and a long message wraps. Text that you paste is plain text, and
 characters that cannot be shown are removed.
 
-CanvasPilot remembers what you did, so that you can step back and forth:
+CanvasPilot remembers what you did, so that you can step back and forth. On macOS, use the Command key where this guide
+says Ctrl:
 
 - **Undo** with Ctrl+Z, or with **Edit > Undo**.
 - **Redo** with Ctrl+Y or Ctrl+Shift+Z, or with **Edit > Redo**.
