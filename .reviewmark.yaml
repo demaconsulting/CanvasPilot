@@ -1158,6 +1158,25 @@ reviews:
       - "test/**/StyleSubsystem/StyleSettingsPageTests.cs"
       - "test/**/StyleSettingsPageViewTests.cs"
 
+  - id: CanvasPilot-Style-StyleKitEditor
+    title: Review of CanvasPilot StyleKitEditor unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-editor.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-editor.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-editor.md"
+      - "src/**/StyleSubsystem/StyleColorRowViewModel.cs"
+      - "src/**/StyleSubsystem/StyleExampleRowViewModel.cs"
+      - "src/**/StyleSubsystem/StyleKitEditorViewModel.cs"
+      - "src/**/StyleSubsystem/StyleNameValueRowViewModel.cs"
+      - "src/**/StyleSubsystem/StylePresetRowViewModel.cs"
+      - "src/**/StyleSubsystem/StyleTextRowViewModel.cs"
+      - "test/**/StyleSubsystem/StyleKitEditorTests.cs"
+
   - id: CanvasPilot-Style-StyleGuidance
     title: Review of CanvasPilot StyleGuidance unit implementation
     context:

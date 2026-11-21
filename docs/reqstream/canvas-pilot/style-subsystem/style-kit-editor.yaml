@@ -1,0 +1,76 @@
+---
+# Software Unit Requirements for the StyleKitEditor Unit
+#
+# The StyleKitEditor unit is the editor of one style kit of the user or of the project. It keeps a draft of every part of
+# the kit, checks the draft with the rules of the style file so that a kit with an error is never written, and changes the
+# files of the example images only when the kit is saved.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleKitEditor Requirements
+            requirements:
+              - id: CanvasPilot-StyleKitEditor-EditEveryPartOfAKit
+                title: >-
+                  The StyleKitEditor shall hold a draft of a kit of the user or of the project that has every part of the kit,
+                  the name and description, the palette with its required and extra colors, the three font lists, the line
+                  width, corner radius, and spacing, the Mermaid theme and its variables, the Vega-Lite configuration, the
+                  written advice with its two lists, the export sizes, and the example images with their captions, let the
+                  user add, remove, and rename colors, theme variables, and lines of advice, set a color as text or with red,
+                  green, and blue values that always agree, leave out lines that are blank, write the draft as the kit when
+                  saved, and say whether the draft differs from the kit that was opened.
+                justification: |
+                  A style that can only be changed by editing a file by hand is changed rarely and wrongly. A draft of every
+                  part lets a person change anything about the look without knowing the file format, a color that can be set
+                  by number or by text suits both a person who has a brand color as a code and one who judges by eye, and a
+                  draft that is only a copy keeps the kit as it was until the person decides.
+                tests:
+                  - StyleKitEditor_Open_KitWithEveryPart_DraftHoldsEveryFieldAndIsClean
+                  - StyleKitEditor_Save_EveryFieldChanged_IsWrittenAndReadBack
+                  - StyleKitEditor_Palette_AddRemoveRenameAndSliders_FollowTheRules
+                  - StyleKitEditor_Mermaid_SwitchedOffAndVariableRows_FollowTheRules
+                  - StyleKitEditor_Guidance_BlankLines_AreLeftOut
+                  - StyleKitEditor_IsDirty_ChangeAndChangeBack_FollowsTheDraft
+
+              - id: CanvasPilot-StyleKitEditor-RefuseInvalidKits
+                title: >-
+                  The StyleKitEditor shall check the draft with the same rules as the reader of the style file, show each
+                  error with the name of the property and what to do, show the warnings without blocking the save, say once,
+                  where it is, a number of an export size that is not a number, hint at text that is hard to read on the
+                  background, refuse to save while the draft has an error, show why a save failed and leave the editor open and
+                  the folder as it was, and refuse to open a kit that comes with the program or is shared.
+                justification: |
+                  A kit with an error is not usable and may stop the application from reading the folder it is in, so the
+                  editor must not write one, and a person can only fix what the message names. The messages must be the ones
+                  that the file reader gives so that the same mistake reads the same in both places. A font that is not
+                  bundled is a choice that a person may want, so it is said and not refused. A failed save must not leave half
+                  a kit, and the kits of the program and of a team are not the user's to change.
+                tests:
+                  - StyleKitEditor_Validate_WrongValues_GiveTheMessagesOfTheReaderAndStopTheSave
+                  - StyleKitEditor_Validate_FontThatIsNotBundled_IsAWarningAndKitCanBeSaved
+                  - StyleKitEditor_ContrastText_LowAndHighContrast_AreSaid
+                  - StyleKitEditor_Save_CatalogFails_ShowsTheReasonAndRemovesTheCopies
+                  - StyleKitEditor_Constructor_ReadOnlyKitAndNullArguments_AreRefused
+
+              - id: CanvasPilot-StyleKitEditor-EditExamplesAndPresets
+                title: >-
+                  The StyleKitEditor shall let the user add, change, and remove export sizes, and add example images from files
+                  that the user chooses and remove them and caption them, shall give a new image a name that is not in use and
+                  never overwrite an example that stays, shall not add a file that is missing or larger than the limit of an
+                  example and say why, shall copy the chosen files into the kit and delete the removed ones only when the kit
+                  is saved and in an order that never leaves a kit file that names a missing file, and shall leave every file
+                  as it was when the user cancels.
+                justification: |
+                  Example images and export sizes are what the user sees and uses every day, so they are edited where the rest
+                  of the kit is. Files that are chosen from anywhere on the computer must not replace the examples that the kit
+                  already has by accident, a file that cannot be used must be refused with a reason, and nothing may change on
+                  disk until the user saves, so that canceling is safe.
+                tests:
+                  - StyleKitEditor_Presets_AddRemoveAndWrongNumbers_GiveMessages
+                  - StyleKitEditor_Examples_AddAndRemove_ChangeTheFilesOnlyWhenSaved
+                  - StyleKitEditor_Cancel_AfterEdits_LeavesTheDiskUntouched
+                  - StyleKitEditor_Examples_NameCollisions_GetANumberAndNothingIsOverwritten
+                  - StyleKitEditor_Examples_MissingAndTooLargeFiles_AreNotAddedAndSaveKeepsTheRest
+                  - StyleKitEditor_AddExamplesCommand_PickerSuppliedOrMissing_AddsOrDoesNothing

@@ -13,9 +13,9 @@ later is given the style as a block of text and two tools, and a picture can be 
 None of it depends on any provider of a language model or on any agent library, so what the subsystem offers can be
 given to any assistant that is added later.
 
-The subsystem is built up unit by unit. It now contains nine units, `StyleKitDocument`, `StyleKitCatalog`,
-`StyleKitArchive`, `StyleSelection`, `StyleGuidance`, `StyleChecker`, `StyleTools`, `StylePicker`, and
-`StyleSettingsPage`.
+The subsystem is built up unit by unit. It now contains ten units, `StyleKitDocument`, `StyleKitCatalog`,
+`StyleKitArchive`, `StyleSelection`, `StyleGuidance`, `StyleChecker`, `StyleTools`, `StylePicker`,
+`StyleSettingsPage`, and `StyleKitEditor`.
 `StyleKitDocument` holds the values of a kit and the format that they are kept in: it reads a kit from a file and from
 its folder with a message for each wrong property, checks a kit that is built in memory with the same rules, and writes
 a kit as canonical text. `StyleKitCatalog` finds the kits in the four places, chooses the kit of the most local place
@@ -37,7 +37,9 @@ grows with them. `StyleTools` describes the two tools of an assistant, `style_ge
 (the descriptor record of the drawing knowledge) with a function from text to text that never throws; the check reads
 only files inside the folder of the project. `StylePicker` is the list in the status bar of the main window with which
 the user chooses the kit of the open project. `StyleSettingsPage` is the page of the settings dialog with which the user
-lists the shared folders of kits and chooses the default kit of a new project. The subsystem depends on CanvasNet for
+lists the shared folders of kits and chooses the default kit of a new project. `StyleKitEditor` is the editor of one kit
+of the user or of the project: a draft of every part that is checked with the rules of the style file and is written,
+with the example files that were added and removed, only when the user saves. The subsystem depends on CanvasNet for
 the classification of font families, and on `Project`, `Settings`, `Preview`, `Utilities`, `Logging`, and `Knowledge`
 (only the descriptor record of a tool).
 
@@ -165,6 +167,21 @@ the classification of font families, and on `Project`, `Settings`, `Preview`, `U
 - *Constraints*: Edits a working copy. A folder that cannot be reached is kept, and a default kit that no kit has is
   kept.
 
+**StyleKitEditor**: The editor of one kit of the user or of the project.
+
+- *Type*: In-process .NET view model `StyleKitEditorViewModel` with the row values `StyleColorRowViewModel`,
+  `StyleNameValueRowViewModel`, `StyleTextRowViewModel`, `StylePresetRowViewModel`, and
+  `StyleExampleRowViewModel`.
+- *Role*: Provider (the draft and its commands), and Consumer (the catalog that writes the kit).
+- *Contract*: The draft has a field or a list of rows for every part of the kit; `Errors` and `Warnings` are the
+  messages of the reader of the style file; `CanSave` is true while there is no error; `BuildKit` makes the kit that
+  the draft describes; `AddExampleFiles` and `AddExamplesCommand` add example images; `SaveCommand` copies the chosen
+  example files in, writes the kit through the catalog, and deletes the example files that were removed;
+  `CancelCommand` writes nothing; `CloseRequested` asks the window to close; `Saved` and `SavedEntry` give the
+  result.
+- *Constraints*: A kit that comes with the program or is shared is refused (it is read only). Nothing on disk changes
+  before the save, and a failed save takes away the files that it copied.
+
 ### Design
 
 **The dependency rule.** The subsystems below `AppShell` do not depend on `AppShell` or on each other upwards, and this
@@ -201,6 +218,7 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 - **StyleTools** unit: the tools `style_get` and `style_check` of an assistant.
 - **StylePicker** unit: the choice of the kit of the open project in the status bar.
 - **StyleSettingsPage** unit: the shared folders and the default kit in the settings dialog.
+- **StyleKitEditor** unit: the editing of one kit of the user or of the project.
 - **Knowledge** subsystem: only the descriptor record of a tool (`KnowledgeTool`).
 - **Project** subsystem: which project is open and when it changes, and the id of the kit that the project file keeps
   (the project service).

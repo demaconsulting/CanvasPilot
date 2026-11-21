@@ -155,6 +155,10 @@ sections:
               A style that is hard to try or to change is not used. Showing what a kit looks like beside the list, and
               keeping the actions that cannot apply to a kit of the program or of a team out of reach, makes the choices
               plain, and an editor that refuses an invalid kit keeps the files in the folders valid.
+            children:
+              - CanvasPilot-StyleKitEditor-EditEveryPartOfAKit
+              - CanvasPilot-StyleKitEditor-RefuseInvalidKits
+              - CanvasPilot-StyleKitEditor-EditExamplesAndPresets
 
           - id: CanvasPilot-Style-StayProviderNeutral
             title: >-

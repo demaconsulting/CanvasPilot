@@ -20,5 +20,6 @@ package CanvasPilot {
         part styleTools : StyleTools;
         part stylePicker : StylePicker;
         part styleSettingsPage : StyleSettingsPage;
+        part styleKitEditor : StyleKitEditor;
     }
 }
