@@ -195,8 +195,8 @@ which the Help menu shows, is asked for as an assistant would ask. The compact i
 for the card of CanvasPilot and a card of CanvasNet; the help tool answers with no arguments the same index, for a topic
 the card of the marks of a message, for an example the text of the example in a fenced block, and for a query the cards
 that fit it. There is one skill for each card, with names that are all different. The card of the layout of a project is
-there, no card carries the tag of what the host program controls, and the card of the PDF format that carries it is not
-found. This scenario is tested by `CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork`.
+there, no card that is only about the host program is, and the card of the PDF format is. This scenario is tested by
+`CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork`.
 
 **CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog**: The application is composed as at
 startup with a dialog service that plays the window, and the user chooses Drawing Knowledge. The command is usable and

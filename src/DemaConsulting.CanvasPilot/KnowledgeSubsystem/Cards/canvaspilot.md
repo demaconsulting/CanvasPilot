@@ -38,3 +38,11 @@ Each card below describes one part of the work. The CanvasNet cards describe how
 to write each format: start with [[svg]], [[mermaid]], [[plantuml]], [[scad]],
 or [[vega-lite]], and with [[composition]] for pictures that combine several
 formats.
+
+## What you cannot run
+
+Some CanvasNet cards mention command-line tools, Pandoc, or the options and
+classes of a host program (such as `SourceOptions`). You cannot run or call
+those: CanvasPilot draws the files itself. Use what the cards say about the
+formats, links, and fragments, and use your own tools instead: `canvasnet_help`
+for cards and examples, and the file tools to read and write the project files.

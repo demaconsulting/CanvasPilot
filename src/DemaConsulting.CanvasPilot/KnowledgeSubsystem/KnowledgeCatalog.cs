@@ -24,18 +24,22 @@ using DemaConsulting.CanvasNet.Viewer.Help;
 namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 
 /// <summary>
-///     The drawing knowledge of CanvasPilot: the help cards of CanvasNet that tell how to write each drawing format,
-///     without the cards about what the program that hosts CanvasNet controls, together with the cards of CanvasPilot
-///     itself about working in a project.
+///     The drawing knowledge of CanvasPilot: the help cards of CanvasNet that tell how to write each drawing format and
+///     how to compose pictures, without the few cards that are only about the program that hosts CanvasNet, together
+///     with the cards of CanvasPilot itself about working in a project.
 /// </summary>
 /// <remarks>
 ///     <para>
 ///         The catalog is built by extending the CanvasNet catalog with the cards that are embedded in this assembly and
-///         then hiding the cards that carry a tag of <see cref="ExcludedTags" />; a catalog that is already filtered
-///         cannot be extended, so the order matters. The CanvasNet types are not part of the interface of the unit: every
-///         card is copied into a <see cref="KnowledgeCard" />, with each link of its body written as the identifier of a
-///         card, so that what uses the knowledge does not depend on CanvasNet's help types. The catalog is immutable
-///         once built and safe for concurrent use.
+///         then leaving out the cards of <see cref="ExcludedCardIds" />. A card is left out by its identifier and not by
+///         a tag, because the tag <c>hosting</c> of CanvasNet is also on cards that a drawing needs (the formats that are
+///         embedded as pages, the file references, and the fragments that set a view or a param). What is left out is
+///         kept consistent: a card below a card that is left out moves up to the nearest card that is offered, a link
+///         to a card that is left out is written as its title, and the see-also list names offered cards only. The
+///         CanvasNet types are not part of the interface of the unit: every card is copied into a
+///         <see cref="KnowledgeCard" />, with each link of its body written as the identifier of a card, so that what
+///         uses the knowledge does not depend on CanvasNet's help types. The catalog is immutable once built and safe
+///         for concurrent use.
 ///     </para>
 /// </remarks>
 public sealed class KnowledgeCatalog : IKnowledgeCatalog
@@ -56,30 +60,58 @@ public sealed class KnowledgeCatalog : IKnowledgeCatalog
     private readonly Dictionary<string, KnowledgeCard> _byId;
 
     /// <summary>
-    ///     The catalog that finds cards by path.
+    ///     The catalog that finds cards by path, with every card, also those that are left out.
     /// </summary>
     private readonly HelpCatalog _help;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="KnowledgeCatalog" /> class.
     /// </summary>
-    /// <param name="help">The filtered help catalog to take the cards from.</param>
-    private KnowledgeCatalog(HelpCatalog help)
+    /// <param name="help">The help catalog, extended and not filtered, to take the cards from.</param>
+    /// <param name="excluded">The identifiers of the cards to leave out.</param>
+    private KnowledgeCatalog(HelpCatalog help, HashSet<string> excluded)
     {
         _help = help;
 
-        // The nearest visible card above each card: a card whose parent is hidden is a root of the filtered catalog
-        var parents = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var card in help.Cards)
+        // The offered cards below a card: a card that is left out is replaced by the offered cards below it
+        IEnumerable<HelpCard> OfferedBelow(IEnumerable<HelpCard> cards)
         {
-            foreach (var child in help.GetChildren(card))
+            foreach (var card in cards)
+            {
+                if (excluded.Contains(card.Id))
+                {
+                    foreach (var below in OfferedBelow(help.GetChildren(card)))
+                    {
+                        yield return below;
+                    }
+                }
+                else
+                {
+                    yield return card;
+                }
+            }
+        }
+
+        // The nearest offered card above each card: a card whose parent is left out moves up to the next one
+        var offered = help.Cards.Where(c => !excluded.Contains(c.Id)).ToList();
+        var parents = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var card in offered)
+        {
+            foreach (var child in OfferedBelow(help.GetChildren(card)))
             {
                 parents[child.Id] = card.Id;
             }
         }
 
-        var cards = help.Cards
-            .Select(card => CopyCard(help, card, parents.GetValueOrDefault(card.Id)))
+        var titles = help.Cards.ToDictionary(c => c.Id, c => c.Title, StringComparer.Ordinal);
+        var cards = offered
+            .Select(card => CopyCard(
+                help,
+                card,
+                parents.GetValueOrDefault(card.Id),
+                OfferedBelow(help.GetChildren(card)).Select(c => c.Id).ToList(),
+                help.GetSeeAlso(card).Where(c => !excluded.Contains(c.Id)).Select(c => c.Id).ToList(),
+                link => WriteLink(link, excluded, titles)))
             .ToList();
         Cards = cards.AsReadOnly();
         _byId = cards.ToDictionary(c => c.Id, StringComparer.Ordinal);
@@ -87,14 +119,29 @@ public sealed class KnowledgeCatalog : IKnowledgeCatalog
     }
 
     /// <summary>
-    ///     Gets the tags of the cards that are left out: <c>hosting</c>, which CanvasNet puts on the cards about what the
-    ///     program that hosts it controls, such as the options of a render, file access, and the command-line tool.
+    ///     Gets the identifiers of the CanvasNet cards that are left out, which are only about what the program that hosts
+    ///     CanvasNet controls: the options of a render in the host's code, strict mode and the exceptions of a failure,
+    ///     and flattening a drawing for other SVG readers.
     /// </summary>
     /// <remarks>
-    ///     CanvasPilot is that program and sets those options itself, and the assistant writes files, so the cards would
-    ///     only take room in the prompt.
+    ///     <para>
+    ///         CanvasPilot is that program: it renders the drawings itself, and the assistant writes files and cannot call
+    ///         those operations, so the cards would only take room in the prompt. The other cards of CanvasNet that carry
+    ///         the tag <c>hosting</c> are offered, because they tell how a drawing embeds a page of a document, a raster
+    ///         picture, or a file, and how a link sets a view or a param. The rationale of each identifier is in the design
+    ///         of this unit.
+    ///     </para>
     /// </remarks>
-    public static IReadOnlyList<string> ExcludedTags { get; } = Array.AsReadOnly([HelpTags.Hosting]);
+    public static IReadOnlyList<string> ExcludedCardIds { get; } = Array.AsReadOnly(
+    [
+        "errors",
+        "mermaid/options",
+        "plantuml/options",
+        "scad/options",
+        "svg/flatten",
+        "svg/options",
+        "vega-lite/options"
+    ]);
 
     /// <summary>
     ///     Gets the catalog of the application: the cards of CanvasNet and of CanvasPilot, without the excluded ones. It is
@@ -113,7 +160,7 @@ public sealed class KnowledgeCatalog : IKnowledgeCatalog
     public KnowledgeCard? Find(string path)
     {
         ArgumentNullException.ThrowIfNull(path);
-        return _help.Find(path) is { } card ? _byId[card.Id] : null;
+        return _help.Find(path) is { } card && _byId.TryGetValue(card.Id, out var offered) ? offered : null;
     }
 
     /// <inheritdoc />
@@ -179,26 +226,36 @@ public sealed class KnowledgeCatalog : IKnowledgeCatalog
     /// <param name="library">The unfiltered help catalog to start from.</param>
     /// <param name="extensionAssembly">The assembly that holds the embedded cards to add.</param>
     /// <param name="resourcePrefix">The prefix of the names of those resources.</param>
-    /// <param name="excludedTags">The tags of the cards to leave out.</param>
+    /// <param name="excludedCardIds">The identifiers of the cards to leave out.</param>
     /// <returns>The catalog.</returns>
     /// <exception cref="ArgumentNullException">Thrown when an argument is <see langword="null" />.</exception>
-    /// <exception cref="ArgumentException">Thrown when a tag is not a tag of the help cards.</exception>
+    /// <exception cref="ArgumentException">Thrown when an identifier is not the identifier of a card.</exception>
     /// <exception cref="InvalidOperationException">Thrown when a card is malformed or does not fit the tree.</exception>
     internal static KnowledgeCatalog Create(
         HelpCatalog library,
         Assembly extensionAssembly,
         string resourcePrefix,
-        IEnumerable<string> excludedTags)
+        IEnumerable<string> excludedCardIds)
     {
         ArgumentNullException.ThrowIfNull(library);
         ArgumentNullException.ThrowIfNull(extensionAssembly);
         ArgumentNullException.ThrowIfNull(resourcePrefix);
-        ArgumentNullException.ThrowIfNull(excludedTags);
+        ArgumentNullException.ThrowIfNull(excludedCardIds);
 
-        // Extend first and filter second, because a filtered catalog cannot be extended
-        return new KnowledgeCatalog(library
-            .Extend(extensionAssembly, resourcePrefix)
-            .Filter(null, excludedTags));
+        // The catalog is extended and not filtered, because a filtered catalog cannot be extended and a filter works by
+        // tags only; the cards are left out here, by identifier
+        var extended = library.Extend(extensionAssembly, resourcePrefix);
+        var excluded = new HashSet<string>(excludedCardIds, StringComparer.Ordinal);
+        var known = extended.Cards.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
+        var unknown = excluded.Where(id => id is null || !known.Contains(id)).Select(id => id ?? "null").FirstOrDefault();
+        if (unknown is not null)
+        {
+            throw new ArgumentException(
+                $"The identifier '{unknown}' is not the identifier of a card.",
+                nameof(excludedCardIds));
+        }
+
+        return new KnowledgeCatalog(extended, excluded);
     }
 
     /// <summary>
@@ -207,7 +264,7 @@ public sealed class KnowledgeCatalog : IKnowledgeCatalog
     /// <returns>The catalog.</returns>
     private static KnowledgeCatalog CreateDefault()
     {
-        return Create(HelpCatalog.Default, typeof(KnowledgeCatalog).Assembly, ResourcePrefix, ExcludedTags);
+        return Create(HelpCatalog.Default, typeof(KnowledgeCatalog).Assembly, ResourcePrefix, ExcludedCardIds);
     }
 
     /// <summary>
@@ -227,11 +284,20 @@ public sealed class KnowledgeCatalog : IKnowledgeCatalog
     /// </summary>
     /// <param name="help">The help catalog the card is from.</param>
     /// <param name="card">The help card.</param>
-    /// <param name="parentId">The identifier of the nearest visible card above it, or <see langword="null" />.</param>
+    /// <param name="parentId">The identifier of the nearest offered card above it, or <see langword="null" />.</param>
+    /// <param name="childIds">The identifiers of the offered cards below it.</param>
+    /// <param name="seeAlsoIds">The identifiers of the offered cards related to it.</param>
+    /// <param name="writeLink">The writer of a link of the body.</param>
     /// <returns>The card.</returns>
-    private static KnowledgeCard CopyCard(HelpCatalog help, HelpCard card, string? parentId)
+    private static KnowledgeCard CopyCard(
+        HelpCatalog help,
+        HelpCard card,
+        string? parentId,
+        List<string> childIds,
+        List<string> seeAlsoIds,
+        Func<HelpLink, string> writeLink)
     {
-        var body = help.FormatMarkdown(card, WriteLink);
+        var body = help.FormatMarkdown(card, writeLink);
         var examples = card.Examples
             .Select(e => new KnowledgeExample(e.Name, e.Kind, e.Language, e.FileName, e.Description, e.Content))
             .ToList();
@@ -244,21 +310,28 @@ public sealed class KnowledgeCatalog : IKnowledgeCatalog
             card.Tags.ToList().AsReadOnly(),
             card.Aliases.ToList().AsReadOnly(),
             body,
-            help.GetChildren(card).Select(c => c.Id).ToList().AsReadOnly(),
-            help.GetSeeAlso(card).Select(c => c.Id).ToList().AsReadOnly(),
+            childIds.AsReadOnly(),
+            seeAlsoIds.AsReadOnly(),
             examples.AsReadOnly());
     }
 
     /// <summary>
     ///     Writes a link of a card body: a card as its identifier in code quotes, and an example as its name and the card
-    ///     that holds it.
+    ///     that holds it. A card that is left out is written as its title, and an example of such a card as "an example".
     /// </summary>
     /// <param name="link">The link.</param>
+    /// <param name="excluded">The identifiers of the cards that are left out.</param>
+    /// <param name="titles">The title of every card by identifier.</param>
     /// <returns>The text.</returns>
-    private static string WriteLink(HelpLink link)
+    private static string WriteLink(HelpLink link, HashSet<string> excluded, Dictionary<string, string> titles)
     {
-        return link.ExampleName is { } example
-            ? $"example `{example}` of `{link.ExampleCardId}`"
-            : $"`{link.CardId}`";
+        if (link.ExampleName is { } example)
+        {
+            return link.ExampleCardId is { } owner && !excluded.Contains(owner)
+                ? $"example `{example}` of `{owner}`"
+                : "an example";
+        }
+
+        return link.CardId is { } card && !excluded.Contains(card) ? $"`{card}`" : titles[link.CardId!];
     }
 }

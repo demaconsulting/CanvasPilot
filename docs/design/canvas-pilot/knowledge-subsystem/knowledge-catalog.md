@@ -5,8 +5,8 @@
 #### Purpose
 
 `KnowledgeCatalog` builds the tree of knowledge cards of the application and answers lookups in it: the help cards of
-CanvasNet, extended with the cards of CanvasPilot that are embedded in the application, without the cards that carry the
-tag `hosting`, copied into values of its own.
+CanvasNet, extended with the cards of CanvasPilot that are embedded in the application, without the few cards that are
+only about the program that hosts CanvasNet, copied into values of its own.
 
 #### Data Model
 
@@ -18,17 +18,34 @@ tag `hosting`, copied into values of its own.
   are files under `KnowledgeSubsystem/Examples`, named `root-file`. The project file embeds them with the logical names
   that CanvasNet reads: `DemaConsulting.CanvasPilot.Knowledge/{path}.md` and
   `DemaConsulting.CanvasPilot.Knowledge.Examples.{root}-{file}`.
-- `ExcludedTags` is the list of tags that are left out: `hosting`.
+- `ExcludedCardIds` is the list of identifiers of the cards that are left out, each only about the program that hosts
+  CanvasNet:
+
+  | Card | Why it is left out |
+  | --- | --- |
+  | `errors` | How a host program receives a failure (exceptions, error constants) and sets strict mode. |
+  | `mermaid/options` | The render options of a diagram that the host program sets in code. |
+  | `plantuml/options` | The same for a PlantUML diagram. |
+  | `scad/options` | The same for a model: variables, time, and triangle budget set by the host program. |
+  | `svg/options` | The same for a drawing: size, scale, background, folder, and file-access policy. |
+  | `vega-lite/options` | The same for a chart; the params of a link are in `vega-lite/params`. |
+  | `svg/flatten` | The host program's operation that writes a drawing copy for browsers and other SVG readers. |
+
+  The other cards that carry the CanvasNet tag `hosting` are offered: `files`, `pdf`, `pptx`, `vsdx`, `raster`,
+  `scad/views`, `vega-lite/params`, `positions`, and `positions/selectors` tell how a drawing embeds a page, a picture,
+  or a file, how a link sets a view or a param, and what a callout binds to. The children of `errors`, the codes and the
+  diagnostics, are offered and move to the top level.
 
 #### Key Methods
 
 **Default**: builds the catalog of the application on first use, once and thread-safe, from the CanvasNet help catalog,
-the embedded cards, and `ExcludedTags`.
+the embedded cards, and `ExcludedCardIds`.
 
-**Create(library, assembly, prefix, excludedTags)**: the internal builder, used by `Default` and by tests. It extends
-the library catalog with the cards of the assembly and then filters the result, and copies each visible card. The parent
-of a card is the nearest card above it that is offered, found from the children of the filtered catalog, so the children
-of a card that is left out become roots.
+**Create(library, assembly, prefix, excludedCardIds)**: the internal builder, used by `Default` and by tests. It extends
+the library catalog with the cards of the assembly, refuses an identifier that is not a card, and copies each card that
+is not left out. The parent of a card is the nearest card above it that is offered, so the children of a card that is
+left out become children of the nearest offered card above it or, with none, roots; the children of a card are the
+offered cards below it, and the related cards are those that are offered.
 
 **Find(path)**: finds the card of a path whose segments are separated by a slash or white space, each the name or
 another name of a card, ignoring case. A path that names no card, or a card that is left out, gives nothing.
@@ -40,22 +57,23 @@ scope and below it, or in the card that a name with a card in front of it (`card
 name ignores case. Where several cards hold an example of the name, as for the sequence diagram of two formats, all are
 given.
 
-**Link writing**: the body of a card is written by CanvasNet with each link to a card that is offered written by the
-catalog: a card as its identifier in code quotes, an example as the name of the example and the identifier of its card.
-CanvasNet writes a link to a card that is left out as the title of that card.
+**Link writing**: the body of a card is written by CanvasNet with each link written by the catalog: a card that is
+offered as its identifier in code quotes, an example as the name of the example and the identifier of its card. A link
+to a card that is left out is written as the title of that card, and a link to an example of such a card as "an
+example".
 
 #### Error Handling
 
 A malformed embedded card, or one that does not fit the tree, is an `InvalidOperationException` that CanvasNet raises
 with the name of the file and the line; because the default catalog is lazy, the exception is raised at first use, and
 the tests load it, so a malformed card fails the build and not the user. A missing argument is an
-`ArgumentNullException`, and an unknown tag of the filter an `ArgumentException`. The unit performs no I/O except
-reading embedded resources and logs nothing.
+`ArgumentNullException`, and an identifier of a card that does not exist an `ArgumentException`. The unit performs no
+I/O except reading embedded resources and logs nothing.
 
 #### Dependencies
 
-- **CanvasNet** (OTS): `HelpCatalog` for the cards, `Extend` for the cards of the application, and `Filter` for the
-  tags.
+- **CanvasNet** (OTS): `HelpCatalog` for the cards, `Extend` for the cards of the application, and `FormatMarkdown`,
+  `GetChildren`, and `GetSeeAlso` for the parts of a card.
 
 #### Callers
 

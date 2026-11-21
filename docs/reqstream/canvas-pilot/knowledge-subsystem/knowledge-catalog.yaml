@@ -2,7 +2,8 @@
 # Software Unit Requirements for the KnowledgeCatalog Unit
 #
 # The KnowledgeCatalog unit builds the tree of knowledge cards of the application: the help cards of CanvasNet extended
-# with the cards of CanvasPilot and then filtered, copied into values of its own, with the links of each body written as
+# with the cards of CanvasPilot, left out where they are only about the host program, copied into values of its own, with
+# the links of each body written as
 # the identifiers of cards. It reads only embedded resources and has no dependency on the user interface.
 
 sections:
@@ -12,24 +13,42 @@ sections:
         sections:
           - title: KnowledgeCatalog Requirements
             requirements:
-              - id: CanvasPilot-KnowledgeCatalog-ExcludeHostingCards
+              - id: CanvasPilot-KnowledgeCatalog-ExcludeHostOnlyCards
                 title: >-
-                  The KnowledgeCatalog shall leave out every card that carries the tag of CanvasNet for what the program
-                  that hosts it controls, shall keep the cards below a left-out card as cards of the top level, shall keep
-                  the other cards, and shall refuse a tag that CanvasNet does not know.
+                  The KnowledgeCatalog shall leave out the cards of CanvasNet that are only about the program that hosts
+                  it, by identifier, shall keep every other card, including those that tell how a drawing embeds pages,
+                  pictures, and files and sets a view or a param, shall keep the cards below a left-out card as cards of
+                  the nearest offered card or of the top level, shall name no left-out card in any child, related card, or
+                  parent, and shall refuse an identifier that is not a card.
                 justification: |
-                  CanvasPilot is the program that hosts CanvasNet and sets those options itself, and the assistant writes
-                  files, so the cards would only take room in a prompt. The cards below a left-out card, such as the codes
-                  of errors below the card of errors, still tell the assistant what it needs, and a mistyped tag must be
-                  an error, not a catalog that keeps everything.
+                  CanvasPilot is the program that hosts CanvasNet and sets the render options itself, and the assistant
+                  writes files, so the cards of the host's options, exceptions, and flattening would only take room in a
+                  prompt. The tag of CanvasNet for hosting is also on cards that a drawing needs, so the exclusion is by
+                  identifier, and a mistyped or renamed identifier must be an error, not a catalog that keeps everything.
+                  The cards below a left-out card, such as the codes of errors, still tell the assistant what it needs,
+                  and no reference may lead to a card that is not offered.
                 children:
-                  - CanvasPilot-OTS-CanvasNet-FilterHelpCardsByTag
+                  - CanvasPilot-OTS-CanvasNet-ProvideHelpCards
                 tests:
-                  - KnowledgeCatalog_Default_NoCardCarriesAnExcludedTag
-                  - KnowledgeCatalog_Default_HostingCardsAreAbsentAndAuthoringCardsRemain
+                  - KnowledgeCatalog_Default_HostOnlyCardsAreAbsentAndAllOtherCardsRemain
+                  - KnowledgeCatalog_Default_DrawingCardsThatCarryTheHostingTagRemain
+                  - KnowledgeCatalog_Default_NoReferenceNamesACardThatIsLeftOut
+                  - KnowledgeCatalog_Default_RelatedCardThatIsLeftOutIsDropped
                   - KnowledgeCatalog_Default_VisibleCardsBelowAHiddenCardArePromotedToRoots
-                  - KnowledgeCatalog_Create_UnknownExcludedTag_ThrowsArgumentException
+                  - KnowledgeCatalog_Create_UnknownExcludedCardId_ThrowsArgumentException
                   - KnowledgeCatalog_Create_NullArguments_ThrowArgumentNullException
+
+              - id: CanvasPilot-KnowledgeCatalog-TellWhatTheAssistantCannotRun
+                title: >-
+                  The KnowledgeCatalog shall offer a root card of CanvasPilot that tells the assistant that the
+                  command-line tools and the host program that cards mention cannot be run, and that it uses the
+                  `canvasnet_help` tool and the file tools instead.
+                justification: |
+                  The cards of CanvasNet that are offered still carry some wording for people who run a command-line tool,
+                  Pandoc, or code against the library. The assistant cannot do that, so it is told once, at the root of the
+                  cards, what to use instead.
+                tests:
+                  - KnowledgeCatalog_Default_RootCardOfCanvasPilotSaysWhatTheAssistantCannotRun
 
               - id: CanvasPilot-KnowledgeCatalog-ExtendWithApplicationCards
                 title: >-

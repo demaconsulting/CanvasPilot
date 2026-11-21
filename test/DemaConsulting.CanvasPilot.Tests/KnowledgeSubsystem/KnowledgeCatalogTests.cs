@@ -28,7 +28,8 @@ namespace DemaConsulting.CanvasPilot.Tests;
 
 /// <summary>
 ///     Unit tests for <see cref="KnowledgeCatalog" />, on the catalog of the application, which is the CanvasNet help
-///     cards extended with the cards that are embedded in this assembly and then filtered.
+///     cards extended with the cards that are embedded in this assembly and then reduced by the cards that are only
+///     about the host program.
 /// </summary>
 public sealed class KnowledgeCatalogTests
 {
@@ -45,13 +46,22 @@ public sealed class KnowledgeCatalogTests
     ];
 
     /// <summary>
-    ///     The identifiers of the CanvasNet cards that carry the hosting tag, which the filter removes.
+    ///     The identifiers of the CanvasNet cards that are only about the host program, which are left out.
     /// </summary>
-    private static readonly string[] HostingCardIds =
+    private static readonly string[] ExcludedIds =
     [
-        "errors", "files", "pdf", "pptx", "vsdx", "raster", "positions", "positions/selectors", "svg/options",
-        "svg/flatten", "scad/options", "scad/views", "mermaid/options", "plantuml/options", "vega-lite/options",
-        "vega-lite/params"
+        "errors", "mermaid/options", "plantuml/options", "scad/options", "svg/flatten", "svg/options",
+        "vega-lite/options"
+    ];
+
+    /// <summary>
+    ///     The identifiers of the CanvasNet cards that carry the hosting tag and that a drawing needs, which are offered:
+    ///     the formats that are embedded as pages, the file references, the fragments that set a view or a param, and
+    ///     the positions that a callout binds to.
+    /// </summary>
+    private static readonly string[] OfferedHostingTaggedIds =
+    [
+        "files", "pdf", "pptx", "vsdx", "raster", "scad/views", "vega-lite/params", "positions", "positions/selectors"
     ];
 
     /// <summary>
@@ -68,33 +78,23 @@ public sealed class KnowledgeCatalogTests
     }
 
     /// <summary>
-    ///     Validates that no card of the application carries the hosting tag.
+    ///     Validates that the exclusion is the list of the cards that are only about the host program, that those cards
+    ///     are absent by identifier and by other name, and that the other cards of CanvasNet and CanvasPilot remain.
     /// </summary>
     [Fact]
-    public void KnowledgeCatalog_Default_NoCardCarriesAnExcludedTag()
-    {
-        // Arrange: the catalog of the application
-        var catalog = KnowledgeCatalog.Default;
-
-        // Act / Assert: the tags of the cards do not include the excluded ones, and the exclusion is the hosting tag
-        Assert.Equal(["hosting"], KnowledgeCatalog.ExcludedTags);
-        Assert.NotEmpty(catalog.Cards);
-        Assert.All(catalog.Cards, card => Assert.DoesNotContain("hosting", card.Tags));
-    }
-
-    /// <summary>
-    ///     Validates that every CanvasNet card about what the host controls is absent and that the other cards remain.
-    /// </summary>
-    [Fact]
-    public void KnowledgeCatalog_Default_HostingCardsAreAbsentAndAuthoringCardsRemain()
+    public void KnowledgeCatalog_Default_HostOnlyCardsAreAbsentAndAllOtherCardsRemain()
     {
         // Arrange: the catalog of the application
         var catalog = KnowledgeCatalog.Default;
         var ids = catalog.Cards.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
 
-        // Act / Assert: the cards of the hosting tag are not found, and the cards for writing each format are
-        Assert.All(HostingCardIds, id => Assert.DoesNotContain(id, ids));
-        Assert.All(HostingCardIds, id => Assert.Null(catalog.Find(id)));
+        // Act / Assert: the exclusion is the list, the cards of it are not found, and every other card is there
+        Assert.Equal(ExcludedIds, KnowledgeCatalog.ExcludedCardIds.Order(StringComparer.Ordinal));
+        Assert.All(ExcludedIds, id => Assert.DoesNotContain(id, ids));
+        Assert.All(ExcludedIds, id => Assert.Null(catalog.Find(id)));
+        Assert.All(
+            HelpCatalog.Default.Cards.Select(c => c.Id).Where(id => !ExcludedIds.Contains(id)),
+            id => Assert.Contains(id, ids));
         Assert.Contains("svg/framed-figure", ids);
         Assert.Contains("mermaid/flowchart", ids);
         Assert.Contains("plantuml/composition", ids);
@@ -102,8 +102,108 @@ public sealed class KnowledgeCatalogTests
         Assert.Contains("vega-lite/data", ids);
         Assert.Contains("composition", ids);
         Assert.Equal(
-            HelpCatalog.Default.Cards.Count - HostingCardIds.Length + CanvasPilotCardIds.Length,
+            HelpCatalog.Default.Cards.Count - ExcludedIds.Length + CanvasPilotCardIds.Length,
             catalog.Cards.Count);
+    }
+
+    /// <summary>
+    ///     Validates that the cards that carry the hosting tag but that a drawing needs are offered, by identifier and by
+    ///     other name.
+    /// </summary>
+    [Fact]
+    public void KnowledgeCatalog_Default_DrawingCardsThatCarryTheHostingTagRemain()
+    {
+        // Arrange: the catalog of the application
+        var catalog = KnowledgeCatalog.Default;
+
+        // Act / Assert: each card is found by identifier, and the cards with other names are found by them
+        Assert.All(OfferedHostingTaggedIds, id => Assert.NotNull(catalog.Find(id)));
+        Assert.All(OfferedHostingTaggedIds, id => Assert.Contains(id, catalog.Cards.Select(c => c.Id)));
+        Assert.Equal("pdf", catalog.Find("pdf")!.Id);
+        Assert.Equal("pptx", catalog.Find("powerpoint")!.Id);
+        Assert.Equal("vsdx", catalog.Find("visio")!.Id);
+        Assert.Equal("raster", catalog.Find("png")!.Id);
+        Assert.Equal("scad/views", catalog.Find("scad camera")!.Id);
+        Assert.Equal("vega-lite/params", catalog.Find("vega-lite selections")!.Id);
+        Assert.Equal("files", catalog.Find("file-access")!.Id);
+    }
+
+    /// <summary>
+    ///     Validates that no card, child, related card, or link of a body names a card that is left out, and that every
+    ///     card can be reached from the roots exactly once.
+    /// </summary>
+    [Fact]
+    public void KnowledgeCatalog_Default_NoReferenceNamesACardThatIsLeftOut()
+    {
+        // Arrange: the catalog of the application
+        var catalog = KnowledgeCatalog.Default;
+        var ids = catalog.Cards.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
+
+        // Act: walk the tree from the roots
+        var reached = new List<string>();
+        void Visit(KnowledgeCard card)
+        {
+            reached.Add(card.Id);
+            foreach (var child in catalog.GetChildren(card))
+            {
+                Assert.Equal(card.Id, child.ParentId);
+                Visit(child);
+            }
+        }
+
+        foreach (var root in catalog.Roots)
+        {
+            Assert.Null(root.ParentId);
+            Visit(root);
+        }
+
+        // Assert: every identifier that a card holds is the identifier of a card, no body writes a card that is left
+        // out as a card, and the walk reaches each card once
+        Assert.All(catalog.Cards, card =>
+        {
+            Assert.All(card.ChildIds, id => Assert.Contains(id, ids));
+            Assert.All(card.SeeAlsoIds, id => Assert.Contains(id, ids));
+            Assert.All(catalog.GetSeeAlso(card), related => Assert.Contains(related.Id, ids));
+            Assert.True(card.ParentId is null || ids.Contains(card.ParentId));
+            Assert.All(ExcludedIds, id => Assert.DoesNotContain($"`{id}`", card.Body, StringComparison.Ordinal));
+        });
+        Assert.Equal(catalog.Cards.Count, reached.Count);
+        Assert.Equal(catalog.Cards.Count, reached.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    /// <summary>
+    ///     Validates that a link to a card that is left out is written as the title of that card, and that a related card
+    ///     that is left out is dropped from the list of the card.
+    /// </summary>
+    [Fact]
+    public void KnowledgeCatalog_Default_RelatedCardThatIsLeftOutIsDropped()
+    {
+        // Arrange: the catalog of the application and the cards that relate to a card that is left out
+        var catalog = KnowledgeCatalog.Default;
+
+        // Act / Assert: the related list holds offered cards only
+        Assert.Contains("svg/flatten", HelpCatalog.Default.Find("svg/bindings")!.SeeAlsoIds);
+        Assert.DoesNotContain("svg/flatten", catalog.Find("svg/bindings")!.SeeAlsoIds);
+        Assert.Contains("errors", HelpCatalog.Default.Find("files")!.SeeAlsoIds);
+        Assert.DoesNotContain("errors", catalog.Find("files")!.SeeAlsoIds);
+        Assert.Contains("svg/embedding", catalog.Find("files")!.SeeAlsoIds);
+    }
+
+    /// <summary>
+    ///     Validates that the root card of CanvasPilot tells the assistant that the command-line tools and the host
+    ///     program that cards mention are not available and which tools to use instead.
+    /// </summary>
+    [Fact]
+    public void KnowledgeCatalog_Default_RootCardOfCanvasPilotSaysWhatTheAssistantCannotRun()
+    {
+        // Arrange: the root card of CanvasPilot
+        var card = KnowledgeCatalog.Default.Find("canvaspilot")!;
+
+        // Act / Assert: the card names the things that are not available and the tools to use
+        Assert.Contains("command-line tools", card.Body, StringComparison.Ordinal);
+        Assert.Contains("cannot run", card.Body, StringComparison.Ordinal);
+        Assert.Contains("`canvasnet_help`", card.Body, StringComparison.Ordinal);
+        Assert.Contains("file tools", card.Body, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -112,7 +212,7 @@ public sealed class KnowledgeCatalogTests
     [Fact]
     public void KnowledgeCatalog_Default_VisibleCardsBelowAHiddenCardArePromotedToRoots()
     {
-        // Arrange: the catalog of the application, where the errors card is hidden but its two children are not
+        // Arrange: the catalog of the application, where the errors card is left out but its two children are not
         var catalog = KnowledgeCatalog.Default;
 
         // Act
@@ -129,19 +229,24 @@ public sealed class KnowledgeCatalogTests
     }
 
     /// <summary>
-    ///     Validates that an unknown tag of the filter is refused.
+    ///     Validates that an identifier that is not the identifier of a card is refused.
     /// </summary>
     [Fact]
-    public void KnowledgeCatalog_Create_UnknownExcludedTag_ThrowsArgumentException()
+    public void KnowledgeCatalog_Create_UnknownExcludedCardId_ThrowsArgumentException()
     {
         // Arrange: nothing
 
-        // Act / Assert: a tag that CanvasNet does not know is refused
+        // Act / Assert: an identifier that no card has is refused, so that a renamed card shows at once
         Assert.Throws<ArgumentException>(() => KnowledgeCatalog.Create(
             HelpCatalog.Default,
             typeof(KnowledgeCatalog).Assembly,
             KnowledgeCatalog.ResourcePrefix,
-            ["no-such-tag"]));
+            ["no-such-card"]));
+        Assert.Throws<ArgumentException>(() => KnowledgeCatalog.Create(
+            HelpCatalog.Default,
+            typeof(KnowledgeCatalog).Assembly,
+            KnowledgeCatalog.ResourcePrefix,
+            [null!]));
     }
 
     /// <summary>
@@ -274,8 +379,8 @@ public sealed class KnowledgeCatalogTests
 
         // Act / Assert: unknown, hidden, and blank paths find no card, and null is refused
         Assert.Null(KnowledgeCatalog.Default.Find("no/such/card"));
-        Assert.Null(KnowledgeCatalog.Default.Find("files"));
-        Assert.Null(KnowledgeCatalog.Default.Find("scad/views"));
+        Assert.Null(KnowledgeCatalog.Default.Find("errors"));
+        Assert.Null(KnowledgeCatalog.Default.Find("svg/flatten"));
         Assert.Null(KnowledgeCatalog.Default.Find("  "));
         Assert.Throws<ArgumentNullException>(() => KnowledgeCatalog.Default.Find(null!));
     }
@@ -331,11 +436,10 @@ public sealed class KnowledgeCatalogTests
     [Fact]
     public void KnowledgeCatalog_Default_LinksToHiddenCardsAreNotCardIds()
     {
-        // Arrange: the library card about embedding files, which links to the visible card about composition and to the
-        // hidden card about files
-        var library = HelpCatalog.Default.Find("svg/embedding");
-        var hidden = HelpCatalog.Default.Find("files");
-        var card = KnowledgeCatalog.Default.Find("svg/embedding");
+        // Arrange: the library card about composing SVG, which links to the card about flattening that is left out
+        var library = HelpCatalog.Default.Find("svg/composition");
+        var hidden = HelpCatalog.Default.Find("svg/flatten");
+        var card = KnowledgeCatalog.Default.Find("svg/composition");
         Assert.NotNull(library);
         Assert.NotNull(hidden);
         Assert.NotNull(card);
@@ -348,7 +452,7 @@ public sealed class KnowledgeCatalogTests
         // and the link to a visible card is its identifier
         Assert.Contains("see <link>", original, StringComparison.Ordinal);
         Assert.Contains($"see {hidden.Title}", body, StringComparison.Ordinal);
-        Assert.DoesNotContain("`files`", body, StringComparison.Ordinal);
+        Assert.DoesNotContain("`svg/flatten`", body, StringComparison.Ordinal);
         Assert.Contains("example `framed` of `svg/framed-figure`", Flat(KnowledgeCatalog.Default.Find("svg/framed-figure")!.Body), StringComparison.Ordinal);
         Assert.Contains("example `anchors` of `scad/anchors`", Flat(KnowledgeCatalog.Default.Find("svg/framed-figure")!.Body), StringComparison.Ordinal);
     }

@@ -314,14 +314,16 @@ program it was.
 
 # Drawing Knowledge
 
-CanvasPilot carries a guide to drawing with the formats that CanvasNet draws and to working in a CanvasPilot project.
-It is a tree of short **cards**: one about each image format (SVG, Mermaid, Vega-Lite, OpenSCAD, and the others),
-about style and composing pictures, and about CanvasPilot itself, such as where files go in a project, how to make the
-picture that you use, and what the marks and attachments of a message mean. The cards of CanvasNet come with the
-CanvasNet library that is installed with CanvasPilot, so they describe exactly what the application can draw. The cards
-about the program that hosts CanvasNet, such as the options of a render, are left out, because CanvasPilot sets those
-itself. You can read the cards yourself, and the AI assistant that will draw pictures for you is meant to use the same
-cards when it is added later; it is not available yet, and nothing in the browser sends anything anywhere.
+CanvasPilot carries a guide to drawing with the formats that CanvasNet draws and to working in a CanvasPilot project. It
+is a tree of short **cards**: one about each image format (SVG, Mermaid, Vega-Lite, OpenSCAD, and the others), about
+style and composing pictures, and about CanvasPilot itself, such as where files go in a project, how to make the picture
+that you use, and what the marks and attachments of a message mean. The cards of CanvasNet come with the CanvasNet
+library that is installed with CanvasPilot, so they describe exactly what the application can draw. The few cards that
+are only about the program that hosts CanvasNet, such as the options of a render in a program's code, are left out,
+because CanvasPilot sets those itself; the cards about embedding pages of documents, pictures, and files, and about
+setting a view or a parameter in a link, are kept. You can read the cards yourself, and the AI assistant that will draw
+pictures for you is meant to use the same cards when it is added later; it is not available yet, and nothing in the
+browser sends anything anywhere.
 
 ## Opening the Browser
 

@@ -141,29 +141,15 @@ sections:
             tests:
               - CanvasNet_HelpCatalog_Default_ProvidesCardsWithBodiesRelatedCardsAndExamples
 
-          - id: CanvasPilot-OTS-CanvasNet-FilterHelpCardsByTag
-            title: >-
-              CanvasNet shall give a view of its help cards without the cards that carry given tags, promoting the visible
-              cards below a hidden card, without changing the catalog it was made from, and shall refuse a tag that it
-              does not know.
-            justification: |
-              The help of the library also covers what the program that hosts it controls. The application is that
-              program, so it leaves those cards out of what it offers, and relies on the cards below a hidden card staying
-              available and on a mistyped tag being an error and not an empty result.
-            tags: [ots]
-            tests:
-              - CanvasNet_HelpCatalog_Filter_ExcludedTag_HidesTheCardsAndRefusesUnknownTagsAndExtension
-
           - id: CanvasPilot-OTS-CanvasNet-ExtendHelpCards
             title: >-
               CanvasNet shall add the cards that are embedded in another assembly to its help cards as new trees after
-              its own, resolving their links against the cards of both, without changing the catalog it was made from, and
-              shall refuse to extend a catalog that is filtered.
+              its own, resolving their links against the cards of both, without changing the catalog it was made from.
             justification: |
               The application adds its own cards, about working in a project, to the cards of the library and offers them
               together. They must follow the cards of the library, link to them, and leave the library catalog as it was,
-              and because a filtered view cannot be extended the application has to extend first and filter second.
+              because the application then leaves out some cards of both itself, by identifier, from the extended
+              catalog.
             tags: [ots]
             tests:
               - CanvasNet_HelpCatalog_Extend_EmbeddedCard_AddsANewRootAndLeavesTheLibraryUnchanged
-              - CanvasNet_HelpCatalog_Filter_ExcludedTag_HidesTheCardsAndRefusesUnknownTagsAndExtension

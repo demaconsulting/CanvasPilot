@@ -263,8 +263,9 @@ public sealed class CanvasPilotTests : IDisposable
     /// <summary>
     ///     Test that the knowledge that the application holds can be looked up as an assistant would: the compact index
     ///     fits its budget and names the cards of CanvasNet and of CanvasPilot, the tool answers the index, a card, an
-    ///     example, and a search, the skills cover every card, and the cards about what the host program controls are not
-    ///     there, all from the program itself without a network, a window, or a language model.
+    ///     example, and a search, the skills cover every card, and the cards that are only about the host program are not
+    ///     there while the cards for embedding pages and files are, all from the program itself without a network, a
+    ///     window, or a language model.
     /// </summary>
     [Fact]
     public void CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork()
@@ -283,7 +284,7 @@ public sealed class CanvasPilotTests : IDisposable
         var skills = KnowledgeSkills.Create(catalog).ToList();
 
         // Assert: the index fits its budget and has a card of each source; the tool answers each kind of request from the
-        // catalog; there is a skill for every card; and nothing about what the host program controls is offered
+        // catalog; there is a skill for every card; and nothing that is only about the host program is offered
         Assert.True(index.Length <= KnowledgePromptBuilder.IndexBudgetCharacters);
         Assert.Contains("- canvaspilot: ", index, StringComparison.Ordinal);
         Assert.Contains("- svg: ", index, StringComparison.Ordinal);
@@ -294,8 +295,10 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(catalog.Cards.Count, skills.Count);
         Assert.Equal(skills.Count, skills.Select(s => s.Name).Distinct(StringComparer.Ordinal).Count());
         Assert.NotNull(catalog.Find("canvaspilot/project-layout"));
-        Assert.DoesNotContain(catalog.Cards, card => card.Tags.Contains("hosting", StringComparer.Ordinal));
-        Assert.Null(catalog.Find("pdf"));
+        Assert.DoesNotContain(catalog.Cards, card => card.Id is "errors" or "svg/options" or "svg/flatten");
+        Assert.NotNull(catalog.Find("pdf"));
+        Assert.Contains("\n- pdf: ", index, StringComparison.Ordinal);
+        Assert.DoesNotContain("\n- svg/options: ", index, StringComparison.Ordinal);
     }
 
     /// <summary>

@@ -4,12 +4,13 @@
 
 The `Knowledge` subsystem is verified by integration tests defined in `KnowledgeSubsystemTests.cs`. The tests use the
 real catalog of the application, with the help cards of CanvasNet, the cards of CanvasPilot that are embedded in the
-application, and the filter that leaves out the cards about what the host program controls, the way the later units and
+application, and the list that leaves out the cards that are only about the host program, the way the later units and
 the assistant will use it. They check the observable result: which cards are offered, that the cards of CanvasPilot are
-last, that no card of the left-out tag is present, that the catalog is one value that many readers share, and that the
-application library refers to no package of a language model or agent library. The Knowledge subsystem has one unit with
-a window, the browser, whose view model is exercised here without a window and with a clipboard that records; the window
-itself is verified by the headless tests of that unit.
+last, that no card that is only about the host program is present and the cards for embedding pages and files are, that
+the catalog is one value that many readers share, and that the application library refers to no package of a language
+model or agent library. The Knowledge subsystem has one unit with a window, the browser, whose view model is exercised
+here without a window and with a clipboard that records; the window itself is verified by the headless tests of that
+unit.
 
 ### Test Environment
 
@@ -19,8 +20,8 @@ the project file of the application library from the repository; no network, dis
 ### Acceptance Criteria
 
 - All subsystem tests pass with zero failures.
-- The catalog has a card for every drawing format of CanvasNet and the cards of CanvasPilot as its last tree, and no
-  card of it carries the tag that is left out.
+- The catalog has a card for every drawing format of CanvasNet and the cards of CanvasPilot as its last tree, has the
+  cards for embedding pages, pictures, and files, and has none of the cards that are only about the host program.
 - Many threads that ask for the default catalog get the same one.
 - The search of the catalog of the application finds the card of a format, the cards of CanvasPilot, and nothing for a
   word that no card has.
@@ -39,10 +40,11 @@ the project file of the application library from the repository; no network, dis
 
 ### Test Scenarios
 
-**KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostingCards**: The roots of the catalog
+**KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostOnlyCards**: The roots of the catalog
 hold the cards for SVG, Mermaid, PlantUML, OpenSCAD, Vega-Lite, and composition, and the tree of CanvasPilot as the last
-root; the cards that carry the left-out tag, and the cards of files and of SVG options that carry it, are absent. This
-scenario is tested by `KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostingCards`.
+root; the cards for files, PDF, PowerPoint, Visio, raster pictures, views of a model, and params of a chart are offered;
+the cards of errors, SVG options, and flattening, which are only about the host program, are absent. This
+scenario is tested by `KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostOnlyCards`.
 
 **KnowledgeSubsystem_Default_IsOneSharedCatalogReadableFromManyThreads**: Eight tasks ask for the default catalog at the
 same time and all get the same object that a later request gets. This scenario is tested by
@@ -66,11 +68,11 @@ the text of an example of the card of framed figures, and a search for a Gantt c
 exist with the closest cards and text that is not JSON with an error message. This scenario is tested by
 `KnowledgeSubsystem_Tools_HelpTool_AnswersFromTheApplicationCatalog`.
 
-**KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards**: The skills of the catalog of the
-application are as many as its cards, have different names that start with `canvasnet-`, include the skills of the
-cards of CanvasPilot, have none for a card of the left-out tag, and have the text of the card of the marks of a message
-with its example as the content of its skill. This scenario is tested by
-`KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards`.
+**KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostOnlyCards**: The skills of the catalog of
+the application are as many as its cards, have different names that start with `canvasnet-`, include the skills of the
+cards of CanvasPilot and of the cards for files and PDF pages, have none for a card that is left out, and have the text
+of the card of the marks of a message with its example as the content of its skill. This scenario is tested by
+`KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostOnlyCards`.
 
 **KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow**: The body of the card of the marks of a
 message, which is a card of CanvasPilot, and the body of the card of framed figures, which is a card of CanvasNet, are

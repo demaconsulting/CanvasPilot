@@ -17,24 +17,26 @@ sections:
           - id: CanvasPilot-Knowledge-OfferDrawingCards
             title: >-
               The Knowledge subsystem shall offer, as one tree of cards that is read once and shared, the cards of CanvasNet
-              that tell how to write each drawing format, without the cards about what the program that hosts CanvasNet
-              controls, together with the cards of CanvasPilot about where files go in a project, how to make the picture
+              that tell how to write each drawing format, without the cards that are only about the program that hosts
+              CanvasNet, together with the cards of CanvasPilot about where files go in a project, how to make the picture
               the user uses, how to read the marks and attachments of a message, and what the user sees.
             justification: |
               The assistant writes files, and the user reads the same advice. The cards of CanvasNet are the advice of the
               library that draws the files, so they are as current as the library; the cards about the options that the
-              program that hosts the library sets would only take room in a prompt, because CanvasPilot is that program.
+              program that hosts the library sets in code would only take room in a prompt, because CanvasPilot is that
+              program, while the cards for embedding pages, pictures, and files are what a drawing needs.
               The cards of CanvasPilot say what the library cannot know: the project folder, the picture the user uses, and
               the marks. Reading the cards once and sharing them keeps the cost of the start low and the answers the same.
             children:
-              - CanvasPilot-KnowledgeCatalog-ExcludeHostingCards
+              - CanvasPilot-KnowledgeCatalog-ExcludeHostOnlyCards
+              - CanvasPilot-KnowledgeCatalog-TellWhatTheAssistantCannotRun
               - CanvasPilot-KnowledgeCatalog-ExtendWithApplicationCards
               - CanvasPilot-KnowledgeCatalog-FindByPathOrAlias
               - CanvasPilot-KnowledgeCatalog-RewriteLinksToCardIds
               - CanvasPilot-KnowledgeCatalog-ListExamplesByName
               - CanvasPilot-KnowledgeCatalog-AgreeWithApplication
             tests:
-              - KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostingCards
+              - KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostOnlyCards
               - KnowledgeSubsystem_Default_IsOneSharedCatalogReadableFromManyThreads
 
           - id: CanvasPilot-Knowledge-FindCards
@@ -97,7 +99,7 @@ sections:
               - CanvasPilot-KnowledgeSkills-OneSkillPerCard
               - CanvasPilot-KnowledgeSkills-NameSkillsFromIds
             tests:
-              - KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards
+              - KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostOnlyCards
 
           - id: CanvasPilot-Knowledge-BrowseCards
             title: >-

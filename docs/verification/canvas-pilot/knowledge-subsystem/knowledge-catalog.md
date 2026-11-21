@@ -15,7 +15,13 @@ N/A - standard test environment.
 #### Acceptance Criteria
 
 - All unit tests pass with zero failures.
-- No card carries the left-out tag, the cards that carry it are absent, and the cards below a left-out card are roots.
+- The seven cards that are only about the host program are the left-out ones, they are absent and cannot be found, every
+  other card of CanvasNet is offered (including the cards that carry the tag `hosting` and that a drawing needs), and
+  the cards below a left-out card are roots.
+- No child, related card, parent, or code-quoted link of any card names a card that is left out, and every card can be
+  reached from the roots once.
+- The root card of CanvasPilot says that command-line tools and the host program cannot be run and names the tools to
+  use.
 - The five cards of CanvasPilot are exactly the embedded card files, they are the last tree, and every card is complete.
 - A card is found by path, by space-separated path, by another name, and in any case; a missing, unknown, or left-out
   path finds nothing.
@@ -27,20 +33,36 @@ N/A - standard test environment.
 
 #### Test Scenarios
 
-**KnowledgeCatalog_Default_NoCardCarriesAnExcludedTag**: The excluded tags are `hosting` and no card of the catalog has
-it. This scenario is tested by `KnowledgeCatalog_Default_NoCardCarriesAnExcludedTag`.
+**KnowledgeCatalog_Default_HostOnlyCardsAreAbsentAndAllOtherCardsRemain**: The left-out identifiers are the seven of the
+design, they are not in the catalog and cannot be found, every other card of the library is in the catalog, and the
+number of cards is the number of the library minus the left-out ones plus the cards of CanvasPilot. This scenario is
+tested by `KnowledgeCatalog_Default_HostOnlyCardsAreAbsentAndAllOtherCardsRemain`.
 
-**KnowledgeCatalog_Default_HostingCardsAreAbsentAndAuthoringCardsRemain**: Sixteen cards of CanvasNet that carry the tag
-are not in the catalog and cannot be found, the cards to write each format are, and the number of cards is the number of
-the library minus those plus the cards of CanvasPilot. This scenario is tested by
-`KnowledgeCatalog_Default_HostingCardsAreAbsentAndAuthoringCardsRemain`.
+**KnowledgeCatalog_Default_DrawingCardsThatCarryTheHostingTagRemain**: The cards for files, PDF, PowerPoint, Visio,
+raster pictures, views of a model, params of a chart, and positions are offered and are found by identifier and by
+their other names. This scenario is tested by `KnowledgeCatalog_Default_DrawingCardsThatCarryTheHostingTagRemain`.
+
+**KnowledgeCatalog_Default_NoReferenceNamesACardThatIsLeftOut**: Every child, related card, and parent of every card is
+a card of the catalog, no body quotes a left-out card as an identifier, every child has its card as parent, and a walk
+from the roots reaches each card once. This scenario is tested by
+`KnowledgeCatalog_Default_NoReferenceNamesACardThatIsLeftOut`.
+
+**KnowledgeCatalog_Default_RelatedCardThatIsLeftOutIsDropped**: Where the library lists the card of flattening as
+related to the card of position bindings, and the card of errors as related to the card of files, the catalog drops
+them and keeps the cards that are offered. This scenario is tested by
+`KnowledgeCatalog_Default_RelatedCardThatIsLeftOutIsDropped`.
+
+**KnowledgeCatalog_Default_RootCardOfCanvasPilotSaysWhatTheAssistantCannotRun**: The body of the root card names the
+command-line tools, says that they cannot be run, and names the `canvasnet_help` tool and the file tools. This scenario
+is tested by `KnowledgeCatalog_Default_RootCardOfCanvasPilotSaysWhatTheAssistantCannotRun`.
 
 **KnowledgeCatalog_Default_VisibleCardsBelowAHiddenCardArePromotedToRoots**: The card of the codes of errors, whose
 parent is left out, has no parent and is a root; a card below a card that is offered keeps its parent. This scenario is
 tested by `KnowledgeCatalog_Default_VisibleCardsBelowAHiddenCardArePromotedToRoots`.
 
-**KnowledgeCatalog_Create_UnknownExcludedTag_ThrowsArgumentException**: A tag that CanvasNet does not know is refused.
-This scenario is tested by `KnowledgeCatalog_Create_UnknownExcludedTag_ThrowsArgumentException`.
+**KnowledgeCatalog_Create_UnknownExcludedCardId_ThrowsArgumentException**: An identifier that is not the identifier of a
+card, or is missing, is refused. This scenario is tested by
+`KnowledgeCatalog_Create_UnknownExcludedCardId_ThrowsArgumentException`.
 
 **KnowledgeCatalog_Create_NullArguments_ThrowArgumentNullException**: Each argument of the builder is required. This
 scenario is tested by `KnowledgeCatalog_Create_NullArguments_ThrowArgumentNullException`.
@@ -71,8 +93,8 @@ holds the bracket syntax outside code. This scenario is tested by
 `KnowledgeCatalog_Default_BodiesHaveLinksWrittenAsCardIds`.
 
 **KnowledgeCatalog_Default_LinksToHiddenCardsAreNotCardIds**: Where the library writes a link to the left-out card of
-files, the catalog writes the title of the card, and the links to cards that are offered are identifiers. This scenario
-is tested by `KnowledgeCatalog_Default_LinksToHiddenCardsAreNotCardIds`.
+flattening, the catalog writes the title of the card, and the links to cards that are offered are identifiers. This
+scenario is tested by `KnowledgeCatalog_Default_LinksToHiddenCardsAreNotCardIds`.
 
 **KnowledgeCatalog_FindExamples_SharedNameCardPrefixAndScope_SelectTheExamples**: The name of the sequence diagram is
 the name of an example of Mermaid and of PlantUML; both are found, a card prefix or a scope selects one, and the case

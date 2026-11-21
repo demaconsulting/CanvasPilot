@@ -101,18 +101,31 @@ check that what the cards of CanvasPilot say about the application is what the c
 
 ### Design
 
-**Extend first, filter second.** The catalog is made from the help catalog of CanvasNet by adding the cards that are
-embedded in the application and then hiding the cards that carry the tag `hosting`. The order matters, because CanvasNet
-refuses to extend a catalog that is already filtered. The cards of CanvasPilot are one new tree, `canvaspilot`, which
-follows the trees of CanvasNet; they carry scope tags that are never hidden.
+**Extend first, then leave cards out.** The catalog is made from the help catalog of CanvasNet by adding the cards that
+are embedded in the application and then leaving out the cards of `ExcludedCardIds`. The order matters, because
+CanvasNet refuses to extend a catalog that is already filtered, and its filter works by tags only, so the exclusion by
+identifier is done here, on the extended catalog. The cards of CanvasPilot are one new tree, `canvaspilot`, which
+follows the trees of CanvasNet; none of them is left out.
 
-**Why `hosting` is left out.** CanvasNet puts the tag `hosting` on the cards about what the program that hosts it
-controls: the options of a render, the folders it may read, the flattening of an SVG file, and the command-line tool.
-CanvasPilot is that program and sets those options itself, and the assistant writes files, so those cards would only
-take room in a prompt. The tag filter only excludes, so every other tag stays and a card that a later version of
-CanvasNet adds is offered without a change. The cost is accepted and recorded: the cards for the binary formats, the
-card of errors (its children stay and move to the top level), the cards of positions, and a few cards of options are not
-offered.
+**Which cards are left out, and why by identifier.** CanvasNet puts the tag `hosting` on sixteen cards, but the tag
+means "something a host program decides", and for more than half of them a drawing needs it: the formats that are
+embedded as pages (`pdf`, `pptx`, `vsdx`), the raster pictures (`raster`), the files a document may reference (`files`),
+the fragments that set a view or a param of a link (`scad/views`, `vega-lite/params`), and the positions that a callout
+binds to (`positions`, `positions/selectors`). A rule such as "hosting and not tagged with a format" does not separate
+them, because the cards of the options of a format carry the tag of that format. So the exclusion is a list of
+identifiers, which is exact, is reviewed card by card, and fails loudly: `Create` refuses an identifier that is not a
+card, so a card that CanvasNet renames or removes fails the build instead of being offered silently. A card that a later
+version of CanvasNet adds is offered until it is reviewed. The cards that are left out, and why, are listed in the
+design of the `KnowledgeCatalog` unit: the `errors` card of the host's exceptions and strict mode, the five cards of
+render options of a format that the host program sets in code, and `svg/flatten`, an operation of the host program for
+other SVG readers.
+
+The children of `errors`, the codes and the diagnostics, stay: they explain what the preview shows, and they move to the
+top level. A related card that is left out is dropped from the list of related cards, and a link to it in a body is
+written as its title, so no identifier, list, index line, skill, or search result names a card that is not offered. The
+cards that are offered still contain some wording for the host program (a command-line tool, Pandoc, the classes of
+CanvasNet); the root card of CanvasPilot tells the assistant that it cannot run those and which tools to use instead
+(`canvasnet_help` and the file tools).
 
 **Own values.** Every card is copied into a `KnowledgeCard`, so that what searches the cards, writes them for a prompt,
 and shows them does not depend on the help types of CanvasNet and can be tested with small catalogs. The links of a body

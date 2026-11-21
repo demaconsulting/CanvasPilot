@@ -48,10 +48,10 @@ public sealed class KnowledgeSubsystemTests
 
     /// <summary>
     ///     Validates that the catalog of the application offers the cards of CanvasNet for drawing, the cards of
-    ///     CanvasPilot for working in a project, and nothing that the host program controls.
+    ///     CanvasPilot for working in a project, and nothing that is only about the host program.
     /// </summary>
     [Fact]
-    public void KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostingCards()
+    public void KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostOnlyCards()
     {
         // Arrange: the catalog of the application
         var catalog = KnowledgeCatalog.Default;
@@ -60,13 +60,17 @@ public sealed class KnowledgeSubsystemTests
         // Act
         var roots = catalog.Roots.Select(c => c.Id).ToList();
 
-        // Assert: a card for every drawing format, the cards of CanvasPilot last, no card of the hosting tag
+        // Assert: a card for every drawing format, the cards of CanvasPilot last, the cards for embedding pages, rasters,
+        // files, views, and params, and no card that is only about the host program
         Assert.All(new[] { "svg", "mermaid", "plantuml", "scad", "vega-lite", "composition", "canvaspilot" }, id => Assert.Contains(id, roots));
         Assert.Equal("canvaspilot", roots[^1]);
         Assert.Contains("canvaspilot/marks", ids);
-        Assert.DoesNotContain(catalog.Cards, c => c.Tags.Contains("hosting"));
-        Assert.DoesNotContain("files", ids);
+        Assert.All(
+            new[] { "files", "pdf", "pptx", "vsdx", "raster", "scad/views", "vega-lite/params" },
+            id => Assert.Contains(id, ids));
         Assert.DoesNotContain("svg/options", ids);
+        Assert.DoesNotContain("svg/flatten", ids);
+        Assert.DoesNotContain("errors", ids);
     }
 
     /// <summary>
@@ -182,7 +186,7 @@ public sealed class KnowledgeSubsystemTests
     ///     with different names, the cards of CanvasPilot among them, and none for a card that is left out.
     /// </summary>
     [Fact]
-    public void KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards()
+    public void KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostOnlyCards()
     {
         // Arrange: the catalog of the application
         var catalog = KnowledgeCatalog.Default;
@@ -193,13 +197,16 @@ public sealed class KnowledgeSubsystemTests
         var marks = skills.Single(s => s.Name == "canvasnet-canvaspilot-marks");
         var marksCard = catalog.Find("canvaspilot/marks")!;
 
-        // Assert: as many skills as cards with different names, no skill for a hosting card, and the card as the content
+        // Assert: as many skills as cards with different names, a skill for a drawing card and none for a card that is left
+        // out, and the card as the content
         Assert.Equal(catalog.Cards.Count, skills.Count);
         Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count());
         Assert.All(names, n => Assert.StartsWith("canvasnet-", n, StringComparison.Ordinal));
         Assert.Contains("canvasnet-svg-framed-figure", names);
-        Assert.DoesNotContain("canvasnet-files", names);
+        Assert.Contains("canvasnet-files", names);
+        Assert.Contains("canvasnet-pdf", names);
         Assert.DoesNotContain("canvasnet-svg-options", names);
+        Assert.DoesNotContain("canvasnet-errors", names);
         Assert.Equal($"{marksCard.Title} - {marksCard.Summary}", marks.Description);
         Assert.Contains(KnowledgePromptBuilder.BuildExample(marksCard.Id, marksCard.Examples[0]), marks.Content, StringComparison.Ordinal);
     }

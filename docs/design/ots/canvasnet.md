@@ -40,22 +40,22 @@ whole set always moves to one version together.
   encodes it.
 - `HelpCatalog` (namespace `DemaConsulting.CanvasNet.Viewer.Help`) — the help of the library as a tree of cards.
   `HelpCatalog.Default` is the library's own tree; `Extend(assembly, resourcePrefix)` adds the cards that are embedded
-  in another assembly as new trees; `Filter(include, exclude)` gives a view without the cards that carry given tags,
-  where the visible cards below a hidden card move up (`HelpTags.Hosting` is the tag for what the host program
-  controls); `Find`, `GetChildren`, `GetSeeAlso`, `Roots`, and `Cards` read the tree; `FormatMarkdown(card, formatLink)`
-  writes the body of a card with the links in the caller's words. `HelpCard` and `HelpExample` carry the parts of a
-  card. A filtered view cannot be extended, so the application extends first and filters second.
+  in another assembly as new trees; `Filter(include, exclude)` gives a view without the cards that carry given tags (the
+  application does not use it, because the tag `hosting` is also on cards that a drawing needs, and leaves cards out by
+  identifier instead); `Find`, `GetChildren`, `GetSeeAlso`, `Roots`, and `Cards` read the tree;
+  `FormatMarkdown(card, formatLink)` writes the body of a card with the links in the caller's words. `HelpCard` and
+  `HelpExample` carry the parts of a card.
 
 ### Integration Pattern
 
 CanvasNet is consumed as a NuGet package reference of the application library. `ImageRenderService` calls
 `CanvasNetViewer.Render` for files and `PngCodec`; `MarkImageComposer` calls `CanvasNetViewer.Render` only for the SVG
 document it builds in memory, and `Surface.Crop` and `PngCodec`; `KnowledgeCatalog` extends `HelpCatalog.Default` with
-the cards embedded in the application, filters out the cards of the tag `hosting`, and copies the cards into values of
-its own, once, on first use; `CanvasNetImageSourceFilter` of the project explorer reads `CanvasNetViewer.Extensions`.
-The viewer is a static, stateless, thread-safe class, so each render is an independent call on a thread-pool thread, and
-the `ViewerImage` is disposed as soon as its pixels and notes are copied. The application never lets CanvasNet read
-outside the project folder and never draws on the user interface thread. CanvasNet has no self-validation mode; the OTS
-tests in `CanvasNetTests.cs` exercise the calls above directly and are the evidence that the library behaves as the
-application relies on, and a version upgrade re-runs them before it is accepted. The drawing libraries bundled with the
-viewer are not used separately.
+the cards embedded in the application, leaves out the cards that are only about the host program (by identifier), and
+copies the cards into values of its own, once, on first use; `CanvasNetImageSourceFilter` of the project explorer reads
+`CanvasNetViewer.Extensions`. The viewer is a static, stateless, thread-safe class, so each render is an independent
+call on a thread-pool thread, and the `ViewerImage` is disposed as soon as its pixels and notes are copied. The
+application never lets CanvasNet read outside the project folder and never draws on the user interface thread. CanvasNet
+has no self-validation mode; the OTS tests in `CanvasNetTests.cs` exercise the calls above directly and are the evidence
+that the library behaves as the application relies on, and a version upgrade re-runs them before it is accepted. The
+drawing libraries bundled with the viewer are not used separately.

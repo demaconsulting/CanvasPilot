@@ -422,32 +422,6 @@ public sealed class CanvasNetTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that CanvasNet filters its help cards by tag: a card with an excluded tag is hidden and the cards below it
-    ///     are promoted, an unknown tag is refused, and a filtered catalog cannot be extended.
-    /// </summary>
-    [Fact]
-    public void CanvasNet_HelpCatalog_Filter_ExcludedTag_HidesTheCardsAndRefusesUnknownTagsAndExtension()
-    {
-        // Arrange: the help catalog of the library
-        var catalog = HelpCatalog.Default;
-
-        // Act: hide the cards about what the host program controls
-        var filtered = catalog.Filter(include: null, exclude: [HelpTags.Hosting]);
-
-        // Assert: the hidden cards are gone from the view and the library is unchanged; a child of a hidden card is a
-        // root; an unknown tag is refused; a filtered view cannot be extended
-        Assert.NotNull(catalog.Find("errors"));
-        Assert.Null(filtered.Find("errors"));
-        Assert.DoesNotContain(filtered.Cards, c => c.Tags.Contains(HelpTags.Hosting));
-        Assert.True(filtered.Cards.Count < catalog.Cards.Count);
-        var codes = filtered.Find("errors/codes");
-        Assert.NotNull(codes);
-        Assert.Contains(codes, filtered.Roots);
-        Assert.Throws<ArgumentException>(() => catalog.Filter(include: null, exclude: ["no-such-tag"]));
-        Assert.Throws<InvalidOperationException>(() => filtered.Extend(typeof(CanvasNetTests).Assembly, "OtsSoftwareTests.HelpCards"));
-    }
-
-    /// <summary>
     ///     Test that CanvasNet extends its help cards with the cards of another assembly: the card is a new root after the
     ///     library roots, its links resolve, and the library catalog is unchanged.
     /// </summary>

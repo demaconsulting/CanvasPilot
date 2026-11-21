@@ -339,9 +339,9 @@ column of the workspace, which is shown while a project is open, and the shell m
 menu (through the composer) and of the talk key.
 
 `KnowledgeCatalog` holds the knowledge of how to draw and how to work in a project as a tree of cards: the help of
-CanvasNet, without the cards about what the host program controls, extended with cards of CanvasPilot that are embedded
-in the application and tell where files go in a project, how to make the picture the user uses, and how to read the
-marks and attachments of a message. The catalog is built once, from embedded resources only, and never changes.
+CanvasNet, without the few cards that are only about the host program, extended with cards of CanvasPilot that are
+embedded in the application and tell where files go in a project, how to make the picture the user uses, and how to read
+the marks and attachments of a message. The catalog is built once, from embedded resources only, and never changes.
 `KnowledgeSearch` finds the cards that fit some words, `KnowledgePromptBuilder` writes the index and the cards as text
 for the prompt of an assistant within a size budget, `KnowledgeTools` describes the one tool by which an assistant
 fetches them, and `KnowledgeSkills` describes each card as a skill; none of these units refers to a provider of a
@@ -504,8 +504,8 @@ made in the project when the message is sent.
 - *Format*: Each card has an identifier that is its path in the tree, a title, a one-line summary, tags, other names, a
   Markdown body, related cards, and examples with their text. The assistant of a later increment is given the same
   cards as an index, as cards on demand through one tool, or as skills.
-- *Constraints*: Nothing is written to a file or sent anywhere. The cards that are about what the host program
-  controls are left out. A card that cannot be read, or a clipboard that cannot be reached, is a message, never an
+- *Constraints*: Nothing is written to a file or sent anywhere. The few cards that are only about the host program
+  are left out. A card that cannot be read, or a clipboard that cannot be reached, is a message, never an
   unhandled failure.
 
 **Speech Settings, Audio Devices, and Model Store**: The speech choices, the audio system, and the downloaded models.
@@ -847,8 +847,9 @@ an example to the clipboard that the window supplies and says in the status line
 - The `Knowledge` subsystem shall hold no reference to any AI provider SDK, client, or agent framework, shall write
   nothing anywhere, and shall have a user interface only in `KnowledgeBrowser`; it shall not depend on `AppShell`, which
   asks for the browser through `IKnowledgeBrowserLauncher`.
-- The catalog shall be extended with the cards of the application before the cards of the tag `hosting` are filtered
-  out, shall be built once from embedded resources only, and shall never change; the index of its cards shall stay
+- The catalog shall be extended with the cards of the application before the cards that are only about the host program
+  are left out (by identifier, not by the tag `hosting`, which is also on cards that a drawing needs), shall be built
+  once from embedded resources only, and shall never change; the index of its cards shall stay
   within the character budget of `KnowledgePromptBuilder`.
 - The installer project shall stay outside the solution so that building and restoring the solution never needs the
   WiX Toolset or Windows; it shall be built only by the Windows build job from the published win-x64 output.
