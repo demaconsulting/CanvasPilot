@@ -37,6 +37,20 @@ sections:
               - KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostingCards
               - KnowledgeSubsystem_Default_IsOneSharedCatalogReadableFromManyThreads
 
+          - id: CanvasPilot-Knowledge-FindCards
+            title: >-
+              The Knowledge subsystem shall find the cards that fit some words, such as the name of a format or of a thing to
+              draw, best first, with the same answer every time.
+            justification: |
+              The user and the assistant seldom know the name of the card they need. Finding cards from the words of the
+              question puts the card that is about the thing in front of the cards that only mention it, and a list that is
+              the same every time can be relied on in a prompt and compared in a test.
+            children:
+              - CanvasPilot-KnowledgeSearch-RankByWeightedTokens
+              - CanvasPilot-KnowledgeSearch-BeDeterministic
+            tests:
+              - KnowledgeSubsystem_Search_QuestionsAboutDrawing_FindTheCardsThatAnswerThem
+
           - id: CanvasPilot-Knowledge-StayProviderNeutral
             title: >-
               The Knowledge subsystem shall offer the knowledge as values and text of its own, with no reference to the

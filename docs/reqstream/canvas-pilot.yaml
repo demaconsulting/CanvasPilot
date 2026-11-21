@@ -424,6 +424,7 @@ sections:
           provider, so the knowledge is kept apart from every provider and offered as plain values and text.
         children:
           - CanvasPilot-Knowledge-OfferDrawingCards
+          - CanvasPilot-Knowledge-FindCards
           - CanvasPilot-Knowledge-StayProviderNeutral
 
       - id: CanvasPilot-System-BrowseDrawingKnowledge

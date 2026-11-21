@@ -43,6 +43,7 @@ input-files:
   - docs/design/canvas-pilot/composer-subsystem/composer-editor.md
   - docs/design/canvas-pilot/knowledge-subsystem.md
   - docs/design/canvas-pilot/knowledge-subsystem/knowledge-catalog.md
+  - docs/design/canvas-pilot/knowledge-subsystem/knowledge-search.md
   - docs/design/canvas-pilot/logging-subsystem.md
   - docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/design/canvas-pilot/payload-subsystem.md

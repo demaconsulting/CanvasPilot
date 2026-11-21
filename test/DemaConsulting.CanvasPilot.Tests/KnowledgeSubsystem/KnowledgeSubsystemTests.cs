@@ -89,6 +89,30 @@ public sealed class KnowledgeSubsystemTests
     }
 
     /// <summary>
+    ///     Validates that the search finds, in the catalog of the application, the cards that answer the questions of a
+    ///     user and of an assistant, with the cards of CanvasPilot among them, and finds nothing for words that no card
+    ///     has.
+    /// </summary>
+    [Fact]
+    public void KnowledgeSubsystem_Search_QuestionsAboutDrawing_FindTheCardsThatAnswerThem()
+    {
+        // Arrange: the search over the catalog of the application
+        var search = new KnowledgeSearch(KnowledgeCatalog.Default);
+
+        // Act
+        var gantt = search.Search("gantt chart");
+        var marks = search.Search("how do I read the marks of a message");
+        var layout = search.Search("project folder layout");
+        var nothing = search.Search("xylophone");
+
+        // Assert: the card of the format, the cards of CanvasPilot, and an empty answer
+        Assert.Equal("mermaid/gantt", gantt[0].Id);
+        Assert.Contains(marks, r => r.Id == "canvaspilot/marks");
+        Assert.Equal("canvaspilot/project-layout", layout[0].Id);
+        Assert.Empty(nothing);
+    }
+
+    /// <summary>
     ///     Validates that the library of the subsystem refers to no package of a language model or agent, by its
     ///     referenced assemblies and by the packages that its dependency file lists.
     /// </summary>

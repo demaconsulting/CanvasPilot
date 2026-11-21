@@ -14,9 +14,10 @@ how to read the marks and attachments of a message, and what the user sees. The 
 interface and none on any provider of a language model or on any agent library, so the knowledge can be given to any
 assistant that is added later.
 
-The subsystem contains the unit `KnowledgeCatalog`, which builds the tree and answers lookups. It depends on CanvasNet
-for the help cards and on `Project`, `Composer`, and `Annotation` only in its tests, which check that what the cards of
-CanvasPilot say about the application is what the code says.
+The subsystem contains two units: `KnowledgeCatalog`, which builds the tree and answers lookups, and `KnowledgeSearch`,
+which finds the cards that fit some words. It depends on CanvasNet for the help cards and on `Project`, `Composer`, and
+`Annotation` only in its tests, which check that what the cards of CanvasPilot say about the application is what the
+code says.
 
 ### Interfaces
 
@@ -31,6 +32,14 @@ CanvasPilot say about the application is what the code says.
   first use, once.
 - *Constraints*: Immutable after it is built and safe for concurrent use. Reading an embedded card that is malformed is
   an `InvalidOperationException` that names the card file.
+
+**KnowledgeSearch**: The search of the cards.
+
+- *Type*: In-process .NET class, with the immutable value `KnowledgeSearchResult`.
+- *Role*: Provider.
+- *Contract*: `Search` takes the words of a query and a number of results and returns the cards that fit, best first,
+  each with its identifier, title, summary, and a positive score. It is made from an `IKnowledgeCatalog`.
+- *Constraints*: Deterministic: the same query on the same cards gives the same list. Safe for concurrent use.
 
 ### Design
 
@@ -55,7 +64,13 @@ it; a link to a card that is left out is plain text.
 **Deterministic and shared.** The default catalog is built once, thread-safe, from embedded resources only, so no file
 or network is touched and every caller sees the same tree.
 
+**Search by weighted words.** The search scores the words of a query against the identifier, other names, title, example
+names, tags, and summary of each card with fixed weights, and does not read the body, so the card that is about a thing
+comes before the cards that only mention it and a list is short enough for a prompt. Ties are broken by depth and
+identifier, so the answer never depends on the order of a dictionary, the culture, or chance.
+
 ### Dependencies
 
 - **KnowledgeCatalog** unit: the tree of cards.
+- **KnowledgeSearch** unit: the search of the cards, which reads the catalog through its interface.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.

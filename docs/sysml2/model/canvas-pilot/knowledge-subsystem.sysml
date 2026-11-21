@@ -12,5 +12,6 @@ package CanvasPilot {
         }
 
         part knowledgeCatalog : KnowledgeCatalog;
+        part knowledgeSearch : KnowledgeSearch;
     }
 }

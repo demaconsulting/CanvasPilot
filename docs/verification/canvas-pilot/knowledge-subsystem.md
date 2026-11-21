@@ -21,6 +21,8 @@ the project file of the application library from the repository; no network, dis
 - The catalog has a card for every drawing format of CanvasNet and the cards of CanvasPilot as its last tree, and no
   card of it carries the tag that is left out.
 - Many threads that ask for the default catalog get the same one.
+- The search of the catalog of the application finds the card of a format, the cards of CanvasPilot, and nothing for a
+  word that no card has.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that
   the project file of the application library declares is a language model or agent library.
 
@@ -34,6 +36,12 @@ scenario is tested by `KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetA
 **KnowledgeSubsystem_Default_IsOneSharedCatalogReadableFromManyThreads**: Eight tasks ask for the default catalog at the
 same time and all get the same object that a later request gets. This scenario is tested by
 `KnowledgeSubsystem_Default_IsOneSharedCatalogReadableFromManyThreads`.
+
+**KnowledgeSubsystem_Search_QuestionsAboutDrawing_FindTheCardsThatAnswerThem**: The search of the catalog of the
+application answers `gantt chart` with the card of the Gantt chart first, a question about reading the marks of a
+message with the card of the marks, and `project folder layout` with the card of the layout of a project first, and a
+nonsense word with nothing. This scenario is tested by
+`KnowledgeSubsystem_Search_QuestionsAboutDrawing_FindTheCardsThatAnswerThem`.
 
 **KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers
 to, the packages in the dependency file of the test project, and the package references in the project file of the

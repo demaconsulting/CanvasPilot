@@ -443,6 +443,22 @@ reviews:
       - "src/**/KnowledgeSubsystem/Cards/**/*.md"
       - "test/**/KnowledgeSubsystem/KnowledgeCatalogTests.cs"
 
+  - id: CanvasPilot-Knowledge-KnowledgeSearch
+    title: Review of CanvasPilot KnowledgeSearch unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-search.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-search.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-search.md"
+      - "src/**/KnowledgeSubsystem/KnowledgeSearch.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeSearchResult.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgeSearchTests.cs"
+      - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
+
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
     title: Review of CanvasPilot Logging subsystem architecture and interfaces
