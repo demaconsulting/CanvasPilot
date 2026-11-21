@@ -250,7 +250,7 @@
                   <ItemsControl ItemsSource="{Binding DontItems}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock TextWrapping="Wrap" Foreground="Firebrick" Text="{Binding ., StringFormat='Do not: {0}'}" />
+                        <TextBlock TextWrapping="Wrap" Foreground="Firebrick" Text="{Binding ., StringFormat='✗ {0}'}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
