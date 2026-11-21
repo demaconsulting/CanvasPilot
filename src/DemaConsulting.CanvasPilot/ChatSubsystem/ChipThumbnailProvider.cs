@@ -72,7 +72,7 @@ public sealed class ChipThumbnailProvider : IChipThumbnailProvider, IDisposable
     /// <summary>
     ///     Guards <see cref="_marks" />.
     /// </summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ChipThumbnailProvider" /> class.

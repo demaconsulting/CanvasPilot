@@ -520,7 +520,7 @@ public sealed class CanvasNetTests : IDisposable
     public void CanvasNet_GenericFontFamilies_ClassifiesBundledAliasesAndUnknownFamilies()
     {
         // Act: classify each family the way the application does, with the common aliases included
-        bool Classify(string name, out bool serif, out bool fixedPitch) =>
+        static bool Classify(string name, out bool serif, out bool fixedPitch) =>
             GenericFontFamilies.TryClassify(name, includeCommonAliases: true, out serif, out fixedPitch);
         var sans = Classify("sans-serif", out var sansSerif, out var sansFixed);
         var segoe = Classify("Segoe UI", out var segoeSerif, out var segoeFixed);

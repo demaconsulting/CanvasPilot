@@ -113,7 +113,7 @@ public sealed partial class StyleKitManagerViewModel : ObservableObject, IDispos
     ///     Keeps two rebuilds apart: outside a user interface the announcements of the catalog arrive on the thread that
     ///     read the kits, and two reads can finish at the same time.
     /// </summary>
-    private readonly object _rebuildLock = new();
+    private readonly Lock _rebuildLock = new();
 
     /// <summary>
     ///     Cancels the drawing of the pictures of the kit that was chosen before.

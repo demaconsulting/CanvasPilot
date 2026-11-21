@@ -81,7 +81,7 @@ public sealed partial class StylePickerViewModel : ObservableObject, IDisposable
     ///     Keeps two rebuilds apart: outside a user interface the announcements of the catalog arrive on the thread that
     ///     read the kits, and two reads can finish at the same time.
     /// </summary>
-    private readonly object _rebuildLock = new();
+    private readonly Lock _rebuildLock = new();
 
     /// <summary>
     ///     Whether the list and the selection are being rebuilt, so that the change of selection that this causes is not
