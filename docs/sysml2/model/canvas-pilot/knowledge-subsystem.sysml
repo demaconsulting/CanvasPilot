@@ -15,5 +15,6 @@ package CanvasPilot {
         part knowledgeSearch : KnowledgeSearch;
         part knowledgePromptBuilder : KnowledgePromptBuilder;
         part knowledgeTools : KnowledgeTools;
+        part knowledgeSkills : KnowledgeSkills;
     }
 }

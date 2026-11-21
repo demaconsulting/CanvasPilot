@@ -178,6 +178,33 @@ public sealed class KnowledgeSubsystemTests
     }
 
     /// <summary>
+    ///     Validates that the skills of the application are made from the catalog of the application: one for each card,
+    ///     with different names, the cards of CanvasPilot among them, and none for a card that is left out.
+    /// </summary>
+    [Fact]
+    public void KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards()
+    {
+        // Arrange: the catalog of the application
+        var catalog = KnowledgeCatalog.Default;
+
+        // Act
+        var skills = KnowledgeSkills.Create(catalog).ToList();
+        var names = skills.Select(s => s.Name).ToList();
+        var marks = skills.Single(s => s.Name == "canvasnet-canvaspilot-marks");
+        var marksCard = catalog.Find("canvaspilot/marks")!;
+
+        // Assert: as many skills as cards with different names, no skill for a hosting card, and the card as the content
+        Assert.Equal(catalog.Cards.Count, skills.Count);
+        Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count());
+        Assert.All(names, n => Assert.StartsWith("canvasnet-", n, StringComparison.Ordinal));
+        Assert.Contains("canvasnet-svg-framed-figure", names);
+        Assert.DoesNotContain("canvasnet-files", names);
+        Assert.DoesNotContain("canvasnet-svg-options", names);
+        Assert.Equal($"{marksCard.Title} - {marksCard.Summary}", marks.Description);
+        Assert.Contains(KnowledgePromptBuilder.BuildExample(marksCard.Id, marksCard.Examples[0]), marks.Content, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Validates that the library of the subsystem refers to no package of a language model or agent, by its
     ///     referenced assemblies and by the packages that its dependency file lists.
     /// </summary>

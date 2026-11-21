@@ -14,9 +14,10 @@ how to read the marks and attachments of a message, and what the user sees. The 
 interface and none on any provider of a language model or on any agent library, so the knowledge can be given to any
 assistant that is added later.
 
-The subsystem contains four units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
+The subsystem contains five units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
 which finds the cards that fit some words, `KnowledgePromptBuilder`, which writes the cards as text for the prompt of an
-assistant, and `KnowledgeTools`, which describes the tool the assistant calls to get them. It depends on CanvasNet for
+assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, and `KnowledgeSkills`, which
+describes each card as a skill. It depends on CanvasNet for
 the help cards and on `Project`, `Composer`, and `Annotation` only in its tests, which check that what the cards of
 CanvasPilot say about the application is what the code says.
 
@@ -64,6 +65,16 @@ CanvasPilot say about the application is what the code says.
 - *Constraints*: The function never throws; arguments that cannot be used are answered with a message that names the
   arguments. The same arguments on the same cards give the same answer. Safe for concurrent use.
 
+**KnowledgeSkills**: The cards as skills for an assistant.
+
+- *Type*: In-process static class, with the immutable value `KnowledgeSkill`.
+- *Role*: Provider.
+- *Contract*: `Create` gives one skill for each card of a catalog, in order: a name that is `canvasnet-` and the
+  identifier of the card with each slash written as a dash, a description that is the title and summary of the card, and
+  a content that is the card with the text of its examples. `NameFor` gives the name of a card.
+- *Constraints*: The skills are made as they are read. The names of the skills of the catalog of the application are all
+  different, which the tests check. Safe for concurrent use.
+
 ### Design
 
 **Extend first, filter second.** The catalog is made from the help catalog of CanvasNet by adding the cards that are
@@ -101,6 +112,11 @@ and whose function takes and returns text, so that it can be handed to the tool 
 chosen later. The function never throws, because an assistant corrects itself from a message that says what to send
 and cannot from an exception; a name that does not exist is answered with the cards that are closest to it.
 
+**Skills made as they are read.** A provider that works with skills can be given each card as one, with the identifier
+of the card in its name, the title and summary as its description, and the card with its examples as its content. The
+text of all the cards is many times what should be built up front, so the skills are made one at a time as they are
+read.
+
 ### Dependencies
 
 - **KnowledgeCatalog** unit: the tree of cards.
@@ -108,4 +124,5 @@ and cannot from an exception; a name that does not exist is answered with the ca
 - **KnowledgePromptBuilder** unit: the text for a prompt, which reads the catalog through its interface and writes the
   results of the search.
 - **KnowledgeTools** unit: the tool for an assistant, which answers from the catalog, the search, and the text writer.
+- **KnowledgeSkills** unit: the cards as skills, which reads the catalog and writes each card with the text writer.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.

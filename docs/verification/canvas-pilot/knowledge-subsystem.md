@@ -27,6 +27,8 @@ the project file of the application library from the repository; no network, dis
   card that a search found holds its example.
 - The tool of the application answers the index, a card, an example, and a search from the catalog of the
   application, and answers bad arguments with a message.
+- The skills of the application have one skill for each card, with different names that start with `canvasnet-`,
+  including the cards of CanvasPilot and none for a card that is left out.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that
   the project file of the application library declares is a language model or agent library.
 
@@ -58,6 +60,12 @@ application, called by the JSON text that an assistant sends, answers the index,
 the text of an example of the card of framed figures, and a search for a Gantt chart, and answers a topic that does not
 exist with the closest cards and text that is not JSON with an error message. This scenario is tested by
 `KnowledgeSubsystem_Tools_HelpTool_AnswersFromTheApplicationCatalog`.
+
+**KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards**: The skills of the catalog of the
+application are as many as its cards, have different names that start with `canvasnet-`, include the skills of the
+cards of CanvasPilot, have none for a card of the left-out tag, and have the text of the card of the marks of a message
+with its example as the content of its skill. This scenario is tested by
+`KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards`.
 
 **KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers
 to, the packages in the dependency file of the test project, and the package references in the project file of the

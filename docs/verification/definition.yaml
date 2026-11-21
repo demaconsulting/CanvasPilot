@@ -43,6 +43,7 @@ input-files:
   - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-search.md
   - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.md
   - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-tools.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-skills.md
   - docs/verification/canvas-pilot/logging-subsystem.md
   - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/verification/canvas-pilot/payload-subsystem.md

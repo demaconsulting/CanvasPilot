@@ -84,6 +84,21 @@ sections:
             tests:
               - KnowledgeSubsystem_Tools_HelpTool_AnswersFromTheApplicationCatalog
 
+          - id: CanvasPilot-Knowledge-DescribeAgentSkills
+            title: >-
+              The Knowledge subsystem shall describe every card as a skill for an assistant, with a name made from the
+              identifier of the card, the title and summary of the card as its description, and the card with its examples
+              as its content, as plain values that can be given to any provider of a language model.
+            justification: |
+              Some providers and agents take knowledge as a set of named skills instead of a tool that is called. Offering
+              each card as a skill, with a name that tells which card it is, lets the same knowledge be given either way
+              without a second copy of the text to keep up to date, and without tying the knowledge to one provider.
+            children:
+              - CanvasPilot-KnowledgeSkills-OneSkillPerCard
+              - CanvasPilot-KnowledgeSkills-NameSkillsFromIds
+            tests:
+              - KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards
+
           - id: CanvasPilot-Knowledge-StayProviderNeutral
             title: >-
               The Knowledge subsystem shall offer the knowledge as values and text of its own, with no reference to the
