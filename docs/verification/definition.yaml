@@ -80,6 +80,7 @@ input-files:
   - docs/verification/canvas-pilot/style-subsystem.md
   - docs/verification/canvas-pilot/style-subsystem/style-kit-document.md
   - docs/verification/canvas-pilot/style-subsystem/style-kit-catalog.md
+  - docs/verification/canvas-pilot/style-subsystem/style-kit-archive.md
   - docs/verification/canvas-pilot/utilities-subsystem.md
   - docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/verification/ots.md

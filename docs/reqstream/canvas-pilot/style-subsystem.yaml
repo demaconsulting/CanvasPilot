@@ -56,6 +56,22 @@ sections:
             tests:
               - StyleSubsystem_FindKitsInLocations_AllPlaces_ResolveByPrecedenceAndSurviveAnUnreachableFolder
 
+          - id: CanvasPilot-Style-ExchangeKitsAsZipFiles
+            title: >-
+              The Style subsystem shall export a kit as a zip file and import a kit from a zip file into the folder of the
+              user or of the project, so that a kit that is exported and imported is the same kit, and shall treat a zip file
+              as untrusted, so that no archive can write outside the folder it is imported to.
+            justification: |
+              Kits are shared as files, by mail, a download, or a shared folder. Importing a file that came from somewhere else
+              is the one place where the application writes files whose names it did not choose, so it must be as careful as
+              it can.
+            children:
+              - CanvasPilot-StyleKitArchive-ExportKitAsZip
+              - CanvasPilot-StyleKitArchive-ImportKitFromZip
+              - CanvasPilot-StyleKitArchive-RefuseUnsafeArchives
+            tests:
+              - StyleSubsystem_ExchangeKitsAsZipFiles_ExportImportAndHostileArchive_MoveKitsAndChangeNothingOutside
+
           - id: CanvasPilot-Style-ChooseActiveKit
             title: >-
               The Style subsystem shall resolve the kit that the open project uses from the id kept in the project file,

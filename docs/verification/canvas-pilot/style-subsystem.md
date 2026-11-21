@@ -23,6 +23,8 @@ file of the application library from the repository; no network, display, or spe
 - Kits that are in the program, the folder of the user, the project, and the shared folders are found with the order of
   precedence, a folder that is not there is reported and does not stop the others, and a shared kit that is copied into the
   project becomes the kit of its id.
+- A kit that is exported to a zip file and imported is the same kit; a second import of the same id is refused, and an archive
+  with a name that climbs out of the target is refused with nothing created outside the target.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that the
   project file of the application library declares is a language model or agent library.
 
@@ -42,6 +44,12 @@ shared and program copies of its id; the missing folder is the one place that is
 are read; a shared kit that is copied into the project is the kit of its id, with the shared one overridden; and a second
 catalog that starts as after a restart finds all of that again. This scenario is tested by
 `StyleSubsystem_FindKitsInLocations_AllPlaces_ResolveByPrecedenceAndSurviveAnUnreachableFolder`.
+
+**StyleSubsystem_ExchangeKitsAsZipFiles_ExportImportAndHostileArchive_MoveKitsAndChangeNothingOutside**: A kit that was read
+from a folder is exported to a zip file and imported into another place; the kit that arrives has the same canonical text. A
+second import of the same file is refused because the id is taken, and an archive with a name that climbs out of the target
+is refused; the target holds only the one kit and nothing was created beside it. This scenario is tested by
+`StyleSubsystem_ExchangeKitsAsZipFiles_ExportImportAndHostileArchive_MoveKitsAndChangeNothingOutside`.
 
 **StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers to, the
 packages in the dependency file of the test project, and the package references in the project file of the application library

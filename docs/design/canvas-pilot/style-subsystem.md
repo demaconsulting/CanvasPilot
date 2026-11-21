@@ -13,7 +13,8 @@ block of text and two tools, and a picture can be checked against the palette of
 provider of a language model or on any agent library, so what the subsystem offers can be given to any assistant that is
 added later.
 
-The subsystem is built up unit by unit. It now contains two units, `StyleKitDocument` and `StyleKitCatalog`.
+The subsystem is built up unit by unit. It now contains three units, `StyleKitDocument`, `StyleKitCatalog`, and
+`StyleKitArchive`.
 `StyleKitDocument` holds the values of a kit and the format that they are kept in: it reads a kit from a file and from its
 folder with a message for each wrong property, checks a kit that is built in memory with the same rules, and writes a kit
 as canonical text. `StyleKitCatalog` finds the kits in the four places, chooses the kit of the most local place for an id,
@@ -21,9 +22,12 @@ reads shared folders on workers with a time limit, keeps the kits of the program
 creates, saves, duplicates, copies, and deletes the kits of the user and of the project. The kits of the program are three
 folders of files, `clean`, `slides-dark`, and `dema`, that are copied beside the executable as loose files (content files of
 the library project) and are in the published folder and the installer package; each has three example files that use
-only the colors of the kit. The units that move kits as zip
-files, choose the kit of a project, write the guidance for an assistant, check a picture, describe the tools of an
-assistant, and show and edit kits in windows follow in later steps, and this document grows with them. The subsystem
+only the colors of the kit. `StyleKitArchive` writes a kit as a zip file and reads one from a zip file as untrusted input: it
+refuses as a whole, before anything is written, an archive with a name that could write outside the target, a link, a file
+that is not part of a kit, or too many or too large files, and it puts a valid kit in place from a hidden folder, so a
+refused archive leaves nothing. The units that choose the kit of a project, write the guidance for an assistant, check a
+picture, describe the tools of an assistant, and show and edit kits in windows follow in later steps, and this document
+grows with them. The subsystem
 depends on CanvasNet for the classification of font families, and on `Project`, `Settings`, `Utilities`, and `Logging` for
 the catalog of kits, and later on `Preview` and `Knowledge` (only the descriptor record of a tool).
 
@@ -55,6 +59,16 @@ the catalog of kits, and later on `Preview` and `Knowledge` (only the descriptor
 - *Constraints*: A shared folder that is offline never blocks the caller or the other places. The kits of the program and
   shared kits are never changed. Safe for concurrent use; `Changed` may be raised on any thread.
 
+**StyleKitArchive**: A kit as a zip file.
+
+- *Type*: In-process .NET static class `StyleKitArchive`, the immutable value `StyleImportResult`, and the enumeration
+  `StyleImportConflict`.
+- *Role*: Provider.
+- *Contract*: `Export` writes a kit and its example files as a zip file; `Import` reads a zip file into a folder of kits
+  and returns the kit, or the reason it was refused, as `Refuse`, `Replace`, or `KeepBoth` says when the id is taken.
+- *Constraints*: Stateless. `Import` never throws for a bad archive, writes only inside the target folder, and leaves
+  nothing in it when it refuses.
+
 ### Design
 
 **The dependency rule.** The subsystems below `AppShell` do not depend on `AppShell` or on each other upwards, and this
@@ -84,7 +98,7 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 - **StyleKitDocument** unit: the values of a kit and the format of its file.
 - **StyleKitCatalog** unit: the kits in the places, the choice by precedence, and the changes to the kits of the user and
   of the project.
-- **Project** subsystem: which project is open and when it changes (the project service).
+- **StyleKitArchive** unit: a kit as a zip file, exported and imported as untrusted input.: which project is open and when it changes (the project service).
 - **Settings** subsystem: the shared kit folders and when they change (the settings service).
 - **Utilities** subsystem: the safe combination of folder and file names.
 - **Logging** subsystem: the log of kits that cannot be used and folders that cannot be read.

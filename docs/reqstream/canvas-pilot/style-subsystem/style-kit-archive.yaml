@@ -1,0 +1,71 @@
+---
+# Software Unit Requirements for the StyleKitArchive Unit
+#
+# The StyleKitArchive unit writes a style kit as a zip file and reads a kit from a zip file that may come from anywhere. It
+# treats every archive as hostile: names that could write outside the target, links, devices, files that are not part of a
+# kit, too many or too large files, and a style file with errors are refused as a whole, and nothing is left behind. It
+# uses only the zip support of the base class library and has no user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleKitArchive Requirements
+            requirements:
+              - id: CanvasPilot-StyleKitArchive-ExportKitAsZip
+                title: >-
+                  The StyleKitArchive shall write a kit as a zip file that has the style file at its top and the example
+                  files of the kit in a folder named examples, replace a file that is there only when the export succeeds, and
+                  report a file of the kit that cannot be read as an I/O failure.
+                justification: |
+                  A kit travels by mail or a download as one file. The same layout that the import reads makes an exported kit
+                  importable by anyone, and a failed export must not destroy an archive that the user already had.
+                tests:
+                  - StyleKitArchive_ExportThenImport_KitWithExamples_RoundTripsByteForByte
+                  - StyleKitArchive_Export_ExistingFileMissingExampleAndNulls_ReplacesFailsAndRefuses
+
+              - id: CanvasPilot-StyleKitArchive-ImportKitFromZip
+                title: >-
+                  The StyleKitArchive shall read a kit from a zip file with the style file and the example files at its top or
+                  all in one folder, put it in a folder of the target named as its id with every example byte for byte, and
+                  when the target already has a kit with that id refuse, replace it, or keep both by giving the imported kit a
+                  number in its id and its name, as it is asked, and shall refuse a style file that has errors with the list
+                  of the issues, an archive with no style file, a file that is not a zip file, and an archive that is damaged,
+                  with a message and without throwing.
+                justification: |
+                  Kits are shared as files, so reading one must be as easy as opening it, must never lose a kit that is
+                  already there by accident, and must tell the user plainly why a file is not a kit. A kit that is not valid
+                  must not be put in a folder where the catalog would look for kits.
+                tests:
+                  - StyleKitArchive_ExportThenImport_KitWithExamples_RoundTripsByteForByte
+                  - StyleKitArchive_Import_ArchiveWithOneWrapperFolder_IsAccepted
+                  - StyleKitArchive_Import_IdAlreadyThere_RefuseReplaceAndKeepBoth
+                  - StyleKitArchive_Import_KeepBothWithLongName_StaysWithinTheNameLimit
+                  - StyleKitArchive_Import_NoStyleFileOrInvalidStyleFile_IsRefusedWithTheReason
+                  - StyleKitArchive_Import_NotAZipOrMissingFile_IsRefusedWithAMessage
+
+              - id: CanvasPilot-StyleKitArchive-RefuseUnsafeArchives
+                title: >-
+                  The StyleKitArchive shall refuse, as a whole and before anything is written, a zip file that has an entry whose
+                  name is absolute, has a drive, uses a backslash, has a part that is empty, a period, or two periods, has a
+                  character that a Windows file name cannot have, is a device name, is too long, is a link, is repeated, or is
+                  not the style file or a file directly in the examples folder, that has more than 100 entries or more than
+                  24 example files, or whose files claim more than 16 MiB each or 64 MiB together; shall refuse an archive whose
+                  files do not match the sizes and checksums of their headers; and shall write the files into a hidden folder of
+                  the target that is removed on every outcome except a valid kit that is moved into place, so that nothing is
+                  ever created outside the target and a refused archive leaves no file.
+                justification: |
+                  A zip file from a stranger is the classic way to write a file outside the folder it is meant for, with a
+                  name that climbs out, and to fill a disk with a file that claims to be small. A kit is only a style file and
+                  a few pictures, so anything else is a sign of an attack or a mistake, and refusing the whole archive before
+                  writing is safer than extracting part of it. A header that does not match the data is a damaged or hostile
+                  file.
+                tests:
+                  - StyleKitArchive_Import_UnsafeOrForeignEntryName_IsRefusedAndNothingIsWritten
+                  - StyleKitArchive_Import_NameOfMoreThan200Characters_IsRefused
+                  - StyleKitArchive_Import_LinkEntry_IsRefused
+                  - StyleKitArchive_Import_SameNameTwice_IsRefused
+                  - StyleKitArchive_Import_HeaderThatUnderstatesTheSize_StopsAtTheLimitAndCleansUp
+                  - StyleKitArchive_Import_HonestSizesOverTheLimits_AreRefusedBeforeAnythingIsWritten
+                  - StyleKitArchive_Import_TooManyEntriesOrExamples_AreRefused

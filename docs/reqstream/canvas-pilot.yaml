@@ -480,6 +480,7 @@ sections:
           change, so they are changed by making a copy.
         children:
           - CanvasPilot-Style-ManageKitsInWindow
+          - CanvasPilot-Style-ExchangeKitsAsZipFiles
 
       - id: CanvasPilot-System-ChooseProjectStyle
         title: >-

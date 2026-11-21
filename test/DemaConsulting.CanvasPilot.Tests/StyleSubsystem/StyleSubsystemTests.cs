@@ -180,6 +180,46 @@ public sealed class StyleSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Validates that a kit that is exported to a zip file comes back as the same kit in another place, that a second
+    ///     import with the same id is refused, and that a hostile archive with a name that climbs out of the target is
+    ///     refused as a whole, with nothing created beside the target.
+    /// </summary>
+    [Fact]
+    public void StyleSubsystem_ExchangeKitsAsZipFiles_ExportImportAndHostileArchive_MoveKitsAndChangeNothingOutside()
+    {
+        // Arrange: a kit in a folder of the user, a target folder inside a parent that holds nothing else
+        var source = Directory.CreateDirectory(Path.Combine(_root, "source")).FullName;
+        WriteKit(source, "shared-look", "The kit that travels.");
+        var read = StyleKitSerializer.ReadFolder(Path.Combine(source, "shared-look"));
+        var entry = new StyleKitEntry(read.Kit!, StyleKitLocation.User, Path.Combine(source, "shared-look"), null, false, false, null, []);
+        var parent = Directory.CreateDirectory(Path.Combine(_root, "parent")).FullName;
+        var target = Path.Combine(parent, "target");
+        var zip = Path.Combine(_root, "shared-look.zip");
+        var hostile = Path.Combine(_root, "hostile.zip");
+        using (var stream = File.Create(hostile))
+        using (var archive = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create))
+        {
+            using var writer = new StreamWriter(archive.CreateEntry("../../escaped.txt").Open());
+            writer.Write("escaped");
+        }
+
+        // Act: export, import, import again, and import the hostile archive
+        StyleKitArchive.Export(entry, zip);
+        var imported = StyleKitArchive.Import(zip, target, StyleImportConflict.Refuse);
+        var again = StyleKitArchive.Import(zip, target, StyleImportConflict.Refuse);
+        var refused = StyleKitArchive.Import(hostile, target, StyleImportConflict.Replace);
+
+        // Assert: the kit arrived equal, the repeat and the hostile archive were refused, and nothing was created outside
+        Assert.True(imported.Succeeded);
+        Assert.Equal(StyleKitSerializer.Write(read.Kit!), StyleKitSerializer.Write(imported.Kit!));
+        Assert.False(again.Succeeded);
+        Assert.False(refused.Succeeded);
+        Assert.Equal(["shared-look"], Directory.GetFileSystemEntries(target).Select(Path.GetFileName));
+        Assert.False(File.Exists(Path.Combine(parent, "escaped.txt")));
+        Assert.False(File.Exists(Path.Combine(_root, "escaped.txt")));
+    }
+
+    /// <summary>
     ///     Validates that the library of the subsystem refers to no package of a language model or agent, by its
     ///     referenced assemblies and by the packages that its dependency file lists.
     /// </summary>

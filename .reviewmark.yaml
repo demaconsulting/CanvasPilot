@@ -1069,6 +1069,22 @@ reviews:
       - "test/**/StyleSubsystem/StyleKitCatalogTests.cs"
       - "test/**/StyleSubsystem/StyleSubsystemFakes.cs"
 
+  - id: CanvasPilot-Style-StyleKitArchive
+    title: Review of CanvasPilot StyleKitArchive unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-archive.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-archive.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-archive.md"
+      - "src/**/StyleSubsystem/StyleImportConflict.cs"
+      - "src/**/StyleSubsystem/StyleImportResult.cs"
+      - "src/**/StyleSubsystem/StyleKitArchive.cs"
+      - "test/**/StyleSubsystem/StyleKitArchiveTests.cs"
+
   - id: CanvasPilot-Style-BuiltInStyleKits
     title: Review of CanvasPilot built-in style kits
     context:
