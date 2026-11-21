@@ -9,7 +9,7 @@
     <style>
       .word { font: bold 86px sans-serif; fill: #ffffff; }
       .eyebrow { font: bold 25px sans-serif; fill: #a5b4fc; }
-      .tag { font: bold 40px sans-serif; fill: #f8fafc; }
+      .tag { font: bold 36px sans-serif; fill: #f8fafc; }
       .body { font: 25px sans-serif; fill: #cbd5e1; }
       .cmd { font: 25px monospace; fill: #e2e8f0; }
       .prompt { fill: #5eead4; }
@@ -116,11 +116,11 @@
   <text class="word" x="52" y="176">Canvas</text>
   <text class="word brandText" x="357.9" y="176">Pilot</text>
   <rect x="58" y="200" width="132" height="6" rx="3" fill="url(#brand)"/>
-  <text class="tag" x="56" y="266">Describe it.</text>
-  <text class="tag brandText" x="56" y="316">Get the picture.</text>
-  <text class="body" x="58" y="368">Type or speak; an AI copilot builds</text>
-  <text class="body" x="58" y="402">it with CanvasNet from SVG, charts,</text>
-  <text class="body" x="58" y="436">pages, and images, ready to share.</text>
+  <text class="tag" x="56" y="266">AI-assisted drawing</text>
+  <text class="tag" x="56" y="314" style="fill: #a5b4fc">creation with CanvasNet.</text>
+  <text class="body" x="58" y="368">Type or speak a request; an AI copilot</text>
+  <text class="body" x="58" y="402">composes SVG, charts, pages, and</text>
+  <text class="body" x="58" y="436">images into a picture ready to share.</text>
   <rect x="56" y="468" width="480" height="54" rx="12" fill="#0a1022" fill-opacity="0.8" stroke="#a78bfa" stroke-opacity="0.45" stroke-width="1.5"/>
   <text class="cmd file" x="78" y="503">"Draw our release flow"</text>
   <text class="note" x="58" y="568">A Windows desktop app.</text>
@@ -200,7 +200,7 @@
         <text x="173" y="99">3D</text>
       </g>
     </g>
-    <text class="label" x="1442" y="190">Every format</text>
+    <text class="label" x="1442" y="190">Many formats</text>
   </g>
 
   <!-- Flows into the engine -->
