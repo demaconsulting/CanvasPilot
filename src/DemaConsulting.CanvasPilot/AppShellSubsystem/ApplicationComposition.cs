@@ -21,6 +21,7 @@
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
@@ -280,7 +281,16 @@ public sealed class ApplicationComposition : IDisposable
             new SpeechSettingsPageViewModel(audioDevices, speechModels),
         ];
 
-        var shell = new MainWindowShell(projects, recentProjects, settings, workspace, pages, exporter, defaultProjectsFolder);
+        var shell = new MainWindowShell(
+            projects,
+            recentProjects,
+            settings,
+            workspace,
+            pages,
+            exporter,
+            defaultProjectsFolder,
+            () => KnowledgeCatalog.Default,
+            logger);
 
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project
         var marks = new MarkRegistry();

@@ -2,7 +2,7 @@ package CanvasPilot {
     private import SoftwareItemMetadata::*;
 
     part def MainWindowShell {
-        doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands, the window title, the recent projects menu, Undo and Redo of the focused part, the talk key, and the dialog service the window implements. */
+        doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands (Help shows the About dialog and the browser of the drawing knowledge), the window title, the recent projects menu, Undo and Redo of the focused part, the talk key, and the dialog service the window implements. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -50,6 +50,11 @@ package CanvasPilot {
         // Shows the payload inspector as a dialog it owns, on behalf of the chat panel, through the launcher seam
         // (IPayloadInspectorLauncher) that the Chat subsystem owns and the dialog service extends.
         dependency MainWindowShell to PayloadInspector;
+
+        // Shows the browser of the drawing knowledge as a window it owns that does not block it, through the launcher
+        // seam (IKnowledgeBrowserLauncher) that the Knowledge subsystem owns and the dialog service extends, over the
+        // catalog that the composition gives it.
+        dependency MainWindowShell to KnowledgeBrowser;
 
         // Undoes and redoes through the focused part's IUndoRedoTarget and starts and stops dictation through an
         // IPushToTalkTarget, both seams that the Composer subsystem owns (ComposerViewModel implements the first).

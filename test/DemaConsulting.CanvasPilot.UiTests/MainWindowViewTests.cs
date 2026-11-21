@@ -30,6 +30,7 @@ using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -140,7 +141,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal(["UndoMenuItem", "RedoMenuItem"], structure[1].Children);
         Assert.Equal(["ExportPngMenuItem", "CopyImageMenuItem"], structure[2].Children);
         Assert.Equal(["SettingsMenuItem"], structure[3].Children);
-        Assert.Equal(["AboutMenuItem"], structure[4].Children);
+        Assert.Equal(["DrawingKnowledgeMenuItem", "AboutMenuItem"], structure[4].Children);
         foreach (var item in structure.SelectMany(top => top.Children.Prepend(top.Id)))
         {
             var found = window.FindControl<MenuItem>(item);
@@ -153,6 +154,8 @@ public sealed class MainWindowViewTests : IDisposable
             menu.Items.OfType<MenuItem>().Select(top => top.Header as string));
         Assert.Equal("Ctrl+Z", window.FindControl<MenuItem>("UndoMenuItem")!.InputGesture?.ToString());
         Assert.Equal("Ctrl+Y", window.FindControl<MenuItem>("RedoMenuItem")!.InputGesture?.ToString());
+        Assert.Equal("_Drawing Knowledge...", window.FindControl<MenuItem>("DrawingKnowledgeMenuItem")!.Header);
+        Assert.Single(window.FindControl<MenuItem>("HelpMenu")!.Items.OfType<Separator>());
 
         window.Close();
     }
@@ -168,7 +171,7 @@ public sealed class MainWindowViewTests : IDisposable
         window.Show();
 
         // Act & Assert: read which items are enabled
-        foreach (var enabled in new[] { "NewProjectMenuItem", "OpenProjectMenuItem", "ExitMenuItem", "SettingsMenuItem", "AboutMenuItem" })
+        foreach (var enabled in new[] { "NewProjectMenuItem", "OpenProjectMenuItem", "ExitMenuItem", "SettingsMenuItem", "DrawingKnowledgeMenuItem", "AboutMenuItem" })
         {
             Assert.True(IsUsable(window.FindControl<MenuItem>(enabled)!), enabled);
         }
@@ -199,6 +202,89 @@ public sealed class MainWindowViewTests : IDisposable
         // Assert: the window closed
         Assert.True(closed);
         Assert.False(window.IsVisible);
+    }
+
+    /// <summary>
+    ///     Test that the Drawing Knowledge menu item shows the browser as a window that the main window owns and that does
+    ///     not block it, with the roots of the catalog of the application in its tree.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_DrawingKnowledgeMenuItem_ShowsBrowserWindowThatDoesNotBlock()
+    {
+        // Arrange: a shown main window
+        var (_, window) = CreateWindow();
+        window.Show();
+
+        // Act: run Drawing Knowledge
+        var shown = ((IAsyncRelayCommand)window.FindControl<MenuItem>("DrawingKnowledgeMenuItem")!.Command!).ExecuteAsync(null);
+        await shown;
+        var browser = AppShellUiHelpers.FindDialog<KnowledgeBrowserView>(window);
+
+        // Assert: the command finished while the window is open, the window is the catalog's tree, and the main window is
+        // still usable
+        Assert.True(browser.IsVisible);
+        Assert.Equal("Drawing Knowledge", browser.Title);
+        var tree = SettingsUiHelpers.Find<TreeView>(browser, "KnowledgeCardTree");
+        Assert.Equal(KnowledgeCatalog.Default.Roots.Count, tree.ItemCount);
+        Assert.True(window.IsEnabled);
+        browser.Close();
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that asking again while the browser is open brings the same window to the front and does not open
+    ///     another, and that asking after it was closed opens a new one.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_DrawingKnowledgeMenuItem_SecondRequest_ReusesTheOpenBrowser()
+    {
+        // Arrange: a shown main window with the browser open, in which a card was chosen
+        var (_, window) = CreateWindow();
+        window.Show();
+        var command = (IAsyncRelayCommand)window.FindControl<MenuItem>("DrawingKnowledgeMenuItem")!.Command!;
+        await command.ExecuteAsync(null);
+        var first = AppShellUiHelpers.FindDialog<KnowledgeBrowserView>(window);
+        var firstViewModel = (KnowledgeBrowserViewModel)first.DataContext!;
+        firstViewModel.Select("canvaspilot");
+
+        // Act: ask again, and look at what is open
+        await command.ExecuteAsync(null);
+        var second = AppShellUiHelpers.FindDialog<KnowledgeBrowserView>(window);
+
+        // Assert: there is one browser, the same one, still showing the card that was chosen
+        Assert.Same(first, second);
+        Assert.Same(firstViewModel, second.DataContext);
+        Assert.Equal("canvaspilot", firstViewModel.SelectedCard!.Id);
+
+        // Act: close it and ask once more
+        first.Close();
+        await command.ExecuteAsync(null);
+        var third = AppShellUiHelpers.FindDialog<KnowledgeBrowserView>(window);
+
+        // Assert: a new browser was opened, with nothing chosen
+        Assert.NotSame(first, third);
+        Assert.Null(((KnowledgeBrowserViewModel)third.DataContext!).SelectedCard);
+        third.Close();
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that closing the main window closes the browser that it owns.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_Close_ClosesTheBrowserItOwns()
+    {
+        // Arrange: a main window with the browser open
+        var (_, window) = CreateWindow();
+        window.Show();
+        await ((IAsyncRelayCommand)window.FindControl<MenuItem>("DrawingKnowledgeMenuItem")!.Command!).ExecuteAsync(null);
+        var browser = AppShellUiHelpers.FindDialog<KnowledgeBrowserView>(window);
+
+        // Act: close the main window
+        window.Close();
+
+        // Assert: the browser is closed with it
+        Assert.False(browser.IsVisible);
     }
 
     /// <summary>

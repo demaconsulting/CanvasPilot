@@ -29,8 +29,8 @@ constructor; the application supplies the exporter of the `Preview` subsystem.
 
 **Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled
 while a project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can
-export), `OpenSettingsCommand`, and `ShowAboutCommand`, and `UndoCommand` and `RedoCommand` (enabled while
-`EditTarget` can undo or redo).
+export), `OpenSettingsCommand`, `ShowDrawingKnowledgeCommand` (enabled while the application has knowledge to show), and
+`ShowAboutCommand`, and `UndoCommand` and `RedoCommand` (enabled while `EditTarget` can undo or redo).
 
 **EditTarget**: `IUndoRedoTarget?` (a `Composer` seam) - what Edit > Undo and Redo act on: the part of the window
 that has the focus, or `null` while the focus is in a part that has nothing to undo. The window sets it. The shell
@@ -52,7 +52,9 @@ because the message editor handles those keys itself. The window implements `IDi
 `StorageProvider`, the clipboard, and the message dialog. Its
 constructor passes
 itself to `AttachDialogService`, and `ExitRequested` closes it. It also tracks the focus and the talk key (see
-**Focus tracking** and **Talk key** below).
+**Focus tracking** and **Talk key** below). Its Help menu has `DrawingKnowledgeMenuItem` (`_Drawing Knowledge...`), a
+separator, and `AboutMenuItem`. The window shows the browser of the drawing knowledge with `Show` and itself as the
+owner, so that it does not block the window, and keeps the one that is open.
 
 #### Key Methods
 
@@ -71,6 +73,17 @@ Exit raises `ExitRequested`.
 **OpenSettings**: Shows a `SettingsDialogViewModel` over the settings service and the supplied pages, and tells
 the dialog it has closed afterwards so the pages can release resources. **ShowAbout** shows an
 `AboutDialogViewModel`.
+
+**ShowDrawingKnowledge**: The constructor takes an optional function that gives the catalog of the drawing knowledge and
+an optional logger; the composition root passes the function that gives the catalog of the application, which reads the
+cards when it is first called, so the start of the application does not pay for them. The command is unavailable when
+there is no function and does nothing until a dialog service is attached. It calls the function, makes a
+`KnowledgeBrowserViewModel` over the catalog and a search of its cards, and gives it to
+`IKnowledgeBrowserLauncher.ShowKnowledgeBrowserAsync`; the dialog service completes that when the window is shown, not
+when it is closed. When the catalog cannot be made, the failure is written to the log and a message dialog says that the
+drawing knowledge could not be loaded, and no window is shown. The window keeps one browser: a request while it is open
+brings that window to the front, restored if it was minimized, and leaves what the user was reading, and a request after
+it was closed shows a new one.
 
 **ExportPng** / **CopyImage**: When the exporter can export, call it with the dialog service. The commands are
 re-evaluated when `CanExportChanged` is raised.
@@ -120,6 +133,8 @@ texts or a blank accepting label.
 - **NewProjectDialog** — collects a project name and location.
 - **SettingsDialog** and **SettingsService** (through `ISettingsService` and `ISettingsPage`) — the settings dialog.
 - **ProjectWorkspace** and **AboutDialog** — the content area and the About dialog.
+- **KnowledgeBrowser** and **KnowledgeCatalog** (through `IKnowledgeBrowserLauncher` and `IKnowledgeCatalog`) — what
+  the Drawing Knowledge command shows; the dialog service extends the launcher, which the `Knowledge` subsystem owns.
 - **ImageExporter** (through `IImageExporter` and `IExportDialogs`) — the Image menu commands run it, and the
   dialog service extends `IExportDialogs` so the exporter can ask the user through it.
 - **Composer** (through `IUndoRedoTarget` and `IPushToTalkTarget`) — what the Edit menu and the talk key reach; the

@@ -20,6 +20,7 @@
 
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -115,6 +116,16 @@ public sealed class FakeDialogService : IDialogService
     public PayloadInspectorViewModel? LastInspector { get; private set; }
 
     /// <summary>
+    ///     Gets how many times the browser of the drawing knowledge was shown.
+    /// </summary>
+    public int KnowledgeBrowserCount { get; private set; }
+
+    /// <summary>
+    ///     Gets the last browser of the drawing knowledge shown.
+    /// </summary>
+    public KnowledgeBrowserViewModel? LastKnowledgeBrowser { get; private set; }
+
+    /// <summary>
     ///     Gets how many times the project file picker was shown.
     /// </summary>
     public int ProjectPickCount { get; private set; }
@@ -177,6 +188,14 @@ public sealed class FakeDialogService : IDialogService
     {
         InspectorCount++;
         LastInspector = viewModel;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task ShowKnowledgeBrowserAsync(KnowledgeBrowserViewModel viewModel)
+    {
+        KnowledgeBrowserCount++;
+        LastKnowledgeBrowser = viewModel;
         return Task.CompletedTask;
     }
 

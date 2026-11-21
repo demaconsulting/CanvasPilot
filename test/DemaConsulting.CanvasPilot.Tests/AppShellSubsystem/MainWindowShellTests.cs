@@ -20,6 +20,7 @@
 
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
@@ -511,6 +512,91 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that Drawing Knowledge asks the dialog service to show a browser whose tree is the roots of the catalog,
+    ///     and that the catalog is asked for each time the command runs, not when the shell is made.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_ShowDrawingKnowledge_ShowsBrowserOnTheCatalog()
+    {
+        // Arrange: a shell whose knowledge is a small catalog that counts how often it is asked for
+        var catalog = new FakeKnowledgeCatalog(
+            FakeKnowledgeCatalog.Card("svg", "SVG", children: ["svg/shapes"]),
+            FakeKnowledgeCatalog.Card("svg/shapes", "Shapes"),
+            FakeKnowledgeCatalog.Card("mermaid", "Mermaid"));
+        var asked = 0;
+        var shell = CreateKnowledgeShell(() =>
+        {
+            asked++;
+            return catalog;
+        });
+        var askedBeforeRun = asked;
+
+        // Act: run Drawing Knowledge
+        var canRun = shell.ShowDrawingKnowledgeCommand.CanExecute(null);
+        await shell.ShowDrawingKnowledgeCommand.ExecuteAsync(null);
+
+        // Assert: the launcher got a browser over the roots of the catalog
+        Assert.True(canRun);
+        Assert.Equal(0, askedBeforeRun);
+        Assert.Equal(1, asked);
+        Assert.Equal(1, _dialogs.KnowledgeBrowserCount);
+        Assert.Equal(["svg", "mermaid"], _dialogs.LastKnowledgeBrowser!.Nodes.Select(n => n.Id));
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that Drawing Knowledge is disabled when the application has no knowledge, and does nothing before a dialog
+    ///     service is attached.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_ShowDrawingKnowledge_WithoutKnowledgeOrDialogService_DoesNothing()
+    {
+        // Arrange: a shell with no knowledge, and one with knowledge but no dialog service
+        var withoutKnowledge = CreateKnowledgeShell(null);
+        var asked = 0;
+        var withoutDialogs = CreateKnowledgeShell(
+            () =>
+            {
+                asked++;
+                return new FakeKnowledgeCatalog();
+            },
+            attachDialogs: false);
+
+        // Act: run the command of each
+        var disabled = withoutKnowledge.ShowDrawingKnowledgeCommand.CanExecute(null);
+        await withoutKnowledge.ShowDrawingKnowledgeCommand.ExecuteAsync(null);
+        await withoutDialogs.ShowDrawingKnowledgeCommand.ExecuteAsync(null);
+
+        // Assert: nothing was shown and the catalog was not asked for
+        Assert.False(disabled);
+        Assert.Equal(0, _dialogs.KnowledgeBrowserCount);
+        Assert.Equal(0, asked);
+    }
+
+    /// <summary>
+    ///     Test that a catalog that cannot be loaded is logged and reported to the user, and that no browser is shown.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_ShowDrawingKnowledge_CatalogCannotBeLoaded_LogsAndShowsMessage()
+    {
+        // Arrange: a shell whose knowledge cannot be loaded, with a log
+        var logger = new RollingFileLogger(Path.Combine(_tempRoot, "logs"));
+        var shell = CreateKnowledgeShell(() => throw new InvalidOperationException("The card 'svg/broken' is malformed."), logger);
+
+        // Act: run Drawing Knowledge
+        await shell.ShowDrawingKnowledgeCommand.ExecuteAsync(null);
+
+        // Assert: the user is told, the problem is in the log, and no browser was shown
+        var message = Assert.Single(_dialogs.Messages);
+        Assert.Equal("Drawing Knowledge", message.Title);
+        Assert.Contains("svg/broken", message.Message, StringComparison.Ordinal);
+        Assert.Equal(0, _dialogs.KnowledgeBrowserCount);
+        var log = await File.ReadAllTextAsync(logger.ActiveFilePath, TestContext.Current.CancellationToken);
+        Assert.Contains("could not be loaded", log, StringComparison.Ordinal);
+        Assert.Contains("svg/broken", log, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that commands that need the user do nothing before a dialog service is attached.
     /// </summary>
     [Fact]
@@ -769,6 +855,26 @@ public sealed class MainWindowShellTests : IDisposable
     {
         var shell = new MainWindowShell(parts.Projects, parts.Recent, parts.Settings, parts.Workspace, pages ?? [], exporter, defaultProjectsFolder);
         shell.AttachDialogService(_dialogs);
+        _shells.Add(shell);
+        return shell;
+    }
+
+    /// <summary>
+    ///     Creates a shell with drawing knowledge and, when asked, the dialog service attached.
+    /// </summary>
+    /// <param name="knowledge">Gets the catalog of the drawing knowledge, or <see langword="null" /> for none.</param>
+    /// <param name="logger">The logger, or <see langword="null" />.</param>
+    /// <param name="attachDialogs">Whether the dialog service is attached.</param>
+    /// <returns>The shell, disposed with the fixture.</returns>
+    private MainWindowShell CreateKnowledgeShell(Func<IKnowledgeCatalog>? knowledge, RollingFileLogger? logger = null, bool attachDialogs = true)
+    {
+        var parts = CreateParts();
+        var shell = new MainWindowShell(parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], null, null, knowledge, logger);
+        if (attachDialogs)
+        {
+            shell.AttachDialogService(_dialogs);
+        }
+
         _shells.Add(shell);
         return shell;
     }

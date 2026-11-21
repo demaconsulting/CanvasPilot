@@ -105,6 +105,11 @@
       <MenuItem Name="HelpMenu"
                 AutomationProperties.AutomationId="HelpMenu"
                 Header="_Help">
+        <MenuItem Name="DrawingKnowledgeMenuItem"
+                  AutomationProperties.AutomationId="DrawingKnowledgeMenuItem"
+                  Header="_Drawing Knowledge..."
+                  Command="{Binding ShowDrawingKnowledgeCommand}" />
+        <Separator />
         <MenuItem Name="AboutMenuItem"
                   AutomationProperties.AutomationId="AboutMenuItem"
                   Header="_About CanvasPilot"

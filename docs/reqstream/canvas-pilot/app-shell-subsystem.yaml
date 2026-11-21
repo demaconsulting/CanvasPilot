@@ -134,6 +134,20 @@ sections:
             tests:
               - AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries
 
+          - id: CanvasPilot-AppShell-DrawingKnowledgeMenu
+            title: >-
+              The AppShell subsystem shall let the user open the browser of the drawing knowledge from the Help menu of the
+              composed application, over the catalog of cards of the application, in a window that stays open beside the
+              work.
+            justification: |
+              The cards are of use only when the user can reach them while working. The application is composed in one
+              place, so that is where the menu is joined to the catalog of the application, and the browser is shown through
+              the window of the shell so that it belongs to it.
+            children:
+              - CanvasPilot-MainWindowShell-ShowDrawingKnowledge
+            tests:
+              - AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication
+
           - id: CanvasPilot-AppShell-ComposeApplication
             title: >-
               The AppShell subsystem shall build the application's units at startup in dependency order, load

@@ -23,6 +23,8 @@ using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -61,8 +63,9 @@ public sealed class RecentProjectItem(string name, string filePath, IAsyncRelayC
 
 /// <summary>
 ///     View model of the application's main window: the File, Edit, Image, Tools, and Help menus, the open project, the
-///     recent projects list, the window title, and the workspace. The Edit menu undoes and redoes in the part of the
-///     window that has the focus (<see cref="EditTarget" />), and the talk key starts and stops dictation in
+///     recent projects list, the window title, and the workspace. The Help menu shows the About dialog and the browser of
+///     the drawing knowledge. The Edit menu undoes and redoes in the part of the window that has the focus
+///     (<see cref="EditTarget" />), and the talk key starts and stops dictation in
 ///     <see cref="PushToTalk" />. It talks to the user only through an
 ///     <see cref="IDialogService" />, which the main window supplies, so it can be tested without a window.
 /// </summary>
@@ -102,6 +105,16 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     The folder offered for new projects when no recent project suggests a better one, or null.
     /// </summary>
     private readonly string? _defaultProjectsFolder;
+
+    /// <summary>
+    ///     Gets the catalog of the drawing knowledge when it is first asked for, or null when the application has none.
+    /// </summary>
+    private readonly Func<IKnowledgeCatalog>? _knowledge;
+
+    /// <summary>
+    ///     Optional logger for diagnostics.
+    /// </summary>
+    private readonly RollingFileLogger? _logger;
 
     /// <summary>
     ///     The synchronization context of the thread that created the shell, which owns the user interface, or null.
@@ -163,6 +176,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     menu items disabled.
     /// </param>
     /// <param name="defaultProjectsFolder">The folder offered for new projects, or <see langword="null" />.</param>
+    /// <param name="knowledge">
+    ///     Gets the catalog of the drawing knowledge for the Help menu, called when the browser is first asked for so that
+    ///     the cards are not read at start, or <see langword="null" /> for none, which leaves the menu item disabled.
+    /// </param>
+    /// <param name="logger">Optional logger for diagnostics.</param>
     public MainWindowShell(
         IProjectService projectService,
         IRecentProjects recentProjects,
@@ -170,7 +188,9 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         ProjectWorkspaceViewModel workspace,
         IReadOnlyList<ISettingsPage> settingsPages,
         IImageExporter? imageExporter = null,
-        string? defaultProjectsFolder = null)
+        string? defaultProjectsFolder = null,
+        Func<IKnowledgeCatalog>? knowledge = null,
+        RollingFileLogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
         ArgumentNullException.ThrowIfNull(recentProjects);
@@ -183,6 +203,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _settingsService = settingsService;
         _settingsPages = settingsPages;
         _defaultProjectsFolder = defaultProjectsFolder;
+        _knowledge = knowledge;
+        _logger = logger;
         Workspace = workspace;
         ImageExporter = imageExporter ?? new NullImageExporter();
         RecentProjects = new ReadOnlyObservableCollection<RecentProjectItem>(_recentItems);
@@ -507,6 +529,41 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
             await _dialogs.ShowAboutAsync(new AboutDialogViewModel());
         }
     }
+
+    /// <summary>
+    ///     Opens the browser of the drawing knowledge in a window that does not block the application. The cards are read
+    ///     the first time this runs; when they cannot be read, the problem is logged and shown to the user.
+    /// </summary>
+    /// <returns>A task that completes when the browser is shown, or the problem was shown.</returns>
+    [RelayCommand(CanExecute = nameof(HasKnowledge))]
+    private async Task ShowDrawingKnowledgeAsync()
+    {
+        if (_dialogs is null || _knowledge is null)
+        {
+            return;
+        }
+
+        KnowledgeBrowserViewModel browser;
+        try
+        {
+            var catalog = _knowledge();
+            browser = new KnowledgeBrowserViewModel(catalog, new KnowledgeSearch(catalog), _logger);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            // A card of the application that cannot be read is a defect of the application, not of the user's work
+            _logger?.Log(LogLevel.Error, "The drawing knowledge could not be loaded.", ex);
+            await _dialogs.ShowMessageAsync("Drawing Knowledge", $"The drawing knowledge could not be loaded: {ex.Message}");
+            return;
+        }
+
+        await _dialogs.ShowKnowledgeBrowserAsync(browser);
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether the application has drawing knowledge to show.
+    /// </summary>
+    private bool HasKnowledge => _knowledge is not null;
 
     /// <summary>
     ///     Gets a value indicating whether the Image menu commands can run.

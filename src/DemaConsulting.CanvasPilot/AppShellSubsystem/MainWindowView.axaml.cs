@@ -27,6 +27,7 @@ using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -38,7 +39,8 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 ///     <see cref="IDialogService" />, because showing dialogs and platform pickers needs the window as owner.
 ///     Exit closes the window. It also tells the shell what has the focus (for Edit > Undo and Redo), and passes the
 ///     talk key and the loss of the active state on to it. The window is the payload inspector launcher of the chat
-///     panel, which the workspace connects when the dialog service is attached.
+///     panel, which the workspace connects when the dialog service is attached. It also shows the browser of the drawing
+///     knowledge as a window of its own that does not block it, one at a time.
 /// </summary>
 public sealed partial class MainWindowView : Window, IDialogService
 {
@@ -54,6 +56,11 @@ public sealed partial class MainWindowView : Window, IDialogService
     ///     View model bound to the window.
     /// </summary>
     private readonly MainWindowShell? _shell;
+
+    /// <summary>
+    ///     The browser of the drawing knowledge while it is open, or <see langword="null" />.
+    /// </summary>
+    private KnowledgeBrowserView? _knowledgeBrowser;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MainWindowView" /> class for the XAML loader. The window
@@ -111,6 +118,30 @@ public sealed partial class MainWindowView : Window, IDialogService
     {
         ArgumentNullException.ThrowIfNull(viewModel);
         await new PayloadInspectorView(viewModel).ShowDialog(this);
+    }
+
+    /// <inheritdoc />
+    public Task ShowKnowledgeBrowserAsync(KnowledgeBrowserViewModel viewModel)
+    {
+        ArgumentNullException.ThrowIfNull(viewModel);
+
+        // There is one browser: asking again brings the open one to the front, as it was left
+        if (_knowledgeBrowser is { } open)
+        {
+            if (open.WindowState == WindowState.Minimized)
+            {
+                open.WindowState = WindowState.Normal;
+            }
+
+            open.Activate();
+            return Task.CompletedTask;
+        }
+
+        var browser = new KnowledgeBrowserView(viewModel);
+        browser.Closed += OnKnowledgeBrowserClosed;
+        _knowledgeBrowser = browser;
+        browser.Show(this);
+        return Task.CompletedTask;
     }
 
     /// <inheritdoc />
@@ -310,6 +341,23 @@ public sealed partial class MainWindowView : Window, IDialogService
     private async Task<IStorageFolder?> TryGetFolderAsync(string? folder)
     {
         return string.IsNullOrWhiteSpace(folder) ? null : await StorageProvider.TryGetFolderFromPathAsync(folder);
+    }
+
+    /// <summary>
+    ///     Forgets the browser of the drawing knowledge when it is closed, so that the next request opens a new one.
+    /// </summary>
+    /// <param name="sender">The browser window.</param>
+    /// <param name="e">The event data.</param>
+    private void OnKnowledgeBrowserClosed(object? sender, EventArgs e)
+    {
+        if (sender is KnowledgeBrowserView browser)
+        {
+            browser.Closed -= OnKnowledgeBrowserClosed;
+            if (ReferenceEquals(browser, _knowledgeBrowser))
+            {
+                _knowledgeBrowser = null;
+            }
+        }
     }
 
     /// <summary>

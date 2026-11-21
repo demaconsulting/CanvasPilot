@@ -26,6 +26,8 @@ services, or display are required.
 - Choices made in the settings dialog opened from the shell are stored and in effect in the next run, and the
   dialog hosts the AI Provider page followed by the Speech page.
 - The About dialog opened from the composed shell shows the application name, a version, and the five libraries.
+- The Drawing Knowledge command of the composed shell gives the dialog service a browser over the catalog of the
+  application, whose tree is the roots of the catalog.
 - The composer of the message created by the composition works in the folder of the project that is open, and has no
   project and no draft once the project is closed.
 - The layer for marks is the overlay of the preview pane with its tool bar in the pane's top bar, and it can make marks
@@ -85,6 +87,11 @@ Speech page. This scenario is tested by `AppShellSubsystem_Settings_ComposedShel
 **AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries**: The About command of a composed shell
 shows a dialog with the application name, a non-blank version, and five libraries. This scenario is tested by
 `AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries`.
+
+**AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication**: The Drawing Knowledge
+command of a composed shell is usable, gives the dialog service one browser whose tree is the roots of the catalog of
+the application, and the browser can show a card of CanvasPilot. This scenario is tested by
+`AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication`.
 
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler
 is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_Throw`.

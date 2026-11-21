@@ -21,7 +21,8 @@ and are described here because they only join the units together.
 **Dialog Service**: How the view models ask the user questions, show dialogs, and open platform pickers.
 
 - *Type*: In-process .NET API (`IDialogService`, which extends `IFolderPicker` of the `Project` subsystem,
-  `IExportDialogs` of the `Preview` subsystem, and `IPayloadInspectorLauncher` of the `Chat` subsystem).
+  `IExportDialogs` of the `Preview` subsystem, `IPayloadInspectorLauncher` of the `Chat` subsystem, and
+  `IKnowledgeBrowserLauncher` of the `Knowledge` subsystem).
 - *Role*: Provider of the contract; the main window (`MainWindowView`) is the implementation.
 - *Contract*: `ShowNewProjectAsync`, `ShowSettingsAsync`, and `ShowAboutAsync` show modal dialogs;
   `PickFolderAsync`, `PickProjectFileAsync`, and `PickSaveFileAsync` return a path or `null` when cancelled;
@@ -31,6 +32,9 @@ and are described here because they only join the units together.
   `CopyImageToClipboardAsync` are declared by `IExportDialogs`, which the `Preview` subsystem owns, so the
   image exporter needs nothing of the shell. `ShowPayloadInspectorAsync` is declared by `IPayloadInspectorLauncher`,
   which the `Chat` subsystem owns; the window shows the payload inspector as a dialog that it owns.
+  `ShowKnowledgeBrowserAsync` is declared by `IKnowledgeBrowserLauncher`, which the `Knowledge` subsystem owns; the
+  window shows the browser of the drawing knowledge as a window that it owns and that does not block it, one at a time,
+  and completes the request when the window is shown.
 - *Constraints*: A platform picker that cannot be shown answers `null`, which reads as cancelled.
 
 **Image Exporter**: The extension point behind the Image menu.
@@ -76,25 +80,27 @@ and are described here because they only join the units together.
   automation identifier that are the same (`FileMenu`, `NewProjectMenuItem`, `OpenProjectMenuItem`,
   `RecentProjectsMenuItem`, `SaveProjectMenuItem`, `CloseProjectMenuItem`, `ExitMenuItem`, `EditMenu`,
   `UndoMenuItem`, `RedoMenuItem`, `ImageMenu`,
-  `ExportPngMenuItem`, `CopyImageMenuItem`, `ToolsMenu`, `SettingsMenuItem`, `HelpMenu`, `AboutMenuItem`). While a
+  `ExportPngMenuItem`, `CopyImageMenuItem`, `ToolsMenu`, `SettingsMenuItem`, `HelpMenu`, `DrawingKnowledgeMenuItem`,
+  `AboutMenuItem`). While a
   project is open the content area has a chat column on the right of the preview, 380 wide at first.
 
 ### Design
 
-1. At startup `App` calls `ApplicationComposition.CreateDefault`, which creates the logger, the settings service
-   (and loads the settings), the project service, the recent projects list, the project explorer with its image
-   source filter and refresh scheduler, the render service, the preview pane, the workspace (which shows the
-   preview pane), the image exporter, the settings pages (the AI Provider page and the Speech page over the speech
-   services, which use neither the audio system nor the model store until the Speech page is loaded), and the
-   shell, in that order, and logs the start. The speech model service that the composition creates is disposed
-   with the composition. After the shell, the composition makes the mark registry, the composer of the message, the
-   layer on which the user marks the picture, and the chat panel. It puts the layer in the overlay slot of the preview
-   pane and the layer's tool bar in the top bar slot, and gives the layer the switch for dragging the picture out. The
-   chat panel joins the layer to the message: it allows marks while the composer can edit, tells the layer which mark
-   chips the message holds whenever the composer changes, and adds the chip of each mark that the layer reports, so that
-   an undo of the chip hides the mark. The composition places the panel in the chat column of the workspace and makes
-   it the push-to-talk target of the shell; the workspace shows the column while a project is open and makes the
-   window's dialog service the panel's launcher of the payload inspector.
+1. At startup `App` calls `ApplicationComposition.CreateDefault`, which creates the logger, the settings service (and
+   loads the settings), the project service, the recent projects list, the project explorer with its image source filter
+   and refresh scheduler, the render service, the preview pane, the workspace (which shows the preview pane), the image
+   exporter, the settings pages (the AI Provider page and the Speech page over the speech services, which use neither
+   the audio system nor the model store until the Speech page is loaded), and the shell, in that order, and logs the
+   start. The shell is given a function that gives the catalog of the drawing knowledge, which reads the cards the first
+   time the Help menu asks for them. The speech model service that the composition creates is disposed with the
+   composition. After the shell, the composition makes the mark registry, the composer of the message, the layer on
+   which the user marks the picture, and the chat panel. It puts the layer in the overlay slot of the preview pane and
+   the layer's tool bar in the top bar slot, and gives the layer the switch for dragging the picture out. The chat panel
+   joins the layer to the message: it allows marks while the composer can edit, tells the layer which mark chips the
+   message holds whenever the composer changes, and adds the chip of each mark that the layer reports, so that an undo
+   of the chip hides the mark. The composition places the panel in the chat column of the workspace and makes it the
+   push-to-talk target of the shell; the workspace shows the column while a project is open and makes the window's
+   dialog service the panel's launcher of the payload inspector.
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. It follows the focus (the nearest data context that can undo and redo becomes the shell's `EditTarget`)
    and the F8 key (start and stop of the push-to-talk target, also on deactivation and close). `App` records
