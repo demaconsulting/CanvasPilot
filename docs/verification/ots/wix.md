@@ -13,10 +13,10 @@ installer project into one Windows Installer (MSI) package file, which is how th
 WiX has no self-validation mode and is not exercised by a unit test, because building a package needs the published
 application and takes a minute or more. The Windows build job builds the package and then runs FileAssert with the
 `installer` tag against `package/CanvasPilot-*-win-x64.msi`, recording the results in
-`artifacts/fileassert-installer-windows-latest.trx`, which the requirements enforcement step reads. The assertion proves that
-exactly one package file exists and that it is not trivially small, so a build that failed silently, produced no
-package, or produced an empty one fails the job. If WiX were non-functional, the build step that precedes the
-assertion would fail first. What the installed package does (the Start Menu shortcut, closing a running
+`artifacts/fileassert-installer-windows-latest.trx`, which the requirements enforcement step reads. The assertion
+proves that exactly one package file exists and that it is not trivially small, so a build that failed silently,
+produced no package, or produced an empty one fails the job. If WiX were non-functional, the build step that precedes
+the assertion would fail first. What the installed package does (the Start Menu shortcut, closing a running
 application, and replacing an earlier version in place) is checked by hand on a clean machine before each release
 and is not part of the automated evidence.
 
