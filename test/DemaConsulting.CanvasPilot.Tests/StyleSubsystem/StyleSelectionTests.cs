@@ -158,6 +158,7 @@ public sealed class StyleSelectionTests : IDisposable
         // Arrange: a project that names a kit that nobody has yet
         await OpenProjectAsync("Gone");
         await _selection.SetActiveAsync("team-kit");
+        await _catalog.PendingRefresh;
         var raised = 0;
         _selection.Changed += (_, _) => Interlocked.Increment(ref raised);
 
@@ -192,8 +193,10 @@ public sealed class StyleSelectionTests : IDisposable
         // Act: look at the second, go back to the first, close
         var second = _selection.ActiveId;
         await _projects.OpenAsync(first, Ct);
+        await _catalog.PendingRefresh;
         var back = _selection.Active?.Kit.Id;
         _projects.Close();
+        await _catalog.PendingRefresh;
         var closed = (_selection.Active, _selection.ActiveId, _selection.IsMissing);
 
         // Assert: each answer is that of the project that was open, and the switches were announced
@@ -213,6 +216,7 @@ public sealed class StyleSelectionTests : IDisposable
         // Arrange: a project that uses a built-in kit and then keeps a copy of it
         await OpenProjectAsync("Frozen");
         await _selection.SetActiveAsync("clean");
+        await _catalog.PendingRefresh;
         var builtIn = _catalog.Resolve("clean")!;
 
         // Act: copy the kit into the project
@@ -462,6 +466,9 @@ public sealed class StyleSelectionTests : IDisposable
         var parent = Directory.CreateDirectory(Path.Combine(_root, "projects")).FullName;
         var created = await _projects.CreateAsync(parent, name, Ct);
         Assert.True(created.Succeeded, created.Error);
+
+        // The catalog reads the places again on its own when the project changes; wait for that before reading them
+        await _catalog.PendingRefresh;
         await _catalog.RefreshAsync(Ct);
     }
 
