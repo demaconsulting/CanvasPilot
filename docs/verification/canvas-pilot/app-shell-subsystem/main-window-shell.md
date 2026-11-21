@@ -48,6 +48,8 @@ temporary local folders; no network or external services are required.
   service.
 - Message, confirmation, and prompt dialogs return the user's answer, trim a prompt's text, and cannot accept a
   blank prompt.
+- A shell that has a style picker shows a status bar with it while a project is open and no bar otherwise; a project
+  that was created, and no project that was only opened, is given the default style kit of the user.
 
 #### Test Scenarios
 
@@ -280,3 +282,17 @@ the trimmed text typed, and returns null when cancelled. This scenario is tested
 
 **MainWindowView_Pickers_HeadlessPlatform_ReturnNull**: The folder, project file, and save pickers answer null
 on the headless platform. This scenario is tested by `MainWindowView_Pickers_HeadlessPlatform_ReturnNull`.
+
+**MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject**: With a style picker that counts the
+requests to give the default kit, creating a project asks once, closing it and opening it again from the recent projects
+does not ask again, and the status bar is off with no project, on with one, and the change is announced. This scenario
+is tested by `MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject`.
+
+**MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar**: A shell with no style picker creates a project as it
+always did and shows no status bar. This scenario is tested by
+`MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar`.
+
+**StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits**: In the real window composed with the real units, the
+status bar is hidden with no project and shown with one, holds the label `Style:` and a list with no style and the three
+kits that come with the program. This scenario is tested by
+`StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits`.

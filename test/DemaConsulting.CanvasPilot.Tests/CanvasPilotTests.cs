@@ -427,6 +427,7 @@ public sealed class CanvasPilotTests : IDisposable
         await composition.Preview.RenderCompletion;
         var target = Path.Combine(_tempRoot, "exported.png");
         dialogs.SaveFileToPick = target;
+        dialogs.ExportPresetToPick = ExportPreset.AsRendered;
 
         // Act: run the export command of the Image menu
         var canExport = composition.Shell.ExportPngCommand.CanExecute(null);

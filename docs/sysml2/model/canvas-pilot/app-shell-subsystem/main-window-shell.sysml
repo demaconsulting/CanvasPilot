@@ -63,5 +63,8 @@ package CanvasPilot {
         // Undoes and redoes through the focused part's IUndoRedoTarget and starts and stops dictation through an
         // IPushToTalkTarget, both seams that the Composer subsystem owns (ComposerViewModel implements the first).
         dependency MainWindowShell to ComposerViewModel;
+
+        // Hosts the list that chooses the style kit in a status bar, and asks it to give a new project the default kit.
+        dependency MainWindowShell to StylePicker;
     }
 }

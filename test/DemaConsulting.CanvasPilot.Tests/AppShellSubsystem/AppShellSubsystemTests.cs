@@ -383,6 +383,52 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that composing the application wires the style kits: the catalog reads the kits that come with the program in
+    ///     the background, the picker offers them, a new project starts with the default kit of the user, the two style tools
+    ///     are described, and the exporter asks the user for a size from the kit and the application.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired()
+    {
+        // Arrange: a composition whose user chose the Clean kit as the default for new projects
+        var token = TestContext.Current.CancellationToken;
+        var composition = Compose();
+        composition.Settings.Update(settings => settings with { Styles = settings.Styles with { DefaultKitId = "clean" } });
+        await composition.StyleCatalog.RefreshAsync(token);
+        var idsBefore = composition.StyleCatalog.Entries.Select(entry => entry.Kit.Id).ToArray();
+        var visibleBefore = composition.StylePicker.IsVisible;
+        _dialogs.OnNewProject = dialog =>
+        {
+            dialog.ProjectName = "Styled";
+            dialog.OkCommand.Execute(null);
+        };
+
+        // Act: create a project, and then export the picture that is shown in it
+        await composition.Shell.NewProjectCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "logo.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='16'><rect width='32' height='16' fill='#00ff00'/></svg>",
+            token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "logo.svg"));
+        await composition.Preview.RenderCompletion;
+        await composition.Shell.ExportPngCommand.ExecuteAsync(null);
+
+        // Assert: the kits of the program were found, the default became the style of the new project, the picker shows
+        // it, the tools are described, and the exporter offered the sizes
+        Assert.Equal(["clean", "dema", "slides-dark"], idsBefore.Order(StringComparer.Ordinal));
+        Assert.False(visibleBefore);
+        Assert.Equal("clean", composition.ActiveStyle.ActiveId);
+        Assert.Equal("clean", composition.StylePicker.SelectedItem!.Id);
+        Assert.True(composition.StylePicker.IsVisible);
+        Assert.True(composition.Shell.ShowStatusBar);
+        Assert.Same(composition.StylePicker, composition.Shell.StylePicker);
+        Assert.Equal(["style_get", "style_check"], composition.StyleToolDescriptors.Select(tool => tool.Name));
+        Assert.Equal(1, _dialogs.PresetOfferCount);
+    }
+
+    /// <summary>
     ///     Test that composing the application refuses missing parts.
     /// </summary>
     [Fact]
@@ -414,7 +460,8 @@ public sealed class AppShellSubsystemTests : IDisposable
             new FakeRefreshScheduler(),
             defaultProjectsFolder: Projects,
             audioDevices: SpeechTestData.AudioDevices([], []),
-            speechModels: SpeechTestData.Models());
+            speechModels: SpeechTestData.Models(),
+            styleUserFolder: Path.Combine(_tempRoot, "styles"));
         composition.Shell.AttachDialogService(_dialogs);
         _compositions.Add(composition);
         return composition;

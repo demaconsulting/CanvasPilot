@@ -1,0 +1,42 @@
+---
+# Software Unit Requirements for the StylePicker Unit
+#
+# The StylePicker unit is the list in the status bar of the main window with which the user chooses the style kit of the
+# open project. It offers no style and every kit that is not hidden by a kit of a more local place, shows the kit that
+# the project uses, writes a choice into the project file through the active style, and says so when the project names a
+# kit that cannot be found.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StylePicker Requirements
+            requirements:
+              - id: CanvasPilot-StylePicker-ShowAndChangeTheActiveKit
+                title: >-
+                  The StylePicker shall offer no style first and then every kit that is not hidden by a kit of a more local
+                  place, each with the place it comes from and with its description and folder as an explanation, show the
+                  kit that the open project uses as the selected choice, show a kit that the project names and that cannot
+                  be found as a choice that says it was not found, write the kit that the user chooses, or no style, into the
+                  project file, show why a choice could not be kept and then what the project really uses, follow a change
+                  that is made elsewhere, be shown only while a project is open, and pass on the request to give a new
+                  project the default kit of the user.
+                justification: |
+                  The style belongs to the project, so the choice must be one step away while the user works and must always
+                  show the truth: the kit that the project file names, also when that kit is gone, and not a kit that was
+                  clicked and refused. A kit that is hidden by a more local copy of the same id is not a different choice, and
+                  a list with no project open would offer a choice that cannot be kept.
+                tests:
+                  - StylePicker_Items_KitsOfTheCatalog_NoStyleFirstAndVisibleOnlyWithAProject
+                  - StylePicker_Select_KitThenNoStyle_IsWrittenToTheProjectFile
+                  - StylePicker_MissingKit_IsShownAsNotFoundAndGoesWhenAnotherIsChosen
+                  - StylePicker_Items_KitHiddenByAMoreLocalKit_IsListedOnceWithTheLocalPlace
+                  - StylePicker_Select_NoProject_ReportsTheReasonAndShowsNoStyleAgain
+                  - StylePicker_SelectedItem_ChoiceMadeElsewhere_IsFollowedWithoutWritingAgain
+                  - StylePicker_ApplyDefaultToNewProjectAsync_PassesOnOrDoesNothing
+                  - StylePicker_PlaceText_EveryPlace_IsNamedForTheUser
+                  - StylePicker_DisposeAndConstructor_StopsFollowingAndRefusesNull
+                  - StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits
+                  - StylePickerView_ChooseKit_WritesTheProjectFile
+                  - StylePickerView_MissingKit_IsShownAsNotFound

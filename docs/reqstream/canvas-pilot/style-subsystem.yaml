@@ -84,6 +84,7 @@ sections:
               - CanvasPilot-StyleSelection-ResolveTheActiveKit
               - CanvasPilot-StyleSelection-KeepChoiceInTheProjectFile
               - CanvasPilot-StyleSelection-StartNewProjectsWithTheDefault
+              - CanvasPilot-StylePicker-ShowAndChangeTheActiveKit
             tests:
               - StyleSubsystem_ChooseActiveKit_DefaultAndChoice_AreKeptInTheProjectFileAndSurviveReopening
 

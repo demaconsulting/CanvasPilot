@@ -82,7 +82,9 @@ and are described here because they only join the units together.
   `UndoMenuItem`, `RedoMenuItem`, `ImageMenu`,
   `ExportPngMenuItem`, `CopyImageMenuItem`, `ToolsMenu`, `SettingsMenuItem`, `HelpMenu`, `DrawingKnowledgeMenuItem`,
   `AboutMenuItem`). While a
-  project is open the content area has a chat column on the right of the preview, 380 wide at first.
+  project is open the content area has a chat column on the right of the preview, 380 wide at first, and a status bar
+  at the bottom (`StatusBar`) with the label `Style:` and the list of the style kits (`StylePicker`), which is
+  hidden while no project is open.
 
 ### Design
 
@@ -100,7 +102,13 @@ and are described here because they only join the units together.
    message holds whenever the composer changes, and adds the chip of each mark that the layer reports, so that an undo
    of the chip hides the mark. The composition places the panel in the chat column of the workspace and makes it the
    push-to-talk target of the shell; the workspace shows the column while a project is open and makes the window's
-   dialog service the panel's launcher of the payload inspector.
+   dialog service the panel's launcher of the payload inspector. The style kits are built before the image exporter
+   and the shell: the catalog of kits, the selection that says which kit the open project uses (which is also the
+   exporter's source of export sizes), the picker that chooses it, and the descriptors of the two style tools. The
+   composition starts reading the kits on a worker and does not wait for it, so the start of the application never
+   waits for a folder; the catalog, the selection, and the picker are disposed before the services they listen to. The
+   shell is given the picker, which it shows in a status bar while a project is open and asks to give a new project the
+   default style kit.
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. It follows the focus (the nearest data context that can undo and redo becomes the shell's `EditTarget`)
    and the F8 key (start and stop of the push-to-talk target, also on deactivation and close). `App` records

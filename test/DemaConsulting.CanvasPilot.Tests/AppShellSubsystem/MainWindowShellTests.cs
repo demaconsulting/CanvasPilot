@@ -25,6 +25,7 @@ using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 using NSubstitute;
 
 namespace DemaConsulting.CanvasPilot.Tests;
@@ -149,6 +150,76 @@ public sealed class MainWindowShellTests : IDisposable
         Assert.True(shell.SaveProjectCommand.CanExecute(null));
         Assert.True(shell.CloseProjectCommand.CanExecute(null));
         Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that a new project is given the default style kit by the style picker, that a project that is only opened is
+    ///     not, and that the status bar follows the project.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject()
+    {
+        // Arrange: a shell with a style picker that counts how often it is asked to give the default
+        var applied = 0;
+        var parts = CreateParts();
+        var catalog = Substitute.For<IStyleKitCatalog>();
+        catalog.Entries.Returns([]);
+        var picker = new StylePickerViewModel(new FakeActiveStyle(), catalog, parts.Projects, () =>
+        {
+            applied++;
+            return Task.CompletedTask;
+        });
+        var shell = new MainWindowShell(
+            parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], null, Directory.CreateDirectory(Projects).FullName, null, picker);
+        shell.AttachDialogService(_dialogs);
+        _shells.Add(shell);
+        var changes = new List<string?>();
+        shell.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        var barWithoutProject = shell.ShowStatusBar;
+        _dialogs.OnNewProject = dialog =>
+        {
+            dialog.ProjectName = "Styled";
+            dialog.OkCommand.Execute(null);
+        };
+
+        // Act: create a project, close it, and open it again from the list of recent projects
+        await shell.NewProjectCommand.ExecuteAsync(null);
+        var appliedForNew = applied;
+        var barWithProject = shell.ShowStatusBar;
+        shell.CloseProjectCommand.Execute(null);
+        await shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+
+        // Assert: the default was given once, for the new project, and the bar was shown with the project
+        Assert.Same(picker, shell.StylePicker);
+        Assert.False(barWithoutProject);
+        Assert.Equal(1, appliedForNew);
+        Assert.Equal(1, applied);
+        Assert.True(barWithProject);
+        Assert.True(shell.ShowStatusBar);
+        Assert.Contains(nameof(MainWindowShell.ShowStatusBar), changes);
+    }
+
+    /// <summary>
+    ///     Test that a shell with no style picker shows no status bar and creates a project as before.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar()
+    {
+        // Arrange: a shell with no style picker
+        var shell = CreateShell(defaultProjectsFolder: Directory.CreateDirectory(Projects).FullName);
+        _dialogs.OnNewProject = dialog =>
+        {
+            dialog.ProjectName = "Plain";
+            dialog.OkCommand.Execute(null);
+        };
+
+        // Act: create a project
+        await shell.NewProjectCommand.ExecuteAsync(null);
+
+        // Assert: the project is open and there is no status bar
+        Assert.True(shell.HasProject);
+        Assert.Null(shell.StylePicker);
+        Assert.False(shell.ShowStatusBar);
     }
 
     /// <summary>
@@ -869,7 +940,7 @@ public sealed class MainWindowShellTests : IDisposable
     private MainWindowShell CreateKnowledgeShell(Func<IKnowledgeCatalog>? knowledge, RollingFileLogger? logger = null, bool attachDialogs = true)
     {
         var parts = CreateParts();
-        var shell = new MainWindowShell(parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], null, null, knowledge, logger);
+        var shell = new MainWindowShell(parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], null, null, knowledge, logger: logger);
         if (attachDialogs)
         {
             shell.AttachDialogService(_dialogs);

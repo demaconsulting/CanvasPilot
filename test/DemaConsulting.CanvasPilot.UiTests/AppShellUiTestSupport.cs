@@ -126,7 +126,8 @@ internal static class AppShellUiHelpers
             imageExporter: exporter,
             defaultProjectsFolder: projects,
             audioDevices: new FakeAudioDeviceService(),
-            speechModels: new FakeSpeechModelService());
+            speechModels: new FakeSpeechModelService(),
+            styleUserFolder: Path.Combine(root, "styles"));
     }
 
     /// <summary>

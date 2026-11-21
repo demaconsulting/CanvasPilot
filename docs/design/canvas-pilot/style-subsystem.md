@@ -13,29 +13,31 @@ later is given the style as a block of text and two tools, and a picture can be 
 None of it depends on any provider of a language model or on any agent library, so what the subsystem offers can be
 given to any assistant that is added later.
 
-The subsystem is built up unit by unit. It now contains seven units, `StyleKitDocument`, `StyleKitCatalog`,
-`StyleKitArchive`, `StyleSelection`, `StyleGuidance`, `StyleChecker`, and `StyleTools`. `StyleKitDocument` holds the
-values of a kit and the format that they are kept in: it reads a kit from a file and from its folder with a message for
-each wrong property, checks a kit that is built in memory with the same rules, and writes a kit as canonical text.
-`StyleKitCatalog` finds the kits in the four places, chooses the kit of the most local place for an id, reads shared
-folders on workers with a time limit, keeps the kits of the program and the shared kits read only, and creates, saves,
-duplicates, copies, and deletes the kits of the user and of the project. The kits of the program are three folders of
-files, `clean`, `slides-dark`, and `dema`, that are copied beside the executable as loose files (content files of the
-library project) and are in the published folder and the installer package; each has three example files that use only
-the colors of the kit. `StyleKitArchive` writes a kit as a zip file and reads one from a zip file as untrusted input: it
-refuses as a whole, before anything is written, an archive with a name that could write outside the target, a link, a
-file that is not part of a kit, or too many or too large files, and it puts a valid kit in place from a hidden folder,
-so a refused archive leaves nothing. `StyleSelection` finds the kit that the open project uses from the id in the
-project file, keeps a new choice in the project file, starts a new project with the default kit of the user, and offers
-the export sizes of the kit and of the application to the export dialog of `Preview`. `StyleGuidance` writes the style
-of a kit as a block of text of at most 4,000 characters for an assistant and as single whole sections, with the full
-paths of the example images. `StyleChecker` measures the colors of a rendered picture against the palette of a kit, in a
-histogram and in CIELAB, and reports what is on the palette, what is a blend at an edge, and what is off the palette.
-The units that show and edit kits in windows follow in later steps, and this document grows with them. `StyleTools`
-describes the two tools of an assistant, `style_get` and `style_check`, as plain values (the descriptor record of the
-drawing knowledge) with a function from text to text that never throws; the check reads only files inside the folder of
-the project. The subsystem depends on CanvasNet for the classification of font families, and on `Project`, `Settings`,
-`Preview`, `Utilities`, `Logging`, and `Knowledge` (only the descriptor record of a tool).
+The subsystem is built up unit by unit. It now contains eight units, `StyleKitDocument`, `StyleKitCatalog`,
+`StyleKitArchive`, `StyleSelection`, `StyleGuidance`, `StyleChecker`, `StyleTools`, and `StylePicker`.
+`StyleKitDocument` holds the values of a kit and the format that they are kept in: it reads a kit from a file and from
+its folder with a message for each wrong property, checks a kit that is built in memory with the same rules, and writes
+a kit as canonical text. `StyleKitCatalog` finds the kits in the four places, chooses the kit of the most local place
+for an id, reads shared folders on workers with a time limit, keeps the kits of the program and the shared kits read
+only, and creates, saves, duplicates, copies, and deletes the kits of the user and of the project. The kits of the
+program are three folders of files, `clean`, `slides-dark`, and `dema`, that are copied beside the executable as loose
+files (content files of the library project) and are in the published folder and the installer package; each has three
+example files that use only the colors of the kit. `StyleKitArchive` writes a kit as a zip file and reads one from a zip
+file as untrusted input: it refuses as a whole, before anything is written, an archive with a name that could write
+outside the target, a link, a file that is not part of a kit, or too many or too large files, and it puts a valid kit in
+place from a hidden folder, so a refused archive leaves nothing. `StyleSelection` finds the kit that the open project
+uses from the id in the project file, keeps a new choice in the project file, starts a new project with the default kit
+of the user, and offers the export sizes of the kit and of the application to the export dialog of `Preview`.
+`StyleGuidance` writes the style of a kit as a block of text of at most 4,000 characters for an assistant and as single
+whole sections, with the full paths of the example images. `StyleChecker` measures the colors of a rendered picture
+against the palette of a kit, in a histogram and in CIELAB, and reports what is on the palette, what is a blend at an
+edge, and what is off the palette. The units that show and edit kits in windows follow in later steps, and this document
+grows with them. `StyleTools` describes the two tools of an assistant, `style_get` and `style_check`, as plain values
+(the descriptor record of the drawing knowledge) with a function from text to text that never throws; the check reads
+only files inside the folder of the project. `StylePicker` is the list in the status bar of the main window with which
+the user chooses the kit of the open project. The subsystem depends on CanvasNet for the classification of font
+families, and on `Project`, `Settings`, `Preview`, `Utilities`, `Logging`, and `Knowledge` (only the descriptor record
+of a tool).
 
 ### Interfaces
 
@@ -122,6 +124,20 @@ the project. The subsystem depends on CanvasNet for the classification of font f
   reads only a file inside the project folder (not in `.canvaspilot`, and not through a link that leads out) and waits
   for the drawing on a thread of the pool, so it must not be called from the thread of the user interface.
 
+**StylePicker**: The choice of the kit in the status bar.
+
+- *Type*: In-process .NET view model `StylePickerViewModel` with the value `StylePickerItem`, and the view
+  `StylePickerView`.
+- *Role*: Provider (the choices and the selection that the window shows), and Consumer (the active style, the catalog,
+  and the project service).
+- *Contract*: `Items` is no style, then each kit that is not hidden by a kit of a more local place, then the kit that
+  the project names when it cannot be found; `SelectedItem` is the kit that the project uses, and setting it writes the
+  choice through `IActiveStyle.SetActiveAsync`; `IsVisible` is true while a project is open; `ErrorMessage` says why a
+  choice was refused; `ApplyDefaultToNewProjectAsync` passes on the request that the shell makes after it created a
+  project.
+- *Constraints*: Keeps no choice of its own: the list is rebuilt from the active style and the catalog on the thread
+  that owns the user interface whenever either announces a change.
+
 ### Design
 
 **The dependency rule.** The subsystems below `AppShell` do not depend on `AppShell` or on each other upwards, and this
@@ -156,6 +172,7 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 - **StyleGuidance** unit: the style of a kit as text for an assistant.
 - **StyleChecker** unit: a picture measured against the palette of a kit.
 - **StyleTools** unit: the tools `style_get` and `style_check` of an assistant.
+- **StylePicker** unit: the choice of the kit of the open project in the status bar.
 - **Knowledge** subsystem: only the descriptor record of a tool (`KnowledgeTool`).
 - **Project** subsystem: which project is open and when it changes, and the id of the kit that the project file keeps
   (the project service).

@@ -208,3 +208,19 @@ sections:
                   - MainWindowView_Prompt_TypedTextAndCancel_ReturnTrimmedTextOrNull
                   - MainWindowView_Pickers_HeadlessPlatform_ReturnNull
                   - MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable
+
+              - id: CanvasPilot-MainWindowShell-ShowTheActiveStyleInAStatusBar
+                title: >-
+                  The MainWindowShell shall show a status bar at the bottom of the window that holds the list with which the
+                  user chooses the style kit of the project, shall show the bar only while a project is open and the
+                  application has such a list, shall follow the list when it shows or hides itself, and shall give a project
+                  that was just created the default style kit of the user and no project that is only opened.
+                justification: |
+                  The style belongs to the project, so the choice has to be in sight while the user works, and an empty bar
+                  with no project open would only take room. A project should say which style it uses from the day it is
+                  made, but opening a project must not change what its file says, and a later change of the preference of the
+                  user must not move projects that exist.
+                tests:
+                  - MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject
+                  - MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar
+                  - StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits

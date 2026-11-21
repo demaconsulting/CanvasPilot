@@ -36,6 +36,9 @@ services, or display are required.
   keeps the message that was sent in its transcript, and has an empty transcript once the project is closed.
 - The chat panel is the chat content of the workspace (shown only while a project is open), the push-to-talk target
   of the shell, and has the window's dialog service as its launcher of the payload inspector.
+- The composition has the catalog of style kits with the kits that come with the program, the picker of the style, the
+  two style tool descriptors, and an exporter that asks for sizes; a new project of the composed shell has the default
+  kit of the user as its style, and the status bar shows the picker while a project is open.
 
 ### Test Scenarios
 
@@ -92,6 +95,13 @@ shows a dialog with the application name, a non-blank version, and five librarie
 command of a composed shell is usable, gives the dialog service one browser whose tree is the roots of the catalog of
 the application, and the browser can show a card of CanvasPilot. This scenario is tested by
 `AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication`.
+
+**AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired**: A composition whose user chose
+`clean` as the default kit finds the three kits that come with the program, shows no picker with no project, gives a
+project created through the shell the kit `clean` as its style (the picker selects it and the status bar is shown),
+describes the tools `style_get` and `style_check`, and, when the user exports the picture that is shown, asks which
+size to export at. This scenario is tested by
+`AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired`.
 
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler
 is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_Throw`.

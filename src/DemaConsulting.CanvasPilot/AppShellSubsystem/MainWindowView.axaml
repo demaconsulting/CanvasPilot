@@ -118,6 +118,20 @@
 
     </Menu>
 
+    <!-- The status bar: the style kit of the open project is chosen here. It is shown while a project is open. -->
+    <Border DockPanel.Dock="Bottom"
+            Name="StatusBar"
+            AutomationProperties.AutomationId="StatusBar"
+            BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            Padding="8,3"
+            IsVisible="{Binding ShowStatusBar}">
+      <ContentControl Name="StylePickerHost"
+                      AutomationProperties.AutomationId="StylePickerHost"
+                      HorizontalAlignment="Left"
+                      Content="{Binding StylePicker}" />
+    </Border>
+
     <ContentControl Name="WorkspaceHost"
                     AutomationProperties.AutomationId="WorkspaceHost"
                     Content="{Binding Workspace}" />

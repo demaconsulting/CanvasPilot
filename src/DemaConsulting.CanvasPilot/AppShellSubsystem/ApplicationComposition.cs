@@ -28,6 +28,7 @@ using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -68,6 +69,10 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="marks">The marks made for the draft message.</param>
     /// <param name="annotation">The layer on which the user marks the shown picture.</param>
     /// <param name="chat">The chat panel, which joins the composer and the annotation layer.</param>
+    /// <param name="styleCatalog">The catalog of style kits.</param>
+    /// <param name="activeStyle">The style kit that the open project uses.</param>
+    /// <param name="stylePicker">The list in the status bar with which the user chooses the style kit.</param>
+    /// <param name="styleTools">The descriptors of the tools that give and check the style, for an assistant.</param>
     /// <param name="ownedServices">The services the composition created and must dispose.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
@@ -81,6 +86,10 @@ public sealed class ApplicationComposition : IDisposable
         MarkRegistry marks,
         AnnotationOverlayViewModel annotation,
         ChatPanelViewModel chat,
+        IStyleKitCatalog styleCatalog,
+        IActiveStyle activeStyle,
+        StylePickerViewModel stylePicker,
+        IReadOnlyList<KnowledgeTool> styleTools,
         IReadOnlyList<IDisposable> ownedServices)
     {
         Logger = logger;
@@ -94,6 +103,10 @@ public sealed class ApplicationComposition : IDisposable
         Marks = marks;
         Annotation = annotation;
         Chat = chat;
+        StyleCatalog = styleCatalog;
+        ActiveStyle = activeStyle;
+        StylePicker = stylePicker;
+        StyleToolDescriptors = styleTools;
         _ownedServices = ownedServices;
 
         // The message is written in the open project: follow it, and start with the one that is open now
@@ -163,6 +176,29 @@ public sealed class ApplicationComposition : IDisposable
     public ChatPanelViewModel Chat { get; }
 
     /// <summary>
+    ///     Gets the catalog of style kits: the kits that come with the program, of the user, of the open project, and in
+    ///     the shared folders. It is read in the background when the application starts, so it is empty for a moment.
+    /// </summary>
+    public IStyleKitCatalog StyleCatalog { get; }
+
+    /// <summary>
+    ///     Gets the style kit that the open project uses, and the means to change it.
+    /// </summary>
+    public IActiveStyle ActiveStyle { get; }
+
+    /// <summary>
+    ///     Gets the list in the status bar of the main window with which the user chooses the style kit of the open project.
+    /// </summary>
+    public StylePickerViewModel StylePicker { get; }
+
+    /// <summary>
+    ///     Gets the descriptors of the two tools that give the style (<c>style_get</c>) and check a picture against it
+    ///     (<c>style_check</c>), in the form of the descriptors of the drawing knowledge, to be given to an assistant
+    ///     together with them when one is added. Nothing in the application calls them yet.
+    /// </summary>
+    public IReadOnlyList<KnowledgeTool> StyleToolDescriptors { get; }
+
+    /// <summary>
     ///     Creates the units for the running application: the log under the per-user local application data
     ///     folder, the settings under the per-user application data folder, the Documents folder as the place
     ///     offered for new projects, and the dispatcher-based refresh scheduler.
@@ -222,6 +258,10 @@ public sealed class ApplicationComposition : IDisposable
     ///     What turns a sent message into what is kept and given to the assistant, or <see langword="null" /> for the
     ///     payload builder, which draws the marks with the render service.
     /// </param>
+    /// <param name="styleUserFolder">
+    ///     The folder of the style kits of the user, or <see langword="null" /> for <c>styles</c> in the data folder of the
+    ///     application. Tests pass a temporary folder so that they do not read the kits of the person who runs them.
+    /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -235,7 +275,8 @@ public sealed class ApplicationComposition : IDisposable
         ISpeechModelService? speechModels = null,
         string? dragFolder = null,
         IDictationService? dictation = null,
-        IMessageBuilder? messageBuilder = null)
+        IMessageBuilder? messageBuilder = null,
+        string? styleUserFolder = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -254,7 +295,21 @@ public sealed class ApplicationComposition : IDisposable
         dragSource.Purge();
         var preview = new PreviewPaneViewModel(renderer, explorer, scheduler, logger: logger, dragSource: dragSource);
         var workspace = new ProjectWorkspaceViewModel(explorer) { Preview = preview };
-        var exporter = imageExporter ?? new ImageExporter(preview, renderer, logger);
+
+        // The style kits: where they are, which one the open project uses, the list that chooses it, and the sizes the
+        // exporter offers. The kits are read in the background, so the start of the application never waits for them.
+        var styleCatalog = new StyleKitCatalog(projects, settings, userFolder: styleUserFolder, logger: logger);
+        var styleSelection = new StyleSelection(projects, styleCatalog, settings, logger);
+        var stylePicker = new StylePickerViewModel(styleSelection, styleCatalog, projects, styleSelection.ApplyDefaultToNewProjectAsync, logger);
+        var styleTools = StyleTools.CreateAll(
+            styleSelection,
+            styleCatalog,
+            () => projects.Current?.FolderPath,
+            () => preview.CurrentImage?.SourcePath,
+            renderer);
+        _ = RefreshStyleKitsAsync(styleCatalog, logger);
+
+        var exporter = imageExporter ?? new ImageExporter(preview, renderer, logger, styleSelection);
 
         // The speech services are shared by the Speech settings page and by dictation. They touch the model store
         // and the audio system only when they are first used, so creating them costs nothing at startup; the ones
@@ -275,6 +330,11 @@ public sealed class ApplicationComposition : IDisposable
             owned.Insert(0, dictationService);
         }
 
+        // The style units listen to the project and the settings; they are disposed before the services they listen to
+        owned.Insert(0, styleCatalog);
+        owned.Insert(0, styleSelection);
+        owned.Insert(0, stylePicker);
+
         IReadOnlyList<ISettingsPage> pages = settingsPages ??
         [
             new AiProviderSettingsPageViewModel(),
@@ -290,6 +350,7 @@ public sealed class ApplicationComposition : IDisposable
             exporter,
             defaultProjectsFolder,
             () => KnowledgeCatalog.Default,
+            stylePicker,
             logger);
 
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project
@@ -316,7 +377,28 @@ public sealed class ApplicationComposition : IDisposable
         shell.PushToTalk = chat;
 
         logger.Log(LogLevel.Info, "Application started.");
-        return new ApplicationComposition(logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat, owned);
+        return new ApplicationComposition(
+            logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat,
+            styleCatalog, styleSelection, stylePicker, styleTools, owned);
+    }
+
+    /// <summary>
+    ///     Reads the style kits in the background and logs a failure, which leaves the list of kits empty until the next
+    ///     change of the project or of the shared folders.
+    /// </summary>
+    /// <param name="catalog">The catalog.</param>
+    /// <param name="logger">The application log.</param>
+    /// <returns>A task that completes when the kits have been read or the failure was logged.</returns>
+    private static async Task RefreshStyleKitsAsync(IStyleKitCatalog catalog, RollingFileLogger logger)
+    {
+        try
+        {
+            await Task.Run(() => catalog.RefreshAsync()).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            logger.Log(LogLevel.Warning, "The style kits could not be read at start.", ex);
+        }
     }
 
     /// <inheritdoc />

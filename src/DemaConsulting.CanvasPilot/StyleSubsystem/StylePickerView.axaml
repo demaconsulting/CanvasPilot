@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.StyleSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.StyleSubsystem.StylePickerView"
+             x:DataType="vm:StylePickerViewModel"
+             IsVisible="{Binding IsVisible}">
+
+  <!-- The style of the open project: a label, the list of kits, and the reason when a choice could not be kept. -->
+  <StackPanel Orientation="Horizontal" Spacing="8">
+
+    <TextBlock VerticalAlignment="Center" Text="Style:" />
+
+    <ComboBox AutomationProperties.AutomationId="StylePicker"
+              MinWidth="220"
+              ItemsSource="{Binding Items}"
+              SelectedItem="{Binding SelectedItem}"
+              ToolTip.Tip="{Binding ToolTipText}">
+      <ComboBox.ItemTemplate>
+        <DataTemplate x:DataType="vm:StylePickerItem">
+          <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding ToolTip}" />
+        </DataTemplate>
+      </ComboBox.ItemTemplate>
+    </ComboBox>
+
+    <TextBlock AutomationProperties.AutomationId="StylePickerError"
+               VerticalAlignment="Center"
+               Foreground="Firebrick"
+               IsVisible="{Binding HasError}"
+               Text="{Binding ErrorMessage}" />
+
+  </StackPanel>
+
+</UserControl>

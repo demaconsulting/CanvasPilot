@@ -494,6 +494,7 @@ sections:
           not silently look different.
         children:
           - CanvasPilot-Style-ChooseActiveKit
+          - CanvasPilot-AppShell-ChooseStyleInStatusBar
           - CanvasPilot-Project-KeepTheStyleChoice
           - CanvasPilot-Settings-KeepStyleSettings
 

@@ -1121,6 +1121,24 @@ reviews:
       - "src/**/StyleSubsystem/StyleSelection.cs"
       - "test/**/StyleSubsystem/StyleSelectionTests.cs"
 
+  - id: CanvasPilot-Style-StylePicker
+    title: Review of CanvasPilot StylePicker unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-picker.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-picker.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-picker.md"
+      - "src/**/StyleSubsystem/StylePickerItem.cs"
+      - "src/**/StyleSubsystem/StylePickerViewModel.cs"
+      - "src/**/StyleSubsystem/StylePickerView.axaml"
+      - "src/**/StyleSubsystem/StylePickerView.axaml.cs"
+      - "test/**/StyleSubsystem/StylePickerTests.cs"
+      - "test/**/StylePickerViewTests.cs"
+
   - id: CanvasPilot-Style-StyleGuidance
     title: Review of CanvasPilot StyleGuidance unit implementation
     context:

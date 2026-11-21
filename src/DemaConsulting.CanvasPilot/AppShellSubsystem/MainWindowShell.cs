@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -28,6 +29,7 @@ using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -112,6 +114,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private readonly Func<IKnowledgeCatalog>? _knowledge;
 
     /// <summary>
+    ///     The list with which the user chooses the style kit of the open project, or null when the application has none.
+    /// </summary>
+    private readonly StylePickerViewModel? _style;
+
+    /// <summary>
     ///     Optional logger for diagnostics.
     /// </summary>
     private readonly RollingFileLogger? _logger;
@@ -180,6 +187,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Gets the catalog of the drawing knowledge for the Help menu, called when the browser is first asked for so that
     ///     the cards are not read at start, or <see langword="null" /> for none, which leaves the menu item disabled.
     /// </param>
+    /// <param name="style">
+    ///     The list with which the user chooses the style kit of the open project, shown in the status bar, or
+    ///     <see langword="null" /> for none, which leaves the status bar out. The shell uses it to give a new project the
+    ///     default style kit of the user but does not dispose it.
+    /// </param>
     /// <param name="logger">Optional logger for diagnostics.</param>
     public MainWindowShell(
         IProjectService projectService,
@@ -190,6 +202,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         IImageExporter? imageExporter = null,
         string? defaultProjectsFolder = null,
         Func<IKnowledgeCatalog>? knowledge = null,
+        StylePickerViewModel? style = null,
         RollingFileLogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
@@ -204,6 +217,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _settingsPages = settingsPages;
         _defaultProjectsFolder = defaultProjectsFolder;
         _knowledge = knowledge;
+        _style = style;
         _logger = logger;
         Workspace = workspace;
         ImageExporter = imageExporter ?? new NullImageExporter();
@@ -212,6 +226,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _projectService.CurrentChanged += OnProjectChanged;
         _recentProjects.Changed += OnRecentProjectsChanged;
         ImageExporter.CanExportChanged += OnCanExportChanged;
+        if (_style is not null)
+        {
+            _style.PropertyChanged += OnStylePickerPropertyChanged;
+        }
 
         RefreshRecentProjects();
         SyncProjectState();
@@ -231,6 +249,18 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Gets what the Image menu exports and copies.
     /// </summary>
     public IImageExporter ImageExporter { get; }
+
+    /// <summary>
+    ///     Gets the list in the status bar with which the user chooses the style kit of the open project, or
+    ///     <see langword="null" /> when the application has none.
+    /// </summary>
+    public StylePickerViewModel? StylePicker => _style;
+
+    /// <summary>
+    ///     Gets a value indicating whether the status bar at the bottom of the window is shown: it is while the application
+    ///     has a style picker and a project is open, because the picker is all that it holds.
+    /// </summary>
+    public bool ShowStatusBar => _style?.IsVisible == true;
 
     /// <summary>
     ///     Gets the recent projects shown in the Recent Projects menu, most recent first.
@@ -317,6 +347,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _projectService.CurrentChanged -= OnProjectChanged;
         _recentProjects.Changed -= OnRecentProjectsChanged;
         ImageExporter.CanExportChanged -= OnCanExportChanged;
+        if (_style is not null)
+        {
+            _style.PropertyChanged -= OnStylePickerPropertyChanged;
+        }
         if (EditTarget is not null)
         {
             EditTarget.UndoRedoStateChanged -= OnUndoRedoStateChanged;
@@ -407,6 +441,12 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         }
 
         var result = await _projectService.CreateAsync(dialog.ParentFolder, dialog.ProjectName);
+        if (result.Succeeded && _style is not null)
+        {
+            // A new project says which style it uses from the start; a project that is only opened keeps what it says
+            await _style.ApplyDefaultToNewProjectAsync();
+        }
+
         await CompleteOpenAsync(result, "New Project");
     }
 
@@ -717,5 +757,18 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
             ExportPngCommand.NotifyCanExecuteChanged();
             CopyImageCommand.NotifyCanExecuteChanged();
         });
+    }
+
+    /// <summary>
+    ///     Shows or hides the status bar when the style picker shows or hides itself.
+    /// </summary>
+    /// <param name="sender">The style picker.</param>
+    /// <param name="e">The event data.</param>
+    private void OnStylePickerPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(StylePickerViewModel.IsVisible))
+        {
+            RunOnOwnerThread(() => OnPropertyChanged(nameof(ShowStatusBar)));
+        }
     }
 }

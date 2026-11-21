@@ -43,25 +43,32 @@ while the talk key is held, which the composition root sets to the chat panel. `
 
 **ExitRequested**: event raised by Exit; the window closes itself in response.
 
+**StylePicker** / **ShowStatusBar**: `StylePicker` is the optional `StylePickerViewModel` of the `Style` subsystem, the
+list with which the user chooses the style kit of the project; the composition root supplies it and keeps it, so the
+shell does not dispose it. `ShowStatusBar` is true while there is a picker and it is visible, which it is while a
+project is open; the shell follows the picker's `IsVisible` and raises the change of `ShowStatusBar`.
+
 **MessageDialogViewModel**: `Title`, `Message`, `OkText`, `ShowCancel`, `IsPrompt`, `InputText`, `Accepted`, `OkCommand`
 (unavailable for a prompt whose entry is blank), `CancelCommand`, and `CloseRequested`.
 
 **Main window**: `MainWindowView` has a `Menu` (`MainMenu`) with the five menus (File, Edit, Image, Tools, Help) and a
-host for the workspace. The Edit menu has Undo and Redo, whose `InputGesture` (Ctrl+Z, Ctrl+Y) is only text,
-because the message editor handles those keys itself. The window implements `IDialogService` with `ShowDialog`,
-`StorageProvider`, the clipboard, and the message dialog. Its
-constructor passes
-itself to `AttachDialogService`, and `ExitRequested` closes it. It also tracks the focus and the talk key (see
-**Focus tracking** and **Talk key** below). Its Help menu has `DrawingKnowledgeMenuItem` (`_Drawing Knowledge...`), a
-separator, and `AboutMenuItem`. The window shows the browser of the drawing knowledge with `Show` and itself as the
-owner, so that it does not block the window, and keeps the one that is open.
+host for the workspace. The Edit menu has Undo and Redo, whose `InputGesture` (Ctrl+Z, Ctrl+Y) is only text, because the
+message editor handles those keys itself. The window implements `IDialogService` with `ShowDialog`, `StorageProvider`,
+the clipboard, and the message dialog. Its constructor passes itself to `AttachDialogService`, and `ExitRequested`
+closes it. It also tracks the focus and the talk key (see **Focus tracking** and **Talk key** below). Its Help menu has
+`DrawingKnowledgeMenuItem` (`_Drawing Knowledge...`), a separator, and `AboutMenuItem`. The window shows the browser of
+the drawing knowledge with `Show` and itself as the owner, so that it does not block the window, and keeps the one that
+is open. Below the content the window has a status bar (`StatusBar`, a `Border` docked at the bottom) whose only content
+is the style picker (`StylePickerHost`); the bar is shown only while `ShowStatusBar` is true.
 
 #### Key Methods
 
 **NewProject**: Builds a `NewProjectDialogViewModel` over the project service with the dialog service as folder
 picker and the start folder, shows it, and, when it was accepted, calls `IProjectService.CreateAsync` with the
 dialog's folder and name. On success the project file is added to the recent projects and the shell is brought in
-line with the project service; on failure the problem is shown.
+line with the project service; on failure the problem is shown. When the shell has a style picker and the project
+was created, the picker is asked to give the project the default style kit of the user before the shell shows the
+project, so a new project says which style it uses from the start; opening a project does not do this.
 
 **OpenProject**: Asks `PickProjectFileAsync` for a file and opens it with `IProjectService.OpenAsync`. A failure
 is shown, and when the file no longer exists it is also removed from the recent projects. Choosing an entry of the
@@ -139,6 +146,8 @@ texts or a blank accepting label.
   dialog service extends `IExportDialogs` so the exporter can ask the user through it.
 - **ExportPresetDialog** (through `IExportDialogs.PickExportPresetAsync`) — the main window shows the Export PNG dialog
   when the exporter asks how to export.
+- **StylePicker** (of the `Style` subsystem) - the list in the status bar that the shell hosts and that it asks to give
+  a new project the default style kit; the shell does not know the kits.
 - **Composer** (through `IUndoRedoTarget` and `IPushToTalkTarget`) — what the Edit menu and the talk key reach; the
   seams are owned by the `Composer` subsystem and the shell does not know what implements them.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.

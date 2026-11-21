@@ -148,6 +148,21 @@ sections:
             tests:
               - AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication
 
+          - id: CanvasPilot-AppShell-ChooseStyleInStatusBar
+            title: >-
+              The AppShell subsystem shall build the style kit catalog, the active style, the list that chooses it, and the
+              two style tool descriptors with the other units of the application, read the kits in the background so that the
+              start of the application does not wait for them, let the exporter offer the sizes of the style, and show the
+              list in a status bar of the main window while a project is open.
+            justification: |
+              The style units do not know the window, the exporter, or each other's owners, so one place has to join them. The
+              kits live in folders that may be slow to read, so reading them must never delay the start, and the user should
+              find the choice of the style where the work is.
+            children:
+              - CanvasPilot-MainWindowShell-ShowTheActiveStyleInAStatusBar
+            tests:
+              - AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired
+
           - id: CanvasPilot-AppShell-ComposeApplication
             title: >-
               The AppShell subsystem shall build the application's units at startup in dependency order, load
