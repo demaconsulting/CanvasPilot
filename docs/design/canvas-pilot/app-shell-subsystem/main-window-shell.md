@@ -30,7 +30,8 @@ constructor; the application supplies the exporter of the `Preview` subsystem.
 **Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled
 while a project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can
 export), `OpenSettingsCommand`, `ShowDrawingKnowledgeCommand` (enabled while the application has knowledge to show), and
-`ShowAboutCommand`, and `UndoCommand` and `RedoCommand` (enabled while `EditTarget` can undo or redo).
+`ShowAboutCommand`, and `UndoCommand` and `RedoCommand` (enabled while `EditTarget` can undo or redo), and
+`CheckAgainstStyleCommand` (enabled while a picture can be checked against the style).
 
 **EditTarget**: `IUndoRedoTarget?` (a `Composer` seam) - what Edit > Undo and Redo act on: the part of the window
 that has the focus, or `null` while the focus is in a part that has nothing to undo. The window sets it. The shell
@@ -95,6 +96,14 @@ it was closed shows a new one.
 **ExportPng** / **CopyImage**: When the exporter can export, call it with the dialog service. The commands are
 re-evaluated when `CanExportChanged` is raised.
 
+**CheckAgainstStyle**: The constructor takes an optional `ICheckAgainstStyle` of the `Style` subsystem. The command
+(`CheckAgainstStyleCommand`, the item `CheckAgainstStyleMenuItem`, `Check _Against Style`, last in the Image menu after
+a separator) can run only while the check says that `CanCheck`, and the shell re-evaluates it when the check raises
+`CanCheckChanged` (on the user interface thread). Running it awaits `RunAsync`, which shows its result among the notes
+of the preview itself; when it answers with a sentence (no picture, no style kit, a kit that cannot be found, a check
+that failed) the shell shows the sentence in a message dialog titled `Check Against Style`. The shell does not dispose
+the check.
+
 **Start folder**: The folder that holds the most recent project's folder, otherwise the default projects folder
 given to the constructor, otherwise none; pickers start there if the folder exists.
 
@@ -148,6 +157,8 @@ texts or a blank accepting label.
   when the exporter asks how to export.
 - **StylePicker** (of the `Style` subsystem) - the list in the status bar that the shell hosts and that it asks to give
   a new project the default style kit; the shell does not know the kits.
+- **StyleChecker** (through `ICheckAgainstStyle`) - what the Check Against Style command runs; the interface belongs to
+  the `Style` subsystem.
 - **Composer** (through `IUndoRedoTarget` and `IPushToTalkTarget`) — what the Edit menu and the talk key reach; the
   seams are owned by the `Composer` subsystem and the shell does not know what implements them.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.

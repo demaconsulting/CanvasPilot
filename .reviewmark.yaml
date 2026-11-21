@@ -1166,10 +1166,13 @@ reviews:
       - "docs/design/canvas-pilot/style-subsystem/style-checker.md"
       - "docs/verification/canvas-pilot/style-subsystem/style-checker.md"
       - "src/**/StyleSubsystem/ColorMath.cs"
+      - "src/**/StyleSubsystem/ICheckAgainstStyle.cs"
+      - "src/**/StyleSubsystem/StyleCheckCommand.cs"
       - "src/**/StyleSubsystem/StyleCheckOptions.cs"
       - "src/**/StyleSubsystem/StyleCheckReport.cs"
       - "src/**/StyleSubsystem/StyleChecker.cs"
       - "test/**/StyleSubsystem/StyleCheckerTests.cs"
+      - "test/**/StyleSubsystem/StyleCheckCommandTests.cs"
 
   - id: CanvasPilot-Style-StyleTools
     title: Review of CanvasPilot StyleTools unit implementation

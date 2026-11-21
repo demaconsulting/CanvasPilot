@@ -139,7 +139,7 @@ public sealed class MainWindowViewTests : IDisposable
             ["NewProjectMenuItem", "OpenProjectMenuItem", "RecentProjectsMenuItem", "SaveProjectMenuItem", "CloseProjectMenuItem", "ExitMenuItem"],
             structure[0].Children);
         Assert.Equal(["UndoMenuItem", "RedoMenuItem"], structure[1].Children);
-        Assert.Equal(["ExportPngMenuItem", "CopyImageMenuItem"], structure[2].Children);
+        Assert.Equal(["ExportPngMenuItem", "CopyImageMenuItem", "CheckAgainstStyleMenuItem"], structure[2].Children);
         Assert.Equal(["SettingsMenuItem"], structure[3].Children);
         Assert.Equal(["DrawingKnowledgeMenuItem", "AboutMenuItem"], structure[4].Children);
         foreach (var item in structure.SelectMany(top => top.Children.Prepend(top.Id)))
@@ -176,7 +176,7 @@ public sealed class MainWindowViewTests : IDisposable
             Assert.True(IsUsable(window.FindControl<MenuItem>(enabled)!), enabled);
         }
 
-        foreach (var disabled in new[] { "RecentProjectsMenuItem", "SaveProjectMenuItem", "CloseProjectMenuItem", "UndoMenuItem", "RedoMenuItem", "ExportPngMenuItem", "CopyImageMenuItem" })
+        foreach (var disabled in new[] { "RecentProjectsMenuItem", "SaveProjectMenuItem", "CloseProjectMenuItem", "UndoMenuItem", "RedoMenuItem", "ExportPngMenuItem", "CopyImageMenuItem", "CheckAgainstStyleMenuItem" })
         {
             Assert.False(IsUsable(window.FindControl<MenuItem>(disabled)!), disabled);
         }
@@ -519,6 +519,56 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal(new Avalonia.PixelSize(30, 12), shownSize);
         Assert.False(IsUsable(export));
         Assert.False(IsUsable(copy));
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that Check Against Style in the Image menu is usable only while a picture is shown, and that running it shows
+    ///     the result in the open list of notes of the preview.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_CheckAgainstStyleMenuItem_PictureShown_EnablesAndShowsNotesInThePreview()
+    {
+        // Arrange: a window showing a project with a blue picture, whose style is the DEMA kit
+        var token = TestContext.Current.CancellationToken;
+        await CreateRememberedProjectAsync("Checked", "a.svg");
+        var (composition, window) = CreateWindow();
+        window.Show();
+        await composition.StyleCatalog.RefreshAsync(token);
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        await composition.ActiveStyle.SetActiveAsync("dema");
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "a.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='12'><rect width='30' height='12' fill='#0000ff'/></svg>",
+            token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        var item = window.FindControl<MenuItem>("CheckAgainstStyleMenuItem")!;
+        var disabledBefore = !IsUsable(item);
+
+        // Act: show the picture, and run the item
+        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var enabledWithPicture = IsUsable(item);
+        await Assert.IsAssignableFrom<IAsyncRelayCommand>(item.Command).ExecuteAsync(null);
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
+
+        // Assert: the notes are listed and the list is open
+        var expander = SettingsUiHelpers.Find<Expander>(window, "PreviewDiagnosticsExpander");
+        var notes = SettingsUiHelpers.Find<ItemsControl>(window, "PreviewDiagnostics").Items.OfType<RenderDiagnostic>().ToArray();
+        Assert.True(disabledBefore);
+        Assert.True(enabledWithPicture);
+        Assert.True(expander.IsVisible);
+        Assert.True(expander.IsExpanded);
+        Assert.Contains(notes, note => note.Code == "style-summary" && note.Message.Contains("FAILED", StringComparison.Ordinal));
+        Assert.Contains(notes, note => note.Code == "style-off-palette");
+
+        composition.Shell.CloseProjectCommand.Execute(null);
+        AppShellUiHelpers.Flush();
+        Assert.False(IsUsable(item));
 
         window.Close();
     }

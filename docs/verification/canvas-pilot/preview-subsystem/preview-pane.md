@@ -44,6 +44,9 @@ temporary local folders and real file I/O; no network or external services are r
   dragging out is off, and a drag from a pane without a drag source start nothing; a drag operation that fails is
   logged and the next drag starts normally.
 - The pane gives a file for dragging only while a picture is shown, dragging out is on, and it has a drag source.
+- Notes that a part gives for the shown picture replace, in place, the earlier notes of the same group, keep the notes
+  of the renderer and of other groups in their order, open the list, are ignored while no picture is shown, and are gone
+  when the picture is drawn again; a blank group and a missing list are refused.
 
 #### Test Scenarios
 
@@ -222,3 +225,15 @@ disables them. This scenario is tested by `MainWindowView_SelectSvg_ShowsPreview
 **PreviewPaneViewModel_ProjectFolder_FollowsTheExplorer**: The pane, seen as the source of the shown picture, has no
 project folder before a project is opened, the folder of the project while it is open, and none after it is closed. This
 scenario is tested by `PreviewPaneViewModel_ProjectFolder_FollowsTheExplorer`.
+
+**PreviewPaneViewModel_ShowNotes_ReplacesTheGroupKeepsOthersAndGoesWithTheNextRender**: A picture is shown with a note
+of the renderer. Notes of the group `style` are given, notes of another group, and new notes of `style`: the list is the
+note of the renderer, the other group's note, and the newest `style` note, in that order, with the header `3 notes`;
+giving no notes removes the `style` notes; after another picture is drawn the list is empty; the list was closed at
+first and open after the first notes. This scenario is tested by
+`PreviewPaneViewModel_ShowNotes_ReplacesTheGroupKeepsOthersAndGoesWithTheNextRender`.
+
+**PreviewPaneViewModel_ShowNotes_NoPictureOrBadArguments_IgnoresOrRefuses**: With no picture shown, notes are ignored
+and the list stays closed; a blank group is refused with `ArgumentException` and a missing list with
+`ArgumentNullException`. This scenario is tested by
+`PreviewPaneViewModel_ShowNotes_NoPictureOrBadArguments_IgnoresOrRefuses`.

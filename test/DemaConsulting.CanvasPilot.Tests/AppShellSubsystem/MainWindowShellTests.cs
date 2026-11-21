@@ -223,6 +223,62 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the Check Against Style command is available only while there is a picture to check, follows it, runs the
+    ///     check, and tells the user why when nothing was checked.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_CheckAgainstStyle_FollowsThePictureRunsTheCheckAndReportsWhyNot()
+    {
+        // Arrange: a shell over a check that has no picture at first and answers as the test says
+        var check = Substitute.For<ICheckAgainstStyle>();
+        check.CanCheck.Returns(false);
+        check.RunAsync().Returns(Task.FromResult<string?>(null));
+        var parts = CreateParts();
+        var shell = new MainWindowShell(
+            parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], null, null, null, null, check);
+        shell.AttachDialogService(_dialogs);
+        _shells.Add(shell);
+        var changes = 0;
+        shell.CheckAgainstStyleCommand.CanExecuteChanged += (_, _) => changes++;
+        var disabledBefore = !shell.CheckAgainstStyleCommand.CanExecute(null);
+
+        // Act: a picture appears, the check runs and succeeds, then it runs and has nothing to check
+        check.CanCheck.Returns(true);
+        check.CanCheckChanged += Raise.Event<EventHandler>(check, EventArgs.Empty);
+        var enabledWithPicture = shell.CheckAgainstStyleCommand.CanExecute(null);
+        await shell.CheckAgainstStyleCommand.ExecuteAsync(null);
+        var messagesAfterSuccess = _dialogs.Messages.Count;
+        check.RunAsync().Returns(Task.FromResult<string?>("This project has no style kit."));
+        await shell.CheckAgainstStyleCommand.ExecuteAsync(null);
+
+        // Assert: the command followed the picture, ran the check twice, and showed a message only for the refusal
+        Assert.True(disabledBefore);
+        Assert.True(enabledWithPicture);
+        Assert.True(changes >= 1);
+        Assert.Equal(0, messagesAfterSuccess);
+        await check.Received(2).RunAsync();
+        Assert.Equal([("Check Against Style", "This project has no style kit.")], _dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that a shell with nothing that can check a picture leaves the Check Against Style command unavailable.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_CheckAgainstStyle_NothingToCheckWith_IsUnavailableAndDoesNothing()
+    {
+        // Arrange: a shell with no check
+        var shell = CreateShell();
+
+        // Act
+        var canExecute = shell.CheckAgainstStyleCommand.CanExecute(null);
+        await shell.CheckAgainstStyleCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.False(canExecute);
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
     ///     Test that canceling the New Project dialog creates nothing.
     /// </summary>
     [Fact]

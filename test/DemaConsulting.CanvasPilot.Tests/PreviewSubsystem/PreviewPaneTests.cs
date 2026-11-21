@@ -717,6 +717,71 @@ public sealed class PreviewPaneTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that notes from a part that checks the picture replace the earlier notes of their group in place, leave the
+    ///     notes of the renderer and of other groups alone, open the list, and go away when the picture is drawn again.
+    /// </summary>
+    [Fact]
+    public async Task PreviewPaneViewModel_ShowNotes_ReplacesTheGroupKeepsOthersAndGoesWithTheNextRender()
+    {
+        // Arrange: a pane that shows a picture with a note of the renderer
+        var pane = CreatePane();
+        _explorer.Open(_folder);
+        _explorer.SelectFile(Path.Combine(_folder, "a.svg"));
+        var rendererNote = new RenderDiagnostic(RenderDiagnosticSeverity.Warning, "image-access-denied", "not drawn");
+        _renderer.Requests[0].Succeed(8, 4, rendererNote);
+        await pane.RenderCompletion;
+        IRenderNoteSink sink = pane;
+        var first = new RenderDiagnostic(RenderDiagnosticSeverity.Info, "style-summary", "first check");
+        var otherGroup = new RenderDiagnostic(RenderDiagnosticSeverity.Info, "other-note", "another part");
+        var second = new RenderDiagnostic(RenderDiagnosticSeverity.Warning, "style-off-palette", "second check");
+        var expandedBefore = pane.AreDiagnosticsExpanded;
+
+        // Act: show notes of a group, notes of another group, then the notes of the first group again
+        sink.ShowNotes("style", [first]);
+        var expandedAfterFirst = pane.AreDiagnosticsExpanded;
+        sink.ShowNotes("other", [otherGroup]);
+        sink.ShowNotes("style", [second]);
+        var afterReplace = pane.Diagnostics.ToArray();
+        var header = pane.DiagnosticsHeader;
+        sink.ShowNotes("style", []);
+        var afterRemove = pane.Diagnostics.ToArray();
+
+        // Act: draw the picture again
+        sink.ShowNotes("style", [first]);
+        _explorer.SelectFile(Path.Combine(_folder, "b.svg"));
+        _renderer.Requests[1].Succeed(5, 5);
+        await pane.RenderCompletion;
+
+        // Assert: the group was replaced in place, the other notes stayed, the list opened, and a new render cleared them
+        Assert.False(expandedBefore);
+        Assert.True(expandedAfterFirst);
+        Assert.Equal([rendererNote, otherGroup, second], afterReplace);
+        Assert.Equal("3 notes", header);
+        Assert.Equal([rendererNote, otherGroup], afterRemove);
+        Assert.Empty(pane.Diagnostics);
+    }
+
+    /// <summary>
+    ///     Test that notes are ignored while no picture is shown and that a missing group or list is refused.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_ShowNotes_NoPictureOrBadArguments_IgnoresOrRefuses()
+    {
+        // Arrange: a pane with no picture
+        var pane = CreatePane();
+        var note = new RenderDiagnostic(RenderDiagnosticSeverity.Info, "style-summary", "check");
+
+        // Act: show notes
+        pane.ShowNotes("style", [note]);
+
+        // Assert: nothing was added, the list stayed closed, and bad arguments are refused
+        Assert.Empty(pane.Diagnostics);
+        Assert.False(pane.AreDiagnosticsExpanded);
+        Assert.Throws<ArgumentException>(() => pane.ShowNotes(" ", []));
+        Assert.Throws<ArgumentNullException>(() => pane.ShowNotes("style", null!));
+    }
+
+    /// <summary>
     ///     Test that the constructor rejects missing collaborators.
     /// </summary>
     [Fact]

@@ -79,3 +79,26 @@ sections:
                   able to check a picture again after a small change and see that only what changed is different.
                 tests:
                   - StyleChecker_Check_SameOrShuffledPixels_GiveEqualReports
+
+              - id: CanvasPilot-StyleChecker-CheckTheShownPicture
+                title: >-
+                  The StyleChecker shall, when the user asks, check the picture that is shown against the kit that the open
+                  project uses, measure the colors on a worker thread and give the result back through the context of the
+                  caller, show it among the notes of the picture, replace the notes of an earlier check, drop the result of a
+                  check whose picture was replaced while it ran, say whether a picture can be checked as pictures appear and go
+                  away, and answer with a sentence, and show no notes, when there is no picture, no style kit, a kit that cannot
+                  be found, or a check that fails.
+                justification: |
+                  The check of a picture is a command of the user, who must be told why nothing happened when there is nothing to
+                  check against. The colors of a large picture take time to count, so the user interface must not wait for
+                  them, and a result that is about a picture that is no longer shown would put notes on the wrong picture.
+                tests:
+                  - StyleCheckCommand_RunAsync_NoPicture_ReturnsMessageAndShowsNothing
+                  - StyleCheckCommand_RunAsync_NoKitOrMissingKit_ReturnsMessageAndShowsNothing
+                  - StyleCheckCommand_RunAsync_PictureOnThePalette_ShowsPassedNotes
+                  - StyleCheckCommand_RunAsync_PictureOffThePalette_ShowsFailedNotesWithTheColor
+                  - StyleCheckCommand_RunAsync_PictureReplacedDuringTheCheck_ShowsNothing
+                  - StyleCheckCommand_RunAsync_CheckThrows_ReturnsMessageAndShowsNothing
+                  - StyleCheckCommand_CanCheck_PictureComesAndGoes_IsAnnouncedUntilDisposed
+                  - StyleCheckCommand_RunAsync_CalledUnderAContext_AppliesTheResultThroughIt
+                  - StyleCheckCommand_Constructor_NullArguments_Throw

@@ -32,7 +32,7 @@ namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
 ///     earlier render never replaces the result of a later one. It exposes the picture, the busy state, the error
 ///     (with its code and hint), and the notes of the render for its view.
 /// </summary>
-public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedImageSource, IDisposable
+public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedImageSource, IRenderNoteSink, IDisposable
 {
     /// <summary>
     ///     How long the pane waits after the last file system change before it renders again.
@@ -111,6 +111,12 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowPlaceholder), nameof(StatusText))]
     private bool _isBusy;
+
+    /// <summary>
+    ///     Whether the list of notes is open.
+    /// </summary>
+    [ObservableProperty]
+    private bool _areDiagnosticsExpanded;
 
     /// <summary>
     ///     The shown picture.
@@ -639,6 +645,40 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
         foreach (var note in notes)
         {
             _diagnostics.Add(note);
+        }
+    }
+
+    /// <inheritdoc />
+    public void ShowNotes(string group, IReadOnlyList<RenderDiagnostic> notes)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(group);
+        ArgumentNullException.ThrowIfNull(notes);
+
+        // Notes are about the shown picture; with none shown there is nothing for them to be about
+        if (Image is null)
+        {
+            return;
+        }
+
+        // The earlier notes of the group go, in place, so the notes of the renderer and of other groups keep their order
+        var prefix = group + "-";
+        for (var index = _diagnostics.Count - 1; index >= 0; index--)
+        {
+            if (_diagnostics[index].Code.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                _diagnostics.RemoveAt(index);
+            }
+        }
+
+        foreach (var note in notes)
+        {
+            _diagnostics.Add(note);
+        }
+
+        // The user asked for these notes, so show them without making the user open the list
+        if (notes.Count > 0)
+        {
+            AreDiagnosticsExpanded = true;
         }
     }
 

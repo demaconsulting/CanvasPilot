@@ -429,6 +429,63 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that Check Against Style on the composed shell measures the shown picture against the kit of the project and
+    ///     shows the result among the notes of the preview, tells the user when the project has no style, and that the notes
+    ///     are gone when the picture is drawn again.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_CheckAgainstStyle_ComposedShell_ShowsNotesInThePreview()
+    {
+        // Arrange: a project that uses the Clean kit and shows a picture that is mostly a lime green that the kit does not have
+        var token = TestContext.Current.CancellationToken;
+        var composition = Compose();
+        await composition.StyleCatalog.RefreshAsync(token);
+        _dialogs.OnNewProject = dialog =>
+        {
+            dialog.ProjectName = "Checked";
+            dialog.OkCommand.Execute(null);
+        };
+        await composition.Shell.NewProjectCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "lime.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='#00FF00'/></svg>",
+            token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "lime.svg"));
+        await composition.Preview.RenderCompletion;
+        var enabledWithPicture = composition.Shell.CheckAgainstStyleCommand.CanExecute(null);
+
+        // Act: check with no style, then choose Clean and check again
+        await composition.Shell.CheckAgainstStyleCommand.ExecuteAsync(null);
+        var messagesWithoutStyle = _dialogs.Messages.ToArray();
+        var notesWithoutStyle = composition.Preview.Diagnostics.Count;
+        await composition.ActiveStyle.SetActiveAsync("clean");
+        await composition.Shell.CheckAgainstStyleCommand.ExecuteAsync(null);
+        var notes = composition.Preview.Diagnostics.ToArray();
+        var expanded = composition.Preview.AreDiagnosticsExpanded;
+
+        // Act: draw another picture
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "plain.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='#FFFFFF'/></svg>",
+            token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "plain.svg"));
+        await composition.Preview.RenderCompletion;
+
+        // Assert: the command was enabled, the user was told about the missing style, and the notes name the lime picture
+        Assert.True(enabledWithPicture);
+        Assert.Equal("Check Against Style", Assert.Single(messagesWithoutStyle).Title);
+        Assert.Contains("no style kit", messagesWithoutStyle[0].Message, StringComparison.Ordinal);
+        Assert.Equal(0, notesWithoutStyle);
+        Assert.Contains(notes, note => note.Code == "style-summary" && note.Message.Contains("FAILED", StringComparison.Ordinal));
+        Assert.Contains(notes, note => note.Code == "style-off-palette" && note.Message.Contains("#00FF00", StringComparison.OrdinalIgnoreCase));
+        Assert.True(expanded);
+        Assert.DoesNotContain(composition.Preview.Diagnostics, note => note.Code.StartsWith("style-", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     ///     Test that composing the application refuses missing parts.
     /// </summary>
     [Fact]

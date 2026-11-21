@@ -119,6 +119,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private readonly StylePickerViewModel? _style;
 
     /// <summary>
+    ///     Checks the shown picture against the style kit of the project, or null when the application cannot.
+    /// </summary>
+    private readonly ICheckAgainstStyle? _styleCheck;
+
+    /// <summary>
     ///     Optional logger for diagnostics.
     /// </summary>
     private readonly RollingFileLogger? _logger;
@@ -192,6 +197,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     <see langword="null" /> for none, which leaves the status bar out. The shell uses it to give a new project the
     ///     default style kit of the user but does not dispose it.
     /// </param>
+    /// <param name="checkAgainstStyle">
+    ///     What the Check Against Style item of the Image menu runs, or <see langword="null" /> for none, which leaves the item
+    ///     disabled. The shell does not dispose it.
+    /// </param>
     /// <param name="logger">Optional logger for diagnostics.</param>
     public MainWindowShell(
         IProjectService projectService,
@@ -203,6 +212,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         string? defaultProjectsFolder = null,
         Func<IKnowledgeCatalog>? knowledge = null,
         StylePickerViewModel? style = null,
+        ICheckAgainstStyle? checkAgainstStyle = null,
         RollingFileLogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
@@ -218,6 +228,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _defaultProjectsFolder = defaultProjectsFolder;
         _knowledge = knowledge;
         _style = style;
+        _styleCheck = checkAgainstStyle;
         _logger = logger;
         Workspace = workspace;
         ImageExporter = imageExporter ?? new NullImageExporter();
@@ -229,6 +240,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         if (_style is not null)
         {
             _style.PropertyChanged += OnStylePickerPropertyChanged;
+        }
+
+        if (_styleCheck is not null)
+        {
+            _styleCheck.CanCheckChanged += OnCanCheckChanged;
         }
 
         RefreshRecentProjects();
@@ -350,6 +366,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         if (_style is not null)
         {
             _style.PropertyChanged -= OnStylePickerPropertyChanged;
+        }
+
+        if (_styleCheck is not null)
+        {
+            _styleCheck.CanCheckChanged -= OnCanCheckChanged;
         }
         if (EditTarget is not null)
         {
@@ -533,6 +554,32 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
             await ImageExporter.CopyImageAsync(_dialogs);
         }
     }
+
+    /// <summary>
+    ///     Checks the shown picture against the style kit of the project and shows the result among the notes of the picture;
+    ///     when nothing could be checked, tells the user why.
+    /// </summary>
+    /// <returns>A task that completes when the check has finished and the user was told, if there was need.</returns>
+    [RelayCommand(CanExecute = nameof(CanCheckAgainstStyle))]
+    private async Task CheckAgainstStyleAsync()
+    {
+        if (_styleCheck is null)
+        {
+            return;
+        }
+
+        var message = await _styleCheck.RunAsync();
+        if (message is not null && _dialogs is not null)
+        {
+            await _dialogs.ShowMessageAsync("Check Against Style", message);
+        }
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether the Check Against Style command can run.
+    /// </summary>
+    /// <returns><see langword="true" /> when the application can check and a picture is shown.</returns>
+    private bool CanCheckAgainstStyle() => _styleCheck?.CanCheck == true;
 
     /// <summary>
     ///     Opens the settings dialog.
@@ -757,6 +804,16 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
             ExportPngCommand.NotifyCanExecuteChanged();
             CopyImageCommand.NotifyCanExecuteChanged();
         });
+    }
+
+    /// <summary>
+    ///     Re-evaluates the Check Against Style command when the picture that can be checked appeared or went away.
+    /// </summary>
+    /// <param name="sender">The check.</param>
+    /// <param name="e">The event data.</param>
+    private void OnCanCheckChanged(object? sender, EventArgs e)
+    {
+        RunOnOwnerThread(() => CheckAgainstStyleCommand.NotifyCanExecuteChanged());
     }
 
     /// <summary>

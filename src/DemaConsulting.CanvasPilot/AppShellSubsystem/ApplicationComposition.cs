@@ -72,6 +72,7 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="styleCatalog">The catalog of style kits.</param>
     /// <param name="activeStyle">The style kit that the open project uses.</param>
     /// <param name="stylePicker">The list in the status bar with which the user chooses the style kit.</param>
+    /// <param name="styleCheck">What the Check Against Style item of the Image menu runs.</param>
     /// <param name="styleTools">The descriptors of the tools that give and check the style, for an assistant.</param>
     /// <param name="ownedServices">The services the composition created and must dispose.</param>
     private ApplicationComposition(
@@ -89,6 +90,7 @@ public sealed class ApplicationComposition : IDisposable
         IStyleKitCatalog styleCatalog,
         IActiveStyle activeStyle,
         StylePickerViewModel stylePicker,
+        ICheckAgainstStyle styleCheck,
         IReadOnlyList<KnowledgeTool> styleTools,
         IReadOnlyList<IDisposable> ownedServices)
     {
@@ -106,6 +108,7 @@ public sealed class ApplicationComposition : IDisposable
         StyleCatalog = styleCatalog;
         ActiveStyle = activeStyle;
         StylePicker = stylePicker;
+        StyleCheck = styleCheck;
         StyleToolDescriptors = styleTools;
         _ownedServices = ownedServices;
 
@@ -190,6 +193,12 @@ public sealed class ApplicationComposition : IDisposable
     ///     Gets the list in the status bar of the main window with which the user chooses the style kit of the open project.
     /// </summary>
     public StylePickerViewModel StylePicker { get; }
+
+    /// <summary>
+    ///     Gets what the Check Against Style item of the Image menu runs: the check of the shown picture against the style
+    ///     kit of the open project.
+    /// </summary>
+    public ICheckAgainstStyle StyleCheck { get; }
 
     /// <summary>
     ///     Gets the descriptors of the two tools that give the style (<c>style_get</c>) and check a picture against it
@@ -301,6 +310,7 @@ public sealed class ApplicationComposition : IDisposable
         var styleCatalog = new StyleKitCatalog(projects, settings, userFolder: styleUserFolder, logger: logger);
         var styleSelection = new StyleSelection(projects, styleCatalog, settings, logger);
         var stylePicker = new StylePickerViewModel(styleSelection, styleCatalog, projects, styleSelection.ApplyDefaultToNewProjectAsync, logger);
+        var styleCheck = new StyleCheckCommand(preview, styleSelection, preview, logger);
         var styleTools = StyleTools.CreateAll(
             styleSelection,
             styleCatalog,
@@ -334,6 +344,7 @@ public sealed class ApplicationComposition : IDisposable
         owned.Insert(0, styleCatalog);
         owned.Insert(0, styleSelection);
         owned.Insert(0, stylePicker);
+        owned.Insert(0, styleCheck);
 
         IReadOnlyList<ISettingsPage> pages = settingsPages ??
         [
@@ -351,6 +362,7 @@ public sealed class ApplicationComposition : IDisposable
             defaultProjectsFolder,
             () => KnowledgeCatalog.Default,
             stylePicker,
+            styleCheck,
             logger);
 
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project
@@ -379,7 +391,7 @@ public sealed class ApplicationComposition : IDisposable
         logger.Log(LogLevel.Info, "Application started.");
         return new ApplicationComposition(
             logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat,
-            styleCatalog, styleSelection, stylePicker, styleTools, owned);
+            styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, owned);
     }
 
     /// <summary>

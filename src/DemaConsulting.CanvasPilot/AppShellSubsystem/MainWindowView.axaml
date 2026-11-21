@@ -91,6 +91,11 @@
                   AutomationProperties.AutomationId="CopyImageMenuItem"
                   Header="_Copy Image"
                   Command="{Binding CopyImageCommand}" />
+        <Separator />
+        <MenuItem Name="CheckAgainstStyleMenuItem"
+                  AutomationProperties.AutomationId="CheckAgainstStyleMenuItem"
+                  Header="Check _Against Style"
+                  Command="{Binding CheckAgainstStyleCommand}" />
       </MenuItem>
 
       <MenuItem Name="ToolsMenu"

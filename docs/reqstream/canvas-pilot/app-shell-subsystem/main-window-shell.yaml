@@ -224,3 +224,19 @@ sections:
                   - MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject
                   - MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar
                   - StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits
+
+              - id: CanvasPilot-MainWindowShell-CheckAgainstStyleFromTheImageMenu
+                title: >-
+                  The MainWindowShell shall offer a Check Against Style item in the Image menu, after Copy Image, that is usable
+                  only while the application can check and a picture is shown and that follows the picture as it appears and
+                  goes away, that runs the check, and that tells the user, in a message, why when nothing was checked, and
+                  shall leave the item unusable when the application has no check.
+                justification: |
+                  Whether a picture follows the style is a question about the picture the user is looking at, so the command is
+                  in the menu of the picture and is offered only when there is something to check. A command that does nothing
+                  without a word would look broken, so a missing style or picture is said.
+                tests:
+                  - MainWindowShell_CheckAgainstStyle_FollowsThePictureRunsTheCheckAndReportsWhyNot
+                  - MainWindowShell_CheckAgainstStyle_NothingToCheckWith_IsUnavailableAndDoesNothing
+                  - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
+                  - MainWindowView_CheckAgainstStyleMenuItem_PictureShown_EnablesAndShowsNotesInThePreview

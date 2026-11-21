@@ -35,6 +35,8 @@ watcher; no network, external services, or display are required.
   for the same picture and is another file for another picture.
 - Exported at a size that is chosen in the export dialog, the shown file is drawn again and written as a PNG of exactly
   that size with its resolution, and the choice is offered again the next time.
+- Notes that another part gives for the shown picture are listed after the notes of the renderer, are replaced by the
+  next notes of the same group, open the list, and are gone when the next picture is drawn.
 
 ### Test Scenarios
 
@@ -86,6 +88,11 @@ picture are drawn again into a 400 by 400 box with a white margin. The picture i
 white, the red picture is in the middle, and the PNG that is encoded from it with 150 dots per inch decodes at 400 by
 400 and holds 5906 pixels per meter in its physical size chunk. This scenario is tested by
 `PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution`.
+
+**PreviewSubsystem_ShowNotesOfOtherParts_ListedWithRendererNotesAndGoWithTheNextPicture**: With a picture shown, a part
+gives a note of the group `style`, and then another note of the same group; only the second is listed, the header says
+`1 note`, the list is open, and after another file is drawn the list is empty. This scenario is tested by
+`PreviewSubsystem_ShowNotesOfOtherParts_ListedWithRendererNotesAndGoWithTheNextPicture`.
 
 **PreviewSubsystem_ExportAtPreset_ShownPicture_WritesPngOfThePresetSizeAndRemembersTheChoice**: With the 40 by 20
 picture shown, a source of one size (300 by 300 at 200 dots per inch), and a user who works the real export dialog view

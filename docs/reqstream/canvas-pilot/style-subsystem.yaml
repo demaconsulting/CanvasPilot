@@ -140,6 +140,7 @@ sections:
               - CanvasPilot-StyleChecker-ReportOffPaletteColors
               - CanvasPilot-StyleChecker-AllowBlendedEdges
               - CanvasPilot-StyleChecker-BeDeterministic
+              - CanvasPilot-StyleChecker-CheckTheShownPicture
             tests:
               - StyleSubsystem_CheckPictures_RealRenderedPictures_PassOnAndFailOffThePalette
 

@@ -113,6 +113,17 @@ of a tool).
 - *Constraints*: Stateless and thread-safe. The same pixels, in any order, give the same report. A picture of the
   largest size is checked in well under a second.
 
+**CheckAgainstStyle**: The command of the Image menu.
+
+- *Type*: In-process .NET interface `ICheckAgainstStyle` and sealed class `StyleCheckCommand`.
+- *Role*: Provider (the command, to the main window), and Consumer (the shown picture and the notes of the preview of
+  `Preview`, and the active style).
+- *Contract*: `CanCheck` says whether a picture is shown and `CanCheckChanged` follows it; `RunAsync` checks the shown
+  picture against the kit of the project on a worker thread and puts the result among the notes of the picture, and
+  answers `null`, or a sentence that says why nothing was checked.
+- *Constraints*: Changes nothing but the notes. The result is applied on the context of the caller, and a result about a
+  picture that was replaced is dropped.
+
 **StyleTools**: The tools of an assistant.
 
 - *Type*: In-process .NET static class `StyleTools`; the tools are `KnowledgeTool` records of the `Knowledge` subsystem.

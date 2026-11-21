@@ -20,7 +20,8 @@ the explorer holds, or `null` when no project is open, for the parts that draw t
 
 **IRenderNoteSink**: the interface (`ShowNotes(group, notes)`) through which a part that checks the picture can put its
 own notes in the list of notes of the picture; the code of every note of a group starts with the group name and a
-hyphen. The interface is declared with the picture source; the pane takes the notes in a later step.
+hyphen. The pane implements it (see **ShowNotes** below). **AreDiagnosticsExpanded**: whether the list of notes is
+open, bound both ways to the expander of the view; the pane opens it when notes are given.
 
 **IsBusy** / **StatusText**: whether a render runs, and a line such as `Rendering a.svg...`,
 `a.svg: 40 x 20 px, svg, 1 note`, or `a.svg: render failed`.
@@ -118,6 +119,13 @@ hidden `.canvaspilot` folder at the project root and a `.canvaspilot` project fi
 other path, including assets in sub-folders, as relevant. Watcher errors are logged and request a render. A folder
 that cannot be watched is logged; the pane then renders only when the selection changes.
 
+**ShowNotes**: Implements `IRenderNoteSink`. Given a group name and notes, and only while a picture is shown, it removes
+from the list of notes, in place, every note whose code starts with the group name and a hyphen, adds the new notes at
+the end, and opens the list when there are new notes. The notes of the renderer and of other groups keep their place. A
+blank group or a missing list is refused with an exception. The list of notes is replaced as a whole by the result of
+the next render, so these notes are gone as soon as the picture is drawn again; the caller applies them on the thread
+that owns the user interface.
+
 **Dispose**: Stops the watcher, discards the pending render, cancels the running render, and unsubscribes from the
 explorer. It is safe to call twice. Results that arrive afterwards are ignored.
 
@@ -141,6 +149,8 @@ entry are ignored.
 
 - The workspace — shows the view through the view locator and disposes the view model.
 - `ImageExporter` — reads the shown picture through `IRenderedImageSource`.
+- The check of the picture against the style (`StyleCheckCommand`, of the `Style` subsystem) — reads the shown picture
+  through `IRenderedImageSource` and gives its notes through `IRenderNoteSink`.
 - `ApplicationComposition` — creates the pane over the explorer, the refresh scheduler, and the drag source, puts the
   marking layer in `Overlay` and its tool bar in `Toolbar`, and turns `IsDragOutEnabled` off while a marking tool is
   chosen.

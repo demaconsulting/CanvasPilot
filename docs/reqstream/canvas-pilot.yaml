@@ -540,3 +540,5 @@ sections:
           anti-aliased edge must not be taken for a departure.
         children:
           - CanvasPilot-Style-CheckPictures
+          - CanvasPilot-Preview-ShowNotesOfOtherParts
+          - CanvasPilot-AppShell-CheckAgainstStyleMenu

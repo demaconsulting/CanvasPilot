@@ -11,7 +11,10 @@ largest size that CanvasNet draws (8192 by 8000 pixels). The color arithmetic is
 CIELAB for white, black, a gray, and red. The boundary of the tolerance is found with the same arithmetic as the check,
 on a kit that has only white so that no line between two palette colors can make a blend. The kits that come with the
 program are checked on their nine example pictures, which are really drawn by the render service, in
-`BuiltInStyleKitTests.cs`. A subsystem test draws two files and checks them against a kit that the catalog finds.
+`BuiltInStyleKitTests.cs`. A subsystem test draws two files and checks them against a kit that the catalog finds. The
+command that the Image menu runs is verified in `StyleCheckCommandTests.cs` with a hand-written source of pictures,
+active style, and sink of notes, and the real checker; the last test runs it under a synchronization context that counts
+what is posted to it.
 
 #### Test Environment
 
@@ -50,6 +53,10 @@ seconds; it was measured at about 0.5 seconds in a debug build on the developmen
 - The options have the values of the design and refuse a limit that is not a number in its range; the methods refuse a
   missing picture or kit, a negative size, pixels that do not fit the size, a limit out of range, and a kit with no
   color.
+- The command of the user checks the shown picture against the kit of the project on a worker thread, applies the notes
+  through the context of the caller, shows nothing and says why when there is no picture, no kit, or a kit that cannot
+  be found, drops the result of a picture that was replaced, answers with a sentence when the check fails, and announces
+  when a picture can be checked.
 
 #### Test Scenarios
 
@@ -135,3 +142,39 @@ limit out of range, and a kit with no color are refused. This scenario is tested
 **BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette**: Each of the nine examples of the kits that come with the program
 is drawn and checked against its own kit: it passes and less than a thousandth of it is off the palette. This scenario
 is tested by `BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette`.
+
+**StyleCheckCommand_RunAsync_NoPicture_ReturnsMessageAndShowsNothing**: With a kit and no picture the command cannot
+check, and answers with a sentence that tells the user that there is no picture. This scenario is tested by
+`StyleCheckCommand_RunAsync_NoPicture_ReturnsMessageAndShowsNothing`.
+
+**StyleCheckCommand_RunAsync_NoKitOrMissingKit_ReturnsMessageAndShowsNothing**: With a picture and no style kit the
+sentence says that the project has no style kit and points at the status bar; with a kit that cannot be found it names
+the kit; no notes are shown in either case. This scenario is tested by
+`StyleCheckCommand_RunAsync_NoKitOrMissingKit_ReturnsMessageAndShowsNothing`.
+
+**StyleCheckCommand_RunAsync_PictureOnThePalette_ShowsPassedNotes**: A picture of white and blue, which the kit has, is
+checked by the real checker and the notes of the group `style` say that it passed and have no color off the palette.
+This scenario is tested by `StyleCheckCommand_RunAsync_PictureOnThePalette_ShowsPassedNotes`.
+
+**StyleCheckCommand_RunAsync_PictureOffThePalette_ShowsFailedNotesWithTheColor**: A picture of which a quarter is a red
+that the kit does not have is checked: the notes say that it failed, and a warning names the red. This scenario is
+tested by `StyleCheckCommand_RunAsync_PictureOffThePalette_ShowsFailedNotesWithTheColor`.
+
+**StyleCheckCommand_RunAsync_PictureReplacedDuringTheCheck_ShowsNothing**: The shown picture is replaced as soon as the
+command has asked for the kit; the check is made and its result is dropped. This scenario is tested by
+`StyleCheckCommand_RunAsync_PictureReplacedDuringTheCheck_ShowsNothing`.
+
+**StyleCheckCommand_RunAsync_CheckThrows_ReturnsMessageAndShowsNothing**: A kit with no color makes the checker refuse;
+the command answers with a sentence that begins `The picture could not be checked` and shows no notes. This scenario is
+tested by `StyleCheckCommand_RunAsync_CheckThrows_ReturnsMessageAndShowsNothing`.
+
+**StyleCheckCommand_CanCheck_PictureComesAndGoes_IsAnnouncedUntilDisposed**: A picture that appears and goes away is
+announced and changes `CanCheck`; after disposal (twice) nothing more is announced. This scenario is tested by
+`StyleCheckCommand_CanCheck_PictureComesAndGoes_IsAnnouncedUntilDisposed`.
+
+**StyleCheckCommand_RunAsync_CalledUnderAContext_AppliesTheResultThroughIt**: When the command is run under a
+synchronization context that counts what is posted to it, the continuation is posted to that context and the notes are
+shown. This scenario is tested by `StyleCheckCommand_RunAsync_CalledUnderAContext_AppliesTheResultThroughIt`.
+
+**StyleCheckCommand_Constructor_NullArguments_Throw**: A missing source of pictures, active style, or sink of notes is
+refused. This scenario is tested by `StyleCheckCommand_Constructor_NullArguments_Throw`.

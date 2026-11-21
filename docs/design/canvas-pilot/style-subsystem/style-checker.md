@@ -8,7 +8,9 @@
 is on the palette, how much is a blend of palette colors at an edge, and which colors are off the palette, with the
 share of each and the palette color that is nearest. A style is kept only when departures from it can be seen, and the
 report tells the person (and, later, an assistant) what to change. The unit works on the pixels that the application
-already holds for a rendered picture, reads no file, and has no user interface.
+already holds for a rendered picture, reads no file, and has no user interface of its own; the small command that the
+Image menu runs (`StyleCheckCommand`) belongs to it and joins the shown picture, the style of the project, and the notes
+of the preview.
 
 #### Data Model
 
@@ -69,6 +71,18 @@ whether a color is in a palette.
 **Known limit.** A smooth gradient between two palette colors lies on the line between them, so it counts as blended
 edges and not as colors off the palette; a gradient to a color that is not in the palette is off the palette.
 
+**The command of the user** (`ICheckAgainstStyle` and `StyleCheckCommand`). The Image menu asks to check the picture
+that is shown. `StyleCheckCommand` takes the picture from `IRenderedImageSource` and the kit from `IActiveStyle` once,
+at the start. With no picture, with no kit, and with a kit that cannot be found it answers with a sentence for the user
+and shows nothing. Otherwise it runs `Check` on a worker thread (`Task.Run`), waits for it without leaving the
+synchronization context of the caller, so the rest runs on the thread that owns the user interface when the command is
+run from it, and gives `ToNotes()` to `IRenderNoteSink.ShowNotes` with the group `style`, unless the picture has been
+replaced while the check ran (the result would then be about a picture that is no longer shown) or the command was
+disposed. A failure of `Check` is written to the log and answered with a sentence. `CanCheck` is true while there is a
+picture, and `CanCheckChanged` follows `IRenderedImageSource.CurrentImageChanged`. The interface is owned by the Style
+subsystem, like `IKnowledgeBrowserLauncher` by Knowledge, so that the main window can offer the command and `Style` does
+not depend on the window; the answer is `null` or a sentence, and the window shows the sentence in a message.
+
 #### Error Handling
 
 The methods throw `ArgumentNullException` for a missing picture or kit, `ArgumentOutOfRangeException` for a negative
@@ -77,11 +91,14 @@ usable color. Nothing else fails: every picture gets a report.
 
 #### Dependencies
 
-- **StyleKitDocument** unit — the kit and the reading of its colors (`StyleColors`).
-- **Preview** subsystem — `RenderedImage` (the pixels) and `RenderDiagnostic` (the notes).
+- **StyleKitDocument** unit - the kit and the reading of its colors (`StyleColors`).
+- **StyleSelection** unit (through `IActiveStyle`) - the kit of the open project, for the command of the user.
+- **Preview** subsystem - `RenderedImage` (the pixels), `RenderDiagnostic` (the notes), `IRenderedImageSource` (the
+  shown picture), and `IRenderNoteSink` (where the notes go).
+- **RollingFileLogger** - optional; records a check that failed.
 
 #### Callers
 
-- The command that checks the shown picture and `StyleTools` (later steps) — check a picture and show or return the
-  report.
+- The Check Against Style item of the Image menu (`MainWindowShell`, through `ICheckAgainstStyle`) and `StyleTools` -
+  check a picture and show or return the report.
 - The tests of the built-in kits — check that their examples are on their own palette.

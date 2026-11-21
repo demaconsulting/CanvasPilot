@@ -50,6 +50,9 @@ temporary local folders; no network or external services are required.
   blank prompt.
 - A shell that has a style picker shows a status bar with it while a project is open and no bar otherwise; a project
   that was created, and no project that was only opened, is given the default style kit of the user.
+- Check Against Style, the last item of the Image menu, is usable only while the application can check and a picture is
+  shown, runs the check, tells the user in a message why when nothing was checked, and is unusable and does nothing in a
+  shell that has no check.
 
 #### Test Scenarios
 
@@ -291,6 +294,23 @@ is tested by `MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyFo
 **MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar**: A shell with no style picker creates a project as it
 always did and shows no status bar. This scenario is tested by
 `MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar`.
+
+**MainWindowShell_CheckAgainstStyle_FollowsThePictureRunsTheCheckAndReportsWhyNot**: With a check that first has no
+picture, the command is unusable; when the check says that a picture appeared the command is usable and announces it;
+running it asks the check, which shows its own notes, and shows no message; a check that answers with a sentence has the
+sentence shown in a message titled `Check Against Style`. This scenario is tested by
+`MainWindowShell_CheckAgainstStyle_FollowsThePictureRunsTheCheckAndReportsWhyNot`.
+
+**MainWindowShell_CheckAgainstStyle_NothingToCheckWith_IsUnavailableAndDoesNothing**: A shell with no check leaves the
+command unusable, and running it does nothing and shows no message. This scenario is tested by
+`MainWindowShell_CheckAgainstStyle_NothingToCheckWith_IsUnavailableAndDoesNothing`.
+
+**MainWindowView_CheckAgainstStyleMenuItem_PictureShown_EnablesAndShowsNotesInThePreview**: In the real window composed
+with the real units, the item is unusable with no picture and usable when a picture is shown; running it against the
+kit DEMA, with a blue picture that the kit does not have, lists a `style-summary` note that says FAILED and a
+`style-off-palette` note in the open list of notes of the preview, and closing the project makes the item unusable
+again. This scenario is tested by
+`MainWindowView_CheckAgainstStyleMenuItem_PictureShown_EnablesAndShowsNotesInThePreview`.
 
 **StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits**: In the real window composed with the real units, the
 status bar is hidden with no project and shown with one, holds the label `Style:` and a list with no style and the three

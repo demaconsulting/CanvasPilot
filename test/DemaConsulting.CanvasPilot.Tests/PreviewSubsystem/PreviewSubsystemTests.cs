@@ -248,6 +248,38 @@ public sealed class PreviewSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that notes that another part gives for the shown picture are listed after the notes of the renderer, are
+    ///     replaced by the next notes of the same group, and are gone when another picture is drawn.
+    /// </summary>
+    [Fact]
+    public async Task PreviewSubsystem_ShowNotesOfOtherParts_ListedWithRendererNotesAndGoWithTheNextPicture()
+    {
+        // Arrange: a shown picture that has no notes of the renderer, and a second picture
+        await File.WriteAllTextAsync(Path.Combine(_folder, "one.svg"), SquareSvg, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(_folder, "two.svg"), WideSvg, TestContext.Current.CancellationToken);
+        var (explorer, pane) = Create();
+        explorer.Open(_folder);
+        explorer.SelectFile(Path.Combine(_folder, "one.svg"));
+        await pane.RenderCompletion;
+        IRenderNoteSink sink = pane;
+
+        // Act: a part gives notes, then new notes of the same group, then the next picture is drawn
+        sink.ShowNotes("style", [new RenderDiagnostic(RenderDiagnosticSeverity.Info, "style-summary", "first")]);
+        sink.ShowNotes("style", [new RenderDiagnostic(RenderDiagnosticSeverity.Warning, "style-off-palette", "second")]);
+        var listed = pane.Diagnostics.Select(note => note.Code).ToArray();
+        var header = pane.DiagnosticsHeader;
+        var expanded = pane.AreDiagnosticsExpanded;
+        explorer.SelectFile(Path.Combine(_folder, "two.svg"));
+        await pane.RenderCompletion;
+
+        // Assert: only the newest notes were listed, with the list open, and the next picture has none
+        Assert.Equal(["style-off-palette"], listed);
+        Assert.Equal("1 note", header);
+        Assert.True(expanded);
+        Assert.Empty(pane.Diagnostics);
+    }
+
+    /// <summary>
     ///     Test that editing the selected file renders the new content after the debounce delay.
     /// </summary>
     [Fact]

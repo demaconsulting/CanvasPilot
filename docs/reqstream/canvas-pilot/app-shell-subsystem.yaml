@@ -163,6 +163,20 @@ sections:
             tests:
               - AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired
 
+          - id: CanvasPilot-AppShell-CheckAgainstStyleMenu
+            title: >-
+              The AppShell subsystem shall give the Image menu of the composed application a Check Against Style item that is
+              usable while a picture is shown and that checks that picture against the style kit of the open project and
+              shows the result among the notes of the preview, or says why nothing was checked.
+            justification: |
+              The check is of use only where the picture is, so it is one command of the menu of the picture. The units that
+              hold the picture, the style, and the notes do not know each other, so the one place that builds the application
+              joins them.
+            children:
+              - CanvasPilot-MainWindowShell-CheckAgainstStyleFromTheImageMenu
+            tests:
+              - AppShellSubsystem_CheckAgainstStyle_ComposedShell_ShowsNotesInThePreview
+
           - id: CanvasPilot-AppShell-ComposeApplication
             title: >-
               The AppShell subsystem shall build the application's units at startup in dependency order, load

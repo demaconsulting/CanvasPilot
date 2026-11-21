@@ -127,6 +127,20 @@ sections:
             tests:
               - PreviewSubsystem_HostOverlay_ContentAssigned_StaysWhilePicturesChange
 
+          - id: CanvasPilot-Preview-ShowNotesOfOtherParts
+            title: >-
+              The Preview subsystem shall list notes that another part gives for the shown picture with the notes of the
+              renderer, so that the user finds them where the notes of the picture are, replace the notes of one group by
+              the next notes of that group without touching the others, and remove them all when the picture is drawn again.
+            justification: |
+              A part that checks a picture, such as the check against a style, has something to say about the picture that is
+              shown. The notes of the renderer are where the user already looks, and a narrow interface lets the part say it
+              without depending on the pane that shows it.
+            children:
+              - CanvasPilot-PreviewPane-ShowStyleNotes
+            tests:
+              - PreviewSubsystem_ShowNotesOfOtherParts_ListedWithRendererNotesAndGoWithTheNextPicture
+
           - id: CanvasPilot-Preview-DragImageOut
             title: >-
               The Preview subsystem shall let the user drag the shown picture out of the preview into another

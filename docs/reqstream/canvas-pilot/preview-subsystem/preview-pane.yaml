@@ -168,3 +168,17 @@ sections:
                   - PreviewPaneView_DragFromImage_PictureShown_OffersPngFileAndBitmap
                   - PreviewPaneView_DragFromImage_ClickOrNotAllowed_StartsNothing
                   - PreviewPaneView_DragFromImage_DragOperationFails_LogsAndKeepsWorking
+
+              - id: CanvasPilot-PreviewPane-ShowStyleNotes
+                title: >-
+                  The PreviewPane shall show notes that another part gives it for the shown picture among the notes of the
+                  renderer, replacing in place the earlier notes of the same group and keeping the notes of the renderer and of
+                  other groups, open the list of notes when notes are given, ignore notes while no picture is shown, refuse a
+                  blank group or a missing list, and remove the notes of every group when the picture is drawn again.
+                justification: |
+                  The notes of the renderer are where the user already looks for what is said about a picture, so the result of
+                  a check of the style belongs there too. It is about one picture, so it goes when the picture changes, and a
+                  second check must not pile its notes on those of the first.
+                tests:
+                  - PreviewPaneViewModel_ShowNotes_ReplacesTheGroupKeepsOthersAndGoesWithTheNextRender
+                  - PreviewPaneViewModel_ShowNotes_NoPictureOrBadArguments_IgnoresOrRefuses
