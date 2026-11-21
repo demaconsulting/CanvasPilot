@@ -24,6 +24,7 @@ using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -210,10 +211,12 @@ public sealed class AppShellSubsystemTests : IDisposable
         var composition = Compose();
         string[] titles = [];
         Type? secondPageType = null;
+        Type? thirdPageType = null;
         _dialogs.OnSettings = dialog =>
         {
             titles = dialog.Pages.Select(page => page.Title).ToArray();
             secondPageType = dialog.Pages[1].GetType();
+            thirdPageType = dialog.Pages[2].GetType();
             dialog.CancelCommand.Execute(null);
         };
 
@@ -221,8 +224,9 @@ public sealed class AppShellSubsystemTests : IDisposable
         await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
 
         // Assert: both pages are hosted
-        Assert.Equal(["AI Provider", "Speech"], titles);
+        Assert.Equal(["AI Provider", "Speech", "Style Kits"], titles);
         Assert.Equal(typeof(SpeechSettingsPageViewModel), secondPageType);
+        Assert.Equal(typeof(StyleSettingsPageViewModel), thirdPageType);
     }
 
     /// <summary>

@@ -87,8 +87,9 @@ settings dialog opened from the shell and chooses OK; a new composition has the 
 is tested by `AppShellSubsystem_Settings_DialogOk_StoresChoicesForNextRun`.
 
 **AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages**: The Settings command of a composed
-shell shows a dialog whose pages are titled AI Provider and Speech, in that order, and the second page is the
-Speech page. This scenario is tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
+shell shows a dialog whose pages are titled AI Provider, Speech, and Style Kits, in that order, and the second page is
+the Speech page and the third is the Style Kits page. This scenario is tested by
+`AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
 
 **AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries**: The About command of a composed shell
 shows a dialog with the application name, a non-blank version, and five libraries. This scenario is tested by

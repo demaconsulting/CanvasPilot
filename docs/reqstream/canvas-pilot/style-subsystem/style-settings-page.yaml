@@ -1,0 +1,48 @@
+---
+# Software Unit Requirements for the StyleSettingsPage Unit
+#
+# The StyleSettingsPage unit is the "Style Kits" page of the settings dialog. It edits the shared folders in which a team
+# keeps style kits, in the order in which they win, and the kit that a new project starts with. It merges only the style
+# settings into the settings when the dialog is applied.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleSettingsPage Requirements
+            requirements:
+              - id: CanvasPilot-StyleSettingsPage-EditSharedFoldersAndDefaultKit
+                title: >-
+                  The StyleSettingsPage shall list the shared kit folders of the settings in their order, each with whether the
+                  kits in it could be read and why not, let the user add a folder by typing or pasting a full path or by
+                  choosing it with the folder picker, refuse a path that is not a full path and a folder that is in the list
+                  already (a spelling of the same folder included), remove a folder and move it up and down, keep a folder that
+                  cannot be reached now, offer no style and every kit that is not hidden as the default kit of a new project and
+                  keep a default kit that no kit has, follow the catalog while the dialog is open, merge only the style settings
+                  into the settings when applied, and be invalid, and refuse to be applied, while a folder in the list is not a
+                  full path.
+                justification: |
+                  A team keeps its kits in a folder that every machine can reach, so the user must be able to name it, also as a
+                  network path that a folder picker cannot browse to, see at once whether it can be read, and decide which folder
+                  wins when two have the same kit. A network folder may be down now and back later, so it stays in the list. A
+                  default kit that is not on this machine must not be lost by saving the settings, and a path that is not a full
+                  path cannot mean the same folder on every machine, so it is not saved. The page must change nothing of the
+                  other settings.
+                tests:
+                  - StyleSettingsPage_Load_Folders_AreListedInOrderWithTheirStatus
+                  - StyleSettingsPage_AddTypedFolder_FullPath_IsAddedSelectedAndDuplicatesAreRefused
+                  - StyleSettingsPage_AddTypedFolder_NotAFullPath_IsRefusedWithAMessage
+                  - StyleSettingsPage_BrowseFolder_PickerChoosesCancelsOrIsMissing_AddsOrDoesNothing
+                  - StyleSettingsPage_RemoveAndMove_SelectedFolder_ChangesTheOrderAndTheCommandsFollow
+                  - StyleSettingsPage_Apply_FoldersAndDefaultKit_MergesOnlyTheStyles
+                  - StyleSettingsPage_IsValid_EntryThatIsNotAFullPath_BlocksApplyUntilRemoved
+                  - StyleSettingsPage_DefaultKit_ChoicesSelectionAndUnknownDefault_AreShownAndApplied
+                  - StyleSettingsPage_CatalogChanges_AreFollowedWhileOpenOnly
+                  - StyleSettingsPage_NullArguments_Throw
+                  - StyleSettingsPage_IsFullPath_Texts_FollowTheRuleOfTheSettings
+                  - StyleSettingsPageView_Show_ListsFoldersAndTheDefaultKit
+                  - StyleSettingsPageView_Buttons_AddMoveAndRemoveFolders
+                  - SettingsDialogView_StyleKitsPage_OkButtonSavesFoldersAndDefaultKit
+                  - AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages
+                  - MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses

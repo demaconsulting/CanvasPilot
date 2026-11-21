@@ -53,6 +53,7 @@ sections:
               - CanvasPilot-StyleKitCatalog-ManageUserAndProjectKits
               - CanvasPilot-StyleKitCatalog-KeepBuiltInAndSharedKitsReadOnly
               - CanvasPilot-StyleKitCatalog-OfferBuiltInKits
+              - CanvasPilot-StyleSettingsPage-EditSharedFoldersAndDefaultKit
             tests:
               - StyleSubsystem_FindKitsInLocations_AllPlaces_ResolveByPrecedenceAndSurviveAnUnreachableFolder
 
@@ -85,6 +86,7 @@ sections:
               - CanvasPilot-StyleSelection-KeepChoiceInTheProjectFile
               - CanvasPilot-StyleSelection-StartNewProjectsWithTheDefault
               - CanvasPilot-StylePicker-ShowAndChangeTheActiveKit
+              - CanvasPilot-StyleSettingsPage-EditSharedFoldersAndDefaultKit
             tests:
               - StyleSubsystem_ChooseActiveKit_DefaultAndChoice_AreKeptInTheProjectFileAndSurviveReopening
 

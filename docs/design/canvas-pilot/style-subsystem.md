@@ -13,8 +13,9 @@ later is given the style as a block of text and two tools, and a picture can be 
 None of it depends on any provider of a language model or on any agent library, so what the subsystem offers can be
 given to any assistant that is added later.
 
-The subsystem is built up unit by unit. It now contains eight units, `StyleKitDocument`, `StyleKitCatalog`,
-`StyleKitArchive`, `StyleSelection`, `StyleGuidance`, `StyleChecker`, `StyleTools`, and `StylePicker`.
+The subsystem is built up unit by unit. It now contains nine units, `StyleKitDocument`, `StyleKitCatalog`,
+`StyleKitArchive`, `StyleSelection`, `StyleGuidance`, `StyleChecker`, `StyleTools`, `StylePicker`, and
+`StyleSettingsPage`.
 `StyleKitDocument` holds the values of a kit and the format that they are kept in: it reads a kit from a file and from
 its folder with a message for each wrong property, checks a kit that is built in memory with the same rules, and writes
 a kit as canonical text. `StyleKitCatalog` finds the kits in the four places, chooses the kit of the most local place
@@ -35,9 +36,10 @@ edge, and what is off the palette. The units that show and edit kits in windows 
 grows with them. `StyleTools` describes the two tools of an assistant, `style_get` and `style_check`, as plain values
 (the descriptor record of the drawing knowledge) with a function from text to text that never throws; the check reads
 only files inside the folder of the project. `StylePicker` is the list in the status bar of the main window with which
-the user chooses the kit of the open project. The subsystem depends on CanvasNet for the classification of font
-families, and on `Project`, `Settings`, `Preview`, `Utilities`, `Logging`, and `Knowledge` (only the descriptor record
-of a tool).
+the user chooses the kit of the open project. `StyleSettingsPage` is the page of the settings dialog with which the user
+lists the shared folders of kits and chooses the default kit of a new project. The subsystem depends on CanvasNet for
+the classification of font families, and on `Project`, `Settings`, `Preview`, `Utilities`, `Logging`, and `Knowledge`
+(only the descriptor record of a tool).
 
 ### Interfaces
 
@@ -149,6 +151,20 @@ of a tool).
 - *Constraints*: Keeps no choice of its own: the list is rebuilt from the active style and the catalog on the thread
   that owns the user interface whenever either announces a change.
 
+**StyleSettingsPage**: The settings page for shared folders and the default kit.
+
+- *Type*: In-process .NET view model `StyleSettingsPageViewModel`, which is an `ISettingsPage` of the `Settings`
+  subsystem, with the values `StyleFolderItem` and `StyleKitChoice`, and the view `StyleSettingsPageView`.
+- *Role*: Provider (a page of the settings dialog), and Consumer (the catalog of kits, and the folder picker of the
+  window through a function).
+- *Contract*: `Title` is `Style Kits`; `Folders` lists the shared folders in order with the status of each;
+  `AddTypedFolderCommand`, `BrowseFolderCommand`, `RemoveFolderCommand`, `MoveFolderUpCommand`, and
+  `MoveFolderDownCommand` edit the list; `DefaultKitChoices` and `SelectedDefaultKit` choose the default kit; `Load`
+  takes the style settings, and `Apply` returns the settings with only `Styles` replaced; `IsValid` is false while a
+  folder is not a full path.
+- *Constraints*: Edits a working copy. A folder that cannot be reached is kept, and a default kit that no kit has is
+  kept.
+
 ### Design
 
 **The dependency rule.** The subsystems below `AppShell` do not depend on `AppShell` or on each other upwards, and this
@@ -184,6 +200,7 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 - **StyleChecker** unit: a picture measured against the palette of a kit.
 - **StyleTools** unit: the tools `style_get` and `style_check` of an assistant.
 - **StylePicker** unit: the choice of the kit of the open project in the status bar.
+- **StyleSettingsPage** unit: the shared folders and the default kit in the settings dialog.
 - **Knowledge** subsystem: only the descriptor record of a tool (`KnowledgeTool`).
 - **Project** subsystem: which project is open and when it changes, and the id of the kit that the project file keeps
   (the project service).

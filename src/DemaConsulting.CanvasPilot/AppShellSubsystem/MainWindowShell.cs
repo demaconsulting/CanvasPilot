@@ -273,6 +273,12 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     public StylePickerViewModel? StylePicker => _style;
 
     /// <summary>
+    ///     Gets the picker of folders that the main window supplies, or <see langword="null" /> until the window has attached
+    ///     itself. A settings page that lets the user choose a folder asks for it when the user asks to browse.
+    /// </summary>
+    public IFolderPicker? FolderPicker => _dialogs;
+
+    /// <summary>
     ///     Gets a value indicating whether the status bar at the bottom of the window is shown: it is while the application
     ///     has a style picker and a project is open, because the picker is all that it holds.
     /// </summary>

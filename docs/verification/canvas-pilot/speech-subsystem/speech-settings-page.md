@@ -83,5 +83,5 @@ opens a dialog that lists the AI Provider and Speech pages, and Cancel closes it
 `MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses`.
 
 **AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages**: The application's composition builds a
-settings dialog whose pages are titled `AI Provider` and `Speech`, the second being the Speech page. This scenario is
-tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
+settings dialog whose pages are titled `AI Provider`, `Speech`, and `Style Kits`, the second being the Speech page. This
+scenario is tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.

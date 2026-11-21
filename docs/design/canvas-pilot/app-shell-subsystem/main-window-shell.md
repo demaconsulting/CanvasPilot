@@ -49,6 +49,10 @@ list with which the user chooses the style kit of the project; the composition r
 shell does not dispose it. `ShowStatusBar` is true while there is a picker and it is visible, which it is while a
 project is open; the shell follows the picker's `IsVisible` and raises the change of `ShowStatusBar`.
 
+**FolderPicker**: the folder picker of the dialog service (`IFolderPicker`), or `null` until the window attached itself.
+The composition root gives it to the Style Kits settings page through a function, because the pages are made before the
+window exists.
+
 **MessageDialogViewModel**: `Title`, `Message`, `OkText`, `ShowCancel`, `IsPrompt`, `InputText`, `Accepted`, `OkCommand`
 (unavailable for a prompt whose entry is blank), `CancelCommand`, and `CloseRequested`.
 

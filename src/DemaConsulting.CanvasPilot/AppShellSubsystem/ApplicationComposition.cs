@@ -346,10 +346,14 @@ public sealed class ApplicationComposition : IDisposable
         owned.Insert(0, stylePicker);
         owned.Insert(0, styleCheck);
 
+        // The Style Kits page browses for folders through the dialog service of the main window, which the shell has only
+        // once the window attaches itself; the page asks the shell when the user asks to browse
+        MainWindowShell? pickerOwner = null;
         IReadOnlyList<ISettingsPage> pages = settingsPages ??
         [
             new AiProviderSettingsPageViewModel(),
             new SpeechSettingsPageViewModel(audioDevices, speechModels),
+            new StyleSettingsPageViewModel(styleCatalog, () => pickerOwner?.FolderPicker),
         ];
 
         var shell = new MainWindowShell(
@@ -364,6 +368,7 @@ public sealed class ApplicationComposition : IDisposable
             stylePicker,
             styleCheck,
             logger);
+        pickerOwner = shell;
 
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project
         var marks = new MarkRegistry();

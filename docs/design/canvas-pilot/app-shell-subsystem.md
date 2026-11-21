@@ -92,17 +92,18 @@ and are described here because they only join the units together.
 1. At startup `App` calls `ApplicationComposition.CreateDefault`, which creates the logger, the settings service (and
    loads the settings), the project service, the recent projects list, the project explorer with its image source filter
    and refresh scheduler, the render service, the preview pane, the workspace (which shows the preview pane), the image
-   exporter, the settings pages (the AI Provider page and the Speech page over the speech services, which use neither
-   the audio system nor the model store until the Speech page is loaded), and the shell, in that order, and logs the
-   start. The shell is given a function that gives the catalog of the drawing knowledge, which reads the cards the first
-   time the Help menu asks for them. The speech model service that the composition creates is disposed with the
-   composition. After the shell, the composition makes the mark registry, the composer of the message, the layer on
-   which the user marks the picture, and the chat panel. It puts the layer in the overlay slot of the preview pane and
-   the layer's tool bar in the top bar slot, and gives the layer the switch for dragging the picture out. The chat panel
-   joins the layer to the message: it allows marks while the composer can edit, tells the layer which mark chips the
-   message holds whenever the composer changes, and adds the chip of each mark that the layer reports, so that an undo
-   of the chip hides the mark. The composition places the panel in the chat column of the workspace and makes it the
-   push-to-talk target of the shell; the workspace shows the column while a project is open and makes the window's
+   exporter, the settings pages (the AI Provider page, the Speech page over the speech services, which use neither the
+   audio system nor the model store until the Speech page is loaded, and the Style Kits page over the catalog of style
+   kits, which gets the folder picker from the shell once the window has attached itself), and the shell, in that order,
+   and logs the start. The shell is given a function that gives the catalog of the drawing knowledge, which reads the
+   cards the first time the Help menu asks for them. The speech model service that the composition creates is disposed
+   with the composition. After the shell, the composition makes the mark registry, the composer of the message, the
+   layer on which the user marks the picture, and the chat panel. It puts the layer in the overlay slot of the preview
+   pane and the layer's tool bar in the top bar slot, and gives the layer the switch for dragging the picture out. The
+   chat panel joins the layer to the message: it allows marks while the composer can edit, tells the layer which mark
+   chips the message holds whenever the composer changes, and adds the chip of each mark that the layer reports, so that
+   an undo of the chip hides the mark. The composition places the panel in the chat column of the workspace and makes it
+   the push-to-talk target of the shell; the workspace shows the column while a project is open and makes the window's
    dialog service the panel's launcher of the payload inspector. The style kits are built before the image exporter and
    the shell: the catalog of kits, the selection that says which kit the open project uses (which is also the exporter's
    source of export sizes), the picker that chooses it, and the descriptors of the two style tools. The composition

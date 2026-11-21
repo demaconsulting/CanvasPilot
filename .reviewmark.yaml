@@ -1139,6 +1139,25 @@ reviews:
       - "test/**/StyleSubsystem/StylePickerTests.cs"
       - "test/**/StylePickerViewTests.cs"
 
+  - id: CanvasPilot-Style-StyleSettingsPage
+    title: Review of CanvasPilot StyleSettingsPage unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-settings-page.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-settings-page.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-settings-page.md"
+      - "src/**/StyleSubsystem/StyleFolderItem.cs"
+      - "src/**/StyleSubsystem/StyleKitChoice.cs"
+      - "src/**/StyleSubsystem/StyleSettingsPageViewModel.cs"
+      - "src/**/StyleSubsystem/StyleSettingsPageView.axaml"
+      - "src/**/StyleSubsystem/StyleSettingsPageView.axaml.cs"
+      - "test/**/StyleSubsystem/StyleSettingsPageTests.cs"
+      - "test/**/StyleSettingsPageViewTests.cs"
+
   - id: CanvasPilot-Style-StyleGuidance
     title: Review of CanvasPilot StyleGuidance unit implementation
     context:
