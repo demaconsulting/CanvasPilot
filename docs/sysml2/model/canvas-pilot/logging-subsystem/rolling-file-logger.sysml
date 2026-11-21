@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_RollingFileLogger {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
 
     part def RollingFileLogger {
         doc /* Writes application events to local size-rolling log files. */

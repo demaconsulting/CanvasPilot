@@ -1,5 +1,8 @@
-package CanvasPilot {
+package CanvasPilot_SettingsSubsystem {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AiProviderSettingsPage::*;
+    private import CanvasPilot_SettingsDialog::*;
+    private import CanvasPilot_SettingsService::*;
 
     part def SettingsSubsystem {
         doc /* Persisted user settings and the modal settings dialog with its pages. */

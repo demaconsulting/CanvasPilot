@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_ProjectSubsystem {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_NewProjectDialog::*;
+    private import CanvasPilot_ProjectExplorer::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_RecentProjects::*;
 
     part def ProjectSubsystem {
         doc /* Projects as folders with a project file, the recent projects list, the New Project dialog, and the project explorer. */

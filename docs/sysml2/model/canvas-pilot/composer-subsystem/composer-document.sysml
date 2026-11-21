@@ -1,4 +1,4 @@
-package CanvasPilot {
+package CanvasPilot_ComposerDocument {
     private import SoftwareItemMetadata::*;
     private import ScalarValues::Integer;
 

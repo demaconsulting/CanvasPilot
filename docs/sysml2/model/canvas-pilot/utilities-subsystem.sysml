@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_UtilitiesSubsystem {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
 
     part def UtilitiesSubsystem {
         doc /* Shared, independently testable helper functions used by other subsystems. */

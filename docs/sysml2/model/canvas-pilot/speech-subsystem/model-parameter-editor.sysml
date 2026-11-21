@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_ModelParameterEditor {
     private import SoftwareItemMetadata::*;
+    private import OtsDependencies::*;
 
     part def ModelParameterEditor {
         doc /* Builds numeric, choice, and boolean editors from the parameters a speech model declares and reads and writes their values as invariant-culture strings. */
@@ -18,6 +19,6 @@ package CanvasPilot {
         }
 
         // Reads the typed parameter descriptors that the library's models declare.
-        dependency ModelParameterEditor to Ots::Speech;
+        dependency ModelParameterEditor to Speech;
     }
 }

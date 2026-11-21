@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_SettingsService {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def SettingsService {
         doc /* Loads, validates, and atomically saves the versioned per-user settings file. */

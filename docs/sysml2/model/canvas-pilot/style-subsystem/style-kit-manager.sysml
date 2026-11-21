@@ -1,5 +1,13 @@
-package CanvasPilot {
+package CanvasPilot_StyleKitManager {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageRenderService::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_StyleGuidance::*;
+    private import CanvasPilot_StyleKitArchive::*;
+    private import CanvasPilot_StyleKitCatalog::*;
+    private import CanvasPilot_StyleKitEditor::*;
+    private import CanvasPilot_StylePicker::*;
+    private import CanvasPilot_StyleSelection::*;
 
     part def StyleKitManager {
         doc /* The window in which the user sees the style kits that were found, in groups by place with notes about places that cannot be read and kits that cannot be used, with a preview of the kit that is chosen (the colors with their roles, the fonts, the numbers, the advice, the export sizes, the warnings, the text that an assistant would be given, and small pictures of the example images that are drawn from the folder of the kit and kept in a cache), and the commands that apply to it: use it in the project, make a new kit or a copy, edit, delete, export and import as zip files, copy into the project, and read the places again, with the commands that would change a kit of the program or of a team unavailable. */

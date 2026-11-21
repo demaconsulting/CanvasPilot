@@ -1,4 +1,4 @@
-package CanvasPilot {
+package CanvasPilot_AboutDialog {
     private import SoftwareItemMetadata::*;
 
     part def AboutDialog {

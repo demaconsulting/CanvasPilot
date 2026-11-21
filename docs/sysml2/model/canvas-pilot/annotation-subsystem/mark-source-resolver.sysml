@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_MarkSourceResolver {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageRenderService::*;
+    private import CanvasPilot_MarkRegistry::*;
     private import ScalarValues::Integer;
 
     part def MarkSourceResolver {

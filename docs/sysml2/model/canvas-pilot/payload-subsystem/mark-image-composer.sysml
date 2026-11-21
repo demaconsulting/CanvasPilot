@@ -1,5 +1,8 @@
-package CanvasPilot {
+package CanvasPilot_MarkImageComposer {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageRenderService::*;
+    private import CanvasPilot_MarkRegistry::*;
+    private import OtsDependencies::*;
     private import ScalarValues::Integer;
 
     part def MarkImageComposer {
@@ -27,7 +30,7 @@ package CanvasPilot {
 
         // Draws an SVG document that embeds the picture and the marks with the CanvasNet viewer and encodes the result
         // with its PNG codec.
-        dependency MarkImageComposer to Ots::CanvasNet;
+        dependency MarkImageComposer to CanvasNet;
 
         // Takes the PNG of the picture from the render service, so that pictures are encoded in one place.
         dependency MarkImageComposer to ImageRenderService;

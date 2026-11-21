@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_MarkRegistry {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageRenderService::*;
     private import ScalarValues::Integer;
 
     // The shape of a mark, as the MarkKind enumeration of the marks (the names are those of the shapes in lower case).

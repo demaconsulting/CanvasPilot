@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_NewProjectDialog {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_ProjectService::*;
 
     part def NewProjectDialog {
         doc /* Modal New Project window that collects and validates a project name and location. */

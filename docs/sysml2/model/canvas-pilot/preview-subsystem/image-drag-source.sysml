@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_ImageDragSource {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageExporter::*;
+    private import CanvasPilot_ImageRenderService::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_RollingFileLogger::*;
 
     part def ImageDragSource {
         doc /* Prepares the shown picture for dragging it into another program by writing it as a PNG file, named after its source file and the start of its pixel fingerprint, in a folder of its own, and removes the files it wrote. */

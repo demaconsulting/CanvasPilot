@@ -1,5 +1,8 @@
-package CanvasPilot {
+package CanvasPilot_StyleKitEditor {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_StyleKitCatalog::*;
+    private import CanvasPilot_StyleKitDocument::*;
+    private import CanvasPilot_StylePicker::*;
 
     part def StyleKitEditor {
         doc /* The editor of one style kit of the user or of the project: a draft of every part of the kit (the name, the palette with colors that are set as text or with red, green, and blue values, the fonts, the numbers, the Mermaid theme and its variables, the Vega-Lite configuration, the advice, the export sizes, and the example images with their captions), the problems of the draft with the same messages as the reader of the style file, and a save that refuses a draft with an error, copies the chosen example files in, writes the kit, and deletes the removed examples, leaving the disk as it was when the user cancels. */

@@ -1,5 +1,10 @@
-package CanvasPilot {
+package CanvasPilot_StyleKitCatalog {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_RollingFileLogger::*;
+    private import CanvasPilot_SettingsService::*;
+    private import CanvasPilot_StyleKitDocument::*;
 
     part def StyleKitCatalog {
         doc /* Finds the style kits in the kits that come with the program, the folder of the user, the styles folder of the open project, and the shared folders of the settings, chooses the kit of the most local place for an id, reads shared folders on workers with a time limit, keeps the kits of the program and the shared kits read only, and creates, saves, duplicates, copies, and deletes the kits of the user and of the project. */

@@ -1,4 +1,4 @@
-package CanvasPilot {
+package CanvasPilot_PathHelpers {
     private import SoftwareItemMetadata::*;
 
     part def PathHelpers {

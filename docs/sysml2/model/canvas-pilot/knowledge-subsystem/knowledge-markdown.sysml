@@ -1,4 +1,4 @@
-package CanvasPilot {
+package CanvasPilot_KnowledgeMarkdown {
     private import SoftwareItemMetadata::*;
     private import ScalarValues::Integer;
 

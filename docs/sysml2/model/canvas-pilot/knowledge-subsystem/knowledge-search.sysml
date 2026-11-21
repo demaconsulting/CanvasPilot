@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_KnowledgeSearch {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_KnowledgeCatalog::*;
     private import ScalarValues::Integer;
 
     part def KnowledgeSearch {

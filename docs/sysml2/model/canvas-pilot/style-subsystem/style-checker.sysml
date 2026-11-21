@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_StyleChecker {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_ImageRenderService::*;
+    private import CanvasPilot_PreviewPane::*;
+    private import CanvasPilot_StyleKitDocument::*;
+    private import CanvasPilot_StyleSelection::*;
 
     part def StyleChecker {
         doc /* Measures the colors of a rendered picture against the palette of a style kit with a histogram of 32 levels per channel and the CIE76 color difference in CIELAB, sorting the pixels into palette colors, blends of two palette colors at edges, and colors that are off the palette, and reports the shares, the largest off-palette colors with their nearest palette color, and whether the picture passes, as notes and as text, the same for the same pixels every time; the command that the Image menu runs checks the shown picture against the kit of the project on a worker thread and shows the notes among the notes of the picture. */

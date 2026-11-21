@@ -1,5 +1,6 @@
-package CanvasPilot {
+package CanvasPilot_AiProviderSettingsPage {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_SettingsDialog::*;
 
     part def AiProviderSettingsPage {
         doc /* The AI Provider page of the settings dialog; edits and validates persisted provider choices. */

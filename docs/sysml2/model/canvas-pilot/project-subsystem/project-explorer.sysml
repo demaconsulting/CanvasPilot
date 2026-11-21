@@ -1,5 +1,9 @@
-package CanvasPilot {
+package CanvasPilot_ProjectExplorer {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_RollingFileLogger::*;
+    private import OtsDependencies::*;
 
     part def ProjectExplorer {
         doc /* Lists, watches, selects, renames, and deletes the image source files in the open project's folder. */
@@ -30,7 +34,7 @@ package CanvasPilot {
         dependency ProjectExplorer to PathHelpers;
 
         // Uses the extension list of CanvasNet's viewer to decide which files are image sources.
-        dependency ProjectExplorer to Ots::CanvasNet;
+        dependency ProjectExplorer to CanvasNet;
 
         // Reports failed file operations to the application log.
         dependency ProjectExplorer to RollingFileLogger;

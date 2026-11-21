@@ -1,5 +1,7 @@
-package CanvasPilot {
+package CanvasPilot_StyleKitArchive {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_PathHelpers::*;
+    private import CanvasPilot_StyleKitDocument::*;
 
     part def StyleKitArchive {
         doc /* Writes a style kit as a zip file and reads a kit from a zip file that may come from anywhere, refusing as a whole an archive with a name that could write outside the target, a link, a file that is not part of a kit, too many or too large files, or sizes and checksums that do not match, and writing into a hidden folder that is moved into place only for a valid kit. */
