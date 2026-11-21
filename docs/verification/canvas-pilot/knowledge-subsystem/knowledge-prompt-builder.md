@@ -43,8 +43,9 @@ only, and a missing catalog is refused. This scenario is tested by
 
 **KnowledgePromptBuilder_BuildIndex_RealCatalog_FitsBudget**: The index of the catalog of the application has at most
 12,000 characters, the index of its top cards at most 2,500, and one line for each card. The measured size after the
-exclusion of the cards that are only about the host program was 11,556 characters for the whole index, 1,859 for the top
-cards, and 10,366 for the top cards and the level below them, for 91 cards in 17 trees; the budgets were not changed
+exclusion of the cards that are only about the host program was 11,717 characters for the whole index, 1,859 for the top
+cards, and 10,527 for the top cards and the level below them, for 92 cards in 17 trees, after the card about style kits
+was added (it was 11,556, 1,859, and 10,366 for 91 cards before it); the budgets were not changed
 (the whole index was 10,584, 1,680, and 9,394 for 82 cards before the cards for embedding pages, pictures, and files
 were offered). This scenario is tested by
 `KnowledgePromptBuilder_BuildIndex_RealCatalog_FitsBudget`.

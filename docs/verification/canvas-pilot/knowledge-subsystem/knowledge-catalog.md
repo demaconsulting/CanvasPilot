@@ -22,7 +22,9 @@ N/A - standard test environment.
   reached from the roots once.
 - The root card of CanvasPilot says that command-line tools and the host program cannot be run and names the tools to
   use.
-- The five cards of CanvasPilot are exactly the embedded card files, they are the last tree, and every card is complete.
+- The six cards of CanvasPilot are exactly the embedded card files, they are the last tree, and every card is complete.
+- The card about style kits quotes the names that the code uses for the tools, the folder, the style file, and the
+  sections.
 - A card is found by path, by space-separated path, by another name, and in any case; a missing, unknown, or left-out
   path finds nothing.
 - No body holds a link of the CanvasNet syntax outside code; a link to a left-out card is the title of the card.
@@ -117,6 +119,13 @@ offered equal those of the library in name, kind, language, file, description, a
 project file, the name of the data folder, the name of the folder of attachments, every kind of mark, and the references
 of a message as the constants and names of the application have them. This scenario is tested by
 `KnowledgeCatalog_Default_CanvasPilotCards_AgreeWithTheApplication`.
+
+**KnowledgeCatalog_Default_StylesCardQuotesTheNamesThatTheCodeUses**: The card `canvaspilot/styles` is a child of the
+root card of CanvasPilot, the root card and the card about the layout point to it, and the card quotes, between back
+ticks, the names of the two tools of the style, the name of the folder of the kits of a project and the name of the
+style file and of the folder of examples, every section of the guidance, and the three cards of the formats that it is
+related to, as the constants and lists of the code have them. This scenario is tested by
+`KnowledgeCatalog_Default_StylesCardQuotesTheNamesThatTheCodeUses`.
 
 **KnowledgeCatalog_Default_PublicTypesReferToNoHelpTypeOfCanvasNetAndCannotBeChanged**: No public member of the
 interface, the catalog, the card, and the examples mentions a type of CanvasNet, and an add to the lists of cards,

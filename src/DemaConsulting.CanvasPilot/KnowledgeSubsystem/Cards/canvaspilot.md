@@ -11,6 +11,7 @@ children:
   - deliverables
   - marks
   - preview
+  - styles
 see-also:
   - svg/composition
   - composition
@@ -31,6 +32,7 @@ changing files in the project folder, in the formats CanvasNet draws.
 - The user sees the selected file drawn next to the chat and redrawn when the
   file changes; see [[canvaspilot/preview]] for what that shows, including errors.
 - Keep one finished picture for the user to use; see [[canvaspilot/deliverables]].
+- Draw in the style of the project when it has one; see [[canvaspilot/styles]].
 
 ## Cards below
 
@@ -45,4 +47,5 @@ Some CanvasNet cards mention command-line tools, Pandoc, or the options and
 classes of a host program (such as `SourceOptions`). You cannot run or call
 those: CanvasPilot draws the files itself. Use what the cards say about the
 formats, links, and fragments, and use your own tools instead: `canvasnet_help`
-for cards and examples, and the file tools to read and write the project files.
+for cards and examples, `style_get` and `style_check` for the style of the
+project, and the file tools to read and write the project files.

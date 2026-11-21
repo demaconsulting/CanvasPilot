@@ -19,7 +19,8 @@ sections:
               The Knowledge subsystem shall offer, as one tree of cards that is read once and shared, the cards of CanvasNet
               that tell how to write each drawing format, without the cards that are only about the program that hosts
               CanvasNet, together with the cards of CanvasPilot about where files go in a project, how to make the picture
-              the user uses, how to read the marks and attachments of a message, and what the user sees.
+              the user uses, how to read the marks and attachments of a message, what the user sees, and how to draw in the style of
+              the project.
             justification: |
               The assistant writes files, and the user reads the same advice. The cards of CanvasNet are the advice of the
               library that draws the files, so they are as current as the library; the cards about the options that the
@@ -35,6 +36,7 @@ sections:
               - CanvasPilot-KnowledgeCatalog-RewriteLinksToCardIds
               - CanvasPilot-KnowledgeCatalog-ListExamplesByName
               - CanvasPilot-KnowledgeCatalog-AgreeWithApplication
+              - CanvasPilot-KnowledgeCatalog-DescribeStyleKits
             tests:
               - KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostOnlyCards
               - KnowledgeSubsystem_Default_IsOneSharedCatalogReadableFromManyThreads

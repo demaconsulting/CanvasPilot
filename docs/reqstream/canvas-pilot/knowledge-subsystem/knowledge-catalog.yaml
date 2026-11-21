@@ -120,6 +120,23 @@ sections:
                 tests:
                   - KnowledgeCatalog_Default_CanvasPilotCards_AgreeWithTheApplication
 
+              - id: CanvasPilot-KnowledgeCatalog-DescribeStyleKits
+                title: >-
+                  The KnowledgeCatalog shall hold a card of CanvasPilot that tells the assistant what a style kit is, where
+                  kits are and which wins, that it calls style_get before it draws and style_check after, how a Mermaid file
+                  and a Vega-Lite file take the style, that export sizes are for the user to choose, and that the example
+                  images are files to open, and that is reached from the root card and the card about the folders of a
+                  project, and shall quote the names of the two tools, the folder of the kits of a project, the style file,
+                  and the sections of the style that the application uses.
+                justification: |
+                  The tools of the style are of no use to an assistant that is not told when to call them, and a card that
+                  names a tool, a folder, or a section that the application does not have steers the assistant wrongly. The
+                  card is checked against the constants of the application, so that a change of a name in the code fails
+                  the build until the card is changed with it.
+                tests:
+                  - KnowledgeCatalog_Default_StylesCardQuotesTheNamesThatTheCodeUses
+                  - KnowledgeCatalog_Default_HasTheCanvasPilotCardsAsOneTreeAfterTheLibraryRoots
+
               - id: CanvasPilot-KnowledgeCatalog-ExposeOwnValues
                 title: >-
                   The KnowledgeCatalog shall offer its cards, examples, and results as values of its own that refer to no

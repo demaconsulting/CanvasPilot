@@ -20,6 +20,8 @@ see-also:
 - **Warnings and diagnostics**: Notes such as `image-access-denied` are listed
   under the picture. A warning means the picture was drawn without something, so
   treat it as a defect to fix; see [[errors/diagnostics]].
-- **Export, copy, and drag**: Saving a PNG, copying the picture, and dragging it
-  out all use the picture the user sees, so what you draw is exactly what they
-  take.
+- **Export, copy, and drag**: Copying the picture and dragging it out use the
+  picture the user sees, so what you draw is exactly what they take. Saving a PNG
+  can use that picture, or the file drawn again at a size that the user chooses
+  (for example the sizes of the style kit), so keep the drawing free of sizes
+  that belong to the export.

@@ -120,6 +120,7 @@ sections:
               - CanvasPilot-StyleTools-DescribeStyleCheck
               - CanvasPilot-StyleTools-ConfineChecksToTheProject
               - CanvasPilot-StyleTools-NeverThrowOnBadArguments
+              - CanvasPilot-KnowledgeCatalog-DescribeStyleKits
             tests:
               - StyleSubsystem_GuideTheAssistant_ToolsOverRealUnits_GiveTheStyleAndCheckAPictureOfTheProject
 

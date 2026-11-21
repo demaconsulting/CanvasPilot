@@ -23,6 +23,7 @@ using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -42,7 +43,8 @@ public sealed class KnowledgeCatalogTests
         "canvaspilot/project-layout",
         "canvaspilot/deliverables",
         "canvaspilot/marks",
-        "canvaspilot/preview"
+        "canvaspilot/preview",
+        "canvaspilot/styles"
     ];
 
     /// <summary>
@@ -278,6 +280,37 @@ public sealed class KnowledgeCatalogTests
             typeof(KnowledgeCatalog).Assembly,
             KnowledgeCatalog.ResourcePrefix,
             null!));
+    }
+
+    /// <summary>
+    ///     Validates that the card about style kits quotes the names that the code uses: the two tools, the folder of the
+    ///     project that holds kits, the name of the style file, and the sections of the guidance, so that the card and the
+    ///     code cannot drift apart, and that the card is reached from the root card and the card about the layout.
+    /// </summary>
+    [Fact]
+    public void KnowledgeCatalog_Default_StylesCardQuotesTheNamesThatTheCodeUses()
+    {
+        // Arrange: the catalog of the application, the card, and the cards that lead to it
+        var catalog = KnowledgeCatalog.Default;
+        var card = catalog.Find("canvaspilot/styles");
+        var root = catalog.Find("canvaspilot")!;
+        var layout = catalog.Find("canvaspilot/project-layout")!;
+
+        // Act / Assert: the card is below the root, the root and the layout card point to it, and the card quotes the code
+        Assert.NotNull(card);
+        Assert.Equal("canvaspilot", card.ParentId);
+        Assert.Contains("canvaspilot/styles", layout.SeeAlsoIds);
+        Assert.Contains("see `canvaspilot/styles`", root.Body, StringComparison.Ordinal);
+        Assert.Contains("see `canvaspilot/styles`", layout.Body, StringComparison.Ordinal);
+        Assert.Contains($"`{StyleTools.GetToolName}`", card.Body, StringComparison.Ordinal);
+        Assert.Contains($"`{StyleTools.CheckToolName}`", card.Body, StringComparison.Ordinal);
+        Assert.Contains($"`{StyleKitCatalog.ProjectFolderName}`", card.Body, StringComparison.Ordinal);
+        Assert.Contains($"`{StyleKitSerializer.FileName}`", card.Body, StringComparison.Ordinal);
+        Assert.Contains($"`{StyleKitSerializer.ExamplesFolderName}`", card.Body, StringComparison.Ordinal);
+        Assert.All(StyleGuidance.SectionNames, name => Assert.Contains($"`{name}`", card.Body, StringComparison.Ordinal));
+        Assert.Equal(["svg/style", "mermaid/style", "vega-lite/style"], card.SeeAlsoIds);
+        Assert.Contains($"`{StyleKitCatalog.ProjectFolderName}/`", layout.Body, StringComparison.Ordinal);
+        Assert.Contains($"`{StyleTools.GetToolName}` and `{StyleTools.CheckToolName}`", root.Body, StringComparison.Ordinal);
     }
 
     /// <summary>

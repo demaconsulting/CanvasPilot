@@ -18,6 +18,10 @@ only about the program that hosts CanvasNet, copied into values of its own.
   are files under `KnowledgeSubsystem/Examples`, named `root-file`. The project file embeds them with the logical names
   that CanvasNet reads: `DemaConsulting.CanvasPilot.Knowledge/{path}.md` and
   `DemaConsulting.CanvasPilot.Knowledge.Examples.{root}-{file}`.
+- The six cards of CanvasPilot are the root card `canvaspilot` and five cards below it: `project-layout`,
+  `deliverables`, `marks`, `preview`, and `styles`, which tells the assistant how to draw in the style of the project
+  and when to call `style_get` and `style_check`. The names of the tools, of the folder of the kits of a project, of the
+  style file, and of the sections of the style that the card quotes are checked against the constants of the code.
 - `ExcludedCardIds` is the list of identifiers of the cards that are left out, each only about the program that hosts
   CanvasNet:
 
