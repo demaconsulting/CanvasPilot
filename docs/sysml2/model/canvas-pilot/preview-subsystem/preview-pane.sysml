@@ -7,6 +7,7 @@ package CanvasPilot {
         metadata info : SoftwareInfo {
             sourceFiles = (
                 "src/DemaConsulting.CanvasPilot/PreviewSubsystem/IRenderedImageSource.cs",
+                "src/DemaConsulting.CanvasPilot/PreviewSubsystem/IRenderNoteSink.cs",
                 "src/DemaConsulting.CanvasPilot/PreviewSubsystem/PreviewPaneViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/PreviewSubsystem/PreviewPaneView.axaml",
                 "src/DemaConsulting.CanvasPilot/PreviewSubsystem/PreviewPaneView.axaml.cs",

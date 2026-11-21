@@ -697,6 +697,7 @@ reviews:
       - "docs/design/canvas-pilot/preview-subsystem/preview-pane.md"
       - "docs/verification/canvas-pilot/preview-subsystem/preview-pane.md"
       - "src/**/PreviewSubsystem/IRenderedImageSource.cs"
+      - "src/**/PreviewSubsystem/IRenderNoteSink.cs"
       - "src/**/PreviewSubsystem/PreviewPaneViewModel.cs"
       - "src/**/PreviewSubsystem/PreviewPaneView.axaml"
       - "src/**/PreviewSubsystem/PreviewPaneView.axaml.cs"
@@ -720,8 +721,28 @@ reviews:
       - "src/**/PreviewSubsystem/ImageExporter.cs"
       - "src/**/PreviewSubsystem/IImageExporter.cs"
       - "src/**/PreviewSubsystem/IExportDialogs.cs"
+      - "src/**/PreviewSubsystem/ExportPreset.cs"
+      - "src/**/PreviewSubsystem/IExportPresetSource.cs"
       - "test/**/PreviewSubsystem/ImageExporterTests.cs"
       - "test/**/PreviewSubsystem/PreviewSubsystemFakes.cs"
+
+  - id: CanvasPilot-Preview-ExportPresetDialog
+    title: Review of CanvasPilot ExportPresetDialog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/export-preset-dialog.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/export-preset-dialog.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/export-preset-dialog.md"
+      - "src/**/PreviewSubsystem/ExportPresetDialogViewModel.cs"
+      - "src/**/PreviewSubsystem/ExportPresetItemViewModel.cs"
+      - "src/**/PreviewSubsystem/ExportPresetDialogView.axaml"
+      - "src/**/PreviewSubsystem/ExportPresetDialogView.axaml.cs"
+      - "test/**/PreviewSubsystem/ExportPresetDialogTests.cs"
+      - "test/**/ExportPresetDialogViewTests.cs"
 
   - id: CanvasPilot-Preview-ImageDragSource
     title: Review of CanvasPilot ImageDragSource unit implementation

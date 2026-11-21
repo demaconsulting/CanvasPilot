@@ -59,6 +59,7 @@ input-files:
   - docs/verification/canvas-pilot/preview-subsystem/image-render-service.md
   - docs/verification/canvas-pilot/preview-subsystem/preview-pane.md
   - docs/verification/canvas-pilot/preview-subsystem/image-exporter.md
+  - docs/verification/canvas-pilot/preview-subsystem/export-preset-dialog.md
   - docs/verification/canvas-pilot/preview-subsystem/image-drag-source.md
   - docs/verification/canvas-pilot/project-subsystem.md
   - docs/verification/canvas-pilot/project-subsystem/project-service.md

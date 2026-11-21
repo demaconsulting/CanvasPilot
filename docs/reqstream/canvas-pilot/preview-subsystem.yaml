@@ -89,8 +89,10 @@ sections:
             children:
               - CanvasPilot-ImageRenderService-RenderAtARequestedSize
               - CanvasPilot-ImageRenderService-WritePngResolution
+              - CanvasPilot-ImageExporter-ExportAtPresetSize
             tests:
               - PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution
+              - PreviewSubsystem_ExportAtPreset_ShownPicture_WritesPngOfThePresetSizeAndRemembersTheChoice
 
           - id: CanvasPilot-Preview-ReportPictureFacts
             title: >-

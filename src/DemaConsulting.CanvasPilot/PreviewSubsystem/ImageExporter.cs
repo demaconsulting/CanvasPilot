@@ -65,12 +65,30 @@ public sealed class ImageExporter : IImageExporter
     private readonly RollingFileLogger? _logger;
 
     /// <summary>
+    ///     Supplies the sizes to offer, or <see langword="null" /> when the picture is always exported as it is shown.
+    /// </summary>
+    private readonly IExportPresetSource? _presets;
+
+    /// <summary>
+    ///     The way that the user chose the last time, for the length of the session, or <see langword="null" /> when
+    ///     there was none.
+    /// </summary>
+    private ExportPreset? _lastChoice;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ImageExporter" /> class.
     /// </summary>
     /// <param name="source">Provides the picture to export.</param>
-    /// <param name="encoder">Encodes the picture as PNG.</param>
+    /// <param name="encoder">Encodes the picture as PNG and draws it again at a size.</param>
     /// <param name="logger">Optional logger for diagnostics.</param>
-    public ImageExporter(IRenderedImageSource source, IImageRenderService encoder, RollingFileLogger? logger = null)
+    /// <param name="presets">
+    ///     Supplies the sizes to offer; <see langword="null" /> to export the picture as it is shown without asking.
+    /// </param>
+    public ImageExporter(
+        IRenderedImageSource source,
+        IImageRenderService encoder,
+        RollingFileLogger? logger = null,
+        IExportPresetSource? presets = null)
     {
         ArgumentNullException.ThrowIfNull(source);
         ArgumentNullException.ThrowIfNull(encoder);
@@ -78,6 +96,7 @@ public sealed class ImageExporter : IImageExporter
         _source = source;
         _encoder = encoder;
         _logger = logger;
+        _presets = presets;
         _source.CurrentImageChanged += OnCurrentImageChanged;
     }
 
@@ -114,6 +133,22 @@ public sealed class ImageExporter : IImageExporter
             return;
         }
 
+        // Offer the sizes when there are any; the picture as it is shown is always the first and the old behavior
+        var choice = ExportPreset.AsRendered;
+        var offered = _presets?.GetPresets();
+        if (offered is { Count: > 0 })
+        {
+            var choices = new List<ExportPreset>(offered.Count + 1) { ExportPreset.AsRendered };
+            choices.AddRange(offered);
+            if (await dialogs.PickExportPresetAsync(choices, _lastChoice) is not { } picked)
+            {
+                return;
+            }
+
+            _lastChoice = picked;
+            choice = picked;
+        }
+
         var chosen = await dialogs.PickSaveFileAsync(ExportTitle, SuggestFileName(image.SourcePath), "PNG image", "*" + PngExtension);
         if (chosen is null)
         {
@@ -125,7 +160,31 @@ public sealed class ImageExporter : IImageExporter
             : chosen + PngExtension;
         try
         {
-            var bytes = _encoder.EncodePng(image);
+            // The picture as shown is encoded as it is; a size means drawing the source file again at that size, which
+            // is sharper than stretching the shown pixels, and any failure of that is shown and writes no file
+            byte[] bytes;
+            if (choice.IsAsRendered)
+            {
+                bytes = _encoder.EncodePng(image);
+            }
+            else
+            {
+                var folder = _source.ProjectFolder ?? Path.GetDirectoryName(image.SourcePath) ?? string.Empty;
+                var result = await _encoder.RenderAsync(image.SourcePath, folder, choice.ToRenderSettings(), CancellationToken.None);
+                if (result.Image is not { } drawn)
+                {
+                    if (result.Error is { } error)
+                    {
+                        Log(LogLevel.Warning, $"'{image.SourcePath}' could not be drawn for the preset '{choice.Name}': {error.Code}: {error.Message}");
+                        await dialogs.ShowMessageAsync(ExportTitle, $"The picture could not be drawn at that size: {error.Message}");
+                    }
+
+                    return;
+                }
+
+                bytes = _encoder.EncodePng(drawn, choice.Dpi);
+            }
+
             await File.WriteAllBytesAsync(path, bytes);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)

@@ -190,6 +190,16 @@ public sealed partial class MainWindowView : Window, IDialogService
     }
 
     /// <inheritdoc />
+    public async Task<ExportPreset?> PickExportPresetAsync(IReadOnlyList<ExportPreset> presets, ExportPreset? last)
+    {
+        ArgumentNullException.ThrowIfNull(presets);
+
+        var viewModel = new ExportPresetDialogViewModel(presets, last);
+        await new ExportPresetDialogView(viewModel).ShowDialog<bool>(this);
+        return viewModel.Accepted ? viewModel.SelectedPreset : null;
+    }
+
+    /// <inheritdoc />
     public async Task<bool> CopyImageToClipboardAsync(RenderedImage image)
     {
         ArgumentNullException.ThrowIfNull(image);

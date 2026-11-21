@@ -7,12 +7,14 @@
 The `Preview` subsystem turns the image source file that the user selects into a picture on the screen, and the
 picture into a PNG file, a clipboard image, or a picture dragged into another program. Its boundary starts with the
 selection and the project folder of the project explorer and ends with the picture shown in the main window, files
-written where the user chooses, the system clipboard, and the operating system's drag and drop. It contains four
+written where the user chooses, the system clipboard, and the operating system's drag and drop. It contains five
 units: `ImageRenderService`, which draws a file with the CanvasNet
-viewer library in the background and encodes pictures as PNG; `PreviewPane`, the view model and view that follow
+viewer library in the background, at a size if asked, and encodes pictures as PNG; `PreviewPane`, the view model and
+view that follow
 the selection, show the picture, the busy state, errors, and notes, render again when files change, host a layer over
 the picture, and start the drag of the picture; `ImageExporter`, which the Image menu uses to save or copy the shown
-picture; and `ImageDragSource`, which writes the picture as a PNG file for dragging it out. CanvasNet is used in
+picture, as it is shown or at a size; `ExportPresetDialog`, the window in which the user chooses how the picture is
+exported; and `ImageDragSource`, which writes the picture as a PNG file for dragging it out. CanvasNet is used in
 exactly one unit, `ImageRenderService`, so the other units and their tests work with a substitute render service.
 
 ### Interfaces
@@ -42,9 +44,25 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
 - *Type*: In-process .NET API (`IImageExporter`, with `NullImageExporter`, and `IExportDialogs`).
 - *Role*: Provider of both contracts; the main window's shell consumes `IImageExporter`, and the main window's
   dialog service implements `IExportDialogs`.
-- *Contract*: `CanExport` is true while a picture is shown; `ExportPngAsync(dialogs)` asks for a file with
-  `IExportDialogs.PickSaveFileAsync` and writes a PNG; `CopyImageAsync(dialogs)` calls
+- *Contract*: `CanExport` is true while a picture is shown; `ExportPngAsync(dialogs)` asks how to export with
+  `IExportDialogs.PickExportPresetAsync` when sizes are offered, asks for a file with
+  `IExportDialogs.PickSaveFileAsync`, and writes a PNG, drawing the file again at the size that was chosen;
+  `CopyImageAsync(dialogs)` calls
   `IExportDialogs.CopyImageToClipboardAsync`; `ShowMessageAsync` reports problems.
+
+**Export Presets**: The sizes that a picture can be exported at.
+
+- *Type*: In-process .NET API (`ExportPreset`, `IExportPresetSource`).
+- *Role*: Consumer (the exporter and the export dialog); the supplier is composed by the application.
+- *Contract*: An `ExportPreset` is a plain value (name, width and height, resolution, transparency, background, origin).
+  `IExportPresetSource.GetPresets` gives the sizes to offer after the picture as it is shown, in order, and may give
+  none. The `Preview` subsystem knows nothing about where the sizes come from.
+
+**Render Notes**: Notes about the shown picture from another part.
+
+- *Type*: In-process .NET API (`IRenderNoteSink`).
+- *Role*: Provider (declared here; the preview pane takes the notes in a later step).
+- *Contract*: `ShowNotes(group, notes)` replaces the notes of a group in the list of notes of the picture.
 
 **Project Explorer**: The selection and project folder that drive the preview.
 
@@ -98,8 +116,9 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
    overlay at their own size.
 4. When files in the project folder change, the pane asks the scheduler for a render after a short delay. The
    current picture stays visible until the new result arrives.
-5. The exporter is enabled while the pane shows a picture. Export asks the dialog service for a file name and
-   writes the PNG that `EncodePng` produces from the shown pixels; Copy hands the picture to the dialog service,
+5. The exporter is enabled while the pane shows a picture. Export asks the dialog service how to export when sizes are
+   offered (the Export PNG dialog), then for a file name, and writes the PNG that `EncodePng` produces from the shown
+   pixels, or from the file drawn again at the chosen size; Copy hands the picture to the dialog service,
    whose window implementation puts a bitmap on the clipboard.
 6. When the user presses the left button on the shown picture and moves the pointer, the view asks the pane for the
    picture as a file; `ImageDragSource` writes it as a PNG in its own folder, and the view starts the system's drag

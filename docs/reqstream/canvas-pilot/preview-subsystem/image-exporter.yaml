@@ -57,3 +57,31 @@ sections:
                   - ImageExporter_CopyImageAsync_PictureShown_CopiesPictureToClipboard
                   - ImageExporter_CopyImageAsync_ClipboardUnavailableOrNoPicture_ShowsMessageOrDoesNothing
                   - MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable
+
+              - id: CanvasPilot-ImageExporter-ExportAtPresetSize
+                title: >-
+                  The ImageExporter shall, when it has sizes to offer, ask the user how to export before it asks for a file,
+                  offering the picture as it is shown first and then the sizes in the order given, remember the choice for
+                  the session, and export the picture as it is shown exactly as before when that is chosen or when there are
+                  no sizes; shall, when a size is chosen, draw the source file of the picture again with the size, the
+                  background or transparency, and the resolution of the size, in the folder of the project, and write the
+                  PNG file of that picture with the resolution; and shall write nothing when the user cancels either
+                  dialog, and tell the user why when the picture cannot be drawn at the size.
+                justification: |
+                  The pictures of a style are made for slides, mail, and paper. Drawing the file again at the size keeps the
+                  lines sharp, where stretching the shown pixels would blur them, and the background and the resolution of
+                  the size make the file ready for its use. The old export must still be there for a picture that is wanted
+                  as it is, and a size that cannot be drawn must be explained and must not leave a file that looks right but
+                  is not.
+                children:
+                  - CanvasPilot-ExportPresetDialog-ChooseAnExportPreset
+                tests:
+                  - ImageExporter_ExportPngAsync_NoPresetSourceOrNoPresets_DoesNotAskAndExportsAsShown
+                  - ImageExporter_ExportPngAsync_AsRenderedChosen_OffersListAndEncodesShownPicture
+                  - ImageExporter_ExportPngAsync_PresetChosen_RendersWithExactSettingsAndWritesEncoderBytes
+                  - ImageExporter_ExportPngAsync_TransparentPresetWithoutDpi_AsksForTransparencyAndNoResolution
+                  - ImageExporter_ExportPngAsync_CancelAtEitherDialog_DrawsAndWritesNothing
+                  - ImageExporter_ExportPngAsync_RenderFails_ShowsMessageWithReasonAndWritesNoFile
+                  - ImageExporter_ExportPngAsync_RenderCancelledOrEncoderRefuses_WritesNoFile
+                  - ImageExporter_ExportPngAsync_SecondExport_OffersTheLastChoice
+                  - ImageExporter_ExportPngAsync_SvgAtPresetSize_WritesPngOfThatSizeWithResolution

@@ -61,6 +61,16 @@ public sealed class FakeDialogService : IDialogService
     public string? SaveFileToPick { get; set; }
 
     /// <summary>
+    ///     Gets or sets the export preset the user picks, or null for cancel.
+    /// </summary>
+    public ExportPreset? ExportPresetToPick { get; set; }
+
+    /// <summary>
+    ///     Gets the number of times the user was asked to pick an export preset.
+    /// </summary>
+    public int PresetOfferCount { get; private set; }
+
+    /// <summary>
     ///     Gets or sets whether the user confirms.
     /// </summary>
     public bool ConfirmResult { get; set; }
@@ -218,6 +228,13 @@ public sealed class FakeDialogService : IDialogService
     public Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern)
     {
         return Task.FromResult(SaveFileToPick);
+    }
+
+    /// <inheritdoc />
+    public Task<ExportPreset?> PickExportPresetAsync(IReadOnlyList<ExportPreset> presets, ExportPreset? last)
+    {
+        PresetOfferCount++;
+        return Task.FromResult(ExportPresetToPick);
     }
 
     /// <inheritdoc />

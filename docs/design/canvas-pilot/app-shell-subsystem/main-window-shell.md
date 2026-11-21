@@ -137,6 +137,8 @@ texts or a blank accepting label.
   the Drawing Knowledge command shows; the dialog service extends the launcher, which the `Knowledge` subsystem owns.
 - **ImageExporter** (through `IImageExporter` and `IExportDialogs`) — the Image menu commands run it, and the
   dialog service extends `IExportDialogs` so the exporter can ask the user through it.
+- **ExportPresetDialog** (through `IExportDialogs.PickExportPresetAsync`) — the main window shows the Export PNG dialog
+  when the exporter asks how to export.
 - **Composer** (through `IUndoRedoTarget` and `IPushToTalkTarget`) — what the Edit menu and the talk key reach; the
   seams are owned by the `Composer` subsystem and the shell does not know what implements them.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.

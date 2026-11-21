@@ -26,6 +26,11 @@ The headless clipboard test runs under the Avalonia headless platform.
 - The suggested file name is the source file's stem with `.png`, including for `.vl.json` files.
 - Copy gives the shown picture to the export dialogs and says nothing when it works; it tells the user when the
   clipboard cannot be used and does nothing without a picture.
+- With sizes to offer the user is asked how to export before a file is asked for, the picture as it is shown is first,
+  and the choice is offered again the next time; without sizes no question is asked and the export is as before.
+- A size draws the source file again with exactly the settings of the size and writes the encoding of that picture with
+  its resolution; a size that cannot be drawn is explained and no file is written; canceling at either dialog writes
+  nothing.
 - The headless clipboard takes a picture and returns it as a bitmap of the same size.
 
 #### Test Scenarios
@@ -70,6 +75,47 @@ service. This scenario is tested by ImageExporter_ExportAndCopy_UsingExportDialo
 
 **ImageExporter_InvalidArguments_Throw**: Missing collaborators, a blank path, and missing export dialogs are
 refused. This scenario is tested by `ImageExporter_InvalidArguments_Throw`.
+
+**ImageExporter_ExportPngAsync_NoPresetSourceOrNoPresets_DoesNotAskAndExportsAsShown**: With no source of sizes and with
+a source that gives none, the user is never asked how to export and both exports write the same file as before. This
+scenario is tested by `ImageExporter_ExportPngAsync_NoPresetSourceOrNoPresets_DoesNotAskAndExportsAsShown`.
+
+**ImageExporter_ExportPngAsync_AsRenderedChosen_OffersListAndEncodesShownPicture**: With two sizes offered the list is
+the picture as it is shown, then the two sizes in order, with no earlier choice; choosing the picture as it is shown
+draws nothing again and writes the bytes of the encoder for the shown picture. This scenario is tested by
+`ImageExporter_ExportPngAsync_AsRenderedChosen_OffersListAndEncodesShownPicture`.
+
+**ImageExporter_ExportPngAsync_PresetChosen_RendersWithExactSettingsAndWritesEncoderBytes**: Choosing a size draws the
+source file of the shown picture once with exactly the size, background, and resolution of the size in the folder of the
+project, encodes the new picture (and not the shown one) with the resolution, writes the bytes of the encoder, and shows
+no message. This scenario is tested by
+`ImageExporter_ExportPngAsync_PresetChosen_RendersWithExactSettingsAndWritesEncoderBytes`.
+
+**ImageExporter_ExportPngAsync_TransparentPresetWithoutDpi_AsksForTransparencyAndNoResolution**: A transparent size with
+only a width is drawn with transparency and no background, the folder of the file is used when the picture source gives
+no project folder, and no resolution is passed to the encoder. This scenario is tested by
+`ImageExporter_ExportPngAsync_TransparentPresetWithoutDpi_AsksForTransparencyAndNoResolution`.
+
+**ImageExporter_ExportPngAsync_CancelAtEitherDialog_DrawsAndWritesNothing**: Canceling at the size dialog, and choosing
+a size and then canceling the save dialog, draw nothing, write nothing, and report nothing. This scenario is tested by
+`ImageExporter_ExportPngAsync_CancelAtEitherDialog_DrawsAndWritesNothing`.
+
+**ImageExporter_ExportPngAsync_RenderFails_ShowsMessageWithReasonAndWritesNoFile**: A size that the renderer refuses
+shows one message titled `Export as PNG` with the reason of the renderer and writes no file. This scenario is tested by
+`ImageExporter_ExportPngAsync_RenderFails_ShowsMessageWithReasonAndWritesNoFile`.
+
+**ImageExporter_ExportPngAsync_RenderCancelledOrEncoderRefuses_WritesNoFile**: A render that was cancelled writes no
+file and says nothing; an encoder that refuses the resolution shows `The image could not be saved:` and writes no file.
+This scenario is tested by `ImageExporter_ExportPngAsync_RenderCancelledOrEncoderRefuses_WritesNoFile`.
+
+**ImageExporter_ExportPngAsync_SecondExport_OffersTheLastChoice**: The first offer has no earlier choice and the second
+offers the choice made in the first. This scenario is tested by
+`ImageExporter_ExportPngAsync_SecondExport_OffersTheLastChoice`.
+
+**ImageExporter_ExportPngAsync_SvgAtPresetSize_WritesPngOfThatSizeWithResolution**: With the real renderer, an SVG that
+is 1600 by 640 exported at 1920 by 1080 with a background and a resolution is a PNG that decodes at 1920 by 1080, has
+the background in its corner, and holds the physical size chunk. This scenario is tested by
+`ImageExporter_ExportPngAsync_SvgAtPresetSize_WritesPngOfThatSizeWithResolution`.
 
 **MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable**: Under the headless platform the main
 window puts a 2 by 2 picture on its clipboard, answers `true`, and the clipboard returns a bitmap of 2 by 2 pixels.

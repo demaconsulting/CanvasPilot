@@ -38,6 +38,17 @@ public interface IExportDialogs
     Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern);
 
     /// <summary>
+    ///     Asks the user how to export the picture: as it is shown or at one of the sizes offered.
+    /// </summary>
+    /// <param name="presets">The choices, in the order to show them; the first is the picture as it is shown.</param>
+    /// <param name="last">
+    ///     The choice made the last time, which is selected when it is among <paramref name="presets" />, or
+    ///     <see langword="null" /> to select the first.
+    /// </param>
+    /// <returns>The preset chosen, or <see langword="null" /> when cancelled.</returns>
+    Task<ExportPreset?> PickExportPresetAsync(IReadOnlyList<ExportPreset> presets, ExportPreset? last);
+
+    /// <summary>
     ///     Puts a picture on the system clipboard as an image.
     /// </summary>
     /// <param name="image">The picture to copy.</param>

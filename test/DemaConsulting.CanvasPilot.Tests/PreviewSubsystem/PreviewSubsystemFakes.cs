@@ -34,6 +34,23 @@ public sealed class FakeExportDialogs : IExportDialogs
     public string? SaveFileToPick { get; set; }
 
     /// <summary>
+    ///     Gets or sets the preset the export dialog returns, or <see langword="null" /> to imitate canceling. When
+    ///     <see cref="PresetNameToPick" /> is set, that name is looked up among the presets offered instead.
+    /// </summary>
+    public ExportPreset? PresetToPick { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the name of the offered preset that the export dialog returns, or <see langword="null" /> to use
+    ///     <see cref="PresetToPick" />.
+    /// </summary>
+    public string? PresetNameToPick { get; set; }
+
+    /// <summary>
+    ///     Gets the offers that were made to the user, in order.
+    /// </summary>
+    public List<(IReadOnlyList<ExportPreset> Presets, ExportPreset? Last)> PresetOffers { get; } = [];
+
+    /// <summary>
     ///     Gets or sets a value indicating whether the clipboard accepts pictures.
     /// </summary>
     public bool ClipboardAvailable { get; set; } = true;
@@ -52,6 +69,14 @@ public sealed class FakeExportDialogs : IExportDialogs
     public Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern)
     {
         return Task.FromResult(SaveFileToPick);
+    }
+
+    /// <inheritdoc />
+    public Task<ExportPreset?> PickExportPresetAsync(IReadOnlyList<ExportPreset> presets, ExportPreset? last)
+    {
+        PresetOffers.Add((presets, last));
+        var picked = PresetNameToPick is { } name ? presets.FirstOrDefault(p => p.Name == name) : PresetToPick;
+        return Task.FromResult(picked);
     }
 
     /// <inheritdoc />

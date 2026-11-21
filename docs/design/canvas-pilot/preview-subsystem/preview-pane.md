@@ -18,6 +18,10 @@ coordinates without the pane knowing them, and one slot in its top bar for the c
 it changes (`IRenderedImageSource`). **ProjectFolder** (`IRenderedImageSource`) is the folder of the open project that
 the explorer holds, or `null` when no project is open, for the parts that draw the shown file again at another size.
 
+**IRenderNoteSink**: the interface (`ShowNotes(group, notes)`) through which a part that checks the picture can put its
+own notes in the list of notes of the picture; the code of every note of a group starts with the group name and a
+hyphen. The interface is declared with the picture source; the pane takes the notes in a later step.
+
 **IsBusy** / **StatusText**: whether a render runs, and a line such as `Rendering a.svg...`,
 `a.svg: 40 x 20 px, svg, 1 note`, or `a.svg: render failed`.
 

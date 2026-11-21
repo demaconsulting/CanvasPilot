@@ -14,6 +14,7 @@ package CanvasPilot {
         part imageRenderService : ImageRenderService;
         part previewPane : PreviewPane;
         part imageExporter : ImageExporter;
+        part exportPresetDialog : ExportPresetDialog;
         part imageDragSource : ImageDragSource;
     }
 }

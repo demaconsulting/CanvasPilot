@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasNet.Canvas;
+using DemaConsulting.CanvasNet.Codecs;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using NSubstitute;
 
@@ -267,4 +269,293 @@ public sealed class ImageExporterTests : IDisposable
         await Assert.ThrowsAsync<ArgumentNullException>(() => exporter.ExportPngAsync(null!));
         await Assert.ThrowsAsync<ArgumentNullException>(() => exporter.CopyImageAsync(null!));
     }
+
+    /// <summary>
+    ///     Test that an exporter with no source of sizes, or a source with none, never asks about sizes and writes the
+    ///     picture as it is shown, as it did before sizes existed.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_NoPresetSourceOrNoPresets_DoesNotAskAndExportsAsShown()
+    {
+        // Arrange: a shown picture, a chosen file, and two exporters: without a source and with an empty one
+        _source.CurrentImage = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        var withoutSource = new ImageExporter(_source, new ImageRenderService());
+        var withEmptySource = new ImageExporter(_source, new ImageRenderService(), null, new FakePresetSource());
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "one.png");
+
+        // Act: export with each
+        await withoutSource.ExportPngAsync(_dialogs);
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "two.png");
+        await withEmptySource.ExportPngAsync(_dialogs);
+
+        // Assert: both files exist, the user was never asked about sizes, and the files are the same
+        Assert.Empty(_dialogs.PresetOffers);
+        Assert.Equal(
+            await File.ReadAllBytesAsync(Path.Combine(_folder, "one.png"), TestContext.Current.CancellationToken),
+            await File.ReadAllBytesAsync(Path.Combine(_folder, "two.png"), TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    ///     Test that the user is offered the picture as it is shown first and then the sizes of the source, in order, and
+    ///     that choosing the picture as it is shown encodes the shown picture and draws nothing again.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_AsRenderedChosen_OffersListAndEncodesShownPicture()
+    {
+        // Arrange: a source with two sizes, a renderer that would answer, and a user who keeps the picture as it is shown
+        var image = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        _source.CurrentImage = image;
+        var renderer = Substitute.For<IImageRenderService>();
+        renderer.EncodePng(image).Returns([1, 2, 3]);
+        var exporter = new ImageExporter(_source, renderer, null, new FakePresetSource(Slide, Mail));
+        _dialogs.PresetNameToPick = "As rendered";
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "out.png");
+
+        // Act: export
+        await exporter.ExportPngAsync(_dialogs);
+
+        // Assert: the list was as rendered, the sizes in order, nothing was drawn again, and the file is the encoding
+        var offer = Assert.Single(_dialogs.PresetOffers);
+        Assert.Equal(["As rendered", "Slide", "Mail"], offer.Presets.Select(p => p.Name));
+        Assert.Equal(ExportPresetOrigin.AsRendered, offer.Presets[0].Origin);
+        Assert.Null(offer.Last);
+        await renderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, default!, default, TestContext.Current.CancellationToken);
+        Assert.Equal([1, 2, 3], await File.ReadAllBytesAsync(Path.Combine(_folder, "out.png"), TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    ///     Test that a size draws the source file again with exactly the settings of the preset in the folder of the
+    ///     project, encodes the new picture with the resolution of the preset, and writes those bytes.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_PresetChosen_RendersWithExactSettingsAndWritesEncoderBytes()
+    {
+        // Arrange: a shown picture of a source file, a renderer that answers with a drawn picture, and a size with a resolution
+        var shown = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        var drawn = TestImages.Create(Path.Combine(_folder, "cover.svg"), 4, 3);
+        _source.CurrentImage = shown;
+        _source.ProjectFolder = _folder;
+        var renderer = Substitute.For<IImageRenderService>();
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<RenderSettings?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(RenderResult.Success(drawn)));
+        renderer.EncodePng(drawn, 150d).Returns([9, 8, 7]);
+        var a4 = new ExportPreset("app:a4", "A4", 1240, 1754, 150, false, "#FFFFFF", ExportPresetOrigin.Application);
+        var exporter = new ImageExporter(_source, renderer, null, new FakePresetSource(a4));
+        _dialogs.PresetToPick = a4;
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "a4.png");
+
+        // Act: export
+        await exporter.ExportPngAsync(_dialogs);
+
+        // Assert: the file was drawn again with exactly the settings, and the bytes of the encoder are the file
+        await renderer.Received(1).RenderAsync(
+            shown.SourcePath,
+            _folder,
+            new RenderSettings(1240, 1754, false, "#FFFFFF", 150),
+            Arg.Any<CancellationToken>());
+        renderer.DidNotReceive().EncodePng(shown);
+        Assert.Equal([9, 8, 7], await File.ReadAllBytesAsync(Path.Combine(_folder, "a4.png"), TestContext.Current.CancellationToken));
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that a transparent size draws without a background and that a size with no resolution writes none.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_TransparentPresetWithoutDpi_AsksForTransparencyAndNoResolution()
+    {
+        // Arrange: a transparent size that also names a background, which it must ignore
+        var shown = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        var drawn = TestImages.Create(Path.Combine(_folder, "cover.svg"), 4, 3);
+        _source.CurrentImage = shown;
+        var renderer = Substitute.For<IImageRenderService>();
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<RenderSettings?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(RenderResult.Success(drawn)));
+        renderer.EncodePng(drawn, null).Returns([5]);
+        var logo = new ExportPreset("kit:logo", "Logo", 512, null, null, true, "#102030", ExportPresetOrigin.StyleKit);
+        var exporter = new ImageExporter(_source, renderer, null, new FakePresetSource(logo));
+        _dialogs.PresetToPick = logo;
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "logo.png");
+
+        // Act: export with no project folder known, so the folder of the source file is the folder it may read
+        await exporter.ExportPngAsync(_dialogs);
+
+        // Assert: transparency without a background, the folder of the file, and no resolution
+        await renderer.Received(1).RenderAsync(
+            shown.SourcePath,
+            _folder,
+            new RenderSettings(512, null, true, null, null),
+            Arg.Any<CancellationToken>());
+        Assert.Equal([5], await File.ReadAllBytesAsync(Path.Combine(_folder, "logo.png"), TestContext.Current.CancellationToken));
+    }
+
+    /// <summary>
+    ///     Test that canceling at the size dialog, or at the save dialog after a size was chosen, draws nothing and writes
+    ///     nothing.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_CancelAtEitherDialog_DrawsAndWritesNothing()
+    {
+        // Arrange: a shown picture, a renderer that must not be asked, and a source with one size
+        _source.CurrentImage = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        var renderer = Substitute.For<IImageRenderService>();
+        var exporter = new ImageExporter(_source, renderer, null, new FakePresetSource(Slide));
+
+        // Act: cancel at the size dialog, then choose a size and cancel the save dialog
+        _dialogs.PresetToPick = null;
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "never.png");
+        await exporter.ExportPngAsync(_dialogs);
+        _dialogs.PresetToPick = Slide;
+        _dialogs.SaveFileToPick = null;
+        await exporter.ExportPngAsync(_dialogs);
+
+        // Assert: nothing was drawn, nothing was written, and nothing was reported
+        Assert.Equal(2, _dialogs.PresetOffers.Count);
+        await renderer.DidNotReceiveWithAnyArgs().RenderAsync(default!, default!, default, TestContext.Current.CancellationToken);
+        Assert.Empty(Directory.GetFiles(_folder));
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that a source file that cannot be drawn at the size is reported with the reason of the renderer and no
+    ///     file is written, and that a resolution the encoder refuses is reported too.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_RenderFails_ShowsMessageWithReasonAndWritesNoFile()
+    {
+        // Arrange: a renderer that refuses the size, and a size to choose
+        _source.CurrentImage = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        var renderer = Substitute.For<IImageRenderService>();
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<RenderSettings?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(RenderResult.Failure(new RenderError("invalid-settings", "The width must be 1 to 8192."))));
+        var huge = new ExportPreset("app:huge", "Huge", 99999, 1, null, false, null, ExportPresetOrigin.Application);
+        var exporter = new ImageExporter(_source, renderer, null, new FakePresetSource(huge));
+        _dialogs.PresetToPick = huge;
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "huge.png");
+
+        // Act: export
+        await exporter.ExportPngAsync(_dialogs);
+
+        // Assert: one message with the title and the reason, and no file
+        var message = Assert.Single(_dialogs.Messages);
+        Assert.Equal("Export as PNG", message.Title);
+        Assert.Contains("The width must be 1 to 8192.", message.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(_folder, "huge.png")));
+    }
+
+    /// <summary>
+    ///     Test that a render that was cancelled writes no file and says nothing, and that the encoder refusing the
+    ///     resolution is shown as a message and writes no file.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_RenderCancelledOrEncoderRefuses_WritesNoFile()
+    {
+        // Arrange: a renderer that is cancelled once and then draws, and an encoder that refuses the resolution
+        var drawn = TestImages.Create(Path.Combine(_folder, "cover.svg"), 4, 3);
+        _source.CurrentImage = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        var renderer = Substitute.For<IImageRenderService>();
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<RenderSettings?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(RenderResult.Cancelled()), Task.FromResult(RenderResult.Success(drawn)));
+        renderer.EncodePng(drawn, Arg.Any<double?>()).Returns(_ => throw new ArgumentException("Not allowed."));
+        var print = new ExportPreset("app:print", "Print", 100, 100, 5000, false, null, ExportPresetOrigin.Application);
+        var exporter = new ImageExporter(_source, renderer, null, new FakePresetSource(print));
+        _dialogs.PresetToPick = print;
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "print.png");
+
+        // Act: export twice
+        await exporter.ExportPngAsync(_dialogs);
+        var afterCancelled = _dialogs.Messages.Count;
+        await exporter.ExportPngAsync(_dialogs);
+
+        // Assert: the cancelled render said nothing, the refused resolution was shown, and no file exists
+        Assert.Equal(0, afterCancelled);
+        var message = Assert.Single(_dialogs.Messages);
+        Assert.StartsWith("The image could not be saved:", message.Message, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(_folder, "print.png")));
+    }
+
+    /// <summary>
+    ///     Test that the choice of the user is offered as the selected one the next time, for the length of the session.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_SecondExport_OffersTheLastChoice()
+    {
+        // Arrange: a renderer that draws, a source with two sizes, and a user who picks the second
+        var shown = TestImages.Create(Path.Combine(_folder, "cover.svg"), 2, 2);
+        _source.CurrentImage = shown;
+        var renderer = Substitute.For<IImageRenderService>();
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<RenderSettings?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult(RenderResult.Success(shown)));
+        renderer.EncodePng(Arg.Any<RenderedImage>(), Arg.Any<double?>()).Returns([1]);
+        var exporter = new ImageExporter(_source, renderer, null, new FakePresetSource(Slide, Mail));
+        _dialogs.PresetToPick = Mail;
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "mail.png");
+
+        // Act: export twice
+        await exporter.ExportPngAsync(_dialogs);
+        await exporter.ExportPngAsync(_dialogs);
+
+        // Assert: the first offer had no last choice and the second had the one that was picked
+        Assert.Equal(2, _dialogs.PresetOffers.Count);
+        Assert.Null(_dialogs.PresetOffers[0].Last);
+        Assert.Equal(Mail, _dialogs.PresetOffers[1].Last);
+    }
+
+    /// <summary>
+    ///     Test with the real renderer that a vector file exported at a preset size is a PNG of exactly that size, with the
+    ///     resolution of the preset in the file and the margin filled with the background of the preset.
+    /// </summary>
+    [Fact]
+    public async Task ImageExporter_ExportPngAsync_SvgAtPresetSize_WritesPngOfThatSizeWithResolution()
+    {
+        // Arrange: an SVG file, the real renderer, the picture it shows, and a size with a background and a resolution
+        var svg = Path.Combine(_folder, "banner.svg");
+        await File.WriteAllTextAsync(
+            svg,
+            "<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='640'><rect width='1600' height='640' fill='#7C3AED'/></svg>",
+            TestContext.Current.CancellationToken);
+        var renderer = new ImageRenderService();
+        var shown = (await renderer.RenderAsync(svg, _folder, TestContext.Current.CancellationToken)).Image!;
+        _source.CurrentImage = shown;
+        _source.ProjectFolder = _folder;
+        var slide = new ExportPreset("app:slide", "Slide", 1920, 1080, 96, false, "#0A1022", ExportPresetOrigin.Application);
+        var exporter = new ImageExporter(_source, renderer, null, new FakePresetSource(slide));
+        _dialogs.PresetToPick = slide;
+        _dialogs.SaveFileToPick = Path.Combine(_folder, "banner.png");
+
+        // Act: export
+        await exporter.ExportPngAsync(_dialogs);
+
+        // Assert: the file decodes to 1920 x 1080, has the background in its corner and the resolution chunk
+        var bytes = await File.ReadAllBytesAsync(Path.Combine(_folder, "banner.png"), TestContext.Current.CancellationToken);
+        using var stream = new MemoryStream(bytes);
+        using var decoded = PngCodec.Load(stream);
+        Assert.Equal((1920, 1080), (decoded.Width, decoded.Height));
+        Assert.Equal(new Rgba32(10, 16, 34, 255), decoded[0, 0]);
+        Assert.Contains("pHYs", System.Text.Encoding.Latin1.GetString(bytes), StringComparison.Ordinal);
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     A size for slides, from the application.
+    /// </summary>
+    private static ExportPreset Slide { get; } =
+        new("app:slide", "Slide", 1920, 1080, null, false, "#FFFFFF", ExportPresetOrigin.Application);
+
+    /// <summary>
+    ///     A size for mail, from the style kit.
+    /// </summary>
+    private static ExportPreset Mail { get; } =
+        new("kit:mail", "Mail", 800, null, null, false, "#FFFFFF", ExportPresetOrigin.StyleKit);
+
+    /// <summary>
+    ///     Hand-written source of sizes for tests.
+    /// </summary>
+    /// <param name="presets">The sizes to offer.</param>
+    private sealed class FakePresetSource(params ExportPreset[] presets) : IExportPresetSource
+    {
+        /// <inheritdoc />
+        public IReadOnlyList<ExportPreset> GetPresets() => presets;
+    }
 }
+

@@ -8,7 +8,9 @@ package CanvasPilot {
             sourceFiles = (
                 "src/DemaConsulting.CanvasPilot/PreviewSubsystem/ImageExporter.cs",
                 "src/DemaConsulting.CanvasPilot/PreviewSubsystem/IImageExporter.cs",
-                "src/DemaConsulting.CanvasPilot/PreviewSubsystem/IExportDialogs.cs"
+                "src/DemaConsulting.CanvasPilot/PreviewSubsystem/IExportDialogs.cs",
+                "src/DemaConsulting.CanvasPilot/PreviewSubsystem/ExportPreset.cs",
+                "src/DemaConsulting.CanvasPilot/PreviewSubsystem/IExportPresetSource.cs"
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/PreviewSubsystem/ImageExporterTests.cs",

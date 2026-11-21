@@ -347,6 +347,38 @@ public sealed class PreviewSubsystemTests : IDisposable
         Assert.Equal(5906u, System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(41)));
     }
 
+    /// <summary>
+    ///     Test that the user is offered the sizes through the real export dialog view model, and that the shown picture is
+    ///     exported at the size that was chosen: the file is a PNG of exactly the preset size with its resolution, and a
+    ///     second export offers the choice of the first.
+    /// </summary>
+    [Fact]
+    public async Task PreviewSubsystem_ExportAtPreset_ShownPicture_WritesPngOfThePresetSizeAndRemembersTheChoice()
+    {
+        // Arrange: a shown 40 x 20 picture, one size of the application, and a user that works the real dialog view model
+        await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), WideSvg, TestContext.Current.CancellationToken);
+        var (explorer, pane) = Create();
+        var preset = new ExportPreset("app:card", "Card", 300, 300, 200, false, "#FFFFFF", ExportPresetOrigin.Application);
+        var exporter = new ImageExporter(pane, new ImageRenderService(), null, new StaticPresets(preset));
+        var user = new DialogViewModelUser("Card", Path.Combine(_folder, "wide-card.png"));
+        explorer.Open(_folder);
+        explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
+        await pane.RenderCompletion;
+
+        // Act: export twice
+        await exporter.ExportPngAsync(user);
+        await exporter.ExportPngAsync(user);
+
+        // Assert: the file is a PNG of 300 x 300 with 200 dots per inch (7874 pixels per meter), and the second offer
+        // had the first choice selected
+        var png = await File.ReadAllBytesAsync(Path.Combine(_folder, "wide-card.png"), TestContext.Current.CancellationToken);
+        Assert.Equal(300, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16, 4)));
+        Assert.Equal(300, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4)));
+        Assert.Equal(7874u, System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(41)));
+        Assert.Equal(["As rendered", "Card"], user.Offers[0]);
+        Assert.Equal("Card", user.SelectedWhenOffered[1]);
+    }
+
     private (ProjectExplorerViewModel Explorer, PreviewPaneViewModel Pane) Create(string? dragFolder = null)
     {
         var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), _explorerScheduler);
@@ -359,5 +391,57 @@ public sealed class PreviewSubsystemTests : IDisposable
         _disposables.Add(pane);
         _disposables.Add(explorer);
         return (explorer, pane);
+    }
+
+    /// <summary>
+    ///     A source of sizes that always gives the same list.
+    /// </summary>
+    /// <param name="presets">The sizes.</param>
+    private sealed class StaticPresets(params ExportPreset[] presets) : IExportPresetSource
+    {
+        /// <inheritdoc />
+        public IReadOnlyList<ExportPreset> GetPresets() => presets;
+    }
+
+    /// <summary>
+    ///     A user that works the real export dialog view model: it selects the line with a name, presses Export, and writes
+    ///     down what was offered and what was selected when the dialog opened.
+    /// </summary>
+    /// <param name="presetName">The name of the line to select.</param>
+    /// <param name="saveFile">The file the user chooses to save to.</param>
+    private sealed class DialogViewModelUser(string presetName, string saveFile) : IExportDialogs
+    {
+        /// <summary>
+        ///     Gets the names of the choices of each offer.
+        /// </summary>
+        public List<string[]> Offers { get; } = [];
+
+        /// <summary>
+        ///     Gets the name of the line that was selected when each offer was shown.
+        /// </summary>
+        public List<string?> SelectedWhenOffered { get; } = [];
+
+        /// <inheritdoc />
+        public Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern)
+        {
+            return Task.FromResult<string?>(saveFile);
+        }
+
+        /// <inheritdoc />
+        public Task<ExportPreset?> PickExportPresetAsync(IReadOnlyList<ExportPreset> presets, ExportPreset? last)
+        {
+            var viewModel = new ExportPresetDialogViewModel(presets, last);
+            Offers.Add(viewModel.Items.Select(item => item.Name).ToArray());
+            SelectedWhenOffered.Add(viewModel.SelectedItem?.Name);
+            viewModel.SelectedItem = viewModel.Items.First(item => item.Name == presetName);
+            viewModel.ExportCommand.Execute(null);
+            return Task.FromResult(viewModel.Accepted ? viewModel.SelectedPreset : null);
+        }
+
+        /// <inheritdoc />
+        public Task<bool> CopyImageToClipboardAsync(RenderedImage image) => Task.FromResult(false);
+
+        /// <inheritdoc />
+        public Task ShowMessageAsync(string title, string message) => Task.CompletedTask;
     }
 }

@@ -33,6 +33,8 @@ watcher; no network, external services, or display are required.
   scaled picture; this is verified by the pane's unit and headless tests.
 - The shown picture can be prepared for dragging out as a file that is a PNG of exactly that picture, which is reused
   for the same picture and is another file for another picture.
+- Exported at a size that is chosen in the export dialog, the shown file is drawn again and written as a PNG of exactly
+  that size with its resolution, and the choice is offered again the next time.
 
 ### Test Scenarios
 
@@ -84,3 +86,9 @@ picture are drawn again into a 400 by 400 box with a white margin. The picture i
 white, the red picture is in the middle, and the PNG that is encoded from it with 150 dots per inch decodes at 400 by
 400 and holds 5906 pixels per meter in its physical size chunk. This scenario is tested by
 `PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution`.
+
+**PreviewSubsystem_ExportAtPreset_ShownPicture_WritesPngOfThePresetSizeAndRemembersTheChoice**: With the 40 by 20
+picture shown, a source of one size (300 by 300 at 200 dots per inch), and a user who works the real export dialog view
+model, the first export offers the picture as it is shown and the size, and writes a PNG whose header holds 300 by 300
+and whose physical size chunk holds 7874 pixels per meter; the second export offers the size already selected. This
+scenario is tested by `PreviewSubsystem_ExportAtPreset_ShownPicture_WritesPngOfThePresetSizeAndRemembersTheChoice`.

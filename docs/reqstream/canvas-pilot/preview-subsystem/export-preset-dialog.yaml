@@ -1,0 +1,36 @@
+---
+# Software Unit Requirements for the ExportPresetDialog Unit
+#
+# The ExportPresetDialog unit is the modal Export PNG window and its view model. It lists the ways that the shown
+# picture can be exported (the picture as it is shown, the sizes of the style kit, and the sizes of the application),
+# says what the file will be for the selected one, and reports the choice. It exports nothing itself: the exporter
+# draws and writes, and the main window shows the dialog through the IExportDialogs interface of the Preview subsystem.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        sections:
+          - title: ExportPresetDialog Requirements
+            requirements:
+              - id: CanvasPilot-ExportPresetDialog-ChooseAnExportPreset
+                title: >-
+                  The ExportPresetDialog shall list the ways to export in the order it is given, with the size and the
+                  background of each, select the way that was chosen the last time when it is still offered and otherwise
+                  the first, say what the file will be for the selected way, accept the selected way when the user chooses
+                  Export, and close without accepting when the user cancels.
+                justification: |
+                  A picture is exported for a purpose: a slide, a mail, a page. The sizes that belong to the style of the
+                  project are one choice away, the picture as it is shown stays the first and the default so the old way of
+                  exporting costs one more click, and a sentence about the result lets the user see what will be written
+                  before a file name is asked for.
+                tests:
+                  - ExportPresetDialogViewModel_New_Presets_ListsInOrderWithSizeLinesAndSelectsFirst
+                  - ExportPresetDialogViewModel_New_LastChoice_IsSelectedWhenStillOffered
+                  - ExportPresetDialogViewModel_ResultText_EachKindOfChoice_SaysWhatTheFileWillBe
+                  - ExportPresetDialogViewModel_ExportAndCancel_AcceptOrNot
+                  - ExportPreset_ToRenderSettings_GivesTheSettingsOfThePreset
+                  - ExportPresetDialogViewModel_InvalidArguments_Throw
+                  - ExportPresetDialogView_Show_ListsChoicesAndSelectsFirst
+                  - ExportPresetDialogView_SelectSizeAndExport_ShowsResultAndAccepts
+                  - ExportPresetDialogView_CancelButton_ClosesWindowWithoutAccepting

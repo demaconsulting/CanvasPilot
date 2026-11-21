@@ -51,6 +51,7 @@ includes:
   - docs/reqstream/canvas-pilot/preview-subsystem/image-render-service.yaml
   - docs/reqstream/canvas-pilot/preview-subsystem/preview-pane.yaml
   - docs/reqstream/canvas-pilot/preview-subsystem/image-exporter.yaml
+  - docs/reqstream/canvas-pilot/preview-subsystem/export-preset-dialog.yaml
   - docs/reqstream/canvas-pilot/preview-subsystem/image-drag-source.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem/settings-service.yaml
