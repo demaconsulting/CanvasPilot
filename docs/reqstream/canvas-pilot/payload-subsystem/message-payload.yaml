@@ -1,0 +1,29 @@
+---
+# Software Unit Requirements for the MessagePayload Unit
+#
+# The MessagePayload unit is the contract between the chat and the assistant: the immutable values that hold the message
+# that was sent, with its text, its parts in order, its attachments, and its pictures with their marks. The unit has no
+# behavior beyond holding values, and no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Payload Subsystem Requirements
+        sections:
+          - title: MessagePayload Requirements
+            requirements:
+              - id: CanvasPilot-MessagePayload-Immutable
+                title: >-
+                  The MessagePayload shall hold the text, the parts in order, the attachments, and the pictures with their
+                  marks, their areas, and their source elements as values that copy the lists and the bytes they are given,
+                  so that nothing done to those afterwards changes the payload, shall carry the version of its contract, and
+                  shall refuse parts that cannot be part of a payload.
+                justification: |
+                  The payload is what the user sent. The draft, the registry of marks, and the buffers it was built from
+                  go on living and being changed, and the payload must still say what it said when it was built. The
+                  version lets a reader that is added later recognize what it is reading.
+                tests:
+                  - MessagePayload_New_CarriesContractVersionOne
+                  - MessagePayload_New_CopiesListsAndBytes_SoLaterChangesToTheSourcesChangeNothing
+                  - PayloadSegment_Parts_AreValuesThatKeepOriginAndReferences
+                  - MessagePayload_New_InvalidParts_Throw

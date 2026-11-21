@@ -1,0 +1,146 @@
+---
+# Software Unit Requirements for the DictationService Unit
+#
+# The DictationService unit turns what the user says while holding a talk button or key into text, through the Speech
+# library's recognition engine, with the model, its settings, and the microphone chosen in the settings. It loads the
+# engine once, checks that the native speech files exist before it loads one, and returns every state in which
+# dictation cannot work as a result with an explanation, never as an exception.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        sections:
+          - title: DictationService Requirements
+            requirements:
+              - id: CanvasPilot-DictationService-StreamPartialText
+                title: >-
+                  The DictationService shall, while a dictation session is listening, keep the text recognized so far
+                  up to date as the finished sentences followed by the sentence that is still being recognized, trimmed
+                  and joined by single spaces, and shall tell its listener whenever that text changes and not when it
+                  stays the same.
+                justification: |
+                  The recognizer revises the sentence it is working on until it finishes it, and the user watches the
+                  words appear while holding the talk control. Showing the finished sentences with the current one lets
+                  the user see at once whether they are understood, and telling the listener only about real changes
+                  keeps the screen from flickering.
+                children:
+                  - CanvasPilot-OTS-Speech-RecognizeStreamingSpeech
+                tests:
+                  - DictationService_BeginAsync_ProvisionalThenFinalResults_UpdatesPartialText
+                  - DictationService_PartialTextChanged_HandlerThrows_RecognitionContinues
+
+              - id: CanvasPilot-DictationService-ReturnFinalTextOnRelease
+                title: >-
+                  The DictationService shall, when the user lets go, let the recognizer finish the audio it has already
+                  heard and return the final text as the finished sentences trimmed and joined by single spaces, keeping
+                  a last sentence that was never finished, returning an empty string when nothing was said, and keeping
+                  the text recognized before a failure of the recognizer together with an explanation of the failure.
+                justification: |
+                  The words that matter are often the last ones, which are still being decoded at the moment of
+                  release, and the user would not accept words that were on the screen disappearing from the message.
+                  A recognizer that fails midway must not take what was already understood with it.
+                tests:
+                  - DictationService_EndAsync_FinalResultsIncludingDrained_ReturnsTrimmedJoinedText
+                  - DictationService_EndAsync_SentenceNeverFinished_KeepsItsLastProvisionalText
+                  - DictationService_EndAsync_NothingSaid_ReturnsEmptyString
+                  - DictationService_EndAsync_RecognizerFaulted_KeepsTextAndReportsProblem
+
+              - id: CanvasPilot-DictationService-KeepListeningBrieflyAfterRelease
+                title: >-
+                  The DictationService shall keep the microphone listening for a short moment after the user lets go
+                  before it stops the recognition, so that words that are still on their way from the microphone are
+                  part of the final text.
+                justification: |
+                  Audio reaches the recognizer in blocks, so at the moment of release the end of the last word has not
+                  arrived yet. Stopping at once would cut that word off, and users let go as soon as they finish
+                  speaking.
+                tests:
+                  - DictationService_EndAsync_WordsArriveDuringReleaseTail_AreKept
+
+              - id: CanvasPilot-DictationService-ReuseLoadedEngine
+                title: >-
+                  The DictationService shall load the speech engine only when it is first needed or when the chosen
+                  model or its stored settings change, keep it for every later hold, load it ahead of time on request
+                  without disturbing a session that is listening, and release the engine that it replaces.
+                justification: |
+                  Loading the engine takes a noticeable time and a lot of memory, so loading it for every hold would
+                  make the talk button unusable. Loading it ahead of time lets the first press respond at once, and a
+                  settings change must take effect without leaving the old engine in memory or pulling it away from a
+                  hold in progress.
+                tests:
+                  - DictationService_BeginAsync_SeveralHolds_ReuseTheLoadedEngine
+                  - DictationService_PrepareAsync_Available_LoadsEngineOnceForLaterHolds
+                  - DictationService_BeginAsync_SettingsChanged_ReloadsEngineAndDisposesOldOne
+                  - DictationService_PrepareAsync_WhileListeningWithChangedSettings_KeepsTheEngineInUse
+
+              - id: CanvasPilot-DictationService-IgnoreOverlappingRequests
+                title: >-
+                  The DictationService shall ignore a request to start listening while a session is already listening,
+                  without reporting a problem, and shall give up a start that the caller cancels, so that the next
+                  request can start.
+                justification: |
+                  Holding a key repeats it, and a button can be pressed twice quickly, so a second request is normal and
+                  must not start a second recognition on the one engine and microphone. A start that is cancelled
+                  because the user already let go must not leave the service believing that it is still listening.
+                tests:
+                  - DictationService_BeginAsync_WhileListening_IsIgnored
+                  - DictationService_BeginAsync_Cancelled_ThrowsAndLeavesNextBeginPossible
+
+              - id: CanvasPilot-DictationService-ReleaseWhatItUses
+                title: >-
+                  The DictationService shall, when a session ends or cannot start, stop and release the recognition
+                  session and the microphone and let the next session start, shall do the same for a session that is
+                  disposed without being ended, shall end a session that is listening when the service is disposed
+                  and release the engine, and shall not write the recognized text to the log.
+                justification: |
+                  The microphone is shared with other programs and with the next hold, so it must be free again as
+                  soon as the user lets go, however the hold ended. What the user says may be private, so the log
+                  that users attach to bug reports must hold events but never words.
+                tests:
+                  - DictationService_EndAsync_ReleasesSessionAndMicrophone_AllowsNextBegin
+                  - DictationService_DisposeSession_WithoutEnd_ReleasesEverythingAndLogsNoText
+                  - DictationService_Dispose_WhileListening_EndsSessionAndReleasesEngine
+                  - DictationService_BeginAsync_SessionCannotStart_ReportsReasonReleasesMicrophoneAndRecovers
+
+              - id: CanvasPilot-DictationService-ReportUnavailableReason
+                title: >-
+                  The DictationService shall report, with a reason and a message of its own that names the next step,
+                  when dictation cannot be used because no model is chosen, the chosen model is unknown, of the wrong
+                  kind, or not downloaded, no microphone can be used, or the speech engine cannot be loaded or started,
+                  shall do so from a check that does not load the engine, in a begin, and in a preparation, and shall
+                  record unexpected failures in the log and not throw.
+                justification: |
+                  Each state has a different remedy, and the user finds out about it by pressing the talk control, so
+                  the answer must say which remedy applies. A check that does not load the engine lets the chat show
+                  the state before the user speaks without paying for the engine, and a failure in a service that
+                  should have answered with a result must still end as a message.
+                children:
+                  - CanvasPilot-OTS-Speech-DegradeWithoutModelOrRuntime
+                tests:
+                  - DictationService_CheckAvailability_EverythingPresent_IsAvailable
+                  - DictationService_CheckAvailability_EachProblem_HasItsOwnReasonAndMessage
+                  - DictationService_CheckAvailability_WrongOrUnknownOrUnreadableModel_ReportsModelNotInstalled
+                  - DictationService_CheckAvailability_AudioSystemUnusable_ReportsNoCaptureDeviceWithProblem
+                  - DictationService_CheckAvailability_ServiceThrows_ReturnsExplanationAndLogsIt
+                  - DictationService_BeginAsync_EngineLoadFails_ReportsReasonAndTriesAgainNextTime
+                  - DictationService_BeginAsync_ModelDisappeared_ReportsModelNotInstalled
+                  - DictationService_BeginAsync_NoMicrophone_ReportsNoCaptureDeviceAndKeepsEngine
+                  - DictationService_BeginAsync_SessionUnavailable_ReportsEngineUnavailable
+                  - DictationService_PrepareAsync_FailureOrUnavailable_IsReturnedAndLoggedNotThrown
+                  - DictationService_InvalidArguments_Throw
+
+              - id: CanvasPilot-DictationService-CheckSpeechRuntimeFirst
+                title: >-
+                  The DictationService shall check that the native speech runtime files exist beside the application,
+                  or in the runtime folder of a development build, before it loads a speech engine, shall report the
+                  names of the missing files, and shall load no engine when any is missing.
+                justification: |
+                  Loading the engine without the inference runtime beside the application does not fail cleanly:
+                  Windows then loads an older runtime from its system folder and the process crashes inside the native
+                  library, which cannot be caught and would lose what the user has not yet sent. Checking for the files
+                  first turns that crash into a message that says to reinstall.
+                tests:
+                  - DictationService_BeginAndPrepare_NativeFilesMissing_NeverLoadEngine
+                  - DictationService_FindMissingNativeLibraries_EmptyOrPartialFolder_NamesWhatIsMissing
+                  - DictationService_FindMissingNativeLibraries_PublishedAndDevelopmentLayouts_AreBothPresent

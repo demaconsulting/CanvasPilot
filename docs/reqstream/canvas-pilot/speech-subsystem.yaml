@@ -1,0 +1,137 @@
+---
+# Speech Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Speech subsystem
+# - The Speech subsystem spans AudioDeviceService (IAudioDeviceService.cs, AudioDeviceService.cs),
+#   SpeechModelService (ISpeechModelService.cs, SpeechModelService.cs), DictationService (IDictationService.cs,
+#   DictationService.cs), DeviceSelection
+#   (DeviceSelectionViewModel.cs, DeviceSelectionView.axaml), ModelCatalogPanel (ModelCatalogPanelViewModel.cs,
+#   ModelListItemViewModel.cs, ModelCatalogPanelView.axaml), ModelParameterEditor
+#   (ModelParameterEditorViewModel.cs, ParameterViewModels.cs, ModelParameterEditorView.axaml), and
+#   SpeechSettingsPage (SpeechSettingsPageViewModel.cs, SpeechSettingsPageView.axaml)
+# - Subsystem requirements describe the speech configuration and dictation behavior that satisfies the system-level
+#   speech requirements
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Speech-ConfigureSpeechSettings
+            title: >-
+              The Speech subsystem shall provide a Speech page in the settings dialog on which the user chooses
+              the microphone and speakers by name, the speech-to-text and text-to-speech models, and the
+              tunable settings of those models, and shall store the choices with the other settings.
+            justification: |
+              Speech input and output need a microphone, speakers, and models, and the choices belong with the
+              other settings so the user configures the application in one place. Models differ in what can be
+              tuned, so the settings of the chosen models are offered as the models describe them.
+            children:
+              - CanvasPilot-SpeechSettingsPage-ProvideSpeechPage
+              - CanvasPilot-SpeechSettingsPage-MapSpeechSettings
+              - CanvasPilot-SpeechSettingsPage-ShowParametersOfChosenModels
+              - CanvasPilot-AudioDeviceService-ListDevices
+              - CanvasPilot-DeviceSelection-ChooseDevicesByName
+              - CanvasPilot-DeviceSelection-RefreshDevices
+              - CanvasPilot-ModelParameterEditor-BuildEditorsFromModelParameters
+              - CanvasPilot-ModelParameterEditor-KeepValuesValid
+              - CanvasPilot-ModelParameterEditor-StoreValuesAsInvariantStrings
+            tests:
+              - SpeechSubsystem_ConfigureSpeech_DialogOk_StoresDevicesModelsAndParameters
+
+          - id: CanvasPilot-Speech-DownloadSpeechModels
+            title: >-
+              The Speech subsystem shall list the available speech models with their install state and download
+              a chosen model with visible progress, cancellation, and an explanation of failures, and shall
+              cancel downloads that are still running when the settings dialog closes.
+            justification: |
+              Speech models are large files that are not shipped with the application. The user must be able to
+              fetch them from the settings, see that the download is working, stop it, and be told why it failed,
+              and a download must never outlive the dialog that shows it.
+            children:
+              - CanvasPilot-SpeechModelService-ListModels
+              - CanvasPilot-SpeechModelService-DownloadModels
+              - CanvasPilot-ModelCatalogPanel-ChooseModels
+              - CanvasPilot-ModelCatalogPanel-DownloadModels
+              - CanvasPilot-ModelCatalogPanel-CancelDownloads
+              - CanvasPilot-SpeechSettingsPage-CancelDownloadsOnClose
+            tests:
+              - SpeechSubsystem_CancelDownloadsOnClose_DialogCancelled_StopsRunningDownload
+
+          - id: CanvasPilot-Speech-ToleratePoorMachines
+            title: >-
+              The Speech subsystem shall keep the settings dialog working, explain what is missing, and keep the
+              stored choices when the machine has no audio hardware, the audio system or the model store cannot
+              be used, or a download fails.
+            justification: |
+              Users run the application on machines of every kind, including ones without a microphone or with a
+              restricted network. Speech is optional, so a machine that cannot use it must still be able to
+              change every other setting without losing what was stored.
+            children:
+              - CanvasPilot-AudioDeviceService-ToleratePoorAudioSystems
+              - CanvasPilot-AudioDeviceService-UseAudioOnDemand
+              - CanvasPilot-SpeechModelService-ReportFailuresAsResults
+              - CanvasPilot-DeviceSelection-ExplainMissingDevices
+              - CanvasPilot-ModelCatalogPanel-ExplainCatalogProblems
+            tests:
+              - SpeechSubsystem_ToleratePoorMachines_NoAudioNoModelStore_DialogStillWorks
+
+          - id: CanvasPilot-Speech-DictateWhileHeld
+            title: >-
+              The Speech subsystem shall turn what the user says while a talk button or key is held into text, with
+              the speech model, its settings, and the microphone chosen in the settings: it shall show the words
+              recognized so far while the talk control is held and, when it is released, return the finished text,
+              shall load the speech engine only once and keep it for later holds, shall ignore a request to listen
+              while it is already listening, and shall release the microphone and the recognition session when the
+              hold ends.
+            justification: |
+              Dictation is a hold-to-talk interaction: the user sees their words appear and lets go when they are
+              done. The engine takes a noticeable time to load, so loading it for every hold would make the
+              feature unusable, and the microphone must be free again at once so that another program, or the next
+              hold, can use it.
+            children:
+              - CanvasPilot-DictationService-StreamPartialText
+              - CanvasPilot-DictationService-ReturnFinalTextOnRelease
+              - CanvasPilot-DictationService-KeepListeningBrieflyAfterRelease
+              - CanvasPilot-DictationService-ReuseLoadedEngine
+              - CanvasPilot-DictationService-IgnoreOverlappingRequests
+              - CanvasPilot-DictationService-ReleaseWhatItUses
+              - CanvasPilot-AudioDeviceService-CreateCaptureDevice
+              - CanvasPilot-SpeechModelService-LoadRecognizer
+            tests:
+              - SpeechSubsystem_Dictation_FakeEngine_ReturnsFinalTextAfterRelease
+
+          - id: CanvasPilot-Speech-ExplainDictationUnavailable
+            title: >-
+              The Speech subsystem shall say, with a message of its own for each case and the next step for the
+              user, when dictation cannot be used because no speech-to-text model is chosen, the chosen model is not
+              downloaded, the native speech files are missing from the application, no microphone can be used, or the
+              speech engine cannot be started, and shall not load the speech engine when the model or the native speech
+              files are missing.
+            justification: |
+              Each of these states has a different remedy, so one message for all of them would leave the user
+              guessing. Loading the engine without the native speech files does not fail cleanly: the process can
+              crash inside the native library, which cannot be caught and would lose the user's unsent message, so
+              the files are checked first.
+            children:
+              - CanvasPilot-DictationService-ReportUnavailableReason
+              - CanvasPilot-DictationService-CheckSpeechRuntimeFirst
+              - CanvasPilot-AudioDeviceService-ExplainMissingMicrophone
+              - CanvasPilot-SpeechModelService-ExplainRecognizerFailures
+            tests:
+              - SpeechSubsystem_Dictation_UnavailableStates_AreExplainedWithoutLoadingAnEngine
+
+          - id: CanvasPilot-Speech-ShipSpeechRuntime
+            title: >-
+              The Windows application that is published for installation shall contain the native speech inference
+              runtime, the Sherpa interface to it, and the native audio library beside the application, so that the
+              speech engine and the microphone work on a machine that has none of them installed.
+            justification: |
+              The speech library calls native libraries. They arrive with the packages that the application uses,
+              and the installer takes whatever is in the published folder, so the delivery is checked on the
+              published output of every Windows build, and the installer's file table is checked in the same build.
+            children:
+              - CanvasPilot-OTS-Speech-DeliverNativeRuntime
+            tests:
+              - windows@Speech_NativeRuntimePublished

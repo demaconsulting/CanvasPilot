@@ -1,0 +1,85 @@
+---
+# Software Unit Requirements for the AiProviderSettingsPage Unit
+#
+# The AiProviderSettingsPage unit is the "AI Provider" page of the settings dialog. It edits and validates
+# the persisted AI provider choices only; no component consumes them yet, so the page has no dependency on any
+# AI service.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Settings Subsystem Requirements
+        sections:
+          - title: AiProviderSettingsPage Requirements
+            requirements:
+              - id: CanvasPilot-AiProviderSettingsPage-EditProviderChoices
+                title: >-
+                  The AiProviderSettingsPage shall let the user choose the provider, model name,
+                  context window, and reasoning level, enable only the entry that belongs to the
+                  selected provider, and merge the choices into the settings without changing values
+                  it does not own.
+                justification: |
+                  The user configures the AI provider once, and the choices must reach the stored
+                  settings exactly. Showing only the relevant provider entry avoids asking for values
+                  that will not be used, and leaving other values alone keeps pages independent.
+                tests:
+                  - AiProviderSettingsPageViewModel_Load_DefaultSettings_ShowsDefaults
+                  - AiProviderSettingsPageViewModel_LoadApply_AllValues_RoundTrips
+                  - AiProviderSettingsPageViewModel_Apply_EditedValues_AreAppliedTrimmed
+                  - AiProviderSettingsPageViewModel_Apply_OtherSettings_AreUnchanged
+                  - AiProviderSettingsPageViewModel_SelectedProvider_Switched_EnablesMatchingEntry
+                  - AiProviderSettingsPageView_SelectProvider_EnablesMatchingEntry
+                  - AiProviderSettingsPageView_LoadedSettings_AreShownInControls
+
+              - id: CanvasPilot-AiProviderSettingsPage-ValidateContextWindow
+                title: >-
+                  The AiProviderSettingsPage shall accept only a whole-number context window from 512
+                  to 2,000,000 tokens, show an error message that states the bounds otherwise, and
+                  refuse to apply an invalid page.
+                justification: |
+                  A context window outside the range a model can use would fail only when the agent
+                  later starts. Stating the bounds in the message tells the user how to correct it.
+                tests:
+                  - AiProviderSettingsPageViewModel_ContextWindowText_OutOfBounds_IsInvalid
+                  - AiProviderSettingsPageViewModel_ContextWindowText_AtBounds_IsValid
+                  - AiProviderSettingsPageViewModel_Apply_InvalidEntries_ThrowsInvalidOperationException
+                  - AiProviderSettingsPageViewModel_ContextWindowText_Edited_RaisesIsValidChanged
+                  - AiProviderSettingsPageView_InvalidContextWindow_ShowsError
+
+              - id: CanvasPilot-AiProviderSettingsPage-ValidateOllamaEndpoint
+                title: >-
+                  The AiProviderSettingsPage shall require the Ollama endpoint to be an absolute http
+                  or https URL while Ollama is the selected provider, and shall not replace the stored
+                  endpoint with an invalid entry.
+                justification: |
+                  A malformed endpoint would make the Ollama provider unusable. The check applies only
+                  while Ollama is selected, so an entry the user cannot currently edit never blocks the
+                  dialog.
+                tests:
+                  - AiProviderSettingsPageViewModel_OllamaEndpoint_InvalidWhenOllamaSelected_IsInvalid
+                  - AiProviderSettingsPageViewModel_OllamaEndpoint_InvalidWhenCopilotSelected_IsIgnoredAndStoredValueKept
+
+              - id: CanvasPilot-AiProviderSettingsPage-CopilotCliPathOverride
+                title: >-
+                  The AiProviderSettingsPage shall let the user override the path of the GitHub Copilot
+                  command-line tool, treat an empty path as automatic discovery, and reject a path with
+                  characters that cannot appear in a file path while GitHub Copilot is the selected
+                  provider.
+                justification: |
+                  The command-line tool may be installed in a non-standard location. An empty value
+                  keeps the default discovery behavior, and rejecting impossible paths catches typing
+                  errors early.
+                tests:
+                  - AiProviderSettingsPageViewModel_CopilotCliPath_EditedAndCleared_IsApplied
+                  - AiProviderSettingsPageViewModel_CopilotCliPath_InvalidCharacters_IsErrorOnlyForCopilot
+
+              - id: CanvasPilot-AiProviderSettingsPage-UnrestrictedToolsOptIn
+                title: >-
+                  The AiProviderSettingsPage shall keep unrestricted agent tools off unless the user
+                  explicitly checks the opt-in.
+                justification: |
+                  Unrestricted tools let the agent act beyond its normal limits, so the safe state must
+                  be the default and must change only by a deliberate user action.
+                tests:
+                  - AiProviderSettingsPageViewModel_UnrestrictedAgentTools_NotChosen_StaysOff
+                  - AiProviderSettingsPageView_UnrestrictedAgentToolsCheckBox_StartsOffAndTogglesSetting

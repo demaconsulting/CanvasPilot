@@ -1,35 +1,114 @@
 ---
 resource-path:
   - docs/verification
-  - docs/verification/template-dot-net-tool
-  - docs/verification/template-dot-net-tool/cli
-  - docs/verification/template-dot-net-tool/self-test
-  - docs/verification/template-dot-net-tool/utilities
+  - docs/verification/canvas-pilot
+  - docs/verification/canvas-pilot/annotation-subsystem
+  - docs/verification/canvas-pilot/app-shell-subsystem
+  - docs/verification/canvas-pilot/chat-subsystem
+  - docs/verification/canvas-pilot/composer-subsystem
+  - docs/verification/canvas-pilot/knowledge-subsystem
+  - docs/verification/canvas-pilot/logging-subsystem
+  - docs/verification/canvas-pilot/payload-subsystem
+  - docs/verification/canvas-pilot/preview-subsystem
+  - docs/verification/canvas-pilot/project-subsystem
+  - docs/verification/canvas-pilot/settings-subsystem
+  - docs/verification/canvas-pilot/speech-subsystem
+  - docs/verification/canvas-pilot/style-subsystem
+  - docs/verification/canvas-pilot/utilities-subsystem
   - docs/verification/ots
   - docs/template
 
 input-files:
   - docs/verification/title.txt
   - docs/verification/introduction.md
-  - docs/verification/template-dot-net-tool.md
-  - docs/verification/template-dot-net-tool/program.md
-  - docs/verification/template-dot-net-tool/cli.md
-  - docs/verification/template-dot-net-tool/cli/context.md
-  - docs/verification/template-dot-net-tool/self-test.md
-  - docs/verification/template-dot-net-tool/self-test/validation.md
-  - docs/verification/template-dot-net-tool/utilities.md
-  - docs/verification/template-dot-net-tool/utilities/path-helpers.md
+  - docs/verification/canvas-pilot.md
+  - docs/verification/canvas-pilot/annotation-subsystem.md
+  - docs/verification/canvas-pilot/annotation-subsystem/annotation-overlay.md
+  - docs/verification/canvas-pilot/annotation-subsystem/mark-registry.md
+  - docs/verification/canvas-pilot/annotation-subsystem/mark-source-resolver.md
+  - docs/verification/canvas-pilot/app-shell-subsystem.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/main-window-shell.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/project-workspace.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/about-dialog.md
+  - docs/verification/canvas-pilot/chat-subsystem.md
+  - docs/verification/canvas-pilot/chat-subsystem/chat-panel.md
+  - docs/verification/canvas-pilot/chat-subsystem/payload-inspector.md
+  - docs/verification/canvas-pilot/composer-subsystem.md
+  - docs/verification/canvas-pilot/composer-subsystem/composer-document.md
+  - docs/verification/canvas-pilot/composer-subsystem/composer-history.md
+  - docs/verification/canvas-pilot/composer-subsystem/attachment-store.md
+  - docs/verification/canvas-pilot/composer-subsystem/attachment-intake.md
+  - docs/verification/canvas-pilot/composer-subsystem/composer-view-model.md
+  - docs/verification/canvas-pilot/composer-subsystem/composer-editor.md
+  - docs/verification/canvas-pilot/knowledge-subsystem.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-catalog.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-search.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-tools.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-skills.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-markdown.md
+  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-browser.md
+  - docs/verification/canvas-pilot/logging-subsystem.md
+  - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
+  - docs/verification/canvas-pilot/payload-subsystem.md
+  - docs/verification/canvas-pilot/payload-subsystem/message-payload.md
+  - docs/verification/canvas-pilot/payload-subsystem/mark-image-composer.md
+  - docs/verification/canvas-pilot/payload-subsystem/payload-builder.md
+  - docs/verification/canvas-pilot/payload-subsystem/payload-describer.md
+  - docs/verification/canvas-pilot/preview-subsystem.md
+  - docs/verification/canvas-pilot/preview-subsystem/image-render-service.md
+  - docs/verification/canvas-pilot/preview-subsystem/preview-pane.md
+  - docs/verification/canvas-pilot/preview-subsystem/image-exporter.md
+  - docs/verification/canvas-pilot/preview-subsystem/export-preset-dialog.md
+  - docs/verification/canvas-pilot/preview-subsystem/image-drag-source.md
+  - docs/verification/canvas-pilot/project-subsystem.md
+  - docs/verification/canvas-pilot/project-subsystem/project-service.md
+  - docs/verification/canvas-pilot/project-subsystem/recent-projects.md
+  - docs/verification/canvas-pilot/project-subsystem/new-project-dialog.md
+  - docs/verification/canvas-pilot/project-subsystem/project-explorer.md
+  - docs/verification/canvas-pilot/settings-subsystem.md
+  - docs/verification/canvas-pilot/settings-subsystem/settings-service.md
+  - docs/verification/canvas-pilot/settings-subsystem/settings-dialog.md
+  - docs/verification/canvas-pilot/settings-subsystem/ai-provider-settings-page.md
+  - docs/verification/canvas-pilot/speech-subsystem.md
+  - docs/verification/canvas-pilot/speech-subsystem/audio-device-service.md
+  - docs/verification/canvas-pilot/speech-subsystem/speech-model-service.md
+  - docs/verification/canvas-pilot/speech-subsystem/dictation-service.md
+  - docs/verification/canvas-pilot/speech-subsystem/device-selection.md
+  - docs/verification/canvas-pilot/speech-subsystem/model-catalog-panel.md
+  - docs/verification/canvas-pilot/speech-subsystem/model-parameter-editor.md
+  - docs/verification/canvas-pilot/speech-subsystem/speech-settings-page.md
+  - docs/verification/canvas-pilot/style-subsystem.md
+  - docs/verification/canvas-pilot/style-subsystem/style-kit-document.md
+  - docs/verification/canvas-pilot/style-subsystem/style-kit-catalog.md
+  - docs/verification/canvas-pilot/style-subsystem/style-kit-archive.md
+  - docs/verification/canvas-pilot/style-subsystem/style-selection.md
+  - docs/verification/canvas-pilot/style-subsystem/style-picker.md
+  - docs/verification/canvas-pilot/style-subsystem/style-settings-page.md
+  - docs/verification/canvas-pilot/style-subsystem/style-kit-editor.md
+  - docs/verification/canvas-pilot/style-subsystem/style-kit-manager.md
+  - docs/verification/canvas-pilot/style-subsystem/style-guidance.md
+  - docs/verification/canvas-pilot/style-subsystem/style-checker.md
+  - docs/verification/canvas-pilot/style-subsystem/style-tools.md
+  - docs/verification/canvas-pilot/utilities-subsystem.md
+  - docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/verification/ots.md
+  - docs/verification/ots/avalonia.md
+  - docs/verification/ots/avalonia-edit.md
   - docs/verification/ots/buildmark.md
+  - docs/verification/ots/canvasnet.md
+  - docs/verification/ots/communitytoolkit-mvvm.md
   - docs/verification/ots/fileassert.md
   - docs/verification/ots/pandoc.md
   - docs/verification/ots/reqstream.md
   - docs/verification/ots/reviewmark.md
   - docs/verification/ots/sarifmark.md
   - docs/verification/ots/sonarmark.md
+  - docs/verification/ots/speech.md
   - docs/verification/ots/sysml2tools.md
   - docs/verification/ots/versionmark.md
   - docs/verification/ots/weasyprint.md
+  - docs/verification/ots/wix.md
   - docs/verification/ots/xunit.md
 template: template.html
 table-of-contents: true

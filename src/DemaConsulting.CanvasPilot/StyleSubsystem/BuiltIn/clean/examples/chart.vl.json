@@ -1,0 +1,32 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": 360,
+  "height": 200,
+  "title": "Tickets closed per week",
+  "config": {
+    "background": "#FFFFFF",
+    "range": { "category": ["#2563EB", "#F59E0B", "#64748B", "#16A34A", "#C62828"] },
+    "axis": {
+      "labelColor": "#475569",
+      "titleColor": "#0F172A",
+      "domainColor": "#475569",
+      "tickColor": "#475569",
+      "gridColor": "#F1F5F9"
+    },
+    "title": { "color": "#0F172A" },
+    "view": { "stroke": "transparent" }
+  },
+  "data": {
+    "values": [
+      { "week": "W1", "closed": 12 },
+      { "week": "W2", "closed": 19 },
+      { "week": "W3", "closed": 15 },
+      { "week": "W4", "closed": 24 }
+    ]
+  },
+  "mark": { "type": "bar", "color": "#2563EB", "cornerRadiusEnd": 4 },
+  "encoding": {
+    "x": { "field": "week", "type": "nominal", "title": "Week", "axis": { "labelAngle": 0 } },
+    "y": { "field": "closed", "type": "quantitative", "title": "Closed" }
+  }
+}

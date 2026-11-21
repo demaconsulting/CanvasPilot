@@ -1,0 +1,78 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.SpeechSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.SpeechSubsystem.ModelParameterEditorView"
+             x:DataType="vm:ModelParameterEditorViewModel">
+
+  <UserControl.DataTemplates>
+
+    <!-- Numeric: a slider, or a whole-number box for an integer parameter, bound to the clamped value. -->
+    <DataTemplate DataType="vm:NumericParameterViewModel">
+      <StackPanel Spacing="2" Margin="0,4">
+        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Slider AutomationProperties.AutomationId="SpeechParameterSlider"
+                  IsVisible="{Binding !IsInteger}"
+                  Minimum="{Binding Minimum}"
+                  Maximum="{Binding Maximum}"
+                  TickFrequency="{Binding Step}"
+                  Value="{Binding Value}"
+                  Width="220" />
+          <NumericUpDown AutomationProperties.AutomationId="SpeechParameterNumberBox"
+                         IsVisible="{Binding IsInteger}"
+                         Minimum="{Binding Minimum}"
+                         Maximum="{Binding Maximum}"
+                         Increment="{Binding Step}"
+                         Value="{Binding Value}"
+                         FormatString="0"
+                         Width="220" />
+          <TextBlock Text="{Binding Unit}" VerticalAlignment="Center" />
+        </StackPanel>
+      </StackPanel>
+    </DataTemplate>
+
+    <!-- Choice: a drop-down list of the declared options. -->
+    <DataTemplate DataType="vm:ChoiceParameterViewModel">
+      <StackPanel Spacing="2" Margin="0,4">
+        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
+        <ComboBox AutomationProperties.AutomationId="SpeechParameterComboBox"
+                  ItemsSource="{Binding Options}"
+                  SelectedItem="{Binding SelectedOption}"
+                  Width="220">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Label}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </StackPanel>
+    </DataTemplate>
+
+    <!-- Boolean: a check box. -->
+    <DataTemplate DataType="vm:BooleanParameterViewModel">
+      <StackPanel Spacing="2" Margin="0,4">
+        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
+        <CheckBox AutomationProperties.AutomationId="SpeechParameterCheckBox"
+                  Content="Enabled"
+                  IsChecked="{Binding Value}" />
+      </StackPanel>
+    </DataTemplate>
+
+  </UserControl.DataTemplates>
+
+  <StackPanel Spacing="4">
+    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+    <TextBlock AutomationProperties.AutomationId="SpeechParametersEmptyMessage"
+               TextWrapping="Wrap"
+               Opacity="0.7"
+               IsVisible="{Binding !HasParameters}"
+               Text="{Binding EmptyMessage}" />
+    <ItemsControl AutomationProperties.AutomationId="SpeechParameterList"
+                  ItemsSource="{Binding Parameters}"
+                  IsVisible="{Binding HasParameters}" />
+  </StackPanel>
+
+</UserControl>

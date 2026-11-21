@@ -28,9 +28,7 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            10.x
-            11.x
+          dotnet-version: 10.x
 
       - name: Restore Tools
         run: >
@@ -95,6 +93,7 @@ jobs:
       pull-requests: write
 
     strategy:
+      fail-fast: false
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
 
@@ -114,9 +113,7 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            10.x
-            11.x
+          dotnet-version: 10.x
 
       - name: Restore Tools
         run: >
@@ -164,11 +161,11 @@ jobs:
         run: >
           dotnet dotnet-sonarscanner
           begin
-          /k:"demaconsulting_TemplateDotNetTool"
+          /k:"demaconsulting_CanvasPilot"
           /o:"demaconsulting"
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
           /d:sonar.host.url="https://sonarcloud.io"
-          /d:sonar.cs.opencover.reportsPaths=**/coverage.opencover.*.xml
+          /d:sonar.cs.opencover.reportsPaths=**/*.opencover.xml
           /d:sonar.scanner.scanAll=false
 
       - name: Build
@@ -184,10 +181,8 @@ jobs:
           --no-build
           --configuration Release
           --property:Version=${{ inputs.version }}
-          --coverlet
-          --coverlet-output-format opencover
-          --report-trx
-          --report-trx-filename "${{ matrix.os }}_{asm}_{tfm}_{arch}.trx"
+          --collect "XPlat Code Coverage;Format=opencover"
+          --logger "trx;LogFilePrefix=${{ matrix.os }}"
           --results-directory artifacts
 
       - name: End Sonar Scanner
@@ -198,13 +193,103 @@ jobs:
           end
           /d:sonar.token="${{ secrets.SONAR_TOKEN }}"
 
-      - name: Create Dotnet Tool
+      # === PACKAGE WINDOWS INSTALLER ===
+      # This section publishes the self-contained win-x64 application and builds the MSI installer.
+      # It runs on the Windows leg only, because the Windows Installer format is a Windows-only
+      # dependency. The installer project is not part of the solution, so it is built explicitly.
+      # FileAssert asserts the package, the native speech runtime, and the style kits in the published output (all are
+      # tagged "installer" and run by one step), and its TRX is the WiX OTS evidence and the speech runtime evidence that
+      # ReqStream consumes. A separate step reads the MSI file table, which proves that the files are in the package.
+      # Downstream projects: Add any additional packaging steps here.
+
+      - name: Publish self-contained build (win-x64)
+        if: matrix.os == 'windows-latest'
         run: >
-          dotnet pack
-          --no-build
-          --no-restore
+          dotnet publish
+          src/DemaConsulting.CanvasPilot.Desktop/DemaConsulting.CanvasPilot.Desktop.csproj
           --configuration Release
-          --property:PackageVersion=${{ inputs.version }}
+          --runtime win-x64
+          --self-contained true
+          --property:Version=${{ inputs.version }}
+          --property:PublishSingleFile=true
+          --output publish/win-x64
+
+      - name: Remove debug symbols and docs from published output (win-x64)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Get-ChildItem publish/win-x64 -Include *.pdb,*.xml -Recurse | Remove-Item -Force
+
+      - name: Compute MSI version
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          # MSI ProductVersion only supports three numeric fields (major.minor.build, each
+          # 0-65535) and cannot represent a SemVer prerelease suffix (e.g. "-beta.12"), so
+          # it's simply truncated off here. Package.wxs's MajorUpgrade AllowDowngrades="yes"
+          # is what makes this safe: it always replaces whatever version is installed -
+          # older, same, or newer - so two builds truncating to the same MSI version (e.g.
+          # a prerelease and its eventual stable release) is not a problem.
+          MSI_VERSION=$(echo "${{ inputs.version }}" | cut -d'-' -f1)
+          echo "MSI_VERSION=${MSI_VERSION}" >> "$GITHUB_ENV"
+          echo "Computed MSI version: ${MSI_VERSION}"
+
+      - name: Build MSI installer
+        if: matrix.os == 'windows-latest'
+        run: >
+          dotnet build
+          src/DemaConsulting.CanvasPilot.Installer/DemaConsulting.CanvasPilot.Installer.wixproj
+          --configuration Release
+          --property:Version=${{ env.MSI_VERSION }}
+          --property:CanvasPilotPublishDir=${{ github.workspace }}/publish/win-x64/
+
+      - name: Copy MSI to package directory
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          Copy-Item "src/DemaConsulting.CanvasPilot.Installer/bin/x64/Release/*.msi" `
+            "package/CanvasPilot-${{ inputs.version }}-win-x64.msi"
+
+      - name: Check MSI file table for the native speech runtime and the style kits
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # The speech engine cannot run, and can even crash the process, without the native inference,
+          # Sherpa, and audio libraries beside the application, so the delivered package must contain
+          # them. The style kits that come with the program are loose files in the StyleKits folder
+          # (style.json three times, and the three example files of each kit), so the package must list
+          # them as well. The installer harvests publish/win-x64 with its sub-folders, and this reads what
+          # the MSI actually lists in its File table (names are stored as "short|long", so the long name
+          # is the one that counts).
+          $required = @('onnxruntime.dll', 'sherpa-onnx-c-api.dll', 'portaudio.dll', 'style.json', 'title-card.svg', 'flow.mmd', 'chart.vl.json')
+          $msi = (Resolve-Path "package/CanvasPilot-${{ inputs.version }}-win-x64.msi").Path
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $database = $installer.GetType().InvokeMember('OpenDatabase', 'InvokeMethod', $null, $installer, @($msi, 0))
+          $view = $database.GetType().InvokeMember('OpenView', 'InvokeMethod', $null, $database, @('SELECT FileName FROM File'))
+          $view.GetType().InvokeMember('Execute', 'InvokeMethod', $null, $view, $null)
+          $files = @()
+          while ($true) {
+            $record = $view.GetType().InvokeMember('Fetch', 'InvokeMethod', $null, $view, $null)
+            if ($null -eq $record) { break }
+            $name = $record.GetType().InvokeMember('StringData', 'GetProperty', $null, $record, @(1))
+            $files += ($name -split '\|')[-1]
+          }
+          $view.GetType().InvokeMember('Close', 'InvokeMethod', $null, $view, $null)
+          Write-Host "MSI file table lists $($files.Count) files: $($files -join ', ')"
+          $missing = $required | Where-Object { $files -notcontains $_ }
+          if ($missing) {
+            Write-Error "The MSI does not contain the required file(s): $($missing -join ', ')"
+            exit 1
+          }
+          Write-Host "✓ MSI contains the native speech runtime and the style kits: $($required -join ', ')"
+
+      - name: Assert MSI installer and native speech runtime with FileAssert
+        if: matrix.os == 'windows-latest'
+        run: >
+          dotnet fileassert
+          --results artifacts/fileassert-installer-${{ matrix.os }}.trx
+          installer
 
       # === UPLOAD ARTIFACTS ===
       # This section uploads all generated artifacts for use by downstream jobs.
@@ -216,13 +301,12 @@ jobs:
           name: artifacts-build-${{ matrix.os }}
           path: artifacts/
 
-      - name: Upload packages
+      - name: Upload MSI package artifact
+        if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v7
         with:
-          name: packages-${{ matrix.os }}
-          path: |
-            src/DemaConsulting.TemplateDotNetTool/bin/Release/*.nupkg
-            src/DemaConsulting.TemplateDotNetTool/bin/Release/*.snupkg
+          name: package-msi
+          path: package/*.msi
 
   # Runs CodeQL security and quality analysis, gathering results to include
   # in the code quality report.
@@ -256,9 +340,7 @@ jobs:
       - name: Setup dotnet
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            10.x
-            11.x
+          dotnet-version: 10.x
 
       - name: Restore Tools
         run: >
@@ -296,119 +378,12 @@ jobs:
           name: artifacts-codeql
           path: artifacts/
 
-  # Performs integration testing on a matrix of operating systems and .NET runtimes,
-  # involving basic tool execution and running self-validation to ensure compatibility
-  # across different platforms and runtime versions.
-  integration-test:
-    name: Integration Test ${{ matrix.os }} .NET ${{ matrix.dotnet-version }}
-    runs-on: ${{ matrix.os }}
-    needs: build
-    permissions:
-      contents: read
-
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        dotnet-version: ['10.x', '11.x']
-
-    steps:
-      # === INSTALL DEPENDENCIES ===
-      # This section installs all required dependencies and tools for integration testing.
-      # Downstream projects: Add any additional dependency installations here.
-
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          sparse-checkout: |
-            .versionmark.yaml
-            .config/dotnet-tools.json
-
-      - name: Download package
-        uses: actions/download-artifact@v8
-        with:
-          name: packages-${{ matrix.os }}
-          path: packages
-
-      - name: Setup dotnet
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: ${{ matrix.dotnet-version }}
-
-      - name: Restore Tools
-        run: >
-          dotnet tool restore
-
-      - name: Install tool from package
-        shell: bash
-        run: |
-          echo "Installing package version ${{ inputs.version }} from: packages/"
-          dotnet tool install --global \
-            --add-source packages \
-            --version ${{ inputs.version }} \
-            DemaConsulting.TemplateDotNetTool
-
-      # === CAPTURE TOOL VERSIONS ===
-      # This section captures the versions of all tools used in the integration tests.
-      # Downstream projects: Add any additional tools to capture here.
-
-      - name: Capture tool versions
-        shell: bash
-        run: |
-          mkdir -p artifacts
-          echo "Capturing tool versions..."
-          # Create short job ID: int-windows-10, int-ubuntu-11, int-macos-10, etc.
-          OS_SHORT=$(echo "${{ matrix.os }}" | sed 's/-latest//')
-          DOTNET_SHORT=$(echo "${{ matrix.dotnet-version }}" | sed 's/\.x$//')
-          JOB_ID="int-${OS_SHORT}-${DOTNET_SHORT}"
-          dotnet versionmark --capture --job-id "${JOB_ID}" \
-            --output "artifacts/versionmark-${JOB_ID}.json" -- \
-            dotnet git versionmark textlint
-          echo "✓ Tool versions captured"
-
-      # === RUN INTEGRATION TESTS ===
-      # This section runs the integration tests for the tool.
-      # Downstream projects: Add any additional integration test steps here.
-
-      - name: Test version display
-        shell: bash
-        run: |
-          echo "Testing templatetool --version..."
-          templatetool --version || { echo "✗ Version command failed"; exit 1; }
-          echo "✓ Version command succeeded"
-
-      - name: Test help display
-        shell: bash
-        run: |
-          echo "Testing templatetool --help..."
-          templatetool --help || { echo "✗ Help command failed"; exit 1; }
-          echo "✓ Help command succeeded"
-
-      - name: Run self-validation
-        shell: bash
-        run: |
-          echo "Running self-validation..."
-          templatetool --validate \
-            --results artifacts/validation-${{ matrix.os }}-dotnet${{ matrix.dotnet-version }}.trx \
-            || { echo "✗ Self-validation failed"; exit 1; }
-          echo "✓ Self-validation succeeded"
-
-      # === UPLOAD ARTIFACTS ===
-      # This section uploads all generated artifacts for use by downstream jobs.
-      # Downstream projects: Add any additional artifact uploads here.
-
-      - name: Upload validation artifacts
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: artifacts-validation-${{ matrix.os }}-dotnet${{ matrix.dotnet-version }}
-          path: artifacts/
-
   # Builds the supporting documentation including user guides, requirements,
   # trace matrices, code quality reports, and build notes.
   build-docs:
     name: Build Documents
     runs-on: windows-latest
-    needs: [build, integration-test, codeql]
+    needs: [build, codeql]
     permissions:
       contents: read
 
@@ -531,7 +506,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/build_notes/generated/build_notes.html
-          "docs/generated/TemplateDotNetTool Build Notes.pdf"
+          "docs/generated/CanvasPilot Build Notes.pdf"
 
       - name: Assert Build Notes Documents with FileAssert
         run: >
@@ -571,7 +546,7 @@ jobs:
           dotnet sarifmark
           --sarif artifacts/csharp.sarif
           --report docs/code_quality/generated/codeql-quality.md
-          --heading "Template DotNet Tool CodeQL Analysis"
+          --heading "CanvasPilot CodeQL Analysis"
           --report-depth 1
 
       - name: Display CodeQL Quality Report
@@ -587,7 +562,7 @@ jobs:
         run: >
           dotnet sonarmark
           --server https://sonarcloud.io
-          --project-key demaconsulting_TemplateDotNetTool
+          --project-key demaconsulting_CanvasPilot
           --branch ${{ github.ref_name }}
           --token "$SONAR_TOKEN"
           --report docs/code_quality/generated/sonar-quality.md
@@ -613,7 +588,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/code_quality/generated/quality.html
-          "docs/generated/TemplateDotNetTool Code Quality.pdf"
+          "docs/generated/CanvasPilot Code Quality.pdf"
 
       - name: Assert Code Quality Documents with FileAssert
         run: >
@@ -674,7 +649,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/code_review_plan/generated/plan.html
-          "docs/generated/TemplateDotNetTool Review Plan.pdf"
+          "docs/generated/CanvasPilot Review Plan.pdf"
 
       - name: Generate Review Report HTML with Pandoc
         shell: bash
@@ -690,7 +665,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/code_review_report/generated/report.html
-          "docs/generated/TemplateDotNetTool Review Report.pdf"
+          "docs/generated/CanvasPilot Review Report.pdf"
 
       - name: Assert Code Review Documents with FileAssert
         run: >
@@ -736,7 +711,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/design/generated/design.html
-          "docs/generated/TemplateDotNetTool Software Design.pdf"
+          "docs/generated/CanvasPilot Software Design.pdf"
 
       - name: Assert Design Documents with FileAssert
         run: >
@@ -767,7 +742,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/verification/generated/verification.html
-          "docs/generated/TemplateDotNetTool Software Verification Design.pdf"
+          "docs/generated/CanvasPilot Software Verification Design.pdf"
 
       - name: Assert Verification Documents with FileAssert
         run: >
@@ -798,7 +773,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/user_guide/generated/user_guide.html
-          "docs/generated/TemplateDotNetTool User Guide.pdf"
+          "docs/generated/CanvasPilot User Guide.pdf"
 
       - name: Assert User Guide Documents with FileAssert
         run: >
@@ -862,7 +837,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/requirements_doc/generated/requirements.html
-          "docs/generated/TemplateDotNetTool Requirements.pdf"
+          "docs/generated/CanvasPilot Requirements.pdf"
 
       - name: Generate Trace Matrix HTML with Pandoc
         shell: bash
@@ -878,7 +853,7 @@ jobs:
           dotnet weasyprint
           --pdf-variant pdf/a-3u
           docs/requirements_report/generated/trace_matrix.html
-          "docs/generated/TemplateDotNetTool Trace Matrix.pdf"
+          "docs/generated/CanvasPilot Trace Matrix.pdf"
 
       - name: Assert Requirements Documents with FileAssert
         run: >

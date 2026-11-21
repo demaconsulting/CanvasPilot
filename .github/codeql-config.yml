@@ -1,18 +1,28 @@
 ---
-# CodeQL configuration for Template DotNet Tool
+# CodeQL configuration for CanvasPilot
 # Suppresses intentional generic catch clauses
 
-name: "Template DotNet Tool CodeQL Config"
+name: "CanvasPilot CodeQL Config"
 
 # Query filters to disable specific queries for certain paths
 query-filters:
   - exclude:
       id: cs/catch-of-all-exceptions
     paths:
-      - src/DemaConsulting.TemplateDotNetTool/Context.cs
-      - src/DemaConsulting.TemplateDotNetTool/Validation.cs
+      - src/DemaConsulting.CanvasPilot/AppShellSubsystem/MainWindowView.axaml.cs
+      - src/DemaConsulting.CanvasPilot/PreviewSubsystem/ImageExporter.cs
+      - src/DemaConsulting.CanvasPilot/PreviewSubsystem/ImageRenderService.cs
+      - src/DemaConsulting.CanvasPilot/PreviewSubsystem/PreviewPaneViewModel.cs
+      - src/DemaConsulting.CanvasPilot/ProjectSubsystem/ProjectExplorerViewModel.cs
+      - src/DemaConsulting.CanvasPilot/ProjectSubsystem/ProjectService.cs
+      - src/DemaConsulting.CanvasPilot/ProjectSubsystem/RecentProjects.cs
+      - src/DemaConsulting.CanvasPilot/SettingsSubsystem/SettingsService.cs
+      - src/DemaConsulting.CanvasPilot/SpeechSubsystem/AudioDeviceService.cs
+      - src/DemaConsulting.CanvasPilot/SpeechSubsystem/DictationService.cs
+      - src/DemaConsulting.CanvasPilot/SpeechSubsystem/ModelCatalogPanelViewModel.cs
+      - src/DemaConsulting.CanvasPilot/SpeechSubsystem/SpeechModelService.cs
   # Exclude path-combine warnings in PathHelpers (validated safe usage)
   - exclude:
       id: cs/path-combine
     paths:
-      - src/DemaConsulting.TemplateDotNetTool/PathHelpers.cs
+      - src/DemaConsulting.CanvasPilot/UtilitiesSubsystem/PathHelpers.cs

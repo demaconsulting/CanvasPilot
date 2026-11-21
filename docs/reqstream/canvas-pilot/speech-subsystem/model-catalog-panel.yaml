@@ -1,0 +1,74 @@
+---
+# Software Unit Requirements for the ModelCatalogPanel Unit
+#
+# The ModelCatalogPanel unit is the view model and view of the speech model lists on the Speech settings page: the
+# speech-to-text and text-to-speech models, the model chosen for each, and downloads with progress and
+# cancellation. Each row is a ModelListItem. Downloads run at once and are not part of OK or Cancel.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        sections:
+          - title: ModelCatalogPanel Requirements
+            requirements:
+              - id: CanvasPilot-ModelCatalogPanel-ChooseModels
+                title: >-
+                  The ModelCatalogPanel shall list the speech-to-text and text-to-speech models separately with
+                  each model's install state, select the stored model of each kind by identifier, report the
+                  chosen identifiers, keep a stored identifier that the list cannot show, and read the catalog
+                  only when loaded or refreshed, refusing to refresh while a download runs.
+                justification: |
+                  The user chooses one model for each direction. A stored choice that the list cannot show, for
+                  example because the model store cannot be read, must not be erased by saving the dialog, and a
+                  refresh that replaced the rows would lose the downloads that the rows show.
+                tests:
+                  - ModelCatalogPanelViewModel_Load_CatalogWithModels_SplitsByRoleAndSelectsStoredModels
+                  - ModelCatalogPanelViewModel_Load_StoredModelNotListed_KeepsStoredIdentifier
+                  - ModelCatalogPanelViewModel_SelectModel_ChangesReportedIdentifier
+                  - ModelCatalogPanelViewModel_Refresh_WhileDownloading_IsRefusedOtherwiseRereads
+                  - ModelCatalogPanelViewModel_New_NullService_Throws
+                  - SpeechSettingsPageView_LoadedSettings_ShowDevicesModelsAndParameters
+
+              - id: CanvasPilot-ModelCatalogPanel-ExplainCatalogProblems
+                title: >-
+                  The ModelCatalogPanel shall explain in text when the catalog cannot be read and when it lists
+                  no models.
+                justification: |
+                  A blank list looks like a defect. Saying that the catalog is empty, or why it could not be
+                  read, tells the user the page is working and what the problem is.
+                tests:
+                  - ModelCatalogPanelViewModel_Load_CatalogUnavailable_ShowsProblemAndKeepsStoredIdentifiers
+                  - ModelCatalogPanelViewModel_Load_EmptyCatalog_ShowsEmptyMessage
+                  - SpeechSettingsPageView_NothingAvailable_ShowsExplanations
+
+              - id: CanvasPilot-ModelCatalogPanel-DownloadModels
+                title: >-
+                  The ModelCatalogPanel shall start a download of a model that is not installed when the user asks,
+                  show its progress while it runs, show the installed state when it ends, and show a failure's
+                  explanation in the model's row while allowing the download to be tried again, without letting
+                  a failure escape.
+                justification: |
+                  Models are large, so the user must see that a download is running and how far it is. Network
+                  failures are common and temporary, so an explanation and a retry are expected, and a failure
+                  must never take the settings dialog down.
+                tests:
+                  - ModelCatalogPanelViewModel_Download_Succeeds_ShowsProgressThenInstalled
+                  - ModelCatalogPanelViewModel_Download_Fails_ShowsFailureAndAllowsRetry
+                  - ModelCatalogPanelViewModel_Download_ServiceThrows_ShowsFailure
+                  - ModelCatalogPanelViewModel_Download_InstalledModelOrNoRow_DoesNothing
+                  - SpeechSettingsPageView_DownloadButton_ShowsProgressThenInstalled
+                  - SpeechSettingsPageView_DownloadFails_ShowsFailureAndAllowsRetry
+
+              - id: CanvasPilot-ModelCatalogPanel-CancelDownloads
+                title: >-
+                  The ModelCatalogPanel shall let the user cancel the download of one model, shall cancel every
+                  running download on request, and shall leave a cancelled model not downloaded with a message
+                  that the download was canceled.
+                justification: |
+                  A download that the user no longer wants must stop and free the network, and the model must be
+                  shown as not installed so that the user is not misled about what can be used.
+                tests:
+                  - ModelCatalogPanelViewModel_CancelDownload_RunningDownload_CancelsAndRestoresRow
+                  - ModelCatalogPanelViewModel_CancelAllDownloads_RunningDownloads_CancelsEach
+                  - SpeechSettingsPageView_CancelButton_StopsDownloadAndExplains

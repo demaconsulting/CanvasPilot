@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.SettingsSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.SettingsSubsystem.AiProviderSettingsPageView"
+             x:DataType="vm:AiProviderSettingsPageViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="6" Margin="0,0,12,0">
+
+      <TextBlock Text="Provider" />
+      <ComboBox AutomationProperties.AutomationId="AiProviderComboBox"
+                HorizontalAlignment="Stretch"
+                ItemsSource="{Binding Providers}"
+                SelectedItem="{Binding SelectedProvider}" />
+
+      <TextBlock Text="Model name" Margin="0,8,0,0" />
+      <TextBox AutomationProperties.AutomationId="AiModelNameTextBox"
+               PlaceholderText="Leave empty to use the provider's default model"
+               Text="{Binding ModelName}" />
+
+      <TextBlock Text="Context window (tokens)" Margin="0,8,0,0" />
+      <TextBox AutomationProperties.AutomationId="AiContextWindowTextBox"
+               Text="{Binding ContextWindowText}" />
+      <TextBlock AutomationProperties.AutomationId="AiContextWindowError"
+                 Foreground="Firebrick"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ContextWindowError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding ContextWindowError}" />
+
+      <TextBlock Text="Reasoning level" Margin="0,8,0,0" />
+      <ComboBox AutomationProperties.AutomationId="AiReasoningLevelComboBox"
+                HorizontalAlignment="Stretch"
+                ItemsSource="{Binding ReasoningLevels}"
+                SelectedItem="{Binding SelectedReasoningLevel}" />
+
+      <TextBlock Text="Ollama endpoint" Margin="0,8,0,0" />
+      <TextBox AutomationProperties.AutomationId="AiOllamaEndpointTextBox"
+               IsEnabled="{Binding IsOllamaSelected}"
+               Text="{Binding OllamaEndpoint}" />
+      <TextBlock AutomationProperties.AutomationId="AiOllamaEndpointError"
+                 Foreground="Firebrick"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding OllamaEndpointError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding OllamaEndpointError}" />
+
+      <TextBlock Text="GitHub Copilot command-line tool path" Margin="0,8,0,0" />
+      <TextBox AutomationProperties.AutomationId="AiCopilotCliPathTextBox"
+               IsEnabled="{Binding IsCopilotSelected}"
+               PlaceholderText="Leave empty to locate the tool automatically"
+               Text="{Binding CopilotCliPath}" />
+      <TextBlock AutomationProperties.AutomationId="AiCopilotCliPathError"
+                 Foreground="Firebrick"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding CopilotCliPathError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding CopilotCliPathError}" />
+
+      <CheckBox AutomationProperties.AutomationId="AiUnrestrictedAgentToolsCheckBox"
+                Margin="0,12,0,0"
+                Content="Allow unrestricted agent tools"
+                IsChecked="{Binding UnrestrictedAgentTools}" />
+      <TextBlock TextWrapping="Wrap"
+                 Opacity="0.7"
+                 Text="When enabled, the AI agent may use tools that are not limited to the project folder. Leave this off unless you trust the agent's instructions." />
+
+    </StackPanel>
+  </ScrollViewer>
+
+</UserControl>

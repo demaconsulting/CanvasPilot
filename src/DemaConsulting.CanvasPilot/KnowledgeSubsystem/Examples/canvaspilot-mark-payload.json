@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "text": "Make [Mark 1] bigger and rename it",
+  "segments": [
+    { "type": "text", "origin": "typed", "text": "Make " },
+    { "type": "mark", "number": 1 },
+    { "type": "text", "origin": "typed", "text": " bigger and rename it" }
+  ],
+  "attachments": [],
+  "images": [
+    {
+      "sourcePath": "order-flow.mmd",
+      "format": "mermaid",
+      "width": 640,
+      "height": 360,
+      "marks": [
+        {
+          "number": 1,
+          "kind": "rectangle",
+          "points": [ { "x": 40, "y": 60 }, { "x": 180, "y": 120 } ],
+          "boundingBox": { "x": 40, "y": 60, "width": 140, "height": 60 },
+          "note": "This box is too small",
+          "sourceElements": {
+            "available": true,
+            "unavailableReason": null,
+            "truncated": false,
+            "elements": [
+              { "kind": "node", "id": "stock", "text": "Stock check", "line": 3, "box": { "x": 48, "y": 66, "width": 120, "height": 48 } }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

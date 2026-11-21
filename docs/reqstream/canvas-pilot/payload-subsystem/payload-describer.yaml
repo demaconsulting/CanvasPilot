@@ -1,0 +1,31 @@
+---
+# Software Unit Requirements for the PayloadDescriber Unit
+#
+# The PayloadDescriber unit describes a payload as text, so that the user and a reviewer can see exactly what the
+# assistant receives. It has no state and no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Payload Subsystem Requirements
+        sections:
+          - title: PayloadDescriber Requirements
+            requirements:
+              - id: CanvasPilot-PayloadDescriber-ListEverythingTheAssistantReceives
+                title: >-
+                  The PayloadDescriber shall describe a payload as JSON text that lists its version, time, text, parts,
+                  attachments, and each picture with its facts and each mark with its geometry, note, area, and source
+                  elements, with each image replaced by its size in bytes and its SHA-256 fingerprint, with missing values
+                  written as null, with special characters escaped as JSON requires, and in a fixed order and number
+                  format with line feeds, so that the same payload always gives the same text.
+                justification: |
+                  The user must be able to see exactly what is sent and a test must be able to compare descriptions. A
+                  fixed form makes the description a record that does not depend on the computer, and escaping as JSON
+                  requires makes it possible to read the text back exactly.
+                tests:
+                  - PayloadDescriber_Describe_Payload_GivesExactlyThisText
+                  - PayloadDescriber_Describe_EqualPayloads_GiveTheSameText
+                  - PayloadDescriber_Describe_Images_AreShownAsByteCountAndFingerprint
+                  - PayloadDescriber_Describe_SpecialCharacters_AreEscapedAsJsonRequiresAndReadBackExactly
+                  - PayloadDescriber_Describe_MissingValues_AreWrittenAsNullAndReason
+                  - PayloadDescriber_Describe_NullPayload_ThrowsArgumentNullException

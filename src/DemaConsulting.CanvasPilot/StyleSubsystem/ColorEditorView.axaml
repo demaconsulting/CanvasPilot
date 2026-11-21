@@ -1,0 +1,73 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.StyleSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.StyleSubsystem.ColorEditorView"
+             x:DataType="vm:StyleColorRowViewModel">
+
+  <!-- One color of the palette: the name of its role, a swatch, the color as text, and red, green, and blue sliders in a flyout. -->
+  <StackPanel Spacing="2">
+    <StackPanel Orientation="Horizontal" Spacing="8">
+
+      <TextBox AutomationProperties.AutomationId="ColorEditorRoleBox"
+               Width="150"
+               VerticalAlignment="Center"
+               IsEnabled="{Binding IsRoleEditable}"
+               Text="{Binding Role}" />
+
+      <Border AutomationProperties.AutomationId="ColorEditorSwatch"
+              Width="30"
+              Height="30"
+              CornerRadius="4"
+              BorderBrush="Gray"
+              BorderThickness="1"
+              VerticalAlignment="Center"
+              Background="{Binding Hex, Converter={x:Static vm:ColorEditorView.HexToBrush}}" />
+
+      <TextBox AutomationProperties.AutomationId="ColorEditorHexBox"
+               Width="110"
+               VerticalAlignment="Center"
+               FontFamily="Consolas,Menlo,monospace"
+               MaxLength="9"
+               Text="{Binding Hex}" />
+
+      <Button AutomationProperties.AutomationId="ColorEditorSlidersButton"
+              VerticalAlignment="Center"
+              Content="RGB...">
+        <Button.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <Grid ColumnDefinitions="Auto,220,40" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="4">
+              <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Red" />
+              <Slider Grid.Row="0" Grid.Column="1"
+                      AutomationProperties.AutomationId="ColorEditorRedSlider"
+                      Minimum="0" Maximum="255" TickFrequency="1" IsSnapToTickEnabled="True"
+                      Value="{Binding Red}" />
+              <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Text="{Binding Red, StringFormat='{}{0:0}'}" />
+
+              <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Green" />
+              <Slider Grid.Row="1" Grid.Column="1"
+                      AutomationProperties.AutomationId="ColorEditorGreenSlider"
+                      Minimum="0" Maximum="255" TickFrequency="1" IsSnapToTickEnabled="True"
+                      Value="{Binding Green}" />
+              <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="{Binding Green, StringFormat='{}{0:0}'}" />
+
+              <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Blue" />
+              <Slider Grid.Row="2" Grid.Column="1"
+                      AutomationProperties.AutomationId="ColorEditorBlueSlider"
+                      Minimum="0" Maximum="255" TickFrequency="1" IsSnapToTickEnabled="True"
+                      Value="{Binding Blue}" />
+              <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Text="{Binding Blue, StringFormat='{}{0:0}'}" />
+            </Grid>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
+
+    </StackPanel>
+
+    <TextBlock AutomationProperties.AutomationId="ColorEditorHexError"
+               Margin="158,0,0,0"
+               Foreground="Firebrick"
+               IsVisible="{Binding !IsHexValid}"
+               Text="{Binding HexError}" />
+  </StackPanel>
+
+</UserControl>

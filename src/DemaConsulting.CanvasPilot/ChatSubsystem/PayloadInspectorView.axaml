@@ -1,0 +1,89 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DemaConsulting.CanvasPilot.ChatSubsystem"
+        x:Class="DemaConsulting.CanvasPilot.ChatSubsystem.PayloadInspectorView"
+        x:DataType="vm:PayloadInspectorViewModel"
+        Title="{Binding Title}"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Width="980"
+        Height="700"
+        MinWidth="560"
+        MinHeight="360"
+        WindowStartupLocation="CenterOwner">
+
+  <Grid Margin="12" RowDefinitions="*,Auto" ColumnDefinitions="*,Auto,*">
+
+    <!-- What the assistant would receive, as text: the message with the places of the marks and attachments, the
+         attachments, and for each marked picture its marks with geometry, note, area, and source elements -->
+    <Grid Grid.Row="0" Grid.Column="0" RowDefinitions="Auto,*">
+      <TextBlock Grid.Row="0"
+                 Margin="0,0,0,6"
+                 FontWeight="SemiBold"
+                 Text="What the assistant would receive" />
+      <TextBox Name="DescriptionText"
+               Grid.Row="1"
+               AutomationProperties.AutomationId="PayloadInspectorText"
+               IsReadOnly="True"
+               AcceptsReturn="True"
+               TextWrapping="NoWrap"
+               FontFamily="Cascadia Mono,Consolas,Menlo,monospace"
+               ScrollViewer.HorizontalScrollBarVisibility="Auto"
+               ScrollViewer.VerticalScrollBarVisibility="Auto"
+               Text="{Binding Description, Mode=OneWay}" />
+    </Grid>
+
+    <GridSplitter Grid.Row="0" Grid.Column="1" Width="6" ResizeDirection="Columns" Background="Transparent" />
+
+    <!-- The pictures of the payload: each marked picture with its marks drawn on it, and the area around each mark -->
+    <Grid Grid.Row="0" Grid.Column="2" RowDefinitions="Auto,*">
+      <TextBlock Grid.Row="0"
+                 Margin="0,0,0,6"
+                 FontWeight="SemiBold"
+                 Text="Pictures" />
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock Name="NoPicturesText"
+                     AutomationProperties.AutomationId="PayloadInspectorNoPictures"
+                     Opacity="0.7"
+                     TextWrapping="Wrap"
+                     Text="This message has no marks, so it has no pictures."
+                     IsVisible="{Binding !HasPictures}" />
+          <ItemsControl Name="PictureList"
+                        AutomationProperties.AutomationId="PayloadInspectorPictures"
+                        ItemsSource="{Binding Pictures}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PayloadPictureViewModel">
+                <StackPanel Margin="0,0,0,12" Spacing="4">
+                  <TextBlock AutomationProperties.AutomationId="PayloadInspectorPictureCaption"
+                             TextWrapping="Wrap"
+                             Text="{Binding Caption}" />
+                  <Border BorderThickness="1" BorderBrush="#55808080" HorizontalAlignment="Left">
+                    <Image AutomationProperties.AutomationId="PayloadInspectorPicture"
+                           Stretch="Uniform"
+                           StretchDirection="DownOnly"
+                           MaxWidth="440"
+                           MaxHeight="320"
+                           Source="{Binding Bitmap}" />
+                  </Border>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+
+    <Button Grid.Row="1"
+            Grid.Column="2"
+            AutomationProperties.AutomationId="PayloadInspectorCloseButton"
+            Margin="0,12,0,0"
+            HorizontalAlignment="Right"
+            Content="Close"
+            IsDefault="True"
+            IsCancel="True"
+            MinWidth="80"
+            Command="{Binding CloseCommand}" />
+
+  </Grid>
+
+</Window>

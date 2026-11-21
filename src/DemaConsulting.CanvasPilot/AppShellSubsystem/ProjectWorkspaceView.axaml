@@ -1,0 +1,86 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.AppShellSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.AppShellSubsystem.ProjectWorkspaceView"
+             x:DataType="vm:ProjectWorkspaceViewModel">
+
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="F2" Command="{Binding RenameSelectedCommand}" />
+    <KeyBinding Gesture="Delete" Command="{Binding DeleteSelectedCommand}" />
+  </UserControl.KeyBindings>
+
+  <!-- Explorer | preview | chat. The chat column and its splitter get their widths from the code of the view, because a
+       column cannot be hidden by binding: they are 0 while no chat is shown. -->
+  <Grid Name="WorkspaceGrid">
+
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="260" MinWidth="140" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition Width="*" MinWidth="200" />
+      <ColumnDefinition Width="0" />
+      <ColumnDefinition Width="0" MinWidth="0" />
+    </Grid.ColumnDefinitions>
+
+    <ContentControl Grid.Column="0"
+                    AutomationProperties.AutomationId="WorkspaceExplorerHost"
+                    Content="{Binding Explorer}">
+      <ContentControl.ContextMenu>
+        <ContextMenu>
+          <MenuItem Name="RenameFileMenuItem"
+                    AutomationProperties.AutomationId="RenameFileMenuItem"
+                    Header="_Rename..."
+                    InputGesture="F2"
+                    Command="{Binding RenameSelectedCommand}" />
+          <MenuItem Name="DeleteFileMenuItem"
+                    AutomationProperties.AutomationId="DeleteFileMenuItem"
+                    Header="_Delete..."
+                    InputGesture="Delete"
+                    Command="{Binding DeleteSelectedCommand}" />
+        </ContextMenu>
+      </ContentControl.ContextMenu>
+    </ContentControl>
+
+    <GridSplitter Grid.Column="1"
+                  AutomationProperties.AutomationId="WorkspaceSplitter"
+                  Width="5"
+                  ResizeDirection="Columns" />
+
+    <Grid Grid.Column="2">
+
+      <ContentControl AutomationProperties.AutomationId="WorkspacePreviewHost"
+                      IsVisible="{Binding HasPreview}"
+                      Content="{Binding Preview}" />
+
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="6"
+                  IsVisible="{Binding !HasPreview}">
+        <TextBlock AutomationProperties.AutomationId="WorkspacePlaceholder"
+                   HorizontalAlignment="Center"
+                   FontSize="20"
+                   Opacity="0.7"
+                   Text="{Binding PlaceholderText}" />
+        <TextBlock AutomationProperties.AutomationId="WorkspaceHint"
+                   HorizontalAlignment="Center"
+                   Opacity="0.6"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HintText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Text="{Binding HintText}" />
+      </StackPanel>
+
+    </Grid>
+
+    <GridSplitter Grid.Column="3"
+                  AutomationProperties.AutomationId="WorkspaceChatSplitter"
+                  Width="5"
+                  IsVisible="{Binding IsChatVisible}"
+                  ResizeDirection="Columns" />
+
+    <ContentControl Grid.Column="4"
+                    AutomationProperties.AutomationId="WorkspaceChatHost"
+                    IsVisible="{Binding IsChatVisible}"
+                    Content="{Binding Chat}" />
+
+  </Grid>
+
+</UserControl>

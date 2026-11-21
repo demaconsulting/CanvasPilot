@@ -1,0 +1,82 @@
+---
+# Software Unit Requirements for the StyleTools Unit
+#
+# The StyleTools unit describes the two tools that give an assistant the style of the project: style_get, which gives the
+# style of a kit as text, and style_check, which checks a picture file of the project against the palette of the kit of the
+# project. The tools are plain values (the descriptor record of the Knowledge subsystem) and a function from the arguments as
+# text to an answer as text, so that they can be given to any provider of a language model. A tool never throws, and
+# style_check reads no file outside the folder of the project.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleTools Requirements
+            requirements:
+              - id: CanvasPilot-StyleTools-DescribeStyleGet
+                title: >-
+                  The StyleTools shall describe the tool style_get with its name, a description of what it is for and how to
+                  call it, and a JSON Schema of the arguments that allows only a kit id and the name of a section, and shall
+                  answer a call with the guidance of the kit of the project, of the kit that is named, or one section of it in
+                  full, answer an id that no kit has with the ids that are known, answer a project with no kit or with a kit
+                  that is missing with how to choose one, and answer a section that does not exist with the names of the
+                  sections.
+                justification: |
+                  An assistant draws better when it is given the style first and can ask for a part of it that was cut to fit.
+                  Telling it what to send instead of failing lets it correct its next call, and a schema without other
+                  properties keeps the calls to what the tool understands.
+                tests:
+                  - StyleTools_CreateAll_Descriptors_HaveNamesDescriptionsAndSchemas
+                  - StyleTools_Get_NoArguments_GivesTheGuidanceOfTheActiveKit
+                  - StyleTools_Get_NamedKit_GivesThatKitOrListsTheKnownKits
+                  - StyleTools_Get_NoActiveKitOrMissingKit_SaysHowToChoose
+                  - StyleTools_Get_Section_GivesThatSectionOrListsTheSections
+
+              - id: CanvasPilot-StyleTools-DescribeStyleCheck
+                title: >-
+                  The StyleTools shall describe the tool style_check with its name, a description of what it is for and how to
+                  call it, and a JSON Schema of the arguments that allows only a path and a tolerance, and shall answer a call
+                  by drawing the file, on a thread of the pool and not on the thread of the caller, and answering with the text
+                  of the report of the check against the kit of the project, using the picture that is shown when no path is
+                  given and a tolerance from 0 to 100 when one is given, and shall answer a project that is not open, a project
+                  with no kit or a missing kit, a path that is not given and a picture that cannot be drawn with a message that
+                  says what is wrong.
+                justification: |
+                  The check is the way an assistant sees whether a picture it drew keeps the style, so it must be a call with
+                  one obvious argument, must say in plain words why it cannot be made, and must not wait on the thread that
+                  shows the application.
+                tests:
+                  - StyleTools_Check_RelativePath_DrawsTheFileAndAnswersWithTheReport
+                  - StyleTools_Check_NoPathOrFullPath_UsesTheShownPictureOrTheFullPath
+                  - StyleTools_Check_Tolerance_ReachesTheCheckAndIsBounded
+                  - StyleTools_Check_NoProjectNoKitOrDrawingFails_AreAnsweredWithAMessage
+                  - StyleTools_Check_RealRender_PassesOnAndFailsOffThePalette
+
+              - id: CanvasPilot-StyleTools-ConfineChecksToTheProject
+                title: >-
+                  The StyleTools shall check only a file that is inside the folder of the open project, refusing a path that
+                  climbs out of the folder, a full path elsewhere, a network path, a path inside the folder that the
+                  application keeps its own data in, a folder, a file that is not there, and a file or a folder on the way that
+                  is a link or a junction that leads outside the folder, before anything is drawn.
+                justification: |
+                  The call comes from an assistant, whose arguments may come from text that a person did not write. A tool that
+                  reads a file must not be made to read other files of the computer, so the path is confined by the same check
+                  that the rest of the application uses for names that it did not choose, and a link, which that check cannot
+                  see, is followed to see where it really leads.
+                tests:
+                  - StyleTools_Check_PathOutsideTheProject_IsRefusedBeforeDrawing
+                  - StyleTools_Check_LinkThatLeadsOutOfTheProject_IsRefused
+
+              - id: CanvasPilot-StyleTools-NeverThrowOnBadArguments
+                title: >-
+                  The StyleTools shall answer arguments that are not JSON, that are not an object, or that have a value of the
+                  wrong type, and a failure of a unit that it uses, with a message that says what to send and shall not throw.
+                justification: |
+                  An assistant can correct itself from a message and cannot from an exception, and an exception in the tool
+                  would end the turn of the assistant for a mistake that a message would have fixed.
+                tests:
+                  - StyleTools_Get_BadArguments_AreAnsweredWithAMessage
+                  - StyleTools_Get_CatalogThrows_IsAnsweredWithAMessage
+                  - StyleTools_Check_BadArguments_AreAnsweredWithAMessage
+                  - StyleTools_Check_NoProjectNoKitOrDrawingFails_AreAnsweredWithAMessage

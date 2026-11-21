@@ -1,0 +1,198 @@
+---
+# Software Unit Requirements for the ComposerViewModel Unit
+#
+# The ComposerViewModel unit is the orchestration of the message being composed, without a window: it owns the document,
+# its undo history, the intake of dropped and pasted content, and push-to-talk dictation, connects the marks and the
+# attachments of the open project to the message, and sends the message. The editing control that shows the message
+# reports what the user does through it and shows what it holds.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Composer Subsystem Requirements
+        sections:
+          - title: ComposerViewModel Requirements
+            requirements:
+              - id: CanvasPilot-ComposerViewModel-MapEditsToHistorySteps
+                title: >-
+                  The ComposerViewModel shall make each action of the user exactly one undo step: each typed or deleted
+                  character, each selection that is deleted or typed over, each dictated block, each drop or paste of any
+                  number of items or of text, each added mark chip, and each deleted chip, and shall not make a step of an
+                  action that changes nothing; shall type at the caret and replace the selection, put dropped items at
+                  the place of the drop, and add the chip of a mark only for a mark of its own registry; shall tell once
+                  for each action that the message changed; and shall keep the caret and the selection inside the
+                  message.
+                justification: |
+                  The granularity of undo is the granularity of the user's actions, and the editing control only reports
+                  what the user did. If the rule were left to the control, a drop of many files could be undone one file
+                  at a time, or a paragraph that was dictated by mistake could need many undo steps. One notification for each
+                  action keeps the control from showing half of an action, and a chip for a mark that does not exist
+                  would make a message that cannot be built.
+                tests:
+                  - ComposerViewModel_InsertTyped_EachCharacterIsOneStep
+                  - ComposerViewModel_ApplyTextChange_ReportedChange_IsAppliedAtItsOffsetAsTypedText
+                  - ComposerViewModel_BackspaceAndDelete_EachCharacterIsOneStep
+                  - ComposerViewModel_BackspaceAtStartAndDeleteAtEnd_AreNoStep
+                  - ComposerViewModel_Delete_SelectionOfTextAndChip_IsOneStep
+                  - ComposerViewModel_InsertTyped_OverSelection_IsOneStep
+                  - ComposerViewModel_AddDictatedBlock_ManyWords_IsOneStepOfDictatedText
+                  - ComposerViewModel_AddDictatedBlock_NothingToAdd_IsNoStep
+                  - ComposerViewModel_AddDictatedBlock_TextThatLooksLikeAChip_StaysCleanedText
+                  - ComposerViewModel_HandleDrop_ThreeFilesAndTwoPictures_IsOneStep
+                  - ComposerViewModel_HandleDrop_AtOffset_PutsItemsThere
+                  - ComposerViewModel_HandlePaste_TextAndItems_AreOneStepAndReplaceSelection
+                  - ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip
+                  - ComposerViewModel_AddMark_MarkOfAnotherRegistry_ThrowsArgumentException
+                  - ComposerViewModel_DeleteChip_IsOneStepAndUndoRestoresItAtTheSameOffset
+                  - ComposerViewModel_InsertTyped_AfterUndo_DiscardsRedo
+                  - ComposerViewModel_Changed_EachActionRaisesItOnce
+                  - ComposerViewModel_SetSelection_OutsideMessage_IsBroughtBackInside
+                  - ComposerViewModel_Constructor_MissingArguments_ThrowArgumentNullException
+
+              - id: CanvasPilot-ComposerViewModel-ExposeUndoRedo
+                title: >-
+                  The ComposerViewModel shall undo and redo whole steps through commands whose availability follows the
+                  history and through an interface that the Edit menu and the keys reach, shall tell when the
+                  availability changes, shall give back the same steps in redo as undo took, shall put the caret where it
+                  was before the step when undoing and where it was after the step when redoing, and shall ignore undo and
+                  redo when there is nothing to do.
+                justification: |
+                  The menu and the keyboard shortcuts do not know what has the focus; they ask the focused part for
+                  undo and redo through one interface, and they must be able to grey out their items. A redo that gave
+                  other steps than undo took, or a caret that stayed behind, would lose the user's place in the message.
+                tests:
+                  - ComposerViewModel_Redo_MixedActions_GivesTheSameStepsBack
+                  - ComposerViewModel_UndoRedoCommands_CanExecuteFollowsHistoryAndRunsSteps
+                  - ComposerViewModel_UndoRedoTarget_ReportsStateAndSteps
+                  - ComposerViewModel_UndoAndRedo_NothingToDo_DoNothing
+                  - ComposerViewModel_Undo_RestoresCaretOfTheStep
+
+              - id: CanvasPilot-ComposerViewModel-InsertDictatedBlockAtCaret
+                title: >-
+                  The ComposerViewModel shall, while the talk button or key is held, listen through the dictation
+                  service and show the words recognized so far, and when it is released, add the final words at the caret,
+                  over the selection, as one block of dictated text and one undo step; shall ignore a press while it is
+                  listening or starting; shall make a start that is still under way give up when the button is released,
+                  and still end and use a session that arrives at that moment; shall ignore a release without a press;
+                  shall move the live words from the thread of the recognizer to the thread that pressed the button and
+                  drop words that arrive after the release; shall give a dictation up without adding anything when the
+                  project changes or the composer is disposed; and shall not let a message be sent while the button is held.
+                justification: |
+                  The user holds the button for as long as they speak. Showing the words as they come shows that they
+                  are understood, and one block makes a mistaken dictation one undo away. The button can be released
+                  before the speech engine, which takes time to load, is ready, and events of the recognizer come from
+                  another thread, so each case must end cleanly without a lost word, a stuck microphone, or text that
+                  appears in another project.
+                tests:
+                  - ComposerViewModel_PushToTalk_HoldAndRelease_ShowsLiveTextThenAddsOneDictatedBlock
+                  - ComposerViewModel_PushToTalk_Release_AddsAtCaretOverSelection
+                  - ComposerViewModel_PushToTalk_SecondPress_IsIgnored
+                  - ComposerViewModel_PushToTalk_ReleaseWhileStarting_GivesUpAndAddsNothing
+                  - ComposerViewModel_PushToTalk_ReleaseWhileStartingButSessionArrives_EndsItAndAddsWords
+                  - ComposerViewModel_PushToTalk_ReleaseWithoutPress_IsIgnored
+                  - ComposerViewModel_PushToTalk_LiveTextFromAnotherThread_IsMovedToTheInterfaceThread
+                  - ComposerViewModel_PushToTalk_ProjectClosedWhileListening_GivesUpAndAddsNothing
+                  - ComposerViewModel_Dispose_WhileListening_ReleasesTheSession
+
+              - id: CanvasPilot-ComposerViewModel-ExplainDictationProblems
+                title: >-
+                  The ComposerViewModel shall, when dictation cannot work, say why in the status text and change nothing:
+                  with the message of the dictation service for each reason it gives, with the reason of a start that
+                  gave no session, with the failure of a start or of the end of a session, with the problem that a session
+                  reports while keeping the words heard before it, with a sentence when nothing was heard, and with the
+                  request to open a project when there is none; and shall always leave the talk button usable again.
+                justification: |
+                  Dictation depends on a model, a microphone, and native files, and any of them can be missing. A button
+                  that silently does nothing makes users think the application is broken; each reason has its own next
+                  step, and the words that were heard before a failure are worth keeping.
+                tests:
+                  - ComposerViewModel_PushToTalk_Unavailable_ShowsReasonAndChangesNothing
+                  - ComposerViewModel_PushToTalk_NothingHeard_IsNoStepAndSaysSo
+                  - ComposerViewModel_PushToTalk_SessionProblem_ShownAndWordsKept
+                  - ComposerViewModel_PushToTalk_SessionProblemWithoutWords_ShowsTheProblem
+                  - ComposerViewModel_PushToTalk_StartWithoutSession_ShowsReasonOrIsSilent
+                  - ComposerViewModel_PushToTalk_StartThrows_ExplainsAndIsIdle
+                  - ComposerViewModel_PushToTalk_EndThrows_ExplainsReleasesSessionAndAddsNothing
+                  - ComposerViewModel_PushToTalk_NoProject_SaysSoAndDoesNotListen
+
+              - id: CanvasPilot-ComposerViewModel-ReportIntakeProblems
+                title: >-
+                  The ComposerViewModel shall add what a drop or a paste brought as one step through the attachment
+                  intake, shall name in the status text the first three items that were left out and the first three that
+                  were accepted with a warning, with the reason of each and how many more there are, shall add nothing and
+                  make no step when nothing could be accepted, and shall clear the status text with the next action.
+                justification: |
+                  An item that disappears from a drop without a word looks like a bug in the application. The user needs
+                  to know which item was left out and why, without a window for each of a hundred items, and a message
+                  about an earlier action must not stay on the screen when it no longer applies.
+                tests:
+                  - ComposerViewModel_HandleDrop_NothingAccepted_IsNoStepAndNamesWhatWasLeftOut
+                  - ComposerViewModel_HandleDrop_GoodAndBadItems_AddsTheGoodOnesAndNamesTheBadOnes
+                  - ComposerViewModel_HandleDrop_ManyLeftOut_NamesThreeAndCountsTheRest
+                  - ComposerViewModel_HandlePaste_PictureRefusedByStore_IsLeftOutWithReason
+                  - ComposerViewModel_StatusText_NextAction_ClearsIt
+
+              - id: CanvasPilot-ComposerViewModel-SendMessage
+                title: >-
+                  The ComposerViewModel shall send the message by putting its attachments into the project, having the
+                  message builder build what is kept and given to the assistant from the snapshot of the message, the
+                  marks whose chips are in it, and the staged attachments, and, only when that worked, raising one event
+                  with the immutable sent message; shall refuse an empty or blank message that has no chip, and a send
+                  while the talk button is held or while a send is under way; and shall not let the message be changed while
+                  it is sent.
+                justification: |
+                  Sending is where the draft becomes a message: the attachments must be in the project before the assistant
+                  is told about them, the marks must be drawn on the pictures they belong to, and what the transcript shows
+                  must be what was sent. A draft that can change during the send, or a second send of the same draft, would
+                  make a message that is not what the user saw.
+                tests:
+                  - ComposerViewModel_SendAsync_TextAttachmentAndMark_StagesBuildsClearsAndRaisesEvent
+                  - ComposerViewModel_SendAsync_EmptyBlankAndChipOnlyMessages_AreHandledAsExpected
+                  - ComposerViewModel_SendAsync_WhileSending_DraftCannotBeChanged
+                  - ComposerViewModel_SendCommand_ExecutesOnlyWithContent
+
+              - id: CanvasPilot-ComposerViewModel-KeepDraftWhenSendFails
+                title: >-
+                  The ComposerViewModel shall keep the draft, its undo history, and its marks exactly as they were, raise
+                  no event, and say why in the status text when the attachments cannot be put into the project, when the
+                  message cannot be built, when the sending is canceled, when the project was closed meanwhile, or when a
+                  talk button is held, and shall let the same draft be sent again once the cause is gone.
+                justification: |
+                  A user who spent a minute on a message with a file and three marks must not lose it because the file is
+                  too large or a picture cannot be drawn. The message must say which attachment is the problem, so that it
+                  can be removed.
+                tests:
+                  - ComposerViewModel_SendAsync_StagingFails_KeepsDraftAndSaysWhich
+                  - ComposerViewModel_SendAsync_BuildFails_KeepsDraftAndSaysWhy
+                  - ComposerViewModel_SendAsync_ProjectClosedMeanwhile_IsNotSent
+                  - ComposerViewModel_SendAsync_Canceled_KeepsDraft
+                  - ComposerViewModel_SendAsync_WhileTalkButtonHeld_IsRefused
+
+              - id: CanvasPilot-ComposerViewModel-ResetAfterSend
+                title: >-
+                  The ComposerViewModel shall, after a message was sent, empty the document, forget every undo and redo
+                  step, empty the marks, put the caret at the start, and remove the saved pictures that no chip refers to,
+                  and shall do the same, without sending, when the draft is cleared.
+                justification: |
+                  Nothing of a sent message may be undone, redone, or found in the next draft, and pictures that were
+                  pasted for a draft that was undone must not pile up in the project.
+                tests:
+                  - ComposerViewModel_SendAsync_TextAttachmentAndMark_StagesBuildsClearsAndRaisesEvent
+                  - ComposerViewModel_SendAsync_ClearsUndoStack
+                  - ComposerViewModel_ClearDraft_EmptiesEverything
+
+              - id: CanvasPilot-ComposerViewModel-RequireOpenProject
+                title: >-
+                  The ComposerViewModel shall allow the message to be changed only while a project is open, shall say that a
+                  project is needed when there is none, shall drop the draft, its history, its marks, and its saved pictures
+                  when the project changes or closes while keeping them when the same project is set again, and shall say
+                  why when the folder of a project cannot be used.
+                justification: |
+                  Attachments, saved pictures, and marks all belong to a project folder, and a draft that outlives its
+                  project could send files into the wrong one. A user who sees a disabled composer must be told what to do.
+                tests:
+                  - ComposerViewModel_NoProject_EditingIsRefusedAndStatusExplains
+                  - ComposerViewModel_SetProject_OtherProject_DropsDraftHistoryMarksAndSavedPictures
+                  - ComposerViewModel_SetProject_SameProject_KeepsDraft
+                  - ComposerViewModel_SetProject_Null_ClosesTheProjectAndDropsTheDraft
+                  - ComposerViewModel_SetProject_UnusableFolder_ExplainsAndHasNoProject

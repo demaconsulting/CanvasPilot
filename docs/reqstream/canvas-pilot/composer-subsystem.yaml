@@ -1,0 +1,225 @@
+---
+# Composer Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Composer subsystem
+# - The Composer subsystem holds the message that the user is composing for the chat and its attachments: the message
+#   as ordered segments, the undo and redo of the user's changes, the intake and staging of dropped and pasted
+#   content, and the view that shows the message in one editing surface with chips inline. The logic of the
+#   subsystem has no dependency on the user interface; only the editor view and its chip, preview, and drawing parts do
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Composer Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Composer-HoldOrderedSegments
+            title: >-
+              The Composer subsystem shall hold the message being composed as an ordered sequence of typed text,
+              dictated text, and chips for attached files, folders, and images and for marks on the picture, so
+              that every part keeps its place, its origin, and its kind, and shall give an unchangeable copy of the
+              message on request.
+            justification: |
+              The message mixes what the user wrote, what the user said, and the things the user pointed at or
+              attached, and its meaning depends on where each of them is. The agent needs to know which words were
+              dictated, because speech recognition makes mistakes that typing does not. An unchangeable copy lets the
+              message be built and shown while the user keeps working.
+            children:
+              - CanvasPilot-ComposerDocument-KeepOrderedSegments
+              - CanvasPilot-ComposerDocument-InsertChipsAtCaret
+              - CanvasPilot-ComposerDocument-DeleteRanges
+              - CanvasPilot-ComposerDocument-SanitizeText
+              - CanvasPilot-ComposerDocument-SnapshotImmutably
+            tests:
+              - ComposerSubsystem_Compose_MixedParts_KeepOrderOriginAndKind
+
+          - id: CanvasPilot-Composer-UndoRedoPerAction
+            title: >-
+              The Composer subsystem shall undo and redo the user's changes to the message one action at a time:
+              each typed or deleted character, each dictated block, each drop or paste of any number of items, each
+              added mark, and each deleted chip is one step, and redo gives the same steps again.
+            justification: |
+              Users expect undo to take back what they just did and no more or less. A dictated block or a drop of
+              many files is one action to the user, so it has to be one step, while typing is undone character by
+              character like in any text editor. A redo that gave different steps than the undo would lose the
+              user's work.
+            children:
+              - CanvasPilot-ComposerHistory-StepGranularity
+              - CanvasPilot-ComposerHistory-RedoSameSteps
+              - CanvasPilot-ComposerHistory-DiscardRedoOnNewEdit
+              - CanvasPilot-ComposerHistory-BoundedDepth
+            tests:
+              - ComposerSubsystem_UndoRedo_MixedSequence_ReturnsToEachStateInOrder
+
+          - id: CanvasPilot-Composer-ForgetDraftOnSend
+            title: >-
+              The Composer subsystem shall keep the draft and its undo history only in memory, and shall clear both
+              when the message is sent, so that nothing of a sent message can be undone or found in the next one.
+            justification: |
+              A draft that was written to disk could leave the user's words, and the names of the files attached, on
+              the computer after the user thought they were gone. Undo after sending would bring a sent message back
+              into the next one.
+            children:
+              - CanvasPilot-ComposerHistory-ClearOnDemand
+              - CanvasPilot-ComposerHistory-StartEmpty
+              - CanvasPilot-ComposerViewModel-ResetAfterSend
+            tests:
+              - ComposerSubsystem_Send_ClearsHistoryAndDocument
+              - ComposerSubsystem_Send_SnapshotIsUnaffectedByNextDraft
+              - ComposerSubsystem_SendThroughViewModel_CopiesAttachmentsBuildsPayloadAndClearsDraft
+
+          - id: CanvasPilot-Composer-AcceptDroppedAndPastedContent
+            title: >-
+              The Composer subsystem shall turn dropped and pasted files, folders, pictures, and text into chips and
+              text for the message, referring to dropped files and folders where they are, saving pasted pictures in
+              the project's private data folder, and removing saved pictures that no chip refers to any more, without
+              copying anything into the project while the message is a draft.
+            justification: |
+              Users bring material to the assistant by dropping files and folders and by pasting screenshots. Copying
+              at drop time would fill the project with material for messages that are never sent, and undoing a drop
+              would have to undo the copy, so the drop only refers to the material and the copy happens when the
+              message is sent. A pasted picture has no file to refer to, so it is saved, and saved pictures that no
+              chip refers to must not pile up.
+            children:
+              - CanvasPilot-AttachmentIntake-ClassifyContent
+              - CanvasPilot-AttachmentIntake-ReferenceOriginalPaths
+              - CanvasPilot-AttachmentIntake-SanitizeDroppedText
+              - CanvasPilot-AttachmentStore-SavePastedImages
+              - CanvasPilot-AttachmentStore-RemoveLeftovers
+              - CanvasPilot-ComposerViewModel-ReportIntakeProblems
+              - CanvasPilot-ComposerEditor-AcceptDropAndPaste
+            tests:
+              - ComposerSubsystem_DropThenUndo_RemovesChipsAndCopiesNothing
+
+          - id: CanvasPilot-Composer-TreatContentAsData
+            title: >-
+              The Composer subsystem shall treat everything that is dropped or pasted strictly as data: it shall
+              never open, run, or render it, shall leave out paths that are not safe to refer to, and shall create
+              files only inside the project, with safe names and without following links.
+            justification: |
+              Dropped files come from the user's computer or from websites and mail, and may be programs, scripts,
+              or names built to reach devices, other drives, or other files than the ones shown. The application only
+              needs their bytes at the moment they are copied into the project, so nothing that is dropped may be
+              given a chance to act.
+            children:
+              - CanvasPilot-AttachmentIntake-RefuseUnsafeNames
+              - CanvasPilot-AttachmentStore-ConfineToProject
+            tests:
+              - ComposerSubsystem_Drop_ProgramsScriptsAndUnsafePaths_AreOnlyDataAndNeverRun
+
+          - id: CanvasPilot-Composer-StageAttachmentsAtSend
+            title: >-
+              The Composer subsystem shall, when the message is sent, copy the attachments from outside the project
+              into the project's attachments folder with names that never replace another file, refer to attachments
+              that are in the project where they are, move pasted pictures there, and either put all of them there
+              within the limits of 500 files and 200 MB for one message or none of them, saying which attachment
+              prevents it.
+            justification: |
+              The assistant works on the project and needs the attached material inside it. Limits keep one message
+              from filling the user's disk or the assistant's context, and a message that is only partly attached
+              would mislead the assistant. The user must be told which attachment is the problem, so that it can be
+              removed from the message.
+            children:
+              - CanvasPilot-AttachmentStore-CopyIntoProjectAtSend
+              - CanvasPilot-AttachmentStore-LimitCopiedSize
+              - CanvasPilot-AttachmentStore-CopyAllOrNothing
+              - CanvasPilot-AttachmentStore-KeepNamesUnique
+            tests:
+              - ComposerSubsystem_Send_CopiesExternalFilesIntoProjectAttachments
+
+          - id: CanvasPilot-Composer-EditWithUndoRedoTarget
+            title: >-
+              The Composer subsystem shall apply every action that the editing control reports through one view model,
+              as exactly one undo step, and shall offer undo and redo to the Edit menu and the keys through an interface
+              that does not depend on what has the focus.
+            justification: |
+              The editing control only knows what the user typed, deleted, dropped, or pasted; the rule that gives each
+              action its place in undo must be in one place that is tested without a window, and the menu must work with
+              whatever part of the window has the focus.
+            children:
+              - CanvasPilot-ComposerViewModel-MapEditsToHistorySteps
+              - CanvasPilot-ComposerViewModel-ExposeUndoRedo
+              - CanvasPilot-ComposerEditor-HandleUndoRedoKeys
+            tests:
+              - ComposerSubsystem_EditThroughViewModel_MixedActionsUndoAndRedoOneStepEach
+
+          - id: CanvasPilot-Composer-AddDictatedWordsAsOneBlock
+            title: >-
+              The Composer subsystem shall, while a talk button or key is held, show the words recognized so far, and when
+              it is released add the final words at the caret as one block of dictated text that one undo removes, and
+              when dictation cannot work shall say why and leave the message as it is.
+            justification: |
+              Dictation is part of the message and must be as easy to take back as a pasted paragraph. The state of the
+              button, the live words, and the reasons why nothing was heard are the behavior of the composer, whatever
+              button or key starts them, so they are decided and tested here.
+            children:
+              - CanvasPilot-ComposerViewModel-InsertDictatedBlockAtCaret
+              - CanvasPilot-ComposerViewModel-ExplainDictationProblems
+            tests:
+              - ComposerSubsystem_DictateThroughViewModel_HoldAndRelease_AddsOneDictatedBlockAsOneStep
+
+          - id: CanvasPilot-Composer-SendComposedMessage
+            title: >-
+              The Composer subsystem shall send the message by putting its attachments into the project and having the
+              message built with the marks that are part of it, shall then give the immutable sent message and empty the
+              draft, and shall keep the draft unchanged and say why when any step fails.
+            justification: |
+              Sending turns a draft into a message that the transcript shows and the assistant is given. It must be all
+              or nothing: a message that was sent but still sits in the draft would be sent twice, and a draft that was
+              lost by a failure would cost the user their work.
+            children:
+              - CanvasPilot-ComposerViewModel-SendMessage
+              - CanvasPilot-ComposerViewModel-KeepDraftWhenSendFails
+            tests:
+              - ComposerSubsystem_SendThroughViewModel_CopiesAttachmentsBuildsPayloadAndClearsDraft
+              - ComposerSubsystem_SendThroughViewModel_AttachmentTooLarge_KeepsDraftAndLeavesProjectUntouched
+
+          - id: CanvasPilot-Composer-WorkInsideAnOpenProject
+            title: >-
+              The Composer subsystem shall let the message be written only in an open project, shall follow the project
+              that is open, and shall drop the draft with its history, marks, and saved pictures when the project changes
+              or is closed.
+            justification: |
+              Attachments are copied into the project and marks are drawn on its pictures, so a message that outlived its
+              project could send files into another one or refer to marks of a picture that is no longer there.
+            children:
+              - CanvasPilot-ComposerViewModel-RequireOpenProject
+            tests:
+              - AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject
+
+          - id: CanvasPilot-Composer-ShowEditableMessage
+            title: >-
+              The Composer subsystem shall show the message in one editing surface in which the user can type, delete,
+              select, and copy, that always holds exactly what the message holds, that shows dictated words with a
+              distinct background, the live words of a dictation, and the sentence about the last action, and that
+              reports every change of the user as one action on the message.
+            justification: |
+              The editing surface is where the user sees and writes the message. If it could differ from the message, the
+              user could send something other than what they see, so the surface only shows the message and reports what
+              the user did. Dictated words must be recognizable, because speech recognition makes mistakes that typing
+              does not, and the user must see at once what a dictation or a drop did.
+            children:
+              - CanvasPilot-ComposerEditor-EditTextWithCaretAndSelection
+              - CanvasPilot-ComposerEditor-MirrorEditsIntoViewModel
+              - CanvasPilot-ComposerEditor-RefuseForbiddenTypedText
+              - CanvasPilot-ComposerEditor-CopyChipsAsReadableText
+              - CanvasPilot-ComposerEditor-ShowDictatedTextDistinctly
+              - CanvasPilot-ComposerEditor-ShowStatusAndLiveWords
+            tests:
+              - ComposerSubsystem_EditMessageInEditor_MixedActions_SurfaceAlwaysEqualsMessage
+
+          - id: CanvasPilot-Composer-ShowChipsInline
+            title: >-
+              The Composer subsystem shall show the files, folders, pictures, and marks of the message as chips inline in
+              the text, in the order of the message, each deletable with a button or a key as one step that undo brings
+              back in the same place.
+            justification: |
+              The meaning of the message depends on where each thing stands among the words, so the things must stand
+              where the user put them, recognizable at a glance, and the user must be able to take one away as easily as
+              a character.
+            children:
+              - CanvasPilot-ComposerEditor-ShowChipsInline
+              - CanvasPilot-ComposerEditor-DeleteChipWithButtonOrKey
+            tests:
+              - ComposerSubsystem_ShowChipsInline_DropThenDeleteAndUndo_ChipsFollowTheMessage

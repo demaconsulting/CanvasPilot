@@ -1,0 +1,265 @@
+---
+# Software Unit Requirements for the MainWindowShell Unit
+#
+# The MainWindowShell unit is the main window's view model and the window that shows it. It owns the File, Edit,
+# Image, Tools, and Help commands, follows the open project in the window title, lists the recent projects, and talks
+# to the user only through an IDialogService that the window implements. The Image menu commands run through an
+# IImageExporter (owned by the Preview subsystem) that the image preview supplies. The Edit menu runs through the
+# IUndoRedoTarget of the part of the window that has the focus, and the talk key runs through an IPushToTalkTarget
+# (both owned by the Composer subsystem).
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: MainWindowShell Requirements
+            requirements:
+              - id: CanvasPilot-MainWindowShell-ExposeMenus
+                title: >-
+                  The MainWindowShell shall present File, Edit, Image, Tools, and Help menus whose items carry a name
+                  and an automation identifier, and shall enable an item only when its command can run.
+                justification: |
+                  A predictable menu structure is how users find the application's functions, and stable
+                  identifiers let automated tests and assistive technology find each item. Disabled items tell
+                  the user what is not available yet, such as saving without a project.
+                children:
+                  - CanvasPilot-OTS-Avalonia-ShowMenusThatFollowCommands
+                  - CanvasPilot-OTS-CommunityToolkitMvvm-FollowCommandAvailability
+                tests:
+                  - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
+                  - MainWindowView_Menus_NoProject_EnabledStateFollowsCommands
+                  - MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled
+
+              - id: CanvasPilot-MainWindowShell-RouteUndoRedoToFocusedTarget
+                title: >-
+                  The MainWindowShell shall offer Undo and Redo commands that act on the part of the window that has
+                  the focus, when that part can undo and redo, that are available only while that part has a step to
+                  undo or redo and follow it as its steps change, and that do nothing and are unavailable while the
+                  focus is in a part that has nothing to undo.
+                justification: |
+                  The Edit menu is one place for a function that belongs to the message being written. The window does
+                  not know what its parts are, so the part that has the focus is asked, which keeps Undo from touching
+                  a message the user is not working in and lets the menu show truthfully whether there is anything
+                  to undo.
+                tests:
+                  - MainWindowShell_UndoRedo_FocusedTarget_DelegatesAndFollowsTargetState
+                  - MainWindowShell_UndoRedo_NoTarget_DisabledAndReplacedTargetIgnored
+                  - MainWindowView_EditMenu_TypingInComposerEnablesUndoAndExplorerFocusDisables
+
+              - id: CanvasPilot-MainWindowShell-StartDictationFromKey
+                title: >-
+                  The MainWindowShell shall start listening on the push-to-talk target when the F8 key goes down, ignore
+                  the repeats of a key that is held, stop listening on the target that was started when the key goes up,
+                  when the window closes, or when the window stops being the active one, and do nothing while there
+                  is no target.
+                justification: |
+                  Holding a key lets the user dictate while the hands stay on the keyboard or pointer. The keyboard
+                  repeats a held key, which must not start the dictation again, and a key that is released in another
+                  window or after the window is gone would never be heard, which would leave the microphone open.
+                tests:
+                  - MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget
+                  - MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget
+                  - MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget
+                  - MainWindowView_PushToTalkKey_NoTarget_IsIgnored
+                  - MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget
+                  - MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget
+
+              - id: CanvasPilot-MainWindowShell-TitleFollowsProject
+                title: >-
+                  The MainWindowShell shall show the window title as the open project's name followed by the
+                  application name, or the application name alone when no project is open, and shall follow
+                  changes made through the project service until it is disposed.
+                justification: |
+                  The title tells the user which project they are working on, including when a project is
+                  closed or opened by another part of the application, and a shell that has been disposed
+                  must not keep reacting to services it no longer owns.
+                children:
+                  - CanvasPilot-OTS-Avalonia-BindControlsToViewModels
+                tests:
+                  - MainWindowShell_New_NoProject_TitleIsApplicationNameAndProjectCommandsDisabled
+                  - MainWindowShell_ProjectServiceChanges_TitleFollows
+                  - MainWindowShell_Dispose_StopsFollowingServices
+                  - MainWindowShell_Constructor_NullArguments_Throw
+                  - MainWindowView_Show_OpensWithShellTitle
+
+              - id: CanvasPilot-MainWindowShell-CreateAndOpenProjects
+                title: >-
+                  The MainWindowShell shall create a project from the New Project dialog and open a project
+                  from a chosen project file, show the project and remember it in the recent projects, start
+                  its pickers in the folder that holds the user's projects, and show any problem to the user
+                  instead of failing.
+                justification: |
+                  Creating and opening projects are the first things a user does. Remembering each project and
+                  starting the pickers where the projects live saves repeated navigation, and explaining a
+                  problem such as a damaged file keeps the user informed and the application running.
+                children:
+                  - CanvasPilot-OTS-CommunityToolkitMvvm-RunAsyncCommandsOnce
+                tests:
+                  - MainWindowShell_NewProject_DialogAccepted_CreatesAndShowsProject
+                  - MainWindowShell_NewProject_DialogCancelled_CreatesNothing
+                  - MainWindowShell_NewProject_CreateFails_ShowsMessage
+                  - MainWindowShell_OpenProject_FileChosen_OpensAndRemembersProject
+                  - MainWindowShell_OpenProject_PickerCancelled_OpensNothing
+                  - MainWindowShell_OpenProject_DamagedFile_ShowsMessageAndOpensNothing
+                  - MainWindowShell_OpenProject_WithRecentProject_PickerStartsInProjectsFolder
+                  - MainWindowShell_CommandsWithoutDialogService_DoNothing
+                  - MainWindowView_NewProjectMenuItem_CancelThenOk_CreatesProjectAndUpdatesTitle
+
+              - id: CanvasPilot-MainWindowShell-SaveAndCloseProjects
+                title: >-
+                  The MainWindowShell shall save the open project, close the open project, and ask the main
+                  window to close when the user chooses Exit, and shall show a failed save to the user.
+                justification: |
+                  Users expect to save their work, to put a project away, and to leave the application from
+                  the File menu, and a save that fails must be explained rather than silently lost.
+                tests:
+                  - MainWindowShell_SaveProject_OpenProject_WritesModifiedTime
+                  - MainWindowShell_SaveProject_SaveFails_ShowsMessage
+                  - MainWindowShell_CloseProject_OpenProject_ResetsTitleAndExplorer
+                  - MainWindowShell_Exit_RaisesExitRequested
+                  - MainWindowView_ExitMenuItem_ClosesWindow
+
+              - id: CanvasPilot-MainWindowShell-ListRecentProjects
+                title: >-
+                  The MainWindowShell shall list the recent projects most recent first in the Recent Projects
+                  menu, show each by its project name with underscores kept visible, open a project when it is
+                  chosen, and drop a project whose file is gone after telling the user.
+                justification: |
+                  Users usually return to the projects they used last. A menu that reflects the stored list,
+                  shows names as typed, and does not keep offering a project that no longer exists gets them
+                  back to work in one choice.
+                tests:
+                  - MainWindowShell_RecentProjects_ListedMostRecentFirstAndOpenOnChoice
+                  - MainWindowShell_RecentProjectItem_NameWithUnderscore_HeaderDoublesUnderscore
+                  - MainWindowShell_RecentProjects_MissingProject_ShowsMessageAndRemovesEntry
+                  - MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow
+                  - MainWindowView_RecentProjectsSubmenu_ItemShowsNameAndOpensProject
+
+              - id: CanvasPilot-MainWindowShell-ShowSettingsAndAbout
+                title: >-
+                  The MainWindowShell shall open the settings dialog over the supplied settings pages, tell the
+                  pages when the dialog closed, and open the About dialog.
+                justification: |
+                  Settings and information about the application are reached from the Tools and Help menus.
+                  Pages that are told when the dialog closes can release resources such as running downloads.
+                children:
+                  - CanvasPilot-OTS-Avalonia-ShowModalDialogs
+                tests:
+                  - MainWindowShell_OpenSettings_ShowsDialogWithPagesAndNotifiesClose
+                  - MainWindowShell_ShowAbout_ShowsAboutDialog
+                  - MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses
+                  - MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses
+
+              - id: CanvasPilot-MainWindowShell-ShowDrawingKnowledge
+                title: >-
+                  The MainWindowShell shall offer a Drawing Knowledge item in the Help menu, above About, that reads the
+                  cards of the application only when it is first used and shows the browser of the drawing knowledge in a
+                  window of its own that does not block the main window, shall bring the open browser to the front instead
+                  of opening a second one, shall close the browser with the main window, shall be unavailable when the
+                  application has no knowledge, and shall log and show to the user, instead of failing, a catalog that
+                  cannot be read.
+                justification: |
+                  The cards help the user write what is wanted, and they are read while the user works, so the window must
+                  not block the application, and one is enough. Reading the cards at the first use keeps the start of the
+                  application as fast as before. A card that cannot be read is a defect of the application, which the user
+                  can report only if it is said and logged, and must not take the application down.
+                tests:
+                  - MainWindowShell_ShowDrawingKnowledge_ShowsBrowserOnTheCatalog
+                  - MainWindowShell_ShowDrawingKnowledge_WithoutKnowledgeOrDialogService_DoesNothing
+                  - MainWindowShell_ShowDrawingKnowledge_CatalogCannotBeLoaded_LogsAndShowsMessage
+                  - MainWindowView_DrawingKnowledgeMenuItem_ShowsBrowserWindowThatDoesNotBlock
+                  - MainWindowView_DrawingKnowledgeMenuItem_SecondRequest_ReusesTheOpenBrowser
+                  - MainWindowView_Close_ClosesTheBrowserItOwns
+
+              - id: CanvasPilot-MainWindowShell-ProvideImageMenuSeam
+                title: >-
+                  The MainWindowShell shall offer Export as PNG and Copy Image commands that are available only
+                  while a picture is shown, that follow the picture as it appears and goes away, and that export
+                  or copy the shown picture and tell the user the outcome.
+                justification: |
+                  Exporting and copying apply to the picture the user is looking at. Offering the commands only
+                  while a picture is shown stops the user from trying to export something that does not exist,
+                  and reporting the outcome tells the user whether the file or clipboard now holds the picture.
+                tests:
+                  - MainWindowShell_ImageCommands_FollowExporterAndInvokeIt
+                  - NullImageExporter_Default_IsDisabledAndDoesNothing
+                  - MainWindowView_ImageMenu_ExporterEnables_ItemsEnabledAndRunExporter
+                  - MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu
+
+              - id: CanvasPilot-MainWindowShell-TalkToUserThroughDialogService
+                title: >-
+                  The MainWindowShell shall ask the user questions, show messages, let the user pick folders and
+                  files, and place a picture on the clipboard through dialogs that look and behave the same
+                  everywhere, shall refuse a blank answer to a one-line prompt, and shall treat a picker the
+                  platform cannot show as no choice.
+                justification: |
+                  A single, consistent way of asking and telling gives every problem report and question the
+                  same look and behavior, and keeps the logic testable without a window. A blank file name must
+                  not be accepted, and a picker the platform cannot show must read as cancelled rather than
+                  fail.
+                tests:
+                  - MessageDialogViewModel_Message_OkAcceptsAndRequestsClose
+                  - MessageDialogViewModel_Confirmation_CancelRequestsCloseWithoutAcceptance
+                  - MessageDialogViewModel_Prompt_BlankEntry_CannotBeAccepted
+                  - MessageDialogViewModel_Constructor_InvalidArguments_Throw
+                  - MainWindowView_ShowMessage_OkButtonClosesDialog
+                  - MainWindowView_Confirm_ConfirmAndCancelButtons_ReturnAnswer
+                  - MainWindowView_Prompt_TypedTextAndCancel_ReturnTrimmedTextOrNull
+                  - MainWindowView_Pickers_HeadlessPlatform_ReturnNull
+                  - MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable
+
+              - id: CanvasPilot-MainWindowShell-ShowTheActiveStyleInAStatusBar
+                title: >-
+                  The MainWindowShell shall show a status bar at the bottom of the window that holds the list with which the
+                  user chooses the style kit of the project, shall show the bar only while a project is open and the
+                  application has such a list, shall follow the list when it shows or hides itself, and shall give a project
+                  that was just created the default style kit of the user and no project that is only opened.
+                justification: |
+                  The style belongs to the project, so the choice has to be in sight while the user works, and an empty bar
+                  with no project open would only take room. A project should say which style it uses from the day it is
+                  made, but opening a project must not change what its file says, and a later change of the preference of the
+                  user must not move projects that exist.
+                tests:
+                  - MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject
+                  - MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar
+                  - StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits
+
+              - id: CanvasPilot-MainWindowShell-CheckAgainstStyleFromTheImageMenu
+                title: >-
+                  The MainWindowShell shall offer a Check Against Style item in the Image menu, after Copy Image, that is usable
+                  only while the application can check and a picture is shown and that follows the picture as it appears and
+                  goes away, that runs the check, and that tells the user, in a message, why when nothing was checked, and
+                  shall leave the item unusable when the application has no check.
+                justification: |
+                  Whether a picture follows the style is a question about the picture the user is looking at, so the command is
+                  in the menu of the picture and is offered only when there is something to check. A command that does nothing
+                  without a word would look broken, so a missing style or picture is said.
+                tests:
+                  - MainWindowShell_CheckAgainstStyle_FollowsThePictureRunsTheCheckAndReportsWhyNot
+                  - MainWindowShell_CheckAgainstStyle_NothingToCheckWith_IsUnavailableAndDoesNothing
+                  - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
+                  - MainWindowView_CheckAgainstStyleMenuItem_PictureShown_EnablesAndShowsNotesInThePreview
+
+              - id: CanvasPilot-MainWindowShell-OpenStyleKitsFromTheToolsMenu
+                title: >-
+                  The MainWindowShell shall offer a Style Kits item in the Tools menu, above Settings, that is usable while
+                  the application has a window that manages style kits, that makes the view model of the window from the
+                  dialog service each time it runs and has the dialog service show it, and that does nothing before a dialog
+                  service is attached, and the main window shall show that window as a window of its own that it owns and that
+                  does not block it, one at a time, close it when the main window closes, show the editor of a kit modally
+                  over it, and offer the pickers of a zip file and of example images.
+                justification: |
+                  Styles are managed beside the work, so the window must stay open while the user draws, and a second request
+                  for it must bring the open one forward and not leave the user with two windows that show different
+                  states. The shell must not know the kits or the window's content, so it makes the view model only through
+                  a function that the composition root supplies, and the main window, which owns the dialogs, is the one
+                  place that can show a window, an editor, and a picker with itself as the owner.
+                tests:
+                  - MainWindowShell_ShowStyleKits_MakesTheViewModelFromTheDialogsAndShowsIt
+                  - MainWindowShell_ShowStyleKits_WithoutWindowOrDialogService_DoesNothing
+                  - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
+                  - MainWindowView_StyleKitsMenuItem_ShowsWindowThatDoesNotBlock
+                  - MainWindowView_StyleKitsMenuItem_SecondRequest_ReusesTheOpenWindow
+                  - MainWindowView_ShowStyleKitEditor_OverTheManagerOrTheMainWindow_ShowsEditorModally
+                  - MainWindowView_Close_ClosesTheStyleKitsWindowItOwns

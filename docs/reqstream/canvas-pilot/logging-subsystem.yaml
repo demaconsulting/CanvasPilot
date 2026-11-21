@@ -1,0 +1,51 @@
+---
+# Logging Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Logging subsystem
+# - The Logging subsystem spans RollingFileLogger.cs (local rolling log files)
+# - Subsystem requirements describe the persistence and retention behavior that satisfies the
+#   system-level operational logging requirement
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Logging Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Logging-PersistOperationalEvents
+            title: >-
+              The Logging subsystem shall persist application events and failures to a local log
+              that users can attach to bug reports.
+            justification: |
+              Users need a readable local event history, including failure details, to attach to
+              bug reports. Persisting entries to local disk only avoids any telemetry or remote
+              transmission of user data.
+            children:
+              - CanvasPilot-RollingFileLogger-WriteTimestampedEntries
+              - CanvasPilot-RollingFileLogger-DefaultLocation
+            tests:
+              - LoggingSubsystem_PersistEvents_EventAndFailure_WritesLocalEntries
+
+          - id: CanvasPilot-Logging-RetainRecentHistory
+            title: >-
+              The Logging subsystem shall retain recent operational history by rotating log files
+              without unbounded growth.
+            justification: |
+              Rolling retention keeps enough troubleshooting history for bug reports while limiting
+              the disk space the application consumes on the user's machine.
+            children:
+              - CanvasPilot-RollingFileLogger-RotateLogFiles
+            tests:
+              - LoggingSubsystem_RetainHistory_SustainedLogging_PrunesOldArchives
+
+          - id: CanvasPilot-Logging-ConfinedLogFiles
+            title: >-
+              The Logging subsystem shall keep every log file it writes inside the configured log
+              folder.
+            justification: |
+              Log file names are configurable, so a malformed name must never cause the logger to
+              write outside the log folder.
+            children:
+              - CanvasPilot-RollingFileLogger-RejectInvalidInput
+            tests:
+              - LoggingSubsystem_SafePaths_TraversalBaseFileName_ThrowsArgumentException

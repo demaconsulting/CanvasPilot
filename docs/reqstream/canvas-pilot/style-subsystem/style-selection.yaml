@@ -1,0 +1,73 @@
+---
+# Software Unit Requirements for the StyleSelection Unit
+#
+# The StyleSelection unit answers which style kit the open project uses. The project file keeps the id of the kit; the
+# unit finds the kit of that id through the catalog, writes a new choice into the project file, gives a new project the
+# default kit of the user, and supplies the export sizes of the kit and of the application to the export dialog of the
+# Preview subsystem. It has no user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleSelection Requirements
+            requirements:
+              - id: CanvasPilot-StyleSelection-ResolveTheActiveKit
+                title: >-
+                  The StyleSelection shall report the kit that the open project uses by finding the kit of the id in the
+                  project file by the order of the places, report that no kit is used when no project is open or the project
+                  names none, report that the kit is missing when no kit has the id and find it when it appears, follow the
+                  project that is open when it is changed or closed, and announce when any of this may have changed.
+                justification: |
+                  The look of a picture depends on the kit of the project, so the answer must always be that of the project
+                  that is open now and of the kits that exist now. A project that names a kit that is gone must say so, and
+                  must find the kit again when it comes back, instead of showing a style that is not there.
+                tests:
+                  - StyleSelection_Active_NoProjectOrNoStyle_IsNullAndNotMissing
+                  - StyleSelection_Active_ProjectNamesAKnownKit_ResolvesItThroughTheCatalog
+                  - StyleSelection_Active_UnknownKitThenAddedThenDeleted_IsMissingFoundAndMissingAgain
+                  - StyleSelection_Active_ProjectSwitchedOrClosed_FollowsTheOpenProject
+                  - StyleSelection_Active_KitCopiedIntoProject_IsTheProjectCopy
+                  - StyleSelection_Changed_ProjectOrCatalogChange_IsRaisedUntilDisposed
+                  - StyleSelection_Constructor_NullArguments_Throw
+
+              - id: CanvasPilot-StyleSelection-KeepChoiceInTheProjectFile
+                title: >-
+                  The StyleSelection shall keep a choice of a kit, or of no style, in the project file through the project
+                  service so that it is there when the project is opened again, announce every choice, and report a choice
+                  that cannot be kept, because no project is open or the id is not an id of a kit, with the reason and
+                  without changing the file.
+                justification: |
+                  The style belongs to the project, so the choice must travel with the project file and survive a restart. A
+                  choice that cannot be kept must say why, and must not leave a file that names a kit that cannot exist.
+                tests:
+                  - StyleSelection_SetActiveAsync_Choice_IsKeptInTheProjectFileAndAnnounced
+                  - StyleSelection_SetActiveAsync_NoProjectOrBadId_ThrowsWithTheReason
+
+              - id: CanvasPilot-StyleSelection-StartNewProjectsWithTheDefault
+                title: >-
+                  The StyleSelection shall make the default kit of the user the style of a new project that has none, when a
+                  kit with that id can be found, and shall not change a project that already names a kit, including one that
+                  cannot be found, apply a default that no kit has, or apply anything when no project is open.
+                justification: |
+                  A project should say which style it uses from the day it is made, and a later change of the preference of the
+                  user should not change the look of a project that already exists.
+                tests:
+                  - StyleSelection_ApplyDefaultToNewProjectAsync_DefaultKit_IsAppliedOnceAndNotTwice
+                  - StyleSelection_ApplyDefaultToNewProjectAsync_NoDefaultUnknownDefaultOrMissingKit_ChangesNothing
+
+              - id: CanvasPilot-StyleSelection-ListExportPresets
+                title: >-
+                  The StyleSelection shall supply, as the export sizes, the sizes of the kit of the project in the order of the
+                  kit and then the sizes of the application (a slide, an email, and a printed page) whose names the kit does
+                  not use, ignoring case, with the background of the kit, or white when there is no kit, for a size that is not
+                  transparent and no background for a size that is.
+                justification: |
+                  The sizes that belong to a style should be one choice away when a picture is exported, the usual sizes should
+                  be there when the kit has none, and a kit that names a size the application also has is the better source for
+                  it. A picture that is exported over the background of the style looks as the style says.
+                tests:
+                  - StyleSelection_GetPresets_NoKit_IsTheApplicationSizesOverWhite
+                  - StyleSelection_GetPresets_KitWithSizes_KitFirstThenApplicationNotRenamedOverTheKitBackground
+                  - StyleSelection_GetPresets_MissingKit_IsTheApplicationSizesOverWhite

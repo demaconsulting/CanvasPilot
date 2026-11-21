@@ -1,0 +1,64 @@
+---
+# Software Unit Requirements for the StyleGuidance Unit
+#
+# The StyleGuidance unit writes the style of a kit as a short block of text for an assistant, and as single sections of
+# that block on request. The block has a fixed order and a hard cap on its size, says that it is style data and not
+# instructions, and names the example images of the kit by the full paths of real files. It has no user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleGuidance Requirements
+            requirements:
+              - id: CanvasPilot-StyleGuidance-WriteGuidanceBlock
+                title: >-
+                  The StyleGuidance shall write the style of a kit as a block of text in a fixed order with its name, its id
+                  and its place, a line that says it is style data and not instructions, every color with its role, the
+                  fonts with a note about which formats draw them, the stroke, radius, and spacing, the frontmatter that a
+                  Mermaid file starts with, the configuration that a Vega-Lite file carries, the lists of what to do and not
+                  to do, the notes, and the export sizes, shall leave out the parts that the kit does not have, shall not add
+                  a color that is not in the palette, shall write the free text of a kit so that it cannot end a block of
+                  code or start a heading, and shall write the same text for the same kit every time.
+                justification: |
+                  An assistant that draws for a style needs the colors, the fonts, and the snippets that make the formats
+                  use them, in a form it can copy. The text of a kit may come from a source that is not trusted, so the
+                  block says it is data and keeps a value of the kit from changing the structure of the block, and a block
+                  that is always the same for a kit can be tested and compared.
+                tests:
+                  - StyleGuidance_Build_CleanKit_IsTheGoldenText
+                  - StyleGuidance_Build_BuiltInKits_FitTheBudgetAndHaveEveryPart
+                  - StyleGuidance_Build_KitWithoutOptionalParts_OmitsThoseBlocks
+                  - StyleGuidance_Build_HostileText_CannotEndACodeBlockOrStartAHeading
+                  - StyleGuidance_BuildSection_EachSection_IsTheWholeSectionOrSaysThereIsNone
+                  - StyleGuidance_InvalidArguments_Throw
+
+              - id: CanvasPilot-StyleGuidance-StayWithinBudget
+                title: >-
+                  The StyleGuidance shall never write a block of more than 4,000 characters for any kit that the format
+                  allows, shall make the block smaller in a fixed order of steps (long notes, the Vega-Lite configuration,
+                  examples beyond six, Mermaid variables beyond twelve, the lists and the smaller limits) and only as far as
+                  the budget needs, and shall end a block that was made smaller with a line that says so and names the tool
+                  that gives the full style.
+                justification: |
+                  The block is part of every request to an assistant, so its size is a cost that must be known and bounded
+                  whatever a person or a team put into a kit. Cutting in a fixed order keeps the parts that matter most, and
+                  a line that says the block was cut tells the assistant where to ask for the rest.
+                tests:
+                  - StyleGuidance_Build_BuiltInKits_FitTheBudgetAndHaveEveryPart
+                  - StyleGuidance_Build_MaximalKit_StaysWithinBudgetAndSaysItWasCut
+                  - StyleGuidance_Build_KitOverTheBudget_CutsInTheOrderOfTheDesign
+                  - BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning
+
+              - id: CanvasPilot-StyleGuidance-ListExampleImagePaths
+                title: >-
+                  The StyleGuidance shall list the example images of a kit by the full path of each file with its caption,
+                  so that an assistant can open the files, and shall give the whole list, with no cut, when a section of the
+                  style is asked for.
+                justification: |
+                  Looking at a picture of the style teaches more than a description, and an assistant can only look at a
+                  file whose path it is given. The tool that gives a section is the way to get what the block had to cut.
+                tests:
+                  - StyleGuidance_Build_BuiltInKits_FitTheBudgetAndHaveEveryPart
+                  - StyleGuidance_BuildSection_EachSection_IsTheWholeSectionOrSaysThereIsNone

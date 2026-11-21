@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>CanvasPilot</AssemblyName>
+    <RootNamespace>DemaConsulting.CanvasPilot.Desktop</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Embeds the DEMA Consulting logo as the Windows executable's icon (exe icon, taskbar,
+         Explorer). Only meaningful on win-x64 publishes; the SDK silently ignores it on
+         other RIDs. -->
+    <ApplicationIcon>..\..\Icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DemaConsulting.CanvasPilot\DemaConsulting.CanvasPilot.csproj" />
+  </ItemGroup>
+
+</Project>

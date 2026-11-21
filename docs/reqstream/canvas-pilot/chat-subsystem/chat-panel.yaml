@@ -1,0 +1,151 @@
+---
+# Software Unit Requirements for the ChatPanel Unit
+#
+# The ChatPanel unit is the panel in which the user converses: the transcript of the messages that were sent in the
+# open project, the composer's editing control below it, the button that sends and the button that listens while it is
+# held, and the joining of the marks drawn on the picture to the message. It follows the composer and the annotation
+# layer and decides nothing that they decide: whether a message can be sent, what dictation says, and which marks are in
+# the message stay with the units that own them. The panel keeps nothing on disk.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Chat Subsystem Requirements
+        sections:
+          - title: ChatPanel Requirements
+            requirements:
+              - id: CanvasPilot-ChatPanel-ListSentMessagesOnly
+                title: >-
+                  The ChatPanel shall list in its transcript exactly the messages that were sent in the open project,
+                  once each and oldest first, each with its words in the order they were written, dictated words
+                  marked as such, the chips of its attachments and marks in their places with their pictures and no
+                  button to delete them, and a statement of how many marks and attachments it carried; shall keep the
+                  transcript only in memory; and shall drop it when the project changes or closes.
+                justification: |
+                  The transcript is the user's record of what was said to the assistant, so it must show what was
+                  sent and not what is still being written, in the order it was sent, and it must show it the way it
+                  was composed, with the marks and files where the user put them, so that the user recognizes the
+                  message. A sent message cannot be changed, so its chips have no delete button. The messages belong
+                  to the project they were sent in and may hold the user's words and file names, so they are not kept
+                  anywhere but in memory and are dropped with the project.
+                tests:
+                  - ChatPanelViewModel_New_HasEmptyTranscriptAndCannotSend
+                  - ChatPanelViewModel_Send_TypedText_AddsOneEntryAndEmptiesTheDraft
+                  - ChatPanelViewModel_Transcript_TwoMessagesAndADraft_ListsOnlySentMessagesInOrder
+                  - ChatPanelViewModel_Send_TypedDictatedAndMark_EntryKeepsOrderOriginsAndSummary
+                  - ChatPanelViewModel_ProjectChanges_DropsTheTranscript
+                  - ChatPanelViewModel_Dispose_StopsFollowingTheComposer
+                  - TranscriptEntryViewModel_Summary_MarksAndAttachments_AreCountedWithTheirNouns
+                  - ChatPanelView_New_ShowsEmptyTranscriptHintComposerAndButtons
+                  - ChatPanelView_Send_TypedText_AppearsInTranscriptAndEmptiesTheEditor
+                  - ChatPanelView_Send_TwoMessages_AreListedInOrder
+                  - ChatPanelView_Send_MessageWithMarkAndFile_ShowsChipsInTranscriptWithoutDeleteButtons
+                  - ChatPanelView_Send_DictatedWords_AreShownWithTheDictatedBackground
+
+              - id: CanvasPilot-ChatPanel-SendFromPanel
+                title: >-
+                  The ChatPanel shall offer a Send button that can be used exactly when the composer can send the
+                  message, shall add the message to the transcript when it was sent and the panel's editing control
+                  shall then be empty, and, when sending fails, shall leave the draft as it was, add nothing to the
+                  transcript, and show the reason that the composer gives.
+                justification: |
+                  Sending is one decision, and the composer owns it: a project is open, the message has words or chips,
+                  nobody holds the talk button, and nothing is being sent. The panel must show that decision and not
+                  make its own, so that the button never promises what the composer will refuse. A message that could
+                  not be sent must not be lost or half sent, so the draft stays and the user is told why.
+                tests:
+                  - ChatPanelViewModel_CanSend_FollowsProjectContentAndTalkButton
+                  - ChatPanelViewModel_Send_BuildFails_KeepsDraftAndTranscriptUnchangedAndSaysWhy
+                  - ChatPanelView_NoProject_SaysSoAndDisablesSendAndTalk
+                  - ChatPanelView_Send_TypedText_AppearsInTranscriptAndEmptiesTheEditor
+
+              - id: CanvasPilot-ChatPanel-LinkMarkChips
+                title: >-
+                  The ChatPanel shall add the chip of every mark that is drawn on the picture to the message at the
+                  caret as one undo step, shall tell the annotation layer after every change of the message which mark
+                  chips it holds and whether marks can be made, so that undoing the chip hides the mark and redoing it
+                  shows the mark again, and shall leave no mark on the picture after the message is sent.
+                justification: |
+                  A mark is part of what the user says only while its chip is in the message, so one undo system must
+                  cover the marks too. The annotation layer and the composer do not know each other, because the
+                  composer already uses the annotation subsystem; the panel is where they meet, and the user must find
+                  the mark where the caret was, as with any other thing that is put into the message.
+                tests:
+                  - ChatPanelViewModel_MarkDrawn_BecomesOneChipStepAndUndoHidesTheMark
+                  - ChatPanelViewModel_DrawingAllowed_FollowsWhetherAMessageCanBeWritten
+                  - ChatPanelViewModel_Send_MessageWithMark_LayerShowsNoMarkAfterwards
+                  - ChatPanelView_MarkDrawn_ChipAppearsInTheEditorAndUndoRemovesIt
+
+              - id: CanvasPilot-ChatPanel-HoldToTalkButton
+                title: >-
+                  The ChatPanel shall start listening when the pointer is pressed on the talk button, or the space or
+                  enter key is pressed on it, and end it when the pointer is released wherever it is, the pointer
+                  capture is lost, the button loses the focus, the key is released, or the panel is removed from the
+                  window, once for each hold; shall show the words recognized so far while it listens; shall label the
+                  button with what it is doing; and shall leave the button unusable while no message can be written.
+                justification: |
+                  Dictation must listen exactly as long as the user holds the button, and the microphone must never
+                  stay open because a release was missed: a release outside the button, a window that loses the pointer
+                  when a dialog opens, and a panel that goes away are all ways of letting go. The keyboard must be able
+                  to hold the button as well, so that dictation does not need a pointer. The label tells the user
+                  whether the application is starting, listening, or finishing, which can take a moment the first time.
+                tests:
+                  - ChatPanelViewModel_TalkText_FollowsDictationState
+                  - ChatPanelViewModel_PushToTalk_PressSpeakRelease_AddsOneDictatedBlockAsOneStep
+                  - ChatPanelViewModel_PushToTalk_SecondPressWhileHeld_IsIgnored
+                  - ChatPanelViewModel_CanTalk_NoProject_IsFalse
+                  - ChatPanelView_HoldToTalk_PressSpeakRelease_ListensShowsWordsAndAddsOneBlock
+                  - ChatPanelView_HoldToTalk_ReleaseOutsideTheButton_StillEndsListening
+                  - ChatPanelView_HoldToTalk_PointerCaptureLost_EndsListening
+                  - ChatPanelView_HoldToTalk_SpaceKeyHeldOnFocusedButton_ListensUntilReleased
+                  - ChatPanelView_HoldToTalk_PanelRemovedWhileHeld_EndsListening
+
+              - id: CanvasPilot-ChatPanel-ShowWhyDictationCannotWork
+                title: >-
+                  The ChatPanel shall show in the panel, when the talk button is pressed while dictation cannot work,
+                  the reason and what to do that the dictation service gives, without listening and without changing
+                  the message, and shall prepare dictation ahead of the first press when the panel is shown, never
+                  failing because of it.
+                justification: |
+                  Dictation depends on a downloaded model, a microphone the operating system lets the application use,
+                  and files that the application ships, and any of them can be missing. A button that does nothing
+                  leaves the user guessing, so the panel says which of them is the problem and where to fix it. Loading
+                  the engine takes a while, so it is done ahead of time, but a machine that cannot do it must still
+                  be able to type.
+                tests:
+                  - ChatPanelViewModel_PushToTalk_NoModelChosen_ShowsReasonAndChangesNothing
+                  - ChatPanelViewModel_PrepareDictation_PreparesOnceAndSwallowsFailure
+                  - ChatPanelViewModel_PrepareDictation_NoDictationService_DoesNothing
+                  - ChatPanelView_HoldToTalk_NoModelChosen_ShowsReasonInPanelAndChangesNothing
+                  - ChatPanelView_Shown_PreparesDictation
+
+              - id: CanvasPilot-ChatPanel-ProvideChipPictures
+                title: >-
+                  The ChatPanel shall give the chips of the message being written and of the sent messages their
+                  pictures: for a mark the area around it cut from the picture it was drawn on, for an attached picture
+                  a small preview of the file, taken for a sent message from its copy in the project, and an icon for
+                  everything else or when a picture cannot be made, without ever failing or holding up typing.
+                justification: |
+                  A chip that only says "Mark 2" does not tell the user which mark that is. The area around the mark
+                  and the preview of the picture show it at a glance. Making them can be slow and can fail for a file
+                  that is not a picture, so they are made in the background and a failure leaves the icon. A sent
+                  message shows what was sent, so its pictures come from the project's copy and from the payload.
+                tests:
+                  - ChipThumbnailProvider_GetThumbnail_NoPictureOrFailure_GivesNullAndDoesNotThrow
+                  - TranscriptEntryViewModel_Items_AttachedPicture_AsksForTheCopyInTheProject
+                  - ChatPanelView_MarkChipInDraft_ShowsThePictureAroundTheMark
+
+              - id: CanvasPilot-ChatPanel-RequestPayloadInspection
+                title: >-
+                  The ChatPanel shall offer on every sent message that has a payload a "View payload" command that asks
+                  the payload inspector launcher to show the inspector for exactly that message's payload, shall do
+                  nothing while no launcher is set, and shall not offer the command for a message without a payload.
+                justification: |
+                  The user must be able to see what the assistant would receive for a message, as a check that the
+                  marks, the files, and the words went together as meant. The panel does not know what shows a window,
+                  because that needs the main window; it asks through a seam, so it can be used and tested without
+                  one.
+                tests:
+                  - TranscriptEntryViewModel_ViewPayloadCommand_ShowsInspectorForThePayloadOfTheMessage
+                  - TranscriptEntryViewModel_ViewPayloadCommand_NoLauncherOrNoPayload_DoesNothing
+                  - ChatPanelView_ViewPayloadButton_ShowsInspectorOfThatMessage

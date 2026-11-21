@@ -1,0 +1,115 @@
+---
+# Software Unit Requirements for the PayloadBuilder Unit
+#
+# The PayloadBuilder unit builds the payload of a message that is sent from a snapshot of the composer, the marks that
+# were made, and the attachments that were put into the project. It reads only values that cannot change, so it can run
+# in the background, and it has no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Payload Subsystem Requirements
+        sections:
+          - title: PayloadBuilder Requirements
+            requirements:
+              - id: CanvasPilot-PayloadBuilder-KeepOrderOfParts
+                title: >-
+                  The PayloadBuilder shall build the text of the message and its parts in the order of the snapshot, with
+                  the text and origin of each run of text, "[Mark n]" for each mark chip, and "[Attachment n: name]" for
+                  each attachment chip, numbering the attachments from one, shall make an empty payload of an empty
+                  message and no image of a message without marks, and shall refuse attachments that are not the
+                  attachments of the chips in their order, a chip of a mark that was not made, and a chip that shows
+                  another number than its mark.
+                justification: |
+                  The order is the meaning of the message. Attachments that did not match the chips would make the
+                  references point at other things, and a mark chip without a mark, or with another number, would make the
+                  message name a mark that cannot be shown.
+                tests:
+                  - PayloadBuilder_Build_MessageWithTextMarksAndAttachments_KeepsOrderAndMakesReferences
+                  - PayloadBuilder_Build_TextOnlyOrChipsOnly_HasNoImagesAndDrawsNothing
+                  - PayloadBuilder_Build_EmptyMessage_GivesEmptyPayload
+                  - PayloadBuilder_Build_AttachmentsThatAreNotTheChipsInOrder_ThrowsArgumentException
+                  - PayloadBuilder_Build_MarkChipWithoutMarkOrWithOtherNumber_ThrowsArgumentException
+                  - PayloadBuilder_Build_MissingArguments_ThrowArgumentNullException
+
+              - id: CanvasPilot-PayloadBuilder-GroupMarksBySnapshot
+                title: >-
+                  The PayloadBuilder shall make one image for each distinct picture, recognized by its file and the
+                  fingerprint of its pixels, that marks of the message were drawn on, in the order of the first mark of the
+                  message that refers to it, with the marks of the picture in the order of their numbers, and shall have
+                  the marks of a picture drawn together, and fail when the composer does not give an area for every mark.
+                justification: |
+                  Marks on two versions of a file belong to two pictures, and a mark described on the wrong picture would
+                  point at the wrong pixels. A picture that is drawn again with the same pixels is the same picture and
+                  needs one image, not two.
+                tests:
+                  - PayloadBuilder_Build_MarksOnTwoPictures_GivesOneImageForEachInOrderOfFirstMark
+                  - PayloadBuilder_Build_SamePictureAsTwoObjects_GivesOneImage
+                  - PayloadBuilder_Build_ComposerReturnsWrongNumberOfAreas_ThrowsInvalidOperationException
+
+              - id: CanvasPilot-PayloadBuilder-OmitInactiveMarks
+                title: >-
+                  The PayloadBuilder shall describe only the marks whose chips are in the message, and a mark whose chip is
+                  in the message more than once only once, and shall make no image for a picture that only other marks were
+                  drawn on.
+                justification: |
+                  A mark whose chip the user deleted or undid is no longer part of the message, and telling the assistant
+                  about it, or drawing it, would undo what the user did.
+                tests:
+                  - PayloadBuilder_Build_MarkWithoutChip_IsOmittedAndRepeatedChipIsOneMark
+
+              - id: CanvasPilot-PayloadBuilder-CarryMarkGeometry
+                title: >-
+                  The PayloadBuilder shall describe each mark with its number, shape, points and bounding box in the pixels
+                  of its picture as the mark holds them, its note, and the picture and the area that the composer made for
+                  it.
+                justification: |
+                  The payload must say what the mark says, no more and no less, so that the assistant can rely on the
+                  numbers being those of the picture it is shown.
+                tests:
+                  - PayloadBuilder_Build_Mark_CarriesGeometryInPicturePixelsNoteAndImageFacts
+
+              - id: CanvasPilot-PayloadBuilder-CarrySourceElements
+                title: >-
+                  The PayloadBuilder shall describe each mark with the parts of the source file that lie under it as the
+                  resolver finds them, or with the statement that the picture cannot tell and the reason, and with whether
+                  the list is cut.
+                justification: |
+                  The assistant uses the parts of the source under a mark to find what the user meant, and must be told
+                  when the picture cannot say, instead of reading an empty list as "nothing".
+                tests:
+                  - PayloadBuilder_Build_Marks_CarrySourceElementsWhereKnownAndNotAvailableOtherwise
+
+              - id: CanvasPilot-PayloadBuilder-ReferenceAttachments
+                title: >-
+                  The PayloadBuilder shall list the attachments in the order of their chips with their kind, name, size,
+                  number of files, the path where the user had them, and their path in the project.
+                justification: |
+                  The assistant reads the attached material from the project and needs to know where it is and what it is.
+                tests:
+                  - PayloadBuilder_Build_Attachments_CarryOriginalAndProjectRelativePaths
+
+              - id: CanvasPilot-PayloadBuilder-BuildFromUnchangeableInputs
+                title: >-
+                  The PayloadBuilder shall use only the snapshot of the message, the list of marks as it was, and the
+                  staged attachments, so that it can build on a background thread and the payload is not changed by later
+                  changes to the draft or the marks, and shall not start a build that was canceled.
+                justification: |
+                  The user goes on working while the message is sent. Building from values that cannot change needs no lock
+                  on the draft, and the result must be what the message was when the user pressed Send.
+                tests:
+                  - PayloadBuilder_BuildAsync_GivesTheSamePayloadAsBuildAndHonorsCancellation
+                  - PayloadBuilder_Build_Payload_IsNotChangedByLaterChangesToDraftAndRegistry
+
+              - id: CanvasPilot-PayloadBuilder-BuildSentMessage
+                title: >-
+                  The PayloadBuilder shall build, through the message builder interface that the composer owns, the sent
+                  message of the composer: the snapshot of the message, only the marks whose chips are in it in the order of
+                  their numbers, the staged attachments, the payload that it builds from them, and the time of the payload.
+                justification: |
+                  The composer sends the messages and the payload subsystem uses the composer, so the composer cannot use
+                  the payload builder directly. The interface lets the composer have its messages built without the two
+                  subsystems depending on each other, and the transcript needs the marks and attachments that belong to the
+                  message next to its payload.
+                tests:
+                  - PayloadBuilder_BuildAsyncAsMessageBuilder_ReturnsSentMessageWithPayloadAndMarksOfChips

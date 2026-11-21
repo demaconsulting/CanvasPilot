@@ -1,0 +1,74 @@
+---
+# Software Unit Requirements for the ProjectWorkspace Unit
+#
+# The ProjectWorkspace unit is the main window's content area, in three columns: the project explorer on the left, an
+# area in the middle that shows supplied preview content or explains what is missing, and, while a project is open,
+# the chat column on the right. It is the extension point where the image preview and the chat panel are plugged in,
+# and it confirms deletions and asks for new names on behalf of the explorer.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: ProjectWorkspace Requirements
+            requirements:
+              - id: CanvasPilot-ProjectWorkspace-HostExplorerAndPreview
+                title: >-
+                  The ProjectWorkspace shall host the project explorer beside a content area that shows the
+                  supplied preview content, or, while there is none, a placeholder that says whether no project
+                  is open, no file is selected, or no preview is available, and a hint on how to start while no
+                  project is open.
+                justification: |
+                  The right-hand area is where the picture of the selected file will appear. Until then, and
+                  whenever there is nothing to show, a plain explanation tells the user what to do next, and
+                  one supplied preview slot lets the preview be added without changing the window.
+                tests:
+                  - ProjectWorkspace_New_NoProject_ShowsNoProjectPlaceholder
+                  - ProjectWorkspace_Constructor_NullExplorer_Throws
+                  - ProjectWorkspace_ShowProject_ListsFilesAndTracksSelection
+                  - ProjectWorkspace_Preview_SuppliedContent_ReplacesPlaceholder
+                  - ProjectWorkspace_Dispose_DisposesExplorer
+                  - ProjectWorkspace_Dispose_DisposesPreviewContent
+                  - MainWindowView_Workspace_SelectionAndPreview_ChangePlaceholderAndContent
+
+              - id: CanvasPilot-ProjectWorkspace-HostChatColumn
+                title: >-
+                  The ProjectWorkspace shall host the supplied chat content in a column on the right of the preview,
+                  start it at 380 pixels wide and let the user resize it with a splitter, show it only while a project
+                  is open and content was supplied, and leave the disposal of that content to its owner.
+                justification: |
+                  A message is written in the project, because its attachments and marks belong to it, so the chat
+                  has no use while no project is open and would only take room from the picture. Placing the chat
+                  beside the picture keeps the picture and the marks in view while the user writes about them.
+                tests:
+                  - ProjectWorkspace_Chat_ShownOnlyWhileProjectIsOpen
+                  - ProjectWorkspace_Chat_NoContent_NotShownWithProject
+                  - ProjectWorkspace_Dispose_DoesNotDisposeChatContent
+                  - MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns
+
+              - id: CanvasPilot-ProjectWorkspace-FollowOpenProject
+                title: >-
+                  The ProjectWorkspace shall show the files of the open project and empty the explorer when
+                  no project is open, without reloading the project that is already shown.
+                justification: |
+                  The list must always match the open project, and showing the same project again, as happens
+                  when a project is saved, must not lose the user's selection.
+                tests:
+                  - ProjectWorkspace_ShowProject_SameProjectKeepsSelectionAndNullCloses
+                  - MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow
+
+              - id: CanvasPilot-ProjectWorkspace-ConfirmDeleteAndPromptRename
+                title: >-
+                  The ProjectWorkspace shall delete the selected file only after the user confirms, ask the
+                  user for a new name before renaming the selected file, make both commands available only
+                  while a file is selected, and show the user any problem that prevents the operation.
+                justification: |
+                  Deleting removes the user's work and renaming can fail, so the user must confirm a deletion,
+                  choose the new name, and be told why an operation could not be done.
+                tests:
+                  - ProjectWorkspace_DeleteSelected_ConfirmedDeletesAndDeclinedKeeps
+                  - ProjectWorkspace_RenameSelected_NewName_RenamesFile
+                  - ProjectWorkspace_RenameSelected_CancelledOrInvalidName_ChangesNothingAndReports
+                  - ProjectWorkspace_FileCommands_NoDialogService_DoNothing
+                  - MainWindowView_DeleteSelectedFile_ConfirmDialog_RemovesFile

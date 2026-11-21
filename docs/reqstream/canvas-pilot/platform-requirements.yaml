@@ -1,0 +1,59 @@
+---
+# System-Level Platform Requirements
+#
+# These requirements specify the platforms and runtimes the application must support.
+# They ensure the application works across the required execution environments.
+#
+# Test links can include a source filter prefix (e.g. "windows@", "ubuntu@", "net10.0@") to restrict
+# which test results count as evidence for a requirement. This is critical for platform and runtime
+# requirements - removing these filters invalidates the evidence-based proof.
+#
+# Source filter prefixes:
+#   windows@TestName      - proves the test passed on a Windows platform
+#   ubuntu@TestName       - proves the test passed on a Linux (Ubuntu) platform
+#   macos@TestName        - proves the test passed on a macOS platform
+#   net10.0@TestName      - proves the test ran with the .NET 10 runtime
+#
+# NOTE: The tests linked here are the application startup test, which composes the application's units exactly
+# as at startup (without a window) and runs on every supported platform and runtime.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Platform Support
+        requirements:
+          - id: CanvasPilot-Platform-Windows
+            title: The application shall execute successfully on Windows platforms.
+            tags: [system]
+            justification: |
+              DEMA Consulting tools must support Windows as a major development platform.
+            tests:
+              # Tests link to "windows" to ensure results come from Windows platform
+              - "windows@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"
+
+          - id: CanvasPilot-Platform-Linux
+            title: The application shall execute successfully on Linux platforms.
+            tags: [system]
+            justification: |
+              DEMA Consulting tools must support Linux for CI/CD and containerized environments.
+            tests:
+              # Tests link to "ubuntu" to ensure results come from Linux platform
+              - "ubuntu@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"
+
+          - id: CanvasPilot-Platform-MacOS
+            title: The application shall execute successfully on macOS platforms.
+            tags: [system]
+            justification: |
+              DEMA Consulting tools must support macOS for developers using Apple platforms.
+            tests:
+              # Tests link to "macos" to ensure results come from macOS platform
+              - "macos@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"
+
+          - id: CanvasPilot-Platform-Net10
+            title: The application shall support the .NET 10 runtime.
+            tags: [system]
+            justification: |
+              .NET 10 is a Long-Term Support (LTS) release, providing long-term stability for
+              enterprise users.
+            tests:
+              - "net10.0@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"

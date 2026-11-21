@@ -1,0 +1,140 @@
+---
+# Knowledge Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Knowledge subsystem
+# - The Knowledge subsystem holds what the drawing assistant and the user need to know to draw with the formats CanvasNet
+#   draws and to work in a CanvasPilot project: a catalog of cards that is taken from the help of CanvasNet and extended
+#   with cards of CanvasPilot, a search of the cards, and the text of cards for the prompt of an assistant. It is kept
+#   apart from every provider of a language model
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Knowledge-OfferDrawingCards
+            title: >-
+              The Knowledge subsystem shall offer, as one tree of cards that is read once and shared, the cards of CanvasNet
+              that tell how to write each drawing format, without the cards that are only about the program that hosts
+              CanvasNet, together with the cards of CanvasPilot about where files go in a project, how to make the picture
+              the user uses, how to read the marks and attachments of a message, what the user sees, and how to draw in the style of
+              the project.
+            justification: |
+              The assistant writes files, and the user reads the same advice. The cards of CanvasNet are the advice of the
+              library that draws the files, so they are as current as the library; the cards about the options that the
+              program that hosts the library sets in code would only take room in a prompt, because CanvasPilot is that
+              program, while the cards for embedding pages, pictures, and files are what a drawing needs.
+              The cards of CanvasPilot say what the library cannot know: the project folder, the picture the user uses, and
+              the marks. Reading the cards once and sharing them keeps the cost of the start low and the answers the same.
+            children:
+              - CanvasPilot-KnowledgeCatalog-ExcludeHostOnlyCards
+              - CanvasPilot-KnowledgeCatalog-TellWhatTheAssistantCannotRun
+              - CanvasPilot-KnowledgeCatalog-ExtendWithApplicationCards
+              - CanvasPilot-KnowledgeCatalog-FindByPathOrAlias
+              - CanvasPilot-KnowledgeCatalog-RewriteLinksToCardIds
+              - CanvasPilot-KnowledgeCatalog-ListExamplesByName
+              - CanvasPilot-KnowledgeCatalog-AgreeWithApplication
+              - CanvasPilot-KnowledgeCatalog-DescribeStyleKits
+            tests:
+              - KnowledgeSubsystem_Default_OffersDrawingCardsOfCanvasNetAndCanvasPilotWithoutHostOnlyCards
+              - KnowledgeSubsystem_Default_IsOneSharedCatalogReadableFromManyThreads
+
+          - id: CanvasPilot-Knowledge-FindCards
+            title: >-
+              The Knowledge subsystem shall find the cards that fit some words, such as the name of a format or of a thing to
+              draw, best first, with the same answer every time.
+            justification: |
+              The user and the assistant seldom know the name of the card they need. Finding cards from the words of the
+              question puts the card that is about the thing in front of the cards that only mention it, and a list that is
+              the same every time can be relied on in a prompt and compared in a test.
+            children:
+              - CanvasPilot-KnowledgeSearch-RankByWeightedTokens
+              - CanvasPilot-KnowledgeSearch-BeDeterministic
+            tests:
+              - KnowledgeSubsystem_Search_QuestionsAboutDrawing_FindTheCardsThatAnswerThem
+
+          - id: CanvasPilot-Knowledge-BuildPromptParts
+            title: >-
+              The Knowledge subsystem shall write the cards as plain text for the prompt of an assistant: an index of every
+              card that stays within a fixed size, a card with the cards related to it and its examples, an example, and the
+              result of a search.
+            justification: |
+              An assistant cannot be given all the cards in every request, because their text is many times what a prompt
+              can hold. A short index tells it what exists, and the cards, examples, and search results that it asks for
+              are given as text it can read. Keeping the size of the index under a limit that is checked keeps the cost of
+              every request known.
+            children:
+              - CanvasPilot-KnowledgePromptBuilder-BuildCompactIndex
+              - CanvasPilot-KnowledgePromptBuilder-RenderCards
+            tests:
+              - KnowledgeSubsystem_PromptBuilder_IndexSearchAndCard_AreReadyForAPrompt
+
+          - id: CanvasPilot-Knowledge-DescribeAgentTools
+            title: >-
+              The Knowledge subsystem shall describe a tool that an assistant can call to get the index of the cards, a
+              card, an example, or the result of a search, as plain values and a function from the arguments as text to
+              an answer as text, so that it can be given to any provider of a language model.
+            justification: |
+              The assistant is told only the index of the cards and needs a way to ask for the rest. A description that is
+              plain values, with a function that takes and returns text, is what every provider's tool mechanism needs,
+              so the choice of provider can be made later without changing the knowledge. A tool that answers a mistaken
+              call with a message lets the assistant correct itself.
+            children:
+              - CanvasPilot-KnowledgeTools-AnswerIndexTopicExampleQuery
+              - CanvasPilot-KnowledgeTools-SuggestForUnknownTopic
+              - CanvasPilot-KnowledgeTools-NeverThrowOnBadArguments
+            tests:
+              - KnowledgeSubsystem_Tools_HelpTool_AnswersFromTheApplicationCatalog
+
+          - id: CanvasPilot-Knowledge-DescribeAgentSkills
+            title: >-
+              The Knowledge subsystem shall describe every card as a skill for an assistant, with a name made from the
+              identifier of the card, the title and summary of the card as its description, and the card with its examples
+              as its content, as plain values that can be given to any provider of a language model.
+            justification: |
+              Some providers and agents take knowledge as a set of named skills instead of a tool that is called. Offering
+              each card as a skill, with a name that tells which card it is, lets the same knowledge be given either way
+              without a second copy of the text to keep up to date, and without tying the knowledge to one provider.
+            children:
+              - CanvasPilot-KnowledgeSkills-OneSkillPerCard
+              - CanvasPilot-KnowledgeSkills-NameSkillsFromIds
+            tests:
+              - KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostOnlyCards
+
+          - id: CanvasPilot-Knowledge-BrowseCards
+            title: >-
+              The Knowledge subsystem shall offer a window that shows the cards to a user as a tree with a search box, with
+              the Markdown of a card read into headings, paragraphs, list items, and blocks of code with bold, italic, and
+              code text without losing any of its text, with the cards below a card and its related cards as links, and
+              with each example of a card ready to be copied.
+            justification: |
+              The cards are written for the assistant, but a user who can read them can tell the assistant exactly what is
+              wanted. A card that is shown as the Markdown it was typed in is hard to read, and a card that is shown with
+              part of its text missing would mislead, so what shows a card is made once, here, and checked on every card.
+              A user who has to leave the window to follow a reference or to take an example would stop using it, so the
+              references and the examples are in the window.
+            children:
+              - CanvasPilot-KnowledgeMarkdown-ParseCardDialect
+              - CanvasPilot-KnowledgeBrowser-ShowTreeAndSelectedCard
+              - CanvasPilot-KnowledgeBrowser-SearchCards
+              - CanvasPilot-KnowledgeBrowser-NavigateRelatedCards
+              - CanvasPilot-KnowledgeBrowser-CopyExamples
+              - CanvasPilot-KnowledgeBrowser-CloseOnRequest
+            tests:
+              - KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow
+              - KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample
+
+          - id: CanvasPilot-Knowledge-StayProviderNeutral
+            title: >-
+              The Knowledge subsystem shall offer the knowledge as values and text of its own, with no reference to the
+              help types of CanvasNet in what it offers and to no package of a language model or agent library.
+            justification: |
+              The assistant that will use the knowledge is added later, and which provider it uses is a choice of the user.
+              Knowledge that is tied to a provider could not be offered to another one, and knowledge that exposes the types
+              of the help library would tie every reader to it. Plain values and text can be given to any provider.
+            children:
+              - CanvasPilot-KnowledgeCatalog-ExposeOwnValues
+            tests:
+              - KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage

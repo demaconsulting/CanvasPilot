@@ -1,0 +1,87 @@
+---
+# Software Unit Requirements for the ComposerDocument Unit
+#
+# The ComposerDocument unit holds the message being composed as an ordered sequence of segments: typed text, dictated
+# text, and chips for attached files, folders, and images and for marks on the picture. It is the single source of
+# truth about the message, has no dependency on the user interface, and cleans all text that enters it.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Composer Subsystem Requirements
+        sections:
+          - title: ComposerDocument Requirements
+            requirements:
+              - id: CanvasPilot-ComposerDocument-KeepOrderedSegments
+                title: >-
+                  The ComposerDocument shall keep text and chips in the order they were inserted at the offsets given,
+                  count one position for each character and for each chip, join neighboring text of the same origin,
+                  and keep text of different origins apart.
+                justification: |
+                  The meaning of the message depends on the place of each word and chip, and the editing control and
+                  the model have to agree on every position. Keeping what was typed apart from what was dictated lets
+                  the agent weigh them differently.
+                tests:
+                  - ComposerDocument_InsertText_IntoEmptyDocument_HoldsOneTypedSegment
+                  - ComposerDocument_InsertText_InTheMiddle_InsertsAtOffset
+                  - ComposerDocument_InsertText_NextToTextOfSameOrigin_JoinsIntoOneSegment
+                  - ComposerDocument_InsertText_DictatedInsideTypedText_KeepsOriginsSeparate
+                  - ComposerDocument_FlatText_TextAndChips_LengthIsCharactersPlusChips
+                  - ComposerDocument_Chips_MixedContent_AreEnumeratedInOrder
+                  - ComposerDocument_Clear_DocumentWithContent_EmptiesDocumentAndLiveSegments
+
+              - id: CanvasPilot-ComposerDocument-InsertChipsAtCaret
+                title: >-
+                  The ComposerDocument shall insert a chip of a file, a folder, an image, or a mark at any offset,
+                  between the text before and after it, so that it occupies one position, and shall name each chip
+                  after the thing it stands for.
+                justification: |
+                  Users drop files where they are typing and add marks in the middle of a sentence; the chip must
+                  sit exactly there and move with the text around it. The name on the chip is how the user
+                  recognizes what is attached.
+                tests:
+                  - ComposerDocument_InsertChip_BetweenText_SplitsTextAndCountsOnePosition
+                  - ComposerDocument_InsertChip_AtStartAndEnd_PlacesChipsAtTheEnds
+                  - ComposerSegment_Chips_ReportNameAndLabel
+
+              - id: CanvasPilot-ComposerDocument-DeleteRanges
+                title: >-
+                  The ComposerDocument shall delete any range of positions, across text and chips, give back the
+                  segments it removed, and refuse an offset or range that is not inside the document.
+                justification: |
+                  Deleting a selection, a character, or a chip are the same operation on the model, and undo needs
+                  exactly what was removed to put it back. A range outside the document points to a mismatch between
+                  the editing control and the model that must not go unnoticed.
+                tests:
+                  - ComposerDocument_Delete_RangeAcrossTextAndChips_RemovesAndReturnsSegments
+                  - ComposerDocument_Delete_SingleChip_JoinsNeighboringText
+                  - ComposerDocument_Delete_ZeroLength_ChangesNothing
+                  - ComposerDocument_GetSlice_InsideText_CutsTextWithoutChangingDocument
+                  - ComposerDocument_InvalidOffsetOrRange_ThrowsArgumentOutOfRangeException
+                  - ComposerDocument_InsertWithInvalidOffset_ThrowsArgumentOutOfRangeException
+
+              - id: CanvasPilot-ComposerDocument-SanitizeText
+                title: >-
+                  The ComposerDocument shall remove from all text that enters it the character that stands for a chip
+                  and every control character except the tab and the line feed, and shall turn every kind of line
+                  break into one line feed.
+                justification: |
+                  Pasted, dropped, and dictated text is data from outside the application. A chip placeholder inside
+                  text would be taken for a chip and shift every chip after it, and control characters have no
+                  meaning in a message and can confuse editing controls and the tools that read the message later.
+                tests:
+                  - ComposerDocument_SanitizeText_UnwantedCharacters_AreRemovedOrNormalized
+                  - ComposerDocument_InsertText_OnlyChipPlaceholders_InsertsNothing
+                  - TextSegment_Constructor_TextWithPlaceholder_HoldsCleanedText
+
+              - id: CanvasPilot-ComposerDocument-SnapshotImmutably
+                title: >-
+                  The ComposerDocument shall give a snapshot of its segments that does not change when the document
+                  changes afterwards.
+                justification: |
+                  The message that is sent is built from the draft while the user may already be writing the next
+                  one. A copy that changed with the draft would send something other than what the user saw when
+                  pressing Send.
+                tests:
+                  - ComposerDocument_Snapshot_AfterLaterEdits_StaysUnchanged
+                  - ComposerSnapshot_HasSameContentAs_EqualAndDifferentContent_ComparesSegments

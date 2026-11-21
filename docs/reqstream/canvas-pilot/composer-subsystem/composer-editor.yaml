@@ -1,0 +1,195 @@
+---
+# Software Unit Requirements for the ComposerEditor Unit
+#
+# The ComposerEditor unit is the view of the message being composed: one editing surface in which typed text, dictated
+# text, and chips for attached files, folders, pictures, and marks stand in order. It shows what the ComposerViewModel
+# holds and reports everything the user does to it as that view model's actions; the editing rules, the undo steps, and
+# the handling of what is dropped and pasted belong to the view model and the intake. Runtime OTS requirements of the
+# editing control are children of the requirements below.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Composer Subsystem Requirements
+        sections:
+          - title: ComposerEditor Requirements
+            requirements:
+              - id: CanvasPilot-ComposerEditor-ShowChipsInline
+                title: >-
+                  The ComposerEditor shall show each file, folder, picture, and mark chip of the message inline in the
+                  text, in the order of the message and between the text before and after it, with an icon for its kind
+                  or a small picture of the item, its name, and the full path or the note as a tooltip; shall show the
+                  picture when a provider has one and the icon otherwise, also when the provider fails; shall draw the
+                  chip that is there after a chip took the place of another; and shall make a preview of a picture file
+                  only for a file that is not larger than 20 MB, without opening any other kind of attachment.
+                justification: |
+                  The user composes with words and with things, and the meaning depends on where each thing stands in the
+                  sentence, so a chip must stand in the line of text where it was dropped, and be recognizable at a
+                  glance by its picture or kind. A slow or broken picture must never hold up typing, and a file that
+                  was dropped is data, so only the bytes of a picture of a bounded size are ever read for a preview.
+                children:
+                  - CanvasPilot-OTS-AvaloniaEdit-EditTextWithInlineObjects
+                tests:
+                  - ComposerEditorView_AddChip_IsDrawnInlineBetweenTexts
+                  - ComposerEditorView_AddMark_ShowsMarkChipAndUndoCommandRemovesIt
+                  - ComposerEditorView_ChipReplacesChip_DrawsTheNewChip
+                  - ComposerEditorView_ThumbnailProvider_PictureReplacesIcon
+                  - ComposerEditorView_ManyChipsAndWrappedText_StayConsistentThroughUndoAll
+                  - ChipView_Show_EachKindOfChip_ShowsLabelIconAndTooltip
+                  - ChipView_ProviderThrows_KeepsIcon
+                  - ImageChipThumbnailProvider_GetThumbnailAsync_PictureFile_ReturnsCachedPreviewUntilChanged
+                  - ImageChipThumbnailProvider_GetThumbnailAsync_NotAPictureMissingOrTooLarge_ReturnsNull
+                  - ImageChipThumbnailProvider_GetThumbnailAsync_OtherChipsAndCancellation_ReturnNull
+
+              - id: CanvasPilot-ComposerEditor-DeleteChipWithButtonOrKey
+                title: >-
+                  The ComposerEditor shall let the user delete a chip with the delete button on the chip or with the
+                  Backspace and Delete keys, each as one step of the message, without moving the keyboard focus to the
+                  button, and shall draw the chip again where it was when the step is undone.
+                justification: |
+                  A chip that was dropped by mistake must be as easy to remove as a character, with the mouse or with the
+                  keyboard, and one removal must be one undo step so that undo brings it back in the same place.
+                tests:
+                  - ComposerEditorView_ChipDeleteButton_RemovesChipAndUndoRestoresIt
+                  - ComposerEditorView_BackspaceAndDeleteOverChip_RemoveChipAsOneStep
+                  - ChipView_DeleteButton_RaisesDeleteRequested
+
+              - id: CanvasPilot-ComposerEditor-EditTextWithCaretAndSelection
+                title: >-
+                  The ComposerEditor shall let the user type text, delete it with Backspace and Delete, select it, type
+                  over a selection, commit several characters at once with an input method, and break lines with Enter,
+                  with a caret, wrapping, and word navigation, such that each typed or deleted character, each commit of
+                  an input method, and each replacement of a selection is one step of the message.
+                justification: |
+                  The editing surface is the place where most messages are written, and users expect it to behave as any
+                  text editor does. The granularity of undo is the granularity of these actions, so each of them must reach
+                  the message as one action, and a commit of an input method, such as a word in Japanese, must not be
+                  taken apart.
+                tests:
+                  - ComposerEditorView_TypeCharacters_EachCharacterIsOneStepUndoneByCtrlZ
+                  - ComposerEditorView_BackspaceAndDelete_EachCharacterIsOneStep
+                  - ComposerEditorView_TypeOverSelection_IsOneStep
+                  - ComposerEditorView_InputMethodCommit_IsOneStep
+                  - ComposerEditorView_EnterKey_KeepsSurfaceAndMessageEqual
+
+              - id: CanvasPilot-ComposerEditor-MirrorEditsIntoViewModel
+                title: >-
+                  The ComposerEditor shall hand every change that the user makes in the editing surface to the view model
+                  as one action, shall write every change of the message that did not come from the surface into the
+                  surface, shall keep the surface equal to the message after every change, also when the message cleaned
+                  the text or refused the change, and shall let the surface be edited only while a project is open.
+                justification: |
+                  The message is the single source of truth about what is sent. If the surface and the message could
+                  differ, the user could send something other than what they see, and chips could shift to the wrong
+                  places. The surface therefore only shows the message and reports what the user did, and it is made
+                  equal to the message whenever they differ.
+                children:
+                  - CanvasPilot-OTS-AvaloniaEdit-ReportDocumentChanges
+                tests:
+                  - ComposerEditorView_TypeCharacters_EachCharacterIsOneStepUndoneByCtrlZ
+                  - ComposerEditorView_EnterKey_KeepsSurfaceAndMessageEqual
+                  - ComposerEditorView_ChipReplacesChip_DrawsTheNewChip
+                  - ComposerEditorView_DropWithoutProject_ChangesNothing
+                  - ComposerEditorView_ProjectOpenedAndClosed_EditableOnlyWhileProjectIsOpen
+                  - ComposerEditorView_ManyChipsAndWrappedText_StayConsistentThroughUndoAll
+
+              - id: CanvasPilot-ComposerEditor-RefuseForbiddenTypedText
+                title: >-
+                  The ComposerEditor shall refuse typed or input-method text that holds the placeholder character of a
+                  chip or a control character other than a tab or a line break before it enters, and shall have text that
+                  is dropped with such characters cleaned by the message.
+                justification: |
+                  A placeholder character in text would be taken for a chip and would shift the chip of every position
+                  after it, and control characters have no meaning in a message and confuse tools that read it later.
+                children:
+                  - CanvasPilot-OTS-AvaloniaEdit-RefuseTypedText
+                tests:
+                  - ComposerEditorView_TypePlaceholderCharacter_IsRefused
+                  - ComposerEditorView_DropTextWithPlaceholder_IsCleaned
+                  - ComposerEditorView_ContainsForbiddenCharacter_Table_FollowsRule
+
+              - id: CanvasPilot-ComposerEditor-HandleUndoRedoKeys
+                title: >-
+                  The ComposerEditor shall undo with Ctrl+Z and redo with Ctrl+Y and Ctrl+Shift+Z (the Command key in place of
+                  Ctrl on macOS) through the view model, one step each, shall keep no history of its own, and shall give the Edit menu the view model as the
+                  target of undo and redo for the editing surface.
+                justification: |
+                  Users reach for the keyboard to undo. The undo of the message must be the only one, because a second
+                  history would undo things behind the message's back, and the Edit menu must reach the same undo through
+                  whatever control has the focus.
+                children:
+                  - CanvasPilot-OTS-AvaloniaEdit-DisableBuiltInUndoRedo
+                tests:
+                  - ComposerEditorView_TypeCharacters_EachCharacterIsOneStepUndoneByCtrlZ
+                  - ComposerEditorView_RedoKeys_CtrlYAndCtrlShiftZ_RedoOneStepEach
+                  - ComposerEditorView_BuiltInUndo_IsSwitchedOffAndItsCommandsRemoved
+                  - ComposerEditorView_UndoRedoTarget_IsTheViewModel
+
+              - id: CanvasPilot-ComposerEditor-AcceptDropAndPaste
+                title: >-
+                  The ComposerEditor shall take what is dropped on the text or pasted from the clipboard as data: files and
+                  folders by their paths, a picture as PNG bytes, and text as text, with files taken before a picture and a
+                  picture before text, shall hand each drop or paste to the view model as one action at the place of the
+                  drop or at the caret, shall show that a drag that brings something acceptable will be copied, shall
+                  refuse drops while the message cannot be edited, and shall not open, run, or read the content.
+                justification: |
+                  Users bring material by dropping files and pasting screenshots. A file manager sends the path as text
+                  with the file, and a browser sends text with a picture, so the most specific kind must win or one drop
+                  would become a chip and a line of path text. The material comes from outside the user's control and is
+                  never given a chance to act, and one drop or paste of any number of items is one undo step.
+                children:
+                  - CanvasPilot-OTS-AvaloniaEdit-InterceptPasteAndDrop
+                tests:
+                  - ComposerEditorView_DropOfFilesAndPicture_FourChipsOneStep
+                  - ComposerEditorView_DropFiles_BecomesChipsInsteadOfPathText
+                  - ComposerEditorView_DropFilesWithPathText_IsChipsOnly
+                  - ComposerEditorView_DragOver_AcceptableAndNot_ShowsDropHighlightOnlyForAcceptable
+                  - ComposerEditorView_DropWithoutProject_ChangesNothing
+                  - ComposerEditorView_DropPictureAndText_BecomePictureChipAndText
+                  - ComposerEditorView_PasteAsync_FilesPictureAndText_EachIsOneStep
+                  - ComposerEditorView_CtrlV_PastesClipboardTextAsOneStep
+                  - ComposerEditorView_CtrlV_FileOnClipboard_MakesChip
+                  - DataTransferReader_Read_FilesAndFolder_ReturnsLocalPaths
+                  - DataTransferReader_Read_FilesWithText_OnlyFilesAreTaken
+                  - DataTransferReader_Read_Bitmap_ReturnsPngBytes
+                  - DataTransferReader_Read_TextAndEmpty_ReturnsTextOrNothing
+                  - DataTransferReader_IsAcceptable_FilesPictureTextAndNothing
+                  - DataTransferReader_NullArguments_Throw
+                  - DataTransferReader_ReadAsync_Clipboard_FilesPictureTextAndEmpty
+
+              - id: CanvasPilot-ComposerEditor-CopyChipsAsReadableText
+                title: >-
+                  The ComposerEditor shall copy and cut the selected part of the message to the clipboard as readable
+                  text in which each chip is its name in brackets and never the placeholder character, and shall make a
+                  cut one step of the message.
+                justification: |
+                  Text that is copied out of the message goes to other programs and into later pastes. The placeholder
+                  character means nothing there, and the user should see what each chip was.
+                tests:
+                  - ComposerEditorView_CopyAndCut_PutReadableTextOnClipboard
+                  - ComposerEditorView_DescribeForClipboard_TextAndChips_ReadableWithoutPlaceholder
+
+              - id: CanvasPilot-ComposerEditor-ShowDictatedTextDistinctly
+                title: >-
+                  The ComposerEditor shall draw a background behind the words that were dictated, and only behind them,
+                  taking each stretch at its offsets in the message so that chips and typed text between stretches do not
+                  shift it, and shall stop drawing it when the dictated block is undone.
+                justification: |
+                  Speech recognition makes mistakes that typing does not, and the assistant is told which words were
+                  dictated. The user must see which words those are to check them.
+                tests:
+                  - ComposerEditorView_DictatedBlock_IsShownAndItsRangeIsDrawn
+                  - DictatedTextBackgroundRenderer_GetRanges_DictatedTextBetweenChipsAndTyped_ReturnsOnlyDictated
+
+              - id: CanvasPilot-ComposerEditor-ShowStatusAndLiveWords
+                title: >-
+                  The ComposerEditor shall show the words recognized so far while the talk control is held, only while
+                  dictation is going on, and shall show the sentence about the last action, such as what a drop left out,
+                  with the text that says a project must be open while none is.
+                justification: |
+                  The user sees at once that they are heard and what a drop left out or why the message cannot be written,
+                  instead of an editor that silently does nothing.
+                tests:
+                  - ComposerEditorView_StatusAndPartialText_AreShown
+                  - ComposerEditorView_DropWithoutProject_ChangesNothing
+                  - ComposerEditorView_ProjectOpenedAndClosed_EditableOnlyWhileProjectIsOpen

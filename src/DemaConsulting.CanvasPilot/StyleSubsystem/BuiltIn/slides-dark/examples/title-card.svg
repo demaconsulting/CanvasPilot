@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400" viewBox="0 0 800 400">
+  <style>
+    .page { fill: #0F172A; }
+    .card { fill: #1E293B; stroke: #60A5FA; stroke-width: 3; }
+    .bar { fill: #FBBF24; }
+    .heading { font-family: sans-serif; font-size: 46px; font-weight: bold; fill: #F1F5F9; }
+    .body { font-family: sans-serif; font-size: 22px; fill: #94A3B8; }
+    .tag { font-family: monospace; font-size: 18px; fill: #60A5FA; }
+  </style>
+  <rect class="page" width="800" height="400"/>
+  <rect class="card" x="32" y="32" width="736" height="336" rx="16" ry="16"/>
+  <rect class="bar" x="72" y="76" width="96" height="8" rx="4" ry="4"/>
+  <text class="heading" x="72" y="172">Quarterly review</text>
+  <text class="body" x="72" y="220">What went well, what did not, and what is next.</text>
+  <text class="tag" x="72" y="316">style kit: slides-dark</text>
+</svg>

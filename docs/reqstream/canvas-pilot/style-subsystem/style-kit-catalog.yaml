@@ -1,0 +1,135 @@
+---
+# Software Unit Requirements for the StyleKitCatalog Unit
+#
+# The StyleKitCatalog unit finds the style kits in the places that hold them (the program, the user, the open project, and
+# the shared folders of the settings), chooses the kit of the most local place when an id is in more than one, reads
+# the shared folders on workers with a time limit so that a folder that is offline never blocks anything, keeps the kits of
+# the program and the shared kits read only, and creates, saves, duplicates, copies, and deletes the kits of the user and
+# of the project. It has no user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleKitCatalog Requirements
+            requirements:
+              - id: CanvasPilot-StyleKitCatalog-FindKitsInEveryLocation
+                title: >-
+                  The StyleKitCatalog shall find a kit in each sub-folder that has a style file in the folder of the kits that
+                  come with the program, the folder of the kits of the user, the styles folder of the open project, and every
+                  shared folder of the settings, shall list each kit with its place, its folder, whether it is read only, and
+                  the shared folder that holds it, in the order of the places and then by name, shall list no place for the
+                  project while none is open, shall read again when the open project or the shared folders change and not
+                  when another setting changes, shall announce each refresh once, and shall leave the kits as they were when
+                  a refresh is cancelled.
+                justification: |
+                  A style is wanted from several places, and the list that the user sees must be complete, in an order that
+                  does not change from one refresh to the next, and must follow the project and the shared folders without
+                  the user asking. A folder that is being written, a folder with no style file, and a folder that is not a kit
+                  must not appear as kits. The number of kit folders read from one place is limited so that a very large
+                  folder costs a fixed amount.
+                tests:
+                  - StyleKitCatalog_RefreshAsync_KitsInEveryLocation_AreFoundWithTheirPlaces
+                  - StyleKitCatalog_RefreshAsync_FolderNamedDifferentlyThanTheId_IsReadWithWarning
+                  - StyleKitCatalog_RefreshAsync_MissingLocalFolders_AreEmptyOrReportedAndNoProjectMeansNoProjectPlace
+                  - StyleKitCatalog_ProjectChanged_RefreshesTheKitsOfTheProject
+                  - StyleKitCatalog_SettingsChanged_OnlyAChangeOfSharedFoldersRefreshes
+                  - StyleKitCatalog_RefreshAsync_RaisesChangedOnceAndCancelledRefreshChangesNothing
+                  - StyleKitCatalog_RefreshAsync_MoreKitFoldersThanTheLimit_ReadsTheLimitAndSaysSo
+
+              - id: CanvasPilot-StyleKitCatalog-ResolveByPrecedence
+                title: >-
+                  The StyleKitCatalog shall find the kit of an id in the most local place that has it, in the order project,
+                  user, shared folders in the order of the settings, and the program, shall keep each kit that is hidden by a
+                  more local one in the list marked as overridden with the name of the place that hides it, shall find
+                  nothing for an id that no kit has, and shall refuse a missing id.
+                justification: |
+                  The more local a copy is, the more deliberate it is: a project can freeze the style it was made with even
+                  when the team changes its kit, and a user can replace a kit of the program with an own copy. Hiding a kit
+                  without telling would make the list look wrong, so a hidden kit is shown with the reason.
+                tests:
+                  - StyleKitCatalog_Resolve_SameIdInTwoLocations_TheMoreLocalWins
+                  - StyleKitCatalog_Resolve_SameIdEverywhere_ChainFollowsThePrecedence
+                  - StyleKitCatalog_Resolve_UnknownIdOrNull_FindsNothingOrIsRefused
+
+              - id: CanvasPilot-StyleKitCatalog-TolerateUnreachableLocations
+                title: >-
+                  The StyleKitCatalog shall read each shared folder on a worker with a time limit, shall report a shared folder
+                  that does not exist, is refused, fails, or does not answer within the limit as a place that is not available
+                  with the reason, shall still read every other place, shall never throw or block its caller for such a
+                  folder, shall list a kit folder whose style file cannot be used as broken with the reasons and not as a kit,
+                  shall let a second folder with the same id in a place be broken, and shall log what it cannot read.
+                justification: |
+                  A shared folder is often a network folder that is slow, offline, or refused. The application must start and
+                  work without it, show the kits of the other places, and tell the user which folder is the problem. A single
+                  bad kit must not hide the good ones, and its reasons must be shown so that it can be repaired.
+                tests:
+                  - StyleKitCatalog_RefreshAsync_MissingSharedFolder_IsReportedAndOthersAreStillRead
+                  - StyleKitCatalog_RefreshAsync_SharedFolderThatHangs_TimesOutAndOthersAreStillRead
+                  - StyleKitCatalog_RefreshAsync_SharedFolderThatIsRefused_IsNotAvailableWithTheReason
+                  - StyleKitCatalog_RefreshAsync_BrokenFolders_AreIsolatedAndListed
+                  - StyleKitCatalog_RefreshAsync_BrokenKit_IsLogged
+
+              - id: CanvasPilot-StyleKitCatalog-ManageUserAndProjectKits
+                title: >-
+                  The StyleKitCatalog shall save a kit that has no error into a folder named as its id in the folder of the user
+                  or of the project, keeping the example files that are there, shall refuse a kit that has an error and a
+                  project place when no project is open, shall create a kit with a valid palette and an id made from its name
+                  that no known kit of any place has, shall duplicate and copy a kit with its example files and captions under
+                  an id that is new or kept, never leaving a half copy, shall copy a kit into the project only when the project
+                  has none of that id, shall delete a kit of the user or of the project with its folder only when the folder is
+                  directly in that place, and shall announce each change.
+                justification: |
+                  The user makes the style that fits the work by starting from a kit and changing it, so every step must keep
+                  the files valid and complete: a copy has the examples that the original has, a new kit never hides another
+                  by an accident of its id, and a failure in the middle must not leave a kit that is half written. A delete that
+                  can be pointed at any folder would be a way to remove files that are not kits, so the folder must be where
+                  the kit is expected to be.
+                tests:
+                  - StyleKitCatalog_Save_UserKit_WritesFolderKeepsExamplesAndRefusesInvalidKit
+                  - StyleKitCatalog_Save_ProjectKit_WritesIntoTheStylesFolderOfTheProjectAndNeedsAProject
+                  - StyleKitCatalog_CreateBlank_Names_GetUniqueIdsAndAValidKit
+                  - StyleKitCatalog_IdBaseFromName_FollowsTheRules
+                  - StyleKitCatalog_Duplicate_KitWithExamples_CopiesEverythingUnderANewId
+                  - StyleKitCatalog_Duplicate_ExampleFileMissing_LeavesNothingBehind
+                  - StyleKitCatalog_Delete_UserAndProjectKits_RemoveFolderAndRefuseOtherFolders
+                  - StyleKitCatalog_CopyIntoProject_SharedKit_FreezesItInTheProject
+                  - StyleKitCatalog_Constructor_NullServices_ThrowArgumentNullException
+
+              - id: CanvasPilot-StyleKitCatalog-OfferBuiltInKits
+                title: >-
+                  The StyleKitCatalog shall find, in the folder beside the program, three kits that come with it, Clean, Slides
+                  Dark, and DEMA, each a style file with no error and no warning that has a readable text on its background and
+                  its surface, the colors, fonts, numbers, and sizes of its design, and the three examples of a title card, a
+                  flowchart, and a chart that carry the theme and the chart configuration of the kit and are drawn without an
+                  error or a note, as files that are in the folder of the program, in the published folder, and in the
+                  installer package, and a kit of the user with the same id shall hide them.
+                justification: |
+                  A person who has made no kit must still be able to give a picture a style, and the kits that come with the
+                  program are also the examples of how a kit is written and of how a file uses it. An assistant is given the
+                  real paths of the example pictures, so they must be files in the folder of the program and not data inside
+                  it, and they must be in the package that is delivered, which a test of the published folder and of the
+                  installer checks. A user who wants another version of a kit makes a copy, which hides the original.
+                tests:
+                  - BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning
+                  - BuiltInStyleKits_ExampleFiles_AreDrawnWithoutErrorOrNote
+                  - BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette
+                  - BuiltInStyleKits_Palette_TextIsReadableOnBackgroundAndSurface
+                  - BuiltInStyleKits_Values_AreTheOnesOfTheDesign
+                  - BuiltInStyleKits_Examples_CarryTheThemeAndChartConfigurationOfTheirKit
+                  - BuiltInStyleKits_OutputFolder_HoldsTheStyleFilesAndAllNineExamples
+                  - BuiltInStyleKits_Catalog_DefaultPlace_FindsTheThreeKitsAsReadOnlyAndTheUserCanOverrideThem
+                  - windows@StyleKits_BuiltInPublished
+
+              - id: CanvasPilot-StyleKitCatalog-KeepBuiltInAndSharedKitsReadOnly
+                title: >-
+                  The StyleKitCatalog shall mark the kits that come with the program and the shared kits as read only, and shall
+                  refuse to save, create, duplicate into, or delete in those places, with a message, leaving their folders as
+                  they are.
+                justification: |
+                  The kits of the program are the same for every user and the shared kits belong to a team that curates them
+                  elsewhere, so a change made here would be lost or would surprise others. A change is made by making a copy
+                  in the folder of the user or of the project, which is writable.
+                tests:
+                  - StyleKitCatalog_ReadOnlyPlaces_RefuseEveryChange

@@ -1,0 +1,70 @@
+---
+# Software Unit Requirements for the SpeechSettingsPage Unit
+#
+# The SpeechSettingsPage unit is the "Speech" page of the settings dialog. It composes the device pickers, the
+# model catalog panel, and the parameter editors of the chosen models, and maps them to and from the stored
+# speech settings. Nothing in the application consumes the choices yet.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        sections:
+          - title: SpeechSettingsPage Requirements
+            requirements:
+              - id: CanvasPilot-SpeechSettingsPage-ProvideSpeechPage
+                title: >-
+                  The SpeechSettingsPage shall be a page titled Speech in the settings dialog, listed after the
+                  AI Provider page in the application, that accepts any entry and does not use the audio system
+                  or the model store until the dialog loads it.
+                justification: |
+                  Speech choices belong in the same dialog as the other settings. The page has nothing the user
+                  can mistype, so it never blocks OK, and loading it only when the dialog opens keeps application
+                  startup fast and free of audio and file system work.
+                tests:
+                  - SpeechSettingsPageViewModel_New_IsTitledValidAndDoesNotUseServices
+                  - AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages
+                  - SettingsDialogView_SpeechPage_IsListedAndShownWhenChosen
+                  - MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses
+
+              - id: CanvasPilot-SpeechSettingsPage-MapSpeechSettings
+                title: >-
+                  The SpeechSettingsPage shall show the stored speech settings and merge the user's choices of
+                  devices by name, models by identifier, and model parameter values into them, without changing
+                  settings it does not own and without losing a stored choice that it could not show.
+                justification: |
+                  The user configures speech once and expects the choices to come back. Storing devices by name
+                  and models by identifier survives changes in the order of the lists, and keeping choices that
+                  the page could not show means a machine without audio hardware does not erase the settings of
+                  the user's other machine.
+                tests:
+                  - SpeechSettingsPageViewModel_LoadApply_StoredSettings_RoundTrips
+                  - SpeechSettingsPageViewModel_Apply_UserChoices_AreStored
+                  - SpeechSettingsPageViewModel_Apply_OtherSettings_AreUnchanged
+                  - SpeechSettingsPageViewModel_Apply_StoredChoicesNotShown_AreKept
+                  - SpeechSettingsPageViewModel_InvalidArguments_Throw
+                  - SettingsDialogView_OkButton_SavesSpeechChoices
+
+              - id: CanvasPilot-SpeechSettingsPage-ShowParametersOfChosenModels
+                title: >-
+                  The SpeechSettingsPage shall show the parameters of the chosen speech-to-text and
+                  text-to-speech models with their stored values, remember the values edited for a model when
+                  another model is chosen, and show the stored values again when the dialog is opened again.
+                justification: |
+                  Each model has its own settings. Remembering edits while the dialog is open lets the user
+                  compare models without retyping, and discarding them when the dialog closes without saving
+                  keeps Cancel meaningful.
+                tests:
+                  - SpeechSettingsPageViewModel_SelectModel_ShowsItsParametersAndRemembersEdits
+                  - SpeechSettingsPageViewModel_Load_AfterEdits_ShowsStoredValuesAgain
+
+              - id: CanvasPilot-SpeechSettingsPage-CancelDownloadsOnClose
+                title: >-
+                  The SpeechSettingsPage shall cancel every model download that is still running when the
+                  settings dialog closes, however it closes.
+                justification: |
+                  Downloads run at once and are not part of OK or Cancel. A download that continued after the
+                  dialog is gone would use the network with nothing to show its progress or let the user stop it.
+                tests:
+                  - SpeechSettingsPageViewModel_OnClosed_RunningDownload_IsCancelled
+                  - SettingsDialogView_CloseWindow_CancelsRunningDownload

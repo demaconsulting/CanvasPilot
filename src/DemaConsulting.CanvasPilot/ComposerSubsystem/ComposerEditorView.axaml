@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ae="using:AvaloniaEdit"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.ComposerSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.ComposerSubsystem.ComposerEditorView"
+             x:DataType="vm:ComposerViewModel">
+
+  <Grid RowDefinitions="Auto,*,Auto">
+
+    <!-- The words recognized so far while the talk button or key is held -->
+    <Border Grid.Row="0"
+            Margin="0,0,0,4"
+            Padding="6,2"
+            CornerRadius="4"
+            Background="#22808080"
+            IsVisible="{Binding IsDictating}">
+      <TextBlock Name="PartialText"
+                 AutomationProperties.AutomationId="ComposerPartialText"
+                 FontStyle="Italic"
+                 TextWrapping="Wrap"
+                 Text="{Binding LivePartialText}" />
+    </Border>
+
+    <!-- The message: text, dictated text, and chips in one editing surface -->
+    <Grid Grid.Row="1">
+      <ae:TextEditor Name="Editor"
+                     AutomationProperties.AutomationId="ComposerTextEditor"
+                     MinHeight="60"
+                     WordWrap="True"
+                     ShowLineNumbers="False"
+                     HorizontalScrollBarVisibility="Disabled"
+                     VerticalScrollBarVisibility="Auto" />
+
+      <!-- Shown while a drag with something the message accepts is over the message -->
+      <Border Name="DropHighlight"
+              AutomationProperties.AutomationId="ComposerDropHighlight"
+              IsHitTestVisible="False"
+              IsVisible="False"
+              BorderThickness="2"
+              CornerRadius="4"
+              BorderBrush="#FF0078D7" />
+
+      <!-- Says why the message cannot be written yet -->
+      <TextBlock Name="NoProjectHint"
+                 AutomationProperties.AutomationId="ComposerNoProjectHint"
+                 Margin="8,6"
+                 IsHitTestVisible="False"
+                 Opacity="0.6"
+                 TextWrapping="Wrap"
+                 Text="{x:Static vm:ComposerViewModel.NoProjectText}"
+                 IsVisible="{Binding !HasProject}" />
+    </Grid>
+
+    <!-- A sentence about the last action, such as what a drop left out -->
+    <TextBlock Name="StatusLine"
+               Grid.Row="2"
+               AutomationProperties.AutomationId="ComposerStatus"
+               Margin="0,4,0,0"
+               TextWrapping="Wrap"
+               Text="{Binding StatusText}"
+               IsVisible="{Binding HasStatus}" />
+
+  </Grid>
+
+</UserControl>

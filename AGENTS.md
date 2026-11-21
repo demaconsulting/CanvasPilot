@@ -1,21 +1,17 @@
 # Project Overview
 
-> **Downstream customization required**: Replace the `TODO` values below with
-> values specific to the target repository. These values are the canonical source
-> for project-wide template placeholders used throughout the repository.
-
-- **project-name**: TODO — repository/project name (e.g., `ReqStream`)
-- **organization**: TODO — organization name for document authorship (e.g., `DEMA Consulting`)
-- **project-tagline**: TODO — document subtitle; 4–8 words, noun phrase, no period
-  (e.g., `Requirements traceability for .NET projects`)
-- **description**: TODO — full project description, may be multiple sentences
-- **languages**: TODO — programming languages used (e.g., `C#`, `C++`)
-- **technologies**: TODO — key technologies and frameworks (e.g., `.NET`, `CMake`)
+- **project-name**: `CanvasPilot`
+- **organization**: `DEMA Consulting`
+- **project-tagline**: `AI-assisted drawing creation with CanvasNet`
+- **description**: CanvasPilot is an AI-powered desktop application that helps users create drawings and
+  diagrams with the CanvasNet library — composing SVG, Mermaid, Vega-Lite, OpenSCAD, and other image
+  sources into standalone images for use in email, presentations, and other media. It supports
+  conversational interaction by text or speech, using GitHub Copilot SDK or Ollama as the language
+  model backend.
+- **languages**: `C#`
+- **technologies**: `.NET`, `Avalonia`, `CanvasNet`, `GitHub Copilot SDK`, `Ollama`
 
 # Project Structure
-
-> **Downstream customization required**: Replace `{project}` and
-> `{test-project}` with the actual source and test project folder names.
 
 ```text
 ├── docs/
@@ -24,6 +20,7 @@
 │   ├── code_review_plan/
 │   ├── code_review_report/
 │   ├── design/
+│   ├── images/
 │   ├── requirements_doc/
 │   ├── requirements_report/
 │   ├── reqstream/
@@ -31,10 +28,18 @@
 │   ├── user_guide/
 │   └── verification/
 ├── src/
-│   └── {project}/
+│   ├── DemaConsulting.CanvasPilot/            # application library (Avalonia views, view models, services)
+│   ├── DemaConsulting.CanvasPilot.Desktop/    # thin executable project (CanvasPilot.exe)
+│   └── DemaConsulting.CanvasPilot.Installer/  # WiX MSI project (not part of the solution)
 └── test/
-    └── {test-project}/
+    ├── DemaConsulting.CanvasPilot.Tests/      # unit, subsystem, and system tests
+    ├── DemaConsulting.CanvasPilot.UiTests/    # headless Avalonia user interface tests
+    └── OtsSoftwareTests/                      # tests of the runtime OTS libraries
 ```
+
+The application library holds one folder per subsystem (`AnnotationSubsystem`, `AppShellSubsystem`, `ChatSubsystem`,
+`ComposerSubsystem`, `KnowledgeSubsystem`, `LoggingSubsystem`, `PayloadSubsystem`, `PreviewSubsystem`,
+`ProjectSubsystem`, `SettingsSubsystem`, `SpeechSubsystem`, `StyleSubsystem`, and `UtilitiesSubsystem`).
 
 # Language and Spelling (ALL Agents)
 
@@ -90,6 +95,7 @@ from `.github/standards/`. Use this matrix to determine which to load:
 - **Software structure**: `sysml2-modeling.md`
 - **Any documentation**: `technical-documentation.md`
 - **Diagrams in documentation**: `diagram-documentation.md` (and the `canvasnet` skill for tooling)
+- **Reading PDF or Office documents**: the `docdown` skill
 
 Load only the standards relevant to your specific task scope.
 

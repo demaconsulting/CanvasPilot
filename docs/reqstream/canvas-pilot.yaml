@@ -1,0 +1,557 @@
+---
+# CanvasPilot System-Level Requirements
+#
+# PURPOSE:
+# - Define system-level requirements describing what end-users need the application to provide
+# - These requirements capture the externally visible behavior of the complete system
+# - System requirements are validated through system-level tests that compose real units
+#   without opening a window
+#
+# NOTE: The system requirements cover operational logging, safe file handling, persisted user settings, AI provider
+# and speech configuration, projects, image browsing and file management, preview and export, marking pictures,
+# composing a message, dictating a message, the speech runtime in the installed application, the drawing knowledge,
+# style kits, the desktop shell, the Windows installer, and application startup. The AI agent that will answer the
+# messages is not covered.
+
+sections:
+  - title: CanvasPilot Requirements
+    requirements:
+      - id: CanvasPilot-System-OperationalLogging
+        title: >-
+          The application shall record operational events and failures to local log files that
+          users can attach to bug reports.
+        tags: [system]
+        justification: |
+          A desktop application has no console or server-side log to consult when something goes
+          wrong. A bounded set of local log files gives users and maintainers the diagnostic
+          evidence needed to troubleshoot problems without telemetry or unbounded disk growth.
+        children:
+          - CanvasPilot-Logging-PersistOperationalEvents
+          - CanvasPilot-Logging-RetainRecentHistory
+          - CanvasPilot-Logging-ConfinedLogFiles
+        tests:
+          - CanvasPilot_OperationalLogging_ApplicationEvent_WritesLocalLog
+
+      - id: CanvasPilot-System-SafeFileHandling
+        title: >-
+          The application shall confine file locations built from caller-supplied names to their
+          intended folders.
+        tags: [system]
+        justification: |
+          The application builds file locations from names that originate outside the code, such as
+          project names and file names. Rejecting traversal sequences and absolute paths prevents
+          those names from reading or overwriting files outside the intended folder.
+        children:
+          - CanvasPilot-Utilities-SafePaths
+        tests:
+          - CanvasPilot_SafeFileHandling_TraversalName_IsRejected
+
+      - id: CanvasPilot-System-PersistUserSettings
+        title: >-
+          The application shall remember the user's settings between runs and shall keep working when
+          the stored settings are damaged.
+        tags: [system]
+        justification: |
+          Users expect to configure the application once. A settings file that is damaged, edited by
+          hand, or written by another version must never stop the application from starting or the
+          user from changing settings.
+        children:
+          - CanvasPilot-Settings-PersistUserSettings
+          - CanvasPilot-Settings-ToleratePoorSettingsFiles
+          - CanvasPilot-Settings-EditSettingsInDialog
+        tests:
+          - CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage
+
+      - id: CanvasPilot-System-ConfigureAiProvider
+        title: >-
+          The application shall let the user choose and store which AI provider and model it uses,
+          with unrestricted agent tools off unless the user opts in.
+        tags: [system]
+        justification: |
+          The application's AI assistance can use different providers, and the choice, with its
+          model and limits, belongs to the user. Storing the choices lets them be configured before
+          the assistant is used, and the safe default for unrestricted tools protects the user's files.
+        children:
+          - CanvasPilot-Settings-ConfigureAiProvider
+        tests:
+          - CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn
+
+      - id: CanvasPilot-System-ConfigureSpeech
+        title: >-
+          The application shall let the user choose and store the microphone, speakers, and speech models it
+          uses, download the models with visible progress, and shall keep working on machines without audio
+          hardware or network access.
+        tags: [system]
+        justification: |
+          Conversation by speech needs devices and models that depend on the user's machine. Choosing them
+          before speech is used lets the user set it up once, and the application must stay usable on machines
+          that cannot use speech, so every problem is explained instead of causing a failure.
+        children:
+          - CanvasPilot-Speech-ConfigureSpeechSettings
+          - CanvasPilot-Speech-DownloadSpeechModels
+          - CanvasPilot-Speech-ToleratePoorMachines
+        tests:
+          - CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun
+
+      - id: CanvasPilot-System-ManageProjects
+        title: >-
+          The application shall let the user create, open, save, and close projects, each a folder with
+          a project file, and quickly reopen recently used projects.
+        tags: [system]
+        justification: |
+          Users organize their drawings in projects. A project folder keeps a drawing's images and
+          assets together where other tools can also reach them, and a list of recent projects gets
+          the user back to their work with one choice. Problems such as an invalid name, a damaged
+          file, or a file from a newer version must be explained rather than cause a failure.
+        children:
+          - CanvasPilot-Project-ManageProjectFiles
+          - CanvasPilot-Project-CreateNewProject
+          - CanvasPilot-Project-RememberRecentProjects
+        tests:
+          - CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject
+
+      - id: CanvasPilot-System-BrowseProjectImages
+        title: >-
+          The application shall list the image source files of the open project so the user can choose
+          one to work on, keeping the list current as files change.
+        tags: [system]
+        justification: |
+          The user works on one image source file at a time, and needs to see which files the project
+          holds, including files added or changed by other tools, without leaving the application.
+        children:
+          - CanvasPilot-Project-BrowseProjectImages
+        tests:
+          - CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles
+
+      - id: CanvasPilot-System-ManageProjectFiles
+        title: >-
+          The application shall let the user rename and delete the image source files of the open project
+          from the project explorer, ask for confirmation before deleting, and tell the user when a file
+          cannot be renamed or deleted.
+        tags: [system]
+        justification: |
+          Users reorganize their drawings while working on them, and doing so without leaving the application
+          keeps the project list correct. A deleted file cannot be recovered, so the user must confirm it, and
+          a name that cannot be used or a file that is in use must be explained rather than silently ignored.
+        children:
+          - CanvasPilot-Project-ManageImageFiles
+          - CanvasPilot-AppShell-ManageProjectFiles
+        tests:
+          - CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems
+
+      - id: CanvasPilot-System-PreviewImages
+        title: >-
+          The application shall show the picture of the image source file the user selects, keep it matched to
+          the file as the file and the files it uses change, and explain files that cannot be drawn.
+        tags: [system]
+        justification: |
+          The user creates images by editing source files, so seeing each file's picture, up to date and
+          without leaving the application, is the core of the main window. Files are often invalid while being
+          edited, and the user needs to be told why instead of seeing a blank or stale picture.
+        children:
+          - CanvasPilot-Preview-RenderSelectedImage
+          - CanvasPilot-Preview-ExplainRenderProblems
+          - CanvasPilot-Preview-KeepPreviewCurrent
+        tests:
+          - CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError
+
+      - id: CanvasPilot-System-ExportImages
+        title: >-
+          The application shall let the user save the shown picture as a PNG file or copy it to the clipboard
+          for use in other programs.
+        tags: [system]
+        justification: |
+          The pictures are composed to be used in email, presentations, and other media, which take a PNG file
+          or a pasted picture.
+        children:
+          - CanvasPilot-Preview-ExportImage
+        tests:
+          - CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile
+
+      - id: CanvasPilot-System-BuildMessagePayload
+        title: >-
+          The application shall identify each picture that a chat message refers to by the file it was drawn from
+          and by fingerprints of that file and of the picture's pixels, shall record where the diagram elements
+          and model anchors are in the picture, and shall tell, for each mark on the picture, which parts of the
+          source file lie under it, or that this kind of picture cannot say, so that the message is tied to exactly
+          what the user saw and pointed at; and shall build from the message that is sent one complete payload for the
+          assistant that cannot change afterwards: the text with the places of the marks and attachments in the order
+          the user placed them, the attachments with where they are in the project, and for each marked picture the
+          picture with the marks drawn and numbered on it, an image of the area around each mark, and the geometry and
+          note of each mark in the pixels of the picture; and shall show the user, as text, exactly what the payload
+          holds.
+        tags: [system]
+        justification: |
+          A message about a picture is only useful if the reader knows which picture it means. Files change while
+          the user works, so a name alone is not enough: the exact file contents and pixels, and where the parts of
+          a diagram are, let a later reader tell which version of the picture was meant and which parts of the
+          source the user pointed at. Pointing at pixels alone leaves the reader to guess which node or bar was
+          meant, so the message names the parts under each mark where the picture knows them, and says plainly
+          where it does not. The assistant receives everything the user meant in one place and in the order the user
+          meant it; the pictures show what the user saw and where they pointed, so that the assistant need not guess
+          from coordinates. The user goes on editing while the message is sent, so the payload must not change, and
+          the user must be able to see exactly what was sent.
+        children:
+          - CanvasPilot-Preview-ReportPictureFacts
+          - CanvasPilot-Annotation-FindSourceElements
+          - CanvasPilot-Payload-DescribeTheMessage
+          - CanvasPilot-Payload-IncludeAnnotatedImage
+          - CanvasPilot-Payload-IncludeMarkCrops
+          - CanvasPilot-Payload-IncludeMarkGeometry
+          - CanvasPilot-Payload-IncludeSourceElements
+          - CanvasPilot-Payload-ReferenceAttachments
+          - CanvasPilot-Payload-BeImmutable
+          - CanvasPilot-Payload-ListWhatIsSent
+          - CanvasPilot-Chat-InspectPayload
+        tests:
+          - CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements
+          - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
+          - CanvasPilot_BuildMessagePayload_MermaidWithMarks_ContainsImagesCropsGeometryAndSourceElements
+          - CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload
+
+      - id: CanvasPilot-System-MarkImage
+        title: >-
+          The application shall show the picture of the selected file with a layer over it, aligned with the
+          picture's pixels at every zoom, on which the user draws numbered rectangle, ellipse, freehand, and arrow
+          marks with the pointer or the keyboard, each with an optional short note and a chip in the message, and shall
+          keep each mark with the exact picture it was made on, so that a mark never moves to another picture and
+          the marks of an earlier picture are not drawn on a later one.
+        tags: [system]
+        justification: |
+          Users point at parts of a picture to say what they mean. For a mark to mean the same part of the
+          picture whatever size the window has or whether the picture is shrunk to fit, the layer must follow
+          the picture exactly. When the file is edited and a new picture is shown, a mark that stayed where it was
+          would point at something else, so a mark belongs to the picture it was drawn on, and the numbers let the
+          user and the assistant talk about marks one by one. The chip puts the mark in the message at the place
+          where the user was writing, so one undo takes it back out.
+        children:
+          - CanvasPilot-Preview-HostOverlay
+          - CanvasPilot-Annotation-KeepMarksOnTheirPicture
+          - CanvasPilot-Annotation-NumberMarks
+          - CanvasPilot-Annotation-DrawMarksOnPicture
+          - CanvasPilot-Annotation-HideMarksOfOtherPictures
+          - CanvasPilot-Chat-LinkMarksToChips
+        tests:
+          - CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures
+          - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
+          - CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture
+          - CanvasPilot_MarkImage_DrawOnShownPicture_AddsNumberedChipPinnedToSnapshot
+          - CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks
+
+      - id: CanvasPilot-System-DragImageOut
+        title: >-
+          The application shall let the user drag the shown picture out of the preview and drop it into another
+          program, such as a presentation, a mail message, or a folder, as a PNG file and as a picture, and shall not
+          leave the files it wrote for this behind after it ends.
+        tags: [system]
+        justification: |
+          The pictures are composed to be used in email, presentations, and other media. Dragging a picture to where
+          it is needed is the quickest way to use it, and files the application wrote for the purpose should not
+          accumulate on the user's computer. Which programs take the file, the picture, or both is checked by hand,
+          because it depends on those programs.
+        children:
+          - CanvasPilot-Preview-DragImageOut
+        tests:
+          - CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile
+
+      - id: CanvasPilot-System-ComposeMessage
+        title: >-
+          The application shall let the user compose a message to the assistant from typed text, dictated text, and
+          things that are attached or pointed at, kept together in the order the user placed them, with the origin of
+          each piece of text and the kind of each attachment kept, shall let the user send it, and shall show the
+          messages that were sent in a transcript.
+        tags: [system]
+        justification: |
+          Users explain a drawing with words and with things: a sentence they type, a sentence they say, a file they
+          drop in, a spot on the picture they point at. The meaning of the message depends on where each of these is,
+          and the assistant needs to know which words were dictated because speech recognition makes mistakes that
+          typing does not. The user needs to see what has been said in the conversation, in the form it was composed.
+        children:
+          - CanvasPilot-Composer-HoldOrderedSegments
+          - CanvasPilot-Composer-SendComposedMessage
+          - CanvasPilot-Composer-WorkInsideAnOpenProject
+          - CanvasPilot-Composer-ShowEditableMessage
+          - CanvasPilot-Composer-ShowChipsInline
+          - CanvasPilot-Chat-ShowTranscriptOfSentMessages
+          - CanvasPilot-Chat-SendComposedMessage
+          - CanvasPilot-AppShell-ChatColumn
+          - CanvasPilot-AppShell-HostChat
+        tests:
+          - CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage
+          - CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript
+          - CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload
+
+      - id: CanvasPilot-System-UndoRedoMessage
+        title: >-
+          The application shall let the user undo and redo changes to the message being composed one action at a time,
+          shall forget what can be undone when the message is sent, and shall not keep drafts after the application
+          ends.
+        tags: [system]
+        justification: |
+          Dropping many files or dictating a paragraph by mistake must be one undo away, while typing is undone
+          character by character like in any editor. After a message is sent, undo must not bring it back, and a draft
+          that was written to disk would leave the user's words and file names on the computer.
+        children:
+          - CanvasPilot-Composer-UndoRedoPerAction
+          - CanvasPilot-Composer-ForgetDraftOnSend
+          - CanvasPilot-Composer-EditWithUndoRedoTarget
+          - CanvasPilot-AppShell-EditMenu
+        tests:
+          - CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears
+          - CanvasPilot_UndoRedoMessage_EachActionKind_StepsAsSpecified
+
+      - id: CanvasPilot-System-AttachToMessage
+        title: >-
+          The application shall let the user attach files, folders, and pictures to the message by dropping them or
+          pasting them, shall treat everything that is attached strictly as data that is never opened or run, shall
+          copy nothing into the project while the message is a draft, and shall copy the attachments into the project
+          when the message is sent, within limits of size and number, without overwriting any file and without leaving
+          a partial copy.
+        tags: [system]
+        justification: |
+          Users explain a drawing with material: a sketch, a logo, a folder of photos, a screenshot. The assistant
+          works on the project, so the material must be in it, but dropped material comes from outside the user's
+          control and must never be given a chance to act, and a message that was never sent must leave nothing behind.
+        children:
+          - CanvasPilot-Composer-AcceptDroppedAndPastedContent
+          - CanvasPilot-Composer-TreatContentAsData
+          - CanvasPilot-Composer-StageAttachmentsAtSend
+        tests:
+          - CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend
+          - CanvasPilot_AttachToMessage_DropFileFolderImage_CopiedIntoProjectOnlyAtSend
+          - CanvasPilot_AttachToMessage_DroppedContent_IsNeverOpened
+
+      - id: CanvasPilot-System-DictateMessage
+        title: >-
+          The application shall let the user dictate part of a message by holding a talk button or key: while it is
+          held the application listens with the speech model and microphone chosen in the settings and shows the
+          words as they are recognized, and when it is released the words are added to the message as one block of
+          dictated text; when dictation cannot work, the application shall say why and what to do about it instead
+          of failing.
+        tags: [system]
+        justification: |
+          Speaking is quicker than typing for describing what is wrong with a picture, and the user's hands are often
+          on the pointer while pointing at it. Showing the words as they come lets the user see at once that they are
+          understood, and adding them as one block lets a mistake in a whole dictation be undone in one step. Speech
+          depends on a downloaded model, a microphone, and files that the application ships, and any of them can be
+          missing on a user's machine, so each case must say what to do. The talk button of the chat panel and the
+          talk key of the main window call this capability.
+        children:
+          - CanvasPilot-Speech-DictateWhileHeld
+          - CanvasPilot-Speech-ExplainDictationUnavailable
+          - CanvasPilot-Composer-AddDictatedWordsAsOneBlock
+          - CanvasPilot-Chat-HoldToTalk
+          - CanvasPilot-AppShell-PushToTalkKey
+          - CanvasPilot-AppShell-HostChat
+        tests:
+          - CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable
+          - CanvasPilot_DictateMessage_HeldAndReleased_InsertsOneBlock
+          - CanvasPilot_DictateMessage_NoModel_ExplainsAndKeepsDraft
+
+      - id: CanvasPilot-System-SelfContainedSpeechRuntime
+        title: >-
+          The installed Windows application shall contain everything that is needed to run the speech model the user
+          chooses, so that only the download of the model itself remains for the user to do.
+        tags: [system]
+        justification: |
+          Users install the application with one installer and cannot be expected to find and install native speech
+          libraries. A speech engine that is started without them can fail without an explanation or can even bring
+          the whole application down, so the installed application must carry them and the delivery must be checked
+          with every build.
+        children:
+          - CanvasPilot-Speech-ShipSpeechRuntime
+        tests:
+          - windows@Speech_NativeRuntimePublished
+
+      - id: CanvasPilot-System-DesktopShell
+        title: >-
+          The application shall present a main window with menus from which the user creates and opens
+          projects, sees the project's image files, returns to recent projects, changes settings, and
+          learns about the application.
+        tags: [system]
+        justification: |
+          The main window is what the user sees and uses. Bringing the project, settings, and application
+          information together under familiar menus, with the open project named in the title, lets a
+          user work without knowing how the application is built.
+        children:
+          - CanvasPilot-AppShell-ProvideMainWindow
+          - CanvasPilot-AppShell-HostProjectWorkspace
+          - CanvasPilot-AppShell-ShowApplicationInformation
+        tests:
+          - CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip
+
+      - id: CanvasPilot-System-WindowsInstaller
+        title: >-
+          The application shall be delivered for 64-bit Windows as one self-contained Windows Installer (MSI)
+          package that installs it for all users, adds a Start Menu shortcut, closes a running instance, and
+          replaces earlier versions in place.
+        tags: [system]
+        justification: |
+          Users install a desktop application with the installer their organization already understands. One
+          package that carries the application with its runtime, needs no separate setup, and upgrades in place
+          lets users install and update without administrator knowledge of the application's parts.
+        children:
+          - CanvasPilot-OTS-WiX-BuildMsiPackage
+        tests:
+          - WiX_MsiPackage
+
+      - id: CanvasPilot-System-StartApplication
+        title: >-
+          The application shall start on every supported platform by building its parts in dependency
+          order, loading the stored settings, and recording its start and stop in the application log.
+        tags: [system]
+        justification: |
+          An application that cannot start leaves the user with nothing. Building the parts the same way
+          on every platform, in one place, makes the start checkable without a window, and the log
+          records when it happened for anyone investigating a problem.
+        children:
+          - CanvasPilot-AppShell-ComposeApplication
+        tests:
+          - CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell
+
+      - id: CanvasPilot-System-ProvideDrawingKnowledge
+        title: >-
+          The application shall hold, in the program and without a network or an assistant, the knowledge of how to draw
+          with the formats CanvasNet draws and how to work in a CanvasPilot project, as cards that can be looked up by
+          name, searched by words, and written as text for a prompt of an assistant, without the cards about what the
+          program that hosts CanvasNet controls, and without depending on any language model or agent library.
+        tags: [system]
+        justification: |
+          A language model writes good drawing files only when it knows how the drawing library reads them, and the
+          people who use the application want to read the same advice. Taking the cards from the drawing library keeps
+          the advice as current as the library, and adding the application's own cards tells the assistant where files go
+          and how to read the marks the user makes. The assistant is added later and may come from more than one
+          provider, so the knowledge is kept apart from every provider and offered as plain values and text.
+        children:
+          - CanvasPilot-Knowledge-OfferDrawingCards
+          - CanvasPilot-Knowledge-FindCards
+          - CanvasPilot-Knowledge-BuildPromptParts
+          - CanvasPilot-Knowledge-DescribeAgentTools
+          - CanvasPilot-Knowledge-DescribeAgentSkills
+          - CanvasPilot-Knowledge-StayProviderNeutral
+        tests:
+          - CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork
+
+      - id: CanvasPilot-System-BrowseDrawingKnowledge
+        title: >-
+          The application shall let the user open the drawing knowledge from the Help menu in a window that stays open
+          beside the work, to browse the cards as a tree, search them, read a card with the cards below it and those
+          related to it, and copy its examples.
+        tags: [system]
+        justification: |-
+          The cards are written for the assistant, but they also explain how each format works, and a user who can read
+          them can tell the assistant exactly what is wanted. A window that does not block the application lets the user
+          read a card while working.
+        children:
+          - CanvasPilot-Knowledge-BrowseCards
+          - CanvasPilot-AppShell-DrawingKnowledgeMenu
+        tests:
+          - CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog
+
+      - id: CanvasPilot-System-DefineStyleKits
+        title: >-
+          The application shall let the user describe how pictures should look as a style kit, with a palette of named
+          colors, fonts, a line width, a corner radius, a spacing, a Mermaid theme, a Vega-Lite configuration, written
+          advice, sizes to export at, and example images, kept as a file and a folder of examples that a person can read
+          and edit, checked with a message for each wrong property, and found in the places that ship with the program,
+          that the user keeps, that a project holds, and that a team shares, with the most local copy of a kit winning.
+        tags: [system]
+        justification: |
+          A person or a team wants every picture to look the same: the same colors, the same type, the same sizes. A kit
+          that is a plain file can be shared by a folder, kept with the project, reviewed, and fixed by hand, and a kit
+          that reports exactly which value is wrong can be repaired without guessing. Kits come from more than one place,
+          so which copy applies must be defined, and the copy that is nearest to the work must win, so that a project can
+          freeze the style it was made with.
+        children:
+          - CanvasPilot-Style-DefineKits
+          - CanvasPilot-Style-FindKitsInLocations
+        tests:
+          - CanvasPilot_DefineStyleKits_BuiltInUserProjectAndSharedKits_ResolveByPrecedence
+
+      - id: CanvasPilot-System-ManageStyleKits
+        title: >-
+          The application shall let the user see the style kits it has found with a preview of each, create, duplicate,
+          edit, and delete the kits of the user and of the project, copy a kit into the project, and import and export a
+          kit as a zip file, in a window that stays open beside the work, without changing the kits that come with the
+          program or that a team shares.
+        tags: [system]
+        justification: |
+          A style is useful only when it is easy to see what there is, to try a kit, and to make a variation of it. Zip
+          files let a kit travel by mail or a download, which means a file of unknown origin is opened, so the import must
+          not write outside the place it was asked to write. The kits of the program and of a team are not the user's to
+          change, so they are changed by making a copy.
+        children:
+          - CanvasPilot-Style-ManageKitsInWindow
+          - CanvasPilot-Style-ExchangeKitsAsZipFiles
+          - CanvasPilot-AppShell-OpenStyleKitsWindow
+        tests:
+          - CanvasPilot_ManageStyleKits_ShellCommandAndManager_CreateEditExportImportAndDelete
+
+      - id: CanvasPilot-System-ChooseProjectStyle
+        title: >-
+          The application shall let the user choose the style kit of a project from the main window, keep the choice in
+          the project file so that it is the same for everyone who opens the project, start a new project with the kit
+          that the user chose as the default, and say so when the chosen kit cannot be found.
+        tags: [system]
+        justification: |
+          The style belongs to the project, not to the machine, so the choice is kept with the project and a later change
+          of the default does not move projects that exist. A project that names a kit that is not on this machine must
+          not silently look different.
+        children:
+          - CanvasPilot-Style-ChooseActiveKit
+          - CanvasPilot-AppShell-ChooseStyleInStatusBar
+          - CanvasPilot-Project-KeepTheStyleChoice
+          - CanvasPilot-Settings-KeepStyleSettings
+        tests:
+          - CanvasPilot_ChooseProjectStyle_PickerAndNewProject_KeepTheChoiceInTheProjectFile
+
+      - id: CanvasPilot-System-ExportAtPresetSizes
+        title: >-
+          The application shall let the user export the shown picture as a PNG at a named size, from the sizes of the
+          style kit of the project and from sizes of the application, with a background or transparency as the size says
+          and with the resolution written into the file, as well as exactly as it is drawn.
+        tags: [system]
+        justification: |
+          A picture is used on a slide, in an email, and on paper, each at its own size. Drawing the file again at the
+          size, not stretching the shown picture, keeps the lines sharp, and the sizes that belong to the style are
+          offered with it so that the user does not have to remember them.
+        children:
+          - CanvasPilot-Style-OfferExportPresets
+          - CanvasPilot-Preview-ExportAtRequestedSize
+        tests:
+          - CanvasPilot_ExportAtPresetSizes_ComposedExporter_WritesPngOfThePresetSize
+
+      - id: CanvasPilot-System-GuideAssistantStyle
+        title: >-
+          The application shall offer the style of the project to an assistant as a block of text of a known size and as
+          two tools, one to read the style and one to check a picture of the project against it, as plain values and text
+          that can be given to any provider of a language model, with the text of a kit marked as data and not as
+          instructions, and without depending on any language model or agent library.
+        tags: [system]
+        justification: |
+          An assistant that writes drawing files should use the colors and fonts of the project without being told every
+          time, and should be able to check what it drew. The text of a kit may come from a shared folder or a zip file,
+          so it must not be taken for an instruction, and its size must be bounded because it is paid for in every
+          request. The assistant is added later and may come from more than one provider, so the parts are plain.
+        children:
+          - CanvasPilot-Style-GuideTheAssistant
+          - CanvasPilot-Style-StayProviderNeutral
+        tests:
+          - CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree
+
+      - id: CanvasPilot-System-CheckPictureAgainstStyle
+        title: >-
+          The application shall let the user check the shown picture against the style kit of the project from the Image
+          menu, and shall show which colors of the picture are on the palette, which are blended edges, and which are off
+          the palette, with their share of the picture, in the notes of the preview.
+        tags: [system]
+        justification: |
+          A style is only kept if departures from it can be seen. Telling the user which colors are off the palette, and how
+          much of the picture they cover, turns a feeling that something is wrong into something that can be fixed, and an
+          anti-aliased edge must not be taken for a departure.
+        children:
+          - CanvasPilot-Style-CheckPictures
+          - CanvasPilot-Preview-ShowNotesOfOtherParts
+          - CanvasPilot-AppShell-CheckAgainstStyleMenu
+        tests:
+          - CanvasPilot_CheckPictureAgainstStyle_ImageMenuCommand_ShowsNotesInTheDiagnosticsArea

@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.AnnotationSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.AnnotationSubsystem.AnnotationToolbarView"
+             x:DataType="vm:AnnotationToolbarViewModel"
+             AutomationProperties.AutomationId="AnnotationToolbar"
+             AutomationProperties.Name="Marking tools">
+
+  <!-- The tool bar of the marks: one button per tool, then, while a finished shape waits for its note, the note and its
+       two buttons, then what is said to the user. It wraps when the pane is narrow. -->
+  <WrapPanel Orientation="Horizontal">
+
+    <StackPanel Orientation="Horizontal"
+                Spacing="2"
+                Margin="0,0,8,0"
+                IsEnabled="{Binding Annotation.ToolsEnabled}">
+      <ToggleButton Name="PointerToolButton"
+                    AutomationProperties.AutomationId="AnnotationToolSelect"
+                    AutomationProperties.Name="Select (no marking tool)"
+                    ToolTip.Tip="Select: no marking tool, so the picture can be dragged out"
+                    Content="Select"
+                    IsChecked="{Binding Annotation.IsPointerSelected, Mode=TwoWay}" />
+      <ToggleButton Name="RectangleToolButton"
+                    AutomationProperties.AutomationId="AnnotationToolRectangle"
+                    AutomationProperties.Name="Rectangle mark"
+                    ToolTip.Tip="Draw a rectangle on the picture"
+                    Content="Rectangle"
+                    IsChecked="{Binding Annotation.IsRectangleSelected, Mode=TwoWay}" />
+      <ToggleButton Name="EllipseToolButton"
+                    AutomationProperties.AutomationId="AnnotationToolEllipse"
+                    AutomationProperties.Name="Ellipse mark"
+                    ToolTip.Tip="Draw an ellipse on the picture"
+                    Content="Ellipse"
+                    IsChecked="{Binding Annotation.IsEllipseSelected, Mode=TwoWay}" />
+      <ToggleButton Name="FreehandToolButton"
+                    AutomationProperties.AutomationId="AnnotationToolFreehand"
+                    AutomationProperties.Name="Freehand mark"
+                    ToolTip.Tip="Draw a line with the pointer on the picture"
+                    Content="Freehand"
+                    IsChecked="{Binding Annotation.IsFreehandSelected, Mode=TwoWay}" />
+      <ToggleButton Name="ArrowToolButton"
+                    AutomationProperties.AutomationId="AnnotationToolArrow"
+                    AutomationProperties.Name="Arrow mark"
+                    ToolTip.Tip="Draw an arrow on the picture"
+                    Content="Arrow"
+                    IsChecked="{Binding Annotation.IsArrowSelected, Mode=TwoWay}" />
+    </StackPanel>
+
+    <StackPanel Name="NotePanel"
+                AutomationProperties.AutomationId="AnnotationNotePanel"
+                Orientation="Horizontal"
+                Spacing="4"
+                Margin="0,0,8,0"
+                IsVisible="{Binding Annotation.IsNoteEditing}">
+      <TextBlock VerticalAlignment="Center" Text="Note:" />
+      <TextBox Name="NoteBox"
+               AutomationProperties.AutomationId="AnnotationNoteBox"
+               AutomationProperties.Name="Note for the new mark (optional)"
+               Width="220"
+               PlaceholderText="Optional short note"
+               Text="{Binding Annotation.NoteText, Mode=TwoWay}" />
+      <Button AutomationProperties.AutomationId="AnnotationNoteAdd"
+              Content="Add mark"
+              Command="{Binding Annotation.CommitNoteCommand}" />
+      <Button AutomationProperties.AutomationId="AnnotationNoteSkip"
+              Content="Skip note"
+              Command="{Binding Annotation.SkipNoteCommand}" />
+    </StackPanel>
+
+    <TextBlock Name="StatusLine"
+               AutomationProperties.AutomationId="AnnotationStatus"
+               AutomationProperties.LiveSetting="Polite"
+               VerticalAlignment="Center"
+               Opacity="0.8"
+               MaxWidth="360"
+               TextTrimming="CharacterEllipsis"
+               ToolTip.Tip="{Binding Annotation.StatusText}"
+               Text="{Binding Annotation.StatusText}" />
+
+    <TextBlock Name="HiddenMarksLine"
+               AutomationProperties.AutomationId="AnnotationHiddenMarks"
+               AutomationProperties.LiveSetting="Polite"
+               Margin="8,0,0,0"
+               VerticalAlignment="Center"
+               Foreground="DarkOrange"
+               MaxWidth="360"
+               TextTrimming="CharacterEllipsis"
+               ToolTip.Tip="{Binding Annotation.HiddenMarksText}"
+               IsVisible="{Binding Annotation.HasHiddenMarks}"
+               Text="{Binding Annotation.HiddenMarksText}" />
+
+  </WrapPanel>
+
+</UserControl>

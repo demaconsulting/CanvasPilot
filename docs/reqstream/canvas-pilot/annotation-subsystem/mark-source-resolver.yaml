@@ -1,0 +1,70 @@
+---
+# Software Unit Requirements for the MarkSourceResolver Unit
+#
+# The MarkSourceResolver unit finds which parts of a picture's source file lie under a mark, from the element positions
+# and anchors that the renderer reported with the picture, and says honestly when the kind of picture reports none. The
+# unit has no state and no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Annotation Subsystem Requirements
+        sections:
+          - title: MarkSourceResolver Requirements
+            requirements:
+              - id: CanvasPilot-MarkSourceResolver-FindElementsUnderMark
+                title: >-
+                  The MarkSourceResolver shall report, for a mark on a picture whose renderer reported element
+                  positions, the elements that the mark covers by its shape: for a rectangle or an ellipse the elements
+                  of which at least a quarter of the box is covered or whose center is inside it, for an arrow the
+                  element that holds the head and then the element that holds the tail, and for a freehand stroke the
+                  elements that the stroke crosses; for a picture with model anchors, the anchors inside a rectangle or
+                  ellipse, the one anchor nearest the head of an arrow within 24 pixels, and the anchors within 8 pixels
+                  of a stroke; each with its kind, identifier, text, source line, and box or pixel, the most covered
+                  first.
+                justification: |
+                  The assistant works with the source file, so the names, texts, and lines of the parts the user pointed
+                  at tell it much more than pixels do. The rules follow what each shape means: an area covers what it
+                  mostly overlaps, an arrow points at one thing, and a stroke touches what it crosses. Anchors have no
+                  size, so they count when the shape reaches them.
+                tests:
+                  - MarkSourceResolver_Resolve_RectangleAroundNode_ReportsNodeWithKindIdTextLineAndBox
+                  - MarkSourceResolver_Resolve_RectangleOverTwoNodes_OrdersByCoverageThenSmallerBoxThenRenderOrder
+                  - MarkSourceResolver_Resolve_RectangleCoveringPartOfNode_NeedsAQuarterOfTheNodeBox
+                  - MarkSourceResolver_Resolve_SmallRectangleAtCenterOfLargeElement_FindsTheElement
+                  - MarkSourceResolver_Resolve_RectangleOverEmptySpace_FindsNothingButIsAvailable
+                  - MarkSourceResolver_Resolve_Ellipse_UsesTheEllipseNotItsBoundingBox
+                  - MarkSourceResolver_Resolve_Arrow_FindsHeadElementThenTailElement
+                  - MarkSourceResolver_Resolve_ArrowHeadInNestedElements_NamesSmallerElementFirst
+                  - MarkSourceResolver_Resolve_FreehandAcrossNodes_FindsCrossedElementsOrderedByStrokeLength
+                  - MarkSourceResolver_Resolve_FreehandOverEmptySpace_FindsNothing
+                  - MarkSourceResolver_Resolve_ElementsWithoutBoxOrWithoutHeight_AreSkippedOrWidened
+                  - MarkSourceResolver_Resolve_RectangleOverAnchors_ReportsAnchorsInsideNearestFirst
+                  - MarkSourceResolver_Resolve_EllipseOverAnchors_ExcludesAnchorInCornerOfBoundingBox
+                  - MarkSourceResolver_Resolve_ArrowNearAnchors_NamesOnlyTheNearestWithinTwentyFourPixels
+                  - MarkSourceResolver_Resolve_FreehandNearAnchors_NamesAnchorsWithinEightPixelsOfStroke
+                  - MarkSourceResolver_Resolve_NullMark_ThrowsArgumentNullException
+
+              - id: CanvasPilot-MarkSourceResolver-ReportNoPositionsHonestly
+                title: >-
+                  The MarkSourceResolver shall report that the picture cannot tell, with a reason that names the picture's
+                  format, when the renderer reported neither element positions nor anchors with a position, and shall
+                  not report an empty list of elements as the answer in that case.
+                justification: |
+                  SVG, PDF, presentations, and raster pictures carry no element data. An empty list would say that nothing
+                  lies under the mark, and the assistant would believe that the user pointed at nothing. The assistant
+                  must be told that the picture cannot say.
+                tests:
+                  - MarkSourceResolver_Resolve_PictureWithoutPositions_ReportsNotAvailableWithReason
+
+              - id: CanvasPilot-MarkSourceResolver-BoundResultSize
+                title: >-
+                  The MarkSourceResolver shall report at most 25 elements for one mark and shall say that the list is
+                  cut when there were more, or when the renderer itself left elements out of what it reported.
+                justification: |
+                  A mark over a crowded diagram would otherwise list every node in it, which fills the message without
+                  helping the assistant. The reader needs to know that the list is not complete, so that it does not
+                  take a shorter list for the whole truth.
+                tests:
+                  - MarkSourceResolver_Resolve_MoreThanTheLimit_ReturnsTwentyFiveAndFlagsTruncation
+                  - MarkSourceResolver_Resolve_RendererTruncatedPositions_PassesTheFlagOn

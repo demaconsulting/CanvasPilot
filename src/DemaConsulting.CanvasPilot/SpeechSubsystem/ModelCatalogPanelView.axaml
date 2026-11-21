@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.SpeechSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.SpeechSubsystem.ModelCatalogPanelView"
+             x:DataType="vm:ModelCatalogPanelViewModel">
+
+  <UserControl.DataTemplates>
+    <!-- One model row: name, state, progress while downloading, the last failure, and the download buttons. -->
+    <DataTemplate DataType="vm:ModelListItemViewModel">
+      <StackPanel Spacing="2" Margin="0,4">
+        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+        <TextBlock AutomationProperties.AutomationId="SpeechModelStatus"
+                   Text="{Binding StatusText}"
+                   Opacity="0.7" />
+        <ProgressBar AutomationProperties.AutomationId="SpeechModelProgress"
+                     Minimum="0"
+                     Maximum="1"
+                     IsIndeterminate="{Binding ProgressFraction, Converter={x:Static ObjectConverters.IsNull}}"
+                     Value="{Binding ProgressFraction}"
+                     IsVisible="{Binding IsDownloading}" />
+        <TextBlock AutomationProperties.AutomationId="SpeechModelFailure"
+                   Foreground="Firebrick"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasFailureMessage}"
+                   Text="{Binding FailureMessage}" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button AutomationProperties.AutomationId="SpeechModelDownloadButton"
+                  Content="Download"
+                  IsEnabled="{Binding CanDownload}"
+                  Command="{Binding $parent[ListBox].((vm:ModelCatalogPanelViewModel)DataContext).DownloadCommand}"
+                  CommandParameter="{Binding}" />
+          <Button AutomationProperties.AutomationId="SpeechModelCancelButton"
+                  Content="Cancel"
+                  IsVisible="{Binding IsDownloading}"
+                  Command="{Binding $parent[ListBox].((vm:ModelCatalogPanelViewModel)DataContext).CancelDownloadCommand}"
+                  CommandParameter="{Binding}" />
+        </StackPanel>
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.DataTemplates>
+
+  <StackPanel Spacing="6">
+
+    <TextBlock Text="Speech models" FontWeight="SemiBold" />
+    <TextBlock TextWrapping="Wrap"
+               Opacity="0.7"
+               Text="Choose the model for each direction. A model must be downloaded before it can be used. Downloads start at once, are not undone by Cancel, and stop when this dialog closes." />
+
+    <TextBlock AutomationProperties.AutomationId="SpeechModelsMessage"
+               TextWrapping="Wrap"
+               Foreground="Firebrick"
+               IsVisible="{Binding HasMessage}"
+               Text="{Binding Message}" />
+
+    <TextBlock Text="Speech to text" Margin="0,4,0,0" />
+    <ListBox AutomationProperties.AutomationId="SpeechSttModelList"
+             MaxHeight="200"
+             ItemsSource="{Binding SttModels}"
+             SelectedItem="{Binding SelectedSttModel}" />
+
+    <TextBlock Text="Text to speech" Margin="0,4,0,0" />
+    <ListBox AutomationProperties.AutomationId="SpeechTtsModelList"
+             MaxHeight="200"
+             ItemsSource="{Binding TtsModels}"
+             SelectedItem="{Binding SelectedTtsModel}" />
+
+    <Button AutomationProperties.AutomationId="SpeechRefreshModelsButton"
+            Content="Refresh models"
+            HorizontalAlignment="Left"
+            Command="{Binding RefreshCommand}" />
+
+  </StackPanel>
+
+</UserControl>

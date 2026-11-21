@@ -1,0 +1,157 @@
+---
+# Preview Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Preview subsystem
+# - The Preview subsystem spans ImageRenderService (IImageRenderService.cs, ImageRenderService.cs, RenderResult.cs),
+#   PreviewPane (PreviewPaneViewModel.cs, PreviewPaneView.axaml, RenderedImageBitmap.cs, IRenderedImageSource.cs), and
+#   ImageExporter (ImageExporter.cs, IImageExporter.cs, IExportDialogs.cs), and ImageDragSource (ImageDragSource.cs)
+# - Subsystem requirements describe the preview behavior that satisfies the system-level preview requirements
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Preview-RenderSelectedImage
+            title: >-
+              The Preview subsystem shall draw the image source file selected in the open project with CanvasNet,
+              confined to the project folder, in the background, and show the picture in the main window.
+            justification: |
+              Seeing the picture of the selected file is the purpose of the application's main window. Drawing in
+              the background keeps the window responsive, and confining the files the drawing may read to the
+              project keeps a file from pulling in unrelated files.
+            children:
+              - CanvasPilot-ImageRenderService-RenderFileToPixels
+              - CanvasPilot-ImageRenderService-ConfineFileAccess
+              - CanvasPilot-PreviewPane-RenderSelectedFile
+              - CanvasPilot-PreviewPane-ConvertPixelsForDisplay
+            tests:
+              - PreviewSubsystem_RenderSelectedImage_SvgInProject_ShowsRenderedPixels
+
+          - id: CanvasPilot-Preview-ExplainRenderProblems
+            title: >-
+              The Preview subsystem shall show that a render is running, and shall explain a file that cannot be
+              drawn with its error code, message, and hint, and a picture that is incomplete with the notes the
+              renderer reported, without failing.
+            justification: |
+              Files are edited while they are shown, so they are often briefly invalid. The user should be told
+              what is wrong, in the words of the drawing library, and the application should keep working and
+              recover as soon as the file is valid again.
+            children:
+              - CanvasPilot-ImageRenderService-ReportNotes
+              - CanvasPilot-ImageRenderService-ReturnFailuresAsResults
+              - CanvasPilot-PreviewPane-ShowBusyAndErrors
+              - CanvasPilot-PreviewPane-ShowDiagnostics
+            tests:
+              - PreviewSubsystem_ReportRenderProblems_BrokenFile_ShowsErrorThenRecovers
+
+          - id: CanvasPilot-Preview-KeepPreviewCurrent
+            title: >-
+              The Preview subsystem shall keep the shown picture matched to the selected file by canceling and
+              ignoring renders of files that are no longer selected, and by rendering again when files in the
+              project folder change on disk.
+            justification: |
+              The picture beside a file name must always be that file's current picture, whatever order renders
+              finish in and whoever edits the file or the assets it embeds.
+            children:
+              - CanvasPilot-ImageRenderService-HonorCancellation
+              - CanvasPilot-PreviewPane-DiscardStaleRenders
+              - CanvasPilot-PreviewPane-RenderAgainOnFileChanges
+            tests:
+              - PreviewSubsystem_KeepPreviewCurrent_SelectedFileEdited_RendersNewContent
+
+          - id: CanvasPilot-Preview-ExportImage
+            title: >-
+              The Preview subsystem shall let the user save the shown picture as a PNG file or copy it to the
+              clipboard, only while a picture is shown.
+            justification: |
+              The pictures are made to be used elsewhere, in email, presentations, and other media, and a PNG
+              file or the clipboard are the ways those programs take a picture.
+            children:
+              - CanvasPilot-ImageRenderService-EncodePng
+              - CanvasPilot-ImageExporter-EnableWhenPictureShown
+              - CanvasPilot-ImageExporter-ExportPng
+              - CanvasPilot-ImageExporter-CopyToClipboard
+            tests:
+              - PreviewSubsystem_ExportImage_ShownPicture_WritesPngAndCopiesToClipboard
+
+          - id: CanvasPilot-Preview-ExportAtRequestedSize
+            title: >-
+              The Preview subsystem shall draw the shown file again at a requested width and height, fitted with its ratio
+              kept, over a requested background or transparent, and encode the picture as a PNG file with a requested
+              resolution written into it, using the folder of the open project as the only folder the file may read.
+            justification: |
+              A picture is used at the size of its use: on a slide, in a mail, on paper. Drawing the source file again at
+              that size keeps lines sharp where stretching the shown pixels would blur them, and the resolution in the file
+              tells the program that opens it how large the picture is meant to be. The folder of the project is kept so
+              that the second drawing is as confined as the first.
+            children:
+              - CanvasPilot-ImageRenderService-RenderAtARequestedSize
+              - CanvasPilot-ImageRenderService-WritePngResolution
+              - CanvasPilot-ImageExporter-ExportAtPresetSize
+            tests:
+              - PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution
+              - PreviewSubsystem_ExportAtPreset_ShownPicture_WritesPngOfThePresetSizeAndRemembersTheChoice
+
+          - id: CanvasPilot-Preview-ReportPictureFacts
+            title: >-
+              The Preview subsystem shall identify each picture it shows by the file it was drawn from and by
+              fingerprints of that file and of the picture's pixels, and shall report where the elements of a
+              diagram, chart, or model are in the picture, in picture pixels, for the kinds of file that provide them.
+            justification: |
+              Messages about a picture, and marks on it, must stay tied to the exact version the user saw, even
+              after the file is edited and the picture is drawn again. The fingerprints tell versions apart, and
+              the element positions let a mark be traced back to the part of the source file it covers.
+            children:
+              - CanvasPilot-ImageRenderService-ReportSnapshotIdentity
+              - CanvasPilot-ImageRenderService-ReportElementPositions
+            tests:
+              - PreviewSubsystem_ReportPictureFacts_DiagramAndSvg_ShowsIdentityAndPositions
+
+          - id: CanvasPilot-Preview-HostOverlay
+            title: >-
+              The Preview subsystem shall provide a layer over the shown picture that the host fills with its own
+              content, laid out in the picture's pixel coordinates at any zoom and scaled together with the
+              picture, and that stays the same while pictures are shown, change, or fail to draw, and a place in
+              the pane's top bar for the host's controls for that layer, which is not scaled with the picture.
+            justification: |
+              Marks and other content that refer to places in the picture need a surface whose coordinates are
+              the picture's pixels. Keeping the layer in the preview and its content outside keeps the preview
+              free of any knowledge of what is drawn on it, and keeping it across renders lets the owner of the
+              content decide what happens to it when the picture changes. The controls of that content must stay
+              the same size at every zoom, so they have a place of their own that is not scaled.
+            children:
+              - CanvasPilot-PreviewPane-HostOverlay
+              - CanvasPilot-PreviewPane-HostToolbar
+            tests:
+              - PreviewSubsystem_HostOverlay_ContentAssigned_StaysWhilePicturesChange
+
+          - id: CanvasPilot-Preview-ShowNotesOfOtherParts
+            title: >-
+              The Preview subsystem shall list notes that another part gives for the shown picture with the notes of the
+              renderer, so that the user finds them where the notes of the picture are, replace the notes of one group by
+              the next notes of that group without touching the others, and remove them all when the picture is drawn again.
+            justification: |
+              A part that checks a picture, such as the check against a style, has something to say about the picture that is
+              shown. The notes of the renderer are where the user already looks, and a narrow interface lets the part say it
+              without depending on the pane that shows it.
+            children:
+              - CanvasPilot-PreviewPane-ShowStyleNotes
+            tests:
+              - PreviewSubsystem_ShowNotesOfOtherParts_ListedWithRendererNotesAndGoWithTheNextPicture
+
+          - id: CanvasPilot-Preview-DragImageOut
+            title: >-
+              The Preview subsystem shall let the user drag the shown picture out of the preview into another
+              program as a PNG file and as a bitmap, keeping the files it writes for this in a folder of its own.
+            justification: |
+              Dragging the picture straight into a presentation, a mail message, or a folder saves the user the
+              steps of exporting a file and finding it again. Keeping the files in a folder of the application
+              lets them be removed without risk to the user's files.
+            children:
+              - CanvasPilot-ImageDragSource-WritePngForDrag
+              - CanvasPilot-ImageDragSource-ConfineToOwnFolder
+              - CanvasPilot-PreviewPane-StartImageDrag
+            tests:
+              - PreviewSubsystem_DragImageOut_ShownPicture_ProvidesPngFileAndBytes

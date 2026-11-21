@@ -1,4 +1,12 @@
-# Template DotNet Tool
+# CanvasPilot
+
+<!-- IMPORTANT: All links in this file must be absolute URLs.
+     This file is distributed in packages and relative links will not resolve. -->
+
+![CanvasPilot banner: the CanvasPilot name with the tagline "Describe it. Get the picture." and the sample request
+"Draw our release flow". A typed or spoken request, files dropped in, marks on a picture, and many source formats flow
+on curved arrows into the CanvasPilot AI copilot, and arrows lead out to a standalone picture composed of a flowchart,
+a chart, and nested pictures, a PNG file, an email, and a presentation slide][hero]
 
 [![GitHub forks][badge-forks]][link-forks]
 [![GitHub stars][badge-stars]][link-stars]
@@ -7,176 +15,100 @@
 [![Build][badge-build]][link-build]
 [![Quality Gate][badge-quality]][link-quality]
 [![Security][badge-security]][link-security]
-[![NuGet][badge-nuget]][link-nuget]
 
-DEMA Consulting template project for DotNet Tools, demonstrating best practices for building command-line
-tools with .NET.
+## What is CanvasPilot?
 
-The diagram below is a placeholder workflow diagram: replace its TODO boxes (in `docs/images/workflow.svg`,
-then re-render `docs/images/workflow.png`) to show how users prepare inputs, run your tool, get its outputs,
-and use them.
+CanvasPilot is a Windows desktop app for creating pictures with an AI copilot. You describe a picture by typing or
+speaking, and the copilot builds it with the [CanvasNet][link-canvasnet] library, compositing SVG, Mermaid, PlantUML,
+Vega-Lite, OpenSCAD, PDF, PowerPoint, and Visio pages, and raster images (even images nested in images) into a
+standalone picture for email, presentations, and other media. There is no Markdown or PDF document pipeline to set up.
 
-![Placeholder workflow diagram: replace the TODO boxes to show how users prepare inputs, run your tool, get
-its outputs, and use them][workflow]
+The workflow runs from a project folder to a picture you can export, copy, or drag into another program. When the
+picture is not right, you mark the problems on it or ask for changes, and go around again.
+
+![Workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in files,
+the planned AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the PNG; a
+return arrow from the preview to the description step is for marking problems or asking for changes][workflow]
 
 ## Features
 
-This template demonstrates:
+Available now:
 
-- **Standardized Command-Line Interface**: Context class handling common arguments
-  (`--version`, `--help`, `--silent`, `--validate`, `--results`, `--depth`, `--log`)
-- **Self-Validation**: Built-in validation tests with TRX/JUnit output
-- **Multi-Platform Support**: Builds and runs on Windows, Linux, and macOS
-- **Multi-Runtime Support**: Targets .NET 10 and 11
-- **Comprehensive CI/CD**: GitHub Actions workflows with quality checks, builds, and
-  integration tests
-- **Linting Enforcement**: LintMark, TextLint, and yamllint enforced on every CI run
-- **Continuous Compliance**: Compliance evidence generated automatically on every CI run, following
-  the [Continuous Compliance][link-continuous-compliance] methodology
-- **SonarCloud Integration**: Quality gate and security analysis on every build
-- **Documentation Generation**: Automated build notes, user guide, code quality reports,
-  requirements, justifications, and trace matrix
-- **Requirements Traceability**: Requirements linked to passing tests with auto-generated trace matrix
+- **Projects**: A project is a folder; create, open, save, and close projects, and return to recent ones
+- **Project explorer**: Lists the image files of the open project and follows changes made by other tools
+- **Live preview**: Draws the selected file with CanvasNet and redraws it when the file changes, with error codes,
+  hints, and diagnostics explained below the picture
+- **Export and share**: Export the picture as a PNG file, copy the image, or drag the picture into other applications
+- **Chat composer**: Write a message by typing or by push-to-talk dictation (hold F8), drag and drop or paste files,
+  folders, and images as inline chips, and undo and redo in fine-grained steps
+- **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows, numbered
+  and with notes; the marks are embedded in the message with crops and the source elements under each mark
+- **Drawing knowledge**: Browse CanvasNet's built-in cards and CanvasPilot's own project guide from the Help menu
+- **Style kits**: Reusable palettes, fonts, size presets, and example images from the program, your folder, the project,
+  or a team folder; export at preset sizes and check a picture against the style
+- **Settings**: Choose the AI provider, and the speech devices and models, with model downloads
+- **Windows installer**: One MSI package for 64-bit Windows
 
-## Installation
+Planned:
 
-Install the tool globally using the .NET CLI:
+- **AI copilot chat**: GitHub Copilot or Ollama writes, renders, inspects, and fixes drawings in a self-checking loop
+- **Safe by default**: The copilot can use only CanvasPilot's own tools, confined to the project folder, with an
+  opt-in unrestricted mode
+- **Spoken replies**: Text-to-speech for the copilot's answers
+- **Variations**: Compare alternative drafts side by side
+- **Export profiles and batch export**: Export many pictures at once, in the sizes and formats each use needs
+- **Linux and macOS builds**
 
-```bash
-dotnet tool install -g DemaConsulting.TemplateDotNetTool
-```
+## Getting started
 
-## Usage
+CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
 
-```bash
-# Default behavior (no arguments) — displays banner and copyright
-templatetool
+1. Download `CanvasPilot-{version}-win-x64.msi` from the [releases page][link-releases], run it, and start
+   CanvasPilot from the Start Menu.
+2. Choose an AI provider in **Tools > Settings... > AI Provider**:
+   - **GitHub Copilot**: Install the GitHub Copilot CLI (version 1.0.113 or later), run `copilot`, and sign in with
+     `/login`. CanvasPilot uses your installed, signed-in CLI.
+   - **Ollama**: Enter the endpoint (default `http://localhost:11434`) and the model of your self-hosted Ollama server.
+     No GitHub account is needed.
+3. Optionally set up speech in **Tools > Settings... > Speech**: pick your microphone and speakers, and download the
+   speech models.
+4. Choose **File > New Project...**, then start describing a picture.
 
-# Display version
-templatetool --version
+## Learn more
 
-# Display help
-templatetool --help
-
-# Run self-validation
-templatetool --validate
-
-# Save validation results (--result is an accepted alias for --results)
-templatetool --validate --results results.trx
-templatetool --validate --result results.xml
-
-# Set heading depth for embedded validation output
-templatetool --validate --depth 2
-
-# Silent mode with logging
-templatetool --silent --log output.log
-```
-
-## Command-Line Options
-
-| Option | Description |
-| --- | --- |
-| `-v`, `--version` | Display version information |
-| `-?`, `-h`, `--help` | Display help message |
-| `--silent` | Suppress console output |
-| `--validate` | Run self-validation |
-| `--results <file>`, `--result <file>` | Write results to `.trx` (TRX) or `.xml` (JUnit XML) file. |
-| `--depth <#>` | Set heading depth for markdown output (default: 1) |
-| `--log <file>` | Write output to log file |
-
-## Error Handling
-
-Unrecognized arguments cause the tool to print an error message to standard error and exit
-with a non-zero exit code. For example:
-
-```text
-Error: Unsupported argument '--unknown'
-```
-
-This behavior enables CI/CD pipelines to detect and surface misconfiguration failures
-automatically.
-
-## Self Validation
-
-Running self-validation produces a report containing the following information:
-
-```text
-# DEMA Consulting Template DotNet Tool
-
-| Information         | Value                                              |
-| :------------------ | :------------------------------------------------- |
-| Tool Version        | <version>                                          |
-| Machine Name        | <machine-name>                                     |
-| OS Version          | <os-version>                                       |
-| DotNet Runtime      | <dotnet-runtime-version>                           |
-| Time Stamp          | <timestamp> UTC                                    |
-
-✓ TemplateTool_VersionDisplay - Passed
-✓ TemplateTool_HelpDisplay - Passed
-
-Total Tests: 2
-Passed: 2
-Failed: 0
-```
-
-Each test in the report proves:
-
-- **`TemplateTool_VersionDisplay`** - `--version` outputs a valid version string.
-- **`TemplateTool_HelpDisplay`** - `--help` outputs usage and options information.
-
-Use `--depth <#>` to control the heading level of the validation output (default: `1`).
-This is useful when embedding validation output into a larger markdown document:
-
-```bash
-# Embed validation at heading level 2
-templatetool --validate --depth 2
-```
-
-See the [User Guide][link-guide] for more details on the self-validation tests.
-
-On validation failure the tool will exit with a non-zero exit code.
-
-## Documentation
-
-Generated documentation includes:
-
-- **Build Notes**: Release information and changes
-- **User Guide**: Comprehensive usage documentation
-- **Code Quality Report**: CodeQL and SonarCloud analysis results
-- **Requirements**: Functional and non-functional requirements
-- **Requirements Justifications**: Detailed requirement rationale
-- **Trace Matrix**: Requirements to test traceability
-
-## Contributing
-
-See [CONTRIBUTING.md](https://github.com/demaconsulting/TemplateDotNetTool/blob/main/CONTRIBUTING.md) for
-guidelines on reporting bugs, suggesting features, and submitting pull requests.
-
-## License
+- [User Guide][link-guide]: Installation, projects, the chat composer, marking pictures, and settings
+- [CanvasNet][link-canvasnet]: The library that draws the pictures
+- [Speech][link-speech]: The library behind dictation and spoken replies
+- [Releases][link-releases]: Installer packages and release notes
+- [Contributing][link-contributing]: Reporting bugs, suggesting features, and submitting pull requests
+- [Continuous Compliance][link-continuous-compliance]: The methodology this project follows
 
 Copyright (c) DEMA Consulting. Licensed under the MIT License. See [LICENSE][link-license] for details.
 
-By contributing to this project, you agree that your contributions will be licensed under the MIT License.
+<!-- Image References -->
+[hero]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/hero.png
+[workflow]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/workflow.png
 
 <!-- Badge References -->
-[workflow]: https://raw.githubusercontent.com/demaconsulting/TemplateDotNetTool/main/docs/images/workflow.png
-[badge-forks]: https://img.shields.io/github/forks/demaconsulting/TemplateDotNetTool?style=plastic
-[badge-stars]: https://img.shields.io/github/stars/demaconsulting/TemplateDotNetTool?style=plastic
-[badge-contributors]: https://img.shields.io/github/contributors/demaconsulting/TemplateDotNetTool?style=plastic
-[badge-license]: https://img.shields.io/github/license/demaconsulting/TemplateDotNetTool?style=plastic
-[badge-build]: https://img.shields.io/github/actions/workflow/status/demaconsulting/TemplateDotNetTool/build_on_push.yaml?style=plastic
-[badge-quality]: https://sonarcloud.io/api/project_badges/measure?project=demaconsulting_TemplateDotNetTool&metric=alert_status
-[badge-security]: https://sonarcloud.io/api/project_badges/measure?project=demaconsulting_TemplateDotNetTool&metric=security_rating
-[badge-nuget]: https://img.shields.io/nuget/v/DemaConsulting.TemplateDotNetTool?style=plastic
+[badge-forks]: https://img.shields.io/github/forks/demaconsulting/CanvasPilot?style=plastic
+[badge-stars]: https://img.shields.io/github/stars/demaconsulting/CanvasPilot?style=plastic
+[badge-contributors]: https://img.shields.io/github/contributors/demaconsulting/CanvasPilot?style=plastic
+[badge-license]: https://img.shields.io/github/license/demaconsulting/CanvasPilot?style=plastic
+[badge-build]: https://img.shields.io/github/actions/workflow/status/demaconsulting/CanvasPilot/build_on_push.yaml?style=plastic
+[badge-quality]: https://sonarcloud.io/api/project_badges/measure?project=demaconsulting_CanvasPilot&metric=alert_status
+[badge-security]: https://sonarcloud.io/api/project_badges/measure?project=demaconsulting_CanvasPilot&metric=security_rating
 
 <!-- Link References -->
-[link-forks]: https://github.com/demaconsulting/TemplateDotNetTool/network/members
-[link-stars]: https://github.com/demaconsulting/TemplateDotNetTool/stargazers
-[link-contributors]: https://github.com/demaconsulting/TemplateDotNetTool/graphs/contributors
-[link-license]: https://github.com/demaconsulting/TemplateDotNetTool/blob/main/LICENSE
-[link-build]: https://github.com/demaconsulting/TemplateDotNetTool/actions/workflows/build_on_push.yaml
-[link-quality]: https://sonarcloud.io/dashboard?id=demaconsulting_TemplateDotNetTool
-[link-security]: https://sonarcloud.io/dashboard?id=demaconsulting_TemplateDotNetTool
-[link-nuget]: https://www.nuget.org/packages/DemaConsulting.TemplateDotNetTool
-[link-guide]: https://github.com/demaconsulting/TemplateDotNetTool/blob/main/docs/user_guide/introduction.md
+[link-forks]: https://github.com/demaconsulting/CanvasPilot/network/members
+[link-stars]: https://github.com/demaconsulting/CanvasPilot/stargazers
+[link-contributors]: https://github.com/demaconsulting/CanvasPilot/graphs/contributors
+[link-license]: https://github.com/demaconsulting/CanvasPilot/blob/main/LICENSE
+[link-build]: https://github.com/demaconsulting/CanvasPilot/actions/workflows/build_on_push.yaml
+[link-quality]: https://sonarcloud.io/dashboard?id=demaconsulting_CanvasPilot
+[link-security]: https://sonarcloud.io/dashboard?id=demaconsulting_CanvasPilot
+[link-releases]: https://github.com/demaconsulting/CanvasPilot/releases
+[link-contributing]: https://github.com/demaconsulting/CanvasPilot/blob/main/CONTRIBUTING.md
+[link-guide]: https://github.com/demaconsulting/CanvasPilot/tree/main/docs/user_guide
+[link-canvasnet]: https://github.com/demaconsulting/CanvasNet
+[link-speech]: https://github.com/demaconsulting/Speech
 [link-continuous-compliance]: https://github.com/demaconsulting/ContinuousCompliance

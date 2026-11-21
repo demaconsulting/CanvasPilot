@@ -1,0 +1,55 @@
+---
+# Software Unit Requirements for the KnowledgeSearch Unit
+#
+# The KnowledgeSearch unit finds the cards of a knowledge catalog that fit some words, with a score that is the same for
+# the same input. It reads only the catalog it is given and has no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        sections:
+          - title: KnowledgeSearch Requirements
+            requirements:
+              - id: CanvasPilot-KnowledgeSearch-RankByWeightedTokens
+                title: >-
+                  The KnowledgeSearch shall cut the query and the identifier, other names, title, summary, tags, and
+                  example names of each card into lower-case words, treat a word of more than three letters that ends in
+                  s as the word without it, score each word of the query once by the best field it matches, an other name
+                  or identifier word highest and a summary word lowest, and a word that starts a longer word of three
+                  letters or more lower, add a bonus to a card that every word matches and a larger one to a card whose
+                  name, other name, or identifier is the whole query, return the cards that score above zero with the best
+                  first and no more than the number asked for, return nothing for a query without a word, and refuse a
+                  missing query and a number of results below one.
+                justification: |
+                  People and assistants ask for cards in their own words: the name of a format, a thing they want to draw,
+                  the plural of a word. Putting the exact names of a card first, then the words of its title, and last the
+                  words of its summary, finds the card that is about the thing before the card that only mentions it, and
+                  the bonus for a card that has every word keeps a card that has all of them above one that has a single
+                  strong match. The body is not searched, because its many words would make every question match many cards.
+                tests:
+                  - KnowledgeSearch_Search_ExactAliasOutranksSummaryHit
+                  - KnowledgeSearch_Search_PluralAndSingularWords_MatchEachOther
+                  - KnowledgeSearch_Search_ShortTokensKeepTheirS
+                  - KnowledgeSearch_Search_CardThatEveryTokenMatchesGetsTheBonus
+                  - KnowledgeSearch_Search_RepeatedWordsInTheQuery_CountOnce
+                  - KnowledgeSearch_Search_ExampleNameHit_FindsTheCard
+                  - KnowledgeSearch_Search_FieldWeights_AreAsSpecified
+                  - KnowledgeSearch_Search_WholeIdentifierAsQuery_GetsTheWholeQueryScore
+                  - KnowledgeSearch_Search_BlankNullAndBadMaxResults_AreHandled
+                  - KnowledgeSearch_Search_MaxResults_LimitsTheListToTheBestCards
+                  - KnowledgeSearch_Search_IdentifierOfEveryCard_FindsThatCardFirst
+                  - KnowledgeSearch_Search_RealCatalog_FindsTheCardsForCommonQuestions
+
+              - id: CanvasPilot-KnowledgeSearch-BeDeterministic
+                title: >-
+                  The KnowledgeSearch shall order cards of the same score by the number of levels of their identifier,
+                  fewest first, and then by identifier, and shall give the same list for the same query and the same cards
+                  every time, with no dependence on the culture, on chance, or on the order of a dictionary.
+                justification: |
+                  A test, a prompt, and a user who asks twice must see the same answer. When a name is shared by two
+                  formats, the card nearer the top of the tree is the more general one, and an order that does not depend on
+                  anything else makes the list a record that can be compared.
+                tests:
+                  - KnowledgeSearch_Search_Ties_AreOrderedByDepthThenIdentifier
+                  - KnowledgeSearch_Search_SameQueryTwice_GivesTheSameResults

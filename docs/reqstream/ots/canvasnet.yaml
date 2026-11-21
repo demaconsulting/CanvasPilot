@@ -1,0 +1,195 @@
+---
+# CanvasNet OTS Software Requirements
+#
+# Requirements for the DemaConsulting.CanvasNet viewer library (DemaConsulting.CanvasNet.Viewer, with the
+# DemaConsulting.CanvasNet core library it brings) as used by CanvasPilot at run time. The library is a runtime
+# dependency, so each requirement is a child of the requirement of the unit that uses the feature
+# (ImageRenderService, ProjectExplorer, MarkImageComposer, KnowledgeCatalog, and StyleKitDocument) and is not a root
+# requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: CanvasNet Requirements
+        requirements:
+          - id: CanvasPilot-OTS-CanvasNet-RenderImageSources
+            title: >-
+              CanvasNet shall render an image source file to a picture of the file's natural size whose pixels
+              are red, green, blue, alpha bytes with straight alpha, tightly packed by row, and report the
+              format it drew.
+            justification: |
+              The preview shows pictures of the user's SVG, diagram, chart, and other image source files. The
+              application copies the pixels as they are and converts them for display, so their layout and
+              alpha representation are part of the interface it relies on.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_SvgFile_ProducesStraightAlphaPixels
+              - CanvasNet_Render_PlantUmlFile_ProducesPicture
+
+          - id: CanvasPilot-OTS-CanvasNet-ListSupportedTypes
+            title: >-
+              CanvasNet shall list the file name extensions it can draw, lower case with the leading dot and
+              including compound extensions.
+            justification: |
+              The project explorer shows exactly the files that can be drawn, so the list of extensions must be
+              available from the library and complete, including multi-part ones such as .vl.json.
+            tags: [ots]
+            tests:
+              - CanvasNet_Extensions_ListsSupportedImageSourceTypes
+
+          - id: CanvasPilot-OTS-CanvasNet-ConfineFileAccess
+            title: >-
+              CanvasNet shall allow the files that a rendered file references to be read only from the folders
+              the caller allows, report a denied file as a warning note, and still draw files that lie in the
+              allowed folders.
+            justification: |
+              Image source files can embed other files by path. The application allows only the project folder
+              so that a file cannot draw unrelated files from the user's computer into a picture.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_UnderRootsPolicy_DeniesEmbeddedFileOutsideRoots
+              - CanvasNet_Render_UnderRootsPolicy_AllowsEmbeddedFileInsideRoots
+
+          - id: CanvasPilot-OTS-CanvasNet-ReportFailures
+            title: >-
+              CanvasNet shall report a file that cannot be rendered by throwing an exception that describes the
+              problem, with a stable error code and a hint for the errors it classifies, and shall distinguish
+              malformed content, a missing file, and an unsupported file type.
+            justification: |
+              Users edit files while they are shown, so failures are common. The application turns each into a
+              message for the user, using the library's code and hint where it provides them, and needs the
+              failures to be distinguishable.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_PageBeyondLastPage_ThrowsViewerExceptionWithCodeAndHint
+              - CanvasNet_Render_UnusableFiles_ThrowDescriptiveExceptions
+
+          - id: CanvasPilot-OTS-CanvasNet-HonorCancellation
+            title: >-
+              CanvasNet shall stop a render with an operation-cancelled exception when the cancellation token
+              given to it is cancelled.
+            justification: |
+              The preview cancels renders of files that are no longer selected, so the library must observe the
+              token it is given instead of always running to completion.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_CancelledToken_ThrowsOperationCanceled
+
+          - id: CanvasPilot-OTS-CanvasNet-EncodePng
+            title: >-
+              CanvasNet shall encode a surface as a PNG stream that decodes to the same pixels, including
+              transparency.
+            justification: |
+              Exporting saves the shown picture as a PNG file, so the encoder must produce valid PNG data that
+              keeps every pixel and its alpha.
+            tags: [ots]
+            tests:
+              - CanvasNet_PngCodec_SaveSurface_WritesValidPngThatRoundTrips
+
+          - id: CanvasPilot-OTS-CanvasNet-ReportElementPositions
+            title: >-
+              CanvasNet shall report, when asked for every position, the kind, identifier, text, source line, and
+              box in picture pixels of each node and edge of a Mermaid diagram and each mark and axis of a
+              Vega-Lite chart, and the pixel position of each anchor that an OpenSCAD model declares, and shall
+              report no positions when none are asked for.
+            justification: |
+              The application traces a mark on a picture to the part of the source file it covers. Only the
+              drawing library knows where it drew each element, so the positions, in the pixels of the picture it
+              returned, are the interface the application relies on, and they must be absent when not requested.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_MermaidWithPositionsSelection_ReportsNodesWithBoxes
+              - CanvasNet_Render_VegaLiteWithPositionsSelection_ReportsMarksAndAxes
+              - CanvasNet_Render_ScadAnchors_ReportsPixelPositions
+
+          - id: CanvasPilot-OTS-CanvasNet-ComposeSvgFromStream
+            title: >-
+              CanvasNet shall draw an SVG document given as a stream, including a PNG picture embedded as a data
+              link and rectangle, ellipse, circle, polyline, and text elements drawn over it, to a picture of the
+              document's size.
+            justification: |
+              The application composes a picture with its marks drawn on it by building an SVG document in memory
+              that embeds the picture the user saw, so that no file has to be written and the picture is exactly
+              the pixels that were shown. The library must draw the embedded picture and every shape over it,
+              including the filled circle of the number badge of a mark.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_SvgStream_WithDataUriImageAndShapes_DrawsAll
+
+          - id: CanvasPilot-OTS-CanvasNet-CropSurface
+            title: >-
+              CanvasNet shall copy a rectangular region of a surface into a new surface of the size of the region
+              that does not change when the original surface changes.
+            justification: |
+              The application cuts the area around a mark from the picture that has the marks drawn on it, and
+              gives the copy to the assistant while the original is disposed. The copy must hold exactly the
+              pixels of the region and must not depend on the original.
+            tags: [ots]
+            tests:
+              - CanvasNet_Surface_Crop_CopiesTheRegionIntoAnIndependentSurface
+
+          - id: CanvasPilot-OTS-CanvasNet-ProvideHelpCards
+            title: >-
+              CanvasNet shall provide its help as a tree of cards that is the same on every read, in which each card has a
+              title, a one-line summary, tags, other names, a body that links to other cards and examples, related cards,
+              and examples with their text, and shall find a card by its path or by one of its other names, ignoring case.
+            justification: |
+              The application tells the user and the assistant how to write each drawing format from the help of the
+              drawing library itself, so that the advice is exactly as current as the library that draws the files. It
+              reads the cards through the interface of the library and relies on their parts and on the way cards are
+              found.
+            tags: [ots]
+            tests:
+              - CanvasNet_HelpCatalog_Default_ProvidesCardsWithBodiesRelatedCardsAndExamples
+
+          - id: CanvasPilot-OTS-CanvasNet-ExtendHelpCards
+            title: >-
+              CanvasNet shall add the cards that are embedded in another assembly to its help cards as new trees after
+              its own, resolving their links against the cards of both, without changing the catalog it was made from.
+            justification: |
+              The application adds its own cards, about working in a project, to the cards of the library and offers them
+              together. They must follow the cards of the library, link to them, and leave the library catalog as it was,
+              because the application then leaves out some cards of both itself, by identifier, from the extended
+              catalog.
+            tags: [ots]
+            tests:
+              - CanvasNet_HelpCatalog_Extend_EmbeddedCard_AddsANewRootAndLeavesTheLibraryUnchanged
+
+          - id: CanvasPilot-OTS-CanvasNet-ClassifyFontFamilies
+            title: >-
+              CanvasNet shall tell whether a font family name is a generic CSS family, a common alias of one, or one of
+              the bundled Liberation families, and which bundled design (sans-serif, serif, or monospace) stands in for
+              it, shall not recognize any other name, and shall split a CSS font-family list into its names.
+            justification: |
+              The application warns the author of a style kit when a font is drawn differently by different formats or on
+              different machines. Only the drawing library knows which names it stands in for with its bundled fonts, so
+              the application asks it and does not keep a list of its own that could drift from the library.
+            tags: [ots]
+            tests:
+              - CanvasNet_GenericFontFamilies_ClassifiesBundledAliasesAndUnknownFamilies
+
+          - id: CanvasPilot-OTS-CanvasNet-RenderAtRequestedSize
+            title: >-
+              CanvasNet shall draw an SVG, a Mermaid diagram, a Vega-Lite chart, and a raster picture at a requested width
+              and height as a picture of exactly that size that is fitted inside the box with its aspect ratio kept, with a
+              margin that is transparent or has a requested background color, and shall scale to the aspect ratio when only
+              one side is requested.
+            justification: |
+              The application exports a picture at the size of its use, for example a slide, by drawing the source file
+              again at that size. It relies on the library for the exact size, for fitting instead of stretching, and for
+              the margin and the transparency, so that no other code has to resample the pixels.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_WidthHeightAndBackground_GivesExactSizeAndTransparency
+
+          - id: CanvasPilot-OTS-CanvasNet-ThemeMermaidFromTheSource
+            title: >-
+              CanvasNet shall draw the nodes of a Mermaid diagram with the theme variables that the front matter of the
+              Mermaid file gives, so that the colors of a style are carried by the file.
+            justification: |
+              The render options of the library have no Mermaid theme, so the colors of a style kit reach a diagram only
+              through the file that is written. The application tells the author of a file what to write and relies on the
+              library to draw it that way.
+            tags: [ots]
+            tests:
+              - CanvasNet_Mermaid_FrontMatterThemeVariables_ColorTheNodes

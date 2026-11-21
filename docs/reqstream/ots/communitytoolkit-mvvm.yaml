@@ -1,0 +1,51 @@
+---
+# CommunityToolkit.Mvvm OTS Software Requirements
+#
+# Requirements for the CommunityToolkit.Mvvm library, whose source generators write the property change
+# notification and command code of the application's view models, as used by CanvasPilot at run time. The
+# library is a runtime dependency, so each requirement is a child of the requirement of the unit that uses the
+# feature (MainWindowShell and PreviewPane) and is not a root requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: CommunityToolkit.Mvvm Requirements
+        requirements:
+          - id: CanvasPilot-OTS-CommunityToolkitMvvm-NotifyPropertyChanges
+            title: >-
+              CommunityToolkit.Mvvm shall generate observable properties that raise a change notification for
+              the property and for each dependent property they name when the value changes, and raise nothing
+              when the value is set to the same value.
+            justification: |
+              The views refresh from the property change notifications of their view models. Dependent
+              properties, such as the status text that follows the busy flag, must be reported with the
+              property they derive from, and repeated notifications for an unchanged value would cause needless
+              re-rendering.
+            tags: [ots]
+            tests:
+              - CommunityToolkitMvvm_ObservableProperty_RaisesOwnAndDependentNotifications
+
+          - id: CanvasPilot-OTS-CommunityToolkitMvvm-FollowCommandAvailability
+            title: >-
+              CommunityToolkit.Mvvm shall generate commands whose can-execute rule is the member they name,
+              that raise their can-execute change event when a property they depend on changes, and that run
+              their method when executed.
+            justification: |
+              The menus and dialog buttons are bound to generated commands, and they are enabled or disabled
+              by the commands' can-execute rules. The commands must tell the user interface when the rule's
+              answer changes, such as when a project is opened.
+            tags: [ots]
+            tests:
+              - CommunityToolkitMvvm_RelayCommand_FollowsCanExecuteRule
+
+          - id: CanvasPilot-OTS-CommunityToolkitMvvm-RunAsyncCommandsOnce
+            title: >-
+              CommunityToolkit.Mvvm shall generate asynchronous commands that report that they are running and
+              cannot be started again until the run ends.
+            justification: |
+              Opening a project, saving, and similar actions take time and are started from menus. The
+              application relies on the command refusing a second start, so that a repeated menu choice does not
+              run the same action twice at once.
+            tags: [ots]
+            tests:
+              - CommunityToolkitMvvm_AsyncRelayCommand_ReportsRunningAndRefusesConcurrentRuns

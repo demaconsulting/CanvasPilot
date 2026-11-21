@@ -1,0 +1,54 @@
+---
+# Software Unit Requirements for the MarkImageComposer Unit
+#
+# The MarkImageComposer unit draws the marks of a message on the picture they were drawn on, numbered, and cuts out the
+# area around each mark, with CanvasNet, without a window and without writing a file.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Payload Subsystem Requirements
+        sections:
+          - title: MarkImageComposer Requirements
+            requirements:
+              - id: CanvasPilot-MarkImageComposer-DrawNumberedMarks
+                title: >-
+                  The MarkImageComposer shall draw each mark on the picture it was drawn on, in the size of the picture, as
+                  a line of its shape in a color that belongs to its number with a white line under it, and a badge with
+                  its number at the top-left of the mark, leave every other pixel as it was shown without changing the
+                  picture, and refuse a mark that was drawn on another picture.
+                justification: |
+                  The assistant is shown the picture with the marks on it, and the text refers to them by number. The
+                  marks must be readable on any background, must be where the user drew them, and must not change what
+                  the user saw anywhere else. A mark on another picture would be drawn on the wrong pixels.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ComposeSvgFromStream
+                tests:
+                  - MarkImageComposer_Compose_Marks_AnnotatedPictureHasSizeOfPicture
+                  - MarkImageComposer_Compose_Rectangle_DrawsColoredLinesOverWhiteAndLeavesOtherPixelsAsShown
+                  - MarkImageComposer_Compose_Mark_DrawsNumberedBadgeAtTopLeftOfMark
+                  - MarkImageComposer_Compose_EllipseArrowAndFreehand_AreDrawnWhereTheirGeometrySays
+                  - MarkImageComposer_Compose_Arrow_HasAHeadAtItsPointedEnd
+                  - MarkImageComposer_ColorOf_Numbers_GiveDistinctColorsThatRepeatAfterSix
+                  - MarkImageComposer_Compose_Marks_DoNotChangeTheRenderedPicture
+                  - MarkImageComposer_Compose_PictureWithTransparency_KeepsTransparentPixelsAwayFromMarks
+                  - MarkImageComposer_Compose_NoMarks_ReturnsPictureWithoutAreas
+                  - MarkImageComposer_Compose_InvalidArguments_Throw
+                  - MarkImageComposer_Sizes_GrowWithPictureWithinLimits
+
+              - id: CanvasPilot-MarkImageComposer-CropAroundMarks
+                title: >-
+                  The MarkImageComposer shall cut out for each mark, in the order of the numbers, the area that holds its
+                  box and its badge with a margin of 16 pixels, at least 64 pixels wide and high and inside the picture, or
+                  the whole picture where it is smaller, from the picture with all marks drawn, and shall report the area
+                  in the pixels of the picture.
+                justification: |
+                  A language model reads a picture at a reduced size, so a small mark on a large picture can be lost. A
+                  cut-out around the mark shows it in detail, and the other marks that fall in it show how they relate.
+                  The area in picture pixels tells where in the whole picture the cut-out is.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-CropSurface
+                tests:
+                  - MarkImageComposer_Compose_Mark_CutsAreaOfBoxAndBadgeWithMarginFromAnnotatedPicture
+                  - MarkImageComposer_Compose_MarkNearCornerOrOnSmallPicture_KeepsAreaInsidePicture
+                  - MarkImageComposer_Compose_SeveralMarks_GivesOneAreaForEachInNumberOrder

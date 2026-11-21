@@ -1,0 +1,99 @@
+---
+# Software Unit Requirements for the StyleKitDocument Unit
+#
+# The StyleKitDocument unit holds the values of a style kit and the file format that they are kept in: it reads the
+# style file and the folder of a kit with a message for each wrong property, checks a kit that is built in memory with the
+# same rules, warns about fonts that not every format draws, bounds the size of every part of a kit, and writes a kit as
+# canonical text. It uses CanvasNet only to classify font families and has no dependency on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleKitDocument Requirements
+            requirements:
+              - id: CanvasPilot-StyleKitDocument-ReadAndWriteVersionedJson
+                title: >-
+                  The StyleKitDocument shall read a kit from a style file of format version 1 and from its folder, giving
+                  every part of the kit a default when the file leaves it out except the id, the name, and the palette,
+                  shall list the example images from the files of the examples folder, sorted by name, with the caption
+                  that the file gives each one, shall refuse a file of a newer or an unknown format version, shall report a
+                  property it does not know as a warning, and shall write a kit as text with the same property order,
+                  indentation, line ends, and color form every time, so that a kit that is read and written again is the
+                  same text.
+                justification: |
+                  A kit is kept in a file that people edit and share, so the file must stay readable when a later version
+                  adds to it, must not be read half when it is from a later version, and must be written the same way every
+                  time so that a change of a kit is a small difference in a review. The files of the examples folder are the
+                  examples, so that a copy, a zip, and a hand edit all give the same kit. The Mermaid part of a kit only carries
+                  values that an author writes into a Mermaid file, because the drawing library takes the theme from the file,
+                  so the kit relies on the library to read them there.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ThemeMermaidFromTheSource
+                tests:
+                  - StyleKitDocument_Write_FullKit_RoundTripsEveryFieldAndIsByteStable
+                  - StyleKitDocument_Parse_MinimalKit_UsesDefaults
+                  - StyleKitDocument_Parse_LowerCaseColors_AreNormalizedToUpperCase
+                  - StyleKitDocument_ReadFolder_ExamplesFolder_ListsTopLevelFilesSortedWithCaptions
+                  - StyleKitDocument_ReadFolder_CaptionWithoutFileAndFolderNameDifferentFromId_AreWarnings
+                  - StyleKitDocument_Parse_FormatVersion_IsCheckedFirst
+                  - StyleKitDocument_Parse_UnknownProperty_IsAWarningAndIsDroppedOnWrite
+                  - StyleKitDocument_ReadFolder_MissingFolderMissingFileOrOversizeFile_ReportsErrors
+
+              - id: CanvasPilot-StyleKitDocument-ValidateWithClearMessages
+                title: >-
+                  The StyleKitDocument shall check every value of a kit, as read from a file or built in memory, shall
+                  report every error and not only the first, shall name the property in the way a person edits the file and
+                  say how to fix it, shall return no kit when there is an error, and shall refuse an id, a color, a theme, a
+                  number, a size preset, and an example path that does not follow the rules of the format, including an
+                  example path that could name a file outside the examples folder.
+                justification: |
+                  A kit is written by hand, so it will be wrong, and the person who wrote it needs to know which property,
+                  what is wrong, and what is allowed, for all the mistakes at once. A kit that is not valid must never be
+                  used or saved. An example path is used to build a file name below the folder of the kit, so one that
+                  climbs out of the folder, names a root, or goes into another folder must be refused.
+                tests:
+                  - StyleKitDocument_Parse_InvalidValue_ReportsErrorWithPathAndText
+                  - StyleKitDocument_Parse_PresetSizesAndNames_AreChecked
+                  - StyleKitDocument_Parse_SeveralErrors_AreAllReported
+                  - StyleKitDocument_Parse_NotAnObjectNotJsonTooDeepOrTooLarge_IsOneErrorOfTheFile
+                  - StyleKitDocument_Parse_ExamplePathOutsideTheExamplesFolder_IsAnError
+                  - StyleKitDocument_Validate_KitInMemory_GivesTheSameMessagesAsTheReader
+                  - StyleKitDocument_IsValidId_ChecksThePattern
+                  - StyleKitDocument_StyleColors_ParseNormalizeAndContrast_FollowTheDefinitions
+
+              - id: CanvasPilot-StyleKitDocument-WarnAboutFontsThatAreNotBundled
+                title: >-
+                  The StyleKitDocument shall accept any font family in a kit and shall warn, naming the family, when the
+                  first family of a font list is not a generic family, a common alias of one, or a bundled Liberation
+                  family, saying which formats draw the installed font and which always use the bundled fonts.
+                justification: |
+                  A designer may want a brand font in the text of an SVG picture on their own machine, so refusing it would
+                  block that. But Mermaid, PlantUML, and Vega-Lite always draw with the bundled fonts, and an SVG on another
+                  machine that lacks the font looks different, so the kit tells the truth about what the font will do.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ClassifyFontFamilies
+                tests:
+                  - StyleKitDocument_Parse_BundledOrCommonFonts_HaveNoMessage
+                  - StyleKitDocument_Parse_FontThatIsNotBundled_IsAWarning
+
+              - id: CanvasPilot-StyleKitDocument-BoundTheSizeOfAKit
+                title: >-
+                  The StyleKitDocument shall refuse a style file that is larger than 256 KiB or nested deeper than 16
+                  levels before building anything from it, shall limit the number of palette colors, theme variables,
+                  size presets, guidance entries, and captions, the length of each text, and the size of the Vega-Lite
+                  configuration, shall ignore with a warning the example files beyond the number a kit may have and those
+                  that are larger than 16 MiB, and shall accept a value at its limit.
+                justification: |
+                  A kit from a shared folder or a zip file is not trusted. Its text is shown to the user and may be given to
+                  an assistant, so it must not be able to grow a prompt, a file, or a picture without bound, and the
+                  limits must be exact so that a kit at a limit is not refused by mistake.
+                tests:
+                  - StyleKitDocument_Parse_Limits_AreErrorsWhenExceededAndAcceptedAtTheLimit
+                  - StyleKitDocument_Parse_TextLengths_AreErrorsOneCharacterOverTheLimit
+                  - StyleKitDocument_Parse_VegaLiteConfigSize_IsMeasuredOnCompactJson
+                  - StyleKitDocument_ReadFolder_TooManyOrTooLargeExampleFiles_AreIgnoredWithWarnings
+                  - StyleKitDocument_IsValidId_LengthLimit_Is48Characters
+                  - StyleKitDocument_PublicMembers_NullArguments_ThrowArgumentNullException
+                  - StyleKitDocument_StyleIssue_ToString_WritesPathAndMessage

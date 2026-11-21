@@ -1,0 +1,132 @@
+---
+# Payload Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Payload subsystem
+# - The Payload subsystem builds, from the message that the user sends, one immutable payload for the assistant that
+#   is added later: the text with its references in order, the attachments with their paths, and for each picture that
+#   marks were drawn on the annotated picture, the area around each mark, the geometry and note of each mark, and the
+#   parts of the source file under it; and it describes a payload as text. The subsystem has no dependency on the
+#   user interface
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Payload Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Payload-DescribeTheMessage
+            title: >-
+              The Payload subsystem shall give the message as text in which each mark and each attachment is referred to
+              as "[Mark n]" or "[Attachment n: name]" at the place the user put it, and as a sequence of parts in
+              that order that keeps the text the user typed apart from the text the user dictated.
+            justification: |
+              The meaning of a message depends on where its marks and attachments are: "make this bigger than that" means
+              nothing without knowing which mark is "this". Speech recognition makes mistakes that typing does not, so the
+              assistant needs to know which words were dictated. Having the text with its references and the parts in
+              order lets the assistant read the message and also use its structure without parsing the text.
+            children:
+              - CanvasPilot-PayloadBuilder-KeepOrderOfParts
+              - CanvasPilot-PayloadBuilder-BuildSentMessage
+            tests:
+              - PayloadSubsystem_Build_MessageText_HasReferencesInOrderWithOrigins
+
+          - id: CanvasPilot-Payload-IncludeAnnotatedImage
+            title: >-
+              The Payload subsystem shall include, for each picture that marks of the message were drawn on, one image of
+              the whole picture, in the pixels the user saw, with every mark of the message drawn and numbered on it,
+              together with the file, the fingerprints of the file and the pixels, the format, and the size of the picture,
+              and shall leave out the marks that are not part of the message and the pictures that only they were drawn on.
+            justification: |
+              The assistant has to see what the user saw and where they pointed, and a numbered mark on the picture lets
+              the text say "mark 2" and mean a place. Marks that the user removed from the message must not appear, or
+              the assistant would be told about things the user took back. The fingerprints let a later reader tell which
+              version of the file the picture shows.
+            children:
+              - CanvasPilot-MarkImageComposer-DrawNumberedMarks
+              - CanvasPilot-PayloadBuilder-GroupMarksBySnapshot
+              - CanvasPilot-PayloadBuilder-OmitInactiveMarks
+            tests:
+              - PayloadSubsystem_Build_MarkedPicture_HasAnnotatedImageWithMarksDrawnAndNumbered
+
+          - id: CanvasPilot-Payload-IncludeMarkCrops
+            title: >-
+              The Payload subsystem shall include for each mark an image of the area around it, cut from the annotated
+              picture, that holds the whole mark and its number with a margin and is large enough to see, together with the
+              area it shows in the pixels of the picture.
+            justification: |
+              On a large picture a small mark is hard to see, and a language model reads a picture at a reduced size. An
+              image of the area around the mark shows what was marked in detail, and the area in picture pixels lets the
+              assistant tell where in the whole picture it is.
+            children:
+              - CanvasPilot-MarkImageComposer-CropAroundMarks
+            tests:
+              - PayloadSubsystem_Build_Marks_HaveCropsThatAreRegionsOfTheAnnotatedPicture
+
+          - id: CanvasPilot-Payload-IncludeMarkGeometry
+            title: >-
+              The Payload subsystem shall describe each mark with its number, its shape, its points and bounding box in
+              the pixels of the picture it was drawn on, and its note.
+            justification: |
+              The images show where the user pointed to a reader that looks at them. The geometry in pixels states it
+              exactly, so that the assistant can relate a mark to positions it knows from the source file, and the note
+              carries what the user said about the mark.
+            children:
+              - CanvasPilot-PayloadBuilder-CarryMarkGeometry
+            tests:
+              - PayloadSubsystem_Build_Marks_HaveGeometryInPicturePixelsAndNote
+
+          - id: CanvasPilot-Payload-IncludeSourceElements
+            title: >-
+              The Payload subsystem shall describe for each mark which parts of the source file lie under it, with what is
+              known about each, where the picture reports where its parts are, and shall say that the picture cannot tell,
+              and why, where it does not.
+            justification: |
+              The assistant works with the source file. The nodes, bars, or anchors under a mark tell it which part of the
+              file the user meant, and an honest "not available" for an SVG or a photograph keeps the assistant from
+              believing that the mark covers nothing.
+            children:
+              - CanvasPilot-PayloadBuilder-CarrySourceElements
+            tests:
+              - PayloadSubsystem_Build_Marks_HaveSourceElementsWhereKnownAndNotAvailableOtherwise
+
+          - id: CanvasPilot-Payload-ReferenceAttachments
+            title: >-
+              The Payload subsystem shall list the attachments of the message in order with their kind, name, and size, the
+              path where the user had them, and their path in the project, relative to the project folder.
+            justification: |
+              The assistant works in the project and finds the attached material there. The original path tells it where
+              the material came from, and the relative path where to read it.
+            children:
+              - CanvasPilot-PayloadBuilder-ReferenceAttachments
+            tests:
+              - PayloadSubsystem_Build_Attachments_HaveOriginalAndProjectRelativePaths
+
+          - id: CanvasPilot-Payload-BeImmutable
+            title: >-
+              The Payload subsystem shall make a payload that cannot change after it is built, whatever the user does with
+              the draft, the marks, or the buffers it was built from, and shall build it only from values that cannot
+              change.
+            justification: |
+              The user goes on writing while a message is sent and the next draft starts at once. A payload that could
+              change would send something other than what the user saw in the inspector, and building from values that
+              cannot change lets the work run in the background without taking a lock on the user's draft.
+            children:
+              - CanvasPilot-MessagePayload-Immutable
+              - CanvasPilot-PayloadBuilder-BuildFromUnchangeableInputs
+            tests:
+              - PayloadSubsystem_Build_Payload_IsNotChangedByTheNextDraft
+
+          - id: CanvasPilot-Payload-ListWhatIsSent
+            title: >-
+              The Payload subsystem shall describe a payload as text that lists everything it holds, the message, the
+              attachments, each picture with its marks, geometry, and source elements, with each image replaced by its size
+              and fingerprint, in a form that is the same for the same payload.
+            justification: |
+              The user must be able to see exactly what the assistant receives, and a test or a reviewer must be able to
+              compare two payloads. Images are shown beside the text, so the text only needs to identify them. Describing
+              the same payload in the same way every time makes the description a reliable record.
+            children:
+              - CanvasPilot-PayloadDescriber-ListEverythingTheAssistantReceives
+            tests:
+              - PayloadSubsystem_Describe_Payload_ListsEverythingTheAssistantReceives

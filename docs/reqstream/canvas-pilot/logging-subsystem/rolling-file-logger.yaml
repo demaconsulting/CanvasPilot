@@ -1,0 +1,66 @@
+---
+# Software Unit Requirements for the RollingFileLogger Class
+#
+# The RollingFileLogger class writes timestamped application events and failure details to a
+# bounded set of local rolling log files under the per-user CanvasPilot log folder, without
+# telemetry or unbounded disk growth.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Logging Subsystem Requirements
+        sections:
+          - title: RollingFileLogger Requirements
+            requirements:
+              - id: CanvasPilot-RollingFileLogger-WriteTimestampedEntries
+                title: >-
+                  The RollingFileLogger shall write timestamped, leveled local log entries for
+                  application events and failures, including exception details.
+                justification: |
+                  Troubleshooting desktop sessions requires a readable local event history that
+                  records when each event happened, how severe it was, and what failed. Entries
+                  from concurrent threads must stay intact so the history remains readable.
+                tests:
+                  - RollingFileLogger_Log_Event_WritesTimestampedEntry
+                  - RollingFileLogger_Log_AllLevels_RecordsLevelTag
+                  - RollingFileLogger_Log_WithException_IncludesExceptionDetails
+                  - RollingFileLogger_Log_ConcurrentWriters_RecordsEveryEntry
+                  - RollingFileLogger_Flush_BeforeAnyLogEntry_DoesNotThrow
+
+              - id: CanvasPilot-RollingFileLogger-DefaultLocation
+                title: >-
+                  The RollingFileLogger shall by default write to a per-user CanvasPilot logs
+                  folder under local application data, creating the folder when it is missing.
+                justification: |
+                  Users and maintainers need a predictable, user-writable location for log files
+                  that does not require administrator rights and survives application upgrades.
+                tests:
+                  - RollingFileLogger_DefaultLogDirectory_Default_IsCanvasPilotLogsUnderLocalAppData
+                  - RollingFileLogger_Constructor_MissingDirectory_CreatesDirectory
+
+              - id: CanvasPilot-RollingFileLogger-RotateLogFiles
+                title: >-
+                  The RollingFileLogger shall rotate the active log file when it reaches the
+                  configured size and delete the oldest archives beyond the configured retention
+                  count.
+                justification: |
+                  The logger must keep recent history available without allowing the on-disk log
+                  footprint to grow indefinitely.
+                tests:
+                  - RollingFileLogger_RotateIfNeeded_ThresholdReached_RotatesAndPrunesArchives
+                  - RollingFileLogger_RotateIfNeeded_BelowThreshold_KeepsActiveFile
+
+              - id: CanvasPilot-RollingFileLogger-RejectInvalidInput
+                title: >-
+                  The RollingFileLogger shall reject invalid configuration and messages rather than
+                  write outside the log folder or record empty entries.
+                justification: |
+                  Log locations and file names are configurable, so invalid values must fail fast
+                  instead of silently writing to an unintended location or producing meaningless
+                  entries.
+                tests:
+                  - RollingFileLogger_Constructor_NonPositiveMaximumFileSize_ThrowsArgumentException
+                  - RollingFileLogger_Constructor_NonPositiveRetainedFileCount_ThrowsArgumentException
+                  - RollingFileLogger_Constructor_WhitespaceDirectory_ThrowsArgumentException
+                  - RollingFileLogger_Log_WhitespaceMessage_ThrowsArgumentException
+                  - RollingFileLogger_Log_TraversalBaseFileName_ThrowsArgumentException

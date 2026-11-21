@@ -1,0 +1,90 @@
+{
+  "formatVersion": 1,
+  "id": "slides-dark",
+  "name": "Slides Dark",
+  "description": "A dark style for slides, with light text, a soft blue primary color, and an amber accent.",
+  "palette": {
+    "background": "#0F172A",
+    "surface": "#1E293B",
+    "text": "#F1F5F9",
+    "muted": "#94A3B8",
+    "primary": "#60A5FA",
+    "secondary": "#94A3B8",
+    "accent": "#FBBF24"
+  },
+  "fonts": {
+    "heading": "sans-serif",
+    "body": "sans-serif",
+    "monospace": "monospace"
+  },
+  "stroke": {
+    "width": 3
+  },
+  "cornerRadius": 16,
+  "spacing": 24,
+  "mermaid": {
+    "theme": "base",
+    "themeVariables": {
+      "background": "#0F172A",
+      "primaryColor": "#1E293B",
+      "primaryTextColor": "#F1F5F9",
+      "primaryBorderColor": "#60A5FA",
+      "lineColor": "#94A3B8",
+      "secondaryColor": "#1E293B",
+      "tertiaryColor": "#1E293B",
+      "edgeLabelBackground": "#1E293B"
+    }
+  },
+  "vegaLite": {
+    "config": {
+      "background": "#0F172A",
+      "range": {
+        "category": ["#60A5FA", "#FBBF24", "#94A3B8", "#F1F5F9"]
+      },
+      "axis": {
+        "labelColor": "#94A3B8",
+        "titleColor": "#F1F5F9",
+        "domainColor": "#94A3B8",
+        "tickColor": "#94A3B8",
+        "gridColor": "#1E293B"
+      },
+      "title": {
+        "color": "#F1F5F9"
+      },
+      "view": {
+        "stroke": "transparent"
+      }
+    }
+  },
+  "guidance": {
+    "notes": "Dark slides with light text. Keep one idea per picture and use amber to point at the one thing that matters.",
+    "do": [
+      "Use the palette colors only.",
+      "Use large text; slides are read from a distance.",
+      "Leave at least 24 pixels of space around elements."
+    ],
+    "dont": [
+      "Do not put dark text on the dark background.",
+      "Do not use gradients or shadows."
+    ]
+  },
+  "sizePresets": [
+    {
+      "name": "Slide 16:9",
+      "width": 1920,
+      "height": 1080,
+      "transparent": false
+    },
+    {
+      "name": "Slide 720p",
+      "width": 1280,
+      "height": 720,
+      "transparent": false
+    }
+  ],
+  "examples": {
+    "examples/title-card.svg": "A title card with a heading, a line of text, and an accent bar.",
+    "examples/flow.mmd": "A flowchart with the Mermaid theme of the kit.",
+    "examples/chart.vl.json": "A bar chart with the Vega-Lite configuration of the kit."
+  }
+}

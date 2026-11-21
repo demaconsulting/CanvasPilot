@@ -1,0 +1,457 @@
+# CanvasPilot
+
+## Verification Approach
+
+System-level verification uses tests in `CanvasPilotTests.cs` that compose real units on temporary
+directories without opening a window. Each test exercises the units together as the application does
+and asserts on observable outcomes such as the files written to disk and the exceptions raised. The
+tests use real file I/O and no mocks for the units themselves; where a user would act in a dialog, a hand-written
+dialog service plays the user, and a hand-written refresh scheduler replaces timed refreshes so no test waits.
+
+The `AppShell` subsystem depends on the `Preview` subsystem and not the reverse (see *Dependency Direction* in the
+design). Verification follows that direction: the `Preview` units are verified with a substitute for the
+`IExportDialogs` interface that `Preview` owns, the shell is verified with a substitute image exporter and with the
+disabled default exporter, and only the system tests and the user interface tests compose the real shell with the real
+preview, which is also what proves that the two work together. The stored AI provider choices are verified through the
+settings service and the settings dialog; the agent that will use them does not exist yet and has no verification.
+
+Dictation is verified at this level over the speech library's own recognition pipeline with a recognition backend
+written in managed code and a recorded sound file for the microphone, so no native speech runtime, model, or microphone
+is needed. Dictation with a real microphone and a real model, the native speech files in an installed application, and
+the reaction of the application to a blocked microphone or missing native files need a person and an installed package;
+they are checked by hand before each release as listed under *Manual Verification* below and in the verification of the
+Speech subsystem and of the Chat subsystem (the talk button of the chat panel with a real microphone and model, and the
+Windows microphone privacy setting), together with the checks of the installed package, and are not evidence for a
+requirement.
+
+## Test Environment
+
+System tests run under the standard .NET test runner on Windows, Linux, and macOS with the .NET 10
+runtime. Temporary directories are created and removed within each test. No network access, external
+services, or display is required.
+
+## Acceptance Criteria
+
+- All system tests pass with zero failures on every supported platform.
+- Application events and failures logged by the application appear in a local log file within the log
+  folder.
+- A file location built from a name that attempts to leave its intended folder is rejected, while a
+  name inside the folder is accepted.
+- Settings saved by one run are restored by the next run, and a damaged settings file yields default
+  settings, a kept-aside copy of the file, and a log entry rather than a failure.
+- AI provider choices made in the settings dialog are stored and restored, and unrestricted agent tools
+  remain off unless the user opts in.
+- Speech devices, models, and a model setting chosen in the Speech page of the settings dialog are stored by device
+  name and model identifier and restored by the next run, using substitute audio and model services.
+- A project created in a folder is reopened from the recent projects list, and a damaged project file is
+  refused with a message and a log entry without changing the open project.
+- The project explorer lists the image source files of the open project and not other content.
+- A selected image source file is rendered and shown with its size, a file that cannot be drawn shows an error with
+  its code, and the shown picture can be exported as a valid PNG file.
+- The shown picture of a diagram is identified by its file and by fingerprints of the file and the pixels, which
+  change when the file is edited, and it locates the diagram's elements in picture pixels.
+- The preview pane has a layer over the shown picture that holds the content placed in it, beside every picture.
+- A message that is sent with marks on the shown diagram and an attached file gives a payload with the text and its
+  references in order, the attachment with its path in the project, the picture with the marks drawn and numbered, an
+  area image and the geometry for each mark, and the source elements under each mark, and the draft is empty afterwards.
+- Marks drawn on the shown picture are numbered in order, keep their geometry in picture pixels and an optional note,
+  stay with the exact picture they were drawn on and are not shown on a picture of the edited file, and report the parts
+  of the diagram's source that lie under them.
+- A user who draws a rectangle on the shown picture gets a mark whose chip is in the message at the caret; undo of the
+  chip hides the mark and redo shows it; dragging the picture out is off only while a marking tool is chosen; and when
+  the file is edited the mark is not drawn on the new picture but stays in the message.
+- The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
+  earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
+  the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
+- A message is composed from typed text, dictated text, and chips for attached files, folders, images, and marks, which
+  stay in the order they were placed with the origin and kind of each; each user action is one undo step and redo gives
+  the same steps; sending clears the draft and what can be undone, and nothing of the draft is written to disk.
+- Files, folders, pictures, and text that are dropped or pasted become chips and text without anything being opened or
+  copied; sending copies them into the project's attachments folder byte for byte, never over another file, within the
+  limits of one message; the explorer does not list them.
+- With the speech settings composed as at startup, dictation tells a user who has no model chosen to choose one, and a
+  user who holds the talk control with a model chosen gets the recognized words as text that is added to the message as
+  one dictated block, in order after the typed text.
+- Holding the talk key opens neither the microphone nor the speech engine when no model is chosen or the chosen model is
+  not installed; the status says what to do, the message is unchanged and can still be sent, and with a model the words
+  recognized while the key was held are added as one dictated block that one undo removes.
+- Marks keep their numbers, points, and picture when the diagram is drawn again; a changed picture does not show them
+  and the sent message holds the picture they were drawn on; the Edit menu's undo and redo go through every action of
+  the message one step at a time, and what is dropped is never opened, run, or shown, whatever it is.
+- A user who marks a node of the shown diagram, writes around the mark, and sends the message through the chat panel
+  sees the message in the transcript with its words and mark chip in order, and "View payload" shows the payload
+  exactly as the payload describer writes it, with the place of the mark, the node under it, and the annotated picture
+  and the area around the mark.
+- The drawing knowledge that the application holds is looked up as an assistant would look it up, from the program
+  itself: the compact index is within its budget and names the cards of CanvasNet and of CanvasPilot, the help tool
+  answers the index, a card, an example, and a search, there is a skill for each card, and no card about what the host
+  program controls is offered.
+- Drawing Knowledge in the Help menu of the composed application gives a browser over that catalog, in which the user
+  can search, open a card, follow a related card, and copy an example.
+- Style kits are found in the program, the folder of the user, the project, and the shared folders, the most local copy
+  of a kit wins, an unreachable shared folder and a kit with a wrong value are reported without hiding the other kits,
+  and the Style Kits window makes, exports, deletes, imports, and copies kits into the project, and chooses the style of
+  the project, while the kits of the program cannot be changed.
+- The style of a project is chosen in the status bar, is kept in the project file, comes from the default kit for a new
+  project only, is the same after a restart, is said to be missing when the kit is not found, and stays empty for a
+  project that never had one.
+- The shown picture is exported at the sizes of the style kit and of the application with the size, the background, and
+  the resolution that the size says, and as drawn; a project with no style is offered the sizes of the application only.
+- The guidance, the two tools, and the card about style kits agree: the guidance is within its budget, the tools read
+  the style and check a picture of the project and refuse a file outside it, and the index of the knowledge fits.
+- Check Against Style in the Image menu shows the colors on the palette and off it as notes of the preview, the notes go
+  when the picture is drawn again, and a project with no style is told to choose one.
+- The published win-x64 application contains the native speech and audio runtime libraries and so does the installer
+  package, so that the installed application needs nothing but the model download to run a chosen speech model.
+- The application starts on every supported platform: composing its units without a window gives a titled shell
+  with the right commands available, and the log records the start and stop.
+- The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
+  version; installing it is checked by hand before each release.
+- The main window shell creates a project, lists its image files, finds it in the recent projects after a
+  restart, and keeps a changed setting across the restart.
+
+## Manual Verification
+
+These checks need a person, a physical machine, and programs or hardware that the automated tests cannot stand in for.
+They are performed on an installed package before each release and are not evidence for a requirement. **None of them
+has been performed on the machine on which this version was built and tested**: the automated tests prove the
+application's own behavior with substitutes (a managed recognition backend and a recorded sound file instead of a
+microphone, headless pointer and keyboard events instead of an operating system drag, and Avalonia's own clipboard
+and data objects instead of the Windows ones), so what follows is unverified until someone ticks it off. The detailed
+steps are in the verification of the unit or subsystem named at each check.
+
+1. *Real dictation.* On a machine with a microphone, install the MSI, download a speech-to-text model on the Speech
+   page, choose it and the microphone, open a project, and dictate with both the talk button and the F8 key: the words
+   show while the control is held, one dictated block is added at the caret on release, and one undo removes it. Also
+   try the reasons: no model chosen, a model not downloaded, the microphone unplugged. (Verification of the `Speech` and
+   `Chat` subsystems.)
+2. *Windows microphone privacy.* Turn off "Let desktop apps access your microphone" and hold the talk button: the panel
+   says that the microphone cannot be used and the application keeps running. (Verification of the `Chat` subsystem.)
+3. *Dragging the shown picture out.* Drag the shown picture into Windows Explorer, a PowerPoint slide, the body of an
+   Outlook message, and Paint: each should receive the picture, as a file or as a bitmap. Which of the two formats each
+   program takes is not known, because the drag was never tried against these programs; if a program refuses the
+   picture, record which, since the drag then needs another format. Also check that a drop on a program that refuses it
+   leaves the application working. (Verification of `ImageDragSource`.)
+4. *Real clipboard.* Press Print Screen or use the Snipping Tool, paste into the message, and check that a picture chip
+   shows the screenshot and is sent; copy files in Explorer and paste: file chips; copy text from another program and
+   paste: text. Check the same with a drag of a file, a folder, and a picture from Explorer and from a browser onto
+   the message. (Verification of `ComposerEditor`.)
+5. *Real input method.* With an input method that composes text (for example Japanese or Chinese), type into the
+   message with and without chips in it: composing shows in place, the committed text is one undo step, and chips are
+   not damaged. (Verification of `ComposerEditor`.)
+6. *Installed package.* Install, upgrade over an older version, start from the Start Menu shortcut, and close a running
+   instance by installing; and look at the installed folder, or the MSI file table (`Orca` or the Windows Installer
+   `File` table), for `sherpa-onnx-c-api.dll`, `onnxruntime.dll`, and `portaudio.dll` next to `CanvasPilot.exe`. The
+   build already fails when any of the three is missing from the published folder or the file table
+   (`Speech_NativeRuntimePublished`); this check confirms what a user gets. (Verification of the `Speech` subsystem and
+   of the WiX Toolset.)
+7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
+   the keyboard, and check the tool bar and the chips with a screen reader. (Verification of `AnnotationOverlay`.)
+8. *Style kits with the real pickers.* On the installed package, open Tools > Style Kits, choose Import and Export with
+   the system zip pickers, add example images with the image picker in the editor, change a color with the flyout and
+   its sliders, and add a shared folder on the Style Kits page of the settings with the folder picker, including a
+   network path that is not reachable; then check that the three kits that come with the program are listed, that the
+   status bar of a project shows the chosen kit, and that exporting at a size writes the file that the window said.
+   (Verification of the `Style` subsystem and of the units `StyleKitManager`, `StyleKitEditor`, and
+   `StyleSettingsPage`.)
+
+## Test Scenarios
+
+**CanvasPilot_OperationalLogging_ApplicationEvent_WritesLocalLog**: A log folder is resolved beneath a
+per-user data root, an informational event and a failure with exception details are logged, and the log
+folder is inspected; exactly one log file exists and it contains both entries including the exception
+detail. This scenario is tested by `CanvasPilot_OperationalLogging_ApplicationEvent_WritesLocalLog`.
+
+**CanvasPilot_SafeFileHandling_TraversalName_IsRejected**: A supplied name containing parent-directory
+traversal is combined with a base folder and an `ArgumentException` is thrown; a name inside the folder
+is combined successfully and the result stays under the base folder. This scenario is tested by
+`CanvasPilot_SafeFileHandling_TraversalName_IsRejected`.
+
+**CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage**: Settings with a recent
+project are saved by one service, loaded by a second, and restored; the settings file is then replaced by
+invalid text and loaded by a third service, which yields default settings, leaves a `settings.json.bad` copy,
+and logs the corruption. This scenario is tested by
+`CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage`.
+
+**CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn**: The settings dialog is composed
+over the AI provider page; Ollama, a model name, a context window, and an endpoint are chosen and OK is
+selected; a new service loads those choices and unrestricted agent tools are still off. This scenario is
+tested by `CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn`.
+
+**CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun**: The application is composed with
+substitute audio and model services that list two microphones, two speakers, a speech-to-text model, and a
+text-to-speech model with a voice choice. The user opens Settings, chooses the second microphone and speaker, both
+models, and the first voice on the Speech page, and chooses OK. After a restart the stored settings hold the device
+names, the model identifiers, and the voice, and a Speech page loaded from them shows the microphone and the voice.
+No hardware is used and nothing is downloaded. This scenario is tested by
+`CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun`.
+
+**CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject**: A project is created in a
+documents folder, added to the recent projects list, and closed; a new settings service loads the list and the
+first entry is opened. The project reopens with its name. A damaged project file is then opened and refused with
+a failed result, the open project is unchanged, and the refusal is logged. This scenario is tested by
+`CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject`.
+
+**CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles**: A created project holds two SVG files and
+a text file; the project explorer is opened on the project folder and lists the two SVG files in name order,
+and selecting one reports its path. This scenario is tested by
+`CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles`.
+
+**CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems**: The composed application's user
+creates a project that holds two SVG files and selects the first. Renaming it to a name that is not an image source
+file is refused with a message; renaming it to `cover.svg` renames the file. Deleting `cover.svg` is first declined
+at the confirmation, which keeps the file, and then confirmed, which removes it. The explorer then lists only the
+other file. This scenario is tested by `CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems`.
+
+**CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell**: The application's units are composed exactly as
+at startup, without a window, over temporary per-user folders; the shell is titled with the application name,
+the commands that need nothing are available, those that need a project are not, the default settings are in
+effect, and the log holds the start and stop entries. The platform requirements link this test to each platform
+and runtime with source filters. This scenario is tested by
+`CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell`.
+
+**CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork**: The catalog of the application,
+which the Help menu shows, is asked for as an assistant would ask. The compact index is within its budget and has a line
+for the card of CanvasPilot and a card of CanvasNet; the help tool answers with no arguments the same index, for a topic
+the card of the marks of a message, for an example the text of the example in a fenced block, and for a query the cards
+that fit it. There is one skill for each card, with names that are all different. The card of the layout of a project is
+there, no card that is only about the host program is, and the card of the PDF format is. This scenario is tested by
+`CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork`.
+
+**CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog**: The application is composed as at
+startup with a dialog service that plays the window, and the user chooses Drawing Knowledge. The command is usable and
+gives the dialog service one browser whose tree is the roots of the catalog of the application, with the cards of
+CanvasPilot among them. The user searches for a word and gets hits, opens the card of the layout of a project and sees
+its title and text, follows the first related card of it, opens the card of deliverables, and copies its first example:
+the text of the example is on the clipboard that records and the status names it. No message was shown. This scenario is
+tested by `CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog`.
+
+**CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError**: The composed application's user creates a
+project that holds a good and a broken SVG and selects the good file: the preview shows a 32 by 16 picture and the
+image export is available. Selecting the broken file shows an error with the code `cannot-draw`, no picture, and no
+export. This scenario is tested by `CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError`.
+
+**CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile**: With the good SVG shown, the Export as PNG command is
+enabled and, with a chosen file, writes a file that starts with the PNG signature and whose header holds width 32 and
+height 16. This scenario is tested by `CanvasPilot_ExportImages_RenderedSvg_WritesValidPngFile`.
+
+**CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements**: The composed application's
+user selects a two-node Mermaid diagram in a project. The shown picture names the diagram's file, has a file
+fingerprint and a pixel fingerprint of 64 hexadecimal characters each, has a box for each of its two nodes, and the
+nodes' text is `Start` and `End`. After another file is shown, the diagram is edited so that the second node is
+`Finish`, and it is selected again: the file fingerprint, the pixel fingerprint, and the snapshot key all differ and
+the node text is `Start` and `Finish`. This scenario is tested by
+`CanvasPilot_BuildMessagePayload_SelectedDiagram_PinsPictureToFileAndReportsElements`.
+
+**CanvasPilot_BuildMessagePayload_MermaidWithMarks_ContainsImagesCropsGeometryAndSourceElements**: The composed
+application's user shows a two-node Mermaid diagram, marks the node `Start` with a rectangle with a note and the node
+`End` with an ellipse, and composes a message from typed text, both marks, an attached file from outside the project,
+and dictated text. The message is sent: the snapshot is taken, the file is copied into the project, and the payload is
+built. The text is `Swap [Mark 1] and [Mark 2] see [Attachment 1: brief.txt] please`; the attachment's project path is
+`attachments/brief.txt` and the file is there; there is one image with the file and fingerprints of the shown picture
+and an annotated picture of its size; the two marks have their kinds, the rectangle has its points and note, each has a
+cut-out of the size of its area, and the source elements of the marks are the nodes `Start` and `End`; the draft and
+what can be undone are empty. This scenario is tested by
+`CanvasPilot_BuildMessagePayload_MermaidWithMarks_ContainsImagesCropsGeometryAndSourceElements`.
+
+**CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures**: The composed application's user creates a
+project that holds a 32 by 16 and an 8 by 8 SVG. Content is placed in the overlay layer of the pane that the workspace
+shows, which is the application's own pane. After the first SVG is selected the layer holds the content beside the 32
+pixel wide picture, and after the second SVG is selected it still holds the same content beside the 8 pixel wide
+picture. This scenario is tested by `CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures`.
+
+**CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture**: The composed application's user shows a
+two-node Mermaid diagram and draws a rectangle with a note around the node `Start`, and an arrow. The marks are numbered
+one and two, hold the shown picture, and the parts of the source under the rectangle include the node `Start`. After the
+diagram is edited and shown again, a third mark is drawn on the new picture and is number three. Each picture shows only
+its own marks while all three belong to the message. This scenario is tested by
+`CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture`.
+
+**CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture**: The composed application's
+user has a project with an 80 by 40 SVG shown and some typed text in the message, chooses the rectangle tool, and draws
+with the overlay's pointer methods and skips the note. Dragging the picture out is off while the tool is chosen and on
+again after the tool is released. The message holds one mark chip with number one after the typed text, and the picture
+shows the mark. Undo removes the chip and the mark is not shown; redo shows both again. After the file is edited and
+shown again the mark is not shown, the overlay counts one hidden mark, and the message still holds the chip. The overlay
+is the overlay of the preview pane and its tool bar is the pane's tool bar. This scenario is tested by
+`CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture`.
+
+**CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile**: The composed application is started with a file of an
+earlier run in its drag folder, which is removed at start. Without a picture no file is offered. With a 32 by 16 SVG
+shown the offered file is in the drag folder, is named `logo-` and the start of the pixel fingerprint, and is a PNG
+of width 32 and height 16; with dragging out turned off none is offered; after the composition is disposed the file is
+gone. This scenario is tested by `CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile`.
+
+**CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage**: A message is composed by typing, dictating a
+block, dropping a file and a folder in one operation, adding a mark where the caret was, and typing more. The message
+holds the typed text up to the mark, the mark, the dictated text with its dictated origin, the file, the folder, and the
+last typed text, in that order, and its length is the number of characters plus one for each chip. This scenario is
+tested by `CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage`.
+
+**CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears**: A draft is built from a typed
+character, a dictated block, a drop of two chips, and a deleted chip. Undoing the deleted chip brings back one chip,
+undoing the drop removes both chips together, undoing the dictation removes the whole block, and redoing it restores the
+whole block. After sending, nothing can be undone or redone, the draft is empty, and no file or folder was written in
+the temporary folder of the test. This scenario is tested by
+`CanvasPilot_UndoRedoMessage_StepsOfEachAction_UndoAndRedoOneAtATimeAndSendClears`.
+
+**CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend**: In a project created by the project
+service that holds one image, a text file, a program, and a folder with a file are dropped from outside the project and
+a screenshot is pasted, in one operation. Nothing is copied into the project while drafting; undo removes the four chips
+and redo brings them back; after sending, the text file, the program, the folder with its file, and the screenshot are
+in the attachments folder with their exact bytes, the original text file is unchanged, the explorer lists only the
+project's image, and the folder for pasted pictures is empty. This scenario is tested by
+`CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend`.
+
+**CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable**: The application is composed as
+at startup over a model service whose model is installed in a temporary store, with a recognition backend written in
+managed code, and an audio service whose microphone is a recorded sound file. Before a model is chosen, dictation
+reports that none is chosen and names the Speech page. After the model is chosen the way the settings page stores it,
+dictation is available; the user holds the talk control and lets go, and the final text is "Make the second box blue."
+Added to a message after typed text with the dictation edit, the message holds the typed text and one block of dictated
+text, in that order. This scenario is tested by
+`CanvasPilot_DictateMessage_HoldToTalk_AddsOneDictatedBlockAndExplainsWhenUnavailable`.
+
+**CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload**: The composed application's user has
+a project with a two-node Mermaid diagram shown and a payload inspector launcher that records what it is asked to show.
+The user types "Make ", draws a rectangle around the node `Start` and skips the note, types " green", and sends the
+message through the chat panel, which could be sent. The transcript holds one entry whose items are the text "Make ", a
+chip, and the text " green"; its payload text is `Make [Mark 1] green`. Choosing "View payload" gives the launcher an
+inspector whose description is exactly the output of the payload describer for that payload, contains the node text
+`Start` as a source element, and has two pictures, the annotated picture and the area around the mark. This scenario is
+tested by `CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload`.
+
+**CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript**: The composed application's user has a
+project with a two-node Mermaid diagram shown and a file outside the project. An empty message cannot be sent. The user
+types "Make ", draws a rectangle with the note "bigger" around the node `Start`, types " like ", drops the file, and
+sends the message through the chat panel. While drafting nothing is in the attachments folder. The transcript holds one
+entry whose items are the text "Make ", the mark chip, the text " like ", and the file chip, with the summary "1 mark, 1
+attachment"; its payload text is `Make [Mark 1] like [Attachment 1: brief.txt]`, its one attachment is
+`attachments/brief.txt` and the file is there with its content, its one picture holds one mark with the note and the
+node `Start` as its source element, and the message, what can be undone, the marks, and the marks shown are empty. This
+scenario is tested by `CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript`.
+
+**CanvasPilot_UndoRedoMessage_EachActionKind_StepsAsSpecified**: The composed application's user has a project with a
+two-node Mermaid diagram shown, two files outside the project, and the message as the target of the Edit menu. The user
+types two characters, dictates a block, drops the two files, marks the node `Start`, and deletes a file chip, one action
+each, and the state of the message after each action is noted. The Edit menu's undo command, run until it is disabled,
+passes through the noted states in reverse order down to the empty message, with one step for each character, the block,
+the drop of two files, the mark and its shown mark, and the deleted chip; the redo command passes through them in order.
+The files of the project are the same before and after drafting. After the message is sent, nothing can be undone or
+redone and both commands are disabled. This scenario is tested by
+`CanvasPilot_UndoRedoMessage_EachActionKind_StepsAsSpecified`.
+
+**CanvasPilot_AttachToMessage_DropFileFolderImage_CopiedIntoProjectOnlyAtSend**: In the composed application's project,
+a text file, a folder with a nested folder and two files, and a picture file are dropped in one drop, and a screenshot
+is pasted. The message holds a file chip, a folder chip, and two picture chips, and the project has no attachments
+folder. A file of the same name as the text file is then put into the attachments folder. After the message is sent, the
+four attachments are in the attachments folder with their exact content, the text file under another name, the earlier
+file unchanged, the pasted picture's draft folder is empty, and the originals are where they were. This scenario is
+tested by `CanvasPilot_AttachToMessage_DropFileFolderImage_CopiedIntoProjectOnlyAtSend`.
+
+**CanvasPilot_AttachToMessage_DroppedContent_IsNeverOpened**: In the composed application with a diagram shown, scripts
+that would write a marker file when run, a web page, a shortcut, a picture file that is no picture, a vector picture
+with a script in it, a program, and a file that another program holds open exclusively are dropped in one drop. Each
+becomes a chip without a message in the status, and the picture shown is still the diagram. After the lock is released
+and the message sent, every file is in the attachments folder with the content that was dropped, the originals are
+unchanged, the two picture files are attachments of the kind picture, and the marker file was never written. This
+scenario is tested by `CanvasPilot_AttachToMessage_DroppedContent_IsNeverOpened`.
+
+**CanvasPilot_DictateMessage_HeldAndReleased_InsertsOneBlock**: The application is composed over a model that is
+installed and chosen in the settings and a microphone that is a recorded sound file, with a project and the typed text
+"Please ". The talk key is pressed: the shell and the chat panel report talking, the message cannot be sent and is
+unchanged. When the key is released nothing is talking, the status is empty, and the message holds the typed text and
+one block of dictated text "Make the second box blue." in that order; one undo removes the whole block and redo puts it
+back. This scenario is tested by `CanvasPilot_DictateMessage_HeldAndReleased_InsertsOneBlock`.
+
+**CanvasPilot_DictateMessage_NoModel_ExplainsAndKeepsDraft**: The application is composed with a project, the typed text
+"Keep this ", and a microphone that fails when it is opened. The talk key is pressed and released with no model chosen:
+the status names the Speech page, the reason is that no model is chosen, and the message is unchanged, idle, and has the
+one step of typing. With a model chosen that is not installed, the status is another one that names the model and the
+reason is that it is not installed. The microphone was never opened, the message can still be sent, and what is sent is
+"Keep this". This scenario is tested by `CanvasPilot_DictateMessage_NoModel_ExplainsAndKeepsDraft`.
+
+**CanvasPilot_MarkImage_DrawOnShownPicture_AddsNumberedChipPinnedToSnapshot**: The composed application's user has a
+two-node Mermaid diagram shown and the typed text "Look: ". The user draws a rectangle with the note "this one" around
+the node `Start` with the pointer, types " and ", and draws an ellipse with the keyboard cursor, skipping the note. The
+two marks are numbered one and two, are a rectangle and an ellipse, and each holds the very picture that was shown, with
+its file and pixel fingerprints; the rectangle's points enclose the node; the message holds the text, the first chip,
+the text, and the second chip in that order; and the layer shows both marks. This scenario is tested by
+`CanvasPilot_MarkImage_DrawOnShownPicture_AddsNumberedChipPinnedToSnapshot`.
+
+**CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks**: The composed application's user has a two-node Mermaid diagram
+shown and marks the node `Start` with a note. Drawing the unchanged file again gives a picture with the same snapshot
+key and shows the mark. After the file is edited and drawn again, the picture has other pixels, the layer shows no mark
+and counts one hidden mark, the message still holds the chip, and the mark still holds the first picture and the same
+points. The message that is sent has a picture with the fingerprints of the first picture, the mark with the same
+points, and the node `Start` as the source element under it. This scenario is tested by
+`CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks`.
+
+**CanvasPilot_DefineStyleKits_BuiltInUserProjectAndSharedKits_ResolveByPrecedence**: The application is composed with a
+kit `clean` in a shared folder and in the folder of the user, a second shared folder that does not exist, and a project.
+The kit of the user wins over the shared and built-in copies. A copy added to the project then wins and the other three
+are listed as hidden; the program has its three kits; a kit of the project with a wrong color is listed as broken with
+the message that names `palette.primary` and is not offered. As the more local copies are deleted the user's copy, the
+shared copy, and the copy of the program win in turn, and the missing shared folder is reported while the other places
+are still read. This scenario is tested by
+`CanvasPilot_DefineStyleKits_BuiltInUserProjectAndSharedKits_ResolveByPrecedence`.
+
+**CanvasPilot_ManageStyleKits_ShellCommandAndManager_CreateEditExportImportAndDelete**: The Style Kits command of the
+shell gives a window with the groups of the project, the user, the shared folders, and the program. The user makes a
+kit, describes it in the editor, and saves it; the file is in the folder of the user. The kit is exported to a zip file
+that holds its `style.json`, deleted after a confirmation, and imported again with the same file. For a kit of the
+program the edit and delete commands are not available and copying into the project is; the copy has its folder in the
+project, wins over the kit of the program, and is made the style of the project, which the project file says. This
+scenario is tested by `CanvasPilot_ManageStyleKits_ShellCommandAndManager_CreateEditExportImportAndDelete`.
+
+**CanvasPilot_ChooseProjectStyle_PickerAndNewProject_KeepTheChoiceInTheProjectFile**: With a default kit in the
+settings, a new project says that kit in its file and the status bar shows it. The user chooses another kit, no style,
+and a kit again, and the file follows each choice. After the application is started again on the same files the project
+shows the chosen kit and not the default. A kit that is not found is shown as missing with the reason, and a project
+created without the shell has no style, shows none, and its file has no style property. This scenario is tested by
+`CanvasPilot_ChooseProjectStyle_PickerAndNewProject_KeepTheChoiceInTheProjectFile`.
+
+**CanvasPilot_ExportAtPresetSizes_ComposedExporter_WritesPngOfThePresetSize**: A project uses a kit with two sizes and a
+dark background and shows a small picture with empty corners. The export offers the picture as drawn, the two sizes of
+the kit, and the three of the application. The size of the kit gives a PNG of exactly that size with the background of
+the kit in the corner; the A4 size gives its size and a resolution of 5906 pixels per meter in the `pHYs` chunk; the
+picture as drawn has its own size. With the style taken away only the picture as drawn and the sizes of the application
+are offered, and the background is white. This scenario is tested by
+`CanvasPilot_ExportAtPresetSizes_ComposedExporter_WritesPngOfThePresetSize`.
+
+**CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree**: For a project that uses a built-in kit, the
+style tool answers the guidance of the kit, within the budget, with its palette; the check tool passes a picture that
+uses only palette colors and fails one with another color and names it, and refuses a file outside the project. With the
+style taken away the style tool says to ask the user to choose a kit. The card about style kits names both tools and the
+index of the knowledge is within its budget. This scenario is tested by
+`CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree`.
+
+**CanvasPilot_CheckPictureAgainstStyle_ImageMenuCommand_ShowsNotesInTheDiagnosticsArea**: The Check Against Style
+command is not available before a picture is shown. For a picture on the palette it adds a summary that says passed and
+a note of the palette colors; for one with another color it adds a summary that says failed and a warning that names the
+color; drawing a picture again removes the notes. With the style taken away the command shows a message that says there
+is no style kit. This scenario is tested by
+`CanvasPilot_CheckPictureAgainstStyle_ImageMenuCommand_ShowsNotesInTheDiagnosticsArea`.
+
+**StyleKits_BuiltInPublished**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the `StyleKits` folder beside the executable holds three `style.json` files and, for each kit,
+the three example images, and a following step reads the file table of the installer package; the installer takes the
+published folder whole. This scenario is tested by `StyleKits_BuiltInPublished`, which is run in CI only.
+
+**Speech_NativeRuntimePublished**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the published folder, which the installer takes whole, holds exactly one each of
+`sherpa-onnx-c-api.dll`, `onnxruntime.dll`, and `portaudio.dll`, each of a plausible size, and a following step reads
+the installer package's file table and fails when any of the three is missing. This scenario is tested by
+`Speech_NativeRuntimePublished`, which is run in CI only on Windows and is described in the verification of the Speech
+subsystem and of the Speech OTS item.
+
+**CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
+creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the
+image and the title names the project. The user changes the AI model name in the settings dialog and the
+application is restarted: the project is in the recent projects menu and the model name is in effect. This
+scenario is tested by `CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip`.
+
+**WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64, builds the
+installer project with the numeric build version, and copies the package, FileAssert asserts that exactly one
+`package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by `WiX_MsiPackage`, which
+is run in CI only and is described in the WiX Toolset OTS verification document.

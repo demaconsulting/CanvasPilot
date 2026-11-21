@@ -1,0 +1,36 @@
+---
+# Software Unit Requirements for the KnowledgeMarkdown Unit
+#
+# The KnowledgeMarkdown unit reads the small dialect of Markdown that the knowledge cards are written in into blocks and
+# runs of text that a window can draw. It has no dependency on the user interface, on a Markdown library, or on any
+# provider of a language model.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        sections:
+          - title: KnowledgeMarkdown Requirements
+            requirements:
+              - id: CanvasPilot-KnowledgeMarkdown-ParseCardDialect
+                title: >-
+                  The KnowledgeMarkdown unit shall read the Markdown of a card into headings of six levels, paragraphs,
+                  bulleted and numbered list items with their markers, and fenced blocks of code with their language, in
+                  the order of the text, joining the lines of a paragraph or item with a space and keeping the lines of
+                  code as they are, shall read bold, italic, and code text inside them into runs of one style each, shall
+                  keep a marker that has no end as text, and shall lose no letter or digit of the text of any card or
+                  example description of the catalog of the application.
+                justification: |
+                  The cards are shown to the user in a window, and Markdown that is shown as it was typed is hard to read.
+                  The cards use only a few constructs, so a small reader that is tested on every card does the work
+                  without adding a Markdown library and its documents, and a check that no text is lost on the real cards
+                  means a new card, or a new version of CanvasNet, cannot make part of a card disappear unnoticed.
+                tests:
+                  - KnowledgeMarkdown_Parse_Headings_AreReadByLevel
+                  - KnowledgeMarkdown_Parse_Paragraphs_JoinLinesAndSplitAtBlankLines
+                  - KnowledgeMarkdown_Parse_Lists_ReadMarkersAndContinuations
+                  - KnowledgeMarkdown_Parse_LinesThatOnlyLookLikeListItems_AreParagraphs
+                  - KnowledgeMarkdown_Parse_FencedCode_IsKeptVerbatim
+                  - KnowledgeMarkdown_Parse_Spans_ReadBoldItalicAndCode
+                  - KnowledgeMarkdown_Parse_WholeCard_KeepsOrderAndMergesRuns
+                  - KnowledgeMarkdown_Parse_RealCatalog_ReadsEveryCardWithoutLosingText

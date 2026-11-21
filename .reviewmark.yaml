@@ -9,6 +9,8 @@ needs-review:
   - "README.md"                   # Root README file
   - "requirements.yaml"           # Root requirements file
   - "**/*.cs"                     # All C# source and test files
+  - "src/**/KnowledgeSubsystem/Cards/**/*.md"  # Knowledge cards: they steer the drawing assistant
+  - "src/**/StyleSubsystem/BuiltIn/**/style.json"  # Built-in style kits: they steer the drawing assistant
   - "docs/reqstream/**/*.yaml"    # Requirements files
   - "docs/design/**/*.md"         # Design documentation files
   - "docs/verification/**/*.md"   # Verification documentation files
@@ -18,14 +20,16 @@ needs-review:
   - "!**/bin/**"                  # Exclude build output
   - "!node_modules/**"            # Exclude npm dependencies
   - "!**/.venv/**"                # Exclude Python virtual environment
+  - "!**/generated/**"            # Exclude generated documents
 
-# Evidence source: review data and index.json are located in the 'reviews' branch
-# of this repository, accessed through the GitHub public HTTPS raw content access.
-# Note: The 'reviews' branch must be created and populated with review evidence PDFs
-# and an index.json before enforcement (--enforce flag) can be enabled in the pipeline.
+# Evidence source: no formal reviews have been performed yet, so there is no review evidence to read, as in the
+# reference template. Once formal reviews begin, create the 'reviews' branch of this repository, populate it with
+# review evidence PDFs and an index.json, and change this to:
+#   type: url
+#   location: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/reviews/index.json
+# before enforcement (--enforce flag) is enabled in the pipeline.
 evidence-source:
-  type: url
-  location: https://raw.githubusercontent.com/demaconsulting/TemplateDotNetTool/reviews/index.json
+  type: none
 
 # Context included for all reviews.
 context:
@@ -45,7 +49,7 @@ reviews:
 
   # Decomposition Review (only one per repository)
   - id: Decomposition
-    title: Review that TemplateDotNetTool Decomposition Addresses the Stated Purpose
+    title: Review that CanvasPilot Decomposition Addresses the Stated Purpose
     context:
       - README.md
       - "docs/user_guide/**/*.md"
@@ -55,129 +59,1242 @@ reviews:
       - docs/design/introduction.md
       - "docs/sysml2/**/*.sysml"
 
-  # TemplateTool - Specials
-  - id: TemplateTool-Architecture
-    title: Review of Template DotNet Tool system architecture and operational validation
+  # CanvasPilot - Specials
+  - id: CanvasPilot-Architecture
+    title: Review of CanvasPilot system architecture and operational validation
     context:
       - README.md
       - "docs/user_guide/**/*.md"
     paths:
-      - "docs/reqstream/template-dot-net-tool.yaml"
+      - "docs/reqstream/canvas-pilot.yaml"
       - "docs/design/introduction.md"
-      - "docs/design/template-dot-net-tool.md"
+      - "docs/design/canvas-pilot.md"
       - "docs/verification/introduction.md"
-      - "docs/verification/template-dot-net-tool.md"
-      - "test/**/IntegrationTests.cs"
+      - "docs/verification/canvas-pilot.md"
+      - "test/**/CanvasPilotTests.cs"
 
-  - id: TemplateTool-Design
-    title: Review of Template DotNet Tool architectural and design consistency
+  - id: CanvasPilot-Design
+    title: Review of CanvasPilot architectural and design consistency
     context:
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/reqstream/canvas-pilot.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/platform-requirements.yaml"
+      - "docs/reqstream/canvas-pilot/platform-requirements.yaml"
       - "docs/design/introduction.md"
-      - "docs/design/template-dot-net-tool/**/*.md"
+      - "docs/design/canvas-pilot/**/*.md"
       - "docs/design/ots.md"
+
+  - id: CanvasPilot-Verification
+    title: Review of CanvasPilot verification design consistency and completeness
+    context:
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/verification/introduction.md"
+      - "docs/verification/canvas-pilot.md"
+      - "docs/verification/canvas-pilot/**/*.md"
       - "docs/verification/ots.md"
 
-  - id: TemplateTool-AllRequirements
-    title: Review of Template DotNet Tool requirements quality and traceability
+  - id: CanvasPilot-AllRequirements
+    title: Review of CanvasPilot requirements quality and traceability
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/**/*.yaml"
+      - "docs/reqstream/canvas-pilot/**/*.yaml"
 
-  # TemplateTool - Program
-  - id: TemplateTool-Program
-    title: Review of Template DotNet Tool Program unit implementation
+  # CanvasPilot - Annotation
+  - id: CanvasPilot-Annotation
+    title: Review of CanvasPilot Annotation subsystem architecture and interfaces
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/program.yaml"
-      - "docs/design/template-dot-net-tool/program.md"
-      - "docs/verification/template-dot-net-tool/program.md"
-      - "src/**/Program.cs"
-      - "test/**/ProgramTests.cs"
+      - "docs/reqstream/canvas-pilot/annotation-subsystem.yaml"
+      - "docs/design/canvas-pilot/annotation-subsystem.md"
+      - "docs/verification/canvas-pilot/annotation-subsystem.md"
+      - "test/**/AnnotationSubsystem/AnnotationSubsystemTests.cs"
 
-  # TemplateTool - Cli
-  - id: TemplateTool-Cli
-    title: Review of Template DotNet Tool Cli subsystem architecture and interfaces
+  - id: CanvasPilot-Annotation-AnnotationOverlay
+    title: Review of CanvasPilot AnnotationOverlay unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/annotation-subsystem.md
+      - docs/reqstream/canvas-pilot/annotation-subsystem.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/cli.yaml"
-      - "docs/design/template-dot-net-tool/cli.md"
-      - "docs/verification/template-dot-net-tool/cli.md"
-      - "test/**/Cli/CliSubsystemTests.cs"
+      - "docs/reqstream/canvas-pilot/annotation-subsystem/annotation-overlay.yaml"
+      - "docs/design/canvas-pilot/annotation-subsystem/annotation-overlay.md"
+      - "docs/verification/canvas-pilot/annotation-subsystem/annotation-overlay.md"
+      - "src/**/AnnotationSubsystem/AnnotationOverlayStyle.cs"
+      - "src/**/AnnotationSubsystem/AnnotationOverlayView.axaml"
+      - "src/**/AnnotationSubsystem/AnnotationOverlayView.axaml.cs"
+      - "src/**/AnnotationSubsystem/AnnotationOverlayViewModel.cs"
+      - "src/**/AnnotationSubsystem/AnnotationToolbarView.axaml"
+      - "src/**/AnnotationSubsystem/AnnotationToolbarView.axaml.cs"
+      - "src/**/AnnotationSubsystem/AnnotationToolbarViewModel.cs"
+      - "test/**/AnnotationSubsystem/AnnotationOverlayTests.cs"
+      - "test/**/AnnotationOverlayViewTests.cs"
 
-  - id: TemplateTool-Cli-Context
-    title: Review of Template DotNet Tool Context unit implementation
+  - id: CanvasPilot-Annotation-MarkRegistry
+    title: Review of CanvasPilot MarkRegistry unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
-      - docs/design/template-dot-net-tool/cli.md
-      - docs/reqstream/template-dot-net-tool/cli.yaml
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/annotation-subsystem.md
+      - docs/reqstream/canvas-pilot/annotation-subsystem.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/cli/context.yaml"
-      - "docs/design/template-dot-net-tool/cli/context.md"
-      - "docs/verification/template-dot-net-tool/cli/context.md"
-      - "src/**/Cli/Context.cs"
-      - "test/**/Cli/ContextTests.cs"
+      - "docs/reqstream/canvas-pilot/annotation-subsystem/mark-registry.yaml"
+      - "docs/design/canvas-pilot/annotation-subsystem/mark-registry.md"
+      - "docs/verification/canvas-pilot/annotation-subsystem/mark-registry.md"
+      - "src/**/AnnotationSubsystem/Mark.cs"
+      - "src/**/AnnotationSubsystem/MarkGeometry.cs"
+      - "src/**/AnnotationSubsystem/MarkRegistry.cs"
+      - "test/**/AnnotationSubsystem/AnnotationSubsystemFakes.cs"
+      - "test/**/AnnotationSubsystem/MarkRegistryTests.cs"
 
-  # TemplateTool - SelfTest
-  - id: TemplateTool-SelfTest
-    title: Review of Template DotNet Tool SelfTest subsystem architecture and interfaces
+  - id: CanvasPilot-Annotation-MarkSourceResolver
+    title: Review of CanvasPilot MarkSourceResolver unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/annotation-subsystem.md
+      - docs/reqstream/canvas-pilot/annotation-subsystem.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/self-test.yaml"
-      - "docs/design/template-dot-net-tool/self-test.md"
-      - "docs/verification/template-dot-net-tool/self-test.md"
-      - "test/**/SelfTest/SelfTestSubsystemTests.cs"
+      - "docs/reqstream/canvas-pilot/annotation-subsystem/mark-source-resolver.yaml"
+      - "docs/design/canvas-pilot/annotation-subsystem/mark-source-resolver.md"
+      - "docs/verification/canvas-pilot/annotation-subsystem/mark-source-resolver.md"
+      - "src/**/AnnotationSubsystem/MarkSourceResolver.cs"
+      - "src/**/AnnotationSubsystem/SourceElementReference.cs"
+      - "test/**/AnnotationSubsystem/MarkSourceResolverTests.cs"
 
-  - id: TemplateTool-SelfTest-Validation
-    title: Review of Template DotNet Tool Validation unit implementation
+  # CanvasPilot - AppShell
+  - id: CanvasPilot-AppShell
+    title: Review of CanvasPilot AppShell subsystem architecture, composition root, and interfaces
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
-      - docs/design/template-dot-net-tool/self-test.md
-      - docs/reqstream/template-dot-net-tool/self-test.yaml
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/self-test/validation.yaml"
-      - "docs/design/template-dot-net-tool/self-test/validation.md"
-      - "docs/verification/template-dot-net-tool/self-test/validation.md"
-      - "src/**/SelfTest/Validation.cs"
-      - "test/**/SelfTest/ValidationTests.cs"
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem.md"
+      - "src/**/App.axaml"
+      - "src/**/App.axaml.cs"
+      - "src/**/AppShellSubsystem/ApplicationComposition.cs"
+      - "src/**/AppShellSubsystem/ViewLocator.cs"
+      - "src/DemaConsulting.CanvasPilot.Desktop/Program.cs"
+      - "test/**/AppShellSubsystem/AppShellSubsystemTests.cs"
+      - "test/DemaConsulting.CanvasPilot.UiTests/TestAppBuilder.cs"
 
-  # TemplateTool - Utilities
-  - id: TemplateTool-Utilities
-    title: Review of Template DotNet Tool Utilities subsystem architecture and interfaces
+  - id: CanvasPilot-AppShell-MainWindowShell
+    title: Review of CanvasPilot MainWindowShell unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/utilities.yaml"
-      - "docs/design/template-dot-net-tool/utilities.md"
-      - "docs/verification/template-dot-net-tool/utilities.md"
-      - "test/**/Utilities/UtilitiesSubsystemTests.cs"
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/main-window-shell.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/main-window-shell.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/main-window-shell.md"
+      - "src/**/AppShellSubsystem/MainWindowShell.cs"
+      - "src/**/AppShellSubsystem/IDialogService.cs"
+      - "src/**/AppShellSubsystem/MessageDialogViewModel.cs"
+      - "src/**/AppShellSubsystem/MessageDialogView.axaml"
+      - "src/**/AppShellSubsystem/MessageDialogView.axaml.cs"
+      - "src/**/AppShellSubsystem/MainWindowView.axaml"
+      - "src/**/AppShellSubsystem/MainWindowView.axaml.cs"
+      - "test/**/AppShellSubsystem/MainWindowShellTests.cs"
+      - "test/**/AppShellSubsystem/MessageDialogTests.cs"
+      - "test/**/AppShellSubsystem/AppShellSubsystemFakes.cs"
+      - "test/**/MainWindowViewTests.cs"
+      - "test/**/AppShellUiTestSupport.cs"
 
-  - id: TemplateTool-Utilities-PathHelpers
-    title: Review of Template DotNet Tool PathHelpers unit implementation
+  - id: CanvasPilot-AppShell-ProjectWorkspace
+    title: Review of CanvasPilot ProjectWorkspace unit implementation
     context:
-      - docs/design/template-dot-net-tool.md
-      - docs/reqstream/template-dot-net-tool.yaml
-      - docs/design/template-dot-net-tool/utilities.md
-      - docs/reqstream/template-dot-net-tool/utilities.yaml
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
     paths:
-      - "docs/reqstream/template-dot-net-tool/utilities/path-helpers.yaml"
-      - "docs/design/template-dot-net-tool/utilities/path-helpers.md"
-      - "docs/verification/template-dot-net-tool/utilities/path-helpers.md"
-      - "src/**/Utilities/PathHelpers.cs"
-      - "test/**/Utilities/PathHelpersTests.cs"
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/project-workspace.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/project-workspace.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/project-workspace.md"
+      - "src/**/AppShellSubsystem/ProjectWorkspaceViewModel.cs"
+      - "src/**/AppShellSubsystem/ProjectWorkspaceView.axaml"
+      - "src/**/AppShellSubsystem/ProjectWorkspaceView.axaml.cs"
+      - "test/**/AppShellSubsystem/ProjectWorkspaceTests.cs"
+
+  - id: CanvasPilot-AppShell-AboutDialog
+    title: Review of CanvasPilot AboutDialog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/about-dialog.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/about-dialog.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/about-dialog.md"
+      - "src/**/AppShellSubsystem/AboutDialogViewModel.cs"
+      - "src/**/AppShellSubsystem/AboutDialogView.axaml"
+      - "src/**/AppShellSubsystem/AboutDialogView.axaml.cs"
+      - "test/**/AppShellSubsystem/AboutDialogTests.cs"
+
+  # CanvasPilot - Chat
+  - id: CanvasPilot-Chat
+    title: Review of CanvasPilot Chat subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem.md"
+      - "docs/verification/canvas-pilot/chat-subsystem.md"
+      - "test/**/ChatSubsystem/ChatSubsystemTests.cs"
+
+  - id: CanvasPilot-Chat-ChatPanel
+    title: Review of CanvasPilot ChatPanel unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/chat-panel.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/chat-panel.md"
+      - "src/**/ChatSubsystem/ChatPanelView.axaml"
+      - "src/**/ChatSubsystem/ChatPanelView.axaml.cs"
+      - "src/**/ChatSubsystem/ChatPanelViewModel.cs"
+      - "src/**/ChatSubsystem/ChipThumbnailProvider.cs"
+      - "src/**/ChatSubsystem/TranscriptEntryView.axaml"
+      - "src/**/ChatSubsystem/TranscriptEntryView.axaml.cs"
+      - "src/**/ChatSubsystem/TranscriptEntryViewModel.cs"
+      - "src/**/ChatSubsystem/TranscriptItem.cs"
+      - "test/**/ChatSubsystem/ChatPanelTests.cs"
+      - "test/**/ChatSubsystem/ChatSubsystemFakes.cs"
+      - "test/**/ChatPanelViewTests.cs"
+      - "test/**/ChatUiTestSupport.cs"
+
+  - id: CanvasPilot-Chat-PayloadInspector
+    title: Review of CanvasPilot PayloadInspector unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/payload-inspector.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/payload-inspector.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/payload-inspector.md"
+      - "src/**/ChatSubsystem/IPayloadInspectorLauncher.cs"
+      - "src/**/ChatSubsystem/PayloadInspectorView.axaml"
+      - "src/**/ChatSubsystem/PayloadInspectorView.axaml.cs"
+      - "src/**/ChatSubsystem/PayloadInspectorViewModel.cs"
+      - "src/**/ChatSubsystem/PayloadPictureViewModel.cs"
+      - "test/**/ChatSubsystem/PayloadInspectorTests.cs"
+      - "test/**/PayloadInspectorViewTests.cs"
+
+  # CanvasPilot - Composer
+  - id: CanvasPilot-Composer
+    title: Review of CanvasPilot Composer subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem.md"
+      - "docs/verification/canvas-pilot/composer-subsystem.md"
+      - "test/**/ComposerSubsystem/ComposerSubsystemTests.cs"
+      - "test/**/ComposerSubsystemUiTests.cs"
+
+  - id: CanvasPilot-Composer-ComposerDocument
+    title: Review of CanvasPilot ComposerDocument unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/composer-document.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/composer-document.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/composer-document.md"
+      - "src/**/ComposerSubsystem/ComposerDocument.cs"
+      - "src/**/ComposerSubsystem/ComposerSegment.cs"
+      - "src/**/ComposerSubsystem/ComposerSnapshot.cs"
+      - "test/**/ComposerSubsystem/ComposerDocumentTests.cs"
+
+  - id: CanvasPilot-Composer-ComposerHistory
+    title: Review of CanvasPilot ComposerHistory unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/composer-history.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/composer-history.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/composer-history.md"
+      - "src/**/ComposerSubsystem/ComposerEdit.cs"
+      - "src/**/ComposerSubsystem/ComposerHistory.cs"
+      - "test/**/ComposerSubsystem/ComposerHistoryTests.cs"
+
+  - id: CanvasPilot-Composer-AttachmentIntake
+    title: Review of CanvasPilot AttachmentIntake unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/attachment-intake.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/attachment-intake.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/attachment-intake.md"
+      - "src/**/ComposerSubsystem/AttachmentIntake.cs"
+      - "src/**/ComposerSubsystem/DroppedContent.cs"
+      - "test/**/ComposerSubsystem/AttachmentIntakeTests.cs"
+
+  - id: CanvasPilot-Composer-AttachmentStore
+    title: Review of CanvasPilot AttachmentStore unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/attachment-store.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/attachment-store.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/attachment-store.md"
+      - "src/**/ComposerSubsystem/AttachmentNames.cs"
+      - "src/**/ComposerSubsystem/AttachmentStore.cs"
+      - "src/**/ComposerSubsystem/IAttachmentStore.cs"
+      - "src/**/ComposerSubsystem/StagedAttachment.cs"
+      - "test/**/ComposerSubsystem/AttachmentStoreTests.cs"
+
+  - id: CanvasPilot-Composer-ComposerViewModel
+    title: Review of CanvasPilot ComposerViewModel unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/composer-view-model.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/composer-view-model.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/composer-view-model.md"
+      - "src/**/ComposerSubsystem/ComposerViewModel.cs"
+      - "src/**/ComposerSubsystem/IMessageBuilder.cs"
+      - "src/**/ComposerSubsystem/IPushToTalkTarget.cs"
+      - "src/**/ComposerSubsystem/IUndoRedoTarget.cs"
+      - "src/**/ComposerSubsystem/SentMessage.cs"
+      - "test/**/ComposerSubsystem/ComposerViewModelTests.cs"
+      - "test/**/ComposerSubsystem/ComposerViewModelFakes.cs"
+
+  - id: CanvasPilot-Composer-ComposerEditor
+    title: Review of CanvasPilot ComposerEditor unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/composer-subsystem.md
+      - docs/reqstream/canvas-pilot/composer-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/composer-subsystem/composer-editor.yaml"
+      - "docs/design/canvas-pilot/composer-subsystem/composer-editor.md"
+      - "docs/verification/canvas-pilot/composer-subsystem/composer-editor.md"
+      - "src/**/ComposerSubsystem/ChipElementGenerator.cs"
+      - "src/**/ComposerSubsystem/ChipView.axaml"
+      - "src/**/ComposerSubsystem/ChipView.axaml.cs"
+      - "src/**/ComposerSubsystem/ComposerEditorView.axaml"
+      - "src/**/ComposerSubsystem/ComposerEditorView.axaml.cs"
+      - "src/**/ComposerSubsystem/DataTransferReader.cs"
+      - "src/**/ComposerSubsystem/DictatedTextBackgroundRenderer.cs"
+      - "src/**/ComposerSubsystem/IChipThumbnailProvider.cs"
+      - "src/**/ComposerSubsystem/ImageChipThumbnailProvider.cs"
+      - "test/**/ComposerEditorViewTests.cs"
+      - "test/**/ComposerEditorSupportTests.cs"
+      - "test/**/ComposerUiTestSupport.cs"
+
+  # CanvasPilot - Knowledge
+  - id: CanvasPilot-Knowledge
+    title: Review of CanvasPilot Knowledge subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem.md"
+      - "test/**/KnowledgeSubsystem/KnowledgeSubsystemTests.cs"
+
+  - id: CanvasPilot-Knowledge-KnowledgeCatalog
+    title: Review of CanvasPilot KnowledgeCatalog unit implementation and cards
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-catalog.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-catalog.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-catalog.md"
+      - "src/**/KnowledgeSubsystem/IKnowledgeCatalog.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeCard.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeCatalog.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeExample.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeExampleReference.cs"
+      - "src/**/KnowledgeSubsystem/Cards/**/*.md"
+      - "test/**/KnowledgeSubsystem/KnowledgeCatalogTests.cs"
+
+  - id: CanvasPilot-Knowledge-KnowledgeSearch
+    title: Review of CanvasPilot KnowledgeSearch unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-search.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-search.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-search.md"
+      - "src/**/KnowledgeSubsystem/KnowledgeSearch.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeSearchResult.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgeSearchTests.cs"
+      - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
+
+  - id: CanvasPilot-Knowledge-KnowledgePromptBuilder
+    title: Review of CanvasPilot KnowledgePromptBuilder unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.md"
+      - "src/**/KnowledgeSubsystem/KnowledgePromptBuilder.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgePromptBuilderTests.cs"
+
+  - id: CanvasPilot-Knowledge-KnowledgeTools
+    title: Review of CanvasPilot KnowledgeTools unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-tools.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-tools.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-tools.md"
+      - "src/**/KnowledgeSubsystem/KnowledgeTool.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeTools.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgeToolsTests.cs"
+      - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
+
+  - id: CanvasPilot-Knowledge-KnowledgeSkills
+    title: Review of CanvasPilot KnowledgeSkills unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-skills.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-skills.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-skills.md"
+      - "src/**/KnowledgeSubsystem/KnowledgeSkill.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeSkills.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgeSkillsTests.cs"
+      - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
+
+  - id: CanvasPilot-Knowledge-KnowledgeMarkdown
+    title: Review of CanvasPilot KnowledgeMarkdown unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-markdown.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-markdown.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-markdown.md"
+      - "src/**/KnowledgeSubsystem/KnowledgeMarkdown.cs"
+      - "src/**/KnowledgeSubsystem/MarkdownBlock.cs"
+      - "src/**/KnowledgeSubsystem/HeadingBlock.cs"
+      - "src/**/KnowledgeSubsystem/ParagraphBlock.cs"
+      - "src/**/KnowledgeSubsystem/ListItemBlock.cs"
+      - "src/**/KnowledgeSubsystem/CodeBlock.cs"
+      - "src/**/KnowledgeSubsystem/MarkdownSpan.cs"
+      - "src/**/KnowledgeSubsystem/MarkdownSpanStyle.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgeMarkdownTests.cs"
+
+  - id: CanvasPilot-Knowledge-KnowledgeBrowser
+    title: Review of CanvasPilot KnowledgeBrowser unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-browser.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-browser.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-browser.md"
+      - "src/**/KnowledgeSubsystem/IKnowledgeBrowserLauncher.cs"
+      - "src/**/KnowledgeSubsystem/IKnowledgeClipboard.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeBrowserView.axaml"
+      - "src/**/KnowledgeSubsystem/KnowledgeBrowserView.axaml.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeBrowserViewModel.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeNodeViewModel.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeLinkViewModel.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeExampleViewModel.cs"
+      - "src/**/KnowledgeSubsystem/MarkdownBlocksPanel.cs"
+      - "src/**/KnowledgeSubsystem/WindowKnowledgeClipboard.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgeBrowserTests.cs"
+      - "test/**/KnowledgeSubsystem/RecordingKnowledgeClipboard.cs"
+      - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
+      - "test/**/KnowledgeBrowserViewTests.cs"
+
+  # CanvasPilot - Logging
+  - id: CanvasPilot-Logging
+    title: Review of CanvasPilot Logging subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/logging-subsystem.yaml"
+      - "docs/design/canvas-pilot/logging-subsystem.md"
+      - "docs/verification/canvas-pilot/logging-subsystem.md"
+      - "test/**/LoggingSubsystem/LoggingSubsystemTests.cs"
+
+  - id: CanvasPilot-Logging-RollingFileLogger
+    title: Review of CanvasPilot RollingFileLogger unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/logging-subsystem.md
+      - docs/reqstream/canvas-pilot/logging-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml"
+      - "docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md"
+      - "docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md"
+      - "src/**/LoggingSubsystem/RollingFileLogger.cs"
+      - "test/**/LoggingSubsystem/RollingFileLoggerTests.cs"
+
+  # CanvasPilot - Payload
+  - id: CanvasPilot-Payload
+    title: Review of CanvasPilot Payload subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem.md"
+      - "docs/verification/canvas-pilot/payload-subsystem.md"
+      - "test/**/PayloadSubsystem/PayloadSubsystemTests.cs"
+
+  - id: CanvasPilot-Payload-MessagePayload
+    title: Review of CanvasPilot MessagePayload unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/payload-subsystem.md
+      - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem/message-payload.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem/message-payload.md"
+      - "docs/verification/canvas-pilot/payload-subsystem/message-payload.md"
+      - "src/**/PayloadSubsystem/MessagePayload.cs"
+      - "src/**/PayloadSubsystem/PayloadAttachment.cs"
+      - "src/**/PayloadSubsystem/PayloadImage.cs"
+      - "src/**/PayloadSubsystem/PayloadMark.cs"
+      - "src/**/PayloadSubsystem/PayloadSegment.cs"
+      - "test/**/PayloadSubsystem/MessagePayloadTests.cs"
+
+  - id: CanvasPilot-Payload-MarkImageComposer
+    title: Review of CanvasPilot MarkImageComposer unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/payload-subsystem.md
+      - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem/mark-image-composer.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem/mark-image-composer.md"
+      - "docs/verification/canvas-pilot/payload-subsystem/mark-image-composer.md"
+      - "src/**/PayloadSubsystem/IMarkImageComposer.cs"
+      - "src/**/PayloadSubsystem/MarkImageComposer.cs"
+      - "test/**/PayloadSubsystem/MarkImageComposerTests.cs"
+      - "test/**/PayloadSubsystem/PayloadSubsystemFakes.cs"
+
+  - id: CanvasPilot-Payload-PayloadBuilder
+    title: Review of CanvasPilot PayloadBuilder unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/payload-subsystem.md
+      - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem/payload-builder.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem/payload-builder.md"
+      - "docs/verification/canvas-pilot/payload-subsystem/payload-builder.md"
+      - "src/**/PayloadSubsystem/PayloadBuilder.cs"
+      - "test/**/PayloadSubsystem/PayloadBuilderTests.cs"
+
+  - id: CanvasPilot-Payload-PayloadDescriber
+    title: Review of CanvasPilot PayloadDescriber unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/payload-subsystem.md
+      - docs/reqstream/canvas-pilot/payload-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/payload-subsystem/payload-describer.yaml"
+      - "docs/design/canvas-pilot/payload-subsystem/payload-describer.md"
+      - "docs/verification/canvas-pilot/payload-subsystem/payload-describer.md"
+      - "src/**/PayloadSubsystem/PayloadDescriber.cs"
+      - "test/**/PayloadSubsystem/PayloadDescriberTests.cs"
+
+  # CanvasPilot - Preview
+  - id: CanvasPilot-Preview
+    title: Review of CanvasPilot Preview subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem.md"
+      - "docs/verification/canvas-pilot/preview-subsystem.md"
+      - "test/**/PreviewSubsystem/PreviewSubsystemTests.cs"
+
+  - id: CanvasPilot-Preview-ImageRenderService
+    title: Review of CanvasPilot ImageRenderService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/image-render-service.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/image-render-service.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/image-render-service.md"
+      - "src/**/PreviewSubsystem/IImageRenderService.cs"
+      - "src/**/PreviewSubsystem/ImageRenderService.cs"
+      - "src/**/PreviewSubsystem/PngPhysicalSize.cs"
+      - "src/**/PreviewSubsystem/RenderResult.cs"
+      - "src/**/PreviewSubsystem/RenderSettings.cs"
+      - "test/**/PreviewSubsystem/ImageRenderServiceTests.cs"
+      - "test/**/PreviewSubsystem/PngPhysicalSizeTests.cs"
+      - "test/**/PreviewSubsystem/RenderResultTests.cs"
+
+  - id: CanvasPilot-Preview-PreviewPane
+    title: Review of CanvasPilot PreviewPane unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/preview-pane.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/preview-pane.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/preview-pane.md"
+      - "src/**/PreviewSubsystem/IRenderedImageSource.cs"
+      - "src/**/PreviewSubsystem/IRenderNoteSink.cs"
+      - "src/**/PreviewSubsystem/PreviewPaneViewModel.cs"
+      - "src/**/PreviewSubsystem/PreviewPaneView.axaml"
+      - "src/**/PreviewSubsystem/PreviewPaneView.axaml.cs"
+      - "src/**/PreviewSubsystem/RenderedImageBitmap.cs"
+      - "test/**/PreviewSubsystem/PreviewPaneTests.cs"
+      - "test/**/PreviewSubsystem/RenderedImageBitmapTests.cs"
+      - "test/**/PreviewSubsystem/PreviewSubsystemFakes.cs"
+      - "test/**/PreviewPaneViewTests.cs"
+
+  - id: CanvasPilot-Preview-ImageExporter
+    title: Review of CanvasPilot ImageExporter unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/image-exporter.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/image-exporter.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/image-exporter.md"
+      - "src/**/PreviewSubsystem/ImageExporter.cs"
+      - "src/**/PreviewSubsystem/IImageExporter.cs"
+      - "src/**/PreviewSubsystem/IExportDialogs.cs"
+      - "src/**/PreviewSubsystem/ExportPreset.cs"
+      - "src/**/PreviewSubsystem/IExportPresetSource.cs"
+      - "test/**/PreviewSubsystem/ImageExporterTests.cs"
+      - "test/**/PreviewSubsystem/PreviewSubsystemFakes.cs"
+
+  - id: CanvasPilot-Preview-ExportPresetDialog
+    title: Review of CanvasPilot ExportPresetDialog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/export-preset-dialog.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/export-preset-dialog.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/export-preset-dialog.md"
+      - "src/**/PreviewSubsystem/ExportPresetDialogViewModel.cs"
+      - "src/**/PreviewSubsystem/ExportPresetItemViewModel.cs"
+      - "src/**/PreviewSubsystem/ExportPresetDialogView.axaml"
+      - "src/**/PreviewSubsystem/ExportPresetDialogView.axaml.cs"
+      - "test/**/PreviewSubsystem/ExportPresetDialogTests.cs"
+      - "test/**/ExportPresetDialogViewTests.cs"
+
+  - id: CanvasPilot-Preview-ImageDragSource
+    title: Review of CanvasPilot ImageDragSource unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/image-drag-source.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/image-drag-source.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/image-drag-source.md"
+      - "src/**/PreviewSubsystem/ImageDragSource.cs"
+      - "test/**/PreviewSubsystem/ImageDragSourceTests.cs"
+  # CanvasPilot - Project
+  - id: CanvasPilot-Project
+    title: Review of CanvasPilot Project subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem.yaml"
+      - "docs/design/canvas-pilot/project-subsystem.md"
+      - "docs/verification/canvas-pilot/project-subsystem.md"
+      - "test/**/ProjectSubsystem/ProjectSubsystemTests.cs"
+
+  - id: CanvasPilot-Project-ProjectService
+    title: Review of CanvasPilot ProjectService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/project-subsystem.md
+      - docs/reqstream/canvas-pilot/project-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem/project-service.yaml"
+      - "docs/design/canvas-pilot/project-subsystem/project-service.md"
+      - "docs/verification/canvas-pilot/project-subsystem/project-service.md"
+      - "src/**/ProjectSubsystem/IProjectService.cs"
+      - "src/**/ProjectSubsystem/ProjectDocument.cs"
+      - "src/**/ProjectSubsystem/ProjectNameRules.cs"
+      - "src/**/ProjectSubsystem/ProjectService.cs"
+      - "test/**/ProjectSubsystem/ProjectServiceTests.cs"
+
+  - id: CanvasPilot-Project-RecentProjects
+    title: Review of CanvasPilot RecentProjects unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/project-subsystem.md
+      - docs/reqstream/canvas-pilot/project-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem/recent-projects.yaml"
+      - "docs/design/canvas-pilot/project-subsystem/recent-projects.md"
+      - "docs/verification/canvas-pilot/project-subsystem/recent-projects.md"
+      - "src/**/ProjectSubsystem/IRecentProjects.cs"
+      - "src/**/ProjectSubsystem/RecentProjects.cs"
+      - "test/**/ProjectSubsystem/RecentProjectsTests.cs"
+
+  - id: CanvasPilot-Project-NewProjectDialog
+    title: Review of CanvasPilot NewProjectDialog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/project-subsystem.md
+      - docs/reqstream/canvas-pilot/project-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem/new-project-dialog.yaml"
+      - "docs/design/canvas-pilot/project-subsystem/new-project-dialog.md"
+      - "docs/verification/canvas-pilot/project-subsystem/new-project-dialog.md"
+      - "src/**/ProjectSubsystem/IFolderPicker.cs"
+      - "src/**/ProjectSubsystem/NewProjectDialogViewModel.cs"
+      - "src/**/ProjectSubsystem/NewProjectDialogView.axaml"
+      - "src/**/ProjectSubsystem/NewProjectDialogView.axaml.cs"
+      - "test/**/ProjectSubsystem/NewProjectDialogTests.cs"
+      - "test/**/NewProjectDialogViewTests.cs"
+
+  - id: CanvasPilot-Project-ProjectExplorer
+    title: Review of CanvasPilot ProjectExplorer unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/project-subsystem.md
+      - docs/reqstream/canvas-pilot/project-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/project-subsystem/project-explorer.yaml"
+      - "docs/design/canvas-pilot/project-subsystem/project-explorer.md"
+      - "docs/verification/canvas-pilot/project-subsystem/project-explorer.md"
+      - "src/**/ProjectSubsystem/IImageSourceFilter.cs"
+      - "src/**/ProjectSubsystem/IRefreshScheduler.cs"
+      - "src/**/ProjectSubsystem/ProjectFileItem.cs"
+      - "src/**/ProjectSubsystem/ProjectExplorerViewModel.cs"
+      - "src/**/ProjectSubsystem/ProjectExplorerView.axaml"
+      - "src/**/ProjectSubsystem/ProjectExplorerView.axaml.cs"
+      - "test/**/ProjectSubsystem/ProjectExplorerTests.cs"
+      - "test/**/ProjectSubsystem/ProjectSubsystemFakes.cs"
+      - "test/**/ProjectExplorerViewTests.cs"
+
+  # CanvasPilot - Settings
+  - id: CanvasPilot-Settings
+    title: Review of CanvasPilot Settings subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem.md"
+      - "docs/verification/canvas-pilot/settings-subsystem.md"
+      - "test/**/SettingsSubsystem/SettingsSubsystemTests.cs"
+
+  - id: CanvasPilot-Settings-SettingsService
+    title: Review of CanvasPilot SettingsService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/settings-subsystem.md
+      - docs/reqstream/canvas-pilot/settings-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem/settings-service.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem/settings-service.md"
+      - "docs/verification/canvas-pilot/settings-subsystem/settings-service.md"
+      - "src/**/SettingsSubsystem/AppSettings.cs"
+      - "src/**/SettingsSubsystem/ISettingsService.cs"
+      - "src/**/SettingsSubsystem/SettingsService.cs"
+      - "test/**/SettingsSubsystem/SettingsServiceTests.cs"
+
+  - id: CanvasPilot-Settings-SettingsDialog
+    title: Review of CanvasPilot SettingsDialog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/settings-subsystem.md
+      - docs/reqstream/canvas-pilot/settings-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem/settings-dialog.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem/settings-dialog.md"
+      - "docs/verification/canvas-pilot/settings-subsystem/settings-dialog.md"
+      - "src/**/SettingsSubsystem/ISettingsPage.cs"
+      - "src/**/SettingsSubsystem/SettingsChoice.cs"
+      - "src/**/SettingsSubsystem/SettingsDialogViewModel.cs"
+      - "src/**/SettingsSubsystem/SettingsDialogView.axaml"
+      - "src/**/SettingsSubsystem/SettingsDialogView.axaml.cs"
+      - "test/**/SettingsSubsystem/SettingsDialogTests.cs"
+      - "test/**/SettingsSubsystem/FakeSettingsPage.cs"
+      - "test/**/SettingsDialogViewTests.cs"
+      - "test/**/SettingsUiTestSupport.cs"
+
+  - id: CanvasPilot-Settings-AiProviderSettingsPage
+    title: Review of CanvasPilot AiProviderSettingsPage unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/settings-subsystem.md
+      - docs/reqstream/canvas-pilot/settings-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem/ai-provider-settings-page.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem/ai-provider-settings-page.md"
+      - "docs/verification/canvas-pilot/settings-subsystem/ai-provider-settings-page.md"
+      - "src/**/SettingsSubsystem/AiProviderSettingsPageViewModel.cs"
+      - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml"
+      - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml.cs"
+      - "test/**/SettingsSubsystem/AiProviderSettingsPageTests.cs"
+      - "test/**/AiProviderSettingsPageViewTests.cs"
+
+  # CanvasPilot - Speech
+  - id: CanvasPilot-Speech
+    title: Review of CanvasPilot Speech subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem.md"
+      - "docs/verification/canvas-pilot/speech-subsystem.md"
+      - "test/**/SpeechSubsystem/SpeechSubsystemTests.cs"
+
+  - id: CanvasPilot-Speech-AudioDeviceService
+    title: Review of CanvasPilot AudioDeviceService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/audio-device-service.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/audio-device-service.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/audio-device-service.md"
+      - "src/**/SpeechSubsystem/IAudioDeviceService.cs"
+      - "src/**/SpeechSubsystem/AudioDeviceService.cs"
+      - "test/**/SpeechSubsystem/AudioDeviceServiceTests.cs"
+
+  - id: CanvasPilot-Speech-SpeechModelService
+    title: Review of CanvasPilot SpeechModelService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/speech-model-service.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/speech-model-service.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/speech-model-service.md"
+      - "src/**/SpeechSubsystem/ISpeechModelService.cs"
+      - "src/**/SpeechSubsystem/SpeechModelService.cs"
+      - "test/**/SpeechSubsystem/SpeechModelServiceTests.cs"
+
+  - id: CanvasPilot-Speech-DictationService
+    title: Review of CanvasPilot DictationService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/dictation-service.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/dictation-service.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/dictation-service.md"
+      - "src/**/SpeechSubsystem/IDictationService.cs"
+      - "src/**/SpeechSubsystem/DictationService.cs"
+      - "test/**/SpeechSubsystem/DictationServiceTests.cs"
+      - "test/**/SpeechSubsystem/DictationTestSupport.cs"
+
+  - id: CanvasPilot-Speech-DeviceSelection
+    title: Review of CanvasPilot DeviceSelection unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/device-selection.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/device-selection.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/device-selection.md"
+      - "src/**/SpeechSubsystem/DeviceSelectionViewModel.cs"
+      - "src/**/SpeechSubsystem/DeviceSelectionView.axaml"
+      - "src/**/SpeechSubsystem/DeviceSelectionView.axaml.cs"
+      - "test/**/SpeechSubsystem/DeviceSelectionTests.cs"
+
+  - id: CanvasPilot-Speech-ModelCatalogPanel
+    title: Review of CanvasPilot ModelCatalogPanel unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/model-catalog-panel.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/model-catalog-panel.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/model-catalog-panel.md"
+      - "src/**/SpeechSubsystem/ModelCatalogPanelViewModel.cs"
+      - "src/**/SpeechSubsystem/ModelListItemViewModel.cs"
+      - "src/**/SpeechSubsystem/ModelCatalogPanelView.axaml"
+      - "src/**/SpeechSubsystem/ModelCatalogPanelView.axaml.cs"
+      - "test/**/SpeechSubsystem/ModelCatalogPanelTests.cs"
+
+  - id: CanvasPilot-Speech-ModelParameterEditor
+    title: Review of CanvasPilot ModelParameterEditor unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/model-parameter-editor.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/model-parameter-editor.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/model-parameter-editor.md"
+      - "src/**/SpeechSubsystem/ModelParameterEditorViewModel.cs"
+      - "src/**/SpeechSubsystem/ParameterViewModels.cs"
+      - "src/**/SpeechSubsystem/ModelParameterEditorView.axaml"
+      - "src/**/SpeechSubsystem/ModelParameterEditorView.axaml.cs"
+      - "test/**/SpeechSubsystem/ModelParameterEditorTests.cs"
+
+  - id: CanvasPilot-Speech-SpeechSettingsPage
+    title: Review of CanvasPilot SpeechSettingsPage unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/speech-settings-page.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/speech-settings-page.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/speech-settings-page.md"
+      - "src/**/SpeechSubsystem/SpeechSettingsPageViewModel.cs"
+      - "src/**/SpeechSubsystem/SpeechSettingsPageView.axaml"
+      - "src/**/SpeechSubsystem/SpeechSettingsPageView.axaml.cs"
+      - "test/**/SpeechSubsystem/SpeechSettingsPageTests.cs"
+      - "test/**/SpeechSubsystem/SpeechSubsystemFakes.cs"
+      - "test/**/SpeechSettingsPageViewTests.cs"
+      - "test/**/SpeechUiTestSupport.cs"
+
+  # CanvasPilot - Style
+  - id: CanvasPilot-Style
+    title: Review of CanvasPilot Style subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem.yaml"
+      - "docs/design/canvas-pilot/style-subsystem.md"
+      - "docs/verification/canvas-pilot/style-subsystem.md"
+      - "test/**/StyleSubsystem/StyleSubsystemTests.cs"
+
+  - id: CanvasPilot-Style-StyleKitDocument
+    title: Review of CanvasPilot StyleKitDocument unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-document.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-document.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-document.md"
+      - "src/**/StyleSubsystem/StyleColors.cs"
+      - "src/**/StyleSubsystem/StyleExample.cs"
+      - "src/**/StyleSubsystem/StyleFonts.cs"
+      - "src/**/StyleSubsystem/StyleGuidanceText.cs"
+      - "src/**/StyleSubsystem/StyleIssue.cs"
+      - "src/**/StyleSubsystem/StyleKit.cs"
+      - "src/**/StyleSubsystem/StyleKitLocation.cs"
+      - "src/**/StyleSubsystem/StyleKitParseResult.cs"
+      - "src/**/StyleSubsystem/StyleKitReader.cs"
+      - "src/**/StyleSubsystem/StyleKitSerializer.cs"
+      - "src/**/StyleSubsystem/StyleMermaid.cs"
+      - "src/**/StyleSubsystem/StyleSizePreset.cs"
+      - "test/**/StyleSubsystem/StyleKitDocumentTests.cs"
+
+  - id: CanvasPilot-Style-StyleKitCatalog
+    title: Review of CanvasPilot StyleKitCatalog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-catalog.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-catalog.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-catalog.md"
+      - "src/**/StyleSubsystem/IStyleKitCatalog.cs"
+      - "src/**/StyleSubsystem/StyleBrokenKit.cs"
+      - "src/**/StyleSubsystem/StyleKitCatalog.cs"
+      - "src/**/StyleSubsystem/StyleKitEntry.cs"
+      - "src/**/StyleSubsystem/StyleKitScanner.cs"
+      - "src/**/StyleSubsystem/StyleLocationStatus.cs"
+      - "test/**/StyleSubsystem/StyleKitCatalogTests.cs"
+      - "test/**/StyleSubsystem/StyleSubsystemFakes.cs"
+
+  - id: CanvasPilot-Style-StyleKitArchive
+    title: Review of CanvasPilot StyleKitArchive unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-archive.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-archive.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-archive.md"
+      - "src/**/StyleSubsystem/StyleImportConflict.cs"
+      - "src/**/StyleSubsystem/StyleImportResult.cs"
+      - "src/**/StyleSubsystem/StyleKitArchive.cs"
+      - "test/**/StyleSubsystem/StyleKitArchiveTests.cs"
+
+  - id: CanvasPilot-Style-StyleSelection
+    title: Review of CanvasPilot StyleSelection unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-selection.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-selection.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-selection.md"
+      - "src/**/StyleSubsystem/IActiveStyle.cs"
+      - "src/**/StyleSubsystem/StyleSelection.cs"
+      - "test/**/StyleSubsystem/StyleSelectionTests.cs"
+
+  - id: CanvasPilot-Style-StylePicker
+    title: Review of CanvasPilot StylePicker unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-picker.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-picker.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-picker.md"
+      - "src/**/StyleSubsystem/StylePickerItem.cs"
+      - "src/**/StyleSubsystem/StylePickerViewModel.cs"
+      - "src/**/StyleSubsystem/StylePickerView.axaml"
+      - "src/**/StyleSubsystem/StylePickerView.axaml.cs"
+      - "test/**/StyleSubsystem/StylePickerTests.cs"
+      - "test/**/StylePickerViewTests.cs"
+
+  - id: CanvasPilot-Style-StyleSettingsPage
+    title: Review of CanvasPilot StyleSettingsPage unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-settings-page.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-settings-page.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-settings-page.md"
+      - "src/**/StyleSubsystem/StyleFolderItem.cs"
+      - "src/**/StyleSubsystem/StyleKitChoice.cs"
+      - "src/**/StyleSubsystem/StyleSettingsPageViewModel.cs"
+      - "src/**/StyleSubsystem/StyleSettingsPageView.axaml"
+      - "src/**/StyleSubsystem/StyleSettingsPageView.axaml.cs"
+      - "test/**/StyleSubsystem/StyleSettingsPageTests.cs"
+      - "test/**/StyleSettingsPageViewTests.cs"
+
+  - id: CanvasPilot-Style-StyleKitEditor
+    title: Review of CanvasPilot StyleKitEditor unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-editor.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-editor.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-editor.md"
+      - "src/**/StyleSubsystem/ColorEditorView.axaml"
+      - "src/**/StyleSubsystem/ColorEditorView.axaml.cs"
+      - "src/**/StyleSubsystem/StyleColorRowViewModel.cs"
+      - "src/**/StyleSubsystem/StyleExampleRowViewModel.cs"
+      - "src/**/StyleSubsystem/StyleKitEditorView.axaml"
+      - "src/**/StyleSubsystem/StyleKitEditorView.axaml.cs"
+      - "src/**/StyleSubsystem/StyleKitEditorViewModel.cs"
+      - "src/**/StyleSubsystem/StyleNameValueRowViewModel.cs"
+      - "src/**/StyleSubsystem/StylePresetRowViewModel.cs"
+      - "src/**/StyleSubsystem/StyleTextRowViewModel.cs"
+      - "test/**/StyleSubsystem/StyleKitEditorTests.cs"
+      - "test/**/StyleKitEditorViewTests.cs"
+
+  - id: CanvasPilot-Style-StyleKitManager
+    title: Review of CanvasPilot StyleKitManager unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-manager.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-manager.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-manager.md"
+      - "src/**/StyleSubsystem/IStyleKitDialogs.cs"
+      - "src/**/StyleSubsystem/StyleKitGroupViewModel.cs"
+      - "src/**/StyleSubsystem/StyleKitItemViewModel.cs"
+      - "src/**/StyleSubsystem/StyleKitManagerView.axaml"
+      - "src/**/StyleSubsystem/StyleKitManagerView.axaml.cs"
+      - "src/**/StyleSubsystem/StyleKitManagerViewModel.cs"
+      - "src/**/StyleSubsystem/StyleSwatch.cs"
+      - "src/**/StyleSubsystem/StyleThumbnail.cs"
+      - "src/**/StyleSubsystem/StyleThumbnailCache.cs"
+      - "src/**/StyleSubsystem/StyleThumbnailViewModel.cs"
+      - "test/**/StyleSubsystem/StyleKitManagerTests.cs"
+      - "test/**/StyleKitManagerViewTests.cs"
+      - "test/**/StyleSubsystem/StyleSubsystemFakes.cs"
+
+  - id: CanvasPilot-Style-StyleGuidance
+    title: Review of CanvasPilot StyleGuidance unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-guidance.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-guidance.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-guidance.md"
+      - "src/**/StyleSubsystem/StyleGuidance.cs"
+      - "test/**/StyleSubsystem/StyleGuidanceTests.cs"
+      - "test/**/StyleSubsystem/Golden/clean-guidance.txt"
+
+  - id: CanvasPilot-Style-StyleChecker
+    title: Review of CanvasPilot StyleChecker unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-checker.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-checker.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-checker.md"
+      - "src/**/StyleSubsystem/ColorMath.cs"
+      - "src/**/StyleSubsystem/ICheckAgainstStyle.cs"
+      - "src/**/StyleSubsystem/StyleCheckCommand.cs"
+      - "src/**/StyleSubsystem/StyleCheckOptions.cs"
+      - "src/**/StyleSubsystem/StyleCheckReport.cs"
+      - "src/**/StyleSubsystem/StyleChecker.cs"
+      - "test/**/StyleSubsystem/StyleCheckerTests.cs"
+      - "test/**/StyleSubsystem/StyleCheckCommandTests.cs"
+
+  - id: CanvasPilot-Style-StyleTools
+    title: Review of CanvasPilot StyleTools unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-tools.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-tools.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-tools.md"
+      - "src/**/StyleSubsystem/StyleTools.cs"
+      - "test/**/StyleSubsystem/StyleToolsTests.cs"
+      - "test/**/StyleSubsystem/StyleSubsystemFakes.cs"
+
+  - id: CanvasPilot-Style-BuiltInStyleKits
+    title: Review of CanvasPilot built-in style kits
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+      - docs/design/canvas-pilot/style-subsystem/style-kit-catalog.md
+      - docs/reqstream/canvas-pilot/style-subsystem/style-kit-catalog.yaml
+    paths:
+      - "src/**/StyleSubsystem/BuiltIn/**/style.json"
+      - "test/**/StyleSubsystem/BuiltInStyleKitTests.cs"
+  # CanvasPilot - Utilities
+  - id: CanvasPilot-Utilities
+    title: Review of CanvasPilot Utilities subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/utilities-subsystem.yaml"
+      - "docs/design/canvas-pilot/utilities-subsystem.md"
+      - "docs/verification/canvas-pilot/utilities-subsystem.md"
+      - "test/**/UtilitiesSubsystem/UtilitiesSubsystemTests.cs"
+
+  - id: CanvasPilot-Utilities-PathHelpers
+    title: Review of CanvasPilot PathHelpers unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/utilities-subsystem.md
+      - docs/reqstream/canvas-pilot/utilities-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/utilities-subsystem/path-helpers.yaml"
+      - "docs/design/canvas-pilot/utilities-subsystem/path-helpers.md"
+      - "docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md"
+      - "src/**/UtilitiesSubsystem/PathHelpers.cs"
+      - "test/**/UtilitiesSubsystem/PathHelpersTests.cs"
 
   # OTS Items
   - id: OTS-BuildMark
@@ -186,6 +1303,56 @@ reviews:
       - "docs/reqstream/ots/buildmark.yaml"
       - "docs/design/ots/buildmark.md"
       - "docs/verification/ots/buildmark.md"
+
+  - id: OTS-CanvasNet
+    title: Review of CanvasNet OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/canvasnet.yaml"
+      - "docs/design/ots/canvasnet.md"
+      - "docs/verification/ots/canvasnet.md"
+      - "test/**/CanvasNetTests.cs"
+
+  - id: OTS-Speech
+    title: Review of Speech OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/speech.yaml"
+      - "docs/design/ots/speech.md"
+      - "docs/verification/ots/speech.md"
+      - "test/**/SpeechTests.cs"
+
+  - id: OTS-WiX
+    title: Review of WiX Toolset OTS verification evidence and installer project
+    paths:
+      - "docs/reqstream/ots/wix.yaml"
+      - "docs/design/ots/wix.md"
+      - "docs/verification/ots/wix.md"
+      - "src/DemaConsulting.CanvasPilot.Installer/DemaConsulting.CanvasPilot.Installer.wixproj"
+      - "src/DemaConsulting.CanvasPilot.Installer/Package.wxs"
+
+  - id: OTS-Avalonia
+    title: Review of Avalonia OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/avalonia.yaml"
+      - "docs/design/ots/avalonia.md"
+      - "docs/verification/ots/avalonia.md"
+      - "test/OtsSoftwareTests/AvaloniaTests.cs"
+      - "test/OtsSoftwareTests/TestAppBuilder.cs"
+
+  - id: OTS-AvaloniaEdit
+    title: Review of AvaloniaEdit OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/avalonia-edit.yaml"
+      - "docs/design/ots/avalonia-edit.md"
+      - "docs/verification/ots/avalonia-edit.md"
+      - "test/OtsSoftwareTests/AvaloniaEditTests.cs"
+
+  - id: OTS-CommunityToolkitMvvm
+    title: Review of CommunityToolkit.Mvvm OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/communitytoolkit-mvvm.yaml"
+      - "docs/design/ots/communitytoolkit-mvvm.md"
+      - "docs/verification/ots/communitytoolkit-mvvm.md"
+      - "test/OtsSoftwareTests/CommunityToolkitMvvmTests.cs"
 
   - id: OTS-FileAssert
     title: Review of FileAssert OTS verification evidence
@@ -256,3 +1423,5 @@ reviews:
       - "docs/reqstream/ots/xunit.yaml"
       - "docs/design/ots/xunit.md"
       - "docs/verification/ots/xunit.md"
+      - "test/SerializedTestRun.cs"
+      - "test/DemaConsulting.CanvasPilot.Tests/TestPlatformPaths.cs"

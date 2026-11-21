@@ -1,0 +1,181 @@
+---
+# Software Unit Requirements for the ImageRenderService Unit
+#
+# The ImageRenderService unit draws an image source file on a background thread with the CanvasNet viewer
+# library, copies the pixels out as a straight-alpha RGBA picture together with the fingerprints that identify the
+# picture and the positions of its elements, and encodes pictures as PNG. It is the one
+# place in the application that talks to CanvasNet's viewer and codecs. Ordinary failures are returned as
+# results with CanvasNet's own code and hint, never thrown.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        sections:
+          - title: ImageRenderService Requirements
+            requirements:
+              - id: CanvasPilot-ImageRenderService-RenderFileToPixels
+                title: >-
+                  The ImageRenderService shall draw an image source file on a background thread and return a
+                  picture that holds the file's width, height, drawn format, and pixels as red, green, blue,
+                  alpha bytes with straight alpha, rows from the top with no padding.
+                justification: |
+                  The preview and the exporter need the drawn picture as plain data that is independent of the
+                  drawing library and can be shown, tested, and saved. Drawing on a background thread keeps the
+                  window responsive while large or complex files render, and a copy of the pixels means no
+                  library object has to be kept alive or disposed by its users.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-RenderImageSources
+                tests:
+                  - ImageRenderService_RenderAsync_SvgFile_ReturnsPixelsSizeAndFormat
+                  - RenderedImage_New_ValidArguments_KeepsValues
+                  - RenderedImage_New_InvalidArguments_Throw
+                  - RenderResult_Factories_ReportExactlyOneOutcome
+
+              - id: CanvasPilot-ImageRenderService-ConfineFileAccess
+                title: >-
+                  The ImageRenderService shall allow the file it draws to read other files, such as embedded
+                  pictures, models, and data, only from inside the project folder, including its sub-folders.
+                justification: |
+                  Image source files can name other files by relative or absolute path, and projects may be
+                  shared. Confining those reads to the project folder keeps a file from drawing the contents
+                  of unrelated files from the user's computer into a picture that is then exported or sent
+                  on, while assets in the project's sub-folders still work.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ConfineFileAccess
+                tests:
+                  - ImageRenderService_RenderAsync_EmbeddedPictureOutsideProject_ReportsAccessDeniedNote
+                  - ImageRenderService_RenderAsync_EmbeddedPictureInProjectSubFolder_IsDrawnWithoutNotes
+
+              - id: CanvasPilot-ImageRenderService-ReportNotes
+                title: >-
+                  The ImageRenderService shall return the notes that the drawing library reports about a
+                  picture, each with a severity, a code, and a message, together with the picture.
+                justification: |
+                  A picture can be drawn successfully and still be incomplete, for example when an embedded
+                  file was denied or a feature is not supported. The user needs to see those notes next to
+                  the picture to understand what is missing.
+                tests:
+                  - ImageRenderService_RenderAsync_EmbeddedPictureOutsideProject_ReportsAccessDeniedNote
+                  - RenderDiagnostic_DisplayText_ShowsSeverityCodeAndMessage
+
+              - id: CanvasPilot-ImageRenderService-ReturnFailuresAsResults
+                title: >-
+                  The ImageRenderService shall return every failure to draw a file as an error result with a
+                  code, a message, and, when the drawing library gives one, a hint, using the library's own
+                  code and hint for the errors it describes, and shall not throw for such failures.
+                justification: |
+                  Users edit files while the application shows them, so missing, unreadable, unsupported, and
+                  malformed files are ordinary events. Returning them as results lets the preview explain the
+                  problem and carry on, and keeping the library's stable codes and hints gives the user the
+                  library's own advice on how to fix the file.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ReportFailures
+                tests:
+                  - ImageRenderService_RenderAsync_BrokenSvg_ReturnsCannotDrawErrorWithoutThrowing
+                  - ImageRenderService_RenderAsync_MissingFile_ReturnsInputNotFoundError
+                  - ImageRenderService_RenderAsync_UnsupportedExtension_ReturnsUnsupportedFormatError
+                  - ImageRenderService_RenderAsync_ViewerException_ReturnsItsCodeAndHint
+                  - ImageRenderService_RenderAsync_OtherFailures_AreReturnedAsErrors
+                  - ImageRenderService_RenderAsync_Failure_IsLogged
+                  - ImageRenderService_InvalidArguments_Throw
+
+              - id: CanvasPilot-ImageRenderService-HonorCancellation
+                title: >-
+                  The ImageRenderService shall stop a render when its cancellation token is cancelled, before
+                  or while the file is drawn, and return a cancelled result that is neither a picture nor an
+                  error.
+                justification: |
+                  The preview cancels a render when the user selects another file. A render that stops
+                  promptly does not waste the processor on a picture nobody will see, and a cancelled result
+                  is distinguishable from a failure so it is never shown as one.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-HonorCancellation
+                tests:
+                  - ImageRenderService_RenderAsync_AlreadyCancelledToken_ReturnsCancelledWithoutDrawing
+                  - ImageRenderService_RenderAsync_CancelledWhileRendering_ReturnsCancelled
+
+              - id: CanvasPilot-ImageRenderService-EncodePng
+                title: >-
+                  The ImageRenderService shall encode a rendered picture as the bytes of a PNG file that has
+                  the picture's size and pixels, including its transparency.
+                justification: |
+                  Exporting must save exactly what the user sees, with transparency intact, from the picture
+                  data alone, without drawing the source file again.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-EncodePng
+                tests:
+                  - ImageRenderService_EncodePng_Image_ProducesValidPngWithSamePixels
+
+              - id: CanvasPilot-ImageRenderService-ReportSnapshotIdentity
+                title: >-
+                  The ImageRenderService shall give each picture it returns the path of the file it was drawn from,
+                  a SHA-256 fingerprint of the file's bytes, and a SHA-256 fingerprint of the picture's size and
+                  pixels, so that the same file gives the same fingerprints and a changed file gives different ones.
+                justification: |
+                  A picture is only a snapshot: the file can change at any time. Messages and marks that refer to a
+                  picture must say which version they mean, and fingerprints of the file and of what was seen tell
+                  versions apart without keeping the picture. A file that cannot be read for its fingerprint after
+                  it was drawn must not stop the picture from being shown.
+                tests:
+                  - ImageRenderService_RenderAsync_SameFileTwice_SameContentHash
+                  - ImageRenderService_RenderAsync_ChangedFile_DifferentSourceAndContentHash
+                  - ImageRenderService_RenderAsync_FileGoneAfterDrawing_HasNoSourceFileHash
+                  - RenderedImage_SnapshotKey_CombinesPathAndContentHash
+                  - RenderedImage_ContentHash_DependsOnPixelsAndSizeOnly
+
+              - id: CanvasPilot-ImageRenderService-ReportElementPositions
+                title: >-
+                  The ImageRenderService shall return, with a picture of a Mermaid diagram or a Vega-Lite chart,
+                  each element's kind, identifier, text, source line, and box in picture pixels, and with a picture
+                  of an OpenSCAD model the pixel position of each anchor the model declares, and shall return none
+                  for other kinds of file.
+                justification: |
+                  A mark drawn on a picture is only meaningful if it can be traced to the part of the source file it
+                  covers. The drawing library knows where it drew each element, and reporting it together with the
+                  picture lets the application name the elements under a mark instead of guessing from pixels.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ReportElementPositions
+                tests:
+                  - ImageRenderService_RenderAsync_MermaidFile_ReportsNodePositionsInPixels
+                  - ImageRenderService_RenderAsync_VegaLiteChart_ReportsMarkPositions
+                  - ImageRenderService_RenderAsync_ScadWithAnchor_ReportsAnchor
+                  - ImageRenderService_RenderAsync_SvgFile_ReportsNoPositions
+                  - ImageRenderService_RenderAsync_Request_AsksForAllPositions
+                  - RenderedImage_New_PositionsAndAnchors_AreCopiedAndDefaultToEmpty
+
+              - id: CanvasPilot-ImageRenderService-RenderAtARequestedSize
+                title: >-
+                  The ImageRenderService shall, when asked for a width, a height, or both, return a picture of exactly that
+                  size, fitted inside the box with its aspect ratio kept and never stretched, shall fill the margin and the
+                  transparent parts with a color that is asked for or leave them transparent when transparency is asked for,
+                  shall draw a document page at a resolution that is asked for, shall give the same picture as before when
+                  nothing is asked for, and shall return a size that is not allowed, a color that is not a color, or a
+                  resolution that is not allowed as an error result that says what is allowed.
+                justification: |
+                  A picture that is used on a slide, in an email, or on paper has to be drawn at the size of its use. Drawing
+                  the source file again at that size keeps lines sharp where stretching the shown picture would blur them, and
+                  fitting it keeps its proportions. A margin that is a color of the style, or transparent, lets the picture sit
+                  on the page it is put on. A request that cannot be drawn must be explained and not crash the export.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-RenderAtRequestedSize
+                tests:
+                  - ImageRenderService_RenderAsync_SvgIntoBox_IsExactlyThatSizeAndLetterboxed
+                  - ImageRenderService_RenderAsync_MermaidVegaLiteAndRasterIntoBox_AreExactlyThatSize
+                  - ImageRenderService_RenderAsync_InvalidSettings_ReturnsInvalidSettingsError
+                  - ImageRenderService_RenderAsync_Settings_ReachTheViewerAsOptions
+
+              - id: CanvasPilot-ImageRenderService-WritePngResolution
+                title: >-
+                  The ImageRenderService shall, when asked to encode a picture with a resolution, write the resolution into
+                  the PNG file so that the file keeps the pixels of the picture, shall write none when no resolution is
+                  asked for, and shall refuse a resolution that is not greater than 0 and at most 2400 dots per inch.
+                justification: |
+                  A picture that is exported for print has to say how large it is, or a program that opens it will choose
+                  a size of its own. The pixels must not change, because the file is what the user saw.
+                tests:
+                  - ImageRenderService_EncodePng_WithDpi_WritesPhysicalSizeAndKeepsPixels
+                  - PngPhysicalSize_Insert_Png_AddsCorrectChunkAfterHeaderAndKeepsPixels
+                  - PngPhysicalSize_Insert_CommonResolutions_ArePixelsPerMeterRounded
+                  - PngPhysicalSize_Insert_PngWithSizeAlready_ReplacesTheChunk
+                  - PngPhysicalSize_Insert_InvalidArguments_Throw

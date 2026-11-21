@@ -1,0 +1,110 @@
+---
+# Annotation Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Annotation subsystem
+# - The Annotation subsystem holds the marks that the user draws on the shown picture for the message being composed:
+#   the layer on which the user draws them with the pointer or the keyboard, which picture each mark belongs to, its
+#   number, its geometry in the picture's pixels, and its optional note, and it finds the parts of the picture's source
+#   file that lie under a mark. The registry and the resolver have no dependency on the user interface; the layer does,
+#   and reaches the composer only through the host that joins them
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Annotation Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Annotation-KeepMarksOnTheirPicture
+            title: >-
+              The Annotation subsystem shall keep each mark with the exact picture it was drawn on, so that a picture
+              of the same file with other pixels shows none of its marks while the marks stay part of the message, and
+              shall forget all marks when the message is sent.
+            justification: |
+              A mark means the pixels under it. When the user edits the file and the preview shows a new picture, a
+              mark that moved along would point at something else than the user meant, and a mark that vanished would
+              lose what the user said. The mark therefore keeps its own picture, shows only on that picture, and is
+              still described to the assistant with the picture it was drawn on. After sending, the marks of the sent
+              message must not turn up in the next one.
+            children:
+              - CanvasPilot-MarkRegistry-PinToSnapshot
+              - CanvasPilot-MarkRegistry-ShowOnlyActiveMarksOfCurrentPicture
+              - CanvasPilot-MarkRegistry-ClearOnSend
+            tests:
+              - AnnotationSubsystem_MarkPicture_FileChanged_MarksStayOnTheirOwnPicture
+
+          - id: CanvasPilot-Annotation-NumberMarks
+            title: >-
+              The Annotation subsystem shall number the marks one, two, three in the order they are made, never
+              reusing or changing a number within a message, and shall describe each mark by its shape, its geometry in
+              the pixels of its picture whatever way the user drew it, and an optional note of one short line.
+            justification: |
+              The user and the assistant talk about the marks by number, so a number must keep meaning the same mark
+              for the whole message, also after an undo and a new mark. The geometry is read by the code that draws the
+              marks, by the code that finds what lies under them, and by the assistant, so it must mean the same pixels
+              of the same picture whether the window was large or small, and the note must be short and plain enough
+              to be read as part of the message.
+            children:
+              - CanvasPilot-MarkRegistry-NumberSequentially
+              - CanvasPilot-MarkRegistry-NormalizeGeometry
+            tests:
+              - AnnotationSubsystem_MarkPicture_MarksOnRenderedDiagram_AreNumberedAndKeepPixelGeometryAndNote
+
+          - id: CanvasPilot-Annotation-FindSourceElements
+            title: >-
+              The Annotation subsystem shall tell, for a mark, which nodes, edges, chart parts, or model anchors of the
+              picture's source file lie under it, with what is known about each, as far as the picture reports where its
+              parts are, and shall say that the picture cannot tell, and why, instead of answering that nothing lies
+              under the mark when the picture reports no positions.
+            justification: |
+              A mark on a diagram is usually meant for a part of it, a node, a bar, a point of the model, and the
+              assistant works with the source file, not with pixels. Mapping the mark to the source parts gives the
+              assistant the names and lines to look at. Where the kind of picture cannot say, an empty answer would claim
+              that the mark covers nothing, which would mislead the assistant, so the answer must say that it cannot tell.
+            children:
+              - CanvasPilot-MarkSourceResolver-FindElementsUnderMark
+              - CanvasPilot-MarkSourceResolver-ReportNoPositionsHonestly
+              - CanvasPilot-MarkSourceResolver-BoundResultSize
+            tests:
+              - AnnotationSubsystem_FindSourceElements_MermaidNode_IsReportedWithTextAndLine
+              - AnnotationSubsystem_FindSourceElements_ScadAnchor_IsReportedWithPixel
+              - AnnotationSubsystem_FindSourceElements_SvgPicture_SaysNotAvailable
+
+          - id: CanvasPilot-Annotation-DrawMarksOnPicture
+            title: >-
+              The Annotation subsystem shall let the user draw a rectangle, an ellipse, a freehand line, or an arrow on
+              the shown picture with the pointer or the keyboard, each with an optional note of one short line, in the
+              pixels of the picture at any zoom, make each finished shape a numbered mark that is pinned to that picture
+              and handed to the message, let the user stop a shape with Escape, offer the tools only when a mark can be
+              made, and keep the picture from being dragged out while a tool is chosen.
+            justification: |
+              Pointing at the part of a picture that is meant is the clearest way to say what to change, and it is the
+              user's own wish that the marks be simple shapes with a number and an optional few words. The marks must
+              be read by the assistant as pixels of an exact picture, so they are made in the picture's own pixels
+              whatever the window looks like, they belong to the picture that was shown when they were started, and they
+              are handed on once they are complete. The pointer is also used to drag the picture out, so the two must
+              not take the same gesture.
+            children:
+              - CanvasPilot-AnnotationOverlay-DrawShapes
+              - CanvasPilot-AnnotationOverlay-AddOptionalNote
+              - CanvasPilot-AnnotationOverlay-CancelWithEscape
+              - CanvasPilot-AnnotationOverlay-ReportCommittedMarks
+              - CanvasPilot-AnnotationOverlay-ToggleDragOutWithTool
+              - CanvasPilot-AnnotationOverlay-OperateByKeyboard
+              - CanvasPilot-AnnotationOverlay-OfferToolsOnlyWithPictureAndMessage
+            tests:
+              - AnnotationSubsystem_DrawMarks_OverlayOnRenderedDiagram_MakesNumberedMarksPinnedToThePicture
+
+          - id: CanvasPilot-Annotation-HideMarksOfOtherPictures
+            title: >-
+              The Annotation subsystem shall show on the picture only the marks of the message that were drawn on
+              exactly that picture, shall keep the marks of an earlier picture of the file in the message, and shall tell
+              the user how many are hidden.
+            justification: |
+              When the file is edited and the picture changes, a mark drawn before would point at other pixels, so it
+              must not be drawn on the new picture; but the mark is part of what the user said, so it stays in the
+              message and the user is told, instead of finding that marks have vanished.
+            children:
+              - CanvasPilot-AnnotationOverlay-ShowOnlyVisibleMarks
+            tests:
+              - AnnotationSubsystem_DrawMarks_FileChanged_OverlayShowsOnlyMarksOfTheShownPicture

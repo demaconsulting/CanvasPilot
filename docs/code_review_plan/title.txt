@@ -1,11 +1,11 @@
 ---
-title: Template DotNet Tool Review Plan
-subtitle: File Review Plan for the Template DotNet Tool
+title: CanvasPilot Review Plan
+subtitle: File Review Plan for the CanvasPilot
 author: DEMA Consulting
-description: File Review Plan for the Template DotNet Tool
+description: File Review Plan for the CanvasPilot
 lang: en-US
 keywords:
-  - Template DotNet Tool
+  - CanvasPilot
   - Review Plan
   - File Reviews
   - .NET

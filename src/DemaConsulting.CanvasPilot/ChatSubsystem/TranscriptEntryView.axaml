@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.ChatSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.ChatSubsystem.TranscriptEntryView"
+             x:DataType="vm:TranscriptEntryViewModel"
+             AutomationProperties.AutomationId="TranscriptEntry">
+
+  <!-- One message that was sent: when it was sent, its words with the chips of its attachments and marks in their
+       places, a statement of what it carried, and the button that shows exactly what the assistant would receive -->
+  <Border Margin="0,0,0,8"
+          Padding="8"
+          CornerRadius="6"
+          Background="#18808080">
+    <StackPanel Spacing="4">
+
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+          <TextBlock FontWeight="SemiBold" Text="You" />
+          <TextBlock Name="SentTimeText"
+                     AutomationProperties.AutomationId="TranscriptSentTime"
+                     Opacity="0.7"
+                     Text="{Binding SentText}" />
+        </StackPanel>
+        <Button Name="ViewPayloadButton"
+                Grid.Column="1"
+                AutomationProperties.AutomationId="TranscriptViewPayloadButton"
+                Padding="8,2"
+                FontSize="12"
+                Content="View payload"
+                Command="{Binding ViewPayloadCommand}"
+                ToolTip.Tip="See exactly what the assistant would receive for this message" />
+      </Grid>
+
+      <SelectableTextBlock Name="MessageText"
+                           AutomationProperties.AutomationId="TranscriptMessageText"
+                           TextWrapping="Wrap" />
+
+      <TextBlock Name="SummaryText"
+                 AutomationProperties.AutomationId="TranscriptSummary"
+                 FontSize="12"
+                 Opacity="0.7"
+                 Text="{Binding Summary}"
+                 IsVisible="{Binding Summary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+    </StackPanel>
+  </Border>
+
+</UserControl>

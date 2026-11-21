@@ -1,0 +1,97 @@
+---
+# Chat Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Chat subsystem
+# - The Chat subsystem is the panel in which the user converses with the assistant that is added later: the transcript
+#   of the messages that were sent, the composer below it with the buttons that send and that listen while held, the
+#   joining of the marks on the picture to the message, and the window that shows exactly what the assistant would
+#   receive for a message. It uses the Composer, Annotation, Payload, and Speech subsystems and holds none of their
+#   rules; it does not depend on the application shell, which places it in the chat column of the main window
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Chat Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Chat-ShowTranscriptOfSentMessages
+            title: >-
+              The Chat subsystem shall show the messages that were sent in the open project as a transcript, oldest
+              first, each as it was composed with its words, marks, and attachments in their places and with their
+              pictures, shall keep the transcript only in memory, and shall drop it when the project changes or closes.
+            justification: |
+              A conversation needs a record of what has been said. The user composed each message from words, files, and
+              marks, and recognizes it by how it looked, so the transcript keeps that form. Messages may hold the user's
+              words and file names and belong to a project, so they are not written anywhere and go with the project.
+            children:
+              - CanvasPilot-ChatPanel-ListSentMessagesOnly
+              - CanvasPilot-ChatPanel-ProvideChipPictures
+            tests:
+              - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
+
+          - id: CanvasPilot-Chat-SendComposedMessage
+            title: >-
+              The Chat subsystem shall let the user send the composed message with one button that can be used exactly
+              when the message can be sent, shall move a sent message from the composer to the transcript, and shall
+              keep the draft, add nothing to the transcript, and say why when the message cannot be sent.
+            justification: |
+              Sending is the moment when the user's words, marks, and files become one message, so it must be
+              plain what can be sent, and a failure must never lose the draft or send half of it. The decision whether a
+              message can be sent stays with the composer, so the button and the composer cannot disagree.
+            children:
+              - CanvasPilot-ChatPanel-SendFromPanel
+            tests:
+              - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
+              - ChatSubsystem_SendMessage_AttachmentCannotBeStaged_KeepsDraftAndTranscriptUnchanged
+
+          - id: CanvasPilot-Chat-LinkMarksToChips
+            title: >-
+              The Chat subsystem shall add a chip to the message for every mark that is drawn on the picture, as one
+              undo step, shall have the picture show exactly the marks whose chips are in the message, and shall leave
+              no mark on the picture after the message is sent.
+            justification: |
+              A mark is something the user points at while writing, so it belongs in the message at the place where the
+              caret was, and undo must treat it like anything else that is put into the message. The picture must not
+              show marks that are no longer part of what is being said, or marks of a message that was already sent.
+            children:
+              - CanvasPilot-ChatPanel-LinkMarkChips
+            tests:
+              - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
+
+          - id: CanvasPilot-Chat-HoldToTalk
+            title: >-
+              The Chat subsystem shall offer a talk button that listens exactly while it is held, shows the words as they
+              are recognized, adds them to the message as one block of dictated text when it is released, says why and
+              what to do when dictation cannot work, and keeps the origin of the dictated words in the message that is
+              sent.
+            justification: |
+              Speaking is quicker than typing for saying what is wrong with a picture, but the application must never
+              listen when the user does not mean it to, so the button listens only while it is held, however the hold
+              ends. A machine without a model, a microphone, or the speech files must be told what is missing, and the
+              assistant must be able to tell dictated words from typed ones because recognition makes mistakes that
+              typing does not.
+            children:
+              - CanvasPilot-ChatPanel-HoldToTalkButton
+              - CanvasPilot-ChatPanel-ShowWhyDictationCannotWork
+            tests:
+              - ChatSubsystem_HoldToTalk_DictatedWords_AreKeptAsDictatedInTheSentPayload
+
+          - id: CanvasPilot-Chat-InspectPayload
+            title: >-
+              The Chat subsystem shall let the user open, on any sent message that has a payload, a window that shows
+              exactly what the assistant would receive for it: the description of the payload as read-only text and the
+              pictures that it holds, each marked picture with its marks drawn on it and the area around each mark,
+              and that releases what it shows when it closes.
+            justification: |
+              The assistant receives more than the user sees in the transcript: the picture with the marks drawn on it,
+              the area around each mark, the geometry, and the parts of the source file under each mark. Letting the
+              user see exactly that, and not a summary, is how the user checks that the message means what they
+              intended before the assistant acts on it.
+            children:
+              - CanvasPilot-ChatPanel-RequestPayloadInspection
+              - CanvasPilot-PayloadInspector-ShowExactPayload
+              - CanvasPilot-PayloadInspector-ShowPayloadImages
+              - CanvasPilot-PayloadInspector-CloseAndRelease
+            tests:
+              - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft

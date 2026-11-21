@@ -1,0 +1,150 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DemaConsulting.CanvasPilot.AppShellSubsystem"
+        x:Class="DemaConsulting.CanvasPilot.AppShellSubsystem.MainWindowView"
+        x:DataType="vm:MainWindowShell"
+        Name="MainWindow"
+        Title="{Binding Title}"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Width="1100"
+        Height="720">
+
+  <Window.Resources>
+    <!-- Each recent project becomes a menu item that shows its name and opens the project. -->
+    <ControlTheme x:Key="RecentProjectMenuItemTheme"
+                  TargetType="MenuItem"
+                  x:DataType="vm:RecentProjectItem"
+                  BasedOn="{StaticResource {x:Type MenuItem}}">
+      <Setter Property="Header" Value="{Binding Header}" />
+      <Setter Property="Command" Value="{Binding OpenCommand}" />
+    </ControlTheme>
+  </Window.Resources>
+
+  <DockPanel>
+
+    <Menu DockPanel.Dock="Top"
+          Name="MainMenu"
+          AutomationProperties.AutomationId="MainMenu">
+
+      <MenuItem Name="FileMenu"
+                AutomationProperties.AutomationId="FileMenu"
+                Header="_File">
+        <MenuItem Name="NewProjectMenuItem"
+                  AutomationProperties.AutomationId="NewProjectMenuItem"
+                  Header="_New Project..."
+                  HotKey="{OnPlatform 'Ctrl+N', macOS='Cmd+N'}"
+                  InputGesture="{OnPlatform 'Ctrl+N', macOS='Cmd+N'}"
+                  Command="{Binding NewProjectCommand}" />
+        <MenuItem Name="OpenProjectMenuItem"
+                  AutomationProperties.AutomationId="OpenProjectMenuItem"
+                  Header="_Open Project..."
+                  HotKey="{OnPlatform 'Ctrl+O', macOS='Cmd+O'}"
+                  InputGesture="{OnPlatform 'Ctrl+O', macOS='Cmd+O'}"
+                  Command="{Binding OpenProjectCommand}" />
+        <MenuItem Name="RecentProjectsMenuItem"
+                  AutomationProperties.AutomationId="RecentProjectsMenuItem"
+                  Header="_Recent Projects"
+                  IsEnabled="{Binding HasRecentProjects}"
+                  ItemContainerTheme="{StaticResource RecentProjectMenuItemTheme}"
+                  ItemsSource="{Binding RecentProjects}" />
+        <Separator />
+        <MenuItem Name="SaveProjectMenuItem"
+                  AutomationProperties.AutomationId="SaveProjectMenuItem"
+                  Header="_Save Project"
+                  HotKey="{OnPlatform 'Ctrl+S', macOS='Cmd+S'}"
+                  InputGesture="{OnPlatform 'Ctrl+S', macOS='Cmd+S'}"
+                  Command="{Binding SaveProjectCommand}" />
+        <MenuItem Name="CloseProjectMenuItem"
+                  AutomationProperties.AutomationId="CloseProjectMenuItem"
+                  Header="_Close Project"
+                  Command="{Binding CloseProjectCommand}" />
+        <Separator />
+        <MenuItem Name="ExitMenuItem"
+                  AutomationProperties.AutomationId="ExitMenuItem"
+                  Header="E_xit"
+                  Command="{Binding ExitCommand}" />
+      </MenuItem>
+
+      <MenuItem Name="EditMenu"
+                AutomationProperties.AutomationId="EditMenu"
+                Header="_Edit">
+        <MenuItem Name="UndoMenuItem"
+                  AutomationProperties.AutomationId="UndoMenuItem"
+                  Header="_Undo"
+                  InputGesture="{OnPlatform 'Ctrl+Z', macOS='Cmd+Z'}"
+                  Command="{Binding UndoCommand}" />
+        <MenuItem Name="RedoMenuItem"
+                  AutomationProperties.AutomationId="RedoMenuItem"
+                  Header="_Redo"
+                  InputGesture="{OnPlatform 'Ctrl+Y', macOS='Cmd+Shift+Z'}"
+                  Command="{Binding RedoCommand}" />
+      </MenuItem>
+
+      <MenuItem Name="ImageMenu"
+                AutomationProperties.AutomationId="ImageMenu"
+                Header="_Image">
+        <MenuItem Name="ExportPngMenuItem"
+                  AutomationProperties.AutomationId="ExportPngMenuItem"
+                  Header="_Export as PNG..."
+                  Command="{Binding ExportPngCommand}" />
+        <MenuItem Name="CopyImageMenuItem"
+                  AutomationProperties.AutomationId="CopyImageMenuItem"
+                  Header="_Copy Image"
+                  Command="{Binding CopyImageCommand}" />
+        <Separator />
+        <MenuItem Name="CheckAgainstStyleMenuItem"
+                  AutomationProperties.AutomationId="CheckAgainstStyleMenuItem"
+                  Header="Check _Against Style"
+                  Command="{Binding CheckAgainstStyleCommand}" />
+      </MenuItem>
+
+      <MenuItem Name="ToolsMenu"
+                AutomationProperties.AutomationId="ToolsMenu"
+                Header="_Tools">
+        <MenuItem Name="StyleKitsMenuItem"
+                  AutomationProperties.AutomationId="StyleKitsMenuItem"
+                  Header="Style _Kits..."
+                  Command="{Binding ShowStyleKitsCommand}" />
+        <MenuItem Name="SettingsMenuItem"
+                  AutomationProperties.AutomationId="SettingsMenuItem"
+                  Header="_Settings..."
+                  Command="{Binding OpenSettingsCommand}" />
+      </MenuItem>
+
+      <MenuItem Name="HelpMenu"
+                AutomationProperties.AutomationId="HelpMenu"
+                Header="_Help">
+        <MenuItem Name="DrawingKnowledgeMenuItem"
+                  AutomationProperties.AutomationId="DrawingKnowledgeMenuItem"
+                  Header="_Drawing Knowledge..."
+                  Command="{Binding ShowDrawingKnowledgeCommand}" />
+        <Separator />
+        <MenuItem Name="AboutMenuItem"
+                  AutomationProperties.AutomationId="AboutMenuItem"
+                  Header="_About CanvasPilot"
+                  Command="{Binding ShowAboutCommand}" />
+      </MenuItem>
+
+    </Menu>
+
+    <!-- The status bar: the style kit of the open project is chosen here. It is shown while a project is open. -->
+    <Border DockPanel.Dock="Bottom"
+            Name="StatusBar"
+            AutomationProperties.AutomationId="StatusBar"
+            BorderThickness="0,1,0,0"
+            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+            Padding="8,3"
+            IsVisible="{Binding ShowStatusBar}">
+      <ContentControl Name="StylePickerHost"
+                      AutomationProperties.AutomationId="StylePickerHost"
+                      HorizontalAlignment="Left"
+                      Content="{Binding StylePicker}" />
+    </Border>
+
+    <ContentControl Name="WorkspaceHost"
+                    AutomationProperties.AutomationId="WorkspaceHost"
+                    Content="{Binding Workspace}" />
+
+  </DockPanel>
+
+</Window>

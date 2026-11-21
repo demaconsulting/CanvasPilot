@@ -1,0 +1,81 @@
+---
+# Software Unit Requirements for the AttachmentIntake Unit
+#
+# The AttachmentIntake unit turns dropped and pasted content into chips and text for the message. It decides what each
+# dropped path is, saves pasted pictures through the attachment store, and cleans text, and it treats all of it as data:
+# nothing that is dropped is opened, run, rendered, or followed.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Composer Subsystem Requirements
+        sections:
+          - title: AttachmentIntake Requirements
+            requirements:
+              - id: CanvasPilot-AttachmentIntake-ClassifyContent
+                title: >-
+                  The AttachmentIntake shall make a file chip for a dropped file, a folder chip for a dropped folder, a
+                  picture chip for a file with a picture extension, and a pasted picture chip for a pasted picture that
+                  the store saved; shall leave out an item that does not exist, with the reason; shall accept at most
+                  200 paths and pictures from one drop; shall refuse a whole drive; and shall accept a file larger than
+                  a message may carry with a warning.
+                justification: |
+                  The chip tells the user and the assistant what was attached, and an item that cannot be attached must
+                  not disappear without a word. One drop is bounded so that a drop of a huge selection cannot freeze the
+                  window, and a file that will not fit in a message is better flagged when it is dropped than when the
+                  message is sent.
+                tests:
+                  - AttachmentIntake_Accept_ExistingFile_BecomesFileChipWithOriginalPath
+                  - AttachmentIntake_Accept_ExistingFolder_BecomesFolderChip
+                  - AttachmentIntake_Accept_PictureFile_BecomesImageChipReferencingOriginalPath
+                  - AttachmentIntake_Accept_MissingPath_IsSkippedWithReason
+                  - AttachmentIntake_Accept_DriveRoot_IsSkipped
+                  - AttachmentIntake_Accept_PastedPicture_IsSavedAndBecomesPastedImageChip
+                  - AttachmentIntake_Accept_PastedPictureRefusedByStore_IsSkippedAndOthersStay
+                  - AttachmentIntake_Accept_PastedPictureCannotBeWritten_IsSkipped
+                  - AttachmentIntake_Accept_FileLargerThanLimit_IsAcceptedAndFlagged
+                  - AttachmentIntake_Accept_MoreThanMaximumItems_AcceptsMaximumAndReportsRest
+                  - AttachmentIntake_Accept_MixedContent_KeepsOrderAndAcceptsTheRest
+
+              - id: CanvasPilot-AttachmentIntake-ReferenceOriginalPaths
+                title: >-
+                  The AttachmentIntake shall refer to a dropped file or folder by its original path, accepting the
+                  same item once, and shall never open, read, copy, or change the item: a file of any kind, including a
+                  program or a script, and a file that another program holds open, becomes a chip and keeps its content.
+                justification: |
+                  Dropped content may be harmful. Looking at what a path is, without opening it, cannot run it, and
+                  copying is postponed to the moment the message is sent, so a drop that is undone has no effect on
+                  the computer.
+                tests:
+                  - AttachmentIntake_Accept_ExistingFile_BecomesFileChipWithOriginalPath
+                  - AttachmentIntake_Accept_PictureFile_BecomesImageChipReferencingOriginalPath
+                  - AttachmentIntake_Accept_SamePathTwice_IsAcceptedOnce
+                  - AttachmentIntake_Accept_ProgramsAndScripts_AreOnlyChipsAndNeverOpened
+
+              - id: CanvasPilot-AttachmentIntake-RefuseUnsafeNames
+                title: >-
+                  The AttachmentIntake shall leave out, with a reason, every path that is not a complete path, that is
+                  empty or holds control characters, that points into the device namespace of the operating system,
+                  that has a part that is '.' or '..', a part with characters that a name cannot hold (including the
+                  colon of an alternate data stream), a part that ends with a dot or a space, or a part that names a
+                  device, and shall not ask the store for anything for such a path.
+                justification: |
+                  Paths such as '..\x', 'C:\dir\con.txt', 'file.txt:hidden', and '\\.\C:' lead to places other than
+                  the ones they seem to, or to devices that can block or harm the application when they are read. The
+                  text of the path is enough to refuse them, before the file system is asked anything.
+                tests:
+                  - AttachmentIntake_Accept_UnsafePath_IsSkippedWithReasonAndMakesNoChip
+                  - AttachmentIntake_Accept_DriveRoot_IsSkipped
+
+              - id: CanvasPilot-AttachmentIntake-SanitizeDroppedText
+                title: >-
+                  The AttachmentIntake shall make dropped and pasted text typed text of the message, cleaned of the
+                  chip placeholder and control characters, shall make no text for text that nothing remains of, and
+                  shall limit the text to 100000 characters, with a warning when it is shortened.
+                justification: |
+                  Text from other programs is data from outside. It can hold characters that would be taken for chips
+                  or that confuse the editing control, and a text of unlimited length would freeze the window.
+                tests:
+                  - AttachmentIntake_Accept_TextWithPlaceholderAndControlCharacters_IsSanitized
+                  - AttachmentIntake_Accept_TextOfOnlyControlCharactersOrNoText_MakesNoSegment
+                  - AttachmentIntake_Accept_VeryLongText_IsShortenedAndFlagged

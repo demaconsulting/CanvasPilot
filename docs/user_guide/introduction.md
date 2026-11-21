@@ -1,28 +1,48 @@
 # Introduction
 
-The workflow below is a placeholder: replace its TODO boxes to show how users prepare inputs, run your
-tool locally or in a CI pipeline, get its outputs, and use them.
+CanvasPilot helps you create pictures from image source files such as SVG drawings, Mermaid diagrams, Vega-Lite
+charts, and OpenSCAD models. You keep the files of a drawing together in a project folder, see each file's picture
+as you work, and save the picture as a PNG file or copy it for use in email, presentations, and other documents.
 
-![Placeholder workflow diagram: replace the TODO boxes to show how users prepare inputs, run your tool, get
-its outputs, and use them](workflow.svg)
+![The workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in
+files, the planned AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the
+PNG; a return arrow from the preview to the description step is for marking problems or asking for
+changes](workflow.svg)
 
 ## Purpose
 
-Template DotNet Tool is a demonstration project that showcases best practices for DEMA
-Consulting DotNet Tools.
+CanvasPilot is an AI-powered desktop application that helps users create drawings and diagrams with the CanvasNet
+library. This version lets you manage projects, browse and preview their image files, export pictures, and set the AI
+provider and speech preferences. It also has a chat panel in which you compose messages: you type or dictate text,
+attach files, folders, and pictures, and mark places on the picture that you are talking about. You can send the message
+and see exactly what it contains. The AI assistant that will answer the messages is not available yet, so a sent message
+stays in the chat panel and nothing is sent to a provider. The Help menu also opens the drawing knowledge, a guide to
+the image formats and to CanvasPilot that you can read card by card and that the assistant is meant to use when it is
+added. Style kits let you keep a look (colors, fonts, sizes, and example images) for a project or a team, export
+pictures at sizes that fit slides, email, and paper, and check a picture against the colors of the style.
 
 ## Scope
 
 This user guide covers:
 
-- Installation instructions
-- Usage examples for common tasks
-- Command-line options reference
-- Practical examples for various scenarios
+- Installing CanvasPilot on Windows
+- Creating, opening, saving, and closing projects
+- The project explorer, the preview, and its notes and errors
+- Exporting a picture as a PNG file at its own size or at a size of your style kit or of the application, copying it to
+  the clipboard, and dragging it into another program
+- Chatting: writing and dictating a message, attaching files, folders, and pictures, marking the picture, and sending
+  the message and viewing its payload
+- Reading the drawing knowledge: opening the browser, the tree of cards, searching, following related cards, and
+  copying examples
+- Style kits: choosing the style of a project, the Style Kits window, where kits are kept and which copy wins, making,
+  editing, importing, and exporting kits, exporting at sizes, and checking a picture against the style
+- The Settings dialog, with the AI Provider, Speech, and Style Kits pages
+- Where CanvasPilot keeps its settings, logs, speech models, and attachments
+- Troubleshooting
 
 # Continuous Compliance
 
-This template follows the
+CanvasPilot follows the
 [Continuous Compliance](https://github.com/demaconsulting/ContinuousCompliance) methodology, which ensures
 compliance evidence is generated automatically on every CI run.
 
@@ -37,167 +57,673 @@ compliance evidence is generated automatically on every CI run.
 
 # Installation
 
-Install the tool globally using the .NET CLI:
+CanvasPilot is installed with a Windows Installer (MSI) package for 64-bit Windows. The package contains the
+application and everything it needs to run, so no other software has to be installed first.
 
-```bash
-dotnet tool install -g DemaConsulting.TemplateDotNetTool
-```
+1. Download `CanvasPilot-{version}-win-x64.msi` from the
+   [CanvasPilot releases page](https://github.com/demaconsulting/CanvasPilot/releases).
+2. Run the file. Installing for all users needs administrator rights, and Windows asks for them.
+3. Start CanvasPilot from the Start Menu.
 
-# Usage
+Windows SmartScreen can warn that the publisher is unknown because the package is not signed yet. Choose
+*More info* and then *Run anyway* if you downloaded the package from the releases page.
 
-## Display Version
+Installing a newer (or older) package replaces the installed version. If CanvasPilot is running, the installer asks it
+to close first. Uninstalling removes the application and leaves your projects, settings, and logs in place.
 
-Display the tool version:
+# Projects
 
-```bash
-templatetool --version
-```
+A project is a folder. It contains a project file named `{name}.canvaspilot` and the image source files of your
+drawing. Put the files you want to preview in the project folder itself, and keep supporting files such as data or
+embedded models in sub-folders. CanvasPilot also uses a hidden `.canvaspilot` folder inside the project for the
+pictures that you paste into a message while you are still writing it, and an `attachments` folder for the files that
+you send with a message (see *Chatting*). The explorer never lists either of them.
 
-## Default Behavior
+## Create a Project
 
-When invoked with no arguments, the tool displays the banner and copyright notice:
+Choose **File > New Project...** (Ctrl+N), enter a **Project name**, and choose the **Location**. The Browse button
+opens a folder picker, and the dialog starts in your Documents folder. The dialog shows the folder that will be
+created, and OK is available only when the project can be created. A project name cannot be empty, cannot contain the
+characters `< > : " / \ | ? *`, cannot start or end with a period, and cannot be a reserved Windows device name. A
+project is created only in a new or empty folder; a folder that already has content is refused.
 
-```bash
-templatetool
-```
+## Open a Project
 
-## Display Help
+Choose **File > Open Project...** (Ctrl+O) and select the `.canvaspilot` file of the project. A file that cannot be
+read, or that was written by a newer version of CanvasPilot, is not opened, and a message tells you why.
 
-Display usage information:
+**File > Recent Projects** lists the projects you used last, most recent first. Choose one to open it. A project whose
+file no longer exists is removed from the list after a message.
 
-```bash
-templatetool --help
-```
+## Save and Close a Project
 
-## Self-Validation
+**File > Save Project** (Ctrl+S) writes the project file. The image source files are ordinary files that you edit with
+the tool of your choice, so saving updates only the project file. **File > Close Project** closes the project and
+clears the explorer and the preview. **File > Exit** closes CanvasPilot.
 
-Self-validation produces a report demonstrating that Template DotNet Tool is functioning
-correctly. This is useful in regulated industries where tool validation evidence is required.
+The title bar shows the name of the open project followed by CanvasPilot.
 
-### Running Validation
+# Working with Images
 
-To perform self-validation:
+## The Project Explorer
 
-```bash
-templatetool --validate
-```
+When a project is open, the left pane lists the image source files in the project folder. It lists a file only when
+CanvasPilot can draw its type, which includes SVG drawings, Mermaid diagrams (`.mmd`), Vega-Lite charts (`.vl.json`
+and `.vl`), OpenSCAD models (`.scad`), pages of PDF and PowerPoint documents, and the other formats that the
+bundled CanvasNet library draws.
+Files in sub-folders and hidden files are not listed.
 
-To save validation results to a file:
+The list follows the folder: files that you add, change, rename, or delete with other tools appear in it after a
+moment. Right-click a file, or select it and press F2 or Delete, to **Rename...** or **Delete...** it. Deleting asks
+you to confirm first.
 
-```bash
-templatetool --validate --results results.trx
-```
+## The Preview
 
-The `--result` option is an accepted alias for `--results`.
+Select a file to see its picture in the right pane. CanvasPilot draws the file in the background, so the window stays
+responsive while a large file is drawn, and a busy indicator with the file's name shows while it runs. When you select
+another file, or the file changes, the picture is drawn again and a result that is no longer wanted is discarded. The
+picture is also redrawn when a file that it uses changes.
 
-The results file format is determined by the file extension: `.trx` for TRX (MSTest) format,
-or `.xml` for JUnit format.
+The **Fit to window** check box scales the picture to the pane. Without it the picture is shown at its own size with
+scroll bars.
 
-### Heading Depth
+A file that references other files, such as an SVG that embeds a picture, can read them only from inside the project
+folder. A file outside it is left out of the picture and reported as a note.
 
-Use `--depth <#>` to control the heading level of the validation output (default: `1`).
-This is useful when embedding the validation report into a larger markdown document:
+## Notes and Errors
 
-```bash
-# Embed validation at heading level 2
-templatetool --validate --depth 2
-```
+Below the picture, the diagnostics list shows the notes that the drawing reported, with their number, for example that
+a feature is not supported or that an embedded file was denied. The picture is still shown when there are notes.
 
-### Validation Report
+When a file cannot be drawn, the preview shows an error with a short code, a message, and, where one exists, a hint
+about what to fix. An unfinished file that you are editing often produces such an error; correct the file and the
+preview updates.
 
-The validation report contains the tool version, machine name, operating system version,
-.NET runtime version, timestamp, and test results.
+## Export and Copy
 
-Example validation report:
+With a picture shown, the **Image** menu offers:
 
-```text
-# DEMA Consulting Template DotNet Tool
+- **Export as PNG...** asks first how the picture is exported (see *Exporting at a Size* in *Style Kits*). *As rendered*
+  is the first choice and is selected, so pressing **Export...** at once saves the picture, with its transparency, as a
+  PNG file at the size it is shown. Then it asks where to save the file.
+- **Copy Image** puts the picture on the clipboard, so you can paste it into email, a presentation, or another
+  program.
+- **Check Against Style** compares the picture with the colors of the style kit of the project (see *Checking a
+  Picture Against the Style* in *Style Kits*).
 
-| Information         | Value                                              |
-| :------------------ | :------------------------------------------------- |
-| Tool Version        | 1.0.0                                              |
-| Machine Name        | BUILD-SERVER                                       |
-| OS Version          | Ubuntu 22.04.3 LTS                                 |
-| DotNet Runtime      | .NET 10.0.0                                        |
-| Time Stamp          | 2024-01-15 10:30:00 UTC                            |
+The three items are disabled while no picture is shown.
 
-✓ TemplateTool_VersionDisplay - Passed
-✓ TemplateTool_HelpDisplay - Passed
+## Drag the Picture Into Another Program
 
-Total Tests: 2
-Passed: 2
-Failed: 0
-```
+You can also drag the picture straight out of the preview. Press the left mouse button on the picture, move the pointer
+a few pixels, and drop it on a folder in Windows Explorer, on a presentation slide, in an email message, or in another
+program that accepts pictures. CanvasPilot offers the picture both as a PNG file, named after the source file, for
+example `flow-1a2b3c4d.png`, and as image data, so each program can take the form it accepts. A click on the picture
+does not start a drag, and nothing is dragged while no picture is shown.
 
-### Validation Tests
+The files that CanvasPilot writes for dragging are kept in the `drag` folder of its folder in
+`%LOCALAPPDATA%\CanvasPilot`, and are deleted when CanvasPilot starts and when it ends, so drop the picture where you
+need it instead of keeping the dragged file. The picture that is dragged is the picture as drawn, without any marks
+(see *Marking the Picture*). Not every program accepts a dropped picture in the same way; if a program
+rejects it, use **Image > Export as PNG...** or **Image > Copy Image** instead.
 
-Each test proves specific functionality works correctly:
+*Not yet checked:* the drag has been tested only inside CanvasPilot's own tests, which stand in for the operating
+system. It has not yet been tried against Windows Explorer, PowerPoint, Outlook, or Paint, so whether each of them takes
+the file, the image data, or both is not confirmed. If a program does not take the picture, please report it (see
+*Troubleshooting*).
 
-- **`TemplateTool_VersionDisplay`** - `--version` outputs a valid version string.
-- **`TemplateTool_HelpDisplay`** - `--help` outputs usage and options information.
+# Chatting
 
-## Silent Mode
+The chat panel is where you compose messages about your drawing. A message can hold text that you type or dictate,
+files, folders, and pictures that you attach, and numbered marks that point at places on the picture. You can send the
+message and see exactly what it contains. **The assistant that will answer is not part of this version**: a sent message
+is kept in the panel and nothing leaves your computer.
 
-Suppress console output:
+## The Chat Panel
 
-```bash
-templatetool --silent
-```
+The chat panel is the column at the right of the window, beside the preview. It is shown while a project is open and
+hidden when there is none. Drag the splitter between the preview and the panel to change its width; it starts at 380
+pixels. From top to bottom the panel has:
 
-## Logging
+- the **transcript**, the messages that you sent in this project, oldest first. While it is empty it says "Messages you
+  send appear here."
+- the **message box**, in which you write the next message. Without an open project it says "Open a project to write a
+  message." and cannot be edited. A status line below it says what is going on, for example what was left out of a drop.
+- the **Hold to talk** button and the **Send** button.
 
-Write output to a log file:
+The transcript lives only in memory. It is cleared when you close the project or CanvasPilot.
 
-```bash
-templatetool --log output.log
-```
+## Writing a Message
 
-## Error Handling
+Click in the message box and type. Enter starts a new line; a message is sent only with the **Send** button. Select,
+copy, cut, and paste work as in any text box, and a long message wraps. Text that you paste is plain text, and
+characters that cannot be shown are removed.
 
-Unrecognized arguments cause the tool to print an error message to standard error and exit
-with a non-zero exit code. For example:
+CanvasPilot remembers what you did, so that you can step back and forth. On macOS, use the Command key where this guide
+says Ctrl:
 
-```text
-Error: Unsupported argument '--unknown'
-```
+- **Undo** with Ctrl+Z, or with **Edit > Undo**.
+- **Redo** with Ctrl+Y or Ctrl+Shift+Z, or with **Edit > Redo**.
 
-This behavior enables automated scripts and CI/CD pipelines to detect and surface
-misconfiguration failures automatically.
+The Edit menu acts on the part of the window that has the focus, so it works while you are in the message box and is
+unavailable when the focus is elsewhere or there is nothing to undo or redo. Every action is one step: each typed
+character, each deleted character, a block of dictated words, the whole of one drop or paste however many items it
+holds, adding a mark, and deleting an attachment or a mark. Redo repeats the same steps. Sending a message clears the
+steps, so a sent message cannot be undone. The message is not saved: if you close the project or CanvasPilot before
+sending it, it is gone.
 
-# Command-Line Options
+## Dictating a Message
 
-The following command-line options are supported:
+You can speak instead of typing. Before the first time, open **Tools > Settings...** and, on the Speech page, download
+a speech-to-text model, choose it, and choose your microphone (an empty choice uses the Windows default microphone).
+See *Speech*.
 
-| Option | Description |
+Then dictate:
+
+1. Click in the message box where the words are to go.
+2. Press and hold the **Hold to talk** button, or hold the **F8** key while the CanvasPilot window is active.
+3. Speak. The button says "Starting... keep holding" and then "Listening... let go to finish", and the words that
+   CanvasPilot has recognized so far appear above the message box while you hold.
+4. Let go. CanvasPilot listens for a moment longer so that your last word is not cut off, and then adds the words to
+   the message at the caret as one block, with a slightly different background so that you can see what was dictated.
+
+One Ctrl+Z removes the whole dictated block. If nothing was recognized, nothing is added and the status line says so.
+Letting go of the button anywhere on the screen, switching to another window, or closing the panel also ends
+the dictation, so the microphone is never left open. The microphone is used only while you hold the button or key, and
+CanvasPilot keeps neither the audio nor the words, apart from the message. You cannot send a message while the button is
+held.
+
+When dictation cannot work, the panel says why and what to do instead of listening: no speech-to-text model is chosen
+or it is not downloaded, no microphone is available, or the speech runtime is missing from the installation. Windows can
+also block desktop applications from using the microphone; if the panel says that the microphone cannot be used, turn on
+**Let desktop apps access your microphone** under **Privacy & security > Microphone** in the Windows settings. See
+*Troubleshooting*.
+
+## Attaching Files, Folders, and Images
+
+You can add things to a message by dropping them into the message box (for example from Windows Explorer or a web
+browser) or by pasting them with Ctrl+V, including a screenshot that you copied. Each file, folder, or picture becomes a
+small **chip** in the text, at the place where you dropped it or at the caret when you paste. A picture shows a small
+preview. Delete a chip with its **x** button, or put the caret next to it and press Backspace or Delete; Ctrl+Z brings
+it back. Text that you drop or paste becomes ordinary text.
+
+What you attach is only ever treated as data. CanvasPilot looks at what a path is and how large a file is, but it never
+opens or runs a file, so even a program or a script is simply attached like any other file. Paths that are not safe to
+refer to, such as device names, are left out, and the status line says which and why.
+
+Nothing is copied while you are writing. When you **send** the message:
+
+- a file or folder from outside the project is copied into the `attachments` folder of the project, with `(2)` and so on
+  added to a name that is already taken, and nothing is ever overwritten. Your original is not changed or deleted.
+- a file or folder that is already inside the project is referred to where it is.
+- a pasted screenshot, which CanvasPilot saved in the hidden `.canvaspilot\attachments` folder while you were writing,
+  is moved into `attachments`. Screenshots that no chip refers to any more are deleted.
+
+The `attachments` folder is not listed in the explorer, which shows only the files in the root of the project. There are
+limits: one drop accepts at most 200 items, one message copies at most 500 files, 500 folders, and 200 MB, and a pasted
+picture can be at most 50 MB. A message that goes over a limit is not sent, and the status line names the item that
+caused it.
+
+## Marking the Picture
+
+Marks let you point at the place that you mean. With a picture shown, the tool bar above it has five buttons:
+
+- **Select** is no marking tool; the picture can be dragged out.
+- **Rectangle**, **Ellipse**, **Freehand**, and **Arrow** draw that shape.
+
+Choose a tool and drag on the picture. A click without a drag makes no mark, and Escape throws a shape away. Marks are
+drawn in the pixels of the picture, so they stay on the right place however you zoom. With the keyboard, give the
+picture layer the focus, move the cursor with the arrow keys, and press Enter or Space to start and to finish a shape.
+
+When you finish a shape, an optional **Note** box appears: type a short note (up to 200 characters) and choose **Add
+mark**, or choose **Skip note**. The mark gets the next number, 1, 2, 3, and so on in the order you make them, and is
+drawn with its number. At the same time a chip, for example "Mark 1", is added to the message at the caret, so you can
+write "the arrow in Mark 1 should point to the other box" and the reader knows which mark you mean. The mark is part of
+the message exactly as long as its chip is in it: deleting the chip hides the mark, and undoing the deletion shows it
+again. Marks are never made by voice.
+
+A mark belongs to the exact picture that it was drawn on. When you change the file and the picture is drawn again, the
+marks are not drawn on the new picture, because they might no longer point at the right place, but they stay in the
+message and the tool bar says how many belong to an earlier picture. The message that you send holds the earlier
+picture that the marks were drawn on.
+
+While a marking tool is chosen, the picture cannot be dragged out. Choose **Select** to drag it again.
+
+## Sending a Message and Viewing the Payload
+
+Choose **Send** when the message is ready. Send works while the message has text or an attachment and a project is open.
+CanvasPilot copies the attachments into the project, builds the payload of the message, adds the message to the
+transcript with its words and chips in the order that you wrote them, and empties the message box and the marks. If
+something goes wrong, the message stays as it was and the status line says what to fix.
+
+The **payload** is everything that the assistant will receive for the message. To see it, choose **View payload** on a
+message in the transcript. A window titled "What the assistant would receive" opens and shows, read-only:
+
+- the text of the message, with `[Mark n]` and `[Attachment n: name]` where the marks and attachments were, and the same
+  message in order with typed and dictated words kept apart,
+- each attachment, with where you had it and its path in the project,
+- for each picture that you marked: the file and fingerprints that say exactly which picture it was, the picture with
+  the marks drawn and numbered on it, the area around each mark, the geometry and note of each mark in the pixels of the
+  picture, and the parts of the source file that lie under each mark, such as the nodes of a Mermaid diagram or the
+  marks of a Vega-Lite chart. For a type of file that does not report where things were drawn, such as an SVG drawing or
+  a raster picture, the payload says that the source elements are not available and why.
+
+Choose **Close** when you are done. Nothing in the window can be changed.
+
+## Dragging the Marked Picture Into Another Program
+
+You can still drag the shown picture out of the preview into another program while you are writing a message, as
+described in *Drag the Picture Into Another Program*, as long as **Select** is chosen. The dragged picture is the
+picture as drawn, **without the marks**; the picture with the marks drawn on it is only in the payload.
+
+This has not been verified against specific programs: the behavior has been tested with the application's automated
+tests, but not by dropping the picture into Windows Explorer, PowerPoint, Outlook, or Paint on a real machine. If a
+program does not accept the picture, use **Image > Export as PNG...** or **Image > Copy Image**, and please report which
+program it was.
+
+# Drawing Knowledge
+
+CanvasPilot carries a guide to drawing with the formats that CanvasNet draws and to working in a CanvasPilot project. It
+is a tree of short **cards**: one about each image format (SVG, Mermaid, Vega-Lite, OpenSCAD, and the others), about
+style and composing pictures, and about CanvasPilot itself, such as where files go in a project, how to make the picture
+that you use, and what the marks and attachments of a message mean. The cards of CanvasNet come with the CanvasNet
+library that is installed with CanvasPilot, so they describe exactly what the application can draw. The few cards that
+are only about the program that hosts CanvasNet, such as the options of a render in a program's code, are left out,
+because CanvasPilot sets those itself; the cards about embedding pages of documents, pictures, and files, and about
+setting a view or a parameter in a link, are kept. You can read the cards yourself, and the AI assistant that will draw
+pictures for you is meant to use the same cards when it is added later; it is not available yet, and nothing in the
+browser sends anything anywhere.
+
+## Opening the Browser
+
+Choose **Help > Drawing Knowledge...** to open the **Drawing Knowledge** window. It opens beside the main window and
+does not block it, so you can read a card while you work on a picture. Choosing the command again brings the window
+that is already open to the front. The window closes when you choose **Close** or press Escape, and with the main
+window. If the cards cannot be read, a message says so and the log has the details.
+
+## The Tree and the Cards
+
+The tree at the left lists the cards. Cards that have cards below them open and close with the arrow, and pausing the
+pointer over a card shows its summary. Choose a card to read it in the pane at the right, which shows:
+
+- the title and the one-line summary of the card, its tags, and the other names that it is known by,
+- the text of the card, with headings, lists, bold, italic, and code text, and blocks of code that you can select,
+- **Cards below**, the cards that the card is the parent of,
+- **See also**, the cards that are related to it,
+- **Examples**, each with a name, a short description, and its text.
+
+The line between the tree and the card can be dragged to make either wider. Before you choose a card the pane tells you
+to choose one or to search.
+
+## Searching the Cards
+
+Type two or more letters into the box above the tree to search. The hits replace the tree, best first, each with its
+title and summary, and choosing a hit shows its card. The search looks at the names, other names, titles, tags, and
+summaries of the cards and the names of their examples, not at the whole text of a card, so the card that is about a
+thing comes before the cards that only mention it. When no card fits, the list says "No card matches those words."
+Clear the box, or type fewer than two letters, to see the tree again. The card that you are reading stays as it is
+while you type.
+
+## Following Cards and Copying Examples
+
+Choose a card under **Cards below** or **See also** to go to it. The tree opens the cards above it and selects it, so
+you always see where you are, however you reached the card.
+
+Each example has a **Copy** button. Choose it to put the text of the example on the clipboard, then paste it into a
+new file in your project and change it. A line under the cards says "Copied example" with the name of the example when
+it worked, or "Could not reach the clipboard." when another program is holding the clipboard; try again in a moment.
+Nothing is written to your project by the browser.
+
+# Style Kits
+
+A **style kit** describes how your pictures should look, so every picture in a project, or every picture of a team,
+has the same colors, type, and sizes. A kit holds:
+
+- a **palette** of named colors (every kit has a *background*, a *text*, and a *primary* color, and may have more, such
+  as *secondary*, *accent*, and *surface*, and colors of its own),
+- **fonts** for headings, body text, and monospaced text, a **line width**, a **corner radius**, and a **spacing**,
+- a **Mermaid theme** and a **Vega-Lite configuration** that you can copy into a Mermaid or chart file,
+- **advice**: notes and a list of things to do and not to do,
+- **export sizes**, such as a slide size, each with an optional resolution and transparency,
+- **example images** with captions that show the style in use.
+
+A kit is a plain folder, so it can be kept in a project, shared in a team folder, sent as a zip file, and edited by
+hand: the folder is named after the kit's id and holds a `style.json` file and an `examples` folder.
+
+CanvasPilot comes with three kits: **Clean** (a light, neutral look), **Slides Dark** (light text on a dark background,
+with sizes for slides), and **DEMA** (the look of the CanvasPilot pictures). Their files cannot be changed, but you can
+duplicate any kit and change the copy.
+
+## Choosing the Style of a Project
+
+While a project is open, the status bar at the bottom of the window shows **Style:** and a list. Choose a kit in the
+list, or **(No style)** for none. Each kit is listed with the place it comes from, for example *Clean (Built-in)*. The
+choice is saved in the project file, so everyone who opens the project, on any computer that has the kit, sees the same
+style. The tooltip of the list shows the description of the kit and its folder.
+
+- A **new** project starts with the **default kit** that you choose on the Style Kits page of the settings (see *Style
+  Kits Page* under *Settings*), or with no style when none is chosen. Changing the default later does not change
+  projects that exist, and a project that is only opened keeps what its file says. A project made with an older version
+  has no style until you choose one.
+- When the project names a kit that cannot be found on this computer, for example one that lived in a team folder that
+  you cannot reach, the list shows the id with *(not found)* and the project behaves as if it had no style until you
+  choose another kit, or until the kit is back (choose **Tools > Style Kits...** and **Refresh**).
+
+## Where Kits Are Kept, and Which Copy Wins
+
+CanvasPilot looks for kits in four places. When the same id is in more than one place, the most local copy is the one
+that is used, from the top of this table down:
+
+| Place | Where | Can you change it? |
+| --- | --- | --- |
+| This project | The `styles` folder inside the project folder, one folder per kit | Yes |
+| My kits | `%APPDATA%\CanvasPilot\styles`, one folder per kit | Yes |
+| Shared | The shared folders of the Style Kits page; a higher folder wins | No, read only |
+| Built-in | The `StyleKits` folder that is installed next to `CanvasPilot.exe` | No, they are read only |
+
+A kit that is hidden by a more local copy is still listed, dimmed, with the place of the copy that hides it. This lets a
+project freeze its style: **Copy into project** makes a copy of a kit in the project's `styles` folder, and from then on
+the project uses its own copy even if the team changes the shared kit. The `styles` folder is an ordinary visible
+folder: the explorer does not list it, and you can keep it with the project, add it to version control, or edit its
+files with other tools (choose **Refresh** in the Style Kits window to read the files again). A kit that cannot be used,
+for example because a color in its `style.json` is not written as `#RRGGBB`, is not offered; the window names its folder
+and says which property is wrong.
+
+## The Style Kits Window
+
+Choose **Tools > Style Kits...** to open the **Style Kits** window. It stays open beside the main window, so you can
+keep it while you work, and choosing the command again brings it to the front. At the left the kits are listed in
+groups, **This project** (while a project is open), **My kits**, **Shared**, and **Built-in**, each kit with a strip of
+its colors. A group says when it is empty, and a shared folder that cannot be reached is named in its group, for example
+because the network is down, while the other groups still work. A kit marked *in use* is the style of the open project.
+
+Choose a kit to see it at the right: its description and place, its palette with each color's role and `#RRGGBB` value,
+fonts, line width, corner radius, spacing, notes and advice, export sizes, any warnings about the kit, small pictures of
+its example images with their captions, and, under **What an assistant is given**, the text that a future assistant
+would receive about the kit, with its length. The buttons are:
+
+- **Use in this project** makes the chosen kit the style of the open project. It is unavailable while no project is open
+  and for a kit that is hidden by a more local copy.
+- **New...** asks for a name and makes a kit with a starter palette in the place chosen under *New and imported kits go
+  to* (**My kits** or **This project**), then opens it in the editor.
+- **Duplicate...** makes a copy of the chosen kit, with its example images, under a new name, in the same chosen place,
+  and opens the copy in the editor. This is how you change a built-in or shared kit.
+- **Edit...** opens the chosen kit in the editor. It is unavailable for built-in and shared kits.
+- **Delete...** deletes the chosen kit and everything in its folder, after you confirm. It is unavailable for built-in
+  and shared kits.
+- **Import...** reads a kit from a zip file into the chosen place. If that place already has a kit with the same id, you
+  choose whether to replace it or to keep both (the new one then gets a number after its id and its name, for example
+  `-2` and `(2)`). CanvasPilot refuses an archive that contains anything that is not part of a kit, a name that would
+  reach outside the target folder, or too many or too large files, and then writes nothing; the line under the buttons
+  says why.
+- **Export...** writes the chosen kit and its example images to a zip file.
+- **Copy into project** copies the chosen kit into the `styles` folder of the open project.
+- **Refresh** reads all places again, for example after you changed a file with another tool.
+
+The line under the buttons says what the last action did or why it could not be done.
+
+## Creating and Editing a Kit
+
+The editor opens as a window over the Style Kits window, with these pages:
+
+- **General**: the name and the description. The id names the kit's folder and cannot be changed; duplicate the kit to
+  give a copy another id.
+- **Palette**: one row per color with its role, a swatch, and the `#RRGGBB` value, which you can type or set with the
+  **RGB...** button, which opens three sliders. A *background*, a *text*, and a *primary* color are required. Add other
+  colors with **Add color**. A hint shows when the text and background colors do not contrast enough to read.
+- **Type and shape**: fonts as lists of families as in CSS (for example `sans-serif`), the line width, the corner
+  radius, and the spacing, in pixels. The generic families (`sans-serif`, `serif`, `monospace`) and the common names
+  such as Arial and Segoe UI are drawn with fonts that come with CanvasNet on every computer. A font that does not come
+  with CanvasNet, such as `Inter`, gives a warning: only SVG and OpenSCAD files draw it, and only on a computer that has
+  the font, while Mermaid, PlantUML, and Vega-Lite always draw their text with the bundled fonts.
+- **Mermaid and Vega-Lite**: a Mermaid theme with its variables and a Vega-Lite configuration (a JSON object).
+  CanvasPilot cannot give a theme or a configuration to a render, so these are starting points and advice for the files
+  that you or the assistant write: a Mermaid file takes the theme in its front matter, and a chart takes the
+  configuration in its `config` property.
+- **Guidance**: notes, and the lists of what to do and not to do.
+- **Sizes**: the export sizes: a name, a width, a height, a resolution (DPI), and whether the margin is transparent.
+  Give a width, a height, or both (both fit the picture inside the box).
+- **Examples**: example images, added with **Add files...** and removed with **Remove**, each with a caption. The files
+  are copied into the kit when you save, and a file that you removed is deleted from the kit then.
+
+The editor checks the kit as you type with the same rules as the kit's file. **Save** is unavailable while a message in
+red is shown, and each message names the property that is wrong; warnings do not stop you from saving. **Cancel** closes
+the editor and writes nothing. Saving writes the kit to its own folder, so a project's kit changes only when you edit
+the copy in the project's `styles` folder.
+
+## Exporting at a Size
+
+**Image > Export as PNG...** first opens the **Export PNG** dialog, which lists, with the resulting size of each:
+
+1. **As rendered**, selected at first: the picture exactly as it is shown, with its transparency. Choosing it gives the
+   same file that earlier versions wrote.
+2. The **export sizes of the style kit** of the project, if it has any.
+3. The **sizes of the application**: *PowerPoint 16:9* (1920 x 1080), *Email (800 wide)* (800 pixels wide, as high as
+   the picture needs), and *A4 portrait @150 DPI* (1240 x 1754, with a resolution of 150 DPI written into the file). A
+   size of the kit with the same name replaces the size of the application.
+
+Choose a size and **Export...**, then choose the file. For a size CanvasPilot draws the source file again at that size,
+so lines and text stay sharp and nothing is stretched. A width and a height define a box in which the picture is fitted
+with its proportions kept, and the margin is filled with the background color of the kit (white when the project has no
+style); a size marked transparent keeps the margin transparent instead. If the file cannot be drawn at that size, a
+message says why and no file is written. **Copy Image** and dragging the picture out always use the picture as it is
+shown.
+
+## Checking a Picture Against the Style
+
+With a picture shown and a kit chosen for the project, **Image > Check Against Style** compares the colors of the
+picture with the palette of the kit and shows the result among the notes under the picture, which opens for it. The
+check counts pixels, so it is about how much of the picture is which color:
+
+- a **summary** that says *PASSED* when at most 5 percent of the picture is off the palette, and *FAILED* otherwise,
+- the palette colors that the picture uses, with their share,
+- the share of **blended edges**, the pixels between two palette colors that smooth the edge of a shape, which are not
+  counted as off the palette,
+- each **off-palette** color that covers at least 1 percent of the picture, as a warning with its share and the nearest
+  palette color, so you know what to change. A color counts as a palette color when it is close to one (the same to the
+  eye).
+
+The notes stay until the picture is drawn again. With no picture, the item is unavailable; with no kit, a message tells
+you to choose one in the status bar first. A picture that uses only the kit's colors passes; Mermaid and chart defaults,
+such as grey grid lines and black text, are reported when the file leaves them at the defaults, which is the reason the
+examples of the kits set every color.
+
+## What an Assistant Will Do With a Kit
+
+The AI assistant is not available yet, and nothing is sent anywhere. The kit is prepared for it: when the assistant is
+added, it will be given the style of the project's kit as a short block of text (the palette, fonts, shapes, and advice,
+and the paths of the example images, which it can look at), and two tools, one to read the style and one to check a
+picture of the project against the palette. The text of a kit is given to it as data and not as instructions, and its
+length is limited. You can see the text in the Style Kits window under **What an assistant is given**.
+
+## Checks That Only a Person Can Do
+
+*Not yet checked:* CanvasPilot's own tests stand in for the operating system's folder and file pickers and for the color
+sliders, so the pickers that choose a shared folder, a zip file to import or export, and example images, and the slider
+flyout of a color, have not yet been tried by a person on an installed package. If one does not work for you, please
+report it (see *Troubleshooting*); you can still type the full path of a shared folder on the Style Kits page and a
+color as `#RRGGBB`.
+
+# Settings
+
+Choose **Tools > Settings...** to open the Settings dialog. The page list at the left shows **AI Provider**, **Speech**,
+and **Style Kits**. **OK** saves the changes from all pages and closes the dialog, **Apply** saves them and keeps the
+dialog open, and **Cancel** closes it without saving. OK and Apply are unavailable while an entry is invalid, and the
+page shows what is wrong.
+
+## AI Provider
+
+The AI Provider page stores your preferences for the assistant. This version only stores them; the assistant that
+would use them is not available yet, so the chat does not use them, and nothing is sent to a provider.
+
+- **Provider**: GitHub Copilot or Ollama.
+- **Model name**: The model to use. Leave it empty for the provider's default model.
+- **Context window (tokens)**: The size of the context window, from 512 to 2,000,000 tokens (default 8192).
+- **Reasoning level**: Auto, Low, Medium, or High.
+- **Ollama endpoint**: The address of the Ollama server (default `http://localhost:11434`). It is used when the
+  provider is Ollama.
+- **GitHub Copilot command-line tool path**: The path of the Copilot command-line tool. Leave it empty to locate the
+  tool automatically. It is used when the provider is GitHub Copilot.
+- **Allow unrestricted agent tools**: Off by default. When it is on, the future agent may use tools that are not
+  limited to the project folder. Leave it off unless you trust the agent's instructions.
+
+## Speech
+
+The Speech page stores which audio devices and speech models CanvasPilot is to use. Dictating a message uses the
+**speech-to-text model** and the **microphone** that you choose here (see *Dictating a Message*); the text-to-speech
+choices are stored but not used yet.
+
+- **Audio devices** shows the microphone (capture) and speakers (playback) that the computer has, and the buttons
+  **Refresh devices** to look again. A computer without audio hardware shows a message instead of devices, and the
+  rest of the page still works.
+- **Speech models** lists the speech-to-text and text-to-speech models, each with its state. A model must be
+  downloaded before it can be used: choose **Download** and watch the progress bar, or **Cancel** to stop. Downloads
+  start at once, are not undone by canceling the dialog, and stop when the Settings dialog closes. A model that has
+  tunable settings, such as a voice or a speaker number, shows editors for them below the lists.
+
+Models are downloaded over HTTPS into a store that is shared with other DEMA Consulting applications that use the speech
+library (see *Where CanvasPilot Keeps Its Files*). A downloaded model is checked before it is installed, and an
+interrupted download leaves no half-installed model.
+
+## Style Kits Page
+
+The Style Kits page stores where CanvasPilot looks for the kits of your team and which kit new projects start with (see
+*Style Kits*).
+
+- **Shared kit folders** lists the folders in which a team keeps style kits, for example `\\server\share\kits`. Type or
+  paste a full folder path and choose **Add**, or choose **Browse...** to pick a folder. A folder is listed with whether
+  it can be reached now, because a network folder can be offline. **Move up** and **Move down** change the order: when
+  the same kit is in more than one folder, the one that is higher in the list is used. **Remove** takes a folder out of
+  the list; the folder itself is not touched. The kits in these folders are read only. A path that is not a full path,
+  and a folder that is already in the list, is refused.
+- **Default kit for new projects** chooses the kit that a project that you create starts with. Projects that exist keep
+  the kit they have.
+
+# About CanvasPilot
+
+Choose **Help > About CanvasPilot** to see the application name, the version, the copyright notice, and the
+third-party libraries that CanvasPilot uses. Include the version when you report a problem.
+
+# Where CanvasPilot Keeps Its Files
+
+| What | Location |
 | --- | --- |
-| `-v`, `--version` | Display version information |
-| `-?`, `-h`, `--help` | Display help message |
-| `--silent` | Suppress console output |
-| `--validate` | Run self-validation |
-| `--results <file>`, `--result <file>` | Write validation results to file (TRX or JUnit format) |
-| `--depth <#>` | Set heading depth for markdown output (default: 1) |
-| `--log <file>` | Write output to log file |
+| Settings and recent projects | `%APPDATA%\CanvasPilot\settings.json` |
+| Log files | `%LOCALAPPDATA%\CanvasPilot\logs` |
+| Pictures prepared for dragging out (temporary) | `%LOCALAPPDATA%\CanvasPilot\drag` |
+| Pictures that you pasted into a message that is not sent yet | `.canvaspilot\attachments` in the project |
+| Files and folders that you sent with a message | `attachments` in the project |
+| Style kits of the project | `styles` in the project |
+| Your own style kits | `%APPDATA%\CanvasPilot\styles` |
+| Style kits that come with CanvasPilot (read only) | `StyleKits` next to `CanvasPilot.exe` in the installation |
+| Downloaded speech models | `%LOCALAPPDATA%\DemaConsulting.Speech\Models` |
+| Your projects | The folder that you chose for each project |
 
-# Examples
+The settings file never contains credentials. The log files stay on your computer and are never sent anywhere; they
+roll over when they reach a size limit and old ones are removed, so they cannot fill the disk. To reset all settings,
+close CanvasPilot and delete `settings.json`. CanvasPilot never stores what you say or the audio from the microphone;
+the words of a dictation exist only in the message that you are writing. A message that you have not sent is not
+saved, so it is lost when you close the project or CanvasPilot, and the transcript of sent messages is lost the same
+way.
 
-## Example 1: Basic Usage
+# Troubleshooting
 
-```bash
-templatetool
-```
+**A file is missing from the explorer.** Only files in the root of the project folder are listed, and only types that
+CanvasPilot can draw. Move the file into the project folder, or check its extension.
 
-## Example 2: Self-Validation with Results
+**The preview shows an error.** Read the code, message, and hint. Typical causes are a syntax error in the file, a
+referenced file that is missing, and a file type that is not supported. The log has the details.
 
-```bash
-templatetool --validate --results validation-results.trx
-```
+**An embedded picture is not drawn.** Files that a drawing references must be inside the project folder. Move the
+picture into the project folder or one of its sub-folders and refer to it by a relative path.
 
-## Example 3: Silent Mode with Logging
+**A project does not open.** The message names the problem. A project file that was written by a newer version of
+CanvasPilot cannot be opened by an older one, and a damaged project file must be repaired or replaced.
 
-```bash
-templatetool --silent --log tool-output.log
-```
+**CanvasPilot started with default settings.** A settings file that cannot be read is kept as `settings.json.bad` next
+to the original, the problem is written to the log, and CanvasPilot starts with default settings. Your projects are
+not affected.
+
+**The Speech page shows no audio devices.** The computer has no audio hardware, or its audio system cannot be used. The
+rest of the page still works, and you can choose devices later.
+
+**A model download fails.** The message on the model says why, for example that the network is blocked. Check the
+connection and choose Download again. Keep the Settings dialog open while a download runs.
+
+**Copy Image does not paste.** Some programs accept only certain clipboard formats. Export the picture as a PNG file and
+insert the file instead.
+
+**The chat panel is not there.** The chat panel is on the right of the preview and is shown only while a project is
+open. Open or create a project. Without one the message box says "Open a project to write a message."
+
+**Send is not available.** Send works only while the message has some text or an attachment, no talk button is held,
+and the previous message is not still being sent. Let go of the Hold to talk button, or write something.
+
+**A message was not sent.** The status line under the message says why, and the message stays as you wrote it. The usual
+cause is a limit: one message copies at most 500 files, 500 folders, and 200 MB into the project, and a pasted picture
+can be at most 50 MB. Remove the item that the status names, or attach a smaller part, and send again.
+
+**An attachment was left out.** When you drop or paste items, the status line lists what was left out and why, for
+example a path that is not complete, a device name, or more than 200 items in one drop. Everything else was added.
+
+**Dictation says it cannot listen.** The message on the panel names the reason and what to do. No speech-to-text model
+is chosen, or the chosen one is not downloaded: choose and download one on the Speech page. No microphone: connect one
+and choose it on the Speech page. Windows can also block desktop applications from the microphone: open the Windows
+**Settings**, go to **Privacy & security > Microphone**, and turn on **Let desktop apps access your microphone**. If the
+speech runtime is reported missing from the installation, reinstall CanvasPilot with the package from the releases page.
+
+**Dictation is slow to start the first time.** The speech model is loaded the first time it is needed, which takes a
+moment. CanvasPilot prepares it when the chat panel is shown. After you change the model on the Speech page the next
+dictation loads it again.
+
+**My marks are gone from the picture.** Marks belong to the picture that they were drawn on. When the file changes and
+the picture is drawn again, the marks are not shown on the new picture, and the marking tool bar says how many belong to
+an earlier picture. Marks are also hidden while their chip is not in the message, for example after you deleted the chip
+or undid it; redo or Ctrl+Y brings them back.
+
+**Drag-out does not work while marking.** Dragging the picture out is turned off while a marking tool is chosen. Choose
+**Select** on the marking tool bar first.
+
+**The Drawing Knowledge window does not open.** A message says that the cards could not be read and the log has the
+details. Cards are part of the installation, so reinstall CanvasPilot with the package from the releases page. If the
+window is already open it is brought to the front instead of opening a second one.
+
+**The search finds no card.** The search needs two or more letters and looks at the names, titles, tags, and summaries
+of the cards, not at their whole text. Try another word for the thing, such as the name of the format, or open the tree
+and read the card that is about it.
+
+**A shared folder of style kits is not reachable.** The Style Kits page and the Style Kits window say that the folder
+cannot be reached, for example because the network share is offline or you may not read it. The other places still work,
+and the shared kits come back when you choose **Refresh** in the Style Kits window once the folder is reachable again.
+A project that uses a shared kit shows *(not found)* in the meantime (see the next item). To keep a kit available
+without the share, use **Copy into project**.
+
+**The project's style kit is not found.** The list in the status bar shows the id with *(not found)* when the project's
+file names a kit that is not on this computer: the kit may have been deleted, may live in a folder that is not
+reachable, or may have been made by a teammate who did not share it. Choose another kit or **(No style)**; or add the
+folder of the kit on the Style Kits page of the settings, or import it from a zip file, and choose **Refresh**.
+
+**A style kit is not listed.** A kit whose `style.json` has an error is not offered. The group in the Style Kits window
+that holds its folder names the folder and the property that is wrong, for example a color that is not written as
+`#RRGGBB`. Fix the file (or edit the kit), and choose **Refresh**. A kit that is dimmed is hidden by a copy of the same
+id in a more local place (see *Where Kits Are Kept, and Which Copy Wins*).
+
+**I cannot edit or delete a style kit.** The kits that come with CanvasPilot and the kits in shared folders are read
+only. Choose **Duplicate...** and change the copy, which is kept in *My kits* or in the project.
+
+**An import is refused.** The message under the buttons of the Style Kits window says why: the zip file has no
+`style.json`, holds files that are not part of a kit, has a name that would reach outside the kit's folder, is too large
+(at most 100 files, 16 MB for one file, and 64 MB in all), or the kit's file has an error. Nothing is written when an
+import is refused.
+
+**Export as PNG... asks which size.** This is the Export PNG dialog (see *Exporting at a Size*). Keep *As rendered*
+selected to save the picture as it is shown.
+
+**Reporting a problem.** Open an issue on the
+[CanvasPilot issues page](https://github.com/demaconsulting/CanvasPilot/issues) and attach the newest file from the log
+folder, after you have checked that it holds nothing private.
 
 ## References
 
-N/A
+- [CanvasPilot repository](https://github.com/demaconsulting/CanvasPilot)
+- [CanvasPilot releases](https://github.com/demaconsulting/CanvasPilot/releases)

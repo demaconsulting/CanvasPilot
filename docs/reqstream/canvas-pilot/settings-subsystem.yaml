@@ -1,0 +1,93 @@
+---
+# Settings Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Settings subsystem
+# - The Settings subsystem spans SettingsService (SettingsService.cs, ISettingsService.cs, AppSettings.cs),
+#   SettingsDialog (SettingsDialogViewModel.cs, ISettingsPage.cs, SettingsDialogView.axaml), and
+#   AiProviderSettingsPage (AiProviderSettingsPageViewModel.cs, AiProviderSettingsPageView.axaml)
+# - Subsystem requirements describe the persistence and editing behavior that satisfies the system-level
+#   settings requirements
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Settings Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Settings-PersistUserSettings
+            title: >-
+              The Settings subsystem shall persist user settings in a single versioned per-user file
+              that is restored on the next run.
+            justification: |
+              Users expect their choices to survive a restart. One versioned file in the per-user
+              application data folder needs no administrator rights and lets the format evolve without
+              breaking existing installations. Settings owned by other subsystems share the file, so
+              saving one subsystem's values must never discard another's.
+            children:
+              - CanvasPilot-SettingsService-LocateSettingsFile
+              - CanvasPilot-SettingsService-RoundTripVersionedSettings
+              - CanvasPilot-SettingsService-WriteAtomically
+              - CanvasPilot-SettingsService-NotifyChanges
+            tests:
+              - SettingsSubsystem_PersistSettings_DialogOk_SurvivesRestart
+
+          - id: CanvasPilot-Settings-ToleratePoorSettingsFiles
+            title: >-
+              The Settings subsystem shall keep working with defaults when the settings file is missing,
+              corrupt, or from a newer version.
+            justification: |
+              A damaged or unexpected settings file must never prevent the application from starting or
+              the user from changing settings. Keeping a corrupt file aside, rather than deleting it,
+              preserves it for diagnosis.
+            children:
+              - CanvasPilot-SettingsService-ToleratePoorFiles
+            tests:
+              - SettingsSubsystem_ToleratePoorFiles_CorruptFile_DialogStillWorks
+
+          - id: CanvasPilot-Settings-EditSettingsInDialog
+            title: >-
+              The Settings subsystem shall let the user edit settings in a modal dialog whose changes
+              take effect only when the user chooses OK or Apply.
+            justification: |
+              A dialog with a page list lets each subsystem contribute its own settings page without
+              the dialog depending on them. Editing a working copy lets the user back out of changes,
+              and blocking invalid entries keeps bad values out of the stored settings.
+            children:
+              - CanvasPilot-SettingsDialog-HostPages
+              - CanvasPilot-SettingsDialog-ApplyOrDiscardChanges
+              - CanvasPilot-SettingsDialog-BlockInvalidSettings
+              - CanvasPilot-SettingsDialog-ReportSaveFailure
+              - CanvasPilot-SettingsDialog-NotifyPagesOnClose
+            tests:
+              - SettingsSubsystem_EditSettings_DialogCancel_LeavesStoredSettingsUnchanged
+
+          - id: CanvasPilot-Settings-ConfigureAiProvider
+            title: >-
+              The Settings subsystem shall let the user choose and store the AI provider, model,
+              context window, reasoning level, endpoint, tool path, and agent-tool opt-in.
+            justification: |
+              The AI provider choices must be stored before anything consumes them, so the user can
+              configure the application once. The choices are validated when entered so a bad value is
+              caught at the dialog rather than when the AI agent is later started, and the
+              agent-tool opt-in is stored as off unless the user deliberately turns it on.
+            children:
+              - CanvasPilot-AiProviderSettingsPage-EditProviderChoices
+              - CanvasPilot-AiProviderSettingsPage-ValidateContextWindow
+              - CanvasPilot-AiProviderSettingsPage-ValidateOllamaEndpoint
+              - CanvasPilot-AiProviderSettingsPage-CopilotCliPathOverride
+              - CanvasPilot-AiProviderSettingsPage-UnrestrictedToolsOptIn
+            tests:
+              - SettingsSubsystem_PersistSettings_DialogOk_SurvivesRestart
+
+          - id: CanvasPilot-Settings-KeepStyleSettings
+            title: >-
+              The Settings subsystem shall keep the shared style kit folders and the default style kit of the user with the
+              other settings, so that they survive a restart and a change of another setting does not lose them.
+            justification: |
+              Where a team keeps its style kits and which kit a new project starts with are choices of the user that apply
+              to every project, so they belong with the stored settings. The settings dialog and other subsystems change
+              their own values only, so each must leave these alone.
+            children:
+              - CanvasPilot-SettingsService-KeepStyleSettings
+            tests:
+              - SettingsSubsystem_KeepStyleSettings_SavedWithOthers_SurviveRestartAndOtherChanges

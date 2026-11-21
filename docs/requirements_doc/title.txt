@@ -1,13 +1,14 @@
 ---
-title: Template DotNet Tool Requirements
-subtitle: Requirements Specification for the Template DotNet Tool
+title: CanvasPilot Requirements
+subtitle: Requirements Specification for the CanvasPilot
 author: DEMA Consulting
-description: Requirements Specification for the Template DotNet Tool
+description: Requirements Specification for the CanvasPilot
 lang: en-US
 keywords:
-  - Template DotNet Tool
+  - CanvasPilot
   - Requirements
   - Specification
   - .NET
-  - Command-Line Tool
+  - Avalonia
+  - Desktop Application
 ---

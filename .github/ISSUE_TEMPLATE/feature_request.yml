@@ -1,6 +1,6 @@
 ---
 name: ✨ Feature Request
-description: Suggest a new feature or enhancement for the TemplateDotNetTool
+description: Suggest a new feature or enhancement for the CanvasPilot
 title: "[Feature]: "
 labels: ["enhancement"]
 assignees: []
@@ -41,17 +41,16 @@ body:
       label: Usage Examples
       description: If applicable, provide examples of how this feature would be used
       placeholder: |
-        ```csharp
-        // Example usage
-        templatetool --input report.json --output report.md --feature-flag
+        ```text
+        Example: select a file in the project explorer and choose Image > Export as PNG... to save the picture
         ```
-      render: csharp
+      render: text
 
   - type: textarea
     id: benefits
     attributes:
       label: Benefits
-      description: Explain why this enhancement would be useful to TemplateDotNetTool users
+      description: Explain why this enhancement would be useful to CanvasPilot users
       placeholder: This would be useful because...
     validations:
       required: true

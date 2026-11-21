@@ -1,0 +1,48 @@
+---
+# Software Unit Requirements for the KnowledgeSkills Unit
+#
+# The KnowledgeSkills unit describes the cards of a catalog as skills for an assistant: one plain value for each card with
+# a name made from the identifier of the card, the title and summary of the card as its description, and the card with its
+# examples as its content. The skills are made as they are read. The unit has no dependency on the user interface or on any
+# provider of a language model.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        sections:
+          - title: KnowledgeSkills Requirements
+            requirements:
+              - id: CanvasPilot-KnowledgeSkills-OneSkillPerCard
+                title: >-
+                  The KnowledgeSkills unit shall describe every card of a catalog as one skill, in the order of the
+                  cards, with the title and summary of the card as its description and the text of the card with the text
+                  of each of its examples in a fenced block as its content, shall make the skills only as they are read,
+                  and shall refuse a missing catalog when the skills are asked for.
+                justification: |
+                  A provider that has skills, or an assistant that is given one tool for each topic, can be given the
+                  knowledge card by card. The description tells the assistant when a skill applies and the content is
+                  everything it needs once it does. The text of all the cards is many times the size of the index, so it
+                  is built only for the skills that are read, and a mistake in the call is reported at the call and not
+                  later where the skills are read.
+                tests:
+                  - KnowledgeSkills_Create_SmallCatalog_IsOneSkillPerCardWithNameDescriptionAndContent
+                  - KnowledgeSkills_Create_SmallCatalog_ContentHasBodyAndFencedExamples
+                  - KnowledgeSkills_Create_Enumeration_IsDeferredAndANullCatalogIsRefusedAtTheCall
+                  - KnowledgeSkills_Create_EmptyCatalog_IsEmpty
+                  - KnowledgeSkills_Create_RealCatalog_HasOneUniqueSkillForEveryCard
+
+              - id: CanvasPilot-KnowledgeSkills-NameSkillsFromIds
+                title: >-
+                  The KnowledgeSkills unit shall name the skill of a card canvasnet- followed by the identifier of the card
+                  with each slash written as a dash, for the cards of CanvasPilot as well as for those of CanvasNet, such
+                  that the names of the skills of the catalog of the application are all different and contain only lower
+                  case letters, digits, and single dashes.
+                justification: |
+                  A skill is found by its name, so the name must tell which card it is and must be one that every
+                  provider accepts. Naming it from the identifier makes the name predictable from the index, and the
+                  check on the real catalog makes a new card whose name would be the same as that of another fail the
+                  build.
+                tests:
+                  - KnowledgeSkills_NameFor_CardId_IsPrefixAndIdWithDashes
+                  - KnowledgeSkills_Create_RealCatalog_HasOneUniqueSkillForEveryCard
