@@ -285,6 +285,9 @@ public static class RenderErrorCodes
 
     /// <summary>The render failed for a reason that is none of the above.</summary>
     public const string OperationFailed = "operation-failed";
+
+    /// <summary>The settings of the render (a size, a background, or a resolution) are not values that CanvasNet draws.</summary>
+    public const string InvalidSettings = "invalid-settings";
 }
 
 /// <summary>

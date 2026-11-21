@@ -451,6 +451,67 @@ public sealed class CanvasNetTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that CanvasNet draws vector files at the width and height that are asked for, exactly that size, fitted
+    ///     into the box with the ratio kept, with a transparent margin or a margin of the background color, and that it
+    ///     scales to the ratio when only one side is given. The application relies on this to export a picture at a size.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_Render_WidthHeightAndBackground_GivesExactSizeAndTransparency()
+    {
+        // Arrange: an SVG of 1600 x 640 with an opaque violet rectangle, and a Mermaid diagram
+        var svg = Write(
+            "banner.svg",
+            "<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='640'><rect width='1600' height='640' fill='#7C3AED'/></svg>");
+        var diagram = Write("flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var margin = new Rgba32(10, 16, 34, 255);
+
+        // Act: draw the SVG in a wider box over transparency, over a color, and at a width only; and the diagram in a box
+        using var transparent = CanvasNetViewer.Render(svg, new ViewerRenderOptions { Width = 1920, Height = 1080, Background = new Rgba32(0, 0, 0, 0) });
+        using var colored = CanvasNetViewer.Render(svg, new ViewerRenderOptions { Width = 1920, Height = 1080, Background = margin });
+        using var widthOnly = CanvasNetViewer.Render(svg, new ViewerRenderOptions { Width = 800 });
+        using var natural = CanvasNetViewer.Render(svg);
+        using var boxedDiagram = CanvasNetViewer.Render(diagram, new ViewerRenderOptions { Width = 800, Height = 400, Background = new Rgba32(0, 0, 0, 0) });
+        using var flattenedDiagram = CanvasNetViewer.Render(diagram, new ViewerRenderOptions { Width = 800, Height = 400, Background = margin });
+
+        // Assert: the box size is exact, the margin is transparent or the color, the picture is fitted and not stretched, and
+        // one side scales with the ratio
+        Assert.Equal((1600, 640), (natural.Surface.Width, natural.Surface.Height));
+        Assert.Equal((1920, 1080), (transparent.Surface.Width, transparent.Surface.Height));
+        Assert.Equal(0, transparent.Surface[0, 0].A);
+        Assert.Equal(new Rgba32(124, 58, 237, 255), transparent.Surface[960, 540]);
+        Assert.Equal(margin, colored.Surface[0, 0]);
+        Assert.Equal(new Rgba32(124, 58, 237, 255), colored.Surface[960, 540]);
+        Assert.Equal((800, 320), (widthOnly.Surface.Width, widthOnly.Surface.Height));
+        Assert.Equal((800, 400), (boxedDiagram.Surface.Width, boxedDiagram.Surface.Height));
+        Assert.Equal(0, boxedDiagram.Surface[0, 0].A);
+        Assert.Equal((800, 400), (flattenedDiagram.Surface.Width, flattenedDiagram.Surface.Height));
+        Assert.Equal(margin, flattenedDiagram.Surface[0, 0]);
+    }
+
+    /// <summary>
+    ///     Test that CanvasNet reads the Mermaid theme from the front matter of the file, so that the variables of a style
+    ///     kit that are written into the file color the nodes. The application cannot inject a Mermaid theme into the render.
+    /// </summary>
+    [Fact]
+    public void CanvasNet_Mermaid_FrontMatterThemeVariables_ColorTheNodes()
+    {
+        // Arrange: the same diagram with and without a front matter that makes the nodes red
+        const string body = "flowchart LR\n  A[Start] --> B[End]\n";
+        var themed = Write("themed.mmd", "---\nconfig:\n  theme: base\n  themeVariables:\n    primaryColor: \"#ff0000\"\n---\n" + body);
+        var plain = Write("plain.mmd", body);
+
+        // Act: render both and measure how much of each node box is red
+        using var themedImage = CanvasNetViewer.Render(themed, new ViewerRenderOptions { Positions = PositionSelection.All });
+        using var plainImage = CanvasNetViewer.Render(plain, new ViewerRenderOptions { Positions = PositionSelection.All });
+        var themedShare = RedShareOfNodes(themedImage);
+        var plainShare = RedShareOfNodes(plainImage);
+
+        // Assert: most of the area of the nodes is red with the theme variable and none is red without it
+        Assert.True(themedShare > 0.3, $"The red share of the nodes was {themedShare}.");
+        Assert.Equal(0, plainShare);
+    }
+
+    /// <summary>
     ///     Test that CanvasNet classifies the generic CSS font families, the common aliases of them, and the bundled
     ///     Liberation families, and does not recognize an arbitrary family, and splits a font-family list, so the
     ///     application can tell which fonts of a style are drawn the same on every machine.
@@ -492,6 +553,36 @@ public sealed class CanvasNetTests : IDisposable
         Assert.False(comic);
         Assert.False(withoutAliases);
         Assert.Equal(["Segoe UI", "Arial", "sans-serif"], families);
+    }
+
+    /// <summary>
+    ///     Measures how much of the area of the node boxes of a picture is red.
+    /// </summary>
+    /// <param name="image">A picture that was rendered with every position requested.</param>
+    /// <returns>The share, from 0 to 1, of the pixels inside the node boxes that are strongly red.</returns>
+    private static double RedShareOfNodes(ViewerImage image)
+    {
+        long red = 0;
+        long total = 0;
+        foreach (var node in image.Positions.Where(position => position.Kind == "node"))
+        {
+            var box = Assert.IsType<PositionBox>(node.Box);
+            for (var y = (int)box.Y; y < (int)(box.Y + box.Height); y++)
+            {
+                for (var x = (int)box.X; x < (int)(box.X + box.Width); x++)
+                {
+                    var pixel = image.Surface[x, y];
+                    total++;
+                    if (pixel.R > 200 && pixel.G < 60 && pixel.B < 60)
+                    {
+                        red++;
+                    }
+                }
+            }
+        }
+
+        Assert.True(total > 0, "The picture has no node.");
+        return (double)red / total;
     }
 
     /// <summary>

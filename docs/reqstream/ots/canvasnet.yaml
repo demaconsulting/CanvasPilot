@@ -167,3 +167,29 @@ sections:
             tags: [ots]
             tests:
               - CanvasNet_GenericFontFamilies_ClassifiesBundledAliasesAndUnknownFamilies
+
+          - id: CanvasPilot-OTS-CanvasNet-RenderAtRequestedSize
+            title: >-
+              CanvasNet shall draw an SVG, a Mermaid diagram, a Vega-Lite chart, and a raster picture at a requested width
+              and height as a picture of exactly that size that is fitted inside the box with its aspect ratio kept, with a
+              margin that is transparent or has a requested background color, and shall scale to the aspect ratio when only
+              one side is requested.
+            justification: |
+              The application exports a picture at the size of its use, for example a slide, by drawing the source file
+              again at that size. It relies on the library for the exact size, for fitting instead of stretching, and for
+              the margin and the transparency, so that no other code has to resample the pixels.
+            tags: [ots]
+            tests:
+              - CanvasNet_Render_WidthHeightAndBackground_GivesExactSizeAndTransparency
+
+          - id: CanvasPilot-OTS-CanvasNet-ThemeMermaidFromTheSource
+            title: >-
+              CanvasNet shall draw the nodes of a Mermaid diagram with the theme variables that the front matter of the
+              Mermaid file gives, so that the colors of a style are carried by the file.
+            justification: |
+              The render options of the library have no Mermaid theme, so the colors of a style kit reach a diagram only
+              through the file that is written. The application tells the author of a file what to write and relies on the
+              library to draw it that way.
+            tags: [ots]
+            tests:
+              - CanvasNet_Mermaid_FrontMatterThemeVariables_ColorTheNodes

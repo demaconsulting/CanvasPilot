@@ -58,6 +58,12 @@ internal sealed class GatedRenderService : IImageRenderService
     /// <inheritdoc />
     public Task<RenderResult> RenderAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
     {
+        return RenderAsync(filePath, projectFolder, null, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<RenderResult> RenderAsync(string filePath, string projectFolder, RenderSettings? settings, CancellationToken cancellationToken)
+    {
         var source = new TaskCompletionSource<RenderResult>(TaskCreationOptions.RunContinuationsAsynchronously);
         _waiting.Add(source);
         _requested++;
@@ -66,6 +72,12 @@ internal sealed class GatedRenderService : IImageRenderService
 
     /// <inheritdoc />
     public byte[] EncodePng(RenderedImage image)
+    {
+        return [];
+    }
+
+    /// <inheritdoc />
+    public byte[] EncodePng(RenderedImage image, double? dpi)
     {
         return [];
     }

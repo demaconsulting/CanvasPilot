@@ -38,20 +38,27 @@ edge joins), `Box` (`RenderBox`: `X`, `Y`, `Width`, `Height`), and `Pixel` (`Ren
 can aim at). All coordinates are continuous pixel coordinates of the picture with the origin at the top-left corner,
 x to the right and y downward. `Text`, `From`, and `To` are `null` rather than empty when the library gives none.
 
-**RenderAnchor**: `Name`, `PixelX`, and `PixelY` (`null` when the library cannot project the point). The anchors are
-valid because the application draws at the natural size; a resized render would move them.
+**RenderAnchor**: `Name`, `PixelX`, and `PixelY` (`null` when the library cannot project the point). The anchors are in the
+pixels of the picture that was drawn: a render at a requested size reports them at that size, and the preview draws at
+the natural size.
 
 **RenderDiagnostic**: `Severity` (`Info`, `Warning`, `Unsupported`), `Code`, `Message`, and `DisplayText`
 (`Severity: Code: Message`). It mirrors CanvasNet's `ImageSourceDiagnostic`.
 
 **RenderError**: `Code`, `Message`, and `Hint` (or `null`). The code is CanvasNet's own for a `ViewerException`
 (for example `page-out-of-range`); otherwise one of `RenderErrorCodes`: `input-not-found`, `input-unreadable`,
-`unsupported-format`, `cannot-draw`, `size-limit`, and `operation-failed`.
+`unsupported-format`, `cannot-draw`, `size-limit`, `invalid-settings`, and `operation-failed`.
 
 **RenderResult**: exactly one of `Image`, `Error`, or `IsCancelled`, created with `Success`, `Failure`, or
 `Cancelled`; `Succeeded` tells whether there is a picture.
 
-**IImageRenderService**: `RenderAsync(filePath, projectFolder, cancellationToken)` and `EncodePng(image)`.
+**RenderSettings**: how a file is drawn when the picture is not wanted at its natural size: `Width` and `Height` (1 to
+8192 pixels, or `null`), `Transparent`, `BackgroundHex` (`#RRGGBB` or `null`), and `Dpi` (greater than 0 and at most 2400,
+or `null`). `RenderSettings.AsRendered` changes nothing. The values are checked when the file is drawn, so a wrong value
+is the result of the render and not an exception of the caller.
+
+**IImageRenderService**: `RenderAsync(filePath, projectFolder, cancellationToken)`, `RenderAsync(filePath, projectFolder,
+settings, cancellationToken)`, `EncodePng(image)`, and `EncodePng(image, dpi)`.
 
 #### Key Methods
 
@@ -83,7 +90,27 @@ gives `size-limit`; `FileReferenceException`, `IOException`, and `UnauthorizedAc
 `input-unreadable`; anything else gives `operation-failed`. Each failure is logged as a warning.
 
 **EncodePng**: Copies the pixels into a new CanvasNet `Surface` and writes it with `PngCodec.Save` to a memory
-stream, so the PNG keeps the straight-alpha transparency.
+stream, so the PNG keeps the straight-alpha transparency. With a resolution it then adds the physical size of the file
+(see *Resolution of a PNG*); without one the bytes are what the codec wrote.
+
+**Settings**: `RenderAsync` with settings builds the viewer options from them: `Width` and `Height` are the options of
+the same name, `Transparent` gives the background `Rgba32(0, 0, 0, 0)` (fully transparent, which keeps transparency and
+makes the margin transparent), a `BackgroundHex` gives that color (which flattens the picture over it and fills the
+margin), and `Dpi` gives the option `Dpi`, which sizes the natural page of a PDF, PowerPoint, or Visio file and is ignored
+by every other kind. Transparency wins over a color, so a preset that says transparent is never flattened. With both
+sides the viewer fits the picture inside the box with its ratio kept and the result is exactly the box; with one side it
+scales keeping the ratio; a vector file is drawn at the size, not resampled, and a raster is resampled by the viewer.
+`null` settings and `RenderSettings.AsRendered` set none of these options, so the render is the one without settings.
+The values are checked before the file is read: a size outside 1 to 8192, a background that is not a color, and a
+resolution outside 0 to 2400 are the error `invalid-settings` with a hint that says what is allowed, because an
+`ArgumentOutOfRangeException` is the one exception that is mapped to that code. The positions and anchors of a picture
+that was drawn at a size are in the pixels of that size.
+
+**Resolution of a PNG**: The PNG codec of CanvasNet writes no `pHYs` chunk. `PngPhysicalSize.Insert` adds the chunk
+directly after the header chunk (or replaces one that is there): the pixels per meter are the resolution divided by
+0.0254, rounded, on both axes, with the meter as unit, and the checksum is the CRC-32 of the PNG specification, computed
+with a table. The rest of the file is copied as it is, so the file decodes to the same pixels. It refuses bytes that do not
+start with the PNG signature and a header chunk.
 
 **Substitute drawing function**: An internal constructor takes the drawing function so tests can produce viewer
 failures that cannot be caused on demand with real files.
@@ -97,7 +124,8 @@ ignored.
 
 #### Dependencies
 
-- **DemaConsulting.CanvasNet.Viewer** (OTS) — `CanvasNetViewer.Render`, `ViewerRenderOptions` (including `Positions`),
+- **DemaConsulting.CanvasNet.Viewer** (OTS) — `CanvasNetViewer.Render`, `ViewerRenderOptions` (including `Positions`,
+  `Width`, `Height`, `Background`, and `Dpi`),
   `ViewerImage.Positions` and `Anchors`, `ViewerException`, `FileAccessPolicy.UnderRoots`, `Surface`, and `PngCodec`;
   see the CanvasNet OTS design.
 - **RollingFileLogger** — optional; records files that could not be drawn.

@@ -35,4 +35,14 @@ public interface IRenderedImageSource
     ///     Gets the picture that is currently shown, or <see langword="null" /> when there is none.
     /// </summary>
     RenderedImage? CurrentImage { get; }
+
+    /// <summary>
+    ///     Gets the folder of the open project, which is the only folder a drawn file may read from, or
+    ///     <see langword="null" /> when no project is open.
+    /// </summary>
+    /// <remarks>
+    ///     A part that draws the shown file again at another size needs it, because the picture alone does not say which
+    ///     folder the file was allowed to read from.
+    /// </remarks>
+    string? ProjectFolder { get; }
 }

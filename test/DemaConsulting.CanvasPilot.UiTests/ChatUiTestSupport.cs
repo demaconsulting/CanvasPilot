@@ -187,6 +187,9 @@ internal sealed class FixedPictureSource : IRenderedImageSource
             CurrentImageChanged?.Invoke(this, EventArgs.Empty);
         }
     }
+
+    /// <inheritdoc />
+    public string? ProjectFolder { get; set; }
 }
 
 /// <summary>

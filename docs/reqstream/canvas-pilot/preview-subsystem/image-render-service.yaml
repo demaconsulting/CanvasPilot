@@ -143,3 +143,39 @@ sections:
                   - ImageRenderService_RenderAsync_SvgFile_ReportsNoPositions
                   - ImageRenderService_RenderAsync_Request_AsksForAllPositions
                   - RenderedImage_New_PositionsAndAnchors_AreCopiedAndDefaultToEmpty
+
+              - id: CanvasPilot-ImageRenderService-RenderAtARequestedSize
+                title: >-
+                  The ImageRenderService shall, when asked for a width, a height, or both, return a picture of exactly that
+                  size, fitted inside the box with its aspect ratio kept and never stretched, shall fill the margin and the
+                  transparent parts with a color that is asked for or leave them transparent when transparency is asked for,
+                  shall draw a document page at a resolution that is asked for, shall give the same picture as before when
+                  nothing is asked for, and shall return a size that is not allowed, a color that is not a color, or a
+                  resolution that is not allowed as an error result that says what is allowed.
+                justification: |
+                  A picture that is used on a slide, in an email, or on paper has to be drawn at the size of its use. Drawing
+                  the source file again at that size keeps lines sharp where stretching the shown picture would blur them, and
+                  fitting it keeps its proportions. A margin that is a color of the style, or transparent, lets the picture sit
+                  on the page it is put on. A request that cannot be drawn must be explained and not crash the export.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-RenderAtRequestedSize
+                tests:
+                  - ImageRenderService_RenderAsync_SvgIntoBox_IsExactlyThatSizeAndLetterboxed
+                  - ImageRenderService_RenderAsync_MermaidVegaLiteAndRasterIntoBox_AreExactlyThatSize
+                  - ImageRenderService_RenderAsync_InvalidSettings_ReturnsInvalidSettingsError
+                  - ImageRenderService_RenderAsync_Settings_ReachTheViewerAsOptions
+
+              - id: CanvasPilot-ImageRenderService-WritePngResolution
+                title: >-
+                  The ImageRenderService shall, when asked to encode a picture with a resolution, write the resolution into
+                  the PNG file so that the file keeps the pixels of the picture, shall write none when no resolution is
+                  asked for, and shall refuse a resolution that is not greater than 0 and at most 2400 dots per inch.
+                justification: |
+                  A picture that is exported for print has to say how large it is, or a program that opens it will choose
+                  a size of its own. The pixels must not change, because the file is what the user saw.
+                tests:
+                  - ImageRenderService_EncodePng_WithDpi_WritesPhysicalSizeAndKeepsPixels
+                  - PngPhysicalSize_Insert_Png_AddsCorrectChunkAfterHeaderAndKeepsPixels
+                  - PngPhysicalSize_Insert_CommonResolutions_ArePixelsPerMeterRounded
+                  - PngPhysicalSize_Insert_PngWithSizeAlready_ReplacesTheChunk
+                  - PngPhysicalSize_Insert_InvalidArguments_Throw

@@ -235,6 +235,9 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     /// <inheritdoc />
     public RenderedImage? CurrentImage => Image;
 
+    /// <inheritdoc />
+    public string? ProjectFolder => _explorer.FolderPath;
+
     /// <summary>
     ///     Gets a task that completes when every render started so far has either applied its result or been
     ///     discarded because a newer render superseded it.

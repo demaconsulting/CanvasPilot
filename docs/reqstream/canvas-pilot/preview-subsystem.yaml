@@ -76,6 +76,22 @@ sections:
             tests:
               - PreviewSubsystem_ExportImage_ShownPicture_WritesPngAndCopiesToClipboard
 
+          - id: CanvasPilot-Preview-ExportAtRequestedSize
+            title: >-
+              The Preview subsystem shall draw the shown file again at a requested width and height, fitted with its ratio
+              kept, over a requested background or transparent, and encode the picture as a PNG file with a requested
+              resolution written into it, using the folder of the open project as the only folder the file may read.
+            justification: |
+              A picture is used at the size of its use: on a slide, in a mail, on paper. Drawing the source file again at
+              that size keeps lines sharp where stretching the shown pixels would blur them, and the resolution in the file
+              tells the program that opens it how large the picture is meant to be. The folder of the project is kept so
+              that the second drawing is as confined as the first.
+            children:
+              - CanvasPilot-ImageRenderService-RenderAtARequestedSize
+              - CanvasPilot-ImageRenderService-WritePngResolution
+            tests:
+              - PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution
+
           - id: CanvasPilot-Preview-ReportPictureFacts
             title: >-
               The Preview subsystem shall identify each picture it shows by the file it was drawn from and by

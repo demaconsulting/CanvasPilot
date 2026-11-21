@@ -18,7 +18,8 @@ relies on each of these behaviors, so each has a requirement and a test.
 CanvasNet has no self-validation mode. It is verified by integration tests in `test/OtsSoftwareTests/CanvasNetTests.cs`
 that call the library directly, on temporary folders, with the same calls and options the application uses
 (`CanvasNetViewer.Render` with `FileAccessPolicy.UnderRoots` and `PositionSelection.All`, `CanvasNetViewer.Extensions`,
-`CanvasNetViewer.Render` of a stream, `Surface.Crop`, `PngCodec.Save`, and `HelpCatalog` with `Extend`).
+`CanvasNetViewer.Render` of a stream, `Surface.Crop`, `PngCodec.Save`, `ViewerRenderOptions` with `Width`, `Height`, and
+`Background`, the front matter of a Mermaid file, `GenericFontFamilies`, and `HelpCatalog` with `Extend`).
 The tests are the evidence that the library behaves as the application relies on, and they are run again before a
 version upgrade is accepted. The unit tests of the units that use the library repeat part of this evidence through
 the application's own calls.
@@ -183,3 +184,25 @@ and the monospace design for `monospace`, `Consolas`, and `liberation mono`; `In
 `Arial` is not recognized when the aliases are not asked for; and the list has the three names without quotes.
 
 **Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ClassifyFontFamilies`.
+
+#### CanvasNet_Render_WidthHeightAndBackground_GivesExactSizeAndTransparency
+
+**Scenario**: A 1600 by 640 SVG with one violet rectangle is drawn at its natural size, into a 1920 by 1080 box over a
+fully transparent background and over the color `#0A1022`, and at a width of 800 only; a Mermaid diagram is drawn into an
+800 by 400 box over a transparent background and over the same color.
+
+**Expected**: The natural picture is 1600 by 640; each box picture is exactly the size of the box; the corner of a
+picture over the transparent background has alpha 0 and over the color is that color; the middle of the SVG is violet, so
+the picture is fitted and not stretched; and the width alone gives 800 by 320.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-RenderAtRequestedSize`.
+
+#### CanvasNet_Mermaid_FrontMatterThemeVariables_ColorTheNodes
+
+**Scenario**: The same flowchart is drawn from a file whose front matter selects the theme `base` and sets the theme
+variable `primaryColor` to red, and from a file without a front matter, each with every position requested.
+
+**Expected**: More than 30 percent of the pixels inside the node boxes of the first picture are strongly red, and none
+of the pixels inside the node boxes of the second.
+
+**Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ThemeMermaidFromTheSource`.

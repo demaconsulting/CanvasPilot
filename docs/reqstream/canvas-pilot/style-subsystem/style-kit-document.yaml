@@ -26,7 +26,11 @@ sections:
                   A kit is kept in a file that people edit and share, so the file must stay readable when a later version
                   adds to it, must not be read half when it is from a later version, and must be written the same way every
                   time so that a change of a kit is a small difference in a review. The files of the examples folder are the
-                  examples, so that a copy, a zip, and a hand edit all give the same kit.
+                  examples, so that a copy, a zip, and a hand edit all give the same kit. The Mermaid part of a kit only carries
+                  values that an author writes into a Mermaid file, because the drawing library takes the theme from the file,
+                  so the kit relies on the library to read them there.
+                children:
+                  - CanvasPilot-OTS-CanvasNet-ThemeMermaidFromTheSource
                 tests:
                   - StyleKitDocument_Write_FullKit_RoundTripsEveryFieldAndIsByteStable
                   - StyleKitDocument_Parse_MinimalKit_UsesDefaults

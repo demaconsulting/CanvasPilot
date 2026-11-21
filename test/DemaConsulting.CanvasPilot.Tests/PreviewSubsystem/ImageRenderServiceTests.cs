@@ -545,6 +545,212 @@ public sealed class ImageRenderServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a vector file drawn with a width and a height is exactly that size, fitted with its ratio kept and
+    ///     not stretched, with a transparent margin when the settings ask for transparency and with the color of the
+    ///     background when they give one.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_SvgIntoBox_IsExactlyThatSizeAndLetterboxed()
+    {
+        // Arrange: a 1600 x 640 SVG that is one opaque violet rectangle
+        var file = Write(
+            "banner.svg",
+            "<svg xmlns='http://www.w3.org/2000/svg' width='1600' height='640'><rect width='1600' height='640' fill='#7C3AED'/></svg>");
+        var service = new ImageRenderService();
+
+        // Act: draw it into a 1920 x 1080 box over transparency, over a color, and with only a width
+        var transparent = await service.RenderAsync(file, Project, new RenderSettings(1920, 1080, Transparent: true), TestContext.Current.CancellationToken);
+        var colored = await service.RenderAsync(file, Project, new RenderSettings(1920, 1080, BackgroundHex: "#0A1022"), TestContext.Current.CancellationToken);
+        var widthOnly = await service.RenderAsync(file, Project, new RenderSettings(Width: 800), TestContext.Current.CancellationToken);
+        var natural = await service.RenderAsync(file, Project, RenderSettings.AsRendered, TestContext.Current.CancellationToken);
+
+        // Assert: exact sizes, the margin is transparent or the color, the picture is in the middle, and the width scales
+        Assert.Equal((1600, 640), (natural.Image!.Width, natural.Image.Height));
+        var box = transparent.Image!;
+        Assert.Equal((1920, 1080), (box.Width, box.Height));
+        Assert.Equal([0, 0, 0, 0], Pixel(box, 0, 0));
+        Assert.Equal([124, 58, 237, 255], Pixel(box, 960, 540));
+        var flattened = colored.Image!;
+        Assert.Equal((1920, 1080), (flattened.Width, flattened.Height));
+        Assert.Equal([10, 16, 34, 255], Pixel(flattened, 0, 0));
+        Assert.Equal([124, 58, 237, 255], Pixel(flattened, 960, 540));
+        Assert.Equal((800, 320), (widthOnly.Image!.Width, widthOnly.Image.Height));
+    }
+
+    /// <summary>
+    ///     Test that a Mermaid diagram, a Vega-Lite chart, and a raster picture are each drawn at a box size exactly and
+    ///     with a transparent margin, so that every family of format can be exported at a size.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_MermaidVegaLiteAndRasterIntoBox_AreExactlyThatSize()
+    {
+        // Arrange: a diagram, a chart, and a 10 x 10 red PNG
+        var diagram = Write("flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var chart = Write(
+            "bars.vl.json",
+            "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\"," +
+            "\"data\":{\"values\":[{\"a\":\"A\",\"b\":3},{\"a\":\"B\",\"b\":5}]},\"mark\":\"bar\"," +
+            "\"encoding\":{\"x\":{\"field\":\"a\",\"type\":\"nominal\"},\"y\":{\"field\":\"b\",\"type\":\"quantitative\"}}}");
+        var raster = Path.Combine(Project, "red.png");
+        using (var surface = new DemaConsulting.CanvasNet.Canvas.Surface(10, 10))
+        {
+            for (var y = 0; y < 10; y++)
+            {
+                for (var x = 0; x < 10; x++)
+                {
+                    surface[x, y] = new DemaConsulting.CanvasNet.Canvas.Rgba32(255, 0, 0, 255);
+                }
+            }
+
+            PngCodec.Save(surface, raster);
+        }
+
+        var service = new ImageRenderService();
+        var settings = new RenderSettings(800, 400, Transparent: true);
+
+        // Act
+        var diagramResult = await service.RenderAsync(diagram, Project, settings, TestContext.Current.CancellationToken);
+        var chartResult = await service.RenderAsync(chart, Project, settings, TestContext.Current.CancellationToken);
+        var rasterResult = await service.RenderAsync(raster, Project, settings, TestContext.Current.CancellationToken);
+
+        // Assert: each is exactly 800 x 400, the margin of each is transparent, and the raster is fitted in the middle
+        foreach (var result in new[] { diagramResult, chartResult, rasterResult })
+        {
+            Assert.True(result.Succeeded, result.Error?.Message);
+            Assert.Equal((800, 400), (result.Image!.Width, result.Image.Height));
+        }
+
+        Assert.Equal(0, Pixel(diagramResult.Image!, 0, 0)[3]);
+        Assert.Equal(0, Pixel(rasterResult.Image!, 0, 0)[3]);
+        Assert.Equal([255, 0, 0, 255], Pixel(rasterResult.Image!, 400, 200));
+    }
+
+    /// <summary>
+    ///     Test that settings that CanvasNet does not draw are a failed result with the code of invalid settings and a
+    ///     message that says what is allowed, and not an exception.
+    /// </summary>
+    /// <param name="width">The width of the settings.</param>
+    /// <param name="height">The height of the settings.</param>
+    /// <param name="background">The background of the settings.</param>
+    /// <param name="dpi">The resolution of the settings.</param>
+    /// <param name="expected">A part of the expected message.</param>
+    [Theory]
+    [InlineData(0, null, null, null, "width must be from 1 to 8192")]
+    [InlineData(8193, null, null, null, "width must be from 1 to 8192")]
+    [InlineData(null, -5, null, null, "height must be from 1 to 8192")]
+    [InlineData(100, 9000, null, null, "height must be from 1 to 8192")]
+    [InlineData(null, null, "red", null, "background must be a color of the form #RRGGBB")]
+    [InlineData(null, null, null, 0.0, "resolution must be greater than 0")]
+    [InlineData(null, null, null, 2400.5, "resolution must be greater than 0")]
+    public async Task ImageRenderService_RenderAsync_InvalidSettings_ReturnsInvalidSettingsError(int? width, int? height, string? background, double? dpi, string expected)
+    {
+        // Arrange: a good file and settings that are not drawn
+        var file = Write("half.svg", HalfRedSvg);
+        var service = new ImageRenderService();
+
+        // Act
+        var result = await service.RenderAsync(file, Project, new RenderSettings(width, height, BackgroundHex: background, Dpi: dpi), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Equal(RenderErrorCodes.InvalidSettings, result.Error!.Code);
+        Assert.Contains(expected, result.Error.Message, StringComparison.Ordinal);
+        Assert.NotNull(result.Error.Hint);
+    }
+
+    /// <summary>
+    ///     Test that a render without settings, with settings that change nothing, and by the older overload is the
+    ///     same render, and that each setting reaches the viewer as the option of that name.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_RenderAsync_Settings_ReachTheViewerAsOptions()
+    {
+        // Arrange: a drawing function that records the options it receives and then stops
+        var received = new List<ViewerRenderOptions>();
+        var service = new ImageRenderService((_, options) =>
+        {
+            received.Add(options);
+            throw new InvalidOperationException("stop");
+        });
+        var file = Path.Combine(Project, "any.svg");
+
+        // Act: render with no settings, with the older overload, as rendered, transparent, with a color, and with both
+        await service.RenderAsync(file, Project, null, TestContext.Current.CancellationToken);
+        await service.RenderAsync(file, Project, TestContext.Current.CancellationToken);
+        await service.RenderAsync(file, Project, RenderSettings.AsRendered, TestContext.Current.CancellationToken);
+        await service.RenderAsync(file, Project, new RenderSettings(100, 50, Transparent: true, Dpi: 150), TestContext.Current.CancellationToken);
+        await service.RenderAsync(file, Project, new RenderSettings(BackgroundHex: "#0A1022"), TestContext.Current.CancellationToken);
+        await service.RenderAsync(file, Project, new RenderSettings(Transparent: true, BackgroundHex: "#0A1022"), TestContext.Current.CancellationToken);
+
+        // Assert: the first three change nothing, and the others set width, height, background, and resolution
+        Assert.Equal(6, received.Count);
+        Assert.All(received.Take(3), o =>
+        {
+            Assert.Null(o.Width);
+            Assert.Null(o.Height);
+            Assert.Null(o.Background);
+            Assert.Null(o.Dpi);
+        });
+        Assert.Equal((100, 50, 150.0), (received[3].Width, received[3].Height, received[3].Dpi));
+        Assert.Equal(0, received[3].Background!.Value.A);
+        Assert.Equal((10, 16, 34, 255), ((int)received[4].Background!.Value.R, (int)received[4].Background!.Value.G, (int)received[4].Background!.Value.B, (int)received[4].Background!.Value.A));
+        Assert.Equal(0, received[5].Background!.Value.A);
+    }
+
+    /// <summary>
+    ///     Test that encoding with a resolution writes the physical size chunk into the file, that the file still decodes
+    ///     to the same pixels, and that encoding without a resolution writes no such chunk.
+    /// </summary>
+    [Fact]
+    public void ImageRenderService_EncodePng_WithDpi_WritesPhysicalSizeAndKeepsPixels()
+    {
+        // Arrange: a 3 x 2 picture
+        var pixels = new byte[3 * 2 * 4];
+        for (var index = 0; index < pixels.Length; index++)
+        {
+            pixels[index] = (byte)(index * 10);
+        }
+
+        var image = new RenderedImage(Path.Combine(Project, "x.svg"), "svg", 3, 2, pixels);
+        var service = new ImageRenderService();
+
+        // Act
+        var plain = service.EncodePng(image);
+        var withNull = service.EncodePng(image, null);
+        var withDpi = service.EncodePng(image, 150);
+        using var stream = new MemoryStream(withDpi);
+        using var decoded = PngCodec.Load(stream);
+
+        // Assert: no chunk without a resolution, 150 dots per inch are 5906 pixels per meter, and the pixels are the same
+        Assert.Equal(plain, withNull);
+        Assert.DoesNotContain("pHYs", System.Text.Encoding.ASCII.GetString(plain), StringComparison.Ordinal);
+        Assert.Contains("pHYs", System.Text.Encoding.ASCII.GetString(withDpi), StringComparison.Ordinal);
+        Assert.Equal(plain.Length + 21, withDpi.Length);
+        Assert.Equal((3, 2), (decoded.Width, decoded.Height));
+        var decodedPixels = new byte[pixels.Length];
+        for (var y = 0; y < decoded.Height; y++)
+        {
+            decoded.GetRowSpanBytes(y).CopyTo(decodedPixels.AsSpan(y * 12, 12));
+        }
+
+        Assert.Equal(pixels, decodedPixels);
+        Assert.Throws<ArgumentOutOfRangeException>(() => service.EncodePng(image, 0));
+    }
+
+    /// <summary>
+    ///     Reads one pixel of a picture.
+    /// </summary>
+    /// <param name="image">The picture.</param>
+    /// <param name="x">The column.</param>
+    /// <param name="y">The row.</param>
+    /// <returns>The red, green, blue, and alpha bytes.</returns>
+    private static int[] Pixel(RenderedImage image, int x, int y)
+    {
+        var offset = ((y * image.Width) + x) * 4;
+        return image.RgbaPixels.Span.Slice(offset, 4).ToArray().Select(b => (int)b).ToArray();
+    }
+
+    /// <summary>
     ///     Test that the constructor and methods reject unusable arguments.
     /// </summary>
     [Fact]

@@ -310,6 +310,43 @@ public sealed class PreviewSubsystemTests : IDisposable
     ///     Creates an explorer and a preview pane over the real render service.
     /// </summary>
     /// <returns>The explorer and the pane.</returns>
+    /// <summary>
+    ///     Test that the shown file can be drawn again at a requested size from what the picture source tells (the file
+    ///     of the shown picture and the folder of the project), and that the result is exactly the box and is encoded with
+    ///     a resolution that the file keeps while decoding to the same pixels.
+    /// </summary>
+    [Fact]
+    public async Task PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution()
+    {
+        // Arrange: a shown 40 x 20 picture and the render service of the application
+        await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), WideSvg, TestContext.Current.CancellationToken);
+        var (explorer, pane) = Create();
+        explorer.Open(_folder);
+        explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
+        await pane.RenderCompletion;
+        IRenderedImageSource source = pane;
+        var renderer = new ImageRenderService();
+
+        // Act: draw the shown file into a 400 x 400 box with a white margin, and encode the result at 150 dots per inch
+        var result = await renderer.RenderAsync(
+            source.CurrentImage!.SourcePath,
+            source.ProjectFolder!,
+            new RenderSettings(400, 400, BackgroundHex: "#FFFFFF"),
+            TestContext.Current.CancellationToken);
+        var png = renderer.EncodePng(result.Image!, 150);
+        using var stream = new MemoryStream(png);
+        using var decoded = DemaConsulting.CanvasNet.Codecs.PngCodec.Load(stream);
+
+        // Assert: the box size, a white margin and the red picture in the middle, and the resolution in the file
+        Assert.True(result.Succeeded, result.Error?.Message);
+        Assert.Equal((400, 400), (result.Image!.Width, result.Image.Height));
+        Assert.Equal((400, 400), (decoded.Width, decoded.Height));
+        Assert.Equal([255, 255, 255, 255], result.Image.RgbaPixels.Span[..4].ToArray().Select(b => (int)b));
+        var middle = ((200 * 400) + 200) * 4;
+        Assert.True(result.Image.RgbaPixels.Span[middle + 1] > 100 && result.Image.RgbaPixels.Span[middle] == 255);
+        Assert.Equal(5906u, System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(png.AsSpan(41)));
+    }
+
     private (ProjectExplorerViewModel Explorer, PreviewPaneViewModel Pane) Create(string? dragFolder = null)
     {
         var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), _explorerScheduler);

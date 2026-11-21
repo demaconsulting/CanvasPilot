@@ -24,7 +24,9 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
 - *Contract*: `RenderAsync(filePath, projectFolder, cancellationToken)` returns a `RenderResult` that holds a
   `RenderedImage` (width, height, format, straight-alpha RGBA pixels, notes, a fingerprint of the source file and of
   the pixels, a snapshot key, and the positions of the elements of a diagram, chart, or model), a `RenderError`
-  (code, message, and optional hint), or a cancelled outcome; `EncodePng(image)` returns the bytes of a PNG file.
+  (code, message, and optional hint), or a cancelled outcome; `RenderAsync` with a `RenderSettings` draws the file at a
+  requested size, over a background or transparent, and at a page resolution; `EncodePng(image)` returns the bytes of a
+  PNG file and `EncodePng(image, dpi)` writes the resolution into it.
 - *Constraints*: Ordinary failures to draw a file are results, never exceptions. The drawn file may read other
   files only from inside the project folder. A cancelled token gives a cancelled result.
 
@@ -32,7 +34,8 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
 
 - *Type*: In-process .NET API (`IRenderedImageSource`).
 - *Role*: Provider (the preview pane) and consumer (the exporter).
-- *Contract*: `CurrentImage` is the shown picture or `null`; `CurrentImageChanged` is raised after it changes.
+- *Contract*: `CurrentImage` is the shown picture or `null`; `CurrentImageChanged` is raised after it changes;
+  `ProjectFolder` is the folder of the open project, which a part that draws the shown file again at another size needs.
 
 **Image Exporter**: The unit behind the Image menu.
 

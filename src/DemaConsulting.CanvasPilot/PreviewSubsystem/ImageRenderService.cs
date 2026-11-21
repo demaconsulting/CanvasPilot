@@ -73,16 +73,28 @@ public sealed class ImageRenderService : IImageRenderService
     /// <inheritdoc />
     public Task<RenderResult> RenderAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
     {
+        return RenderAsync(filePath, projectFolder, null, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<RenderResult> RenderAsync(string filePath, string projectFolder, RenderSettings? settings, CancellationToken cancellationToken)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
 
         // The viewer observes the token itself, so the task is not started with it: a cancelled render
         // completes with a cancelled result instead of a cancelled task.
-        return Task.Run(() => Render(filePath, projectFolder, cancellationToken), CancellationToken.None);
+        return Task.Run(() => Render(filePath, projectFolder, settings, cancellationToken), CancellationToken.None);
     }
 
     /// <inheritdoc />
     public byte[] EncodePng(RenderedImage image)
+    {
+        return EncodePng(image, null);
+    }
+
+    /// <inheritdoc />
+    public byte[] EncodePng(RenderedImage image, double? dpi)
     {
         ArgumentNullException.ThrowIfNull(image);
 
@@ -95,7 +107,10 @@ public sealed class ImageRenderService : IImageRenderService
 
         using var stream = new MemoryStream();
         PngCodec.Save(surface, stream);
-        return stream.ToArray();
+        var png = stream.ToArray();
+
+        // The codec writes no resolution, so one that is asked for is added as a chunk that leaves the pixels alone
+        return dpi is { } resolution ? PngPhysicalSize.Insert(png, resolution) : png;
     }
 
     /// <summary>
@@ -104,24 +119,17 @@ public sealed class ImageRenderService : IImageRenderService
     /// </summary>
     /// <param name="filePath">The file to draw.</param>
     /// <param name="projectFolder">The folder the file may read from.</param>
+    /// <param name="settings">How to draw the file, or <see langword="null" /> to draw it as it is.</param>
     /// <param name="cancellationToken">Cancels the render.</param>
     /// <returns>The result.</returns>
-    private RenderResult Render(string filePath, string projectFolder, CancellationToken cancellationToken)
+    private RenderResult Render(string filePath, string projectFolder, RenderSettings? settings, CancellationToken cancellationToken)
     {
         var fullPath = filePath;
         try
         {
             cancellationToken.ThrowIfCancellationRequested();
             fullPath = Path.GetFullPath(filePath);
-            var options = new ViewerRenderOptions
-            {
-                FileAccess = FileAccessPolicy.UnderRoots(Path.GetFullPath(projectFolder)),
-                CancellationToken = cancellationToken,
-
-                // Ask for the position of every element: Mermaid and Vega-Lite report nodes, edges, marks, and
-                // axes, and every other kind ignores the request. OpenSCAD anchors are reported without asking.
-                Positions = PositionSelection.All
-            };
+            var options = CreateOptions(Path.GetFullPath(projectFolder), settings, cancellationToken);
 
             using var viewerImage = _render(fullPath, options);
             var sourceFileHash = HashSourceFile(fullPath);
@@ -139,6 +147,89 @@ public sealed class ImageRenderService : IImageRenderService
             Log(LogLevel.Warning, $"Rendering '{fullPath}' failed ({error.Code}): {error.Message}", ex);
             return RenderResult.Failure(error);
         }
+    }
+
+    /// <summary>
+    ///     Builds the options of the viewer: the confinement of the files, the cancellation, the positions of the
+    ///     elements, and the size, background, and resolution that the settings ask for.
+    /// </summary>
+    /// <param name="projectFolder">The full path of the folder the file may read from.</param>
+    /// <param name="settings">How to draw the file, or <see langword="null" /> to draw it as it is.</param>
+    /// <param name="cancellationToken">Cancels the render.</param>
+    /// <returns>The options.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when a setting is outside what CanvasNet draws.</exception>
+    private static ViewerRenderOptions CreateOptions(string projectFolder, RenderSettings? settings, CancellationToken cancellationToken)
+    {
+        // The size is checked here with a message that says what is allowed; the viewer would refuse it too, but later
+        // and in its own words
+        CheckPixels(settings?.Width, nameof(RenderSettings.Width));
+        CheckPixels(settings?.Height, nameof(RenderSettings.Height));
+        if (settings?.Dpi is { } dpi && (!double.IsFinite(dpi) || dpi <= 0 || dpi > RenderSettings.MaxDpi))
+        {
+            throw new ArgumentOutOfRangeException(nameof(settings), dpi, $"The resolution must be greater than 0 and at most {RenderSettings.MaxDpi} dots per inch.");
+        }
+
+        return new ViewerRenderOptions
+        {
+            FileAccess = FileAccessPolicy.UnderRoots(projectFolder),
+            CancellationToken = cancellationToken,
+
+            // Ask for the position of every element: Mermaid and Vega-Lite report nodes, edges, marks, and
+            // axes, and every other kind ignores the request. OpenSCAD anchors are reported without asking.
+            Positions = PositionSelection.All,
+
+            // The size: both sides fit the picture into a box of that size keeping its ratio, one side scales it
+            Width = settings?.Width,
+            Height = settings?.Height,
+            Background = ToBackground(settings),
+            Dpi = settings?.Dpi
+        };
+    }
+
+    /// <summary>
+    ///     Checks that a size in pixels, when it is given, is one that CanvasNet draws.
+    /// </summary>
+    /// <param name="pixels">The size, or <see langword="null" />.</param>
+    /// <param name="name">The name of the setting for the message.</param>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the size is given and is outside 1 to 8192.</exception>
+    private static void CheckPixels(int? pixels, string name)
+    {
+        if (pixels is { } value && (value < 1 || value > RenderSettings.MaxPixels))
+        {
+            throw new ArgumentOutOfRangeException(name, value, $"The {name.ToLowerInvariant()} must be from 1 to {RenderSettings.MaxPixels} pixels.");
+        }
+    }
+
+    /// <summary>
+    ///     Chooses the background of the render from the settings.
+    /// </summary>
+    /// <param name="settings">The settings, or <see langword="null" />.</param>
+    /// <returns>
+    ///     A fully transparent color to keep transparency, the color of the settings to flatten over it, or
+    ///     <see langword="null" /> to leave the picture as the file draws it.
+    /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when the background is not a color of the form <c>#RRGGBB</c>.</exception>
+    private static Rgba32? ToBackground(RenderSettings? settings)
+    {
+        if (settings is null)
+        {
+            return null;
+        }
+
+        // Transparency wins over a color, so a preset that says transparent is never flattened by a stray color
+        if (settings.Transparent)
+        {
+            return new Rgba32(0, 0, 0, 0);
+        }
+
+        if (settings.BackgroundHex is null)
+        {
+            return null;
+        }
+
+        return Rgba32.TryParse(settings.BackgroundHex, out var color)
+            ? color
+            : throw new ArgumentOutOfRangeException(nameof(settings), settings.BackgroundHex, "The background must be a color of the form #RRGGBB.");
     }
 
     /// <summary>
@@ -251,6 +342,8 @@ public sealed class ImageRenderService : IImageRenderService
         return exception switch
         {
             ViewerException viewer => new RenderError(viewer.Code, viewer.Message, viewer.Hint),
+            ArgumentOutOfRangeException =>
+                new RenderError(RenderErrorCodes.InvalidSettings, exception.Message, "Use a size from 1 to 8192 pixels, a color like #RRGGBB, and a resolution up to 2400 dots per inch."),
             FileNotFoundException or DirectoryNotFoundException =>
                 new RenderError(RenderErrorCodes.InputNotFound, exception.Message, "Check that the file still exists in the project folder."),
             NotSupportedException =>

@@ -42,9 +42,36 @@ public interface IImageRenderService
     Task<RenderResult> RenderAsync(string filePath, string projectFolder, CancellationToken cancellationToken);
 
     /// <summary>
+    ///     Draws a file on a background thread at a size, over a background, or at a resolution that the settings ask
+    ///     for. The file may only read other files (embedded pictures, includes, data) from inside the project folder.
+    /// </summary>
+    /// <remarks>
+    ///     With <see langword="null" /> or <see cref="RenderSettings.AsRendered" /> this is the same render as the
+    ///     overload without settings. Settings that are not valid (a size outside 1 to 8192, a color that is not
+    ///     <c>#RRGGBB</c>, a resolution outside 0 to 2400) are a failed result with the code <c>invalid-settings</c>,
+    ///     not an exception.
+    /// </remarks>
+    /// <param name="filePath">The full path of the file to draw.</param>
+    /// <param name="projectFolder">The project folder, which is the only folder the drawn file may read from.</param>
+    /// <param name="settings">How to draw the file, or <see langword="null" /> to draw it as it is.</param>
+    /// <param name="cancellationToken">Cancels the render.</param>
+    /// <returns>A task with the picture, the reason the file could not be drawn, or a cancelled result.</returns>
+    Task<RenderResult> RenderAsync(string filePath, string projectFolder, RenderSettings? settings, CancellationToken cancellationToken);
+
+    /// <summary>
     ///     Encodes a picture as a PNG file image, keeping its transparency.
     /// </summary>
     /// <param name="image">The picture.</param>
     /// <returns>The bytes of a PNG file.</returns>
     byte[] EncodePng(RenderedImage image);
+
+    /// <summary>
+    ///     Encodes a picture as a PNG file image, keeping its transparency, and writes the resolution of the picture into
+    ///     the file when one is given.
+    /// </summary>
+    /// <param name="image">The picture.</param>
+    /// <param name="dpi">The resolution in dots per inch (greater than 0 and at most 2400), or <see langword="null" /> to write none.</param>
+    /// <returns>The bytes of a PNG file; the pixels are those of the picture whether or not a resolution is written.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="dpi" /> is given and is not greater than 0 and at most 2400.</exception>
+    byte[] EncodePng(RenderedImage image, double? dpi);
 }

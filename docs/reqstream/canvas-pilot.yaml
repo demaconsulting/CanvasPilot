@@ -506,6 +506,7 @@ sections:
           offered with it so that the user does not have to remember them.
         children:
           - CanvasPilot-Style-OfferExportPresets
+          - CanvasPilot-Preview-ExportAtRequestedSize
 
       - id: CanvasPilot-System-GuideAssistantStyle
         title: >-

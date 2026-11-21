@@ -677,8 +677,11 @@ reviews:
       - "docs/verification/canvas-pilot/preview-subsystem/image-render-service.md"
       - "src/**/PreviewSubsystem/IImageRenderService.cs"
       - "src/**/PreviewSubsystem/ImageRenderService.cs"
+      - "src/**/PreviewSubsystem/PngPhysicalSize.cs"
       - "src/**/PreviewSubsystem/RenderResult.cs"
+      - "src/**/PreviewSubsystem/RenderSettings.cs"
       - "test/**/PreviewSubsystem/ImageRenderServiceTests.cs"
+      - "test/**/PreviewSubsystem/PngPhysicalSizeTests.cs"
       - "test/**/PreviewSubsystem/RenderResultTests.cs"
 
   - id: CanvasPilot-Preview-PreviewPane

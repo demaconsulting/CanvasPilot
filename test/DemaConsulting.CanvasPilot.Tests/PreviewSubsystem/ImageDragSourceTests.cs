@@ -272,7 +272,19 @@ public sealed class ImageDragSourceTests : IDisposable
         }
 
         /// <inheritdoc />
+        public Task<RenderResult> RenderAsync(string filePath, string projectFolder, RenderSettings? settings, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <inheritdoc />
         public byte[] EncodePng(RenderedImage image)
+        {
+            return EncodePng(image, null);
+        }
+
+        /// <inheritdoc />
+        public byte[] EncodePng(RenderedImage image, double? dpi)
         {
             Calls++;
             return Failure is { } failure ? throw failure : [.. PngSignature, (byte)image.Width, (byte)image.Height];

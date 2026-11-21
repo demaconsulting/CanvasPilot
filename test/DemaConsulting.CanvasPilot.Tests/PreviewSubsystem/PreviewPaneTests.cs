@@ -90,6 +90,30 @@ public sealed class PreviewPaneTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the pane gives the folder of the open project through the picture source, and none while no project
+    ///     is open, so that a part that draws the shown file again at another size knows which folder the file may read.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_ProjectFolder_FollowsTheExplorer()
+    {
+        // Arrange: a pane over an explorer with no project
+        var pane = CreatePane();
+        IRenderedImageSource source = pane;
+        var before = source.ProjectFolder;
+
+        // Act: open the project and close it again
+        _explorer.Open(_folder);
+        var whileOpen = source.ProjectFolder;
+        _explorer.Close();
+        var after = source.ProjectFolder;
+
+        // Assert
+        Assert.Null(before);
+        Assert.Equal(_folder, whileOpen);
+        Assert.Null(after);
+    }
+
+    /// <summary>
     ///     Test that selecting a file starts a render of that file in the project folder, shows that it is busy, and
     ///     shows the picture, its size, and its notes when the render finishes.
     /// </summary>

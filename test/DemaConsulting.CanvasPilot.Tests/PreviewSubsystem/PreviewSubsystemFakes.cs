@@ -93,13 +93,19 @@ public sealed class FakeImageRenderService : IImageRenderService
     /// <inheritdoc />
     public Task<RenderResult> RenderAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
     {
+        return RenderAsync(filePath, projectFolder, null, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public Task<RenderResult> RenderAsync(string filePath, string projectFolder, RenderSettings? settings, CancellationToken cancellationToken)
+    {
         if (ThrowOnNextRender is { } exception)
         {
             ThrowOnNextRender = null;
             return Task.FromException<RenderResult>(exception);
         }
 
-        var request = new Request(filePath, projectFolder, cancellationToken);
+        var request = new Request(filePath, projectFolder, cancellationToken) { Settings = settings };
         _requests.Add(request);
         return request.Completion.Task;
     }
@@ -107,8 +113,20 @@ public sealed class FakeImageRenderService : IImageRenderService
     /// <inheritdoc />
     public byte[] EncodePng(RenderedImage image)
     {
+        return EncodePng(image, null);
+    }
+
+    /// <inheritdoc />
+    public byte[] EncodePng(RenderedImage image, double? dpi)
+    {
+        EncodedDpi.Add(dpi);
         return [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, (byte)image.Width, (byte)image.Height];
     }
+
+    /// <summary>
+    ///     Gets the resolutions that pictures were encoded with, in order; <see langword="null" /> for none.
+    /// </summary>
+    public List<double?> EncodedDpi { get; } = [];
 
     /// <summary>
     ///     One requested render.
@@ -118,6 +136,11 @@ public sealed class FakeImageRenderService : IImageRenderService
     /// <param name="Token">The cancellation token that was passed.</param>
     public sealed record Request(string FilePath, string ProjectFolder, CancellationToken Token)
     {
+        /// <summary>
+        ///     Gets the settings that were passed, or <see langword="null" /> when the file was to be drawn as it is.
+        /// </summary>
+        public RenderSettings? Settings { get; init; }
+
         /// <summary>
         ///     Gets the source that completes the render.
         /// </summary>
@@ -206,4 +229,7 @@ public sealed class FakeRenderedImageSource : IRenderedImageSource
             CurrentImageChanged?.Invoke(this, EventArgs.Empty);
         }
     }
+
+    /// <inheritdoc />
+    public string? ProjectFolder { get; set; }
 }

@@ -15,7 +15,8 @@ coordinates without the pane knowing them, and one slot in its top bar for the c
 #### Data Model
 
 **Image** / **HasImage** / **CurrentImage**: the shown `RenderedImage` or `null`. `CurrentImageChanged` is raised
-after it changes (`IRenderedImageSource`).
+after it changes (`IRenderedImageSource`). **ProjectFolder** (`IRenderedImageSource`) is the folder of the open project
+that the explorer holds, or `null` when no project is open, for the parts that draw the shown file again at another size.
 
 **IsBusy** / **StatusText**: whether a render runs, and a line such as `Rendering a.svg...`,
 `a.svg: 40 x 20 px, svg, 1 note`, or `a.svg: render failed`.

@@ -20,14 +20,24 @@ whole set always moves to one version together.
 - `ViewerRenderOptions.FileAccess = FileAccessPolicy.UnderRoots(projectFolder)` — confines the files the drawn file
   reads to the project folder; a denied picture becomes the warning note `image-access-denied`.
 - `ViewerRenderOptions.CancellationToken` — stops a render; an `OperationCanceledException` results.
+- `ViewerRenderOptions.Width`, `Height`, `Background`, and `Dpi` — draw at a size (`ImageRenderService` with a
+  `RenderSettings`, used to export at a size of a style kit): with both sides the picture is fitted inside the box with
+  its aspect ratio kept, so the result is exactly that size, and the margin is the `Background` color or, for the fully
+  transparent color `Rgba32(0, 0, 0, 0)`, transparent; with one side the picture scales keeping its ratio; any other
+  background color flattens the picture over it; `Dpi` sizes the natural page of a PDF, PowerPoint, or Visio file and
+  every other kind ignores it. The sides must be 1 to 8192 and the resolution greater than 0 and at most 2400, or the
+  viewer throws `ArgumentOutOfRangeException`. A vector file is drawn at the size and a raster is resampled by the viewer.
+- Mermaid theme — `ViewerRenderOptions` has no Mermaid option: the theme and the theme variables come from the front
+  matter of the Mermaid file (`config:` with `theme: base` and `themeVariables:`), so the colors of a style kit reach a
+  diagram through the file that is written, and the application cannot inject them.
 - `ViewerRenderOptions.Positions = PositionSelection.All` — asks a Mermaid diagram or a Vega-Lite chart for the
   position of every element. `ViewerImage.Positions` (`ImagePosition`: `Kind` such as `node`, `edge`, `mark`, `axis`,
   `Id`, `Text`, `Line`, `From`, `To`, `Box`, and `Pixel`, in continuous picture pixels with the origin at the top-left
   corner) and `ViewerImage.PositionsTruncated` (the library reports at most 1000 positions) carry the answer. Every
   other kind of file ignores the request, and a picture that a file embeds never reports positions.
 - `ViewerImage.Anchors` (`SourceAnchor`: `Name`, `X`, `Y`, `Z`, `PixelX`, `PixelY`) — the anchors that an OpenSCAD model
-  declares with `echo("anchor", name, [x, y, z])`. Their pixel positions are valid only while the render is not
-  resized with `Width` or `Height`; the application renders at the natural size.
+  declares with `echo("anchor", name, [x, y, z])`. Their pixel positions are in the pixels of the picture that was drawn,
+  so a render at a requested size reports them at that size.
 - `CanvasNetViewer.Render(Stream, fileName, options)` — draws an SVG document held in memory. `MarkImageComposer` uses
   it to draw marks over the picture the user saw: the SVG embeds the picture as a `data:image/png;base64` link and draws
   rectangle, ellipse, polyline, circle, and text elements over it, so no file is written and the picture is exactly the

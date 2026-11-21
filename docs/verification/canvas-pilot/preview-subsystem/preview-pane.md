@@ -218,3 +218,7 @@ bitmap of that size with the converted pixels. This scenario is tested by
 **MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu**: In the main window, selecting an SVG in the explorer
 shows a bitmap of its size in the workspace's preview pane and enables the Image menu items; closing the project
 disables them. This scenario is tested by `MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu`.
+
+**PreviewPaneViewModel_ProjectFolder_FollowsTheExplorer**: The pane, seen as the source of the shown picture, has no
+project folder before a project is opened, the folder of the project while it is open, and none after it is closed. This
+scenario is tested by `PreviewPaneViewModel_ProjectFolder_FollowsTheExplorer`.
