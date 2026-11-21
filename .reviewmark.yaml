@@ -22,13 +22,14 @@ needs-review:
   - "!**/.venv/**"                # Exclude Python virtual environment
   - "!**/generated/**"            # Exclude generated documents
 
-# Evidence source: review data and index.json are located in the 'reviews' branch
-# of this repository, accessed through the GitHub public HTTPS raw content access.
-# Note: The 'reviews' branch must be created and populated with review evidence PDFs
-# and an index.json before enforcement (--enforce flag) can be enabled in the pipeline.
+# Evidence source: no formal reviews have been performed yet, so there is no review evidence to read, as in the
+# reference template. Once formal reviews begin, create the 'reviews' branch of this repository, populate it with
+# review evidence PDFs and an index.json, and change this to:
+#   type: url
+#   location: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/reviews/index.json
+# before enforcement (--enforce flag) is enabled in the pipeline.
 evidence-source:
-  type: url
-  location: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/reviews/index.json
+  type: none
 
 # Context included for all reviews.
 context:
@@ -1423,3 +1424,4 @@ reviews:
       - "docs/design/ots/xunit.md"
       - "docs/verification/ots/xunit.md"
       - "test/SerializedTestRun.cs"
+      - "test/DemaConsulting.CanvasPilot.Tests/TestPlatformPaths.cs"
