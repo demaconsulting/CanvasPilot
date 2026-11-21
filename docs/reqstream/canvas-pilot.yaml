@@ -440,3 +440,5 @@ sections:
           The cards are written for the assistant, but they also explain how each format works, and a user who can read
           them can tell the assistant exactly what is wanted. A window that does not block the application lets the user
           read a card while working.
+        children:
+          - CanvasPilot-Knowledge-BrowseCards

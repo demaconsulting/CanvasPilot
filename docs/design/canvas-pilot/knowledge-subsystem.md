@@ -14,12 +14,12 @@ how to read the marks and attachments of a message, and what the user sees. The 
 interface and none on any provider of a language model or on any agent library, so the knowledge can be given to any
 assistant that is added later.
 
-The subsystem contains five units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
+The subsystem contains six units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
 which finds the cards that fit some words, `KnowledgePromptBuilder`, which writes the cards as text for the prompt of an
-assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, and `KnowledgeSkills`, which
-describes each card as a skill. It depends on CanvasNet for
-the help cards and on `Project`, `Composer`, and `Annotation` only in its tests, which check that what the cards of
-CanvasPilot say about the application is what the code says.
+assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, `KnowledgeSkills`, which
+describes each card as a skill, and `KnowledgeMarkdown`, which reads the Markdown of a card into blocks that a window
+can draw. It depends on CanvasNet for the help cards and on `Project`, `Composer`, and `Annotation` only in its tests,
+which check that what the cards of CanvasPilot say about the application is what the code says.
 
 ### Interfaces
 
@@ -75,6 +75,17 @@ CanvasPilot say about the application is what the code says.
 - *Constraints*: The skills are made as they are read. The names of the skills of the catalog of the application are all
   different, which the tests check. Safe for concurrent use.
 
+**KnowledgeMarkdown**: The Markdown of a card as blocks for a window.
+
+- *Type*: In-process static class, with the immutable values `HeadingBlock`, `ParagraphBlock`, `ListItemBlock`,
+  `CodeBlock` (all `MarkdownBlock`), `MarkdownSpan`, and the enumeration `MarkdownSpanStyle`.
+- *Role*: Provider.
+- *Contract*: `Parse` reads the Markdown that the cards use into headings of six levels, paragraphs, list items with
+  their markers, and fenced blocks of code with their language, with the text of a heading, paragraph, or item as runs
+  of normal, bold, italic, and code text.
+- *Constraints*: Any text can be read and no letter or digit of a card is lost, which the tests check on every card.
+  Safe for concurrent use.
+
 ### Design
 
 **Extend first, filter second.** The catalog is made from the help catalog of CanvasNet by adding the cards that are
@@ -117,6 +128,11 @@ of the card in its name, the title and summary as its description, and the card 
 text of all the cards is many times what should be built up front, so the skills are made one at a time as they are
 read.
 
+**An own small reader for the cards.** The cards use only headings, paragraphs, lists, fenced code, and bold, italic,
+and code text, and their links were already written as identifiers. A reader of those constructs, whose tests prove on
+every card that no text is lost, shows the cards without a Markdown library, which would be one more third-party item to
+document, test, and keep current.
+
 ### Dependencies
 
 - **KnowledgeCatalog** unit: the tree of cards.
@@ -125,4 +141,5 @@ read.
   results of the search.
 - **KnowledgeTools** unit: the tool for an assistant, which answers from the catalog, the search, and the text writer.
 - **KnowledgeSkills** unit: the cards as skills, which reads the catalog and writes each card with the text writer.
+- **KnowledgeMarkdown** unit: the blocks of the Markdown of a card, which has no dependency on another unit.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.

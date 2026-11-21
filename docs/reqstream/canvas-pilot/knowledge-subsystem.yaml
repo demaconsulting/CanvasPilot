@@ -99,6 +99,20 @@ sections:
             tests:
               - KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards
 
+          - id: CanvasPilot-Knowledge-BrowseCards
+            title: >-
+              The Knowledge subsystem shall offer what a window needs to show the cards to a user, starting with the
+              Markdown of a card read into headings, paragraphs, list items, and blocks of code with bold, italic, and code
+              text, without losing any of its text.
+            justification: |
+              The cards are written for the assistant, but a user who can read them can tell the assistant exactly what is
+              wanted. A card that is shown as the Markdown it was typed in is hard to read, and a card that is shown with
+              part of its text missing would mislead, so what shows a card is made once, here, and checked on every card.
+            children:
+              - CanvasPilot-KnowledgeMarkdown-ParseCardDialect
+            tests:
+              - KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow
+
           - id: CanvasPilot-Knowledge-StayProviderNeutral
             title: >-
               The Knowledge subsystem shall offer the knowledge as values and text of its own, with no reference to the

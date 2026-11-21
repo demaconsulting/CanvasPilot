@@ -29,6 +29,8 @@ the project file of the application library from the repository; no network, dis
   application, and answers bad arguments with a message.
 - The skills of the application have one skill for each card, with different names that start with `canvasnet-`,
   including the cards of CanvasPilot and none for a card that is left out.
+- The cards of the application are read into blocks that a window can draw, with headings, list items, and code in
+  them.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that
   the project file of the application library declares is a language model or agent library.
 
@@ -66,6 +68,11 @@ application are as many as its cards, have different names that start with `canv
 cards of CanvasPilot, have none for a card of the left-out tag, and have the text of the card of the marks of a message
 with its example as the content of its skill. This scenario is tested by
 `KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostingCards`.
+
+**KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow**: The body of the card of the marks of a
+message, which is a card of CanvasPilot, and the body of the card of framed figures, which is a card of CanvasNet, are
+each read into blocks with a heading, list items or paragraphs, and runs of code text, and no block is empty. This
+scenario is tested by `KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow`.
 
 **KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers
 to, the packages in the dependency file of the test project, and the package references in the project file of the

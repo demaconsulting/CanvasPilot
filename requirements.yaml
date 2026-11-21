@@ -33,6 +33,7 @@ includes:
   - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.yaml
   - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-tools.yaml
   - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-skills.yaml
+  - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-markdown.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml
   - docs/reqstream/canvas-pilot/payload-subsystem.yaml

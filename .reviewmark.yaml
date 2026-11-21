@@ -505,6 +505,27 @@ reviews:
       - "test/**/KnowledgeSubsystem/KnowledgeSkillsTests.cs"
       - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
 
+  - id: CanvasPilot-Knowledge-KnowledgeMarkdown
+    title: Review of CanvasPilot KnowledgeMarkdown unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-markdown.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-markdown.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-markdown.md"
+      - "src/**/KnowledgeSubsystem/KnowledgeMarkdown.cs"
+      - "src/**/KnowledgeSubsystem/MarkdownBlock.cs"
+      - "src/**/KnowledgeSubsystem/HeadingBlock.cs"
+      - "src/**/KnowledgeSubsystem/ParagraphBlock.cs"
+      - "src/**/KnowledgeSubsystem/ListItemBlock.cs"
+      - "src/**/KnowledgeSubsystem/CodeBlock.cs"
+      - "src/**/KnowledgeSubsystem/MarkdownSpan.cs"
+      - "src/**/KnowledgeSubsystem/MarkdownSpanStyle.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgeMarkdownTests.cs"
+
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
     title: Review of CanvasPilot Logging subsystem architecture and interfaces

@@ -205,6 +205,38 @@ public sealed class KnowledgeSubsystemTests
     }
 
     /// <summary>
+    ///     Validates that the body of a card of CanvasPilot and the body of a card of CanvasNet are read into blocks that
+    ///     a window can draw, with headings, items or paragraphs, runs of code text, and nothing empty.
+    /// </summary>
+    [Fact]
+    public void KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow()
+    {
+        // Arrange: a card of each source
+        var catalog = KnowledgeCatalog.Default;
+        var cards = new[] { catalog.Find("canvaspilot/marks")!, catalog.Find("svg/framed-figure")! };
+
+        // Act
+        var read = cards.Select(c => KnowledgeMarkdown.Parse(c.Body)).ToList();
+
+        // Assert: each card has a heading, text blocks, and runs of code, and no block has an empty run
+        Assert.All(read, blocks =>
+        {
+            Assert.NotEmpty(blocks);
+            Assert.Contains(blocks, b => b is HeadingBlock);
+            Assert.Contains(blocks, b => b is ListItemBlock or ParagraphBlock);
+            var spans = blocks.SelectMany(b => b switch
+            {
+                HeadingBlock h => h.Spans,
+                ParagraphBlock p => p.Spans,
+                ListItemBlock l => l.Spans,
+                _ => []
+            }).ToList();
+            Assert.Contains(spans, s => s.Style == MarkdownSpanStyle.Code);
+            Assert.All(spans, s => Assert.NotEqual(string.Empty, s.Text));
+        });
+    }
+
+    /// <summary>
     ///     Validates that the library of the subsystem refers to no package of a language model or agent, by its
     ///     referenced assemblies and by the packages that its dependency file lists.
     /// </summary>
