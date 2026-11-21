@@ -8,7 +8,7 @@ CanvasPilot is a desktop application built on .NET and Avalonia. It is structure
 software items documented are thirteen subsystems, `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`,
 `Payload`, `Preview`, `Project`, `Settings`, `Speech`, `Style`, and `Utilities`.
 
-```mermaid
+```{.mermaid scale=0.9}
 flowchart TD
     subgraph Annotation
         MarkRegistry
