@@ -12,6 +12,20 @@ updates:
       nuget-dependencies:
         patterns:
           - "*"
+    ignore:
+      # xunit.v3 4.x and xunit.runner.visualstudio 4.x are held back: xunit.v3 4.x runs only on
+      # Microsoft.Testing.Platform and changes the extensibility API, and the latest
+      # Avalonia.Headless.XUnit (built against xunit.v3 3.x) fails test discovery against it with a
+      # MissingMethodException, so the headless UiTests cannot run. Remove these rules once
+      # Avalonia.Headless.XUnit supports xunit.v3 4.x.
+      - dependency-name: "xunit.v3"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "xunit.runner.visualstudio"
+        update-types: ["version-update:semver-major"]
+      # Microsoft.CodeAnalysis.NetAnalyzers stays on the major version of the .NET SDK installed
+      # by CI and of the target framework (net10.0); the 11.x analyzers belong to the .NET 11 SDK.
+      - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+        update-types: ["version-update:semver-major"]
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
