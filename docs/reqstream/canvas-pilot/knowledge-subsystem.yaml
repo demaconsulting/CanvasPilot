@@ -51,6 +51,22 @@ sections:
             tests:
               - KnowledgeSubsystem_Search_QuestionsAboutDrawing_FindTheCardsThatAnswerThem
 
+          - id: CanvasPilot-Knowledge-BuildPromptParts
+            title: >-
+              The Knowledge subsystem shall write the cards as plain text for the prompt of an assistant: an index of every
+              card that stays within a fixed size, a card with the cards related to it and its examples, an example, and the
+              result of a search.
+            justification: |
+              An assistant cannot be given all the cards in every request, because their text is many times what a prompt
+              can hold. A short index tells it what exists, and the cards, examples, and search results that it asks for
+              are given as text it can read. Keeping the size of the index under a limit that is checked keeps the cost of
+              every request known.
+            children:
+              - CanvasPilot-KnowledgePromptBuilder-BuildCompactIndex
+              - CanvasPilot-KnowledgePromptBuilder-RenderCards
+            tests:
+              - KnowledgeSubsystem_PromptBuilder_IndexSearchAndCard_AreReadyForAPrompt
+
           - id: CanvasPilot-Knowledge-StayProviderNeutral
             title: >-
               The Knowledge subsystem shall offer the knowledge as values and text of its own, with no reference to the

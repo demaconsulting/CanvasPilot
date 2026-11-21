@@ -23,6 +23,8 @@ the project file of the application library from the repository; no network, dis
 - Many threads that ask for the default catalog get the same one.
 - The search of the catalog of the application finds the card of a format, the cards of CanvasPilot, and nothing for a
   word that no card has.
+- The index of the catalog of the application is within its budget, lists the cards of both sources, and the text of the
+  card that a search found holds its example.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that
   the project file of the application library declares is a language model or agent library.
 
@@ -42,6 +44,12 @@ application answers `gantt chart` with the card of the Gantt chart first, a ques
 message with the card of the marks, and `project folder layout` with the card of the layout of a project first, and a
 nonsense word with nothing. This scenario is tested by
 `KnowledgeSubsystem_Search_QuestionsAboutDrawing_FindTheCardsThatAnswerThem`.
+
+**KnowledgeSubsystem_PromptBuilder_IndexSearchAndCard_AreReadyForAPrompt**: The index of the catalog of the application
+is within its budget and has the lines of a card of CanvasNet and a card of CanvasPilot, the list of the results of a
+search for a framed figure with a callout starts with the card of framed figures, and the text of that card with its
+examples holds the text of its first example in a fenced block of its language. This scenario is tested by
+`KnowledgeSubsystem_PromptBuilder_IndexSearchAndCard_AreReadyForAPrompt`.
 
 **KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers
 to, the packages in the dependency file of the test project, and the package references in the project file of the

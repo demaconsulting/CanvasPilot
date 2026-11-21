@@ -1,0 +1,54 @@
+---
+# Software Unit Requirements for the KnowledgePromptBuilder Unit
+#
+# The KnowledgePromptBuilder unit writes the knowledge cards as plain text for the prompt of an assistant: a compact
+# index of every card, one card with its related cards and examples, one example, and the result of a search. It reads
+# only the catalog it is given and has no dependency on the user interface or on any provider of a language model.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        sections:
+          - title: KnowledgePromptBuilder Requirements
+            requirements:
+              - id: CanvasPilot-KnowledgePromptBuilder-BuildCompactIndex
+                title: >-
+                  The KnowledgePromptBuilder shall write the index of the cards as one line that says how to ask for a
+                  card followed by one line for each card, in the order of the tree, with the identifier, title, and
+                  summary of the card, shall be able to stop at a level of the tree, shall refuse a level below zero, and
+                  shall write the index of the catalog of the application in no more than 12,000 characters, and the
+                  cards at the top of it in no more than 2,500.
+                justification: |
+                  The index is given to the assistant in every prompt, so its size is a cost of every request. The
+                  assistant reads the index to choose the cards it asks for, and a limit that the tests check makes a new
+                  card, or a new version of CanvasNet that adds many, fail the build instead of silently making every
+                  request larger. A shorter form with only the cards at the top remains for a prompt that cannot hold
+                  the whole index.
+                tests:
+                  - KnowledgePromptBuilder_BuildIndex_SmallCatalog_IsHeaderAndOneLinePerCardInTreeOrder
+                  - KnowledgePromptBuilder_BuildIndex_MaxDepth_LimitsTheLevels
+                  - KnowledgePromptBuilder_BuildIndex_EmptyCatalogAndNullCatalog_AreHandled
+                  - KnowledgePromptBuilder_BuildIndex_RealCatalog_FitsBudget
+
+              - id: CanvasPilot-KnowledgePromptBuilder-RenderCards
+                title: >-
+                  The KnowledgePromptBuilder shall write a card as its title, identifier, summary, tags, other names,
+                  body, the cards below it and the cards related to it as lines with identifier, title, and summary, and
+                  the list of its examples, with the text of each example in a fenced block of its language when that is
+                  asked for, shall write an example as a line that names it, its card, and its details followed by its
+                  text in a fence that is longer than any run of backticks in the text, and shall write the result of a
+                  search as one line for each card, best first, or one line when there is none, the same for the same
+                  cards every time.
+                justification: |
+                  The assistant reads these texts as they are, so their shape is part of what it is told. A fence that the
+                  text of an example cannot end keeps an example that shows Markdown from breaking the prompt, and writing
+                  the links of a card as identifiers lets the assistant follow them with the tool that gives a card.
+                tests:
+                  - KnowledgePromptBuilder_BuildCard_WithoutExamples_IsTheCardWithListsOfRelatedCardsAndExamples
+                  - KnowledgePromptBuilder_BuildCard_WithExamples_AddsEachExampleInAFencedBlock
+                  - KnowledgePromptBuilder_BuildCard_BareCard_HasOnlyTheParts
+                  - KnowledgePromptBuilder_BuildExample_FileCommandAndTextWithFence_AreWrittenInAFencedBlock
+                  - KnowledgePromptBuilder_BuildRelated_ChildrenAndSeeAlso_AreListedInSections
+                  - KnowledgePromptBuilder_BuildSearchResults_WithAndWithoutCards_AreListedInOrder
+                  - KnowledgePromptBuilder_BuildCard_RealCatalog_KeepsLinkTextAndIsRepeatable

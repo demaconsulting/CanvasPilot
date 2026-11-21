@@ -113,6 +113,38 @@ public sealed class KnowledgeSubsystemTests
     }
 
     /// <summary>
+    ///     Validates that the text for a prompt is built from the catalog of the application: an index that is within its
+    ///     budget and lists the cards of CanvasNet and of CanvasPilot, the text of the card that a search found, and the
+    ///     text of an example of it.
+    /// </summary>
+    [Fact]
+    public void KnowledgeSubsystem_PromptBuilder_IndexSearchAndCard_AreReadyForAPrompt()
+    {
+        // Arrange: the catalog, the search, and the builder of the application
+        var catalog = KnowledgeCatalog.Default;
+        var search = new KnowledgeSearch(catalog);
+        var builder = new KnowledgePromptBuilder(catalog);
+
+        // Act
+        var index = builder.BuildIndex();
+        var found = search.Search("framed figure callout", 3);
+        var listing = KnowledgePromptBuilder.BuildSearchResults(found);
+        var card = catalog.Find(found[0].Id);
+        var text = builder.BuildCard(card!, includeExamples: true);
+        var example = KnowledgePromptBuilder.BuildExample(card!.Id, card.Examples[0]);
+
+        // Assert: the index is within budget and lists both sources of cards, the listing names the best card first, the
+        // card text holds its example, and the example text is a fenced block of the same file
+        Assert.True(index.Length <= KnowledgePromptBuilder.IndexBudgetCharacters);
+        Assert.Contains("\n- svg/framed-figure: ", index, StringComparison.Ordinal);
+        Assert.Contains("\n- canvaspilot/marks: ", index, StringComparison.Ordinal);
+        Assert.StartsWith("Cards found, best first:\n- svg/framed-figure: ", listing, StringComparison.Ordinal);
+        Assert.Equal("svg/framed-figure", card.Id);
+        Assert.Contains(example, text, StringComparison.Ordinal);
+        Assert.Contains("```xml\n<svg", example, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Validates that the library of the subsystem refers to no package of a language model or agent, by its
     ///     referenced assemblies and by the packages that its dependency file lists.
     /// </summary>

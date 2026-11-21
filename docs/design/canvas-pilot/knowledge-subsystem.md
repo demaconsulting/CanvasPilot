@@ -14,10 +14,10 @@ how to read the marks and attachments of a message, and what the user sees. The 
 interface and none on any provider of a language model or on any agent library, so the knowledge can be given to any
 assistant that is added later.
 
-The subsystem contains two units: `KnowledgeCatalog`, which builds the tree and answers lookups, and `KnowledgeSearch`,
-which finds the cards that fit some words. It depends on CanvasNet for the help cards and on `Project`, `Composer`, and
-`Annotation` only in its tests, which check that what the cards of CanvasPilot say about the application is what the
-code says.
+The subsystem contains three units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
+which finds the cards that fit some words, and `KnowledgePromptBuilder`, which writes the cards as text for the prompt
+of an assistant. It depends on CanvasNet for the help cards and on `Project`, `Composer`, and `Annotation` only in its
+tests, which check that what the cards of CanvasPilot say about the application is what the code says.
 
 ### Interfaces
 
@@ -40,6 +40,16 @@ code says.
 - *Contract*: `Search` takes the words of a query and a number of results and returns the cards that fit, best first,
   each with its identifier, title, summary, and a positive score. It is made from an `IKnowledgeCatalog`.
 - *Constraints*: Deterministic: the same query on the same cards gives the same list. Safe for concurrent use.
+
+**KnowledgePromptBuilder**: The cards as text for a prompt.
+
+- *Type*: In-process .NET class.
+- *Role*: Provider.
+- *Contract*: `BuildIndex` writes the index of every card (or of the top levels of the tree), `BuildCard` a card with
+  its related cards and, when asked, the text of its examples, `BuildRelated` the cards below a card and the cards
+  related to it, `BuildExample` one example in a fenced block, and `BuildSearchResults` the cards that a search found.
+  The index of the catalog of the application is limited to `IndexBudgetCharacters`, 12,000 characters.
+- *Constraints*: Plain text with line feeds, the same for the same cards, and no state. Safe for concurrent use.
 
 ### Design
 
@@ -69,8 +79,14 @@ names, tags, and summary of each card with fixed weights, and does not read the 
 comes before the cards that only mention it and a list is short enough for a prompt. Ties are broken by depth and
 identifier, so the answer never depends on the order of a dictionary, the culture, or chance.
 
+**A compact index and cards on demand.** The whole text of the cards is many times what a prompt can hold, so an
+assistant is given an index with one line for each card and asks for the cards it needs. The size of the index has a
+limit that the tests check on the real catalog, so a card that makes it too large fails the build.
+
 ### Dependencies
 
 - **KnowledgeCatalog** unit: the tree of cards.
 - **KnowledgeSearch** unit: the search of the cards, which reads the catalog through its interface.
+- **KnowledgePromptBuilder** unit: the text for a prompt, which reads the catalog through its interface and writes the
+  results of the search.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.

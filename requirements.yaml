@@ -30,6 +30,7 @@ includes:
   - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
   - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-catalog.yaml
   - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-search.yaml
+  - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml
   - docs/reqstream/canvas-pilot/payload-subsystem.yaml

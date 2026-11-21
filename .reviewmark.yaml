@@ -459,6 +459,20 @@ reviews:
       - "test/**/KnowledgeSubsystem/KnowledgeSearchTests.cs"
       - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
 
+  - id: CanvasPilot-Knowledge-KnowledgePromptBuilder
+    title: Review of CanvasPilot KnowledgePromptBuilder unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.md"
+      - "src/**/KnowledgeSubsystem/KnowledgePromptBuilder.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgePromptBuilderTests.cs"
+
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
     title: Review of CanvasPilot Logging subsystem architecture and interfaces

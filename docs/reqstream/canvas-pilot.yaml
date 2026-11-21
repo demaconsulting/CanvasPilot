@@ -425,6 +425,7 @@ sections:
         children:
           - CanvasPilot-Knowledge-OfferDrawingCards
           - CanvasPilot-Knowledge-FindCards
+          - CanvasPilot-Knowledge-BuildPromptParts
           - CanvasPilot-Knowledge-StayProviderNeutral
 
       - id: CanvasPilot-System-BrowseDrawingKnowledge
