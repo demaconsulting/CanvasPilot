@@ -46,7 +46,16 @@ public sealed class FakeRefreshScheduler : IRefreshScheduler
     /// <summary>
     ///     Gets how many callbacks are waiting to run.
     /// </summary>
-    public int PendingCount => _pending.Count;
+    public int PendingCount
+    {
+        get
+        {
+            lock (_pending)
+            {
+                return _pending.Count;
+            }
+        }
+    }
 
     /// <summary>
     ///     Gets the delay of the most recent request.
@@ -56,11 +65,15 @@ public sealed class FakeRefreshScheduler : IRefreshScheduler
     /// <inheritdoc />
     public IDisposable Schedule(TimeSpan delay, Action callback)
     {
-        ScheduledCount++;
-        LastDelay = delay;
         var entry = new Entry(callback, this);
-        _pending.Add(entry);
-        _all.Add(entry);
+        lock (_pending)
+        {
+            ScheduledCount++;
+            LastDelay = delay;
+            _pending.Add(entry);
+            _all.Add(entry);
+        }
+
         return entry;
     }
 
@@ -69,8 +82,13 @@ public sealed class FakeRefreshScheduler : IRefreshScheduler
     /// </summary>
     public void RunPending()
     {
-        var due = _pending.ToList();
-        _pending.Clear();
+        List<Entry> due;
+        lock (_pending)
+        {
+            due = _pending.ToList();
+            _pending.Clear();
+        }
+
         foreach (var entry in due)
         {
             entry.Callback();
@@ -84,8 +102,14 @@ public sealed class FakeRefreshScheduler : IRefreshScheduler
     /// <param name="index">The zero-based position of the request.</param>
     public void RunScheduled(int index)
     {
-        _pending.Remove(_all[index]);
-        _all[index].Callback();
+        Entry entry;
+        lock (_pending)
+        {
+            entry = _all[index];
+            _pending.Remove(entry);
+        }
+
+        entry.Callback();
     }
 
     /// <summary>
@@ -103,7 +127,10 @@ public sealed class FakeRefreshScheduler : IRefreshScheduler
         /// <inheritdoc />
         public void Dispose()
         {
-            owner._pending.Remove(this);
+            lock (owner._pending)
+            {
+                owner._pending.Remove(this);
+            }
         }
     }
 }

@@ -12,9 +12,8 @@ see-also:
   - canvaspilot/marks
 ---
 
-- **The picture**: The selected file is drawn at its natural size and drawn again
-  when the file changes. So a file you write is shown to the user as soon as it is
-  saved.
+- **The picture**: The selected file is drawn by CanvasNet (by default scaled down to fit the pane, never scaled up) and
+  drawn again when the file changes. So a file you write is shown to the user as soon as it is saved.
 - **Errors**: When a file cannot be drawn, the user sees the CanvasNet error code
   and its hint instead of a picture. Fix the cause of the code; do not work around
   it. See [[errors/codes]] for what each code means.

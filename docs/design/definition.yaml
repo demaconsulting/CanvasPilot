@@ -7,7 +7,8 @@ resource-path:
   - docs/design/canvas-pilot/app-shell-subsystem
   - docs/design/canvas-pilot/chat-subsystem
   - docs/design/canvas-pilot/composer-subsystem
-  - docs/design/canvas-pilot/knowledge-subsystem  - docs/design/canvas-pilot/logging-subsystem
+  - docs/design/canvas-pilot/knowledge-subsystem
+  - docs/design/canvas-pilot/logging-subsystem
   - docs/design/canvas-pilot/payload-subsystem
   - docs/design/canvas-pilot/preview-subsystem
   - docs/design/canvas-pilot/project-subsystem
