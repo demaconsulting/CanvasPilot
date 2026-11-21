@@ -363,21 +363,33 @@ public sealed class ProjectExplorerTests : IDisposable
     ///     that the refresh then updates the list.
     /// </summary>
     [Fact]
-    public void ProjectExplorerViewModel_RequestRefresh_Burst_CoalescesIntoOneRefresh()
+    public async Task ProjectExplorerViewModel_RequestRefresh_Burst_CoalescesIntoOneRefresh()
     {
         // Arrange: an open project with a custom debounce delay
         Touch("one.svg");
         var explorer = CreateExplorer(debounce: TimeSpan.FromMilliseconds(40));
         explorer.Open(Folder);
 
-        // Act: a file appears and three requests arrive before the delay passes
+        // Act: a file appears; the folder watcher reports it on its own thread, in more than one event, so the test waits
+        // until the reports have come before it makes its three requests, which then arrive before the delay passes
         Touch("two.svg");
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (_scheduler.ScheduledCount == 0 && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+
+        await Task.Delay(250, TestContext.Current.CancellationToken);
         explorer.RequestRefresh();
         explorer.RequestRefresh();
         explorer.RequestRefresh();
         var beforeDelay = explorer.Items.Count;
         var pendingAfterBurst = _scheduler.PendingCount;
-        _scheduler.RunPending();
+        while (explorer.Items.Count < 2 && DateTime.UtcNow < deadline.AddSeconds(10))
+        {
+            _scheduler.RunPending();
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
 
         // Assert: one callback was waiting with the debounce delay, the list changed only when it ran
         Assert.Equal(1, pendingAfterBurst);
@@ -446,10 +458,17 @@ public sealed class ProjectExplorerTests : IDisposable
             await Task.Delay(25, TestContext.Current.CancellationToken);
         }
 
-        _scheduler.RunPending();
+        Assert.True(_scheduler.ScheduledCount > 0, "The folder watcher did not report the new file.");
+
+        // The watcher reports a new file in more than one event, and a report that arrives while a callback runs
+        // replaces it, so the callbacks are run until the file is listed
+        while (explorer.Items.Count == 0 && DateTime.UtcNow < deadline)
+        {
+            _scheduler.RunPending();
+            await Task.Delay(25, TestContext.Current.CancellationToken);
+        }
 
         // Assert: a refresh was requested and the file is listed
-        Assert.True(_scheduler.ScheduledCount > 0, "The folder watcher did not report the new file.");
         Assert.Equal(["created.svg"], explorer.Items.Select(item => item.Name));
     }
 
