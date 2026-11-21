@@ -5,12 +5,18 @@
 `StyleKitEditor` is verified with unit tests in `StyleKitEditorTests.cs` over a real `StyleKitCatalog` on temporary
 folders (the kits are real folders and the example files are real files, so what a save does to the folder is read back
 from the disk). The tests read the draft, the errors and warnings, the derived values, and the files and the style file
-that a save leaves, and use a catalog that fails when the failure of a write is the subject. Headless UI tests of the
-view are added with the view (see the view tests of the unit once the view exists).
+that a save leaves, and use a catalog that fails when the failure of a write is the subject. Headless UI tests in
+`StyleKitEditorViewTests.cs` (the `UiTests` project, using Avalonia's headless platform with the Skia renderer) show the
+real editor window and the real color control over a real catalog, choose tabs, type into boxes, click buttons with the
+mouse, open the flyout of the sliders, and read the controls and the files. The window is shown without an owner there;
+showing it modally over the window that manages kits is verified by the tests of that window. The platform picker of the
+example files cannot be shown headless; the editor is tested with a picker that answers.
 
 #### Test Environment
 
 Unit tests use the standard test environment with temporary local folders and real file I/O. No network and no window.
+UI tests run under the Avalonia headless platform, serialized with test parallelization disabled; no display or
+windowing system is required.
 
 #### Acceptance Criteria
 
@@ -33,6 +39,13 @@ Unit tests use the standard test environment with temporary local folders and re
   what it copied and keeps the editor open.
 - Canceling leaves every file as it was.
 - A kit that is read only and missing arguments are refused.
+- The window has a tab for each part of a kit that shows it; Save is off while a color is not a color and the error is
+  shown at the color and below the tabs, and Save is on again when it is fixed; Save writes the kit and closes the
+  window and Cancel closes it and writes nothing; the buttons that add and remove an export size, a theme variable, a
+  line of advice, and an example work, and a width that is not a number is shown as an error.
+- The color control paints its swatch with the color of the text, shows the reason when the text is not a color, keeps
+  the sliders of the flyout and the text in step in both directions, and does not let the name of a required role be
+  changed.
 
 #### Test Scenarios
 
@@ -112,3 +125,34 @@ example is still there. This scenario is tested by `StyleKitEditor_Save_CatalogF
 **StyleKitEditor_Constructor_ReadOnlyKitAndNullArguments_AreRefused**: A built-in kit is refused with a message that
 says it is read only, and missing arguments of the editor and of each row are refused. This scenario is tested by
 `StyleKitEditor_Constructor_ReadOnlyKitAndNullArguments_AreRefused`.
+
+**StyleKitEditorView_Show_TabsShowEveryPartOfTheKit**: The window of a new kit has the tabs General, Palette, Type and
+shape, Mermaid and Vega-Lite, Guidance, Sizes, and Examples; the first tab shows the name and the id; the palette tab
+lists three colors with their text, the role boxes of the required colors are off, and the contrast hint says the text
+reads well; the fonts and numbers tab shows the font and the line width and corner radius. This scenario is tested by
+`StyleKitEditorView_Show_TabsShowEveryPartOfTheKit`.
+
+**StyleKitEditorView_Save_BadColorThenFixed_IsDisabledThenEnabled**: Typing `#12` into the box of the primary color
+turns Save off, shows one error below the tabs and the reason under the color; typing `#112233` turns Save on and hides
+the errors. This scenario is tested by `StyleKitEditorView_Save_BadColorThenFixed_IsDisabledThenEnabled`.
+
+**StyleKitEditorView_SaveAndCancelButtons_WriteOrLeaveTheKitAndClose**: In two windows over two kits, the name is
+changed; clicking Save writes the new name and closes the window; clicking Cancel closes the window and the kit keeps
+its name. This scenario is tested by `StyleKitEditorView_SaveAndCancelButtons_WriteOrLeaveTheKitAndClose`.
+
+**StyleKitEditorView_Sizes_AddAndRemoveRow_ChangeThePresets**: Clicking Add size adds a row with the name `New size` and
+the width 1280; a width of `wide` shows the error list; clicking Remove removes the row and the error. This scenario is
+tested by `StyleKitEditorView_Sizes_AddAndRemoveRow_ChangeThePresets`.
+
+**StyleKitEditorView_MermaidGuidanceAndExamples_RowsAreAddedAndRemoved**: The list of themes is hidden until the check
+box is set; a theme variable is added and removed; a line is added to each list of advice and one is removed; a file
+that the picker returns is listed as `logo.svg (new)`, gets a caption that the draft holds, and is removed. This
+scenario is tested by `StyleKitEditorView_MermaidGuidanceAndExamples_RowsAreAddedAndRemoved`.
+
+**ColorEditorView_Hex_SwatchFollowsTheTextAndErrorIsShown**: The swatch has the color of the text, follows a new text,
+shows no color and the reason for text that is not a color, and the role box of a required color is off. This scenario
+is tested by `ColorEditorView_Hex_SwatchFollowsTheTextAndErrorIsShown`.
+
+**ColorEditorView_Sliders_StayInStepWithTheText**: The flyout of the control opens with sliders at the values of the
+text; moving two sliders writes the new text; typing a new text moves the sliders; the role box of a color that is not
+required is on. This scenario is tested by `ColorEditorView_Sliders_StayInStepWithTheText`.

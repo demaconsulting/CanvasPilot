@@ -1169,13 +1169,18 @@ reviews:
       - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-editor.yaml"
       - "docs/design/canvas-pilot/style-subsystem/style-kit-editor.md"
       - "docs/verification/canvas-pilot/style-subsystem/style-kit-editor.md"
+      - "src/**/StyleSubsystem/ColorEditorView.axaml"
+      - "src/**/StyleSubsystem/ColorEditorView.axaml.cs"
       - "src/**/StyleSubsystem/StyleColorRowViewModel.cs"
       - "src/**/StyleSubsystem/StyleExampleRowViewModel.cs"
+      - "src/**/StyleSubsystem/StyleKitEditorView.axaml"
+      - "src/**/StyleSubsystem/StyleKitEditorView.axaml.cs"
       - "src/**/StyleSubsystem/StyleKitEditorViewModel.cs"
       - "src/**/StyleSubsystem/StyleNameValueRowViewModel.cs"
       - "src/**/StyleSubsystem/StylePresetRowViewModel.cs"
       - "src/**/StyleSubsystem/StyleTextRowViewModel.cs"
       - "test/**/StyleSubsystem/StyleKitEditorTests.cs"
+      - "test/**/StyleKitEditorViewTests.cs"
 
   - id: CanvasPilot-Style-StyleKitManager
     title: Review of CanvasPilot StyleKitManager unit implementation

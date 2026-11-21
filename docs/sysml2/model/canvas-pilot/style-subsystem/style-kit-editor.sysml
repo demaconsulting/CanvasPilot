@@ -6,14 +6,21 @@ package CanvasPilot {
 
         metadata info : SoftwareInfo {
             sourceFiles = (
+                "src/DemaConsulting.CanvasPilot/StyleSubsystem/ColorEditorView.axaml",
+                "src/DemaConsulting.CanvasPilot/StyleSubsystem/ColorEditorView.axaml.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleColorRowViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleExampleRowViewModel.cs",
+                "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleKitEditorView.axaml",
+                "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleKitEditorView.axaml.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleKitEditorViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleNameValueRowViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StylePresetRowViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleTextRowViewModel.cs"
             );
-            testFiles = ("test/DemaConsulting.CanvasPilot.Tests/StyleSubsystem/StyleKitEditorTests.cs");
+            testFiles = (
+                "test/DemaConsulting.CanvasPilot.Tests/StyleSubsystem/StyleKitEditorTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/StyleKitEditorViewTests.cs"
+            );
             designFiles = ("docs/design/canvas-pilot/style-subsystem/style-kit-editor.md");
             verificationFiles = ("docs/verification/canvas-pilot/style-subsystem/style-kit-editor.md");
             requirementFiles = ("docs/reqstream/canvas-pilot/style-subsystem/style-kit-editor.yaml");

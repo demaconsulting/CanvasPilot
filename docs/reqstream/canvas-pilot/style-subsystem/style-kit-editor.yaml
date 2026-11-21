@@ -33,6 +33,10 @@ sections:
                   - StyleKitEditor_Mermaid_SwitchedOffAndVariableRows_FollowTheRules
                   - StyleKitEditor_Guidance_BlankLines_AreLeftOut
                   - StyleKitEditor_IsDirty_ChangeAndChangeBack_FollowsTheDraft
+                  - StyleKitEditorView_Show_TabsShowEveryPartOfTheKit
+                  - StyleKitEditorView_MermaidGuidanceAndExamples_RowsAreAddedAndRemoved
+                  - ColorEditorView_Hex_SwatchFollowsTheTextAndErrorIsShown
+                  - ColorEditorView_Sliders_StayInStepWithTheText
 
               - id: CanvasPilot-StyleKitEditor-RefuseInvalidKits
                 title: >-
@@ -53,6 +57,8 @@ sections:
                   - StyleKitEditor_ContrastText_LowAndHighContrast_AreSaid
                   - StyleKitEditor_Save_CatalogFails_ShowsTheReasonAndRemovesTheCopies
                   - StyleKitEditor_Constructor_ReadOnlyKitAndNullArguments_AreRefused
+                  - StyleKitEditorView_Save_BadColorThenFixed_IsDisabledThenEnabled
+                  - StyleKitEditorView_SaveAndCancelButtons_WriteOrLeaveTheKitAndClose
 
               - id: CanvasPilot-StyleKitEditor-EditExamplesAndPresets
                 title: >-
@@ -74,3 +80,5 @@ sections:
                   - StyleKitEditor_Examples_NameCollisions_GetANumberAndNothingIsOverwritten
                   - StyleKitEditor_Examples_MissingAndTooLargeFiles_AreNotAddedAndSaveKeepsTheRest
                   - StyleKitEditor_AddExamplesCommand_PickerSuppliedOrMissing_AddsOrDoesNothing
+                  - StyleKitEditorView_Sizes_AddAndRemoveRow_ChangeThePresets
+                  - StyleKitEditorView_MermaidGuidanceAndExamples_RowsAreAddedAndRemoved

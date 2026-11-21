@@ -67,6 +67,20 @@ is logged and left, which a later read of the folder shows as an example again. 
 set and `CloseRequested` is raised. The kit is saved in the place that it was found in (the user or the project) and in
 a folder named as its id. `CancelCommand` raises `CloseRequested` and writes nothing.
 
+**View**: `StyleKitEditorView` is a window with a tab for each part of the kit: General (name, description, the id and
+the place), Palette (a `ColorEditorView` for each color with a Remove button that is off for a required color, Add
+color, and the contrast hint), Type and shape (the three font lists and numeric boxes for the three numbers), Mermaid
+and Vega-Lite (a check box for the theme, the list of themes, the variable rows, and a multi-line box for the
+configuration), Guidance (the notes and the two lists), Sizes (a row of boxes for each export size), and Examples (a row
+with the name of the file and a caption box for each example, Add files, and the reason a file was not added). Below the
+tabs are the errors in red, the warnings, the reason a save failed, and the Save and Cancel buttons; Save follows
+`CanSave`. The Remove buttons of the rows are handled in one place in the code of the window, which passes the row to
+the command that removes it. The window closes when `CloseRequested` is raised. `ColorEditorView` is the control of one
+color: the name of the role (editable only for a color that is not required), a swatch painted with the text of the
+color, the text box, the reason when the text is not a color, and a button that opens a flyout with sliders for red,
+green, and blue, which are bound to the channels of the row so that they and the text always agree. It uses only the
+controls that Avalonia has, so the editor needs no package for a color picker.
+
 #### Error Handling
 
 The constructor throws `ArgumentNullException` for a missing catalog or entry and `InvalidOperationException` for a kit
@@ -86,3 +100,4 @@ an exception. A failure to write is `SaveError`.
 
 - `StyleKitManagerViewModel` - makes the editor for a kit that the user chose to edit, or has just created or
   duplicated, and shows it through the dialogs.
+- `MainWindowView` - shows the editor window modally over the window that manages kits when the dialogs are asked to.
