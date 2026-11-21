@@ -22,8 +22,9 @@ assertions on its actual pipeline output:
   (`SysML2Tools_LintSelfTest`, `SysML2Tools_RenderSvgSelfTest`). This proves the tool's `lint` and
   `render` commands work correctly in isolation, but does not prove they were actually invoked
   successfully against this project's real model.
-- **Lint pipeline evidence**: `lint.ps1` runs `dotnet sysml2tools lint 'docs/sysml2/**/*.sysml'`
-  against the actual CanvasPilot model and fails the build on any syntax or reference error.
+- **Lint pipeline evidence**: `lint.ps1` runs `dotnet sysml2tools lint --strict-unresolved 'docs/sysml2/**/*.sysml'`
+  against the actual CanvasPilot model and fails the build on any syntax or reference error, including an
+  unresolved reference.
   A build failure here is direct evidence that lint did not pass against the real model; a
   successful build is direct evidence that it did.
 - **Render pipeline evidence**: The build-docs job runs `dotnet sysml2tools render` to produce one
@@ -33,8 +34,8 @@ assertions on its actual pipeline output:
   omits the diagram silently - so a successful Pandoc/WeasyPrint build is not sufficient evidence
   that render succeeded. Instead, `SysML2Tools_DesignDiagramsSvg` is a FileAssert test that runs
   immediately after the render step and directly asserts that each expected SVG file
-  (`SoftwareStructureView.svg`, `CanvasPilotView.svg`, and the view of each subsystem, such as
-  `LoggingSubsystemView.svg`) exists in
+  (`SoftwareStructureView.svg`, `CanvasPilotView.svg`, `OtsView.svg`, the view of each subsystem, such as
+  `LoggingSubsystemView.svg`, and the focused dependency views, such as `StyleSubsystemKitsView.svg`) exists in
   `docs/design/generated/`, has a non-trivial size, and is
   well-formed XML with an `<svg>` root element. This is the only evidence that render actually
   produced the required diagrams against the real model.

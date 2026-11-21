@@ -140,3 +140,19 @@ The subsystem consumes the `DemaConsulting.Speech` library, with its `DemaConsul
 in `AudioDeviceService`, `SpeechModelService`, and `DictationService` and for the descriptor types that the other units
 show (see the Speech OTS design), and Avalonia and CommunityToolkit.Mvvm in the view models and views. The native
 speech runtime arrives with those packages; see the Speech OTS design.
+
+### Dependencies
+
+The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`). The hub supplier
+`RollingFileLogger`, which many units use, is left out of the view.
+
+- `AudioDeviceService` and `SpeechModelService` depend on the Speech library (OTS).
+- `DictationService` depends on `AudioDeviceService`, `SpeechModelService`, `SettingsService` (`Settings`), and the
+  Speech library.
+- `DeviceSelection` depends on `AudioDeviceService`.
+- `ModelCatalogPanel` depends on `SpeechModelService` and the Speech library.
+- `ModelParameterEditor` depends on the Speech library.
+- `SpeechSettingsPage` depends on `DeviceSelection`, `ModelCatalogPanel`, `ModelParameterEditor`, and
+  `SettingsDialog` (`Settings`).
+
+![Speech dependencies](SpeechSubsystemDependencyView.svg)

@@ -109,3 +109,19 @@ SHA-256 fingerprint, and the images can be shown beside the text. Missing values
 that cannot say what is under a mark is written with `available` false and the reason. Quotation marks, backslashes, and
 control characters are escaped as JSON requires; other characters are written as they are, because the text is shown to
 a person and is never put in a web page.
+
+### Dependencies
+
+The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`) and are split into two
+views. The hub supplier `ImageRenderService` (`Preview`) is left out of both.
+
+`PayloadBuilder` depends on `ComposerDocument`, `AttachmentStore`, and `ComposerViewModel` (`Composer`),
+`MarkRegistry` and `MarkSourceResolver` (`Annotation`), and `MarkImageComposer` and `MessagePayload`.
+
+![Payload builder dependencies](PayloadSubsystemBuilderView.svg)
+
+`MessagePayload` depends on `ComposerDocument` (`Composer`) and `MarkRegistry` and `MarkSourceResolver`
+(`Annotation`); `PayloadDescriber` depends on `MessagePayload`; and `MarkImageComposer` depends on `MarkRegistry` and
+on CanvasNet (OTS).
+
+![Payload message dependencies](PayloadSubsystemMessageView.svg)

@@ -79,12 +79,12 @@ The following topics are out of scope:
 The software structure is modeled in SysML2 under `docs/sysml2/` and rendered to the diagram
 below by SysML2Tools as part of the build pipeline. AI agents should query the SysML2 model
 directly (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose
-elsewhere in this document. The diagram shows the system, its thirteen subsystems with their units, and the runtime OTS
-items that the system consumes; the dependencies between the units are in the model and are shown in the view of each
-subsystem. The build and documentation tools listed in Scope above are documented separately (see
-`docs/design/ots.md`).
+elsewhere in this document. The diagram shows the system and its thirteen subsystems, with the runtime OTS items that
+the system consumes; the units are in the view of each subsystem, and the dependencies between the units are in the
+model and are shown in the focused dependency views that the design of the larger subsystems embeds. The build and
+documentation tools listed in Scope above are documented separately (see `docs/design/ots.md`).
 
-![The CanvasPilot system with its thirteen subsystems and their units, and the runtime third-party items it
+![The CanvasPilot system with its thirteen subsystems and the runtime third-party items it
 uses](SoftwareStructureView.svg)
 
 ## Architecture

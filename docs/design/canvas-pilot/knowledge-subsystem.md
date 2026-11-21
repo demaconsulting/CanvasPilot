@@ -179,3 +179,8 @@ sentence the user can read and not an exception.
 - **Logging** subsystem: the log, used only by the browser, for a clipboard failure.
 - **Avalonia** and **CommunityToolkit.Mvvm** (OTS): the window of the browser, which is the only unit that uses them.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.
+
+The view below shows the dependencies between the units of this subsystem and on CanvasNet, from the SysML2 model; the
+hub supplier `RollingFileLogger` is left out.
+
+![Knowledge dependencies](KnowledgeSubsystemDependencyView.svg)

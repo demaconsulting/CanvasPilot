@@ -244,3 +244,30 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 - **Utilities** subsystem: the safe combination of folder and file names.
 - **Logging** subsystem: the log of kits that cannot be used and folders that cannot be read.
 - **CanvasNet** (OTS): the classification of font families, used to warn about a font that not every format draws.
+
+The dependencies of the units come from the SysML2 model and are split into four views by theme. The hub suppliers
+`RollingFileLogger`, `ImageRenderService`, `PathHelpers`, and `ProjectService`, which many units use, are left out of
+them.
+
+The kit values and the places of kits: `StyleKitDocument` depends on CanvasNet; `StyleKitCatalog` depends on
+`StyleKitDocument` and `SettingsService`; `StyleKitArchive` depends on `StyleKitDocument`; and `StyleSelection`
+depends on `StyleKitCatalog`, `SettingsService`, and `ImageExporter`.
+
+![Style kit dependencies](StyleSubsystemKitsView.svg)
+
+The guidance and the tools for an assistant: `StyleGuidance` depends on `StyleKitDocument` and `StyleKitCatalog`;
+`StyleChecker` depends on `StyleKitDocument`, `StyleSelection`, and `PreviewPane`; and `StyleTools` depends on
+`StyleGuidance`, `StyleChecker`, `StyleSelection`, `StyleKitCatalog`, and `KnowledgeTools`.
+
+![Style assistant dependencies](StyleSubsystemAssistantView.svg)
+
+The editing of a kit and the choice of a kit: `StyleKitEditor` depends on `StyleKitDocument`, `StyleKitCatalog`, and
+`StylePicker`; `StylePicker` depends on `StyleSelection` and `StyleKitCatalog`; and `StyleSettingsPage` depends on
+`StyleKitCatalog`, `StylePicker`, and `SettingsDialog`.
+
+![Style editing dependencies](StyleSubsystemEditingView.svg)
+
+The window that manages kits: `StyleKitManager` depends on `StyleKitCatalog`, `StyleKitArchive`, `StyleSelection`,
+`StyleKitEditor`, `StyleGuidance`, and `StylePicker`.
+
+![Style manager dependencies](StyleSubsystemManagerView.svg)
