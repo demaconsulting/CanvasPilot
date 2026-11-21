@@ -429,6 +429,8 @@ sections:
           - CanvasPilot-Knowledge-DescribeAgentTools
           - CanvasPilot-Knowledge-DescribeAgentSkills
           - CanvasPilot-Knowledge-StayProviderNeutral
+        tests:
+          - CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork
 
       - id: CanvasPilot-System-BrowseDrawingKnowledge
         title: >-
@@ -443,3 +445,5 @@ sections:
         children:
           - CanvasPilot-Knowledge-BrowseCards
           - CanvasPilot-AppShell-DrawingKnowledgeMenu
+        tests:
+          - CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog

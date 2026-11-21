@@ -82,6 +82,12 @@ services, or display is required.
   sees the message in the transcript with its words and mark chip in order, and "View payload" shows the payload
   exactly as the payload describer writes it, with the place of the mark, the node under it, and the annotated picture
   and the area around the mark.
+- The drawing knowledge that the application holds is looked up as an assistant would look it up, from the program
+  itself: the compact index is within its budget and names the cards of CanvasNet and of CanvasPilot, the help tool
+  answers the index, a card, an example, and a search, there is a skill for each card, and no card about what the host
+  program controls is offered.
+- Drawing Knowledge in the Help menu of the composed application gives a browser over that catalog, in which the user
+  can search, open a card, follow a related card, and copy an example.
 - The published win-x64 application contains the native speech and audio runtime libraries and so does the installer
   package, so that the installed application needs nothing but the model download to run a chosen speech model.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
@@ -183,6 +189,22 @@ the commands that need nothing are available, those that need a project are not,
 effect, and the log holds the start and stop entries. The platform requirements link this test to each platform
 and runtime with source filters. This scenario is tested by
 `CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell`.
+
+**CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork**: The catalog of the application,
+which the Help menu shows, is asked for as an assistant would ask. The compact index is within its budget and has a line
+for the card of CanvasPilot and a card of CanvasNet; the help tool answers with no arguments the same index, for a topic
+the card of the marks of a message, for an example the text of the example in a fenced block, and for a query the cards
+that fit it. There is one skill for each card, with names that are all different. The card of the layout of a project is
+there, no card carries the tag of what the host program controls, and the card of the PDF format that carries it is not
+found. This scenario is tested by `CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork`.
+
+**CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog**: The application is composed as at
+startup with a dialog service that plays the window, and the user chooses Drawing Knowledge. The command is usable and
+gives the dialog service one browser whose tree is the roots of the catalog of the application, with the cards of
+CanvasPilot among them. The user searches for a word and gets hits, opens the card of the layout of a project and sees
+its title and text, follows the first related card of it, opens the card of deliverables, and copies its first example:
+the text of the example is on the clipboard that records and the status names it. No message was shown. This scenario is
+tested by `CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog`.
 
 **CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError**: The composed application's user creates a
 project that holds a good and a broken SVG and selects the good file: the preview shows a 32 by 16 picture and the

@@ -22,6 +22,7 @@ using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
@@ -257,6 +258,94 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.False(File.Exists(Path.Combine(folder, "cover.svg")));
         Assert.True(File.Exists(Path.Combine(folder, "b.svg")));
         Assert.Equal(["b.svg"], listed);
+    }
+
+    /// <summary>
+    ///     Test that the knowledge that the application holds can be looked up as an assistant would: the compact index
+    ///     fits its budget and names the cards of CanvasNet and of CanvasPilot, the tool answers the index, a card, an
+    ///     example, and a search, the skills cover every card, and the cards about what the host program controls are not
+    ///     there, all from the program itself without a network, a window, or a language model.
+    /// </summary>
+    [Fact]
+    public void CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork()
+    {
+        // Arrange: the catalog of the application, with the units that are built on it
+        var catalog = KnowledgeCatalog.Default;
+        var prompts = new KnowledgePromptBuilder(catalog);
+        var tool = Assert.Single(KnowledgeTools.CreateAll(catalog), t => t.Name == KnowledgeTools.HelpToolName);
+
+        // Act: read the index, then ask the tool as an assistant would, and make the skills
+        var index = prompts.BuildIndex();
+        var indexAnswer = tool.Invoke("{}");
+        var cardAnswer = tool.Invoke("{\"topic\":\"canvaspilot/marks\"}");
+        var exampleAnswer = tool.Invoke("{\"example\":\"mark-payload\"}");
+        var searchAnswer = tool.Invoke("{\"query\":\"gradient\"}");
+        var skills = KnowledgeSkills.Create(catalog).ToList();
+
+        // Assert: the index fits its budget and has a card of each source; the tool answers each kind of request from the
+        // catalog; there is a skill for every card; and nothing about what the host program controls is offered
+        Assert.True(index.Length <= KnowledgePromptBuilder.IndexBudgetCharacters);
+        Assert.Contains("- canvaspilot: ", index, StringComparison.Ordinal);
+        Assert.Contains("- svg: ", index, StringComparison.Ordinal);
+        Assert.Equal(index, indexAnswer);
+        Assert.Contains("canvaspilot/marks", cardAnswer, StringComparison.Ordinal);
+        Assert.Contains("```", exampleAnswer, StringComparison.Ordinal);
+        Assert.DoesNotContain("No card matches", searchAnswer, StringComparison.Ordinal);
+        Assert.Equal(catalog.Cards.Count, skills.Count);
+        Assert.Equal(skills.Count, skills.Select(s => s.Name).Distinct(StringComparer.Ordinal).Count());
+        Assert.NotNull(catalog.Find("canvaspilot/project-layout"));
+        Assert.DoesNotContain(catalog.Cards, card => card.Tags.Contains("hosting", StringComparer.Ordinal));
+        Assert.Null(catalog.Find("pdf"));
+    }
+
+    /// <summary>
+    ///     Test that a user who chooses Drawing Knowledge in the Help menu of the composed application gets a browser over
+    ///     the catalog of the application: its tree is the roots of the catalog, a search finds a card, a card shows its
+    ///     text and a related card that can be followed, and an example can be copied, without a window.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog()
+    {
+        // Arrange: the application composed as at startup, with a dialog service that plays the window
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var composition = ApplicationComposition.Create(
+            logger,
+            new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger),
+            new FakeRefreshScheduler());
+        _disposables.Add(composition);
+        var dialogs = new FakeDialogService();
+        composition.Shell.AttachDialogService(dialogs);
+        var clipboard = new RecordingKnowledgeClipboard();
+
+        // Act: the user chooses Drawing Knowledge, searches for a word, opens the card of the project layout, follows a
+        // related card, and copies the first example of the card of deliverables
+        var enabled = composition.Shell.ShowDrawingKnowledgeCommand.CanExecute(null);
+        await composition.Shell.ShowDrawingKnowledgeCommand.ExecuteAsync(null);
+        var browser = dialogs.LastKnowledgeBrowser!;
+        browser.Clipboard = clipboard;
+        browser.SearchText = "gradient";
+        var hits = browser.Results.Select(hit => hit.Id).ToList();
+        browser.Select("canvaspilot/project-layout");
+        var layoutTitle = browser.CardTitle;
+        var layoutBlocks = browser.Blocks.Count;
+        var related = browser.SeeAlso[0];
+        related.NavigateCommand.Execute(related.Id);
+        var followed = browser.SelectedCard!.Id;
+        browser.Select("canvaspilot/deliverables");
+        await browser.CopyExampleCommand.ExecuteAsync(browser.Examples[0]);
+
+        // Assert: the browser is over the catalog of the application and everything worked as the user would see it
+        Assert.True(enabled);
+        Assert.Equal(1, dialogs.KnowledgeBrowserCount);
+        Assert.Equal(KnowledgeCatalog.Default.Roots.Select(r => r.Id), browser.Nodes.Select(n => n.Id));
+        Assert.Contains("canvaspilot", browser.Nodes.Select(n => n.Id));
+        Assert.NotEmpty(hits);
+        Assert.False(string.IsNullOrWhiteSpace(layoutTitle));
+        Assert.True(layoutBlocks > 0);
+        Assert.Equal(related.Id, followed);
+        Assert.Equal([browser.Examples[0].Content], clipboard.Texts);
+        Assert.Equal($"Copied example '{browser.Examples[0].Name}'.", browser.Status);
+        Assert.Empty(dialogs.Messages);
     }
 
     /// <summary>
