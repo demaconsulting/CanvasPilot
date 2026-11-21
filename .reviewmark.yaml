@@ -1106,6 +1106,21 @@ reviews:
       - "src/**/StyleSubsystem/StyleKitArchive.cs"
       - "test/**/StyleSubsystem/StyleKitArchiveTests.cs"
 
+  - id: CanvasPilot-Style-StyleSelection
+    title: Review of CanvasPilot StyleSelection unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-selection.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-selection.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-selection.md"
+      - "src/**/StyleSubsystem/IActiveStyle.cs"
+      - "src/**/StyleSubsystem/StyleSelection.cs"
+      - "test/**/StyleSubsystem/StyleSelectionTests.cs"
+
   - id: CanvasPilot-Style-BuiltInStyleKits
     title: Review of CanvasPilot built-in style kits
     context:

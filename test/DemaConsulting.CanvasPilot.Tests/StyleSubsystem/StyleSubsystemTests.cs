@@ -56,9 +56,17 @@ public sealed class StyleSubsystemTests : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        if (Directory.Exists(_root))
+        // A refresh that a project change started may still be reading the files; try again for a moment
+        for (var attempt = 0; attempt < 40 && Directory.Exists(_root); attempt++)
         {
-            Directory.Delete(_root, recursive: true);
+            try
+            {
+                Directory.Delete(_root, recursive: true);
+            }
+            catch (IOException)
+            {
+                Thread.Sleep(50);
+            }
         }
     }
 
@@ -151,6 +159,109 @@ public sealed class StyleSubsystemTests : IDisposable
         var unavailable = Assert.Single(restarted.Locations, l => !l.IsAvailable);
         Assert.Equal(offline, unavailable.Path);
         Assert.Equal(5, restarted.Locations.Count);
+    }
+
+    /// <summary>
+    ///     Validates that the default kit of the user becomes the style of a new project, that the choice is kept in the
+    ///     project file, that another project service that opens the file resolves the same kit through a new catalog, and
+    ///     that a kit that cannot be found is reported as missing.
+    /// </summary>
+    [Fact]
+    public async Task StyleSubsystem_ChooseActiveKit_DefaultAndChoice_AreKeptInTheProjectFileAndSurviveReopening()
+    {
+        // Arrange: a kit of the user that is the default, real settings, and a new project
+        var ct = TestContext.Current.CancellationToken;
+        Directory.CreateDirectory(Path.Combine(_root, "projects"));
+        var user = Path.Combine(_root, "user");
+        WriteKit(user, "team-look", "mine");
+        var settings = new SettingsService(Path.Combine(_root, "settings"));
+        settings.Save(new AppSettings { Styles = new StyleSettings { DefaultKitId = "team-look" } });
+        var projects = new ProjectService();
+        using var catalog = new StyleKitCatalog(projects, settings, Path.Combine(_root, "builtin"), user, TimeSpan.FromSeconds(5));
+        using var selection = new StyleSelection(projects, catalog, settings);
+        await catalog.RefreshAsync(ct);
+        var project = (await projects.CreateAsync(Path.Combine(_root, "projects"), "Look", ct)).Project!;
+        await catalog.RefreshAsync(ct);
+
+        // Act: apply the default, read the file, open the file with a second set of services, and then name a kit that
+        // does not exist
+        await selection.ApplyDefaultToNewProjectAsync();
+        using var json = JsonDocument.Parse(await File.ReadAllTextAsync(project.FilePath, ct));
+        var secondProjects = new ProjectService();
+        using var secondCatalog = new StyleKitCatalog(secondProjects, settings, Path.Combine(_root, "builtin"), user, TimeSpan.FromSeconds(5));
+        using var second = new StyleSelection(secondProjects, secondCatalog, settings);
+        await secondProjects.OpenAsync(project.FilePath, ct);
+        await secondCatalog.RefreshAsync(ct);
+        var reopened = second.Active?.Kit.Id;
+        await second.SetActiveAsync("lost-kit");
+        var missing = (second.Active, second.IsMissing, second.ActiveId);
+
+        // Assert: the file named the default, the kit was resolved after reopening, and a lost kit is reported
+        Assert.Equal("team-look", json.RootElement.GetProperty("activeStyleKit").GetString());
+        Assert.Equal("team-look", reopened);
+        Assert.Equal((null, true, "lost-kit"), missing);
+    }
+
+    /// <summary>
+    ///     Validates that the sizes of the kit of the project are offered by the exporter of the Preview subsystem, ahead of
+    ///     the sizes of the application, and that exporting at the size of the kit writes a PNG of exactly that size over
+    ///     the background of the kit.
+    /// </summary>
+    [Fact]
+    public async Task StyleSubsystem_OfferExportPresets_KitSizes_AreOfferedByTheExporterAndWriteAPngOfTheSize()
+    {
+        // Arrange: a real project with a vector picture, a kit of the user with a size and a dark background that the
+        // project uses, and a shown picture
+        var ct = TestContext.Current.CancellationToken;
+        Directory.CreateDirectory(Path.Combine(_root, "projects"));
+        var user = Path.Combine(_root, "user");
+        var kit = new StyleKit(
+            "slides",
+            "Slides",
+            string.Empty,
+            new Dictionary<string, string> { ["background"] = "#102030", ["text"] = "#FFFFFF", ["primary"] = "#2563EB" },
+            new StyleFonts("sans-serif", "sans-serif", "monospace"),
+            2,
+            8,
+            16,
+            null,
+            null,
+            new StyleGuidanceText(string.Empty, [], []),
+            [new StyleSizePreset("Square", 320, 320, 96, false)],
+            []);
+        Directory.CreateDirectory(user);
+        var folder = Directory.CreateDirectory(Path.Combine(user, "slides")).FullName;
+        await File.WriteAllTextAsync(Path.Combine(folder, StyleKitSerializer.FileName), StyleKitSerializer.Write(kit), ct);
+        var settings = new SettingsService(Path.Combine(_root, "settings"));
+        var projects = new ProjectService();
+        using var catalog = new StyleKitCatalog(projects, settings, Path.Combine(_root, "builtin"), user, TimeSpan.FromSeconds(5));
+        using var selection = new StyleSelection(projects, catalog, settings);
+        var project = (await projects.CreateAsync(Path.Combine(_root, "projects"), "Look", ct)).Project!;
+        await catalog.RefreshAsync(ct);
+        await selection.SetActiveAsync("slides");
+        var svg = Path.Combine(project.FolderPath, "wide.svg");
+        await File.WriteAllTextAsync(svg, "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='#2563EB'/></svg>", ct);
+        var renderer = new PreviewSubsystem.ImageRenderService();
+        var source = new FakeRenderedImageSource
+        {
+            CurrentImage = (await renderer.RenderAsync(svg, project.FolderPath, ct)).Image,
+            ProjectFolder = project.FolderPath
+        };
+        var exporter = new PreviewSubsystem.ImageExporter(source, renderer, null, selection);
+        var dialogs = new FakeExportDialogs { PresetNameToPick = "Square", SaveFileToPick = Path.Combine(project.FolderPath, "square.png") };
+
+        // Act: export
+        await exporter.ExportPngAsync(dialogs);
+
+        // Assert: the user was offered the picture as shown, the size of the kit, and then the sizes of the application,
+        // and the file is a 320 x 320 PNG whose corner has the background of the kit
+        var offered = Assert.Single(dialogs.PresetOffers).Presets.Select(p => p.Name);
+        Assert.Equal(["As rendered", "Square", "PowerPoint 16:9", "Email (800 wide)", "A4 portrait @150 DPI"], offered);
+        using var stream = File.OpenRead(Path.Combine(project.FolderPath, "square.png"));
+        using var decoded = DemaConsulting.CanvasNet.Codecs.PngCodec.Load(stream);
+        Assert.Equal((320, 320), (decoded.Width, decoded.Height));
+        Assert.Equal(new DemaConsulting.CanvasNet.Canvas.Rgba32(16, 32, 48, 255), decoded[0, 0]);
+        Assert.Empty(dialogs.Messages);
     }
 
     /// <summary>

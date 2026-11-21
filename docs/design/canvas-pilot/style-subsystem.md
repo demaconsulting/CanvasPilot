@@ -13,8 +13,9 @@ later is given the style as a block of text and two tools, and a picture can be 
 None of it depends on any provider of a language model or on any agent library, so what the subsystem offers can be
 given to any assistant that is added later.
 
-The subsystem is built up unit by unit. It now contains three units, `StyleKitDocument`, `StyleKitCatalog`, and
-`StyleKitArchive`. `StyleKitDocument` holds the values of a kit and the format that they are kept in: it reads a kit
+The subsystem is built up unit by unit. It now contains four units, `StyleKitDocument`, `StyleKitCatalog`,
+`StyleKitArchive`, and `StyleSelection`. `StyleKitDocument` holds the values of a kit and the format that they are kept
+in: it reads a kit
 from a file and from its folder with a message for each wrong property, checks a kit that is built in memory with the
 same rules, and writes a kit as canonical text. `StyleKitCatalog` finds the kits in the four places, chooses the kit of
 the most local place for an id, reads shared folders on workers with a time limit, keeps the kits of the program and the
@@ -24,11 +25,13 @@ executable as loose files (content files of the library project) and are in the 
 package; each has three example files that use only the colors of the kit. `StyleKitArchive` writes a kit as a zip file
 and reads one from a zip file as untrusted input: it refuses as a whole, before anything is written, an archive with a
 name that could write outside the target, a link, a file that is not part of a kit, or too many or too large files, and
-it puts a valid kit in place from a hidden folder, so a refused archive leaves nothing. The units that choose the kit of
-a project, write the guidance for an assistant, check a picture, describe the tools of an assistant, and show and edit
-kits in windows follow in later steps, and this document grows with them. The subsystem depends on CanvasNet for the
-classification of font families, and on `Project`, `Settings`, `Utilities`, and `Logging` for the catalog of kits, and
-later on `Preview` and `Knowledge` (only the descriptor record of a tool).
+it puts a valid kit in place from a hidden folder, so a refused archive leaves nothing. `StyleSelection` finds the kit
+that the open project uses from the id in the project file, keeps a new choice in the project file, starts a new project
+with the default kit of the user, and offers the export sizes of the kit and of the application to the export dialog of
+`Preview`. The units that write the guidance for an assistant, check a picture, describe the tools of an assistant, and
+show and edit kits in windows follow in later steps, and this document grows with them. The subsystem depends on
+CanvasNet for the classification of font families, and on `Project`, `Settings`, `Preview`, `Utilities`, and `Logging`,
+and later on `Knowledge` (only the descriptor record of a tool).
 
 ### Interfaces
 
@@ -69,6 +72,20 @@ later on `Preview` and `Knowledge` (only the descriptor record of a tool).
 - *Constraints*: Stateless. `Import` never throws for a bad archive, writes only inside the target folder, and leaves
   nothing in it when it refuses.
 
+**StyleSelection**: The kit that the open project uses, and the export sizes.
+
+- *Type*: In-process .NET interface `IActiveStyle` and sealed class `StyleSelection`, which also implements
+  `IExportPresetSource` of the `Preview` subsystem.
+- *Role*: Provider (the active kit, the choice, the export sizes), and Consumer (the project service, the catalog, the
+  settings service).
+- *Contract*: `Active` is the kit that the id in the project file resolves to, `ActiveId` is that id, and `IsMissing` is
+  true when the id names a kit that cannot be found; `SetActiveAsync` writes the choice into the project file;
+  `ApplyDefaultToNewProjectAsync` gives a project with no style the default kit of the user; `GetPresets` gives the
+  sizes of the kit and then the sizes of the application that the kit does not rename; `Changed` is raised when any
+  answer may have changed.
+- *Constraints*: Keeps no copy of the choice, so an answer is never stale. Safe for concurrent use; `Changed` may be
+  raised on any thread.
+
 ### Design
 
 **The dependency rule.** The subsystems below `AppShell` do not depend on `AppShell` or on each other upwards, and this
@@ -98,8 +115,11 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 - **StyleKitDocument** unit: the values of a kit and the format of its file.
 - **StyleKitCatalog** unit: the kits in the places, the choice by precedence, and the changes to the kits of the user
   and of the project.
-- **StyleKitArchive** unit: a kit as a zip file, exported and imported as untrusted input.: which project is open and
-  when it changes (the project service).
+- **StyleKitArchive** unit: a kit as a zip file, exported and imported as untrusted input.
+- **StyleSelection** unit: the kit of the open project, the choice, and the export sizes.
+- **Project** subsystem: which project is open and when it changes, and the id of the kit that the project file keeps
+  (the project service).
+- **Preview** subsystem: the export size and the source of export sizes that `StyleSelection` implements.
 - **Settings** subsystem: the shared kit folders and when they change (the settings service).
 - **Utilities** subsystem: the safe combination of folder and file names.
 - **Logging** subsystem: the log of kits that cannot be used and folders that cannot be read.

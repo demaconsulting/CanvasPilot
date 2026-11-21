@@ -80,6 +80,12 @@ sections:
             justification: |
               The style belongs to the project, so the project file says which kit it uses, and a project that names a kit
               that is not here must say so and not look different without a word.
+            children:
+              - CanvasPilot-StyleSelection-ResolveTheActiveKit
+              - CanvasPilot-StyleSelection-KeepChoiceInTheProjectFile
+              - CanvasPilot-StyleSelection-StartNewProjectsWithTheDefault
+            tests:
+              - StyleSubsystem_ChooseActiveKit_DefaultAndChoice_AreKeptInTheProjectFileAndSurviveReopening
 
           - id: CanvasPilot-Style-OfferExportPresets
             title: >-
@@ -90,6 +96,10 @@ sections:
               The sizes that belong to a style should be one choice away when a picture is exported, and the user should
               still have the usual sizes when the kit has none. A kit that names a size the application also has is the
               better source for it.
+            children:
+              - CanvasPilot-StyleSelection-ListExportPresets
+            tests:
+              - StyleSubsystem_OfferExportPresets_KitSizes_AreOfferedByTheExporterAndWriteAPngOfTheSize
 
           - id: CanvasPilot-Style-GuideTheAssistant
             title: >-

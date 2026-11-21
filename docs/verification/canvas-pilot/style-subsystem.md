@@ -26,6 +26,10 @@ project file of the application library from the repository; no network, display
   the project becomes the kit of its id.
 - A kit that is exported to a zip file and imported is the same kit; a second import of the same id is refused, and an
   archive with a name that climbs out of the target is refused with nothing created outside the target.
+- The default kit of the user becomes the style of a new project and is kept in the project file; another set of
+  services that opens the file finds the same kit; a kit that cannot be found is reported as missing.
+- The export sizes that the style supplies are offered by the exporter of the `Preview` subsystem, the sizes of the kit
+  first, and an export at the size of the kit is a PNG of exactly that size over the background of the kit.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that the
   project file of the application library declares is a language model or agent library.
 
@@ -51,6 +55,19 @@ read from a folder is exported to a zip file and imported into another place; th
 canonical text. A second import of the same file is refused because the id is taken, and an archive with a name that
 climbs out of the target is refused; the target holds only the one kit and nothing was created beside it. This scenario
 is tested by `StyleSubsystem_ExchangeKitsAsZipFiles_ExportImportAndHostileArchive_MoveKitsAndChangeNothingOutside`.
+
+**StyleSubsystem_ChooseActiveKit_DefaultAndChoice_AreKeptInTheProjectFileAndSurviveReopening**: With a kit of the user
+as the default kit in the real settings and a new project, applying the default writes `activeStyleKit` into the project
+file. A second project service, catalog, and selection that open the file find the same kit as the active kit; naming a
+kit that does not exist then reports it as missing, with its id and no kit. This scenario is tested by
+`StyleSubsystem_ChooseActiveKit_DefaultAndChoice_AreKeptInTheProjectFileAndSurviveReopening`.
+
+**StyleSubsystem_OfferExportPresets_KitSizes_AreOfferedByTheExporterAndWriteAPngOfTheSize**: A project uses a kit of the
+user with a dark background and one size, `Square` at 320 by 320. With a vector picture shown, the exporter that gets
+the selection as its source of sizes offers the picture as it is shown, `Square`, and the three sizes of the
+application, in that order; exporting at `Square` writes a PNG of 320 by 320 whose corner has the background of the kit,
+with no message. This scenario is tested by
+`StyleSubsystem_OfferExportPresets_KitSizes_AreOfferedByTheExporterAndWriteAPngOfTheSize`.
 
 **StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers to, the
 packages in the dependency file of the test project, and the package references in the project file of the application
