@@ -81,6 +81,6 @@ verification of `ImageDragSource`). This scenario is tested by
 **PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution**: With the real render
 service, the file of the shown 40 by 20 picture and the folder of the project that the pane gives as the source of the
 picture are drawn again into a 400 by 400 box with a white margin. The picture is exactly 400 by 400, its corner is
-white, the red picture is in the middle, and the PNG that is encoded from it with 150 dots per inch decodes at 400 by 400
-and holds 5906 pixels per meter in its physical size chunk. This scenario is tested by
+white, the red picture is in the middle, and the PNG that is encoded from it with 150 dots per inch decodes at 400 by
+400 and holds 5906 pixels per meter in its physical size chunk. This scenario is tested by
 `PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution`.

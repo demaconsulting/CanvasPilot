@@ -134,9 +134,9 @@ raises one change event. This scenario is tested by
 scenario is tested by `ProjectService_CloseThenOpen_SameFile_OpensAgain`.
 
 **ProjectService_SetActiveStyleKitAsync_ValidId_IsWrittenAndReadBackAfterReopen**: Setting the kit `slides-dark` on a
-created project writes `activeStyleKit` and the later modified time into the file, makes the kit part of the open project
-and of the returned project, raises one change event, leaves no temporary file, and a second service that opens the file
-reads the same kit. This scenario is tested by
+created project writes `activeStyleKit` and the later modified time into the file, makes the kit part of the open
+project and of the returned project, raises one change event, leaves no temporary file, and a second service that opens
+the file reads the same kit. This scenario is tested by
 `ProjectService_SetActiveStyleKitAsync_ValidId_IsWrittenAndReadBackAfterReopen`.
 
 **ProjectService_SetActiveStyleKitAsync_NullOrSameId_RemovesPropertyOrDoesNothing**: Setting the kit that the project
@@ -150,8 +150,8 @@ and the unknown property. This scenario is tested by
 `ProjectService_SetActiveStyleKitAsync_OlderFileWithUnknownProperty_ReadsAsNoStyleAndKeepsProperty`.
 
 **ProjectService_SetActiveStyleKitAsync_InvalidId_IsRefused**: An empty id, a blank id, an id with an upper-case letter,
-a leading dash, a space, an underscore, `..`, a backslash, a line feed, or 49 characters is refused with the message that
-says what an id is, and the file and the open project stay as they were. This scenario is tested by
+a leading dash, a space, an underscore, `..`, a backslash, a line feed, or 49 characters is refused with the message
+that says what an id is, and the file and the open project stay as they were. This scenario is tested by
 `ProjectService_SetActiveStyleKitAsync_InvalidId_IsRefused`.
 
 **ProjectService_SetActiveStyleKitAsync_LongestId_IsAccepted**: An id of 48 characters that starts with a digit is

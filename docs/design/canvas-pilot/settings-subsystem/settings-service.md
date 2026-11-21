@@ -4,10 +4,10 @@
 
 #### Purpose
 
-`SettingsService` owns the application settings. It reads and writes the versioned per-user settings file,
-keeps the settings in effect, and announces changes. A bad, missing, or newer file never stops the
-application. The `AppSettings`, `AiProviderSettings`, `SpeechSettings`, and `StyleSettings` records and `ISettingsService`
-interface belong to this unit.
+`SettingsService` owns the application settings. It reads and writes the versioned per-user settings file, keeps the
+settings in effect, and announces changes. A bad, missing, or newer file never stops the application. The `AppSettings`,
+`AiProviderSettings`, `SpeechSettings`, and `StyleSettings` records and `ISettingsService` interface belong to this
+unit.
 
 #### Data Model
 
@@ -61,13 +61,12 @@ marks the file corrupt, so it is moved to `settings.json.bad` (replacing any ear
 logged, and defaults are used. When the file's version is newer than the supported version, log a warning and
 use the known values. Normalize the result.
 
-**Normalize**: Makes parsed or caller-supplied settings safe to use. Sets the version to the current version;
-replaces null sections, strings, and dictionary entries with defaults; drops blank recent-project entries;
-replaces a context window outside its bounds and an endpoint that is not an absolute `http` or `https` URL
-with their defaults; trims text values; keeps the shared style kit folders that are full paths, each once (ignoring
-case, in the first spelling) and in their order, drops a relative, blank, or invalid entry with a warning in the log, and
-keeps a folder that does not exist because a network folder may be back later; and replaces a default style kit id that no
-kit can have with none.
+**Normalize**: Makes parsed or caller-supplied settings safe to use. Sets the version to the current version; replaces
+null sections, strings, and dictionary entries with defaults; drops blank recent-project entries; replaces a context
+window outside its bounds and an endpoint that is not an absolute `http` or `https` URL with their defaults; trims text
+values; keeps the shared style kit folders that are full paths, each once (ignoring case, in the first spelling) and in
+their order, drops a relative, blank, or invalid entry with a warning in the log, and keeps a folder that does not exist
+because a network folder may be back later; and replaces a default style kit id that no kit can have with none.
 
 **Save**: Replaces the settings in effect and writes them.
 

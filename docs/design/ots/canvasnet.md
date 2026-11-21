@@ -26,7 +26,8 @@ whole set always moves to one version together.
   transparent color `Rgba32(0, 0, 0, 0)`, transparent; with one side the picture scales keeping its ratio; any other
   background color flattens the picture over it; `Dpi` sizes the natural page of a PDF, PowerPoint, or Visio file and
   every other kind ignores it. The sides must be 1 to 8192 and the resolution greater than 0 and at most 2400, or the
-  viewer throws `ArgumentOutOfRangeException`. A vector file is drawn at the size and a raster is resampled by the viewer.
+  viewer throws `ArgumentOutOfRangeException`. A vector file is drawn at the size and a raster is resampled by the
+  viewer.
 - Mermaid theme — `ViewerRenderOptions` has no Mermaid option: the theme and the theme variables come from the front
   matter of the Mermaid file (`config:` with `theme: base` and `themeVariables:`), so the colors of a style kit reach a
   diagram through the file that is written, and the application cannot inject them.
@@ -36,8 +37,8 @@ whole set always moves to one version together.
   corner) and `ViewerImage.PositionsTruncated` (the library reports at most 1000 positions) carry the answer. Every
   other kind of file ignores the request, and a picture that a file embeds never reports positions.
 - `ViewerImage.Anchors` (`SourceAnchor`: `Name`, `X`, `Y`, `Z`, `PixelX`, `PixelY`) — the anchors that an OpenSCAD model
-  declares with `echo("anchor", name, [x, y, z])`. Their pixel positions are in the pixels of the picture that was drawn,
-  so a render at a requested size reports them at that size.
+  declares with `echo("anchor", name, [x, y, z])`. Their pixel positions are in the pixels of the picture that was
+  drawn, so a render at a requested size reports them at that size.
 - `CanvasNetViewer.Render(Stream, fileName, options)` — draws an SVG document held in memory. `MarkImageComposer` uses
   it to draw marks over the picture the user saw: the SVG embeds the picture as a `data:image/png;base64` link and draws
   rectangle, ellipse, polyline, circle, and text elements over it, so no file is written and the picture is exactly the
@@ -55,12 +56,13 @@ whole set always moves to one version together.
   identifier instead); `Find`, `GetChildren`, `GetSeeAlso`, `Roots`, and `Cards` read the tree;
   `FormatMarkdown(card, formatLink)` writes the body of a card with the links in the caller's words. `HelpCard` and
   `HelpExample` carry the parts of a card.
-- `GenericFontFamilies` (namespace `DemaConsulting.CanvasNet.Fonts`) — `TryClassify(name, includeCommonAliases: true, ...)`
-  says whether a font family name is a generic CSS family, a common alias of one (such as `Arial` or `Segoe UI`), or a
-  bundled Liberation family, and which bundled design stands in for it; `SplitFamilyList` splits a CSS `font-family` list.
-  `StyleKitDocument` classifies the first family of each font list of a style kit with it, so that the warning about a font
-  that is not bundled agrees with what the library draws. CanvasNet draws SVG and OpenSCAD text with an installed font when
-  the machine has it, and Mermaid, PlantUML, and Vega-Lite text with the bundled fonts only.
+- `GenericFontFamilies` (namespace `DemaConsulting.CanvasNet.Fonts`) —
+  `TryClassify(name, includeCommonAliases: true, ...)` says whether a font family name is a generic CSS family, a common
+  alias of one (such as `Arial` or `Segoe UI`), or a bundled Liberation family, and which bundled design stands in for
+  it; `SplitFamilyList` splits a CSS `font-family` list. `StyleKitDocument` classifies the first family of each font
+  list of a style kit with it, so that the warning about a font that is not bundled agrees with what the library draws.
+  CanvasNet draws SVG and OpenSCAD text with an installed font when the machine has it, and Mermaid, PlantUML, and
+  Vega-Lite text with the bundled fonts only.
 
 ### Integration Pattern
 
@@ -68,12 +70,11 @@ CanvasNet is consumed as a NuGet package reference of the application library. `
 `CanvasNetViewer.Render` for files and `PngCodec`; `MarkImageComposer` calls `CanvasNetViewer.Render` only for the SVG
 document it builds in memory, and `Surface.Crop` and `PngCodec`; `KnowledgeCatalog` extends `HelpCatalog.Default` with
 the cards embedded in the application, leaves out the cards that are only about the host program (by identifier), and
-copies the cards into values of its own, once, on first use; `StyleKitDocument` asks `GenericFontFamilies` whether the first
-family of a font list is one that CanvasNet draws the same on every machine; `CanvasNetImageSourceFilter` of the project
-explorer reads
-`CanvasNetViewer.Extensions`. The viewer is a static, stateless, thread-safe class, so each render is an independent
-call on a thread-pool thread, and the `ViewerImage` is disposed as soon as its pixels and notes are copied. The
-application never lets CanvasNet read outside the project folder and never draws on the user interface thread. CanvasNet
-has no self-validation mode; the OTS tests in `CanvasNetTests.cs` exercise the calls above directly and are the evidence
-that the library behaves as the application relies on, and a version upgrade re-runs them before it is accepted. The
-drawing libraries bundled with the viewer are not used separately.
+copies the cards into values of its own, once, on first use; `StyleKitDocument` asks `GenericFontFamilies` whether the
+first family of a font list is one that CanvasNet draws the same on every machine; `CanvasNetImageSourceFilter` of the
+project explorer reads `CanvasNetViewer.Extensions`. The viewer is a static, stateless, thread-safe class, so each
+render is an independent call on a thread-pool thread, and the `ViewerImage` is disposed as soon as its pixels and notes
+are copied. The application never lets CanvasNet read outside the project folder and never draws on the user interface
+thread. CanvasNet has no self-validation mode; the OTS tests in `CanvasNetTests.cs` exercise the calls above directly
+and are the evidence that the library behaves as the application relies on, and a version upgrade re-runs them before it
+is accepted. The drawing libraries bundled with the viewer are not used separately.

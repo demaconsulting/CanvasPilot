@@ -45,6 +45,12 @@ enableGlobDot: true
 # Project-specific technical terms and tool names
 words:
   - AARRGGBB
+  - IDAT
+  - IEND
+  - IHDR
+  - Letterboxed
+  - Rescan
+  - Über
   - Argb
   - Avalonia
   - axaml

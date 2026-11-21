@@ -9,9 +9,9 @@ CanvasNet (`DemaConsulting.CanvasNet.Viewer`, with the `DemaConsulting.CanvasNet
 image source files of a project to pixels, lists the file types it can draw, confines the files a drawn file may read,
 reports problems with files as descriptive exceptions, honors cancellation, encodes PNG, reports where it drew the
 elements of diagrams, charts, and models, draws an SVG document held in memory, copies a region of a picture, and
-provides its help as cards that can be extended with the cards of the application, and tells which font families it draws
-the same on every machine. The application
-relies on each of these behaviors, so each has a requirement and a test.
+provides its help as cards that can be extended with the cards of the application, and tells which font families it
+draws the same on every machine. The application relies on each of these behaviors, so each has a requirement and a
+test.
 
 ### Verification Approach
 
@@ -175,25 +175,26 @@ a card and to an example written by the function that was given; the catalog tha
 
 #### CanvasNet_GenericFontFamilies_ClassifiesBundledAliasesAndUnknownFamilies
 
-**Scenario**: The family names `sans-serif`, `Segoe UI`, `serif`, `monospace`, `Consolas`, `liberation mono`, `Inter`, and
-`Comic Sans MS` are classified with the common aliases included, `Arial` is classified without them, and the list
+**Scenario**: The family names `sans-serif`, `Segoe UI`, `serif`, `monospace`, `Consolas`, `liberation mono`, `Inter`,
+and `Comic Sans MS` are classified with the common aliases included, `Arial` is classified without them, and the list
 `"Segoe UI", Arial, sans-serif` is split.
 
-**Expected**: The keywords, `Segoe UI`, `Consolas`, and `liberation mono` are recognized, with the serif design for `serif`
-and the monospace design for `monospace`, `Consolas`, and `liberation mono`; `Inter` and `Comic Sans MS` are not recognized;
-`Arial` is not recognized when the aliases are not asked for; and the list has the three names without quotes.
+**Expected**: The keywords, `Segoe UI`, `Consolas`, and `liberation mono` are recognized, with the serif design for
+`serif` and the monospace design for `monospace`, `Consolas`, and `liberation mono`; `Inter` and `Comic Sans MS` are not
+recognized; `Arial` is not recognized when the aliases are not asked for; and the list has the three names without
+quotes.
 
 **Requirement coverage**: `CanvasPilot-OTS-CanvasNet-ClassifyFontFamilies`.
 
 #### CanvasNet_Render_WidthHeightAndBackground_GivesExactSizeAndTransparency
 
 **Scenario**: A 1600 by 640 SVG with one violet rectangle is drawn at its natural size, into a 1920 by 1080 box over a
-fully transparent background and over the color `#0A1022`, and at a width of 800 only; a Mermaid diagram is drawn into an
-800 by 400 box over a transparent background and over the same color.
+fully transparent background and over the color `#0A1022`, and at a width of 800 only; a Mermaid diagram is drawn into
+an 800 by 400 box over a transparent background and over the same color.
 
 **Expected**: The natural picture is 1600 by 640; each box picture is exactly the size of the box; the corner of a
-picture over the transparent background has alpha 0 and over the color is that color; the middle of the SVG is violet, so
-the picture is fitted and not stretched; and the width alone gives 800 by 320.
+picture over the transparent background has alpha 0 and over the color is that color; the middle of the SVG is violet,
+so the picture is fitted and not stretched; and the width alone gives 800 by 320.
 
 **Requirement coverage**: `CanvasPilot-OTS-CanvasNet-RenderAtRequestedSize`.
 

@@ -42,7 +42,7 @@ startup, a dialog is opened, a model name is typed, and OK is chosen; a fresh se
 the corrupt file exists as `settings.json.bad`. This scenario is tested by
 `SettingsSubsystem_ToleratePoorFiles_CorruptFile_DialogStillWorks`.
 
-**SettingsSubsystem_KeepStyleSettings_SavedWithOthers_SurviveRestartAndOtherChanges**: Style settings with a shared folder
-and a default kit are stored, a model name is typed in the dialog, and OK is chosen. A fresh service loads the model name
-and the style settings as they were. This scenario is tested by
+**SettingsSubsystem_KeepStyleSettings_SavedWithOthers_SurviveRestartAndOtherChanges**: Style settings with a shared
+folder and a default kit are stored, a model name is typed in the dialog, and OK is chosen. A fresh service loads the
+model name and the style settings as they were. This scenario is tested by
 `SettingsSubsystem_KeepStyleSettings_SavedWithOthers_SurviveRestartAndOtherChanges`.

@@ -25,15 +25,15 @@ Fee license terms that started with WiX v6.
 
 ### Integration Pattern
 
-The installer project is a separate project that is not part of the solution, so the cross-platform restore and build
-of the solution never needs WiX. Only the Windows build job uses it, after the application is published self-contained
-as a single file for `win-x64` with the debug symbols and documentation files removed: it computes the numeric MSI
-version from the build version (a prerelease suffix cannot be represented and is removed), builds the installer
-project with that version and the publish folder as properties, and copies the package to
-`CanvasPilot-{version}-win-x64.msi`. The properties reach `Package.wxs` as preprocessor variables. WiX has no
-self-validation mode, so the evidence that it works is the FileAssert test `WiX_MsiPackage` (tag `installer`), run
-against the copied package in the same job; its results file is an input of requirements enforcement. The same job
-asserts, with other FileAssert tests of the same tag, that the published folder holds the native speech runtime and the
-style kits that come with the program (the `StyleKits` folder), and a
-step reads the file table of the package to check that the installer took those files, also those of the sub-folders. What the
-installed package does is checked by hand before a release. The package is never built or installed by the tests.
+The installer project is a separate project that is not part of the solution, so the cross-platform restore and build of
+the solution never needs WiX. Only the Windows build job uses it, after the application is published self-contained as a
+single file for `win-x64` with the debug symbols and documentation files removed: it computes the numeric MSI version
+from the build version (a prerelease suffix cannot be represented and is removed), builds the installer project with
+that version and the publish folder as properties, and copies the package to `CanvasPilot-{version}-win-x64.msi`. The
+properties reach `Package.wxs` as preprocessor variables. WiX has no self-validation mode, so the evidence that it works
+is the FileAssert test `WiX_MsiPackage` (tag `installer`), run against the copied package in the same job; its results
+file is an input of requirements enforcement. The same job asserts, with other FileAssert tests of the same tag, that
+the published folder holds the native speech runtime and the style kits that come with the program (the `StyleKits`
+folder), and a step reads the file table of the package to check that the installer took those files, also those of the
+sub-folders. What the installed package does is checked by hand before a release. The package is never built or
+installed by the tests.

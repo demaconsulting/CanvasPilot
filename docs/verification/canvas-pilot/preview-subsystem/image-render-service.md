@@ -31,9 +31,9 @@ Standard test environment with temporary local folders and real file I/O; no net
 - A cancelled token, before or during the render, gives a cancelled result with no picture or error.
 - An encoded PNG has the signature and decodes to the same size and pixels, including transparency, and one that is
   encoded with a resolution has a correct physical size chunk and decodes to the same pixels.
-- A render at a requested width and height is exactly that size, fitted with the ratio kept, with a transparent or colored
-  margin, for SVG, Mermaid, Vega-Lite, and raster files; one side scales with the ratio; no settings change nothing; and
-  a size, color, or resolution that is not allowed is an error result with the code `invalid-settings`.
+- A render at a requested width and height is exactly that size, fitted with the ratio kept, with a transparent or
+  colored margin, for SVG, Mermaid, Vega-Lite, and raster files; one side scales with the ratio; no settings change
+  nothing; and a size, color, or resolution that is not allowed is an error result with the code `invalid-settings`.
 - Invalid arguments are refused.
 
 #### Test Scenarios
@@ -155,8 +155,8 @@ violet, so the picture is fitted and not stretched; the width gives 800 by 320; 
 1600 by 640. This scenario is tested by `ImageRenderService_RenderAsync_SvgIntoBox_IsExactlyThatSizeAndLetterboxed`.
 
 **ImageRenderService_RenderAsync_MermaidVegaLiteAndRasterIntoBox_AreExactlyThatSize**: A Mermaid diagram, a Vega-Lite
-chart, and a 10 by 10 red PNG are drawn into an 800 by 400 box with a transparent margin. Each is exactly 800 by 400, the
-corner of the diagram and of the PNG is transparent, and the middle of the PNG is red. This scenario is tested by
+chart, and a 10 by 10 red PNG are drawn into an 800 by 400 box with a transparent margin. Each is exactly 800 by 400,
+the corner of the diagram and of the PNG is transparent, and the middle of the PNG is red. This scenario is tested by
 `ImageRenderService_RenderAsync_MermaidVegaLiteAndRasterIntoBox_AreExactlyThatSize`.
 
 **ImageRenderService_RenderAsync_InvalidSettings_ReturnsInvalidSettingsError**: A width of 0 or 8193, a height of -5 or
@@ -176,8 +176,8 @@ last has the chunk (21 bytes more) and decodes to the same size and pixels, and 
 scenario is tested by `ImageRenderService_EncodePng_WithDpi_WritesPhysicalSizeAndKeepsPixels`.
 
 **PngPhysicalSize_Insert_Png_AddsCorrectChunkAfterHeaderAndKeepsPixels**: The chunk is added to a PNG from the codec of
-CanvasNet. The original array is not changed, the bytes before the chunk are the signature and header chunk, the chunk has
-nine bytes of data with 5906 pixels per meter on both axes and the meter as unit, its checksum equals a bit-by-bit
+CanvasNet. The original array is not changed, the bytes before the chunk are the signature and header chunk, the chunk
+has nine bytes of data with 5906 pixels per meter on both axes and the meter as unit, its checksum equals a bit-by-bit
 reference computation, the rest of the file follows unchanged, and the file decodes to the same pixels. This scenario is
 tested by `PngPhysicalSize_Insert_Png_AddsCorrectChunkAfterHeaderAndKeepsPixels`.
 

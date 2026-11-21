@@ -79,11 +79,12 @@ temporary file is deleted and the failure is returned and logged.
 rule that style kits follow (1 to 48 lower-case letters, digits, and dashes that start with a letter or a digit; `null`
 means no style), because the project subsystem does not depend on the style subsystem and the id is only text to it, but
 the id is used by other units to build the name of a folder, so it must never be something else. Fails with a message
-when the id is invalid or no project is open; returns the open project without writing when the project already has
-that id. Otherwise it writes the document with `ActiveStyleKit` changed through the same private step as `SaveAsync`
+when the id is invalid or no project is open; returns the open project without writing when the project already has that
+id. Otherwise it writes the document with `ActiveStyleKit` changed through the same private step as `SaveAsync`
 (modified time set, temporary file, move over the project file), replaces the open project with the saved one when it is
-still the open project, and raises `CurrentChanged`. Raising the event is safe for the units that follow it: the workspace
-opens the explorer only when the folder is not the one that is open, and the style selection reads the id again.
+still the open project, and raises `CurrentChanged`. Raising the event is safe for the units that follow it: the
+workspace opens the explorer only when the folder is not the one that is open, and the style selection reads the id
+again.
 
 **Close**: Clears the open project and raises `CurrentChanged` once; does nothing when no project is open.
 

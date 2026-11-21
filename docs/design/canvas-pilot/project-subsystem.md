@@ -22,12 +22,12 @@ shell, which supplies the folder picker and the refresh scheduler.
 
 - *Type*: In-process .NET API (`IProjectService`).
 - *Role*: Provider.
-- *Contract*: `CreateAsync(parentFolder, name)`, `OpenAsync(projectFile)`, and `SaveAsync()` return a
-  `ProjectResult` that holds the `ProjectInfo` or a user-readable error; `SetActiveStyleKitAsync(id)` keeps the id of the
-  style kit of the project (or none) in the project file and returns the same kind of result; `Close()` closes the
-  project; `Current` is the open project or `null`; `CurrentChanged` is raised after the open project changes, and after
-  the style kit that it uses changes;
-  `ValidateProjectName`, `ValidateParentFolder`, and `ValidateNewProject` return a problem text or `null`.
+- *Contract*: `CreateAsync(parentFolder, name)`, `OpenAsync(projectFile)`, and `SaveAsync()` return a `ProjectResult`
+  that holds the `ProjectInfo` or a user-readable error; `SetActiveStyleKitAsync(id)` keeps the id of the style kit of
+  the project (or none) in the project file and returns the same kind of result; `Close()` closes the project; `Current`
+  is the open project or `null`; `CurrentChanged` is raised after the open project changes, and after the style kit that
+  it uses changes; `ValidateProjectName`, `ValidateParentFolder`, and `ValidateNewProject` return a problem text or
+  `null`.
 - *Constraints*: Ordinary user problems are returned, never thrown. A failed open leaves the open project
   unchanged.
 

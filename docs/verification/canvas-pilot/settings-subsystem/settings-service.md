@@ -115,23 +115,24 @@ attached; the handler receives the loaded settings. This scenario is tested by
 also cover the style settings: two shared folders, one of them a network path, and a default kit are stored, read by a
 fresh service, and written as `styles.sharedKitFolders` and `styles.defaultKitId`.
 
-**SettingsService_Load_FileWithoutStyles_GivesNoSharedFoldersAndNoDefaultKit**: A file from before style kits, and a file
-whose `styles` is `null`, give no shared folders and no default kit. This scenario is tested by
+**SettingsService_Load_FileWithoutStyles_GivesNoSharedFoldersAndNoDefaultKit**: A file from before style kits, and a
+file whose `styles` is `null`, give no shared folders and no default kit. This scenario is tested by
 `SettingsService_Load_FileWithoutStyles_GivesNoSharedFoldersAndNoDefaultKit`.
 
-**SettingsService_Load_SharedKitFolders_AreTrimmedFilteredAndUniqueInOrder**: A file lists a folder with white space around
-it, a relative path, a blank entry, `null`, the first folder again in upper case, a folder that does not exist, and a
-drive-relative path. The result is the first folder trimmed, then the folder that does not exist, and the log has four lines
-about dropped entries. This scenario is tested by `SettingsService_Load_SharedKitFolders_AreTrimmedFilteredAndUniqueInOrder`.
+**SettingsService_Load_SharedKitFolders_AreTrimmedFilteredAndUniqueInOrder**: A file lists a folder with white space
+around it, a relative path, a blank entry, `null`, the first folder again in upper case, a folder that does not exist,
+and a drive-relative path. The result is the first folder trimmed, then the folder that does not exist, and the log has
+four lines about dropped entries. This scenario is tested by
+`SettingsService_Load_SharedKitFolders_AreTrimmedFilteredAndUniqueInOrder`.
 
-**SettingsService_Load_DefaultKitId_IsValidOrEmpty**: A valid id is kept, one with white space around it is trimmed, and an
-id with an upper-case letter, a leading dash, a space, `..`, or no text is replaced with none. This scenario is tested by
-`SettingsService_Load_DefaultKitId_IsValidOrEmpty`.
+**SettingsService_Load_DefaultKitId_IsValidOrEmpty**: A valid id is kept, one with white space around it is trimmed, and
+an id with an upper-case letter, a leading dash, a space, `..`, or no text is replaced with none. This scenario is
+tested by `SettingsService_Load_DefaultKitId_IsValidOrEmpty`.
 
-**SettingsService_Update_StyleSettings_KeepsOtherSettingsAndPersists**: An update that changes only the style settings keeps
-the AI provider and speech settings, and a fresh service reads the new style settings. This scenario is tested by
+**SettingsService_Update_StyleSettings_KeepsOtherSettingsAndPersists**: An update that changes only the style settings
+keeps the AI provider and speech settings, and a fresh service reads the new style settings. This scenario is tested by
 `SettingsService_Update_StyleSettings_KeepsOtherSettingsAndPersists`.
 
-**SettingsService_StyleSettings_IsValidKitId_FollowsTheRule**: Ids of 1 to 48 lower-case letters, digits, and dashes that do
-not start with a dash are valid; 49 characters, none, empty text, a leading dash, upper case, an underscore, and a line feed
-are not. This scenario is tested by `SettingsService_StyleSettings_IsValidKitId_FollowsTheRule`.
+**SettingsService_StyleSettings_IsValidKitId_FollowsTheRule**: Ids of 1 to 48 lower-case letters, digits, and dashes
+that do not start with a dash are valid; 49 characters, none, empty text, a leading dash, upper case, an underscore, and
+a line feed are not. This scenario is tested by `SettingsService_StyleSettings_IsValidKitId_FollowsTheRule`.

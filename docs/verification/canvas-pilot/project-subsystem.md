@@ -47,8 +47,8 @@ files; one is renamed and the other deleted, after which only the renamed file i
 project file remain. This scenario is tested by
 `ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources`.
 
-**ProjectSubsystem_KeepTheStyleChoice_SetAndReopen_GivesTheSameChoiceAndKeepsTheProject**: A created project has an image
-file and, in its project file, a property that this version does not know. A style kit is chosen, and a second service
-that opens the file as after a restart reads the same kit. The unknown property is still in the file, the image file and
-the data folder are untouched, and choosing no style removes the property of the style and keeps the unknown one. This
-scenario is tested by `ProjectSubsystem_KeepTheStyleChoice_SetAndReopen_GivesTheSameChoiceAndKeepsTheProject`.
+**ProjectSubsystem_KeepTheStyleChoice_SetAndReopen_GivesTheSameChoiceAndKeepsTheProject**: A created project has an
+image file and, in its project file, a property that this version does not know. A style kit is chosen, and a second
+service that opens the file as after a restart reads the same kit. The unknown property is still in the file, the image
+file and the data folder are untouched, and choosing no style removes the property of the style and keeps the unknown
+one. This scenario is tested by `ProjectSubsystem_KeepTheStyleChoice_SetAndReopen_GivesTheSameChoiceAndKeepsTheProject`.
