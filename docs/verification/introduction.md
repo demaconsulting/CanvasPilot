@@ -2,7 +2,8 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
-AppShell, Annotation, Chat, Composer, Logging, Payload, Preview, Project, Settings, Speech, and Utilities subsystems;
+AppShell, Annotation, Chat, Composer, Knowledge, Logging, Payload, Preview, Project, Settings, Speech, and Utilities
+subsystems;
 the AI agent that will answer the messages is not part of this version and is added as a further subsystem when it is
 introduced.
 
@@ -42,6 +43,14 @@ This document covers the verification design for the following software items:
       send
     - **ComposerEditor** — the editing view of the message: text, dictated text, and chips inline, with undo and redo
       keys, paste, and drop
+  - **Knowledge** subsystem
+    - **KnowledgeCatalog** — the tree of cards from the help of CanvasNet and the cards of CanvasPilot
+    - **KnowledgeSearch** — the cards that fit some words, best first
+    - **KnowledgePromptBuilder** — the cards as text for the prompt of an assistant, within a size budget
+    - **KnowledgeTools** — the tool description and function by which an assistant gets the cards
+    - **KnowledgeSkills** — each card as a skill for an assistant
+    - **KnowledgeMarkdown** — the Markdown of a card as blocks that a window draws, with no text lost
+    - **KnowledgeBrowser** — the window in which the user reads, searches, and follows the cards and copies examples
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
   - **Payload** subsystem
@@ -100,7 +109,8 @@ The following topics are out of scope:
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
 - The AI agent is not part of this version, and so is not verified; the messages are composed and sent without an
-  agent, and only the stored settings that the agent will read, and the payload that it will receive, are verified
+  agent, and only the stored settings that the agent will read, the payload that it will receive, and the knowledge
+  that it will be given are verified
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified
@@ -116,6 +126,7 @@ test/
 │   ├── AppShellSubsystem/
 │   ├── ChatSubsystem/
 │   ├── ComposerSubsystem/
+│   ├── KnowledgeSubsystem/
 │   ├── LoggingSubsystem/
 │   ├── PayloadSubsystem/
 │   ├── PreviewSubsystem/

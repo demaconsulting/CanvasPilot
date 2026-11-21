@@ -43,13 +43,13 @@ Available now:
   folders, and images as inline chips, and undo and redo in fine-grained steps
 - **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows, numbered
   and with notes; the marks are embedded in the message with crops and the source elements under each mark
+- **Drawing knowledge**: Browse CanvasNet's built-in cards and CanvasPilot's own project guide from the Help menu
 - **Settings**: Choose the AI provider, and the speech devices and models, with model downloads
 - **Windows installer**: One MSI package for 64-bit Windows
 
 Planned:
 
 - **AI copilot chat**: GitHub Copilot or Ollama writes, renders, inspects, and fixes drawings in a self-checking loop
-- **Built-in CanvasNet knowledge cards**: Format and style guidance the copilot reads while it works
 - **Safe by default**: The copilot can use only CanvasPilot's own tools, confined to the project folder, with an
   opt-in unrestricted mode
 - **Spoken replies**: Text-to-speech for the copilot's answers

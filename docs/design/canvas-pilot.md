@@ -5,8 +5,8 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented are eleven subsystems, `Annotation`, `AppShell`, `Chat`, `Composer`, `Logging`, `Payload`,
-`Preview`, `Project`, `Settings`, `Speech`, and `Utilities`.
+software items documented are twelve subsystems, `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`,
+`Payload`, `Preview`, `Project`, `Settings`, `Speech`, and `Utilities`.
 
 ```mermaid
 flowchart TD
@@ -31,6 +31,15 @@ flowchart TD
         AttachmentStore
         ComposerViewModel
         ComposerEditor
+    end
+    subgraph Knowledge
+        KnowledgeCatalog
+        KnowledgeSearch
+        KnowledgePromptBuilder
+        KnowledgeTools
+        KnowledgeSkills
+        KnowledgeMarkdown
+        KnowledgeBrowser
     end
     subgraph Logging
         RollingFileLogger
@@ -165,6 +174,19 @@ flowchart TD
     MainWindowShell --> ProjectWorkspace
     MainWindowShell --> ImageExporter
     MainWindowShell --> AboutDialog
+    MainWindowShell --> KnowledgeBrowser
+    KnowledgeSearch --> KnowledgeCatalog
+    KnowledgePromptBuilder --> KnowledgeCatalog
+    KnowledgePromptBuilder --> KnowledgeSearch
+    KnowledgeTools --> KnowledgeCatalog
+    KnowledgeTools --> KnowledgeSearch
+    KnowledgeTools --> KnowledgePromptBuilder
+    KnowledgeSkills --> KnowledgeCatalog
+    KnowledgeSkills --> KnowledgePromptBuilder
+    KnowledgeBrowser --> KnowledgeCatalog
+    KnowledgeBrowser --> KnowledgeSearch
+    KnowledgeBrowser --> KnowledgeMarkdown
+    KnowledgeBrowser --> RollingFileLogger
     ProjectWorkspace --> ProjectExplorer
     ProjectWorkspace --> ChatPanel
 ```
@@ -316,6 +338,22 @@ cannot change anything. The panel does not know what shows the inspector; it ask
 column of the workspace, which is shown while a project is open, and the shell makes the panel the target of the Edit
 menu (through the composer) and of the talk key.
 
+`KnowledgeCatalog` holds the knowledge of how to draw and how to work in a project as a tree of cards: the help of
+CanvasNet, without the cards about what the host program controls, extended with cards of CanvasPilot that are embedded
+in the application and tell where files go in a project, how to make the picture the user uses, and how to read the
+marks and attachments of a message. The catalog is built once, from embedded resources only, and never changes.
+`KnowledgeSearch` finds the cards that fit some words, `KnowledgePromptBuilder` writes the index and the cards as text
+for the prompt of an assistant within a size budget, `KnowledgeTools` describes the one tool by which an assistant
+fetches them, and `KnowledgeSkills` describes each card as a skill; none of these units refers to a provider of a
+language model, so the same knowledge can be given to any assistant that is added later, and until then only the user
+reads it. `KnowledgeMarkdown` reads the Markdown of a card into blocks that a window can draw, without a Markdown
+library, and `KnowledgeBrowser` is the window in which the user reads the cards: a tree, a search box that runs the same
+search as the assistant, the card with its related cards and examples, and a button that copies an example. The window
+is the only unit of the subsystem with a user interface. The browser does not know the main window; the shell asks an
+`IKnowledgeBrowserLauncher`, which `IDialogService` extends, so the main window shows it beside itself, one at a time
+and without blocking. The `Knowledge` subsystem depends on `Logging` (the log of a clipboard failure) and on CanvasNet,
+and not on `AppShell`.
+
 ### Dependency Direction
 
 The dependencies between the subsystems run one way: `AppShell` depends on `Preview`, and `Preview` does not depend on
@@ -333,9 +371,11 @@ Because the direction is fixed, a subsystem added later depends on the subsystem
 the composition root and the window refer to every subsystem. The `Chat` subsystem is the first of them: it uses
 `Composer`, `Annotation`, `Payload`, and `Speech`, and the seam by which it asks for the inspector window,
 `IPayloadInspectorLauncher`, belongs to `Chat`, so `IDialogService` extends it just as it extends the seams of `Project`
-and `Preview`. The direction is shown in the model and in the diagram above, and the verification of `ImageExporter`
+and `Preview`. The `Knowledge` subsystem follows the same rule: the seam by which the shell asks for the browser,
+`IKnowledgeBrowserLauncher`, belongs to `Knowledge`, and `IDialogService` extends it too. The direction is shown in the
+model and in the diagram above, and the verification of `ImageExporter`
 uses a substitute for `IExportDialogs`, so no test of `Preview` needs the dialog service of `AppShell`, and the
-verification of the chat panel uses a substitute for the launcher.
+verification of the chat panel and of the Help command uses a substitute for the launcher.
 
 The same rule keeps `Composer` and `Payload` apart. The payload is built from the composer's snapshot, so `Payload`
 depends on `Composer`; the composer sends the messages, so it needs them built. The seam belongs to the lower
@@ -455,6 +495,19 @@ made in the project when the message is sent.
   copied while the message is a draft, nothing is overwritten, links are not followed, and a failed copy leaves nothing
   behind. The project explorer lists only image source files in the project root, so neither folder is listed.
 
+**Drawing Knowledge**: The cards that tell how to draw with the formats CanvasNet draws and how to work in a project.
+
+- *Direction*: Input (the cards that are embedded in the application and in the CanvasNet library) and output (the
+  window in which the user reads them, and text copied to the clipboard).
+- *Type*: Embedded Markdown resources, read once into an in-memory tree; an Avalonia window opened by Help > Drawing
+  Knowledge; the system clipboard.
+- *Format*: Each card has an identifier that is its path in the tree, a title, a one-line summary, tags, other names, a
+  Markdown body, related cards, and examples with their text. The assistant of a later increment is given the same
+  cards as an index, as cards on demand through one tool, or as skills.
+- *Constraints*: Nothing is written to a file or sent anywhere. The cards that are about what the host program
+  controls are left out. A card that cannot be read, or a clipboard that cannot be reached, is a message, never an
+  unhandled failure.
+
 **Speech Settings, Audio Devices, and Model Store**: The speech choices, the audio system, and the downloaded models.
 
 - *Direction*: Input and output.
@@ -500,7 +553,8 @@ made in the project when the message is sent.
 - *Direction*: Input and output.
 - *Type*: Avalonia window with File, Edit, Image, Tools, and Help menus, a project explorer, a preview area with a
   layer for marks, a chat column with the message composer and the transcript, and modal dialogs (New Project,
-  Settings, About, payload inspector, and message, confirmation, and prompt dialogs).
+  Settings, About, payload inspector, and message, confirmation, and prompt dialogs) and, from the Help menu, the
+  window of the drawing knowledge, which does not block the main window.
 - *Format*: The window title is `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`.
   Every menu item has a name and an automation identifier that are the same. The F8 key is the talk key: dictation
   listens while it is held.
@@ -510,21 +564,22 @@ made in the project when the message is sent.
 
 ## Dependencies
 
-The `Annotation`, `AppShell`, `Chat`, `Composer`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`, `Speech`, and
-`Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and project files and the
-description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm, which are runtime
-third-party items (the `Composer` editor view also uses the AvaloniaEdit editing control, which is a runtime
+The `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`,
+`Speech`, and `Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and project
+files and the description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm, which
+are runtime third-party items (the `Composer` editor view also uses the AvaloniaEdit editing control, which is a runtime
 third-party item too; the other `Annotation`, `Chat`, and `Composer` units use base class library types and Avalonia
-only, and the `Payload` units base class library types and CanvasNet). The `ImageRenderService` unit draws files and
-encodes PNG with the
-`DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a picture with
-the same library, and the `ProjectExplorer` unit uses its extension list to decide which files are image sources. The
-`AudioDeviceService`, `SpeechModelService`, and `DictationService` units list audio devices and speech models, download
-models, create capture devices, and load and run the speech engine with the `DemaConsulting.Speech` library and its
-Sherpa model package, whose native speech runtime is shipped with the application, and the speech descriptor types are
-shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items (see *OTS Dependencies*).
-Build, documentation, and quality tools are documented in the OTS design documents. The Windows installer package is
-built from the published application by the WiX Toolset, also documented as an OTS item; no run-time item depends on it.
+only, and the `Payload` units base class library types and CanvasNet; of the `Knowledge` units only the browser uses
+Avalonia and CommunityToolkit.Mvvm, and the catalog reads the help cards of CanvasNet). The `ImageRenderService` unit
+draws files and encodes PNG with the `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the
+marks of a message over a picture with the same library, and the `ProjectExplorer` unit uses its extension list to
+decide which files are image sources. The `AudioDeviceService`, `SpeechModelService`, and `DictationService` units list
+audio devices and speech models, download models, create capture devices, and load and run the speech engine with the
+`DemaConsulting.Speech` library and its Sherpa model package, whose native speech runtime is shipped with the
+application, and the speech descriptor types are shown by the other units of the `Speech` subsystem; both libraries are
+documented as OTS items (see *OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS
+design documents. The Windows installer package is built from the published application by the WiX Toolset, also
+documented as an OTS item; no run-time item depends on it.
 
 ## Risk Control Measures
 
@@ -621,16 +676,17 @@ creates the project folder, the project file, and the data folder. To open a pro
 through `SettingsService`, and the project folder is opened in `ProjectExplorer`, which lists its image source
 files, watches the folder, and refreshes the list after file changes.
 
-At startup `App` asks `ApplicationComposition` to build the units: the logger, the settings service (whose settings
-are loaded at once), the project service, the recent projects list, the project explorer, the render service, the
-image drag source (which deletes the files of earlier drags), the preview pane, the workspace, the image exporter, the
-speech services with the dictation service, the shell, the mark registry, the mark image composer and payload builder,
-the composer (with its attachment store and intake), the annotation overlay, and the chat panel, which it places in the
-workspace and makes the target of the talk key. The `MainWindowView` is created
-over the shell and gives itself to the shell as the dialog service. From
-then on the user's menu choices become shell commands, which call the `Project` and `Settings` subsystems, show
-dialogs through the dialog service, and, when the open project changes, update the window title and open or close
-the project in the workspace. On exit `App` disposes the composition.
+At startup `App` asks `ApplicationComposition` to build the units: the logger, the settings service (whose settings are
+loaded at once), the project service, the recent projects list, the project explorer, the render service, the image drag
+source (which deletes the files of earlier drags), the preview pane, the workspace, the image exporter, the speech
+services with the dictation service, the shell, the mark registry, the mark image composer and payload builder, the
+composer (with its attachment store and intake), the annotation overlay, and the chat panel, which it places in the
+workspace and makes the target of the talk key. It also gives the shell a function that gives the catalog of the drawing
+knowledge, which reads the cards the first time Help > Drawing Knowledge is used and not at startup. The
+`MainWindowView` is created over the shell and gives itself to the shell as the dialog service. From then on the user's
+menu choices become shell commands, which call the `Project` and `Settings` subsystems, show dialogs through the dialog
+service, and, when the open project changes, update the window title and open or close the project in the workspace. On
+exit `App` disposes the composition.
 
 When the user selects a file in `ProjectExplorer`, `PreviewPane` cancels any render that is running and asks
 `ImageRenderService` to draw the file in the background; the result, a picture with notes or an error with its
@@ -712,6 +768,16 @@ payload already holds and from the copies of attached pictures in the project. "
 and lists the payload's pictures, and gives it to the `IPayloadInspectorLauncher`, which the main window implements by
 showing `PayloadInspectorView` as a dialog.
 
+When the user chooses Help > Drawing Knowledge, `MainWindowShell` asks the function it was given for the catalog, which
+builds `KnowledgeCatalog.Default` on its first use, makes a `KnowledgeBrowserViewModel` over the catalog and a
+`KnowledgeSearch` made from it, and gives it to the `IKnowledgeBrowserLauncher`, which the main window implements by
+showing `KnowledgeBrowserView` as a window of its own; a second request brings that window to the front. The view model
+builds the tree of nodes from the roots of the catalog. A card is shown the same way whether the user chose it in the
+tree, chose a hit of the search, or followed a link: `Select` opens the cards above it, selects it, and reads its text
+with `KnowledgeMarkdown.Parse`, its cards below and related cards with the catalog, and its examples. Two or more
+letters in the search box call `KnowledgeSearch.Search` and show its hits in place of the tree. Copy gives the text of
+an example to the clipboard that the window supplies and says in the status line whether it worked.
+
 ## Design Constraints
 
 - Log files shall be written only to local disk; no telemetry or remote transmission is performed.
@@ -778,6 +844,12 @@ showing `PayloadInspectorView` as a dialog.
   file table shall be verified for it with every Windows build.
 - Dictation shall listen only while a talk control is held and for a short moment afterwards, shall release the
   microphone when the session ends, and shall never write what was recognized to the log.
+- The `Knowledge` subsystem shall hold no reference to any AI provider SDK, client, or agent framework, shall write
+  nothing anywhere, and shall have a user interface only in `KnowledgeBrowser`; it shall not depend on `AppShell`, which
+  asks for the browser through `IKnowledgeBrowserLauncher`.
+- The catalog shall be extended with the cards of the application before the cards of the tag `hosting` are filtered
+  out, shall be built once from embedded resources only, and shall never change; the index of its cards shall stay
+  within the character budget of `KnowledgePromptBuilder`.
 - The installer project shall stay outside the solution so that building and restoring the solution never needs the
   WiX Toolset or Windows; it shall be built only by the Windows build job from the published win-x64 output.
 - The installer shall replace any installed version and shall not write or remove user data.

@@ -6,9 +6,10 @@ provides folder-based projects, an explorer of the project's image source files,
 is drawn by CanvasNet, PNG export, copy to the clipboard, and drag-out of the shown picture, persisted settings with
 AI provider and speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders,
 and pictures, and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload
-inspector, and the installer. Messages are composed and sent without an agent: the AI agent that will answer them and
-use the stored choices is out of scope of this version. The document covers local software items (systems, subsystems,
-and units) and the OTS software items they consume.
+inspector, the drawing knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the
+Help menu), and the installer. Messages are composed and sent without an agent: the AI agent that will answer them and
+use the stored choices and the knowledge is out of scope of this version. The document covers local software items
+(systems, subsystems, and units) and the OTS software items they consume.
 
 ## Purpose
 
@@ -29,6 +30,8 @@ Local items:
   - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
+  - **Knowledge** subsystem: **KnowledgeCatalog**, **KnowledgeSearch**, **KnowledgePromptBuilder**,
+    **KnowledgeTools**, **KnowledgeSkills**, **KnowledgeMarkdown**, and **KnowledgeBrowser** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Payload** subsystem: **MessagePayload**, **MarkImageComposer**, **PayloadBuilder**, and **PayloadDescriber**
     units.
@@ -60,7 +63,8 @@ The following topics are out of scope:
   installer project (which is covered by the WiX Toolset OTS design), or the build pipeline CI configuration
 - The AI agent that answers the messages is not part of this version; the settings that it will read are
   designed (see the *AI Provider Seam* section of the system design), and the payload that it will receive is built
-  and shown for every sent message, but nothing reads it and no answer comes back
+  and shown for every sent message, but nothing reads it and no answer comes back; the drawing knowledge that it will
+  be given is built and can be read in the browser, but no assistant uses it yet
 - The internal design of OTS software items is excluded; only integration and usage design is documented
 
 ## Software Structure
@@ -68,12 +72,12 @@ The following topics are out of scope:
 The software structure is modeled in SysML2 under `docs/sysml2/` and rendered to the diagram
 below by SysML2Tools as part of the build pipeline. AI agents should query the SysML2 model
 directly (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose
-elsewhere in this document. The diagram shows the system, its eleven subsystems with their units, and the runtime OTS
+elsewhere in this document. The diagram shows the system, its twelve subsystems with their units, and the runtime OTS
 items that the system consumes; the dependencies between the units are in the model and are shown in the view of each
 subsystem. The build and documentation tools listed in Scope above are documented separately (see
 `docs/design/ots.md`).
 
-![The CanvasPilot system with its eleven subsystems and their units, and the runtime third-party items it
+![The CanvasPilot system with its twelve subsystems and their units, and the runtime third-party items it
 uses](SoftwareStructureView.svg)
 
 ## Architecture
@@ -84,14 +88,16 @@ application. The application library holds the subsystems: the AppShell subsyste
 user converses; it uses the Composer subsystem (the message, its undo steps, and the attachments), the Annotation
 subsystem (marks on the picture), the Payload subsystem (the message that is sent), and the Speech subsystem
 (dictation). Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in
-the Project explorer; Speech also adds a page to the Settings dialog. Every subsystem logs through Logging, and the
+the Project explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing:
+the AppShell opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards,
+so an assistant added later can be given the same cards. Every subsystem logs through Logging, and the
 subsystems that build file locations use Utilities. The third-party items are used inside the library, and the
 application reads and writes only the local data in the bottom row. Section *Architecture* of the system design
 explains the dependencies between the subsystems, which run one way, and why no subsystem refers to AppShell.
 
 ![Architecture of CanvasPilot: the desktop head starts the application library, whose AppShell subsystem builds and
-hosts the eleven subsystems, from Chat and Composer down to Logging and Utilities, with the third-party items and the
-local data the application uses](architecture.svg)
+hosts the twelve subsystems, from Chat and Composer down to Logging and Utilities, with the Knowledge subsystem beside
+them, and the third-party items and the local data the application uses](architecture.svg)
 
 ## Folder Layout
 
@@ -105,6 +111,9 @@ local data the application uses](architecture.svg)
     - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, the
       intake and copying of attachments, the view model that orchestrates them with dictation and sending, and the
       editing view that shows the message with its chips inline
+    - **KnowledgeSubsystem/** - the drawing knowledge: the tree of cards from the help of CanvasNet and the cards of
+      CanvasPilot (embedded Markdown under `Cards/`), the search of the cards, their text for the prompt of an
+      assistant, the tool and the skills that describe them, the Markdown reader, and the browser window
     - **LoggingSubsystem/** - local rolling log file subsystem
     - **PayloadSubsystem/** - the message that is sent as one immutable payload: text with references, attachments,
       annotated pictures, mark crops, mark geometry, and source elements, and its description
