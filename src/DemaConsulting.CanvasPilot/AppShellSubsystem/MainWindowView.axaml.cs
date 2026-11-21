@@ -25,12 +25,14 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using DemaConsulting.CanvasNet.Viewer;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -40,7 +42,8 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 ///     Exit closes the window. It also tells the shell what has the focus (for Edit > Undo and Redo), and passes the
 ///     talk key and the loss of the active state on to it. The window is the payload inspector launcher of the chat
 ///     panel, which the workspace connects when the dialog service is attached. It also shows the browser of the drawing
-///     knowledge as a window of its own that does not block it, one at a time.
+///     knowledge, and the window that manages style kits, each as a window of its own that does not block it, one at a time,
+///     and the editor of a style kit modally over the latter.
 /// </summary>
 public sealed partial class MainWindowView : Window, IDialogService
 {
@@ -53,6 +56,22 @@ public sealed partial class MainWindowView : Window, IDialogService
     };
 
     /// <summary>
+    ///     The zip file type offered by the pickers of the kits.
+    /// </summary>
+    private static readonly FilePickerFileType ZipFileType = new("Zip files")
+    {
+        Patterns = ["*.zip"]
+    };
+
+    /// <summary>
+    ///     The image source file types that CanvasNet draws, offered by the picker of the example images of a kit.
+    /// </summary>
+    private static readonly FilePickerFileType ImageSourceFileType = new("Image source files")
+    {
+        Patterns = [.. CanvasNetViewer.Extensions.Select(extension => "*" + extension)]
+    };
+
+    /// <summary>
     ///     View model bound to the window.
     /// </summary>
     private readonly MainWindowShell? _shell;
@@ -61,6 +80,11 @@ public sealed partial class MainWindowView : Window, IDialogService
     ///     The browser of the drawing knowledge while it is open, or <see langword="null" />.
     /// </summary>
     private KnowledgeBrowserView? _knowledgeBrowser;
+
+    /// <summary>
+    ///     The window that manages style kits while it is open, or <see langword="null" />.
+    /// </summary>
+    private StyleKitManagerView? _styleKitManager;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MainWindowView" /> class for the XAML loader. The window
@@ -142,6 +166,77 @@ public sealed partial class MainWindowView : Window, IDialogService
         _knowledgeBrowser = browser;
         browser.Show(this);
         return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task ShowStyleKitManagerAsync(StyleKitManagerViewModel viewModel)
+    {
+        ArgumentNullException.ThrowIfNull(viewModel);
+
+        // There is one window: asking again brings the open one to the front, and the view model that was made is not used
+        if (_styleKitManager is { } open)
+        {
+            if (open.WindowState == WindowState.Minimized)
+            {
+                open.WindowState = WindowState.Normal;
+            }
+
+            open.Activate();
+            viewModel.Dispose();
+            return Task.CompletedTask;
+        }
+
+        var manager = new StyleKitManagerView(viewModel);
+        manager.Closed += OnStyleKitManagerClosed;
+        _styleKitManager = manager;
+        manager.Show(this);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public async Task ShowStyleKitEditorAsync(StyleKitEditorViewModel viewModel)
+    {
+        ArgumentNullException.ThrowIfNull(viewModel);
+
+        // The editor is modal over the window that manages kits, which it is opened from, or else over the main window
+        Window owner = _styleKitManager is { IsVisible: true } manager ? manager : this;
+        await new StyleKitEditorView(viewModel).ShowDialog(owner);
+    }
+
+    /// <inheritdoc />
+    public async Task<string?> PickZipToImportAsync(string? initialFolder)
+    {
+        var options = new FilePickerOpenOptions
+        {
+            Title = "Import Style Kit",
+            AllowMultiple = false,
+            FileTypeFilter = [ZipFileType],
+            SuggestedStartLocation = await TryGetFolderAsync(initialFolder)
+        };
+
+        var files = await StorageProvider.OpenFilePickerAsync(options);
+        return files.Count == 0 ? null : files[0].TryGetLocalPath();
+    }
+
+    /// <inheritdoc />
+    public Task<string?> PickZipToExportAsync(string suggestedFileName)
+    {
+        return PickSaveFileAsync("Export Style Kit", suggestedFileName, "Zip files", "*.zip");
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> PickExampleFilesAsync(string? initialFolder)
+    {
+        var options = new FilePickerOpenOptions
+        {
+            Title = "Add Example Images",
+            AllowMultiple = true,
+            FileTypeFilter = [ImageSourceFileType, FilePickerFileTypes.All],
+            SuggestedStartLocation = await TryGetFolderAsync(initialFolder)
+        };
+
+        var files = await StorageProvider.OpenFilePickerAsync(options);
+        return files.Select(file => file.TryGetLocalPath()).OfType<string>().ToList();
     }
 
     /// <inheritdoc />
@@ -366,6 +461,23 @@ public sealed partial class MainWindowView : Window, IDialogService
             if (ReferenceEquals(browser, _knowledgeBrowser))
             {
                 _knowledgeBrowser = null;
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Forgets the window that manages style kits when it is closed, so that the next request opens a new one.
+    /// </summary>
+    /// <param name="sender">The window.</param>
+    /// <param name="e">The event data.</param>
+    private void OnStyleKitManagerClosed(object? sender, EventArgs e)
+    {
+        if (sender is StyleKitManagerView manager)
+        {
+            manager.Closed -= OnStyleKitManagerClosed;
+            if (ReferenceEquals(manager, _styleKitManager))
+            {
+                _styleKitManager = null;
             }
         }
     }

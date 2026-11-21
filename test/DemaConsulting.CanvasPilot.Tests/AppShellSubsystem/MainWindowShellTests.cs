@@ -724,6 +724,69 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that Style Kits makes the view model of the window from the dialog service each time it runs and hands it to
+    ///     the dialog service to show.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_ShowStyleKits_MakesTheViewModelFromTheDialogsAndShowsIt()
+    {
+        // Arrange: a shell whose window is made over a real catalog on temporary folders
+        using var places = new StyleKitPlaces();
+        using var catalog = places.CreateCatalog();
+        var received = new List<IStyleKitDialogs>();
+        var shell = CreateStyleKitsShell(dialogs =>
+        {
+            received.Add(dialogs);
+            return new StyleKitManagerViewModel(catalog, new FakeActiveStyle(), new RecordingRenderService(), dialogs, places.Projects);
+        });
+
+        // Act: run Style Kits twice
+        var canRun = shell.ShowStyleKitsCommand.CanExecute(null);
+        await shell.ShowStyleKitsCommand.ExecuteAsync(null);
+        var first = _dialogs.LastStyleKitManager;
+        await shell.ShowStyleKitsCommand.ExecuteAsync(null);
+
+        // Assert: each run asked for a view model from the dialog service and showed it
+        Assert.True(canRun);
+        Assert.Equal(2, received.Count);
+        Assert.All(received, dialogs => Assert.Same(_dialogs, dialogs));
+        Assert.Equal(2, _dialogs.StyleKitManagerCount);
+        Assert.NotSame(first, _dialogs.LastStyleKitManager);
+        Assert.Empty(_dialogs.Messages);
+        first!.Dispose();
+        _dialogs.LastStyleKitManager!.Dispose();
+    }
+
+    /// <summary>
+    ///     Test that Style Kits is unusable when the application has no such window, and does nothing before a dialog
+    ///     service is attached.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_ShowStyleKits_WithoutWindowOrDialogService_DoesNothing()
+    {
+        // Arrange: a shell with no window, and one with a window but no dialog service
+        var withoutWindow = CreateStyleKitsShell(null);
+        var made = 0;
+        var withoutDialogs = CreateStyleKitsShell(
+            _ =>
+            {
+                made++;
+                throw new InvalidOperationException("Not to be called.");
+            },
+            attachDialogs: false);
+
+        // Act: run the command of each
+        var disabled = withoutWindow.ShowStyleKitsCommand.CanExecute(null);
+        await withoutWindow.ShowStyleKitsCommand.ExecuteAsync(null);
+        await withoutDialogs.ShowStyleKitsCommand.ExecuteAsync(null);
+
+        // Assert: nothing was made or shown
+        Assert.False(disabled);
+        Assert.Equal(0, made);
+        Assert.Equal(0, _dialogs.StyleKitManagerCount);
+    }
+
+    /// <summary>
     ///     Test that commands that need the user do nothing before a dialog service is attached.
     /// </summary>
     [Fact]
@@ -997,6 +1060,25 @@ public sealed class MainWindowShellTests : IDisposable
     {
         var parts = CreateParts();
         var shell = new MainWindowShell(parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], null, null, knowledge, logger: logger);
+        if (attachDialogs)
+        {
+            shell.AttachDialogService(_dialogs);
+        }
+
+        _shells.Add(shell);
+        return shell;
+    }
+
+    /// <summary>
+    ///     Creates a shell with a window that manages style kits and, when asked, the dialog service attached.
+    /// </summary>
+    /// <param name="styleKits">Makes the view model of the window, or <see langword="null" /> for none.</param>
+    /// <param name="attachDialogs">Whether the dialog service is attached.</param>
+    /// <returns>The shell, disposed with the fixture.</returns>
+    private MainWindowShell CreateStyleKitsShell(Func<IStyleKitDialogs, StyleKitManagerViewModel>? styleKits, bool attachDialogs = true)
+    {
+        var parts = CreateParts();
+        var shell = new MainWindowShell(parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], styleKits: styleKits);
         if (attachDialogs)
         {
             shell.AttachDialogService(_dialogs);

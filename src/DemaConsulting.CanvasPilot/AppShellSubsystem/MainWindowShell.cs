@@ -124,6 +124,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private readonly ICheckAgainstStyle? _styleCheck;
 
     /// <summary>
+    ///     Makes the view model of the window that manages style kits, or null when the application has none.
+    /// </summary>
+    private readonly Func<IStyleKitDialogs, StyleKitManagerViewModel>? _styleKits;
+
+    /// <summary>
     ///     Optional logger for diagnostics.
     /// </summary>
     private readonly RollingFileLogger? _logger;
@@ -201,6 +206,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     What the Check Against Style item of the Image menu runs, or <see langword="null" /> for none, which leaves the item
     ///     disabled. The shell does not dispose it.
     /// </param>
+    /// <param name="styleKits">
+    ///     Makes the view model of the window that manages style kits from the dialogs that it asks through, called each time the
+    ///     Style Kits item of the Tools menu is chosen, or <see langword="null" /> for none, which leaves the item unusable. The
+    ///     window disposes the view model it is given.
+    /// </param>
     /// <param name="logger">Optional logger for diagnostics.</param>
     public MainWindowShell(
         IProjectService projectService,
@@ -213,6 +223,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         Func<IKnowledgeCatalog>? knowledge = null,
         StylePickerViewModel? style = null,
         ICheckAgainstStyle? checkAgainstStyle = null,
+        Func<IStyleKitDialogs, StyleKitManagerViewModel>? styleKits = null,
         RollingFileLogger? logger = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
@@ -229,6 +240,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _knowledge = knowledge;
         _style = style;
         _styleCheck = checkAgainstStyle;
+        _styleKits = styleKits;
         _logger = logger;
         Workspace = workspace;
         ImageExporter = imageExporter ?? new NullImageExporter();
@@ -586,6 +598,27 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     /// </summary>
     /// <returns><see langword="true" /> when the application can check and a picture is shown.</returns>
     private bool CanCheckAgainstStyle() => _styleCheck?.CanCheck == true;
+
+    /// <summary>
+    ///     Opens the window that manages style kits, which does not block the application. There is one such window at a time:
+    ///     when it is open, it is brought to the front.
+    /// </summary>
+    /// <returns>A task that completes when the window is shown, not when it is closed.</returns>
+    [RelayCommand(CanExecute = nameof(HasStyleKits))]
+    private async Task ShowStyleKitsAsync()
+    {
+        if (_dialogs is null || _styleKits is null)
+        {
+            return;
+        }
+
+        await _dialogs.ShowStyleKitManagerAsync(_styleKits(_dialogs));
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether the application has a window that manages style kits to show.
+    /// </summary>
+    private bool HasStyleKits => _styleKits is not null;
 
     /// <summary>
     ///     Opens the settings dialog.

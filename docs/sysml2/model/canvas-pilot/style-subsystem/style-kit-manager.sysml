@@ -9,6 +9,8 @@ package CanvasPilot {
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/IStyleKitDialogs.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleKitGroupViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleKitItemViewModel.cs",
+                "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleKitManagerView.axaml",
+                "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleKitManagerView.axaml.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleKitManagerViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleSwatch.cs",
                 "src/DemaConsulting.CanvasPilot/StyleSubsystem/StyleThumbnail.cs",
@@ -17,7 +19,8 @@ package CanvasPilot {
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/StyleSubsystem/StyleKitManagerTests.cs",
-                "test/DemaConsulting.CanvasPilot.Tests/StyleSubsystem/StyleSubsystemFakes.cs"
+                "test/DemaConsulting.CanvasPilot.Tests/StyleSubsystem/StyleSubsystemFakes.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/StyleKitManagerViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/style-subsystem/style-kit-manager.md");
             verificationFiles = ("docs/verification/canvas-pilot/style-subsystem/style-kit-manager.md");

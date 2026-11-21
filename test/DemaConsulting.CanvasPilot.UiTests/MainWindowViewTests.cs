@@ -34,6 +34,7 @@ using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
@@ -140,7 +141,7 @@ public sealed class MainWindowViewTests : IDisposable
             structure[0].Children);
         Assert.Equal(["UndoMenuItem", "RedoMenuItem"], structure[1].Children);
         Assert.Equal(["ExportPngMenuItem", "CopyImageMenuItem", "CheckAgainstStyleMenuItem"], structure[2].Children);
-        Assert.Equal(["SettingsMenuItem"], structure[3].Children);
+        Assert.Equal(["StyleKitsMenuItem", "SettingsMenuItem"], structure[3].Children);
         Assert.Equal(["DrawingKnowledgeMenuItem", "AboutMenuItem"], structure[4].Children);
         foreach (var item in structure.SelectMany(top => top.Children.Prepend(top.Id)))
         {
@@ -155,6 +156,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal("Ctrl+Z", window.FindControl<MenuItem>("UndoMenuItem")!.InputGesture?.ToString());
         Assert.Equal("Ctrl+Y", window.FindControl<MenuItem>("RedoMenuItem")!.InputGesture?.ToString());
         Assert.Equal("_Drawing Knowledge...", window.FindControl<MenuItem>("DrawingKnowledgeMenuItem")!.Header);
+        Assert.Equal("Style _Kits...", window.FindControl<MenuItem>("StyleKitsMenuItem")!.Header);
         Assert.Single(window.FindControl<MenuItem>("HelpMenu")!.Items.OfType<Separator>());
 
         window.Close();
@@ -171,7 +173,7 @@ public sealed class MainWindowViewTests : IDisposable
         window.Show();
 
         // Act & Assert: read which items are enabled
-        foreach (var enabled in new[] { "NewProjectMenuItem", "OpenProjectMenuItem", "ExitMenuItem", "SettingsMenuItem", "DrawingKnowledgeMenuItem", "AboutMenuItem" })
+        foreach (var enabled in new[] { "NewProjectMenuItem", "OpenProjectMenuItem", "ExitMenuItem", "StyleKitsMenuItem", "SettingsMenuItem", "DrawingKnowledgeMenuItem", "AboutMenuItem" })
         {
             Assert.True(IsUsable(window.FindControl<MenuItem>(enabled)!), enabled);
         }
@@ -266,6 +268,123 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Null(((KnowledgeBrowserViewModel)third.DataContext!).SelectedCard);
         third.Close();
         window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the Style Kits menu item shows the window that manages kits as a window that the main window owns and
+    ///     that does not block it, with the kits that come with the program listed in it.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_StyleKitsMenuItem_ShowsWindowThatDoesNotBlock()
+    {
+        // Arrange: a shown main window whose kits were read
+        var (composition, window) = CreateWindow();
+        window.Show();
+        await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
+
+        // Act: run Style Kits
+        await ((IAsyncRelayCommand)window.FindControl<MenuItem>("StyleKitsMenuItem")!.Command!).ExecuteAsync(null);
+        var manager = AppShellUiHelpers.FindDialog<StyleKitManagerView>(window);
+        var cards = manager.GetVisualDescendants().OfType<Button>().Where(button => AutomationProperties.GetAutomationId(button) == "StyleKitCard").ToArray();
+
+        // Assert: the command finished while the window is open, and it lists the kits of the program
+        Assert.True(manager.IsVisible);
+        Assert.Equal("Style Kits", manager.Title);
+        Assert.Equal(3, cards.Length);
+        Assert.True(window.IsEnabled);
+        manager.Close();
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that asking again while the window that manages kits is open brings the same window to the front and does not
+    ///     open another, and that asking after it was closed opens a new one.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_StyleKitsMenuItem_SecondRequest_ReusesTheOpenWindow()
+    {
+        // Arrange: a shown main window with the window that manages kits open and a kit chosen in it
+        var (composition, window) = CreateWindow();
+        window.Show();
+        await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
+        var command = (IAsyncRelayCommand)window.FindControl<MenuItem>("StyleKitsMenuItem")!.Command!;
+        await command.ExecuteAsync(null);
+        var first = AppShellUiHelpers.FindDialog<StyleKitManagerView>(window);
+        var firstViewModel = (StyleKitManagerViewModel)first.DataContext!;
+        firstViewModel.SelectItemCommand.Execute(firstViewModel.Groups[^1].Items[0]);
+
+        // Act: ask again, and look at what is open
+        await command.ExecuteAsync(null);
+        var second = AppShellUiHelpers.FindDialog<StyleKitManagerView>(window);
+
+        // Assert: there is one window, the same one, still showing the kit that was chosen
+        Assert.Same(first, second);
+        Assert.Same(firstViewModel, second.DataContext);
+        Assert.True(firstViewModel.HasSelection);
+
+        // Act: close it and ask once more
+        first.Close();
+        await command.ExecuteAsync(null);
+        var third = AppShellUiHelpers.FindDialog<StyleKitManagerView>(window);
+
+        // Assert: a new window was opened, with nothing chosen
+        Assert.NotSame(first, third);
+        Assert.False(((StyleKitManagerViewModel)third.DataContext!).HasSelection);
+        third.Close();
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the main window shows the editor of a kit as a modal window over the window that manages kits and over
+    ///     itself when that is not open, and that the editor's Cancel button completes the request.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_ShowStyleKitEditor_OverTheManagerOrTheMainWindow_ShowsEditorModally()
+    {
+        // Arrange: a main window and a kit of the user to edit
+        var (composition, window) = CreateWindow();
+        window.Show();
+        var entry = composition.StyleCatalog.CreateBlank("Poster", StyleKitLocation.User);
+
+        // Act: ask for the editor with no manager open, and cancel it
+        var shown = window.ShowStyleKitEditorAsync(new StyleKitEditorViewModel(composition.StyleCatalog, entry));
+        var editor = AppShellUiHelpers.FindDialog<StyleKitEditorView>(window);
+        var overMain = editor.IsVisible;
+        SettingsUiHelpers.Click(editor, SettingsUiHelpers.Find<Button>(editor, "StyleEditorCancelButton"));
+        await shown;
+
+        // Act: open the manager and ask again; the editor is owned by the manager
+        await ((IAsyncRelayCommand)window.FindControl<MenuItem>("StyleKitsMenuItem")!.Command!).ExecuteAsync(null);
+        var manager = AppShellUiHelpers.FindDialog<StyleKitManagerView>(window);
+        var second = window.ShowStyleKitEditorAsync(new StyleKitEditorViewModel(composition.StyleCatalog, entry));
+        var overManager = AppShellUiHelpers.FindDialog<StyleKitEditorView>(manager);
+        SettingsUiHelpers.Click(overManager, SettingsUiHelpers.Find<Button>(overManager, "StyleEditorCancelButton"));
+        await second;
+
+        // Assert
+        Assert.True(overMain);
+        Assert.Empty(manager.OwnedWindows);
+        manager.Close();
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that closing the main window closes the window that manages kits and the browser that it owns.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_Close_ClosesTheStyleKitsWindowItOwns()
+    {
+        // Arrange: a main window with the window that manages kits open
+        var (_, window) = CreateWindow();
+        window.Show();
+        await ((IAsyncRelayCommand)window.FindControl<MenuItem>("StyleKitsMenuItem")!.Command!).ExecuteAsync(null);
+        var manager = AppShellUiHelpers.FindDialog<StyleKitManagerView>(window);
+
+        // Act: close the main window
+        window.Close();
+
+        // Assert: the window that manages kits is closed with it
+        Assert.False(manager.IsVisible);
     }
 
     /// <summary>

@@ -24,6 +24,7 @@ using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -136,6 +137,36 @@ public sealed class FakeDialogService : IDialogService
     public KnowledgeBrowserViewModel? LastKnowledgeBrowser { get; private set; }
 
     /// <summary>
+    ///     Gets how many times the window that manages style kits was shown.
+    /// </summary>
+    public int StyleKitManagerCount { get; private set; }
+
+    /// <summary>
+    ///     Gets the last view model of the window that manages style kits that was shown.
+    /// </summary>
+    public StyleKitManagerViewModel? LastStyleKitManager { get; private set; }
+
+    /// <summary>
+    ///     Gets the editors of style kits that were shown, in order.
+    /// </summary>
+    public List<StyleKitEditorViewModel> StyleKitEditors { get; } = [];
+
+    /// <summary>
+    ///     Gets or sets the zip file the user picks to import, or null for cancel.
+    /// </summary>
+    public string? ZipToImport { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the zip file the user picks to export to, or null for cancel.
+    /// </summary>
+    public string? ZipToExport { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the example files the user picks.
+    /// </summary>
+    public IReadOnlyList<string> ExampleFilesToPick { get; set; } = [];
+
+    /// <summary>
     ///     Gets how many times the project file picker was shown.
     /// </summary>
     public int ProjectPickCount { get; private set; }
@@ -208,6 +239,31 @@ public sealed class FakeDialogService : IDialogService
         LastKnowledgeBrowser = viewModel;
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc />
+    public Task ShowStyleKitManagerAsync(StyleKitManagerViewModel viewModel)
+    {
+        StyleKitManagerCount++;
+        LastStyleKitManager = viewModel;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task ShowStyleKitEditorAsync(StyleKitEditorViewModel viewModel)
+    {
+        StyleKitEditors.Add(viewModel);
+        viewModel.CancelCommand.Execute(null);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<string?> PickZipToImportAsync(string? initialFolder) => Task.FromResult(ZipToImport);
+
+    /// <inheritdoc />
+    public Task<string?> PickZipToExportAsync(string suggestedFileName) => Task.FromResult(ZipToExport);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<string>> PickExampleFilesAsync(string? initialFolder) => Task.FromResult(ExampleFilesToPick);
 
     /// <inheritdoc />
     public Task<string?> PickFolderAsync(string? initialFolder)

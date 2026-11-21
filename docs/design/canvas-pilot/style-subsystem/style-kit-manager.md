@@ -66,6 +66,22 @@ a drawing that failed for a reason that may pass (it was cancelled, or the rende
 that is not there is reported without a drawing; when the cache is full the picture that was asked for longest ago goes
 first; disposing the cache cancels what is being drawn.
 
+**View**: `StyleKitManagerView` is a window with the list on the left and the preview on the right, split by a bar that
+can be dragged. The list is an `ItemsControl` of groups (`StyleKitGroups`); each group has its title, its empty text, a
+card for each kit (`StyleKitCard`, a flat button with the name, the mark `in use`, the description, the strip of colors,
+the place, and what hides the kit, tinted when it is chosen and dimmed when another kit hides it), and its notes. The
+preview (`StyleKitPreview`) shows the name, the place, why the kit cannot be changed, the warnings, the colors as
+swatches that carry their role and color in a readable label, the fonts and numbers, the advice, the sizes, the small
+pictures of the examples with their captions or the reason that one could not be drawn, and the text for an assistant
+with its length behind an expander. Along the bottom are the status line (`StyleKitStatus`), the buttons of the commands
+(`StyleKitUseButton`, `StyleKitNewButton`, `StyleKitDuplicateButton`, `StyleKitEditButton`, `StyleKitDeleteButton`,
+`StyleKitImportButton`, `StyleKitExportButton`, `StyleKitCopyIntoProjectButton`, `StyleKitRefreshButton`,
+`StyleKitCloseButton`), and the list that chooses where new and imported kits go (`StyleKitTargetComboBox`). Choosing a
+card is handled in the code of the window, which passes the card's kit to `SelectItemCommand`. The bitmaps of the
+pictures are made from the rendered pictures by a converter of the window. The window closes when the view model asks,
+and disposes the view model when it is closed. It is shown by the main window, which keeps one such window (see the
+design of `MainWindowShell`).
+
 #### Error Handling
 
 The constructors throw `ArgumentNullException` for a missing argument. Everything that can go wrong in a command,

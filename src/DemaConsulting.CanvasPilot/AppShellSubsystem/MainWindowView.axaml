@@ -101,6 +101,10 @@
       <MenuItem Name="ToolsMenu"
                 AutomationProperties.AutomationId="ToolsMenu"
                 Header="_Tools">
+        <MenuItem Name="StyleKitsMenuItem"
+                  AutomationProperties.AutomationId="StyleKitsMenuItem"
+                  Header="Style _Kits..."
+                  Command="{Binding ShowStyleKitsCommand}" />
         <MenuItem Name="SettingsMenuItem"
                   AutomationProperties.AutomationId="SettingsMenuItem"
                   Header="_Settings..."

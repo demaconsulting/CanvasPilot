@@ -163,6 +163,20 @@ sections:
             tests:
               - AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired
 
+          - id: CanvasPilot-AppShell-OpenStyleKitsWindow
+            title: >-
+              The AppShell subsystem shall give the Tools menu of the composed application a Style Kits item that opens the
+              window that manages style kits over the catalog of kits, the active style, the render service, and the project
+              service of the application, in a window that stays open beside the work.
+            justification: |
+              The window needs the units that know the kits, the project, and the drawing, and none of them knows the window,
+              so the one place that builds the application joins them and gives the shell the way to make the window's view
+              model from the dialogs that the main window implements.
+            children:
+              - CanvasPilot-MainWindowShell-OpenStyleKitsFromTheToolsMenu
+            tests:
+              - AppShellSubsystem_StyleKits_ComposedShell_ShowsTheWindowOnTheCatalogOfTheApplication
+
           - id: CanvasPilot-AppShell-CheckAgainstStyleMenu
             title: >-
               The AppShell subsystem shall give the Image menu of the composed application a Check Against Style item that is

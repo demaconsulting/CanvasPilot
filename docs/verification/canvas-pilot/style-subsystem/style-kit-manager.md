@@ -10,9 +10,12 @@ a render service that completes at once, fails for the files that the test lists
 message, the files and folders that a command leaves, and the zip files that it writes. The cache of small pictures is
 tested through the same render service and through a substitute that throws. The subsystem test
 `StyleSubsystem_ManageKitsInWindow_ManagerAndEditor_CreateEditExportImportAndDeleteAKit` makes, edits, draws, exports,
-deletes, and imports a kit through the window. Headless UI tests of the view are added with the view
-(`StyleKitManagerViewTests`). The platform pickers cannot be shown headless; they are checked by hand before a release
-together with the other pickers of the application.
+deletes, and imports a kit through the window. Headless UI tests in `StyleKitManagerViewTests.cs` (the `UiTests`
+project, using Avalonia's headless platform with the Skia renderer) show the real window over a real catalog, project
+service, and selection with the kits that come with the program and the real render service, so the example images are
+really drawn; they click the cards and the buttons with the mouse and read the controls and the files, with hand-written
+pickers and questions. The tests of the main window show the window from the Tools menu. The platform pickers cannot be
+shown headless; they are checked by hand before a release together with the other pickers of the application.
 
 #### Test Environment
 
@@ -49,6 +52,12 @@ no platform picker is used. A render that has to be slow is a render that waits 
   forgets the least recently used picture when full, does not remember a failure that may pass, and reports a missing
   file.
 - Missing arguments are refused.
+- The real window lists the groups and a card for each kit that comes with the program, shows the preview of a chosen
+  kit (name, colors, text for an assistant and its length) with a picture drawn by the real renderer for each example,
+  tints the chosen card, and shows the note of a shared folder that cannot be reached. Its buttons follow the rules
+  above: Edit and Delete are off for a kit of the program, Use in this project and Copy into project need a project, and
+  the buttons use the project (the id is written into the project file and the card of the kit in use is marked), edit
+  (the list shows the saved kit), delete (after a question), export, import, make a kit, refresh, and close the window.
 
 #### Test Scenarios
 
@@ -166,3 +175,29 @@ checked. This scenario is tested by `StyleThumbnailCache_GetAsync_MissingFileAnd
 window, edited in the editor with a new color and an example image with a caption, drawn as a small picture from the
 folder of the kit, exported, deleted, and imported again; it is back with its name, color, example, and caption. This
 scenario is tested by `StyleSubsystem_ManageKitsInWindow_ManagerAndEditor_CreateEditExportImportAndDeleteAKit`.
+
+**StyleKitManagerView_Show_ListsGroupsAndChoosingAKitShowsThePreview**: The window shows the groups My kits, Shared, and
+Built-in, a card for Clean, DEMA, and Slides Dark, and the note that no kit is chosen; clicking the card of DEMA tints
+it, hides the note, shows its name, one swatch for each color, a picture for each of its three examples (drawn by the
+real renderer) with their labels, and the length of the text for an assistant out of 4,000 characters. This scenario is
+tested by `StyleKitManagerView_Show_ListsGroupsAndChoosingAKitShowsThePreview`.
+
+**StyleKitManagerView_Buttons_BuiltInAndOwnKits_EnableWhatApplies**: With a built-in kit chosen Edit, Delete, Use in
+this project, and Copy into project are off and Duplicate, Export, New, and Import are on, and the preview says the kit
+cannot be changed; with a kit of the user chosen Edit and Delete are on. This scenario is tested by
+`StyleKitManagerView_Buttons_BuiltInAndOwnKits_EnableWhatApplies`.
+
+**StyleKitManagerView_UseInProjectAndCopyIntoProject_ChangeTheProject**: With a project open, Copy into project makes a
+copy of the chosen built-in kit in the `styles` folder of the project and chooses it; Use in this project writes `clean`
+as the `activeStyleKit` of the project file; the card of the copy is marked as in use and the group of the project is
+listed first. This scenario is tested by `StyleKitManagerView_UseInProjectAndCopyIntoProject_ChangeTheProject`.
+
+**StyleKitManagerView_DeleteExportImportAndEdit_ChangeTheListAndTheFiles**: An editor that renames the kit and saves is
+reflected in the card; Export writes the zip file; Delete asks and leaves the kit when the answer is no and removes the
+folder and the card when it is yes; Import brings the kit back and says so in the status line. This scenario is tested
+by `StyleKitManagerView_DeleteExportImportAndEdit_ChangeTheListAndTheFiles`.
+
+**StyleKitManagerView_NewNotesAndClose_ShowTheKitTheNoteAndCloseTheWindow**: New makes the kit named in the prompt and
+shows it in the preview; a shared folder that is not there is noted in its group; Refresh says the kits were read again;
+Close closes the window. This scenario is tested by
+`StyleKitManagerView_NewNotesAndClose_ShowTheKitTheNoteAndCloseTheWindow`.

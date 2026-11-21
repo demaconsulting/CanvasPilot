@@ -78,14 +78,12 @@ and are described here because they only join the units together.
 - *Role*: Provider.
 - *Contract*: The main window has a File, Edit, Image, Tools, and Help menu; every menu item has a name and an
   automation identifier that are the same (`FileMenu`, `NewProjectMenuItem`, `OpenProjectMenuItem`,
-  `RecentProjectsMenuItem`, `SaveProjectMenuItem`, `CloseProjectMenuItem`, `ExitMenuItem`, `EditMenu`,
-  `UndoMenuItem`, `RedoMenuItem`, `ImageMenu`,
-  `ExportPngMenuItem`, `CopyImageMenuItem`, `CheckAgainstStyleMenuItem`, `ToolsMenu`, `SettingsMenuItem`, `HelpMenu`,
-  `DrawingKnowledgeMenuItem`,
-  `AboutMenuItem`). While a
-  project is open the content area has a chat column on the right of the preview, 380 wide at first, and a status bar
-  at the bottom (`StatusBar`) with the label `Style:` and the list of the style kits (`StylePicker`), which is
-  hidden while no project is open.
+  `RecentProjectsMenuItem`, `SaveProjectMenuItem`, `CloseProjectMenuItem`, `ExitMenuItem`, `EditMenu`, `UndoMenuItem`,
+  `RedoMenuItem`, `ImageMenu`, `ExportPngMenuItem`, `CopyImageMenuItem`, `CheckAgainstStyleMenuItem`, `ToolsMenu`,
+  `StyleKitsMenuItem`, `SettingsMenuItem`, `HelpMenu`, `DrawingKnowledgeMenuItem`, `AboutMenuItem`). While a project is
+  open the content area has a chat column on the right of the preview, 380 wide at first, and a status bar at the bottom
+  (`StatusBar`) with the label `Style:` and the list of the style kits (`StylePicker`), which is hidden while no project
+  is open.
 
 ### Design
 
@@ -112,7 +110,9 @@ and are described here because they only join the units together.
    given the picker, which it shows in a status bar while a project is open and asks to give a new project the default
    style kit. The composition also makes the check of the shown picture against the style (`StyleCheckCommand`, over the
    preview pane as the source of pictures and as the sink of notes) and gives it to the shell for the Check Against
-   Style item of the Image menu.
+   Style item of the Image menu. It gives the shell, too, a function that makes the view model of the window that
+   manages style kits (over the catalog, the selection, the render service, and the project service) from the dialogs
+   that the window asks through, for the Style Kits item of the Tools menu.
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. It follows the focus (the nearest data context that can undo and redo becomes the shell's `EditTarget`)
    and the F8 key (start and stop of the push-to-talk target, also on deactivation and close). `App` records

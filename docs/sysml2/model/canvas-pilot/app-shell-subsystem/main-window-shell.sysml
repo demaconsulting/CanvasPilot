@@ -67,6 +67,9 @@ package CanvasPilot {
         // Hosts the list that chooses the style kit in a status bar, and asks it to give a new project the default kit.
         dependency MainWindowShell to StylePicker;
 
+        // Shows the window that manages style kits from the Tools menu, through the dialogs that the main window implements.
+        dependency MainWindowShell to StyleKitManager;
+
         // Runs the Check Against Style item of the Image menu through the interface (ICheckAgainstStyle) that the Style
         // subsystem owns and the check of the shown picture implements.
         dependency MainWindowShell to StyleChecker;

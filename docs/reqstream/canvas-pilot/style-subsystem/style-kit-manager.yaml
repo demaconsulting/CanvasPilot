@@ -40,6 +40,8 @@ sections:
                   - StyleThumbnailCache_GetAsync_ConcurrentRepeatedAndAbandoned_DrawsOnce
                   - StyleThumbnailCache_GetAsync_FullCache_ForgetsTheOneUsedLeastRecently
                   - StyleThumbnailCache_GetAsync_MissingFileAndFailures_AreReportedAndNotRemembered
+                  - StyleKitManagerView_Show_ListsGroupsAndChoosingAKitShowsThePreview
+                  - StyleKitManagerView_NewNotesAndClose_ShowTheKitTheNoteAndCloseTheWindow
 
               - id: CanvasPilot-StyleKitManager-ManageKits
                 title: >-
@@ -67,8 +69,11 @@ sections:
                   - StyleKitManager_Export_ChosenKit_WritesAZipFileOrSaysWhy
                   - StyleKitManager_Import_ZipFile_ImportsAndAsksAboutAnExistingKit
                   - StyleKitManager_Import_HostileZipAndMissingProject_AreRefusedWithAReason
+                  - StyleKitManagerView_Buttons_BuiltInAndOwnKits_EnableWhatApplies
                   - StyleKitManager_CopyIntoProject_BuiltInKit_FreezesACopyInTheProject
                   - StyleKitManager_Thumbnails_ChosenKit_AreDrawnOnceAndAgainWhenTheFileChanges
+                  - StyleKitManagerView_UseInProjectAndCopyIntoProject_ChangeTheProject
+                  - StyleKitManagerView_DeleteExportImportAndEdit_ChangeTheListAndTheFiles
 
               - id: CanvasPilot-StyleKitManager-ProtectBuiltInAndSharedKits
                 title: >-
@@ -90,3 +95,4 @@ sections:
                   - StyleKitManager_Duplicate_BuiltInKit_MakesAnEditableCopyWithItsExamples
                   - StyleKitManager_CopyIntoProject_BuiltInKit_FreezesACopyInTheProject
                   - StyleKitManager_Import_HostileZipAndMissingProject_AreRefusedWithAReason
+                  - StyleKitManagerView_Buttons_BuiltInAndOwnKits_EnableWhatApplies

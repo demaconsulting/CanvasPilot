@@ -240,3 +240,26 @@ sections:
                   - MainWindowShell_CheckAgainstStyle_NothingToCheckWith_IsUnavailableAndDoesNothing
                   - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
                   - MainWindowView_CheckAgainstStyleMenuItem_PictureShown_EnablesAndShowsNotesInThePreview
+
+              - id: CanvasPilot-MainWindowShell-OpenStyleKitsFromTheToolsMenu
+                title: >-
+                  The MainWindowShell shall offer a Style Kits item in the Tools menu, above Settings, that is usable while
+                  the application has a window that manages style kits, that makes the view model of the window from the
+                  dialog service each time it runs and has the dialog service show it, and that does nothing before a dialog
+                  service is attached, and the main window shall show that window as a window of its own that it owns and that
+                  does not block it, one at a time, close it when the main window closes, show the editor of a kit modally
+                  over it, and offer the pickers of a zip file and of example images.
+                justification: |
+                  Styles are managed beside the work, so the window must stay open while the user draws, and a second request
+                  for it must bring the open one forward and not leave the user with two windows that show different
+                  states. The shell must not know the kits or the window's content, so it makes the view model only through
+                  a function that the composition root supplies, and the main window, which owns the dialogs, is the one
+                  place that can show a window, an editor, and a picker with itself as the owner.
+                tests:
+                  - MainWindowShell_ShowStyleKits_MakesTheViewModelFromTheDialogsAndShowsIt
+                  - MainWindowShell_ShowStyleKits_WithoutWindowOrDialogService_DoesNothing
+                  - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
+                  - MainWindowView_StyleKitsMenuItem_ShowsWindowThatDoesNotBlock
+                  - MainWindowView_StyleKitsMenuItem_SecondRequest_ReusesTheOpenWindow
+                  - MainWindowView_ShowStyleKitEditor_OverTheManagerOrTheMainWindow_ShowsEditorModally
+                  - MainWindowView_Close_ClosesTheStyleKitsWindowItOwns

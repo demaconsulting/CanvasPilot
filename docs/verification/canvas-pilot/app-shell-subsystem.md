@@ -39,6 +39,8 @@ services, or display are required.
 - The composition has the catalog of style kits with the kits that come with the program, the picker of the style, the
   two style tool descriptors, and an exporter that asks for sizes; a new project of the composed shell has the default
   kit of the user as its style, and the status bar shows the picker while a project is open.
+- The Style Kits item of the composed shell shows a window over the catalog of the application, which lists the kits
+  that come with the program and with which a kit of the user can be made in the folder of the user of the composition.
 - Check Against Style on the composed shell checks the picture that is shown against the kit of the project, shows the
   result among the notes of the preview with the list open, tells the user when the project has no style, and the notes
   are gone when another picture is drawn.
@@ -113,6 +115,12 @@ message that says so and the notes stay empty; after the kit Clean is chosen it 
 FAILED and a `style-off-palette` note that names the lime green and opens the list; after another file is drawn the
 notes of the style are gone. This scenario is tested by
 `AppShellSubsystem_CheckAgainstStyle_ComposedShell_ShowsNotesInThePreview`.
+
+**AppShellSubsystem_StyleKits_ComposedShell_ShowsTheWindowOnTheCatalogOfTheApplication**: With the kits read, the Style
+Kits command of a composed shell is usable, gives the dialog service one window that lists the three kits that come with
+the program, and a kit that is made in that window is in the folder of the user of the composition and was offered to
+the editor. This scenario is tested by
+AppShellSubsystem_StyleKits_ComposedShell_ShowsTheWindowOnTheCatalogOfTheApplication.
 
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler
 is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_Throw`.

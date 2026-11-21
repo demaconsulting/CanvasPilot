@@ -273,6 +273,36 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that Style Kits run on the composed shell gives the dialog service a window over the catalog of the
+    ///     application, which lists the kits that come with the program and can make a kit of the user.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_StyleKits_ComposedShell_ShowsTheWindowOnTheCatalogOfTheApplication()
+    {
+        // Arrange: a composed application whose kits are read
+        var composition = Compose();
+        await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
+
+        // Act: run Style Kits, and make a kit in the window that was shown
+        var enabled = composition.Shell.ShowStyleKitsCommand.CanExecute(null);
+        await composition.Shell.ShowStyleKitsCommand.ExecuteAsync(null);
+        var manager = _dialogs.LastStyleKitManager!;
+        _dialogs.PromptResult = "Poster";
+        await manager.NewCommand.ExecuteAsync(null);
+
+        // Assert: the window lists the kits of the program, and the new kit is in the folder of the user of the composition
+        Assert.True(enabled);
+        Assert.Equal(1, _dialogs.StyleKitManagerCount);
+        Assert.Equal(
+            ["Clean", "DEMA", "Slides Dark"],
+            manager.Groups.Single(group => group.Location == StyleKitLocation.BuiltIn).Items.Select(item => item.Name));
+        Assert.Equal("Poster", manager.SelectedItem!.Name);
+        Assert.StartsWith(Path.Combine(_tempRoot, "styles"), manager.SelectedItem.Entry.FolderPath, StringComparison.OrdinalIgnoreCase);
+        Assert.Single(_dialogs.StyleKitEditors);
+        manager.Dispose();
+    }
+
+    /// <summary>
     ///     Test that the composer of the message follows the project that is open: it works in the folder of a project
     ///     that is created, and has no message and refuses editing after the project is closed.
     /// </summary>

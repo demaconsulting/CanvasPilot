@@ -1,0 +1,332 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DemaConsulting.CanvasPilot.StyleSubsystem"
+        x:Class="DemaConsulting.CanvasPilot.StyleSubsystem.StyleKitManagerView"
+        x:DataType="vm:StyleKitManagerViewModel"
+        Title="Style Kits"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Width="1120"
+        Height="760"
+        MinWidth="820"
+        MinHeight="520"
+        WindowStartupLocation="CenterOwner">
+
+  <Window.Styles>
+    <!-- A kit in the list is a flat button that shows a card; the chosen kit has a tint -->
+    <Style Selector="Button.kit-card">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Margin" Value="0,2" />
+    </Style>
+    <Style Selector="Button.kit-card.selected">
+      <Setter Property="Background" Value="{DynamicResource SystemAccentColorLight3}" />
+    </Style>
+    <Style Selector="Button.kit-card.selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource SystemAccentColorLight3}" />
+    </Style>
+    <Style Selector="TextBlock.section">
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,12,0,4" />
+    </Style>
+  </Window.Styles>
+
+  <DockPanel Margin="12">
+
+    <!-- What the last command did, the place for new kits, and the actions. -->
+    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0" Spacing="6">
+
+      <TextBlock AutomationProperties.AutomationId="StyleKitStatus"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding HasStatusMessage}"
+                 Text="{Binding StatusMessage}" />
+
+      <WrapPanel Orientation="Horizontal">
+        <Button AutomationProperties.AutomationId="StyleKitUseButton" Margin="0,0,6,6" Content="Use in this project" Command="{Binding UseInProjectCommand}" />
+        <Button AutomationProperties.AutomationId="StyleKitNewButton" Margin="0,0,6,6" Content="New..." Command="{Binding NewCommand}" />
+        <Button AutomationProperties.AutomationId="StyleKitDuplicateButton" Margin="0,0,6,6" Content="Duplicate..." Command="{Binding DuplicateCommand}" />
+        <Button AutomationProperties.AutomationId="StyleKitEditButton" Margin="0,0,6,6" Content="Edit..." Command="{Binding EditCommand}" />
+        <Button AutomationProperties.AutomationId="StyleKitDeleteButton" Margin="0,0,6,6" Content="Delete..." Command="{Binding DeleteCommand}" />
+        <Button AutomationProperties.AutomationId="StyleKitImportButton" Margin="0,0,6,6" Content="Import..." Command="{Binding ImportCommand}" />
+        <Button AutomationProperties.AutomationId="StyleKitExportButton" Margin="0,0,6,6" Content="Export..." Command="{Binding ExportCommand}" />
+        <Button AutomationProperties.AutomationId="StyleKitCopyIntoProjectButton" Margin="0,0,6,6" Content="Copy into project" Command="{Binding CopyIntoProjectCommand}" />
+        <Button AutomationProperties.AutomationId="StyleKitRefreshButton" Margin="0,0,6,6" Content="Refresh" Command="{Binding RefreshCommand}" />
+        <StackPanel Orientation="Horizontal" Spacing="6" Margin="12,0,6,6">
+          <TextBlock VerticalAlignment="Center" Text="New and imported kits go to:" />
+          <ComboBox AutomationProperties.AutomationId="StyleKitTargetComboBox"
+                    MinWidth="130"
+                    ItemsSource="{x:Static vm:StyleKitManagerViewModel.TargetChoices}"
+                    SelectedIndex="{Binding TargetIndex}" />
+        </StackPanel>
+        <Button AutomationProperties.AutomationId="StyleKitCloseButton" Margin="0,0,0,6" Content="Close" IsCancel="True" Command="{Binding CloseCommand}" />
+      </WrapPanel>
+
+    </StackPanel>
+
+    <Grid ColumnDefinitions="360,Auto,*">
+
+      <!-- The kits in groups by place -->
+      <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+        <ItemsControl AutomationProperties.AutomationId="StyleKitGroups" ItemsSource="{Binding Groups}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StyleKitGroupViewModel">
+              <StackPanel Margin="0,0,8,14">
+                <TextBlock AutomationProperties.AutomationId="StyleKitGroupTitle"
+                           FontWeight="Bold"
+                           FontSize="15"
+                           Text="{Binding Title}" />
+                <TextBlock Opacity="0.7"
+                           TextWrapping="Wrap"
+                           Margin="0,2"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{Binding EmptyText}" />
+                <ItemsControl ItemsSource="{Binding Items}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StyleKitItemViewModel">
+                      <Button AutomationProperties.AutomationId="StyleKitCard"
+                              Classes="kit-card"
+                              Classes.selected="{Binding IsSelected}"
+                              Opacity="{Binding CardOpacity}"
+                              Click="OnKitCardClick">
+                        <StackPanel Spacing="3">
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
+                            <TextBlock Foreground="SeaGreen" IsVisible="{Binding IsInUse}" Text="in use" />
+                          </StackPanel>
+                          <TextBlock Opacity="0.7"
+                                     TextWrapping="Wrap"
+                                     IsVisible="{Binding HasDescription}"
+                                     Text="{Binding Description}" />
+                          <ItemsControl ItemsSource="{Binding StripColors}">
+                            <ItemsControl.ItemsPanel>
+                              <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="2" />
+                              </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                              <DataTemplate x:DataType="x:String">
+                                <Border Width="34"
+                                        Height="16"
+                                        CornerRadius="3"
+                                        BorderBrush="Gray"
+                                        BorderThickness="1"
+                                        Background="{Binding ., Converter={x:Static vm:ColorEditorView.HexToBrush}}" />
+                              </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                          </ItemsControl>
+                          <TextBlock Opacity="0.7" FontSize="11" Text="{Binding PlaceText}" />
+                          <TextBlock Foreground="DarkGoldenrod"
+                                     FontSize="11"
+                                     TextWrapping="Wrap"
+                                     IsVisible="{Binding IsOverridden}"
+                                     Text="{Binding OverriddenText}" />
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding Notes}" IsVisible="{Binding HasNotes}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                      <TextBlock AutomationProperties.AutomationId="StyleKitGroupNote"
+                                 Foreground="DarkGoldenrod"
+                                 FontSize="12"
+                                 TextWrapping="Wrap"
+                                 Margin="0,2"
+                                 Text="{Binding}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <GridSplitter Grid.Column="1" Width="6" Background="Transparent" />
+
+      <!-- The preview of the chosen kit -->
+      <Panel Grid.Column="2">
+
+        <TextBlock AutomationProperties.AutomationId="StyleKitNoSelection"
+                   Opacity="0.7"
+                   Margin="12"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding !HasSelection}"
+                   Text="Choose a kit in the list to see its colors, fonts, sizes, and example images." />
+
+        <ScrollViewer AutomationProperties.AutomationId="StyleKitPreview"
+                      VerticalScrollBarVisibility="Auto"
+                      IsVisible="{Binding HasSelection}">
+          <ContentControl Content="{Binding SelectedItem}">
+            <ContentControl.ContentTemplate>
+              <DataTemplate x:DataType="vm:StyleKitItemViewModel">
+                <StackPanel Margin="8,0,12,12" Spacing="2">
+
+                  <TextBlock AutomationProperties.AutomationId="StylePreviewName"
+                             FontSize="22"
+                             FontWeight="Bold"
+                             TextWrapping="Wrap"
+                             Text="{Binding Name}" />
+                  <TextBlock Opacity="0.8" TextWrapping="Wrap" IsVisible="{Binding HasDescription}" Text="{Binding Description}" />
+                  <TextBlock AutomationProperties.AutomationId="StylePreviewLocation"
+                             Opacity="0.7"
+                             FontSize="12"
+                             TextWrapping="Wrap"
+                             Text="{Binding LocationText}" />
+                  <TextBlock AutomationProperties.AutomationId="StylePreviewReadOnly"
+                             Foreground="DarkGoldenrod"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding IsReadOnly}"
+                             Text="{Binding ReadOnlyText}" />
+                  <TextBlock Foreground="DarkGoldenrod"
+                             TextWrapping="Wrap"
+                             IsVisible="{Binding IsOverridden}"
+                             Text="{Binding OverriddenText}" />
+
+                  <ItemsControl AutomationProperties.AutomationId="StylePreviewWarnings"
+                                ItemsSource="{Binding Warnings}"
+                                IsVisible="{Binding HasWarnings}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Foreground="DarkGoldenrod" TextWrapping="Wrap" Text="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock Classes="section" Text="Palette" />
+                  <ItemsControl AutomationProperties.AutomationId="StylePreviewSwatches" ItemsSource="{Binding Swatches}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:StyleSwatch">
+                        <Border Width="104"
+                                Height="58"
+                                Margin="0,0,6,6"
+                                CornerRadius="5"
+                                BorderBrush="Gray"
+                                BorderThickness="1"
+                                Background="{Binding Hex, Converter={x:Static vm:ColorEditorView.HexToBrush}}">
+                          <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock HorizontalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Foreground="{Binding LabelHex, Converter={x:Static vm:ColorEditorView.HexToBrush}}"
+                                       Text="{Binding Role}" />
+                            <TextBlock HorizontalAlignment="Center"
+                                       FontSize="11"
+                                       Foreground="{Binding LabelHex, Converter={x:Static vm:ColorEditorView.HexToBrush}}"
+                                       Text="{Binding Hex}" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock Classes="section" Text="Type and shape" />
+                  <ItemsControl ItemsSource="{Binding FontLines}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock TextWrapping="Wrap" Text="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock AutomationProperties.AutomationId="StylePreviewNumbers" Text="{Binding NumbersText}" />
+                  <TextBlock Text="{Binding MermaidText}" />
+                  <TextBlock Text="{Binding VegaLiteText}" />
+
+                  <TextBlock Classes="section" Text="Advice" IsVisible="{Binding HasNotes}" />
+                  <TextBlock TextWrapping="Wrap" IsVisible="{Binding HasNotes}" Text="{Binding Notes}" />
+                  <ItemsControl ItemsSource="{Binding DoItems}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock TextWrapping="Wrap" Foreground="SeaGreen" Text="{Binding ., StringFormat='Do: {0}'}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <ItemsControl ItemsSource="{Binding DontItems}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock TextWrapping="Wrap" Foreground="Firebrick" Text="{Binding ., StringFormat='Do not: {0}'}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock Classes="section" Text="Export sizes" IsVisible="{Binding HasPresets}" />
+                  <ItemsControl AutomationProperties.AutomationId="StylePreviewPresets"
+                                ItemsSource="{Binding PresetLines}"
+                                IsVisible="{Binding HasPresets}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock Classes="section" Text="Examples" IsVisible="{Binding HasExamples}" />
+                  <ItemsControl AutomationProperties.AutomationId="StylePreviewThumbnails"
+                                ItemsSource="{Binding Thumbnails}"
+                                IsVisible="{Binding HasExamples}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:StyleThumbnailViewModel">
+                        <Border Width="256"
+                                Margin="0,0,8,8"
+                                Padding="6"
+                                CornerRadius="5"
+                                BorderBrush="Gray"
+                                BorderThickness="1">
+                          <StackPanel Spacing="4">
+                            <Image AutomationProperties.AutomationId="StyleThumbnailImage"
+                                   MaxWidth="240"
+                                   MaxHeight="200"
+                                   Stretch="Uniform"
+                                   IsVisible="{Binding HasImage}"
+                                   Source="{Binding Image, Converter={x:Static vm:StyleKitManagerView.ImageToBitmap}}" />
+                            <TextBlock AutomationProperties.AutomationId="StyleThumbnailPlaceholder"
+                                       Opacity="0.7"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding HasPlaceholder}"
+                                       Text="{Binding PlaceholderText}" />
+                            <TextBlock AutomationProperties.AutomationId="StyleThumbnailLabel"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Text="{Binding Label}" />
+                          </StackPanel>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+
+                  <TextBlock Classes="section" Text="What an assistant is given" />
+                  <TextBlock AutomationProperties.AutomationId="StylePreviewGuidanceSize" Opacity="0.7" Text="{Binding GuidanceSizeText}" />
+                  <Expander Header="Show the text">
+                    <TextBox AutomationProperties.AutomationId="StylePreviewGuidanceText"
+                             IsReadOnly="True"
+                             AcceptsReturn="True"
+                             TextWrapping="NoWrap"
+                             FontFamily="Consolas,Menlo,monospace"
+                             MaxHeight="320"
+                             Text="{Binding GuidanceText, Mode=OneWay}" />
+                  </Expander>
+
+                </StackPanel>
+              </DataTemplate>
+            </ContentControl.ContentTemplate>
+          </ContentControl>
+        </ScrollViewer>
+
+      </Panel>
+
+    </Grid>
+
+  </DockPanel>
+
+</Window>

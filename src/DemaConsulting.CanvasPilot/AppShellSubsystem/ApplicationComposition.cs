@@ -367,6 +367,7 @@ public sealed class ApplicationComposition : IDisposable
             () => KnowledgeCatalog.Default,
             stylePicker,
             styleCheck,
+            dialogs => new StyleKitManagerViewModel(styleCatalog, styleSelection, renderer, dialogs, projects, logger),
             logger);
         pickerOwner = shell;
 

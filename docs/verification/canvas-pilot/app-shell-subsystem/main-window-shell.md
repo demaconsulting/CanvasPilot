@@ -50,6 +50,11 @@ temporary local folders; no network or external services are required.
   blank prompt.
 - A shell that has a style picker shows a status bar with it while a project is open and no bar otherwise; a project
   that was created, and no project that was only opened, is given the default style kit of the user.
+- The Tools menu has Style Kits above Settings, usable when the application has a window that manages style kits;
+  running it makes the view model of the window from the dialog service each time and hands it to the dialog service,
+  and does nothing without a window or a dialog service. The real main window shows that window as a window that it owns
+  and that does not block it, one at a time (a second request brings the open one to the front), closes it when the main
+  window closes, and shows the editor of a kit modally over that window or over itself.
 - Check Against Style, the last item of the Image menu, is usable only while the application can check and a picture is
   shown, runs the check, tells the user in a message why when nothing was checked, and is unusable and does nothing in a
   shell that has no check.
@@ -316,3 +321,29 @@ again. This scenario is tested by
 status bar is hidden with no project and shown with one, holds the label `Style:` and a list with no style and the three
 kits that come with the program. This scenario is tested by
 `StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits`.
+
+**MainWindowShell_ShowStyleKits_MakesTheViewModelFromTheDialogsAndShowsIt**: With a function that makes the window of a
+real catalog, running Style Kits twice calls the function twice with the dialog service, and the dialog service shows
+two different view models. This scenario is tested by
+`MainWindowShell_ShowStyleKits_MakesTheViewModelFromTheDialogsAndShowsIt`.
+
+**MainWindowShell_ShowStyleKits_WithoutWindowOrDialogService_DoesNothing**: A shell with no window cannot run the
+command, and a shell with a window and no dialog service does not call the function. This scenario is tested by
+`MainWindowShell_ShowStyleKits_WithoutWindowOrDialogService_DoesNothing`.
+
+**MainWindowView_StyleKitsMenuItem_ShowsWindowThatDoesNotBlock**: In the real window composed with the real units, the
+Style Kits item opens a window titled Style Kits that the main window owns, with a card for each of the three kits that
+come with the program, and the main window stays usable. This scenario is tested by
+`MainWindowView_StyleKitsMenuItem_ShowsWindowThatDoesNotBlock`.
+
+**MainWindowView_StyleKitsMenuItem_SecondRequest_ReusesTheOpenWindow**: A second request brings the same window to the
+front with the kit that was chosen still chosen; after it was closed a request opens a new window with nothing chosen.
+This scenario is tested by `MainWindowView_StyleKitsMenuItem_SecondRequest_ReusesTheOpenWindow`.
+
+**MainWindowView_ShowStyleKitEditor_OverTheManagerOrTheMainWindow_ShowsEditorModally**: Asking the main window for the
+editor of a kit shows it over the main window when the window that manages kits is not open and over that window when it
+is, and the Cancel button of the editor completes the request. This scenario is tested by
+`MainWindowView_ShowStyleKitEditor_OverTheManagerOrTheMainWindow_ShowsEditorModally`.
+
+**MainWindowView_Close_ClosesTheStyleKitsWindowItOwns**: Closing the main window closes the window that manages kits.
+This scenario is tested by `MainWindowView_Close_ClosesTheStyleKitsWindowItOwns`.

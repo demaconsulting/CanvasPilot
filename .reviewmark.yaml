@@ -1196,12 +1196,15 @@ reviews:
       - "src/**/StyleSubsystem/IStyleKitDialogs.cs"
       - "src/**/StyleSubsystem/StyleKitGroupViewModel.cs"
       - "src/**/StyleSubsystem/StyleKitItemViewModel.cs"
+      - "src/**/StyleSubsystem/StyleKitManagerView.axaml"
+      - "src/**/StyleSubsystem/StyleKitManagerView.axaml.cs"
       - "src/**/StyleSubsystem/StyleKitManagerViewModel.cs"
       - "src/**/StyleSubsystem/StyleSwatch.cs"
       - "src/**/StyleSubsystem/StyleThumbnail.cs"
       - "src/**/StyleSubsystem/StyleThumbnailCache.cs"
       - "src/**/StyleSubsystem/StyleThumbnailViewModel.cs"
       - "test/**/StyleSubsystem/StyleKitManagerTests.cs"
+      - "test/**/StyleKitManagerViewTests.cs"
       - "test/**/StyleSubsystem/StyleSubsystemFakes.cs"
 
   - id: CanvasPilot-Style-StyleGuidance

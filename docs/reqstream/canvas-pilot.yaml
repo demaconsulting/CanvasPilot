@@ -481,6 +481,7 @@ sections:
         children:
           - CanvasPilot-Style-ManageKitsInWindow
           - CanvasPilot-Style-ExchangeKitsAsZipFiles
+          - CanvasPilot-AppShell-OpenStyleKitsWindow
 
       - id: CanvasPilot-System-ChooseProjectStyle
         title: >-

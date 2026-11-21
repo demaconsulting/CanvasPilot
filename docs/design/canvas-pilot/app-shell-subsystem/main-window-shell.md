@@ -27,11 +27,12 @@ not treat them as access keys.
 **ImageExporter**: `IImageExporter` of the `Preview` subsystem — `NullImageExporter` unless one is supplied to the
 constructor; the application supplies the exporter of the `Preview` subsystem.
 
-**Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled
-while a project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can
-export), `OpenSettingsCommand`, `ShowDrawingKnowledgeCommand` (enabled while the application has knowledge to show), and
-`ShowAboutCommand`, and `UndoCommand` and `RedoCommand` (enabled while `EditTarget` can undo or redo), and
-`CheckAgainstStyleCommand` (enabled while a picture can be checked against the style).
+**Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled while a
+project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can export),
+`OpenSettingsCommand`, `ShowStyleKitsCommand` (enabled while the application has a window that manages style kits),
+`ShowDrawingKnowledgeCommand` (enabled while the application has knowledge to show), and `ShowAboutCommand`, and
+`UndoCommand` and `RedoCommand` (enabled while `EditTarget` can undo or redo), and `CheckAgainstStyleCommand` (enabled
+while a picture can be checked against the style).
 
 **EditTarget**: `IUndoRedoTarget?` (a `Composer` seam) - what Edit > Undo and Redo act on: the part of the window
 that has the focus, or `null` while the focus is in a part that has nothing to undo. The window sets it. The shell
@@ -63,8 +64,14 @@ the clipboard, and the message dialog. Its constructor passes itself to `AttachD
 closes it. It also tracks the focus and the talk key (see **Focus tracking** and **Talk key** below). Its Help menu has
 `DrawingKnowledgeMenuItem` (`_Drawing Knowledge...`), a separator, and `AboutMenuItem`. The window shows the browser of
 the drawing knowledge with `Show` and itself as the owner, so that it does not block the window, and keeps the one that
-is open. Below the content the window has a status bar (`StatusBar`, a `Border` docked at the bottom) whose only content
-is the style picker (`StylePickerHost`); the bar is shown only while `ShowStatusBar` is true.
+is open. Its Tools menu has `StyleKitsMenuItem` (`Style _Kits...`) above `SettingsMenuItem`. The window also implements
+`IStyleKitDialogs`, which `IDialogService` includes: it shows the window that manages style kits with `Show` and itself
+as the owner, one at a time (a request while it is open brings it to the front, restored if it was minimized, and
+disposes the view model that was made for the request), shows the editor of a kit modally over that window (or over
+itself when that is not open), and shows the pickers of a zip file to import, of a zip file to write, and of example
+images (which offers the file types that CanvasNet draws). Below the content the window has a status bar (`StatusBar`, a
+`Border` docked at the bottom) whose only content is the style picker (`StylePickerHost`); the bar is shown only while
+`ShowStatusBar` is true.
 
 #### Key Methods
 
@@ -85,6 +92,12 @@ Exit raises `ExitRequested`.
 **OpenSettings**: Shows a `SettingsDialogViewModel` over the settings service and the supplied pages, and tells
 the dialog it has closed afterwards so the pages can release resources. **ShowAbout** shows an
 `AboutDialogViewModel`.
+
+**ShowStyleKits**: The constructor takes an optional function that makes the `StyleKitManagerViewModel` from an
+`IStyleKitDialogs`; the composition root passes the one that builds it over the catalog of kits, the selection, the
+render service, and the project service. The command is unavailable when there is no function and does nothing until a
+dialog service is attached. Each time it runs it calls the function with the dialog service and gives the view model to
+`IStyleKitDialogs.ShowStyleKitManagerAsync`, which completes when the window is shown, not when it is closed.
 
 **ShowDrawingKnowledge**: The constructor takes an optional function that gives the catalog of the drawing knowledge and
 an optional logger; the composition root passes the function that gives the catalog of the application, which reads the
@@ -161,6 +174,9 @@ texts or a blank accepting label.
   when the exporter asks how to export.
 - **StylePicker** (of the `Style` subsystem) - the list in the status bar that the shell hosts and that it asks to give
   a new project the default style kit; the shell does not know the kits.
+- **StyleKitManager** (of the `Style` subsystem) - the window that manages style kits, which the shell asks the dialogs
+  to show; the dialog service includes `IStyleKitDialogs`, so the same main window shows it, its editor, and its
+  pickers.
 - **StyleChecker** (through `ICheckAgainstStyle`) - what the Check Against Style command runs; the interface belongs to
   the `Style` subsystem.
 - **Composer** (through `IUndoRedoTarget` and `IPushToTalkTarget`) — what the Edit menu and the talk key reach; the

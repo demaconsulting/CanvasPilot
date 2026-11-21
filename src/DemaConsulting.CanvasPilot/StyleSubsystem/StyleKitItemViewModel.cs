@@ -113,6 +113,11 @@ public sealed partial class StyleKitItemViewModel : ObservableObject
     public string Description => Entry.Kit.Description;
 
     /// <summary>
+    ///     Gets a value indicating whether the kit has a description.
+    /// </summary>
+    public bool HasDescription => Description.Length > 0;
+
+    /// <summary>
     ///     Gets the place of the kit in words: <c>project</c>, <c>my kits</c>, <c>shared</c>, or <c>built-in</c>.
     /// </summary>
     public string PlaceText => StylePickerViewModel.PlaceText(Entry.Location);

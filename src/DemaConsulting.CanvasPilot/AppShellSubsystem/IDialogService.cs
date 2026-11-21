@@ -23,6 +23,7 @@ using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -32,10 +33,11 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 ///     is needed. Every method completes when the user has closed the dialog, except the browser of the drawing
 ///     knowledge, which is a window that does not block and completes when it is shown. It includes the dialogs that
 ///     lower subsystems ask for through their own interfaces: the folder picker of the project subsystem, the export
-///     dialogs of the preview subsystem, the payload inspector of the chat subsystem, and the browser of the knowledge
-///     subsystem.
+///     dialogs of the preview subsystem, the payload inspector of the chat subsystem, the browser of the knowledge
+///     subsystem, and the windows, file pickers, and questions of the style kits window (which include asking the user to
+///     confirm an action and to type a line of text).
 /// </summary>
-public interface IDialogService : IFolderPicker, IExportDialogs, IPayloadInspectorLauncher, IKnowledgeBrowserLauncher
+public interface IDialogService : IFolderPicker, IExportDialogs, IPayloadInspectorLauncher, IKnowledgeBrowserLauncher, IStyleKitDialogs
 {
     /// <summary>
     ///     Shows the New Project dialog modally. The view model reports whether it was accepted.
@@ -64,23 +66,4 @@ public interface IDialogService : IFolderPicker, IExportDialogs, IPayloadInspect
     /// <param name="initialFolder">The folder to start in, or <see langword="null" /> for the platform default.</param>
     /// <returns>The full path of the chosen <c>.canvaspilot</c> file, or <see langword="null" /> when cancelled.</returns>
     Task<string?> PickProjectFileAsync(string? initialFolder);
-
-    /// <summary>
-    ///     Asks the user to confirm an action.
-    /// </summary>
-    /// <param name="title">The dialog title.</param>
-    /// <param name="message">The question.</param>
-    /// <param name="confirmText">The label of the button that confirms.</param>
-    /// <returns><see langword="true" /> when the user confirmed; <see langword="false" /> when cancelled.</returns>
-    Task<bool> ConfirmAsync(string title, string message, string confirmText);
-
-    /// <summary>
-    ///     Asks the user to type a line of text.
-    /// </summary>
-    /// <param name="title">The dialog title.</param>
-    /// <param name="message">The prompt.</param>
-    /// <param name="initialText">The text to start with.</param>
-    /// <param name="confirmText">The label of the button that accepts.</param>
-    /// <returns>The text entered, or <see langword="null" /> when the user cancelled.</returns>
-    Task<string?> PromptAsync(string title, string message, string initialText, string confirmText);
 }
