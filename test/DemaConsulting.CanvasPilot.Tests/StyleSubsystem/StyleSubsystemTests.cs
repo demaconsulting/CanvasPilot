@@ -265,6 +265,45 @@ public sealed class StyleSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Validates that a picture that is really drawn from a file is checked against the kit that the catalog finds: a
+    ///     picture that uses only the colors of the kit passes, a picture with another color fails and names it with the
+    ///     nearest role, and the notes of the check have the codes that the list of notes of a picture groups by.
+    /// </summary>
+    [Fact]
+    public async Task StyleSubsystem_CheckPictures_RealRenderedPictures_PassOnAndFailOffThePalette()
+    {
+        // Arrange: a kit of the user, found through the catalog, and two SVG files drawn by the real render service
+        var ct = TestContext.Current.CancellationToken;
+        var user = Path.Combine(_root, "user");
+        WriteKit(user, "checked", "mine");
+        var settings = new SettingsService(Path.Combine(_root, "settings"));
+        var projects = new ProjectService();
+        using var catalog = new StyleKitCatalog(projects, settings, Path.Combine(_root, "builtin"), user, TimeSpan.FromSeconds(5));
+        await catalog.RefreshAsync(ct);
+        var kit = catalog.Resolve("checked")!.Kit;
+        var folder = Directory.CreateDirectory(Path.Combine(_root, "pictures")).FullName;
+        var good = Path.Combine(folder, "good.svg");
+        var bad = Path.Combine(folder, "bad.svg");
+        await File.WriteAllTextAsync(good, "<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='#FFFFFF'/><rect x='20' y='20' width='60' height='60' fill='#2563EB'/></svg>", ct);
+        await File.WriteAllTextAsync(bad, "<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><rect width='100' height='100' fill='#FFFFFF'/><rect x='0' y='0' width='50' height='100' fill='#D32F2F'/></svg>", ct);
+        var renderer = new PreviewSubsystem.ImageRenderService();
+
+        // Act: draw and check both
+        var goodReport = StyleChecker.Check((await renderer.RenderAsync(good, folder, ct)).Image!, kit);
+        var badReport = StyleChecker.Check((await renderer.RenderAsync(bad, folder, ct)).Image!, kit);
+
+        // Assert: the first passes with the two palette colors, the second fails and names the red
+        Assert.True(goodReport.Passed, goodReport.ToText("good.svg"));
+        Assert.Equal(["background", "primary"], goodReport.OnPalette.Select(u => u.Role));
+        Assert.False(badReport.Passed);
+        Assert.Equal("#D32F2F", Assert.Single(badReport.OffPalette).Hex);
+        Assert.Equal(0.5, badReport.OffPaletteShare, 2);
+        Assert.Equal("style-summary", badReport.ToNotes()[0].Code);
+        Assert.All(badReport.ToNotes(), n => Assert.StartsWith("style-", n.Code, StringComparison.Ordinal));
+        Assert.Contains("Off the palette: #D32F2F", badReport.ToText("bad.svg"), StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Writes a kit as a folder in a place.
     /// </summary>
     /// <param name="root">The place.</param>

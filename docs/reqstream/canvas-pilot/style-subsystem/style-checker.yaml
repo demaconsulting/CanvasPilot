@@ -1,0 +1,81 @@
+---
+# Software Unit Requirements for the StyleChecker Unit
+#
+# The StyleChecker unit measures the colors of a picture against the palette of a style kit. It works on the pixels that the
+# application holds for a rendered picture, counts them in a histogram, and sorts them into palette colors, blends of two
+# palette colors at an edge, and colors that are off the palette, with the share and the nearest palette color of each. The
+# same picture always gives the same report. It has no user interface and reads no file.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleChecker Requirements
+            requirements:
+              - id: CanvasPilot-StyleChecker-MeasureColorsAgainstThePalette
+                title: >-
+                  The StyleChecker shall count the pixels of a picture that are not empty, flattening a pixel that is partly
+                  see-through over the background of the kit, and shall credit each to the palette color that is nearest to it
+                  in CIELAB when it is within the tolerance, so that the report has the share of the picture that is each
+                  palette color, and shall pass the picture when no more than the limit of its pixels are off the palette.
+                justification: |
+                  A style is kept when the colors of a picture are the colors of the palette. The distance has to be one that
+                  the eye would agree with, so it is measured in CIELAB and not in the channels of the screen, and a pixel that
+                  is not there must not be held against the picture. A pass or a fail needs a limit that can be named, since a
+                  few stray pixels are not a departure from a style.
+                tests:
+                  - ColorMath_ToLab_KnownColors_AreCloseToTheReferenceValues
+                  - StyleChecker_Check_StripesOfPaletteColors_AreOnThePaletteAndPass
+                  - StyleChecker_Check_ColorAroundTheTolerance_IsOnThePaletteInsideAndOffJustOutside
+                  - StyleChecker_Check_TransparentPixels_AreIgnoredAndCounted
+                  - StyleChecker_Check_TranslucentPixels_AreFlattenedOverTheBackground
+                  - StyleChecker_Check_EmptyAndOnePixelPictures_AreHandled
+                  - StyleChecker_Check_LargestPicture_FinishesInUnderTwoSeconds
+                  - StyleCheckOptions_DefaultsAndValidate_AreTheOnesOfTheDesign
+                  - StyleChecker_Check_InvalidArguments_Throw
+                  - BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette
+
+              - id: CanvasPilot-StyleChecker-ReportOffPaletteColors
+                title: >-
+                  The StyleChecker shall report each color that is off the palette that has at least a hundredth of the
+                  counted pixels, taking colors that are within a small difference of each other as one, with its share and
+                  the nearest palette color and the difference, the largest first and at most eight, shall add the share of the
+                  others to one other share, shall make the shares of the palette colors, the blends, and the colors off the
+                  palette add up to the whole picture, and shall write the report as notes for the list of notes of the picture
+                  and as text for a reader that is not looking at the picture.
+                justification: |
+                  A report that says only that a picture is off the style does not say what to change. The color, how much of
+                  the picture it is, and the palette color that it should probably be tell the person or the assistant what to
+                  correct, and a short list of the larger departures is more useful than every stray shade.
+                tests:
+                  - StyleChecker_Check_TenPercentRedBlock_ReportsColorShareAndNearestRole
+                  - StyleChecker_Check_TinyOffPaletteShare_IsCountedNotListed
+                  - StyleChecker_Check_TwelveOffPaletteColors_ListCappedAtEightWithOtherShare
+                  - StyleChecker_Check_MixedPicture_SharesAddUpToOne
+                  - StyleChecker_Check_GradientToAColorOffThePalette_Fails
+                  - StyleCheckReport_ToNotesAndToText_FailingPicture_HaveTheShapeOfTheDesign
+                  - StyleCheckReport_ToText_PassingPictureWithoutName_HasNoOffPaletteLine
+
+              - id: CanvasPilot-StyleChecker-AllowBlendedEdges
+                title: >-
+                  The StyleChecker shall count a color that is within a small difference of the straight line, in sRGB, between
+                  two palette colors as a blend of them, as the edge of an anti-aliased shape is, and shall report the share of
+                  such pixels as blended edges and not as colors that are off the palette.
+                justification: |
+                  Every picture that is drawn with smooth edges has pixels between the color of a shape and the color of what is
+                  behind it. Counting them as departures would make every correct picture fail, so they are told apart and
+                  reported on their own.
+                tests:
+                  - ColorMath_BlendDistance_PointOnBesideAndFarFromTheLine_IsZeroSmallAndInfinite
+                  - StyleChecker_Check_AntiAliasedEdgeBetweenTwoPaletteColors_IsBlendedNotOffPalette
+
+              - id: CanvasPilot-StyleChecker-BeDeterministic
+                title: >-
+                  The StyleChecker shall give the same report for the same pixels every time and for the same pixels in any
+                  order, on every machine.
+                justification: |
+                  A report that changes from one run to the next cannot be trusted, compared, or tested, and a person must be
+                  able to check a picture again after a small change and see that only what changed is different.
+                tests:
+                  - StyleChecker_Check_SameOrShuffledPixels_GiveEqualReports

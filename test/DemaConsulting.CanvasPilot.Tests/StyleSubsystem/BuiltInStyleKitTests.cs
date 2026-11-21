@@ -120,6 +120,32 @@ public sealed class BuiltInStyleKitTests : IDisposable
     }
 
     /// <summary>
+    ///     Validates that every example of every kit is on the palette of its own kit, as the style check measures it: the
+    ///     picture passes, and less than a thousandth of its pixels are off the palette. The bound is the largest value that
+    ///     was measured (0.045 percent, for the flowchart of the kit DEMA), rounded up to the next thousandth.
+    /// </summary>
+    [Fact]
+    public async Task BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette()
+    {
+        // Arrange
+        var renderer = new ImageRenderService();
+
+        // Act / Assert: each example is drawn and checked against the kit that it is the example of
+        foreach (var id in KitIds)
+        {
+            var folder = Path.Combine(BuiltInFolder, id);
+            var kit = StyleKitSerializer.ReadFolder(folder).Kit!;
+            foreach (var file in ExampleFiles)
+            {
+                var result = await renderer.RenderAsync(Path.Combine(folder, "examples", file), folder, TestContext.Current.CancellationToken);
+                var report = StyleChecker.Check(result.Image!, kit);
+                Assert.True(report.Passed, $"{id}/{file}: {report.ToText(file)}");
+                Assert.True(report.OffPaletteShare < 0.001, $"{id}/{file}: {report.OffPaletteShare:P3} is off the palette.");
+            }
+        }
+    }
+
+    /// <summary>
     ///     Validates that the text of each kit can be read on its background and on its surface, and that the muted text can
     ///     be read on the background, with the contrast of at least 4.5 to 1 that the guidelines of the web ask for.
     /// </summary>

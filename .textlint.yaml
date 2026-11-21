@@ -45,6 +45,9 @@ enableGlobDot: true
 # Project-specific technical terms and tool names
 words:
   - AARRGGBB
+  - CIEDE
+  - CIELAB
+  - tristimulus
   - IDAT
   - IEND
   - IHDR

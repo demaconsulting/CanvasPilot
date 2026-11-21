@@ -30,6 +30,8 @@ project file of the application library from the repository; no network, display
   services that opens the file finds the same kit; a kit that cannot be found is reported as missing.
 - The export sizes that the style supplies are offered by the exporter of the `Preview` subsystem, the sizes of the kit
   first, and an export at the size of the kit is a PNG of exactly that size over the background of the kit.
+- A picture that is drawn from a file is checked against the kit that the catalog finds: a picture of the colors of the
+  kit passes, and a picture with another color fails and names it.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that the
   project file of the application library declares is a language model or agent library.
 
@@ -68,6 +70,12 @@ the selection as its source of sizes offers the picture as it is shown, `Square`
 application, in that order; exporting at `Square` writes a PNG of 320 by 320 whose corner has the background of the kit,
 with no message. This scenario is tested by
 `StyleSubsystem_OfferExportPresets_KitSizes_AreOfferedByTheExporterAndWriteAPngOfTheSize`.
+
+**StyleSubsystem_CheckPictures_RealRenderedPictures_PassOnAndFailOffThePalette**: Two SVG files are drawn by the real
+render service and checked against a kit that the catalog finds. The one that uses white and the blue of the kit passes
+with the roles `background` and `primary`; the one with half of it in `#D32F2F` fails, lists that color, has half of the
+picture off the palette, and its notes all have codes that start with `style-`. This scenario is tested by
+`StyleSubsystem_CheckPictures_RealRenderedPictures_PassOnAndFailOffThePalette`.
 
 **StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers to, the
 packages in the dependency file of the test project, and the package references in the project file of the application

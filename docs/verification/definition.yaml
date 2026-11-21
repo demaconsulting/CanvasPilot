@@ -84,6 +84,7 @@ input-files:
   - docs/verification/canvas-pilot/style-subsystem/style-kit-archive.md
   - docs/verification/canvas-pilot/style-subsystem/style-selection.md
   - docs/verification/canvas-pilot/style-subsystem/style-guidance.md
+  - docs/verification/canvas-pilot/style-subsystem/style-checker.md
   - docs/verification/canvas-pilot/utilities-subsystem.md
   - docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/verification/ots.md

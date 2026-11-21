@@ -127,6 +127,13 @@ sections:
               A style is only kept when departures from it can be seen. A picture always has blended pixels where a shape
               meets another, and those must not be taken for a departure, and a report that changes from run to run cannot
               be trusted or tested.
+            children:
+              - CanvasPilot-StyleChecker-MeasureColorsAgainstThePalette
+              - CanvasPilot-StyleChecker-ReportOffPaletteColors
+              - CanvasPilot-StyleChecker-AllowBlendedEdges
+              - CanvasPilot-StyleChecker-BeDeterministic
+            tests:
+              - StyleSubsystem_CheckPictures_RealRenderedPictures_PassOnAndFailOffThePalette
 
           - id: CanvasPilot-Style-ManageKitsInWindow
             title: >-

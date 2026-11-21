@@ -1136,6 +1136,23 @@ reviews:
       - "test/**/StyleSubsystem/StyleGuidanceTests.cs"
       - "test/**/StyleSubsystem/Golden/clean-guidance.txt"
 
+  - id: CanvasPilot-Style-StyleChecker
+    title: Review of CanvasPilot StyleChecker unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-checker.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-checker.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-checker.md"
+      - "src/**/StyleSubsystem/ColorMath.cs"
+      - "src/**/StyleSubsystem/StyleCheckOptions.cs"
+      - "src/**/StyleSubsystem/StyleCheckReport.cs"
+      - "src/**/StyleSubsystem/StyleChecker.cs"
+      - "test/**/StyleSubsystem/StyleCheckerTests.cs"
+
   - id: CanvasPilot-Style-BuiltInStyleKits
     title: Review of CanvasPilot built-in style kits
     context:

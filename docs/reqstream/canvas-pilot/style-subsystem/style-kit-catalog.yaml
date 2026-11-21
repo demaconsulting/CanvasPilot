@@ -114,6 +114,7 @@ sections:
                 tests:
                   - BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning
                   - BuiltInStyleKits_ExampleFiles_AreDrawnWithoutErrorOrNote
+                  - BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette
                   - BuiltInStyleKits_Palette_TextIsReadableOnBackgroundAndSurface
                   - BuiltInStyleKits_Values_AreTheOnesOfTheDesign
                   - BuiltInStyleKits_Examples_CarryTheThemeAndChartConfigurationOfTheirKit

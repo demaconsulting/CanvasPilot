@@ -169,6 +169,10 @@ theme, a Vega-Lite configuration, notes, three examples with captions that are f
 and a block of guidance for an assistant that fits its budget. This scenario is tested by
 `BuiltInStyleKits_ReadFolder_EachKit_LoadsWithNoErrorAndNoWarning`.
 
+**BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette**: Each of the nine examples is drawn and checked against its own
+kit with the style checker: it passes and less than a thousandth of it is off the palette (the largest value measured
+was 0.045 percent). This scenario is tested by `BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette`.
+
 **BuiltInStyleKits_ExampleFiles_AreDrawnWithoutErrorOrNote**: The nine example files are drawn by the real render
 service with the folder of their kit as the only folder they may read. Each draw succeeds, has no note, and is larger
 than 100 by 50 pixels. This scenario is tested by `BuiltInStyleKits_ExampleFiles_AreDrawnWithoutErrorOrNote`.
