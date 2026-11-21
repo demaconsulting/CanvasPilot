@@ -193,11 +193,12 @@ public sealed class SettingsService : ISettingsService
     /// </summary>
     /// <param name="settings">The settings as read or supplied; individual members may be null after parsing.</param>
     /// <returns>Settings that satisfy every documented bound, at the current schema version.</returns>
-    private static AppSettings Normalize(AppSettings? settings)
+    private AppSettings Normalize(AppSettings? settings)
     {
         var source = settings ?? new AppSettings();
         var ai = source.AiProvider ?? new AiProviderSettings();
         var speech = source.Speech ?? new SpeechSettings();
+        var styles = source.Styles ?? new StyleSettings();
 
         var parameters = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
         foreach (var (modelId, values) in speech.ModelParameters ?? new Dictionary<string, IReadOnlyDictionary<string, string>>())
@@ -237,7 +238,42 @@ public sealed class SettingsService : ISettingsService
                 TtsModelId = speech.TtsModelId ?? string.Empty,
                 ModelParameters = parameters,
             },
+            Styles = styles with
+            {
+                SharedKitFolders = NormalizeSharedFolders(styles.SharedKitFolders),
+                DefaultKitId = StyleSettings.IsValidKitId(styles.DefaultKitId?.Trim()) ? styles.DefaultKitId!.Trim() : string.Empty,
+            },
         };
+    }
+
+    /// <summary>
+    ///     Cleans the list of shared style kit folders: each entry is trimmed, must be a full path, and appears once; the
+    ///     order is kept.
+    /// </summary>
+    /// <remarks>
+    ///     A folder that does not exist or cannot be reached is kept, because a network folder may be down now and back
+    ///     later and the list of kits says which folders cannot be reached. A relative path or a blank entry cannot mean the
+    ///     same folder on every machine, so it is dropped and the drop is logged.
+    /// </remarks>
+    /// <param name="folders">The folders as read or supplied; may be <see langword="null" /> after parsing.</param>
+    /// <returns>The kept folders, in their order.</returns>
+    private List<string> NormalizeSharedFolders(IReadOnlyList<string>? folders)
+    {
+        var kept = new List<string>();
+        foreach (var entry in folders ?? [])
+        {
+            var folder = entry?.Trim() ?? string.Empty;
+            if (folder.Length == 0 || folder.IndexOfAny(Path.GetInvalidPathChars()) >= 0 || !Path.IsPathFullyQualified(folder))
+            {
+                Log(LogLevel.Warning, $"The shared style kit folder '{entry}' is not a full path and was dropped from the settings.");
+            }
+            else if (!kept.Contains(folder, StringComparer.OrdinalIgnoreCase))
+            {
+                kept.Add(folder);
+            }
+        }
+
+        return kept;
     }
 
     /// <summary>

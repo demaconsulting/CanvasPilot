@@ -23,7 +23,8 @@ this subsystem.
 - *Contract*: `Current` returns the settings in effect; `Load` reads the file; `Save` replaces the settings
   and writes the file; `Update` applies a transformation to the latest settings and writes the result;
   `Changed` is raised after any of these changes the settings. The settings are the immutable `AppSettings`
-  record with `AiProviderSettings` and `SpeechSettings` sections.
+  record with `AiProviderSettings`, `SpeechSettings`, and `StyleSettings` sections (the shared style kit folders and the
+  default style kit).
 - *Constraints*: `Save` and `Update` report a failed write as `IOException` and leave the settings in effect
   unchanged. `Load` never throws for a bad file.
 

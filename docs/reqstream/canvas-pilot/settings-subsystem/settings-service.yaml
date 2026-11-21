@@ -84,3 +84,24 @@ sections:
                   - SettingsService_Save_Settings_RaisesChangedWithSavedSettings
                   - SettingsService_Update_Transform_SavesAndReturnsTransformedSettings
                   - SettingsService_Load_ExistingFile_RaisesChanged
+
+              - id: CanvasPilot-SettingsService-KeepStyleSettings
+                title: >-
+                  The SettingsService shall keep the folders in which a team shares style kits, in their order, and the id of the
+                  style kit that a new project starts with, store them in the settings file, read them back, give no folders and
+                  no default kit for a file that has none, keep a folder once and in its first spelling, drop a folder that is
+                  not a full path and log the drop, keep a folder that does not exist, and replace a default kit id that no kit
+                  can have with none.
+                justification: |
+                  The folders of the shared kits are looked up in the order the user gave, because an earlier folder wins over a
+                  later one. A folder on a network may be away for a while and must still be there when it returns, but a path
+                  that is relative would mean another folder on every machine. A default kit that cannot be a kit would only
+                  ever be reported as missing, so it is not kept. A settings file from before style kits must still load.
+                tests:
+                  - SettingsService_SaveLoad_AllSettings_RoundTrips
+                  - SettingsService_Save_Settings_WritesVersionedCamelCaseJson
+                  - SettingsService_Load_FileWithoutStyles_GivesNoSharedFoldersAndNoDefaultKit
+                  - SettingsService_Load_SharedKitFolders_AreTrimmedFilteredAndUniqueInOrder
+                  - SettingsService_Load_DefaultKitId_IsValidOrEmpty
+                  - SettingsService_Update_StyleSettings_KeepsOtherSettingsAndPersists
+                  - SettingsService_StyleSettings_IsValidKitId_FollowsTheRule

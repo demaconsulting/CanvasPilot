@@ -494,6 +494,7 @@ sections:
         children:
           - CanvasPilot-Style-ChooseActiveKit
           - CanvasPilot-Project-KeepTheStyleChoice
+          - CanvasPilot-Settings-KeepStyleSettings
 
       - id: CanvasPilot-System-ExportAtPresetSizes
         title: >-

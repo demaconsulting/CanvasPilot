@@ -122,6 +122,8 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal("tts-1", loaded.Speech.TtsModelId);
         Assert.Equal("0.75", loaded.Speech.ModelParameters["tts-1"]["speed"]);
         Assert.Equal("true", loaded.Speech.ModelParameters["tts-1"]["normalize"]);
+        Assert.Equal(["C:\\Team\\Styles", "\\\\server\\share\\styles"], loaded.Styles.SharedKitFolders);
+        Assert.Equal("slides-dark", loaded.Styles.DefaultKitId);
     }
 
     /// <summary>
@@ -152,6 +154,9 @@ public sealed class SettingsServiceTests : IDisposable
         var speech = root.GetProperty("speech");
         Assert.Equal("mic", speech.GetProperty("captureDevice").GetString());
         Assert.Equal("0.75", speech.GetProperty("modelParameters").GetProperty("tts-1").GetProperty("speed").GetString());
+        var styles = root.GetProperty("styles");
+        Assert.Equal("C:\\Team\\Styles", styles.GetProperty("sharedKitFolders")[0].GetString());
+        Assert.Equal("slides-dark", styles.GetProperty("defaultKitId").GetString());
     }
 
     /// <summary>
@@ -430,6 +435,124 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a settings file from before style kits has no such member and gives the defaults for it, and that a
+    ///     null member does the same.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_FileWithoutStyles_GivesNoSharedFoldersAndNoDefaultKit()
+    {
+        // Arrange: an older file and a file whose styles member is null
+        WriteSettingsFile("""{ "version": 1, "aiProvider": { "modelName": "gpt" } }""");
+        var older = new SettingsService(SettingsFolder).Load();
+        WriteSettingsFile("""{ "version": 1, "styles": null }""");
+        var nulled = new SettingsService(SettingsFolder).Load();
+
+        // Assert
+        Assert.Empty(older.Styles.SharedKitFolders);
+        Assert.Equal(string.Empty, older.Styles.DefaultKitId);
+        Assert.Empty(nulled.Styles.SharedKitFolders);
+        Assert.Equal(string.Empty, nulled.Styles.DefaultKitId);
+    }
+
+    /// <summary>
+    ///     Test that the shared kit folders are trimmed, that relative, blank, and invalid entries are dropped with a line
+    ///     in the log, that a folder is kept once ignoring case, that the order is kept, and that a folder that does not
+    ///     exist is kept.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_SharedKitFolders_AreTrimmedFilteredAndUniqueInOrder()
+    {
+        // Arrange: a file with good, relative, blank, null, duplicate, and not existing folders
+        var missing = Path.Combine(_tempRoot, "not-created");
+        var folderB = Path.Combine(_tempRoot, "b");
+        WriteSettingsFile(
+            "{ \"styles\": { \"sharedKitFolders\": ["
+            + JsonSerializer.Serialize("  " + folderB + "  ") + ", "
+            + JsonSerializer.Serialize("styles\\relative") + ", "
+            + JsonSerializer.Serialize("   ") + ", null, "
+            + JsonSerializer.Serialize(folderB.ToUpperInvariant()) + ", "
+            + JsonSerializer.Serialize(missing) + ", "
+            + JsonSerializer.Serialize("C:folder") + "] } }");
+        var logger = new RollingFileLogger(LogFolder);
+
+        // Act
+        var loaded = new SettingsService(SettingsFolder, logger).Load();
+
+        // Assert: the first spelling of the folder is kept once, the missing folder is kept, and four entries were dropped
+        Assert.Equal([folderB, missing], loaded.Styles.SharedKitFolders);
+        var log = File.ReadAllText(logger.ActiveFilePath);
+        Assert.Equal(4, log.Split("was dropped from the settings", StringSplitOptions.None).Length - 1);
+    }
+
+    /// <summary>
+    ///     Test that a default kit id that no kit can have is replaced with none, that one with white space around it is
+    ///     trimmed, and that a valid one is kept.
+    /// </summary>
+    /// <param name="stored">The id in the file.</param>
+    /// <param name="expected">The id that is read.</param>
+    [Theory]
+    [InlineData("clean", "clean")]
+    [InlineData("  slides-dark ", "slides-dark")]
+    [InlineData("Clean", "")]
+    [InlineData("-x", "")]
+    [InlineData("a b", "")]
+    [InlineData("../x", "")]
+    [InlineData("", "")]
+    public void SettingsService_Load_DefaultKitId_IsValidOrEmpty(string stored, string expected)
+    {
+        // Arrange
+        WriteSettingsFile("{ \"styles\": { \"defaultKitId\": " + JsonSerializer.Serialize(stored) + " } }");
+
+        // Act
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert
+        Assert.Equal(expected, loaded.Styles.DefaultKitId);
+    }
+
+    /// <summary>
+    ///     Test that saving style settings by an update keeps the other settings and persists the style settings.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Update_StyleSettings_KeepsOtherSettingsAndPersists()
+    {
+        // Arrange: full settings that are stored
+        var service = new SettingsService(SettingsFolder);
+        service.Save(CreateFullSettings());
+        var folder = Path.Combine(_tempRoot, "team");
+
+        // Act: change only the styles, then load with a fresh service
+        service.Update(s => s with { Styles = new StyleSettings { SharedKitFolders = [folder], DefaultKitId = "dema" } });
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert
+        Assert.Equal([folder], loaded.Styles.SharedKitFolders);
+        Assert.Equal("dema", loaded.Styles.DefaultKitId);
+        Assert.Equal("llama3", loaded.AiProvider.ModelName);
+        Assert.Equal("mic", loaded.Speech.CaptureDevice);
+    }
+
+    /// <summary>
+    ///     Test that the rule of a kit id accepts 1 to 48 lower-case letters, digits, and dashes that do not start with a
+    ///     dash, and nothing else.
+    /// </summary>
+    [Fact]
+    public void SettingsService_StyleSettings_IsValidKitId_FollowsTheRule()
+    {
+        // Act / Assert
+        Assert.True(StyleSettings.IsValidKitId("a"));
+        Assert.True(StyleSettings.IsValidKitId("9-lives"));
+        Assert.True(StyleSettings.IsValidKitId(new string('a', 48)));
+        Assert.False(StyleSettings.IsValidKitId(new string('a', 49)));
+        Assert.False(StyleSettings.IsValidKitId(null));
+        Assert.False(StyleSettings.IsValidKitId(string.Empty));
+        Assert.False(StyleSettings.IsValidKitId("-a"));
+        Assert.False(StyleSettings.IsValidKitId("A"));
+        Assert.False(StyleSettings.IsValidKitId("a_b"));
+        Assert.False(StyleSettings.IsValidKitId("a\n"));
+    }
+
+    /// <summary>
     ///     Test that a whitespace settings folder is rejected.
     /// </summary>
     [Fact]
@@ -468,6 +591,11 @@ public sealed class SettingsServiceTests : IDisposable
                 {
                     ["tts-1"] = new Dictionary<string, string> { ["speed"] = "0.75", ["normalize"] = "true" },
                 },
+            },
+            Styles = new StyleSettings
+            {
+                SharedKitFolders = ["C:\\Team\\Styles", "\\\\server\\share\\styles"],
+                DefaultKitId = "slides-dark",
             },
         };
     }

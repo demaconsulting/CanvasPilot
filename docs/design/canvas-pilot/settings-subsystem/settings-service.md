@@ -6,14 +6,14 @@
 
 `SettingsService` owns the application settings. It reads and writes the versioned per-user settings file,
 keeps the settings in effect, and announces changes. A bad, missing, or newer file never stops the
-application. The `AppSettings`, `AiProviderSettings`, and `SpeechSettings` records and `ISettingsService`
+application. The `AppSettings`, `AiProviderSettings`, `SpeechSettings`, and `StyleSettings` records and `ISettingsService`
 interface belong to this unit.
 
 #### Data Model
 
 **AppSettings**: `record` — the whole document: `Version` (`int`, currently 1), `RecentProjects`
-(`IReadOnlyList<string>`, most recent first), `AiProvider` (`AiProviderSettings`), and `Speech`
-(`SpeechSettings`). Immutable; changed with `with` expressions.
+(`IReadOnlyList<string>`, most recent first), `AiProvider` (`AiProviderSettings`), `Speech`
+(`SpeechSettings`), and `Styles` (`StyleSettings`). Immutable; changed with `with` expressions.
 
 **AiProviderSettings**: `record` — `Provider` (`AiProviderKind`: `GitHubCopilot` or `Ollama`), `ModelName`
 (`string`, empty for the provider default), `ContextWindowTokens` (`int`, 512 to 2,000,000, default 8192),
@@ -24,6 +24,12 @@ interface belong to this unit.
 **SpeechSettings**: `record` — `CaptureDevice`, `PlaybackDevice`, `SttModelId`, and `TtsModelId` (`string`,
 empty for the default), and `ModelParameters` (model identifier, then parameter identifier, then the value
 as an invariant-culture string).
+
+**StyleSettings**: `record` — `SharedKitFolders` (`IReadOnlyList<string>`, the full paths of the folders in which a team
+shares style kits, in order of precedence with an earlier folder winning) and `DefaultKitId` (`string`, the id of the
+kit that a new project starts with, empty for none). `StyleSettings.IsValidKitId` is the rule of a kit id (1 to 48
+lower-case letters, digits, and dashes that start with a letter or a digit), kept here as a plain check because the
+settings subsystem does not depend on the style subsystem.
 
 **File format**: a camel-case JSON object with the same names, for example
 `{"version":1,"recentProjects":[],"aiProvider":{"provider":"GitHubCopilot",...},"speech":{...}}`. Enumerations
@@ -58,7 +64,10 @@ use the known values. Normalize the result.
 **Normalize**: Makes parsed or caller-supplied settings safe to use. Sets the version to the current version;
 replaces null sections, strings, and dictionary entries with defaults; drops blank recent-project entries;
 replaces a context window outside its bounds and an endpoint that is not an absolute `http` or `https` URL
-with their defaults; and trims text values.
+with their defaults; trims text values; keeps the shared style kit folders that are full paths, each once (ignoring
+case, in the first spelling) and in their order, drops a relative, blank, or invalid entry with a warning in the log, and
+keeps a folder that does not exist because a network folder may be back later; and replaces a default style kit id that no
+kit can have with none.
 
 **Save**: Replaces the settings in effect and writes them.
 

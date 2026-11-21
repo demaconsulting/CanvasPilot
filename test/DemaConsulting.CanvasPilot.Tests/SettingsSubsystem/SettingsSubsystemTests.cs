@@ -69,6 +69,31 @@ public sealed class SettingsSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the style settings are stored with the other settings, survive a restart, and are kept when the
+    ///     dialog stores its own choices.
+    /// </summary>
+    [Fact]
+    public void SettingsSubsystem_KeepStyleSettings_SavedWithOthers_SurviveRestartAndOtherChanges()
+    {
+        // Arrange: stored style settings, and a dialog over the AI provider page
+        var service = new SettingsService(_tempRoot);
+        var shared = Path.Combine(_tempRoot, "team-styles");
+        service.Save(new AppSettings { Styles = new StyleSettings { SharedKitFolders = [shared], DefaultKitId = "dema" } });
+        var page = new AiProviderSettingsPageViewModel();
+        var dialog = new SettingsDialogViewModel(service, [page]);
+        page.ModelName = "llama3";
+
+        // Act: choose OK, then start a fresh service as after a restart
+        dialog.OkCommand.Execute(null);
+        var restarted = new SettingsService(_tempRoot).Load();
+
+        // Assert: the dialog's choice was stored and the style settings are as they were
+        Assert.Equal("llama3", restarted.AiProvider.ModelName);
+        Assert.Equal([shared], restarted.Styles.SharedKitFolders);
+        Assert.Equal("dema", restarted.Styles.DefaultKitId);
+    }
+
+    /// <summary>
     ///     Test that canceling the dialog leaves the stored settings untouched.
     /// </summary>
     [Fact]

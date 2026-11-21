@@ -78,3 +78,16 @@ sections:
               - CanvasPilot-AiProviderSettingsPage-UnrestrictedToolsOptIn
             tests:
               - SettingsSubsystem_PersistSettings_DialogOk_SurvivesRestart
+
+          - id: CanvasPilot-Settings-KeepStyleSettings
+            title: >-
+              The Settings subsystem shall keep the shared style kit folders and the default style kit of the user with the
+              other settings, so that they survive a restart and a change of another setting does not lose them.
+            justification: |
+              Where a team keeps its style kits and which kit a new project starts with are choices of the user that apply
+              to every project, so they belong with the stored settings. The settings dialog and other subsystems change
+              their own values only, so each must leave these alone.
+            children:
+              - CanvasPilot-SettingsService-KeepStyleSettings
+            tests:
+              - SettingsSubsystem_KeepStyleSettings_SavedWithOthers_SurviveRestartAndOtherChanges

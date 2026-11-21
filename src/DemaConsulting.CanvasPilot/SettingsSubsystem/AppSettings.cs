@@ -167,6 +167,42 @@ public sealed record SpeechSettings
 }
 
 /// <summary>
+///     Persisted choices about style kits: the shared folders in which kits are found, and the kit that a new project
+///     starts with.
+/// </summary>
+public sealed record StyleSettings
+{
+    /// <summary>
+    ///     Gets the folders, in order of precedence (an earlier folder wins over a later one), that hold kits that a team
+    ///     shares. Every entry is a full path; a folder that cannot be reached is kept and is reported where the kits are
+    ///     listed.
+    /// </summary>
+    public IReadOnlyList<string> SharedKitFolders { get; init; } = [];
+
+    /// <summary>
+    ///     Gets the id of the kit that a new project starts with, or an empty string for no style.
+    /// </summary>
+    public string DefaultKitId { get; init; } = string.Empty;
+
+    /// <summary>
+    ///     Determines whether a text can be the id of a style kit: 1 to 48 lower-case letters, digits, and dashes that start
+    ///     with a letter or a digit.
+    /// </summary>
+    /// <remarks>
+    ///     The settings subsystem does not depend on the style subsystem, to which the kits belong, so the rule of the id is
+    ///     kept here as a plain check and the id is only text.
+    /// </remarks>
+    /// <param name="id">The text to check.</param>
+    /// <returns><see langword="true" /> when the text can be the id of a style kit.</returns>
+    public static bool IsValidKitId(string? id)
+    {
+        return id is { Length: >= 1 and <= 48 }
+               && id[0] != '-'
+               && id.All(c => c is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '-');
+    }
+}
+
+/// <summary>
 ///     The complete persisted application settings document (<c>settings.json</c>).
 /// </summary>
 public sealed record AppSettings
@@ -195,4 +231,9 @@ public sealed record AppSettings
     ///     Gets the speech choices.
     /// </summary>
     public SpeechSettings Speech { get; init; } = new();
+
+    /// <summary>
+    ///     Gets the style kit choices.
+    /// </summary>
+    public StyleSettings Styles { get; init; } = new();
 }
