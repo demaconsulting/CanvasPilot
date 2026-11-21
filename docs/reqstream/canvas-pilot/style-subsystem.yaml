@@ -46,6 +46,14 @@ sections:
               one a team keeps. The most local copy is the most deliberate one, so it wins, which lets a project keep the
               style it was made with even when the team changes its kit. A network folder that is down must not stop the
               application or hide the other kits.
+            children:
+              - CanvasPilot-StyleKitCatalog-FindKitsInEveryLocation
+              - CanvasPilot-StyleKitCatalog-ResolveByPrecedence
+              - CanvasPilot-StyleKitCatalog-TolerateUnreachableLocations
+              - CanvasPilot-StyleKitCatalog-ManageUserAndProjectKits
+              - CanvasPilot-StyleKitCatalog-KeepBuiltInAndSharedKitsReadOnly
+            tests:
+              - StyleSubsystem_FindKitsInLocations_AllPlaces_ResolveByPrecedenceAndSurviveAnUnreachableFolder
 
           - id: CanvasPilot-Style-ChooseActiveKit
             title: >-

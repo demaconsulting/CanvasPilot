@@ -66,6 +66,7 @@ includes:
   - docs/reqstream/canvas-pilot/speech-subsystem/speech-settings-page.yaml
   - docs/reqstream/canvas-pilot/style-subsystem.yaml
   - docs/reqstream/canvas-pilot/style-subsystem/style-kit-document.yaml
+  - docs/reqstream/canvas-pilot/style-subsystem/style-kit-catalog.yaml
   - docs/reqstream/canvas-pilot/utilities-subsystem.yaml
   - docs/reqstream/canvas-pilot/utilities-subsystem/path-helpers.yaml
   - docs/reqstream/canvas-pilot/platform-requirements.yaml

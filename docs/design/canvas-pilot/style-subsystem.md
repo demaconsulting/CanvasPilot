@@ -13,13 +13,16 @@ block of text and two tools, and a picture can be checked against the palette of
 provider of a language model or on any agent library, so what the subsystem offers can be given to any assistant that is
 added later.
 
-The subsystem is built up unit by unit. It now contains one unit, `StyleKitDocument`, which holds the values of a kit and
-the format that they are kept in: it reads a kit from a file and from its folder with a message for each wrong property,
-checks a kit that is built in memory with the same rules, and writes a kit as canonical text. The units that find kits in
-the four places, move them as zip files, choose the kit of a project, write the guidance for an assistant, check a picture,
-describe the tools of an assistant, and show and edit kits in windows follow in later steps, and this document grows with
-them. The subsystem depends on CanvasNet for the classification of font families, and later on `Project`, `Settings`,
-`Preview`, `Knowledge` (only the descriptor record of a tool), `Utilities`, and `Logging`.
+The subsystem is built up unit by unit. It now contains two units, `StyleKitDocument` and `StyleKitCatalog`.
+`StyleKitDocument` holds the values of a kit and the format that they are kept in: it reads a kit from a file and from its
+folder with a message for each wrong property, checks a kit that is built in memory with the same rules, and writes a kit
+as canonical text. `StyleKitCatalog` finds the kits in the four places, chooses the kit of the most local place for an id,
+reads shared folders on workers with a time limit, keeps the kits of the program and the shared kits read only, and
+creates, saves, duplicates, copies, and deletes the kits of the user and of the project. The units that move kits as zip
+files, choose the kit of a project, write the guidance for an assistant, check a picture, describe the tools of an
+assistant, and show and edit kits in windows follow in later steps, and this document grows with them. The subsystem
+depends on CanvasNet for the classification of font families, and on `Project`, `Settings`, `Utilities`, and `Logging` for
+the catalog of kits, and later on `Preview` and `Knowledge` (only the descriptor record of a tool).
 
 ### Interfaces
 
@@ -34,6 +37,20 @@ them. The subsystem depends on CanvasNet for the classification of font families
   every error and warning, each with the path of the property in the words of the file, and returns no kit when there is an
   error.
 - *Constraints*: Stateless and safe for concurrent use. A kit that has an error is not written by the units that save kits.
+
+**StyleKitCatalog**: The kits in the places that hold them.
+
+- *Type*: In-process .NET interface `IStyleKitCatalog` and sealed class `StyleKitCatalog`, with the immutable values
+  `StyleKitEntry`, `StyleLocationStatus`, and `StyleBrokenKit`.
+- *Role*: Provider (the entries, the places, and the changes to kits), and Consumer (the project service for the open
+  project, the settings service for the shared folders).
+- *Contract*: `Entries` lists every kit with its place, folder, read-only flag, and whether it is overridden; `Locations`
+  tells whether each place could be read and which folders are broken; `Resolve` finds the kit of an id by the order of
+  precedence (project, user, shared folders in order, program); `RefreshAsync` reads the places, each shared folder with a
+  time limit; `Save`, `CreateBlank`, `Duplicate`, `CopyIntoProject`, and `Delete` change the kits of the user and of the
+  project; `Changed` is raised after any of these changes the entries.
+- *Constraints*: A shared folder that is offline never blocks the caller or the other places. The kits of the program and
+  shared kits are never changed. Safe for concurrent use; `Changed` may be raised on any thread.
 
 ### Design
 
@@ -62,4 +79,10 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 ### Dependencies
 
 - **StyleKitDocument** unit: the values of a kit and the format of its file.
+- **StyleKitCatalog** unit: the kits in the places, the choice by precedence, and the changes to the kits of the user and
+  of the project.
+- **Project** subsystem: which project is open and when it changes (the project service).
+- **Settings** subsystem: the shared kit folders and when they change (the settings service).
+- **Utilities** subsystem: the safe combination of folder and file names.
+- **Logging** subsystem: the log of kits that cannot be used and folders that cannot be read.
 - **CanvasNet** (OTS): the classification of font families, used to warn about a font that not every format draws.

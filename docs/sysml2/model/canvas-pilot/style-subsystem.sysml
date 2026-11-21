@@ -12,5 +12,6 @@ package CanvasPilot {
         }
 
         part styleKitDocument : StyleKitDocument;
+        part styleKitCatalog : StyleKitCatalog;
     }
 }

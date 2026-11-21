@@ -1047,6 +1047,26 @@ reviews:
       - "src/**/StyleSubsystem/StyleMermaid.cs"
       - "src/**/StyleSubsystem/StyleSizePreset.cs"
       - "test/**/StyleSubsystem/StyleKitDocumentTests.cs"
+
+  - id: CanvasPilot-Style-StyleKitCatalog
+    title: Review of CanvasPilot StyleKitCatalog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-catalog.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-catalog.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-catalog.md"
+      - "src/**/StyleSubsystem/IStyleKitCatalog.cs"
+      - "src/**/StyleSubsystem/StyleBrokenKit.cs"
+      - "src/**/StyleSubsystem/StyleKitCatalog.cs"
+      - "src/**/StyleSubsystem/StyleKitEntry.cs"
+      - "src/**/StyleSubsystem/StyleKitScanner.cs"
+      - "src/**/StyleSubsystem/StyleLocationStatus.cs"
+      - "test/**/StyleSubsystem/StyleKitCatalogTests.cs"
+      - "test/**/StyleSubsystem/StyleSubsystemFakes.cs"
   # CanvasPilot - Utilities
   - id: CanvasPilot-Utilities
     title: Review of CanvasPilot Utilities subsystem architecture and interfaces
