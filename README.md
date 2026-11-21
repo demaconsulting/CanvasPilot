@@ -1,7 +1,7 @@
 <!-- IMPORTANT: All links in this file must be absolute URLs.
      This file is distributed in packages and relative links will not resolve. -->
 
-# ![CanvasPilot: AI-assisted drawing creation with CanvasNet. Type or speak a request; an AI copilot composes SVG, charts, pages, and images into a picture ready to share. Shown with the sample request 'Draw our release flow' and the note 'A Windows desktop app'. A typed request or dictation, dropped-in files, marks on a picture, and many source formats flow into the CanvasPilot AI copilot, and arrows lead out to a standalone picture composed of a flowchart, a chart, and nested pictures, a PNG file, an email, and a presentation slide][hero]
+# ![CanvasPilot: AI-assisted drawing creation with CanvasNet][hero]
 
 [![GitHub forks][badge-forks]][link-forks]
 [![GitHub stars][badge-stars]][link-stars]
