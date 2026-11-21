@@ -92,6 +92,12 @@ public sealed class StyleKitPlaces : IDisposable
     public SettingsService Settings { get; }
 
     /// <summary>
+    ///     Gets or sets a catalog that a test made over these places and that is disposed with them, or
+    ///     <see langword="null" /> when the test made none.
+    /// </summary>
+    public StyleKitCatalog? Catalog { get; set; }
+
+    /// <summary>
     ///     Gets the project service.
     /// </summary>
     public IProjectService Projects => _projects;
@@ -190,9 +196,60 @@ public sealed class StyleKitPlaces : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        Catalog?.Dispose();
         if (Directory.Exists(Root))
         {
             Directory.Delete(Root, recursive: true);
         }
+    }
+}
+
+/// <summary>
+///     Hand-written stand-in for the style that the open project uses, for the tests of the units that read it: the test
+///     sets the kit, the id, and whether the kit is missing, and the stand-in announces the change.
+/// </summary>
+public sealed class FakeActiveStyle : IActiveStyle
+{
+    /// <inheritdoc />
+    public event EventHandler? Changed;
+
+    /// <inheritdoc />
+    public StyleKitEntry? Active { get; private set; }
+
+    /// <inheritdoc />
+    public string? ActiveId { get; private set; }
+
+    /// <inheritdoc />
+    public bool IsMissing { get; private set; }
+
+    /// <summary>
+    ///     Makes a kit the active one and announces the change.
+    /// </summary>
+    /// <param name="entry">The kit, or <see langword="null" /> for none.</param>
+    public void Use(StyleKitEntry? entry)
+    {
+        Active = entry;
+        ActiveId = entry?.Kit.Id;
+        IsMissing = false;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    ///     Makes the project name a kit that cannot be found and announces the change.
+    /// </summary>
+    /// <param name="id">The id that the project names.</param>
+    public void UseMissing(string id)
+    {
+        Active = null;
+        ActiveId = id;
+        IsMissing = true;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <inheritdoc />
+    public Task SetActiveAsync(string? id)
+    {
+        ActiveId = id;
+        return Task.CompletedTask;
     }
 }

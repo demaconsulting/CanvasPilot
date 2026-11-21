@@ -304,6 +304,46 @@ public sealed class StyleSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Validates that the two tools over the real units give an assistant the style of the project: <c>style_get</c> gives
+    ///     the block of the kit that the project file names, within the budget and naming its own tool; <c>style_check</c>
+    ///     checks a picture of the project, fails a picture with another color and names it, and refuses a file outside
+    ///     the project.
+    /// </summary>
+    [Fact]
+    public async Task StyleSubsystem_GuideTheAssistant_ToolsOverRealUnits_GiveTheStyleAndCheckAPictureOfTheProject()
+    {
+        // Arrange: a real project that uses a kit of the user, with pictures in it and a picture outside it
+        var ct = TestContext.Current.CancellationToken;
+        Directory.CreateDirectory(Path.Combine(_root, "projects"));
+        var user = Path.Combine(_root, "user");
+        WriteKit(user, "guided", "mine");
+        var settings = new SettingsService(Path.Combine(_root, "settings"));
+        var projects = new ProjectService();
+        using var catalog = new StyleKitCatalog(projects, settings, Path.Combine(_root, "builtin"), user, TimeSpan.FromSeconds(5));
+        using var selection = new StyleSelection(projects, catalog, settings);
+        var project = (await projects.CreateAsync(Path.Combine(_root, "projects"), "Look", ct)).Project!;
+        await catalog.RefreshAsync(ct);
+        await selection.SetActiveAsync("guided");
+        await File.WriteAllTextAsync(Path.Combine(project.FolderPath, "off.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><rect width='40' height='40' fill='#FFFFFF'/><rect width='20' height='40' fill='#D32F2F'/></svg>", ct);
+        await File.WriteAllTextAsync(Path.Combine(_root, "outside.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'/>", ct);
+        var tools = StyleTools.CreateAll(selection, catalog, () => projects.Current?.FolderPath, () => Path.Combine(project.FolderPath, "off.svg"), new PreviewSubsystem.ImageRenderService());
+
+        // Act: ask for the style, check the shown picture, and try the picture outside the project
+        var style = tools[0].Invoke("{}");
+        var checkedPicture = tools[1].Invoke("{}");
+        var outside = tools[1].Invoke("{\"path\":\"..\\\\outside.svg\"}");
+
+        // Assert: the block is the guidance of the kit within the budget, the check fails the red, and the outside file is refused
+        Assert.Equal(StyleGuidance.Build(catalog.Resolve("guided")!), style);
+        Assert.True(style.Length <= StyleGuidance.BudgetCharacters);
+        Assert.Contains(StyleTools.GetToolName, StyleGuidance.TruncationNote, StringComparison.Ordinal);
+        Assert.Contains("Result: FAILED, 50.0% of the pixels are off the palette", checkedPicture, StringComparison.Ordinal);
+        Assert.Contains("Off the palette: #D32F2F 50.0%", checkedPicture, StringComparison.Ordinal);
+        Assert.StartsWith("Error: ", outside, StringComparison.Ordinal);
+        Assert.Contains("is not a path inside the project folder", outside, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Writes a kit as a folder in a place.
     /// </summary>
     /// <param name="root">The place.</param>

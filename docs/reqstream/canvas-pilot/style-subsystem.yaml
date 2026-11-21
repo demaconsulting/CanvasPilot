@@ -116,6 +116,12 @@ sections:
               - CanvasPilot-StyleGuidance-WriteGuidanceBlock
               - CanvasPilot-StyleGuidance-StayWithinBudget
               - CanvasPilot-StyleGuidance-ListExampleImagePaths
+              - CanvasPilot-StyleTools-DescribeStyleGet
+              - CanvasPilot-StyleTools-DescribeStyleCheck
+              - CanvasPilot-StyleTools-ConfineChecksToTheProject
+              - CanvasPilot-StyleTools-NeverThrowOnBadArguments
+            tests:
+              - StyleSubsystem_GuideTheAssistant_ToolsOverRealUnits_GiveTheStyleAndCheckAPictureOfTheProject
 
           - id: CanvasPilot-Style-CheckPictures
             title: >-

@@ -32,6 +32,8 @@ project file of the application library from the repository; no network, display
   first, and an export at the size of the kit is a PNG of exactly that size over the background of the kit.
 - A picture that is drawn from a file is checked against the kit that the catalog finds: a picture of the colors of the
   kit passes, and a picture with another color fails and names it.
+- The tools of an assistant over the real units give the style of the project (within the budget), check a picture of
+  the project and name the color that is off the palette, and refuse a file outside the project.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that the
   project file of the application library declares is a language model or agent library.
 
@@ -76,6 +78,13 @@ render service and checked against a kit that the catalog finds. The one that us
 with the roles `background` and `primary`; the one with half of it in `#D32F2F` fails, lists that color, has half of the
 picture off the palette, and its notes all have codes that start with `style-`. This scenario is tested by
 `StyleSubsystem_CheckPictures_RealRenderedPictures_PassOnAndFailOffThePalette`.
+
+**StyleSubsystem_GuideTheAssistant_ToolsOverRealUnits_GiveTheStyleAndCheckAPictureOfTheProject**: A real project uses a
+kit of the user through the real selection. `style_get` gives exactly the guidance of the kit, within the budget, and
+the line that ends a cut block names the tool; `style_check` with no arguments checks the picture that is shown, fails
+it with half of the pixels off the palette and names the color, and a path that climbs out of the project is refused.
+This scenario is tested by
+`StyleSubsystem_GuideTheAssistant_ToolsOverRealUnits_GiveTheStyleAndCheckAPictureOfTheProject`.
 
 **StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers to, the
 packages in the dependency file of the test project, and the package references in the project file of the application

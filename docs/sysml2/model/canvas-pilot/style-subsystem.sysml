@@ -17,5 +17,6 @@ package CanvasPilot {
         part styleSelection : StyleSelection;
         part styleGuidance : StyleGuidance;
         part styleChecker : StyleChecker;
+        part styleTools : StyleTools;
     }
 }

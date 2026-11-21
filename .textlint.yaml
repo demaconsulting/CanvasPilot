@@ -47,6 +47,7 @@ words:
   - AARRGGBB
   - CIEDE
   - CIELAB
+  - mklink
   - tristimulus
   - IDAT
   - IEND

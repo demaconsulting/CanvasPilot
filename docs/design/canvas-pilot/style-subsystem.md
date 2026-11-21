@@ -13,10 +13,10 @@ later is given the style as a block of text and two tools, and a picture can be 
 None of it depends on any provider of a language model or on any agent library, so what the subsystem offers can be
 given to any assistant that is added later.
 
-The subsystem is built up unit by unit. It now contains six units, `StyleKitDocument`, `StyleKitCatalog`,
-`StyleKitArchive`, `StyleSelection`, `StyleGuidance`, and `StyleChecker`. `StyleKitDocument` holds the values of a kit
-and the format that they are kept in: it reads a kit from a file and from its folder with a message for each wrong
-property, checks a kit that is built in memory with the same rules, and writes a kit as canonical text.
+The subsystem is built up unit by unit. It now contains seven units, `StyleKitDocument`, `StyleKitCatalog`,
+`StyleKitArchive`, `StyleSelection`, `StyleGuidance`, `StyleChecker`, and `StyleTools`. `StyleKitDocument` holds the
+values of a kit and the format that they are kept in: it reads a kit from a file and from its folder with a message for
+each wrong property, checks a kit that is built in memory with the same rules, and writes a kit as canonical text.
 `StyleKitCatalog` finds the kits in the four places, chooses the kit of the most local place for an id, reads shared
 folders on workers with a time limit, keeps the kits of the program and the shared kits read only, and creates, saves,
 duplicates, copies, and deletes the kits of the user and of the project. The kits of the program are three folders of
@@ -31,9 +31,11 @@ the export sizes of the kit and of the application to the export dialog of `Prev
 of a kit as a block of text of at most 4,000 characters for an assistant and as single whole sections, with the full
 paths of the example images. `StyleChecker` measures the colors of a rendered picture against the palette of a kit, in a
 histogram and in CIELAB, and reports what is on the palette, what is a blend at an edge, and what is off the palette.
-The units that describe the tools of an assistant, and show and edit kits in windows follow in later steps, and this
-document grows with them. The subsystem depends on CanvasNet for the classification of font families, and on `Project`,
-`Settings`, `Preview`, `Utilities`, and `Logging`, and later on `Knowledge` (only the descriptor record of a tool).
+The units that show and edit kits in windows follow in later steps, and this document grows with them. `StyleTools`
+describes the two tools of an assistant, `style_get` and `style_check`, as plain values (the descriptor record of the
+drawing knowledge) with a function from text to text that never throws; the check reads only files inside the folder of
+the project. The subsystem depends on CanvasNet for the classification of font families, and on `Project`, `Settings`,
+`Preview`, `Utilities`, `Logging`, and `Knowledge` (only the descriptor record of a tool).
 
 ### Interfaces
 
@@ -109,6 +111,17 @@ document grows with them. The subsystem depends on CanvasNet for the classificat
 - *Constraints*: Stateless and thread-safe. The same pixels, in any order, give the same report. A picture of the
   largest size is checked in well under a second.
 
+**StyleTools**: The tools of an assistant.
+
+- *Type*: In-process .NET static class `StyleTools`; the tools are `KnowledgeTool` records of the `Knowledge` subsystem.
+- *Role*: Provider; consumer of the active style, the catalog, the render service, and the guidance and the checker.
+- *Contract*: `CreateAll` gives `style_get` (the guidance of the kit of the project, of a named kit, or one section) and
+  `style_check` (a picture file of the project checked against the palette of the kit); each has a name, a description,
+  a JSON Schema, and a function from the arguments as text to an answer as text.
+- *Constraints*: A function never throws; a mistake is answered with a message that says what to send. `style_check`
+  reads only a file inside the project folder (not in `.canvaspilot`, and not through a link that leads out) and waits
+  for the drawing on a thread of the pool, so it must not be called from the thread of the user interface.
+
 ### Design
 
 **The dependency rule.** The subsystems below `AppShell` do not depend on `AppShell` or on each other upwards, and this
@@ -142,6 +155,8 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 - **StyleSelection** unit: the kit of the open project, the choice, and the export sizes.
 - **StyleGuidance** unit: the style of a kit as text for an assistant.
 - **StyleChecker** unit: a picture measured against the palette of a kit.
+- **StyleTools** unit: the tools `style_get` and `style_check` of an assistant.
+- **Knowledge** subsystem: only the descriptor record of a tool (`KnowledgeTool`).
 - **Project** subsystem: which project is open and when it changes, and the id of the kit that the project file keeps
   (the project service).
 - **Preview** subsystem: the export size and the source of export sizes that `StyleSelection` implements.
