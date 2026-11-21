@@ -13,6 +13,7 @@
 // composition (and, where declared, 'dependency' relationships) render correctly.
 package CanvasPilotDesignViews {
     private import StandardViewDefinitions::*;
+    private import Views::*;
     private import OtsDependencies::*;
     private import CanvasPilot::*;
     private import CanvasPilot_AnnotationSubsystem::*;
