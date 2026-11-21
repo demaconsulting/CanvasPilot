@@ -6,21 +6,15 @@
 #   so agents and developers do not need to respond to lint output.
 #   Handles: dotnet format, LintMark (markdown), yamlfix, YAML line endings.
 #
-# EXTENSION POINTS:
-#   Search for "[PROJECT-SPECIFIC]" comments to find the designated locations
-#   for adding project-specific auto-fix operations.
-#
-# MODIFICATION POLICY:
-#   Only modify this file to add project-specific operations at the designated
-#   [PROJECT-SPECIFIC] extension points, or to update tool versions as needed.
-
-# ==============================================================================
-# HELPER FUNCTIONS
-# ==============================================================================
+# CUSTOMIZATION:
+#   This script belongs to the project: extend it as the project grows. Add steps at the
+#   [PROJECT-SPECIFIC] points, update tool versions, and add optional parameters that focus
+#   a run (for example -Project <name> in a multi-library repository).
+#   Run with no arguments it must still apply every fixer, and it always exits 0.
 
 function Get-VenvActivateScript {
-    if (Test-Path ".venv/Scripts/Activate.ps1") { return ".venv/Scripts/Activate.ps1" }  # Windows
-    if (Test-Path ".venv/bin/Activate.ps1") { return ".venv/bin/Activate.ps1" }          # Linux/macOS
+    if (Test-Path ".venv/Scripts/Activate.ps1") { return ".venv/Scripts/Activate.ps1" }
+    if (Test-Path ".venv/bin/Activate.ps1") { return ".venv/bin/Activate.ps1" }
     return $null
 }
 
@@ -68,12 +62,6 @@ function Normalize-YamlLineEndings {
         }
 }
 
-# ==============================================================================
-# AUTO-FIX
-# Applies all auto-fixers with progress output. Never fails — applies what it can and
-# exits 0 so agents do not react to any output as a problem to solve.
-# ==============================================================================
-
 # --- YAML Auto-Fix ---
 Write-Host "Fixing: YAML..."
 if (Initialize-PythonVenv -Silent) {
@@ -90,6 +78,9 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 # [PROJECT-SPECIFIC] Add additional auto-fixers here.
+# C/C++ example:
+#   Get-ChildItem -Recurse -Include "*.cpp","*.hpp","*.h" |
+#       ForEach-Object { clang-format -i $_.FullName } 2>$null
 
 # --- .NET Auto-Format ---
 Write-Host "Fixing: dotnet format..."
@@ -98,11 +89,6 @@ $slnFiles = @(Get-ChildItem -Filter "*.sln" -ErrorAction SilentlyContinue) +
 if ($slnFiles.Count -gt 0) {
     dotnet format 2>$null
 }
-
-# [PROJECT-SPECIFIC] Add additional language-specific auto-formatters here.
-# Example (C/C++ with clang-format):
-#   Get-ChildItem -Recurse -Include "*.cpp","*.hpp","*.h" |
-#       ForEach-Object { clang-format -i $_.FullName } 2>$null
 
 Write-Host "Auto-fix complete."
 exit 0

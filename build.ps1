@@ -1,30 +1,32 @@
 # build.ps1
 #
 # PURPOSE:
-#   Unified cross-platform build script (replaces build.bat and build.sh).
-#   Builds the solution in Release configuration and runs all unit tests.
+#   Builds DemaConsulting.CanvasPilot.slnx in Release configuration and runs all tests
+#   (xunit.v3 3.2.2 + Avalonia.Headless.XUnit): TRX results are written to artifacts/tests.
+#   The WiX installer project is not part of the solution and is built by the CI pipeline.
 #
-# EXTENSION POINTS:
-#   Search for "[PROJECT-SPECIFIC]" comments to find the designated locations
-#   for adding project-specific build or test operations.
-#
-# MODIFICATION POLICY:
-#   Only modify this file to add project-specific operations at the designated
-#   [PROJECT-SPECIFIC] extension points.
+# CUSTOMIZATION:
+#   This script belongs to the project: extend it as the project grows. Add steps at the
+#   [PROJECT-SPECIFIC] points and add optional parameters that focus a run (for example
+#   -Project <name> in a multi-library repository). Slow or environment-dependent test tiers
+#   (GUI automation, integration) may be opt-in switches.
+#   Run with no arguments it must still build and run the standard test suite (agents rely
+#   on that), and never remove or weaken a test step to make it pass.
 
-$ErrorActionPreference = 'Stop'
+$buildError = $false
 
-Write-Host "Building project..."
-dotnet build --configuration Release
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Write-Host "Restoring dependencies..."
+dotnet restore
+if ($LASTEXITCODE -ne 0) { $buildError = $true }
 
-# [PROJECT-SPECIFIC] Add additional build steps here.
+Write-Host "Building..."
+dotnet build --no-restore --configuration Release
+if ($LASTEXITCODE -ne 0) { $buildError = $true }
 
-Write-Host "Running unit tests..."
-# VSTest-style run (xunit.v3 3.2.2 + Avalonia.Headless.XUnit): TRX results are written to artifacts/tests.
-dotnet test --configuration Release --no-build --logger "trx" --results-directory artifacts/tests
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Write-Host "Running tests..."
+dotnet test --no-build --configuration Release --logger trx --results-directory artifacts/tests
+if ($LASTEXITCODE -ne 0) { $buildError = $true }
 
-# [PROJECT-SPECIFIC] Add additional test or post-build steps here.
+# [PROJECT-SPECIFIC] Add additional build steps here (e.g., packaging, publishing).
 
-Write-Host "Build and tests completed successfully!"
+exit ($buildError ? 1 : 0)
