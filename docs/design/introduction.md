@@ -1,15 +1,17 @@
 # Introduction
 
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
-CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. It
-provides folder-based projects, an explorer of the project's image source files, a preview of the selected file that
-is drawn by CanvasNet, PNG export, copy to the clipboard, and drag-out of the shown picture, persisted settings with
-AI provider and speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders,
-and pictures, and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload
-inspector, the drawing knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the
-Help menu), and the installer. Messages are composed and sent without an agent: the AI agent that will answer them and
-use the stored choices and the knowledge is out of scope of this version. The document covers local software items
-(systems, subsystems, and units) and the OTS software items they consume.
+CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. It provides
+folder-based projects, an explorer of the project's image source files, a preview of the selected file that is drawn by
+CanvasNet, PNG export, copy to the clipboard, and drag-out of the shown picture, persisted settings with AI provider and
+speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders, and pictures,
+and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload inspector, the drawing
+knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the Help menu), style kits
+(palettes, fonts, sizes, and example images that a project, a user, or a team keeps, with a window to manage them,
+export at their sizes, and a check of a picture against the palette), and the installer. Messages are composed and sent
+without an agent: the AI agent that will answer them and use the stored choices, the knowledge, and the style is out of
+scope of this version. The document covers local software items (systems, subsystems, and units) and the OTS software
+items they consume.
 
 ## Purpose
 
@@ -35,12 +37,16 @@ Local items:
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Payload** subsystem: **MessagePayload**, **MarkImageComposer**, **PayloadBuilder**, and **PayloadDescriber**
     units.
-  - **Preview** subsystem: **ImageRenderService**, **PreviewPane**, **ImageExporter**, and **ImageDragSource** units.
+  - **Preview** subsystem: **ImageRenderService**, **PreviewPane**, **ImageExporter**, **ImageDragSource**, and
+    **ExportPresetDialog** units.
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
     **ProjectExplorer** units.
   - **Settings** subsystem: **SettingsService**, **SettingsDialog**, and **AiProviderSettingsPage** units.
   - **Speech** subsystem: **AudioDeviceService**, **SpeechModelService**, **DictationService**, **DeviceSelection**,
     **ModelCatalogPanel**, **ModelParameterEditor**, and **SpeechSettingsPage** units.
+  - **Style** subsystem: **StyleKitDocument**, **StyleKitCatalog**, **StyleKitArchive**, **StyleSelection**,
+    **StyleGuidance**, **StyleChecker**, **StyleTools**, **StylePicker**, **StyleSettingsPage**, **StyleKitEditor**, and
+    **StyleKitManager** units.
   - **Utilities** subsystem: **PathHelpers** unit.
 
 OTS items:
@@ -61,10 +67,11 @@ The following topics are out of scope:
 
 - Design documents are not produced for the test projects, the executable project that starts the application, the
   installer project (which is covered by the WiX Toolset OTS design), or the build pipeline CI configuration
-- The AI agent that answers the messages is not part of this version; the settings that it will read are
-  designed (see the *AI Provider Seam* section of the system design), and the payload that it will receive is built
-  and shown for every sent message, but nothing reads it and no answer comes back; the drawing knowledge that it will
-  be given is built and can be read in the browser, but no assistant uses it yet
+- The AI agent that answers the messages is not part of this version; the settings that it will read are designed (see
+  the *AI Provider Seam* section of the system design), and the payload that it will receive is built and shown for
+  every sent message, but nothing reads it and no answer comes back; the drawing knowledge that it will be given is
+  built and can be read in the browser, and the style that it will be given and the two tools that it will use to read
+  the style and check a picture are built and tested, but no assistant uses any of it yet
 - The internal design of OTS software items is excluded; only integration and usage design is documented
 
 ## Software Structure
@@ -72,12 +79,12 @@ The following topics are out of scope:
 The software structure is modeled in SysML2 under `docs/sysml2/` and rendered to the diagram
 below by SysML2Tools as part of the build pipeline. AI agents should query the SysML2 model
 directly (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose
-elsewhere in this document. The diagram shows the system, its twelve subsystems with their units, and the runtime OTS
+elsewhere in this document. The diagram shows the system, its thirteen subsystems with their units, and the runtime OTS
 items that the system consumes; the dependencies between the units are in the model and are shown in the view of each
 subsystem. The build and documentation tools listed in Scope above are documented separately (see
 `docs/design/ots.md`).
 
-![The CanvasPilot system with its twelve subsystems and their units, and the runtime third-party items it
+![The CanvasPilot system with its thirteen subsystems and their units, and the runtime third-party items it
 uses](SoftwareStructureView.svg)
 
 ## Architecture
@@ -90,14 +97,18 @@ subsystem (marks on the picture), the Payload subsystem (the message that is sen
 (dictation). Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in
 the Project explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing:
 the AppShell opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards,
-so an assistant added later can be given the same cards. Every subsystem logs through Logging, and the
+so an assistant added later can be given the same cards. The Style subsystem holds the style kits: the AppShell shows
+its window from the Tools menu and its list of kits in the status bar, the Preview subsystem offers the sizes of the
+kit of the project when a picture is exported, and the check of a picture against the palette puts its result among the
+notes of the preview; it depends on Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none
+of them depends on it. Every subsystem logs through Logging, and the
 subsystems that build file locations use Utilities. The third-party items are used inside the library, and the
 application reads and writes only the local data in the bottom row. Section *Architecture* of the system design
 explains the dependencies between the subsystems, which run one way, and why no subsystem refers to AppShell.
 
 ![Architecture of CanvasPilot: the desktop head starts the application library, whose AppShell subsystem builds and
-hosts the twelve subsystems, from Chat and Composer down to Logging and Utilities, with the Knowledge subsystem beside
-them, and the third-party items and the local data the application uses](architecture.svg)
+hosts the thirteen subsystems, from Chat and Composer down to Logging and Utilities, with the Knowledge and Style
+subsystems beside them, and the third-party items and the local data the application uses](architecture.svg)
 
 ## Folder Layout
 
@@ -121,6 +132,10 @@ them, and the third-party items and the local data the application uses](archite
     - **ProjectSubsystem/** - projects, recent projects, New Project dialog, and project explorer
     - **SettingsSubsystem/** - persisted settings, settings dialog, and settings pages
     - **SpeechSubsystem/** - audio devices, speech models and their downloads, and the Speech settings page
+    - **StyleSubsystem/** - style kits: the format, the places that hold them, zip import and export, the kit of the
+      project, the text and tools for an assistant, the check of a picture against a palette, the list in the status
+      bar, the settings page, the window that manages kits and the editor, and the kits that come with the program under
+      BuiltIn/
     - **UtilitiesSubsystem/** - shared utilities subsystem
   - **DemaConsulting.CanvasPilot.Desktop/** - thin executable project (`CanvasPilot.exe`) that starts the Avalonia
     application

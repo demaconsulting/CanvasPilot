@@ -44,6 +44,8 @@ Available now:
 - **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows, numbered
   and with notes; the marks are embedded in the message with crops and the source elements under each mark
 - **Drawing knowledge**: Browse CanvasNet's built-in cards and CanvasPilot's own project guide from the Help menu
+- **Style kits**: Reusable palettes, fonts, size presets, and example images from the program, your folder, the project,
+  or a team folder; export at preset sizes and check a picture against the style
 - **Settings**: Choose the AI provider, and the speech devices and models, with model downloads
 - **Windows installer**: One MSI package for 64-bit Windows
 
@@ -53,7 +55,6 @@ Planned:
 - **Safe by default**: The copilot can use only CanvasPilot's own tools, confined to the project folder, with an
   opt-in unrestricted mode
 - **Spoken replies**: Text-to-speech for the copilot's answers
-- **Style kits**: Palette, fonts, size presets, and example images, shared per user, project, or team
 - **Variations**: Compare alternative drafts side by side
 - **Export profiles and batch export**: Export many pictures at once, in the sizes and formats each use needs
 - **Linux and macOS builds**

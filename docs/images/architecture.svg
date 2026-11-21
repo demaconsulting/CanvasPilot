@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="844" viewBox="0 0 960 844" font-family="Segoe UI, Arial, sans-serif">
   <title>CanvasPilot architecture</title>
-  <desc>The Desktop head starts the Avalonia application. The library holds the AppShell subsystem, which builds and hosts the other eleven subsystems: Chat, Composer, Payload, and Annotation for the conversation, Project, Preview, Settings, and Speech for the files, the picture, and the choices, and Knowledge, the drawing guide of cards with its browser. Chat uses Composer, Payload, Annotation, and Speech; Payload and Annotation read the pictures of Preview; Preview follows the Project explorer, and Speech adds a page to the Settings dialog. Every subsystem logs through Logging, and the subsystems that build file locations use Utilities. Third-party items and the local data the application reads and writes are shown below.</desc>
+  <desc>The Desktop head starts the Avalonia application. The library holds the AppShell subsystem, which builds and hosts the other twelve subsystems: Chat, Composer, Payload, and Annotation for the conversation, Project, Preview, Settings, and Speech for the files, the picture, and the choices, Knowledge, the drawing guide of cards with its browser, and Style, the style kits with their window, picker, and check of a picture against a palette. Chat uses Composer, Payload, Annotation, and Speech; Payload and Annotation read the pictures of Preview; Preview follows the Project explorer, and Speech and Style add pages to the Settings dialog. Style depends on Project, Settings, Preview, and Knowledge, and none of them depends on Style. Every subsystem logs through Logging, and the subsystems that build file locations use Utilities. Third-party items and the local data the application reads and writes are shown below.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
@@ -93,6 +93,7 @@
     <text x="369" y="363">PreviewPane</text>
     <text x="369" y="378">ImageExporter</text>
     <text x="369" y="393">ImageDragSource</text>
+    <text x="369" y="408">ExportPresetDialog</text>
   </g>
 
   <!-- Settings -->
@@ -124,28 +125,41 @@
 
   <!-- Notes on the dependencies that are not between neighbors -->
   <g font-size="11" fill="#334155" text-anchor="middle">
-    <text x="480" y="450">Chat also uses Annotation, Payload, and Speech; Annotation and Payload read the pictures of Preview.</text>
-    <text x="480" y="466">Every subsystem logs through Logging, and the subsystems that build file locations use Utilities.</text>
+    <text x="480" y="444">Chat also uses Annotation, Payload, and Speech; Annotation and Payload read the pictures of Preview.</text>
+    <text x="480" y="458">Style uses Project, Settings, Preview, and Knowledge (only the descriptor of a tool); none of them uses Style.</text>
+    <text x="480" y="472">Every subsystem logs through Logging, and the subsystems that build file locations use Utilities.</text>
   </g>
 
-  <!-- Row 3: the drawing knowledge. Knowledge -->
-  <rect x="40" y="480" width="880" height="74" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
-  <text x="480" y="503" font-size="14" font-weight="700" fill="#4c1d95" text-anchor="middle">Knowledge</text>
+  <!-- Row 3: the drawing knowledge and the style kits. Knowledge -->
+  <rect x="40" y="484" width="430" height="78" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="255" y="505" font-size="14" font-weight="700" fill="#4c1d95" text-anchor="middle">Knowledge</text>
   <g font-size="11" fill="#5b21b6" text-anchor="middle">
-    <text x="480" y="522">KnowledgeCatalog, KnowledgeSearch, KnowledgePromptBuilder, KnowledgeTools, KnowledgeSkills, KnowledgeMarkdown</text>
-    <text x="480" y="538">KnowledgeBrowser (the Help &gt; Drawing Knowledge window); no language model is referenced</text>
+    <text x="255" y="522">KnowledgeCatalog, KnowledgeSearch, KnowledgePromptBuilder,</text>
+    <text x="255" y="536">KnowledgeTools, KnowledgeSkills, KnowledgeMarkdown,</text>
+    <text x="255" y="550">KnowledgeBrowser (Help &gt; Drawing Knowledge); no language model</text>
   </g>
 
-  <!-- Knowledge logs through Logging -->
-  <line x1="255" y1="554" x2="255" y2="578" stroke="#475569" stroke-width="2" marker-end="url(#a)"/>
+  <!-- Style -->
+  <rect x="490" y="484" width="430" height="78" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
+  <text x="705" y="505" font-size="14" font-weight="700" fill="#4c1d95" text-anchor="middle">Style</text>
+  <g font-size="11" fill="#5b21b6" text-anchor="middle">
+    <text x="705" y="522">StyleKitDocument, StyleKitCatalog, StyleKitArchive, StyleSelection,</text>
+    <text x="705" y="536">StyleGuidance, StyleChecker, StyleTools, StylePicker,</text>
+    <text x="705" y="550">StyleSettingsPage, StyleKitEditor, StyleKitManager; no language model</text>
+  </g>
 
+  <!-- Knowledge logs through Logging, Style uses Utilities -->
+  <g stroke="#475569" stroke-width="2" marker-end="url(#a)">
+    <line x1="255" y1="562" x2="255" y2="580"/>
+    <line x1="705" y1="562" x2="705" y2="580"/>
+  </g>
   <!-- Logging and Utilities -->
-  <rect x="40" y="578" width="430" height="50" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
-  <text x="255" y="600" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">Logging</text>
-  <text x="255" y="618" font-size="11" fill="#1e40af" text-anchor="middle">RollingFileLogger: local rolling log files</text>
-  <rect x="490" y="578" width="430" height="50" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
-  <text x="705" y="600" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">Utilities</text>
-  <text x="705" y="618" font-size="11" fill="#1e40af" text-anchor="middle">PathHelpers: safe path combination</text>
+  <rect x="40" y="580" width="430" height="50" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="255" y="602" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">Logging</text>
+  <text x="255" y="620" font-size="11" fill="#1e40af" text-anchor="middle">RollingFileLogger: local rolling log files</text>
+  <rect x="490" y="580" width="430" height="50" rx="10" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="705" y="602" font-size="14" font-weight="700" fill="#1e3a8a" text-anchor="middle">Utilities</text>
+  <text x="705" y="620" font-size="11" fill="#1e40af" text-anchor="middle">PathHelpers: safe path combination</text>
 
   <!-- Third-party items -->
   <text x="24" y="676" font-size="13" font-weight="600" fill="#0f172a">Third-party (OTS) items used by the library</text>
@@ -172,9 +186,9 @@
   <g>
     <rect x="20" y="780" width="215" height="52" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
     <text x="127" y="801" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">Project folder</text>
-    <text x="127" y="819" font-size="11" fill="#334155" text-anchor="middle">{name}.canvaspilot, image files</text>
+    <text x="127" y="819" font-size="11" fill="#334155" text-anchor="middle">{name}.canvaspilot, images, styles</text>
     <rect x="255" y="780" width="215" height="52" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
-    <text x="362" y="801" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">settings.json</text>
+    <text x="362" y="801" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">settings.json, styles</text>
     <text x="362" y="819" font-size="11" fill="#334155" text-anchor="middle">%APPDATA%\CanvasPilot</text>
     <rect x="490" y="780" width="215" height="52" rx="10" fill="#f1f5f9" stroke="#64748b" stroke-width="2"/>
     <text x="597" y="801" font-size="12" font-weight="700" fill="#0f172a" text-anchor="middle">Log files</text>

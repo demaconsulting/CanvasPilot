@@ -18,7 +18,8 @@ attach files, folders, and pictures, and mark places on the picture that you are
 and see exactly what it contains. The AI assistant that will answer the messages is not available yet, so a sent message
 stays in the chat panel and nothing is sent to a provider. The Help menu also opens the drawing knowledge, a guide to
 the image formats and to CanvasPilot that you can read card by card and that the assistant is meant to use when it is
-added.
+added. Style kits let you keep a look (colors, fonts, sizes, and example images) for a project or a team, export
+pictures at sizes that fit slides, email, and paper, and check a picture against the colors of the style.
 
 ## Scope
 
@@ -27,12 +28,15 @@ This user guide covers:
 - Installing CanvasPilot on Windows
 - Creating, opening, saving, and closing projects
 - The project explorer, the preview, and its notes and errors
-- Exporting a picture as a PNG file, copying it to the clipboard, and dragging it into another program
+- Exporting a picture as a PNG file at its own size or at a size of your style kit or of the application, copying it to
+  the clipboard, and dragging it into another program
 - Chatting: writing and dictating a message, attaching files, folders, and pictures, marking the picture, and sending
   the message and viewing its payload
 - Reading the drawing knowledge: opening the browser, the tree of cards, searching, following related cards, and
   copying examples
-- The Settings dialog, with the AI Provider and Speech pages
+- Style kits: choosing the style of a project, the Style Kits window, where kits are kept and which copy wins, making,
+  editing, importing, and exporting kits, exporting at sizes, and checking a picture against the style
+- The Settings dialog, with the AI Provider, Speech, and Style Kits pages
 - Where CanvasPilot keeps its settings, logs, speech models, and attachments
 - Troubleshooting
 
@@ -139,11 +143,15 @@ preview updates.
 
 With a picture shown, the **Image** menu offers:
 
-- **Export as PNG...** asks where to save the file and writes the picture, with its transparency, as a PNG file.
+- **Export as PNG...** asks first how the picture is exported (see *Exporting at a Size* in *Style Kits*). *As rendered*
+  is the first choice and is selected, so pressing **Export...** at once saves the picture, with its transparency, as a
+  PNG file at the size it is shown. Then it asks where to save the file.
 - **Copy Image** puts the picture on the clipboard, so you can paste it into email, a presentation, or another
   program.
+- **Check Against Style** compares the picture with the colors of the style kit of the project (see *Checking a
+  Picture Against the Style* in *Style Kits*).
 
-Both items are disabled while no picture is shown.
+The three items are disabled while no picture is shown.
 
 ## Drag the Picture Into Another Program
 
@@ -365,12 +373,182 @@ new file in your project and change it. A line under the cards says "Copied exam
 it worked, or "Could not reach the clipboard." when another program is holding the clipboard; try again in a moment.
 Nothing is written to your project by the browser.
 
+# Style Kits
+
+A **style kit** describes how your pictures should look, so every picture in a project, or every picture of a team,
+has the same colors, type, and sizes. A kit holds:
+
+- a **palette** of named colors (every kit has a *background*, a *text*, and a *primary* color, and may have more, such
+  as *secondary*, *accent*, and *surface*, and colors of its own),
+- **fonts** for headings, body text, and monospaced text, a **line width**, a **corner radius**, and a **spacing**,
+- a **Mermaid theme** and a **Vega-Lite configuration** that you can copy into a Mermaid or chart file,
+- **advice**: notes and a list of things to do and not to do,
+- **export sizes**, such as a slide size, each with an optional resolution and transparency,
+- **example images** with captions that show the style in use.
+
+A kit is a plain folder, so it can be kept in a project, shared in a team folder, sent as a zip file, and edited by
+hand: the folder is named after the kit's id and holds a `style.json` file and an `examples` folder.
+
+CanvasPilot comes with three kits: **Clean** (a light, neutral look), **Slides Dark** (light text on a dark background,
+with sizes for slides), and **DEMA** (the look of the CanvasPilot pictures). Their files cannot be changed, but you can
+duplicate any kit and change the copy.
+
+## Choosing the Style of a Project
+
+While a project is open, the status bar at the bottom of the window shows **Style:** and a list. Choose a kit in the
+list, or **(No style)** for none. Each kit is listed with the place it comes from, for example *Clean (Built-in)*. The
+choice is saved in the project file, so everyone who opens the project, on any computer that has the kit, sees the same
+style. The tooltip of the list shows the description of the kit and its folder.
+
+- A **new** project starts with the **default kit** that you choose on the Style Kits page of the settings (see *Style
+  Kits Page* under *Settings*), or with no style when none is chosen. Changing the default later does not change
+  projects that exist, and a project that is only opened keeps what its file says. A project made with an older version
+  has no style until you choose one.
+- When the project names a kit that cannot be found on this computer, for example one that lived in a team folder that
+  you cannot reach, the list shows the id with *(not found)* and the project behaves as if it had no style until you
+  choose another kit, or until the kit is back (choose **Tools > Style Kits...** and **Refresh**).
+
+## Where Kits Are Kept, and Which Copy Wins
+
+CanvasPilot looks for kits in four places. When the same id is in more than one place, the most local copy is the one
+that is used, from the top of this table down:
+
+| Place | Where | Can you change it? |
+| --- | --- | --- |
+| This project | The `styles` folder inside the project folder, one folder per kit | Yes |
+| My kits | `%APPDATA%\CanvasPilot\styles`, one folder per kit | Yes |
+| Shared | The shared folders of the Style Kits page; a higher folder wins | No, read only |
+| Built-in | The `StyleKits` folder that is installed next to `CanvasPilot.exe` | No, they are read only |
+
+A kit that is hidden by a more local copy is still listed, dimmed, with the place of the copy that hides it. This lets a
+project freeze its style: **Copy into project** makes a copy of a kit in the project's `styles` folder, and from then on
+the project uses its own copy even if the team changes the shared kit. The `styles` folder is an ordinary visible
+folder: the explorer does not list it, and you can keep it with the project, add it to version control, or edit its
+files with other tools (choose **Refresh** in the Style Kits window to read the files again). A kit that cannot be used,
+for example because a color in its `style.json` is not written as `#RRGGBB`, is not offered; the window names its folder
+and says which property is wrong.
+
+## The Style Kits Window
+
+Choose **Tools > Style Kits...** to open the **Style Kits** window. It stays open beside the main window, so you can
+keep it while you work, and choosing the command again brings it to the front. At the left the kits are listed in
+groups, **This project** (while a project is open), **My kits**, **Shared**, and **Built-in**, each kit with a strip of
+its colors. A group says when it is empty, and a shared folder that cannot be reached is named in its group, for example
+because the network is down, while the other groups still work. A kit marked *in use* is the style of the open project.
+
+Choose a kit to see it at the right: its description and place, its palette with each color's role and `#RRGGBB` value,
+fonts, line width, corner radius, spacing, notes and advice, export sizes, any warnings about the kit, small pictures of
+its example images with their captions, and, under **What an assistant is given**, the text that a future assistant
+would receive about the kit, with its length. The buttons are:
+
+- **Use in this project** makes the chosen kit the style of the open project. It is unavailable while no project is open
+  and for a kit that is hidden by a more local copy.
+- **New...** asks for a name and makes a kit with a starter palette in the place chosen under *New and imported kits go
+  to* (**My kits** or **This project**), then opens it in the editor.
+- **Duplicate...** makes a copy of the chosen kit, with its example images, under a new name, in the same chosen place,
+  and opens the copy in the editor. This is how you change a built-in or shared kit.
+- **Edit...** opens the chosen kit in the editor. It is unavailable for built-in and shared kits.
+- **Delete...** deletes the chosen kit and everything in its folder, after you confirm. It is unavailable for built-in
+  and shared kits.
+- **Import...** reads a kit from a zip file into the chosen place. If that place already has a kit with the same id, you
+  choose whether to replace it or to keep both (the new one then gets a number after its id and its name, for example
+  `-2` and `(2)`). CanvasPilot refuses an archive that contains anything that is not part of a kit, a name that would
+  reach outside the target folder, or too many or too large files, and then writes nothing; the line under the buttons
+  says why.
+- **Export...** writes the chosen kit and its example images to a zip file.
+- **Copy into project** copies the chosen kit into the `styles` folder of the open project.
+- **Refresh** reads all places again, for example after you changed a file with another tool.
+
+The line under the buttons says what the last action did or why it could not be done.
+
+## Creating and Editing a Kit
+
+The editor opens as a window over the Style Kits window, with these pages:
+
+- **General**: the name and the description. The id names the kit's folder and cannot be changed; duplicate the kit to
+  give a copy another id.
+- **Palette**: one row per color with its role, a swatch, and the `#RRGGBB` value, which you can type or set with the
+  **RGB...** button, which opens three sliders. A *background*, a *text*, and a *primary* color are required. Add other
+  colors with **Add color**. A hint shows when the text and background colors do not contrast enough to read.
+- **Type and shape**: fonts as lists of families as in CSS (for example `sans-serif`), the line width, the corner
+  radius, and the spacing, in pixels. The generic families (`sans-serif`, `serif`, `monospace`) and the common names
+  such as Arial and Segoe UI are drawn with fonts that come with CanvasNet on every computer. A font that does not come
+  with CanvasNet, such as `Inter`, gives a warning: only SVG and OpenSCAD files draw it, and only on a computer that has
+  the font, while Mermaid, PlantUML, and Vega-Lite always draw their text with the bundled fonts.
+- **Mermaid and Vega-Lite**: a Mermaid theme with its variables and a Vega-Lite configuration (a JSON object).
+  CanvasPilot cannot give a theme or a configuration to a render, so these are starting points and advice for the files
+  that you or the assistant write: a Mermaid file takes the theme in its front matter, and a chart takes the
+  configuration in its `config` property.
+- **Guidance**: notes, and the lists of what to do and not to do.
+- **Sizes**: the export sizes: a name, a width, a height, a resolution (DPI), and whether the margin is transparent.
+  Give a width, a height, or both (both fit the picture inside the box).
+- **Examples**: example images, added with **Add files...** and removed with **Remove**, each with a caption. The files
+  are copied into the kit when you save, and a file that you removed is deleted from the kit then.
+
+The editor checks the kit as you type with the same rules as the kit's file. **Save** is unavailable while a message in
+red is shown, and each message names the property that is wrong; warnings do not stop you from saving. **Cancel** closes
+the editor and writes nothing. Saving writes the kit to its own folder, so a project's kit changes only when you edit
+the copy in the project's `styles` folder.
+
+## Exporting at a Size
+
+**Image > Export as PNG...** first opens the **Export PNG** dialog, which lists, with the resulting size of each:
+
+1. **As rendered**, selected at first: the picture exactly as it is shown, with its transparency. Choosing it gives the
+   same file that earlier versions wrote.
+2. The **export sizes of the style kit** of the project, if it has any.
+3. The **sizes of the application**: *PowerPoint 16:9* (1920 x 1080), *Email (800 wide)* (800 pixels wide, as high as
+   the picture needs), and *A4 portrait @150 DPI* (1240 x 1754, with a resolution of 150 DPI written into the file). A
+   size of the kit with the same name replaces the size of the application.
+
+Choose a size and **Export...**, then choose the file. For a size CanvasPilot draws the source file again at that size,
+so lines and text stay sharp and nothing is stretched. A width and a height define a box in which the picture is fitted
+with its proportions kept, and the margin is filled with the background color of the kit (white when the project has no
+style); a size marked transparent keeps the margin transparent instead. If the file cannot be drawn at that size, a
+message says why and no file is written. **Copy Image** and dragging the picture out always use the picture as it is
+shown.
+
+## Checking a Picture Against the Style
+
+With a picture shown and a kit chosen for the project, **Image > Check Against Style** compares the colors of the
+picture with the palette of the kit and shows the result among the notes under the picture, which opens for it. The
+check counts pixels, so it is about how much of the picture is which color:
+
+- a **summary** that says *PASSED* when at most 5 percent of the picture is off the palette, and *FAILED* otherwise,
+- the palette colors that the picture uses, with their share,
+- the share of **blended edges**, the pixels between two palette colors that smooth the edge of a shape, which are not
+  counted as off the palette,
+- each **off-palette** color that covers at least 1 percent of the picture, as a warning with its share and the nearest
+  palette color, so you know what to change. A color counts as a palette color when it is close to one (the same to the
+  eye).
+
+The notes stay until the picture is drawn again. With no picture, the item is unavailable; with no kit, a message tells
+you to choose one in the status bar first. A picture that uses only the kit's colors passes; Mermaid and chart defaults,
+such as grey grid lines and black text, are reported when the file leaves them at the defaults, which is the reason the
+examples of the kits set every color.
+
+## What an Assistant Will Do With a Kit
+
+The AI assistant is not available yet, and nothing is sent anywhere. The kit is prepared for it: when the assistant is
+added, it will be given the style of the project's kit as a short block of text (the palette, fonts, shapes, and advice,
+and the paths of the example images, which it can look at), and two tools, one to read the style and one to check a
+picture of the project against the palette. The text of a kit is given to it as data and not as instructions, and its
+length is limited. You can see the text in the Style Kits window under **What an assistant is given**.
+
+## Checks That Only a Person Can Do
+
+*Not yet checked:* CanvasPilot's own tests stand in for the operating system's folder and file pickers and for the color
+sliders, so the pickers that choose a shared folder, a zip file to import or export, and example images, and the slider
+flyout of a color, have not yet been tried by a person on an installed package. If one does not work for you, please
+report it (see *Troubleshooting*); you can still type the full path of a shared folder on the Style Kits page and a
+color as `#RRGGBB`.
+
 # Settings
 
-Choose **Tools > Settings...** to open the Settings dialog. The page list at the left shows **AI Provider** and
-**Speech**. **OK** saves the changes from all pages and closes the dialog, **Apply** saves them and keeps the dialog
-open, and **Cancel** closes it without saving. OK and Apply are unavailable while an entry is invalid, and the page
-shows what is wrong.
+Choose **Tools > Settings...** to open the Settings dialog. The page list at the left shows **AI Provider**, **Speech**,
+and **Style Kits**. **OK** saves the changes from all pages and closes the dialog, **Apply** saves them and keeps the
+dialog open, and **Cancel** closes it without saving. OK and Apply are unavailable while an entry is invalid, and the
+page shows what is wrong.
 
 ## AI Provider
 
@@ -406,6 +584,20 @@ Models are downloaded over HTTPS into a store that is shared with other DEMA Con
 library (see *Where CanvasPilot Keeps Its Files*). A downloaded model is checked before it is installed, and an
 interrupted download leaves no half-installed model.
 
+## Style Kits Page
+
+The Style Kits page stores where CanvasPilot looks for the kits of your team and which kit new projects start with (see
+*Style Kits*).
+
+- **Shared kit folders** lists the folders in which a team keeps style kits, for example `\\server\share\kits`. Type or
+  paste a full folder path and choose **Add**, or choose **Browse...** to pick a folder. A folder is listed with whether
+  it can be reached now, because a network folder can be offline. **Move up** and **Move down** change the order: when
+  the same kit is in more than one folder, the one that is higher in the list is used. **Remove** takes a folder out of
+  the list; the folder itself is not touched. The kits in these folders are read only. A path that is not a full path,
+  and a folder that is already in the list, is refused.
+- **Default kit for new projects** chooses the kit that a project that you create starts with. Projects that exist keep
+  the kit they have.
+
 # About CanvasPilot
 
 Choose **Help > About CanvasPilot** to see the application name, the version, the copyright notice, and the
@@ -420,6 +612,9 @@ third-party libraries that CanvasPilot uses. Include the version when you report
 | Pictures prepared for dragging out (temporary) | `%LOCALAPPDATA%\CanvasPilot\drag` |
 | Pictures that you pasted into a message that is not sent yet | `.canvaspilot\attachments` in the project |
 | Files and folders that you sent with a message | `attachments` in the project |
+| Style kits of the project | `styles` in the project |
+| Your own style kits | `%APPDATA%\CanvasPilot\styles` |
+| Style kits that come with CanvasPilot (read only) | `StyleKits` next to `CanvasPilot.exe` in the installation |
 | Downloaded speech models | `%LOCALAPPDATA%\DemaConsulting.Speech\Models` |
 | Your projects | The folder that you chose for each project |
 
@@ -495,6 +690,33 @@ window is already open it is brought to the front instead of opening a second on
 **The search finds no card.** The search needs two or more letters and looks at the names, titles, tags, and summaries
 of the cards, not at their whole text. Try another word for the thing, such as the name of the format, or open the tree
 and read the card that is about it.
+
+**A shared folder of style kits is not reachable.** The Style Kits page and the Style Kits window say that the folder
+cannot be reached, for example because the network share is offline or you may not read it. The other places still work,
+and the shared kits come back when you choose **Refresh** in the Style Kits window once the folder is reachable again.
+A project that uses a shared kit shows *(not found)* in the meantime (see the next item). To keep a kit available
+without the share, use **Copy into project**.
+
+**The project's style kit is not found.** The list in the status bar shows the id with *(not found)* when the project's
+file names a kit that is not on this computer: the kit may have been deleted, may live in a folder that is not
+reachable, or may have been made by a teammate who did not share it. Choose another kit or **(No style)**; or add the
+folder of the kit on the Style Kits page of the settings, or import it from a zip file, and choose **Refresh**.
+
+**A style kit is not listed.** A kit whose `style.json` has an error is not offered. The group in the Style Kits window
+that holds its folder names the folder and the property that is wrong, for example a color that is not written as
+`#RRGGBB`. Fix the file (or edit the kit), and choose **Refresh**. A kit that is dimmed is hidden by a copy of the same
+id in a more local place (see *Where Kits Are Kept, and Which Copy Wins*).
+
+**I cannot edit or delete a style kit.** The kits that come with CanvasPilot and the kits in shared folders are read
+only. Choose **Duplicate...** and change the copy, which is kept in *My kits* or in the project.
+
+**An import is refused.** The message under the buttons of the Style Kits window says why: the zip file has no
+`style.json`, holds files that are not part of a kit, has a name that would reach outside the kit's folder, is too large
+(at most 100 files, 16 MB for one file, and 64 MB in all), or the kit's file has an error. Nothing is written when an
+import is refused.
+
+**Export as PNG... asks which size.** This is the Export PNG dialog (see *Exporting at a Size*). Keep *As rendered*
+selected to save the picture as it is shown.
 
 **Reporting a problem.** Open an issue on the
 [CanvasPilot issues page](https://github.com/demaconsulting/CanvasPilot/issues) and attach the newest file from the log

@@ -5,8 +5,8 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented are twelve subsystems, `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`,
-`Payload`, `Preview`, `Project`, `Settings`, `Speech`, and `Utilities`.
+software items documented are thirteen subsystems, `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`,
+`Payload`, `Preview`, `Project`, `Settings`, `Speech`, `Style`, and `Utilities`.
 
 ```mermaid
 flowchart TD
@@ -55,6 +55,7 @@ flowchart TD
         PreviewPane
         ImageExporter
         ImageDragSource
+        ExportPresetDialog
     end
     subgraph Project
         ProjectService
@@ -75,6 +76,19 @@ flowchart TD
         ModelCatalogPanel
         ModelParameterEditor
         SpeechSettingsPage
+    end
+    subgraph Style
+        StyleKitDocument
+        StyleKitCatalog
+        StyleKitArchive
+        StyleSelection
+        StyleGuidance
+        StyleChecker
+        StyleTools
+        StylePicker
+        StyleSettingsPage
+        StyleKitEditor
+        StyleKitManager
     end
     subgraph Utilities
         PathHelpers
@@ -187,6 +201,52 @@ flowchart TD
     KnowledgeBrowser --> KnowledgeSearch
     KnowledgeBrowser --> KnowledgeMarkdown
     KnowledgeBrowser --> RollingFileLogger
+    MainWindowShell --> ExportPresetDialog
+    MainWindowShell --> StyleChecker
+    MainWindowShell --> StylePicker
+    MainWindowShell --> StyleKitManager
+    StyleKitCatalog --> StyleKitDocument
+    StyleKitCatalog --> ProjectService
+    StyleKitCatalog --> SettingsService
+    StyleKitCatalog --> PathHelpers
+    StyleKitCatalog --> RollingFileLogger
+    StyleKitArchive --> StyleKitDocument
+    StyleKitArchive --> PathHelpers
+    StyleSelection --> StyleKitCatalog
+    StyleSelection --> ProjectService
+    StyleSelection --> SettingsService
+    StyleSelection --> ImageExporter
+    StyleGuidance --> StyleKitDocument
+    StyleGuidance --> StyleKitCatalog
+    StyleChecker --> StyleKitDocument
+    StyleChecker --> StyleSelection
+    StyleChecker --> ImageRenderService
+    StyleChecker --> PreviewPane
+    StyleTools --> StyleSelection
+    StyleTools --> StyleKitCatalog
+    StyleTools --> StyleGuidance
+    StyleTools --> StyleChecker
+    StyleTools --> ImageRenderService
+    StyleTools --> KnowledgeTools
+    StyleTools --> PathHelpers
+    StylePicker --> StyleSelection
+    StylePicker --> StyleKitCatalog
+    StylePicker --> ProjectService
+    StyleSettingsPage --> SettingsDialog
+    StyleSettingsPage --> StyleKitCatalog
+    StyleSettingsPage --> StylePicker
+    StyleSettingsPage --> ProjectService
+    StyleKitEditor --> StyleKitCatalog
+    StyleKitEditor --> StyleKitDocument
+    StyleKitEditor --> StylePicker
+    StyleKitManager --> StyleKitCatalog
+    StyleKitManager --> StyleSelection
+    StyleKitManager --> StyleKitArchive
+    StyleKitManager --> StyleKitEditor
+    StyleKitManager --> StyleGuidance
+    StyleKitManager --> StylePicker
+    StyleKitManager --> ImageRenderService
+    StyleKitManager --> ProjectService
     ProjectWorkspace --> ProjectExplorer
     ProjectWorkspace --> ChatPanel
 ```
@@ -250,11 +310,15 @@ coordinates and scaled with it, which other items fill with content that refers 
 its top bar, not scaled, for the controls of that content. `PreviewPane`
 follows the selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders
 that are no longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture
-as a PNG file or copies it to the clipboard for the Image menu. `ImageDragSource` prepares the shown picture for
+as a PNG file or copies it to the clipboard for the Image menu: it first asks which size to export at (the picture as
+it is shown, or a size that a source of sizes offers), and for a size it draws the file again at that size and
+background, so the lines stay sharp, and writes the resolution into the file. `ExportPresetDialog` is the small dialog
+in which the user chooses the size. `ImageDragSource` prepares the shown picture for
 dragging it into another program, such as a presentation, a mail message, or a folder: it writes the picture as a PNG
 file in a folder of its own, and the preview view offers that file and the picture's bitmap to the program the user
-drops them on. The `Preview` subsystem owns the two interfaces that this needs, `IImageExporter` and `IExportDialogs`,
-and does not refer to the main window.
+drops them on. The `Preview` subsystem owns the interfaces that this needs, `IImageExporter`, `IExportDialogs`,
+`IExportPresetSource` (where the sizes come from), and `IRenderNoteSink` (where other parts put notes about the shown
+picture), and does not refer to the main window or to the `Style` subsystem.
 
 `ComposerDocument` holds the message that the user is composing for the chat as an ordered sequence of typed text,
 dictated text, and chips for attached files, folders, and images and for marks on the picture, and is the single source
@@ -354,6 +418,23 @@ is the only unit of the subsystem with a user interface. The browser does not kn
 and without blocking. The `Knowledge` subsystem depends on `Logging` (the log of a clipboard failure) and on CanvasNet,
 and not on `AppShell`.
 
+`StyleKitDocument` is the format of a style kit and the one place that reads and writes it: a folder with a `style.json`
+file (a palette of named colors, fonts, a line width, a corner radius, a spacing, a Mermaid theme, a Vega-Lite
+configuration, advice, export sizes, and captions) and an `examples` folder, read with a message for each wrong
+property. `StyleKitCatalog` finds the kits in the four places and chooses the most local copy of a kit by the order
+project, user, shared folders, program, and it is the only item that writes kits; the kits of the program and of a
+team are read only. `StyleKitArchive` exchanges a kit as a zip file and reads one as untrusted input. `StyleSelection`
+says which kit the open project uses, keeps the choice in the project file, gives a new project the default kit of the
+user, and is the source of export sizes that `ImageExporter` asks (the sizes of the kit, then the sizes of the
+application). `StyleGuidance` and `StyleTools` give the style to an assistant that is added later, as a block of text of
+a known size and as two tools, `style_get` and `style_check`, which are plain values and use no provider of a language
+model. `StyleChecker` measures the colors of a picture against the palette of a kit and `StyleCheckCommand` runs it
+for the Image menu and puts the result among the notes of the preview. `StylePicker` is the list in the status bar,
+`StyleSettingsPage` the page of the settings dialog for shared folders and the default kit, and `StyleKitManager` and
+`StyleKitEditor` the window in which the user sees, makes, edits, imports, exports, and chooses kits. The `Style`
+subsystem depends on `Project`, `Settings`, `Preview`, `Knowledge` (only the descriptor record of a tool), `Utilities`,
+`Logging`, and CanvasNet, and not on `AppShell`.
+
 ### Dependency Direction
 
 The dependencies between the subsystems run one way: `AppShell` depends on `Preview`, and `Preview` does not depend on
@@ -372,10 +453,14 @@ the composition root and the window refer to every subsystem. The `Chat` subsyst
 `Composer`, `Annotation`, `Payload`, and `Speech`, and the seam by which it asks for the inspector window,
 `IPayloadInspectorLauncher`, belongs to `Chat`, so `IDialogService` extends it just as it extends the seams of `Project`
 and `Preview`. The `Knowledge` subsystem follows the same rule: the seam by which the shell asks for the browser,
-`IKnowledgeBrowserLauncher`, belongs to `Knowledge`, and `IDialogService` extends it too. The direction is shown in the
-model and in the diagram above, and the verification of `ImageExporter`
-uses a substitute for `IExportDialogs`, so no test of `Preview` needs the dialog service of `AppShell`, and the
-verification of the chat panel and of the Help command uses a substitute for the launcher.
+`IKnowledgeBrowserLauncher`, belongs to `Knowledge`, and `IDialogService` extends it too. The `Style` subsystem sits
+above `Project`, `Settings`, `Preview`, and `Knowledge` and none of them refers to it: the seams that they need are
+declared by the lower subsystem (`IExportPresetSource` and `IRenderNoteSink` in `Preview`), the id of the kit of a
+project is plain text in the project file, and the style settings are a plain record in the settings.
+`IStyleKitDialogs`, the windows and pickers that the Style Kits window asks for, belongs to `Style`, and
+`IDialogService` extends it as well. The direction is shown in the model and in the diagram above, and the verification
+of `ImageExporter` uses a substitute for `IExportDialogs`, so no test of `Preview` needs the dialog service of
+`AppShell`, and the verification of the chat panel and of the Help command uses a substitute for the launcher.
 
 The same rule keeps `Composer` and `Payload` apart. The payload is built from the composer's snapshot, so `Payload`
 depends on `Composer`; the composer sends the messages, so it needs them built. The seam belongs to the lower
@@ -419,7 +504,8 @@ yet, no interface is declared for it, and no requirement depends on it.
 - *Direction*: Input and output.
 - *Type*: JSON file on the local file system.
 - *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects, the AI provider
-  choices, and the speech choices. Unknown properties are ignored.
+  choices, the speech choices, and the style choices (the shared kit folders and the default kit). Unknown properties
+  are ignored.
 - *Constraints*: The default location is `%APPDATA%\CanvasPilot\settings.json`. The file is written
   atomically. A corrupt file is renamed `settings.json.bad` and defaults are used. The file never
   contains credentials.
@@ -435,9 +521,10 @@ yet, no interface is declared for it, and no requirement depends on it.
 
 - *Direction*: Input and output.
 - *Type*: A folder on the local file system holding a `{name}.canvaspilot` JSON file, a hidden `.canvaspilot`
-  folder, and the image source files.
-- *Format*: The project file holds `formatVersion` (1), `name`, `createdUtc`, and an optional `modifiedUtc`;
-  unknown properties are ignored when reading and kept when saving.
+  folder, the image source files, and optionally a `styles` folder of style kits.
+- *Format*: The project file holds `formatVersion` (1), `name`, `createdUtc`, an optional `modifiedUtc`, and an optional
+  `activeStyleKit` (the id of the style kit that the project uses; absent for a project with no style); unknown
+  properties are ignored when reading and kept when saving.
 - *Constraints*: A project is created only in a new or empty folder. A project file with a newer
   `formatVersion` is refused with a message. Project and file names follow rules that hold on every supported
   platform.
@@ -457,8 +544,10 @@ works with its files.
 - *Direction*: Input (the selected image source file and the files it uses) and output (the picture, a PNG file,
   and a clipboard image).
 - *Type*: Avalonia control in the main window, files on the local file system, and the system clipboard.
-- *Format*: The picture is drawn by CanvasNet at the file's natural size. An export is a PNG file with the same
-  pixels, including transparency; a copy is a bitmap on the clipboard.
+- *Format*: The picture is drawn by CanvasNet at the file's natural size. An export as drawn is a PNG file with the same
+  pixels, including transparency; an export at a size is the file drawn again at that size (fitted into a width and a
+  height, or scaled to one of them, keeping its ratio) over the background of the size or transparent, with the
+  resolution of the size written into the file; a copy is a bitmap on the clipboard.
 - *Constraints*: The drawn file may read other files only from inside the project folder. A file that cannot be
   drawn is explained with its error code, message, and hint, never an unhandled failure. Export and copy are
   enabled only while a picture is shown.
@@ -508,6 +597,23 @@ made in the project when the message is sent.
   are left out. A card that cannot be read, or a clipboard that cannot be reached, is a message, never an
   unhandled failure.
 
+**Style Kits**: The folders that describe how pictures should look, and the zip files that carry them.
+
+- *Direction*: Input (kits from four places and from zip files) and output (kits the user makes, copies, edits, or
+  exports).
+- *Type*: Folders on the local file system, `.zip` files, an Avalonia window opened by Tools > Style Kits, the list in
+  the status bar, and the Style Kits page of the settings dialog.
+- *Format*: A kit is a folder `{id}` with a `style.json` file (`formatVersion` 1) and an `examples` folder. The places
+  are, from the winning one down, the `styles` folder of the open project, `%APPDATA%\CanvasPilot\styles`, the shared
+  folders listed in the settings (earlier ones first), and the `StyleKits` folder beside the executable that comes with
+  the program (`clean`, `slides-dark`, and `dema`). A zip file holds `style.json` and `examples/` at its root, or in one
+  wrapper folder.
+- *Constraints*: Every kit is bounded (a style file is at most 256 KiB, an example file at most 16 MiB, at most 24
+  examples) and is read with a message for each wrong property. The kits of the program and of shared folders are never
+  written. An import writes only inside the chosen place, refuses an archive as a whole when a name could leave it, and
+  counts the bytes it writes (at most 100 entries, 16 MiB for an entry, and 64 MiB in all). A shared folder that cannot
+  be reached is reported and never blocks the window.
+
 **Speech Settings, Audio Devices, and Model Store**: The speech choices, the audio system, and the downloaded models.
 
 - *Direction*: Input and output.
@@ -542,8 +648,8 @@ made in the project when the message is sent.
   installer project, which is not part of the solution.
 - *Format*: The package carries the self-contained single-file `CanvasPilot.exe` publish output, the native libraries
   that stay beside it (the Skia, text shaping, and ANGLE graphics libraries and the speech inference runtime, Sherpa
-  interface, and audio library), a Start Menu shortcut, and the Add/Remove Programs icon and links; its version is the
-  numeric part of the build version.
+  interface, and audio library), the `StyleKits` folder of the three style kits that come with the program, a Start Menu
+  shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version.
 - *Constraints*: Installing a package replaces any installed version, older or newer, and asks a running
   `CanvasPilot.exe` to close first. The package contains no user data, and uninstalling leaves the user's settings,
   logs, and projects in place.
@@ -552,9 +658,10 @@ made in the project when the message is sent.
 
 - *Direction*: Input and output.
 - *Type*: Avalonia window with File, Edit, Image, Tools, and Help menus, a project explorer, a preview area with a
-  layer for marks, a chat column with the message composer and the transcript, and modal dialogs (New Project,
-  Settings, About, payload inspector, and message, confirmation, and prompt dialogs) and, from the Help menu, the
-  window of the drawing knowledge, which does not block the main window.
+  layer for marks, a chat column with the message composer and the transcript, a status bar with the style kit of the
+  project, and modal dialogs (New Project, Settings, About, payload inspector, export size, style kit editor, and
+  message, confirmation, and prompt dialogs) and, from the Help and Tools menus, the windows of the drawing knowledge
+  and of the style kits, which do not block the main window.
 - *Format*: The window title is `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`.
   Every menu item has a name and an automation identifier that are the same. The F8 key is the talk key: dictation
   listens while it is held.
@@ -565,14 +672,16 @@ made in the project when the message is sent.
 ## Dependencies
 
 The `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`,
-`Speech`, and `Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and project
-files and the description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm, which
-are runtime third-party items (the `Composer` editor view also uses the AvaloniaEdit editing control, which is a runtime
-third-party item too; the other `Annotation`, `Chat`, and `Composer` units use base class library types and Avalonia
-only, and the `Payload` units base class library types and CanvasNet; of the `Knowledge` units only the browser uses
-Avalonia and CommunityToolkit.Mvvm, and the catalog reads the help cards of CanvasNet). The `ImageRenderService` unit
-draws files and encodes PNG with the `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the
-marks of a message over a picture with the same library, and the `ProjectExplorer` unit uses its extension list to
+`Speech`, `Style`, and `Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and
+project files and the description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm,
+which are runtime third-party items (the `Composer` editor view also uses the AvaloniaEdit editing control, which is a
+runtime third-party item too; the other `Annotation`, `Chat`, and `Composer` units use base class library types and
+Avalonia only, and the `Payload` units base class library types and CanvasNet; of the `Knowledge` units only the browser
+uses Avalonia and CommunityToolkit.Mvvm, and the catalog reads the help cards of CanvasNet; the `Style` units read and
+write their files with `System.Text.Json` and `System.IO.Compression`, `StyleKitDocument` classifies font families with
+CanvasNet, and the picker, page, manager, and editor use Avalonia and CommunityToolkit.Mvvm). The `ImageRenderService`
+unit draws files and encodes PNG with the `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws
+the marks of a message over a picture with the same library, and the `ProjectExplorer` unit uses its extension list to
 decide which files are image sources. The `AudioDeviceService`, `SpeechModelService`, and `DictationService` units list
 audio devices and speech models, download models, create capture devices, and load and run the speech engine with the
 `DemaConsulting.Speech` library and its Sherpa model package, whose native speech runtime is shipped with the
@@ -658,6 +767,17 @@ and the build verifies both the published output and the file table of the insta
 only while the talk control is held, releases the microphone when it ends, keeps neither audio nor recognized text
 outside the message, and writes events but never words to the log.
 
+**Safe style kits**: A style kit may come from a shared folder, a download, or a zip file in the mail, so it is read as
+untrusted input. `StyleKitDocument` bounds every part before anything is made from it (file size, depth, number and
+length of entries, example captions) and reports each wrong value with its property; `StyleKitArchive` refuses a whole
+archive, before it writes anything, when a name could leave the target folder (parent parts, drive letters, rooted
+names, links, characters a name cannot hold) or when a file is not part of a kit, counts the bytes that it really
+writes, so a header that lies about a size does not help, and puts a kit in place only when it is valid. A shared folder
+is read on a worker with a time limit, so one that does not answer cannot stop the window; the kits of the program and
+of a shared folder are never written. The example images of a kit are drawn with only the folder of the kit readable,
+`style_check` reads only a file inside the project (not through a link that leads out), and the block of guidance says
+that the text of a kit is data and not instructions, so a kit cannot instruct an assistant, and its size is capped.
+
 Application subsystems call `RollingFileLogger.Log` with a severity, a message, and optional exception
 context. `RollingFileLogger` asks `PathHelpers` to resolve the active file path inside the log folder,
 rotates and prunes archives when the active file has reached its size threshold, and appends the
@@ -681,7 +801,10 @@ loaded at once), the project service, the recent projects list, the project expl
 source (which deletes the files of earlier drags), the preview pane, the workspace, the image exporter, the speech
 services with the dictation service, the shell, the mark registry, the mark image composer and payload builder, the
 composer (with its attachment store and intake), the annotation overlay, and the chat panel, which it places in the
-workspace and makes the target of the talk key. It also gives the shell a function that gives the catalog of the drawing
+workspace and makes the target of the talk key. It also builds the style units: the catalog of style kits, the selection
+of the project, the list for the status bar, the command of the Image menu, the two tools of an assistant (nothing
+calls them yet), and the source of export sizes that it gives the exporter; the kits are read on a worker, so the start
+never waits for them. It also gives the shell a function that gives the catalog of the drawing
 knowledge, which reads the cards the first time Help > Drawing Knowledge is used and not at startup. The
 `MainWindowView` is created over the shell and gives itself to the shell as the dialog service. From then on the user's
 menu choices become shell commands, which call the `Project` and `Settings` subsystems, show dialogs through the dialog
@@ -689,13 +812,20 @@ service, and, when the open project changes, update the window title and open or
 exit `App` disposes the composition.
 
 When the user selects a file in `ProjectExplorer`, `PreviewPane` cancels any render that is running and asks
-`ImageRenderService` to draw the file in the background; the result, a picture with notes or an error with its
-code and hint, is shown unless a newer render was started meanwhile. When files in the project change, the pane
-renders again after a short delay. The Image menu runs `ImageExporter`, which encodes the shown picture as PNG and
-writes it where the user chooses, or hands it to the window to put on the clipboard. When the user presses the left
-button on the shown picture and moves the pointer, the preview view asks `PreviewPane` for the picture as a file;
-`ImageDragSource` writes the PNG in its folder, and the view starts the operating system's drag with that file and
-a bitmap of the picture.
+`ImageRenderService` to draw the file in the background; the result, a picture with notes or an error with its code and
+hint, is shown unless a newer render was started meanwhile. When files in the project change, the pane renders again
+after a short delay. The Image menu runs `ImageExporter`, which asks the user which size to export at
+(`ExportPresetDialog`, with the sizes that `StyleSelection` offers) and then either encodes the shown picture as PNG or
+draws the file again at the chosen size with `ImageRenderService` and encodes that, and writes it where the user
+chooses, or hands the picture to the window to put on the clipboard. When the user chooses Check Against Style,
+`StyleCheckCommand` takes the shown picture, has `StyleChecker` measure it against the palette of the kit of the project
+on a worker thread, and gives the notes of the result to `PreviewPane`, which shows them with the other notes until the
+picture is drawn again. When the user chooses Tools > Style Kits, the shell makes a `StyleKitManagerViewModel` over the
+catalog and gives it to the dialog service, which shows the window of the manager; the manager changes kits only through
+`StyleKitCatalog` and `StyleKitArchive`, and the choice of the kit of the project through `StyleSelection`. When the
+user presses the left button on the shown picture and moves the pointer, the preview view asks `PreviewPane` for the
+picture as a file; `ImageDragSource` writes the PNG in its folder, and the view starts the operating system's drag with
+that file and a bitmap of the picture.
 
 The message being composed is held by `ComposerDocument`, and every change the user makes to it, typing, dictating,
 dropping, pasting, adding a mark, and deleting, is made as one `ComposerEdit` that `ComposerHistory.Execute` applies to
@@ -853,4 +983,14 @@ an example to the clipboard that the window supplies and says in the status line
   within the character budget of `KnowledgePromptBuilder`.
 - The installer project shall stay outside the solution so that building and restoring the solution never needs the
   WiX Toolset or Windows; it shall be built only by the Windows build job from the published win-x64 output.
+- The `Style` subsystem shall hold no reference to any AI provider SDK, client, or agent framework and shall add no
+  package; it shall not be depended on by `Preview`, `Project`, `Settings`, or `Knowledge`, and it shall not depend on
+  `AppShell`.
+- Only `StyleKitCatalog` shall write the kits of the user and of the project and only `StyleKitArchive` shall create
+  files from an archive, only inside the folder it was given; the kits of the program and of shared folders shall never
+  be changed by the application, and the project's kits shall live in `styles`, never in `.canvaspilot`.
+- A shared folder shall be read with a time limit and off the user interface thread, and a kit that cannot be read shall
+  be reported and shall never keep the other kits from being listed.
+- The guidance of a kit shall not exceed `StyleGuidance.BudgetCharacters` characters, and the kit's text shall be marked
+  as data.
 - The installer shall replace any installed version and shall not write or remove user data.

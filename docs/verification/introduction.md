@@ -2,10 +2,9 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
-AppShell, Annotation, Chat, Composer, Knowledge, Logging, Payload, Preview, Project, Settings, Speech, and Utilities
-subsystems;
-the AI agent that will answer the messages is not part of this version and is added as a further subsystem when it is
-introduced.
+AppShell, Annotation, Chat, Composer, Knowledge, Logging, Payload, Preview, Project, Settings, Speech, Style, and
+Utilities subsystems; the AI agent that will answer the messages is not part of this version and is added as a further
+subsystem when it is introduced.
 
 ## Purpose
 
@@ -63,6 +62,7 @@ This document covers the verification design for the following software items:
     - **PreviewPane** — preview of the selected file with busy, error, and note display
     - **ImageExporter** — PNG file and clipboard export of the shown picture
     - **ImageDragSource** — the shown picture as a PNG file, ready to be dragged into another program
+    - **ExportPresetDialog** — the dialog in which the user chooses the size to export at
   - **Project** subsystem
     - **ProjectService** — project folders and versioned project files
     - **RecentProjects** — most-recently-used project list
@@ -80,6 +80,18 @@ This document covers the verification design for the following software items:
     - **ModelCatalogPanel** — speech model lists with downloads
     - **ModelParameterEditor** — editors for the tunable settings of a model
     - **SpeechSettingsPage** — speech settings page
+  - **Style** subsystem
+    - **StyleKitDocument** — the values and the file format of a style kit, with a message for each wrong property
+    - **StyleKitCatalog** — the kits in the program, user, project, and shared places, and the choice by precedence
+    - **StyleKitArchive** — a kit as a zip file, exported, and imported as untrusted input
+    - **StyleSelection** — the kit of the open project, the choice, the default kit, and the export sizes
+    - **StyleGuidance** — the style of a kit as text of a known size for an assistant
+    - **StyleChecker** — a picture measured against the palette of a kit, and the command of the Image menu
+    - **StyleTools** — the tools style_get and style_check of an assistant
+    - **StylePicker** — the choice of the kit of the project in the status bar
+    - **StyleSettingsPage** — the settings page for shared kit folders and the default kit
+    - **StyleKitEditor** — the editing of one kit of the user or of the project
+    - **StyleKitManager** — the window that shows and manages the kits
   - **Utilities** subsystem
     - **PathHelpers** — safe path combination utilities
 
@@ -109,8 +121,8 @@ The following topics are out of scope:
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
 - The AI agent is not part of this version, and so is not verified; the messages are composed and sent without an
-  agent, and only the stored settings that the agent will read, the payload that it will receive, and the knowledge
-  that it will be given are verified
+  agent, and only the stored settings that the agent will read, the payload that it will receive, the knowledge
+  and the style that it will be given, and the two style tools that it will use are verified
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified
@@ -133,6 +145,7 @@ test/
 │   ├── ProjectSubsystem/
 │   ├── SettingsSubsystem/
 │   ├── SpeechSubsystem/
+│   ├── StyleSubsystem/
 │   ├── UtilitiesSubsystem/
 │   └── CanvasPilotTests.cs            — system tests
 ├── DemaConsulting.CanvasPilot.UiTests/ — headless user interface tests of the views
