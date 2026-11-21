@@ -1,0 +1,102 @@
+---
+# Software Unit Requirements for the KnowledgeBrowser Unit
+#
+# The KnowledgeBrowser unit is the window that shows the drawing knowledge to the user: the cards as a tree, a search box,
+# the card that is chosen with its text, the cards below it and its related cards as links, and its examples with a button
+# that copies each. It reads the catalog and the search and changes nothing in them. It has no dependency on any provider
+# of a language model.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        sections:
+          - title: KnowledgeBrowser Requirements
+            requirements:
+              - id: CanvasPilot-KnowledgeBrowser-ShowTreeAndSelectedCard
+                title: >-
+                  The KnowledgeBrowser shall show the cards as a tree with a node for each root of the catalog and, below
+                  it, a node for each card below that card in the order of the catalog, shall show nothing of a card until
+                  the user chooses one, and shall show a chosen card with its title, summary, tags, other names, its text
+                  drawn from Markdown as headings, paragraphs, list items, blocks of code, and bold, italic, and code text,
+                  the cards below it, its related cards, and its examples.
+                justification: |
+                  The cards are many and nest, so a tree is how a user finds the one that is wanted, and the order of the
+                  catalog is the order that the library teaches in. A card that is drawn from its Markdown can be read, and
+                  one that shows its tags, other names, and parts tells the user what else there is. Nothing is shown before
+                  a choice so that the window does not claim a card that was not asked for, and a catalog that loops, which
+                  a mistaken card could make, must not make the window loop.
+                tests:
+                  - KnowledgeBrowserViewModel_Constructor_NullArguments_Throw
+                  - KnowledgeBrowserViewModel_Constructor_BuildsTreeFromRootsAndChildren
+                  - KnowledgeBrowserViewModel_Constructor_CatalogThatLoops_BuildsATreeThatEnds
+                  - KnowledgeBrowserViewModel_Select_Card_ShowsEverythingTheCardHolds
+                  - KnowledgeBrowserViewModel_Select_PlainLeafCard_ShowsNoRelatedPartsAndHeaderWithoutFile
+                  - KnowledgeBrowserViewModel_Select_ChildCard_OpensAncestorsAndSelectsItsNode
+                  - KnowledgeBrowserViewModel_SelectedNode_SetByTheTree_ShowsItsCardAndIgnoresNull
+                  - KnowledgeBrowserViewModel_Select_EveryCardOfTheApplication_ShowsItsTextAndSearchFindsCards
+                  - KnowledgeBrowserView_Shown_ShowsRootsInTreeAndNoCard
+                  - KnowledgeBrowserView_NodeChosen_ShowsTitleSummaryTagsAndBodyDrawnFromMarkdown
+                  - KnowledgeBrowserView_MarkdownBlocksPanel_DrawsEveryKindOfBlock
+
+              - id: CanvasPilot-KnowledgeBrowser-SearchCards
+                title: >-
+                  The KnowledgeBrowser shall run the search of the knowledge when the search box holds two or more
+                  characters, not counting the white space around them, shall show its hits, best first, in place of the
+                  tree, shall say when it found no card, shall show the tree again when the box holds fewer, and shall not
+                  change the card that is shown while the user types.
+                justification: |
+                  A user who knows a word but not the name of the card gets to the card by searching, and the hits must be
+                  the ones that the assistant would get, so the same search is used. One letter matches nearly everything,
+                  so a search starts at two. Leaving the card that is shown alone lets the user read while typing the next
+                  question, and an empty result must be said, so that it is not taken for a window that is still working.
+                tests:
+                  - KnowledgeBrowserViewModel_SearchText_TwoOrMoreCharacters_ShowsHitsInPlaceOfTree
+                  - KnowledgeBrowserViewModel_SearchText_ShortOrEmpty_RestoresTreeAndNoHitIsReported
+                  - KnowledgeBrowserViewModel_SearchText_HitChosen_ShowsCardAndKeepsHits
+                  - KnowledgeBrowserView_SearchBox_TextTyped_ShowsHitsInPlaceOfTreeAndHitOpensCard
+                  - KnowledgeBrowserView_SearchBox_NoCardFits_SaysSo
+
+              - id: CanvasPilot-KnowledgeBrowser-NavigateRelatedCards
+                title: >-
+                  The KnowledgeBrowser shall show the cards below a card and the cards related to it as links that go to
+                  their cards, whether the user chooses a card in the tree, a hit of the search, or a link, shall open the
+                  cards above a card in the tree and select it there, and shall leave the card that is shown as it is and
+                  say so when a card is not in the catalog.
+                justification: |
+                  The cards refer to one another, and a user who has to find each in the tree again would stop following the
+                  references. Going to a card from a link must leave the tree showing where the card is, or the user is lost
+                  in the tree, and a link to a card that is not there must be reported and not clear what is being read.
+                tests:
+                  - KnowledgeBrowserViewModel_Select_AliasAndUnknownCard_FindsOrKeepsTheShownCard
+                  - KnowledgeBrowserViewModel_Select_CardThatIsShown_ReadsItAgainAndClearsStatus
+                  - KnowledgeBrowserViewModel_NavigateCommand_LinkOfTheCard_ShowsThatCard
+                  - KnowledgeBrowserView_SeeAlsoAndChildButtons_GoToTheirCardsAndSelectTheNode
+
+              - id: CanvasPilot-KnowledgeBrowser-CopyExamples
+                title: >-
+                  The KnowledgeBrowser shall show each example of the card that is shown with its name, kind, language, file,
+                  description, and text, shall copy the text of an example to the clipboard when the user presses its Copy
+                  button and say which example was copied, and shall say that the clipboard could not be reached, and not
+                  fail, when there is no clipboard, when it cannot be reached, or when it throws.
+                justification: |
+                  The examples are the part of a card that a user takes away, to put in a file or to show the assistant, so
+                  copying must be one press. The system clipboard is shared with other programs and can be locked, and a
+                  copy that fails without a word looks like a copy that worked, so the window says which of the two happened.
+                tests:
+                  - KnowledgeBrowserViewModel_CopyExampleCommand_Success_PutsContentOnClipboardAndSaysSo
+                  - KnowledgeBrowserViewModel_CopyExampleCommand_ClipboardOutOfReach_SaysSoAndDoesNotThrow
+                  - KnowledgeBrowserView_CopyButton_PutsTheExampleOnTheClipboardAndSaysSo
+                  - KnowledgeBrowserView_Shown_WithoutClipboard_UsesTheClipboardOfTheWindow
+
+              - id: CanvasPilot-KnowledgeBrowser-CloseOnRequest
+                title: >-
+                  The KnowledgeBrowser shall close its window when the user presses Close, and shall do nothing when asked
+                  to copy no example.
+                justification: |
+                  The browser is a window of its own beside the work, and the user must be able to put it away; a command
+                  that has nothing to act on must leave everything as it is, because a button can be pressed while the list
+                  that it belongs to is being rebuilt.
+                tests:
+                  - KnowledgeBrowserViewModel_Commands_NoExampleAndClose_DoNothingAndRaiseCloseRequested
+                  - KnowledgeBrowserView_CloseButton_ClosesTheWindow

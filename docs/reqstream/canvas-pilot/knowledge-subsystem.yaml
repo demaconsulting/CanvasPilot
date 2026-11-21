@@ -101,17 +101,26 @@ sections:
 
           - id: CanvasPilot-Knowledge-BrowseCards
             title: >-
-              The Knowledge subsystem shall offer what a window needs to show the cards to a user, starting with the
-              Markdown of a card read into headings, paragraphs, list items, and blocks of code with bold, italic, and code
-              text, without losing any of its text.
+              The Knowledge subsystem shall offer a window that shows the cards to a user as a tree with a search box, with
+              the Markdown of a card read into headings, paragraphs, list items, and blocks of code with bold, italic, and
+              code text without losing any of its text, with the cards below a card and its related cards as links, and
+              with each example of a card ready to be copied.
             justification: |
               The cards are written for the assistant, but a user who can read them can tell the assistant exactly what is
               wanted. A card that is shown as the Markdown it was typed in is hard to read, and a card that is shown with
               part of its text missing would mislead, so what shows a card is made once, here, and checked on every card.
+              A user who has to leave the window to follow a reference or to take an example would stop using it, so the
+              references and the examples are in the window.
             children:
               - CanvasPilot-KnowledgeMarkdown-ParseCardDialect
+              - CanvasPilot-KnowledgeBrowser-ShowTreeAndSelectedCard
+              - CanvasPilot-KnowledgeBrowser-SearchCards
+              - CanvasPilot-KnowledgeBrowser-NavigateRelatedCards
+              - CanvasPilot-KnowledgeBrowser-CopyExamples
+              - CanvasPilot-KnowledgeBrowser-CloseOnRequest
             tests:
               - KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow
+              - KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample
 
           - id: CanvasPilot-Knowledge-StayProviderNeutral
             title: >-

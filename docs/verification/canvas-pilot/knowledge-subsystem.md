@@ -7,8 +7,9 @@ real catalog of the application, with the help cards of CanvasNet, the cards of 
 application, and the filter that leaves out the cards about what the host program controls, the way the later units and
 the assistant will use it. They check the observable result: which cards are offered, that the cards of CanvasPilot are
 last, that no card of the left-out tag is present, that the catalog is one value that many readers share, and that the
-application library refers to no package of a language model or agent library. The subsystem has no dependency on the
-user interface, so no substitute is needed.
+application library refers to no package of a language model or agent library. The Knowledge subsystem has one unit with
+a window, the browser, whose view model is exercised here without a window and with a clipboard that records; the window
+itself is verified by the headless tests of that unit.
 
 ### Test Environment
 
@@ -31,6 +32,8 @@ the project file of the application library from the repository; no network, dis
   including the cards of CanvasPilot and none for a card that is left out.
 - The cards of the application are read into blocks that a window can draw, with headings, list items, and code in
   them.
+- The browser over the catalog of the application shows the tree of its roots, finds a card by search, shows a card with
+  its text and related cards, and copies an example to the clipboard that it was given.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that
   the project file of the application library declares is a language model or agent library.
 
@@ -73,6 +76,12 @@ with its example as the content of its skill. This scenario is tested by
 message, which is a card of CanvasPilot, and the body of the card of framed figures, which is a card of CanvasNet, are
 each read into blocks with a heading, list items or paragraphs, and runs of code text, and no block is empty. This
 scenario is tested by `KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow`.
+
+**KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample**: The browser over the catalog
+of the application has a node for each root, finds the card of the marks of a message and a card for gradients by
+search, shows the card of the marks with its text and its related cards as the catalog gives them, and puts the text of
+its first example on a clipboard that records, with a status that names the example. This scenario is tested by
+`KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample`.
 
 **KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers
 to, the packages in the dependency file of the test project, and the package references in the project file of the

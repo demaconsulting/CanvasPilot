@@ -10,16 +10,17 @@ title, a one-line summary, tags, other names, a body in Markdown that links to o
 and examples with their text. The cards come from two places: the help of CanvasNet, which tells how to write each
 format and is as current as the library that draws the files, and cards of CanvasPilot that are embedded in the
 application and tell what the library cannot know: where files go in a project, how to make the picture the user uses,
-how to read the marks and attachments of a message, and what the user sees. The subsystem has no dependency on the user
-interface and none on any provider of a language model or on any agent library, so the knowledge can be given to any
-assistant that is added later.
+how to read the marks and attachments of a message, and what the user sees. Everything in it except one unit, the window
+that shows the cards to the user, has no dependency on the user interface; none of it depends on any provider of a
+language model or on any agent library, so the knowledge can be given to any assistant that is added later.
 
-The subsystem contains six units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
+The subsystem contains seven units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
 which finds the cards that fit some words, `KnowledgePromptBuilder`, which writes the cards as text for the prompt of an
 assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, `KnowledgeSkills`, which
-describes each card as a skill, and `KnowledgeMarkdown`, which reads the Markdown of a card into blocks that a window
-can draw. It depends on CanvasNet for the help cards and on `Project`, `Composer`, and `Annotation` only in its tests,
-which check that what the cards of CanvasPilot say about the application is what the code says.
+describes each card as a skill, `KnowledgeMarkdown`, which reads the Markdown of a card into blocks that a window can
+draw, and `KnowledgeBrowser`, the window in which the user reads the cards. It depends on CanvasNet for the help cards,
+on `Logging` for the log of a clipboard failure, and on `Project`, `Composer`, and `Annotation` only in its tests, which
+check that what the cards of CanvasPilot say about the application is what the code says.
 
 ### Interfaces
 
@@ -86,6 +87,18 @@ which check that what the cards of CanvasPilot say about the application is what
 - *Constraints*: Any text can be read and no letter or digit of a card is lost, which the tests check on every card.
   Safe for concurrent use.
 
+**KnowledgeBrowser**: The window in which the user reads the cards.
+
+- *Type*: In-process .NET window with its view model, the view models of its nodes, links, and examples, the seam
+  `IKnowledgeClipboard`, and the seam `IKnowledgeBrowserLauncher` by which the main window is asked to show it.
+- *Role*: Provider (the view model and the window) and Consumer (the catalog, the search, and the Markdown reader).
+- *Contract*: The view model shows the cards as a tree, runs the search of the knowledge from a search box, and shows
+  the card that is chosen with its text, the cards below it, its related cards, and its examples. `Select` shows a card
+  by identifier, the links are commands that call it, and an example can be copied to the clipboard. The launcher shows
+  the window beside the main window, one at a time.
+- *Constraints*: Owned by the user interface thread. It changes nothing in the catalog. A failure to reach the clipboard
+  is a sentence in its status and not an exception.
+
 ### Design
 
 **Extend first, filter second.** The catalog is made from the help catalog of CanvasNet by adding the cards that are
@@ -133,6 +146,13 @@ and code text, and their links were already written as identifiers. A reader of 
 every card that no text is lost, shows the cards without a Markdown library, which would be one more third-party item to
 document, test, and keep current.
 
+**A window that reads, and nothing else.** The browser is the one place where the knowledge meets the user interface, so
+it is kept as a thin window over a view model that can be tested without one. The window never changes the catalog; it
+shows a tree, runs the same search as the assistant, and shows one card at a time. The three ways to a card (the tree, a
+hit of the search, and a link) all end in one method, so a card looks the same however it was reached and the tree
+always shows where it is. The clipboard is a seam, because it belongs to a window, and a failure to reach it is a
+sentence the user can read and not an exception.
+
 ### Dependencies
 
 - **KnowledgeCatalog** unit: the tree of cards.
@@ -142,4 +162,7 @@ document, test, and keep current.
 - **KnowledgeTools** unit: the tool for an assistant, which answers from the catalog, the search, and the text writer.
 - **KnowledgeSkills** unit: the cards as skills, which reads the catalog and writes each card with the text writer.
 - **KnowledgeMarkdown** unit: the blocks of the Markdown of a card, which has no dependency on another unit.
+- **KnowledgeBrowser** unit: the window of the user, which reads the catalog, the search, and the Markdown blocks.
+- **Logging** subsystem: the log, used only by the browser, for a clipboard failure.
+- **Avalonia** and **CommunityToolkit.Mvvm** (OTS): the window of the browser, which is the only unit that uses them.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.
