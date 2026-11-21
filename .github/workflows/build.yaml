@@ -288,7 +288,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: >
           dotnet fileassert
-          --results artifacts/fileassert-installer.trx
+          --results artifacts/fileassert-installer-${{ matrix.os }}.trx
           installer
 
       # === UPLOAD ARTIFACTS ===

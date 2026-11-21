@@ -4,7 +4,7 @@
 # These requirements specify the platforms and runtimes the application must support.
 # They ensure the application works across the required execution environments.
 #
-# Test links can include a source filter prefix (e.g. "windows@", "ubuntu@", "dotnet10.x@") to restrict
+# Test links can include a source filter prefix (e.g. "windows@", "ubuntu@", "net10.0@") to restrict
 # which test results count as evidence for a requirement. This is critical for platform and runtime
 # requirements - removing these filters invalidates the evidence-based proof.
 #
@@ -12,7 +12,7 @@
 #   windows@TestName      - proves the test passed on a Windows platform
 #   ubuntu@TestName       - proves the test passed on a Linux (Ubuntu) platform
 #   macos@TestName        - proves the test passed on a macOS platform
-#   dotnet10.x@TestName   - proves the test ran with .NET 10.x runtime
+#   net10.0@TestName      - proves the test ran with the .NET 10 runtime
 #
 # NOTE: The tests linked here are the application startup test, which composes the application's units exactly
 # as at startup (without a window) and runs on every supported platform and runtime.
@@ -56,4 +56,4 @@ sections:
               .NET 10 is a Long-Term Support (LTS) release, providing long-term stability for
               enterprise users.
             tests:
-              - "dotnet10.x@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"
+              - "net10.0@CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell"
