@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.StyleSubsystem;
@@ -252,4 +253,186 @@ public sealed class FakeActiveStyle : IActiveStyle
         ActiveId = id;
         return Task.CompletedTask;
     }
+}
+
+/// <summary>
+///     Hand-written windows and pickers of the Style Kits window for tests: it records what was asked for and answers as the
+///     test says, so no window and no platform picker is needed.
+/// </summary>
+public sealed class FakeStyleKitDialogs : IStyleKitDialogs
+{
+    /// <summary>
+    ///     Gets the windows of the manager that were shown.
+    /// </summary>
+    public List<StyleKitManagerViewModel> Managers { get; } = [];
+
+    /// <summary>
+    ///     Gets the editors that were shown, in order.
+    /// </summary>
+    public List<StyleKitEditorViewModel> Editors { get; } = [];
+
+    /// <summary>
+    ///     Gets or sets what the user does in the editor; when <see langword="null" />, the user cancels.
+    /// </summary>
+    public Action<StyleKitEditorViewModel>? OnEditor { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the zip file that the user chooses to import, or <see langword="null" /> for cancel.
+    /// </summary>
+    public string? ZipToImport { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the zip file that the user chooses to write, or <see langword="null" /> for cancel.
+    /// </summary>
+    public string? ZipToExport { get; set; }
+
+    /// <summary>
+    ///     Gets the file names that were suggested for an export.
+    /// </summary>
+    public List<string> SuggestedZipNames { get; } = [];
+
+    /// <summary>
+    ///     Gets or sets the example files that the user chooses.
+    /// </summary>
+    public IReadOnlyList<string> ExampleFiles { get; set; } = [];
+
+    /// <summary>
+    ///     Gets or sets what the user answers to a confirmation, by the label of the button; a label that is not in the
+    ///     dictionary is answered with <see cref="ConfirmDefault" />.
+    /// </summary>
+    public Dictionary<string, bool> ConfirmAnswers { get; } = [];
+
+    /// <summary>
+    ///     Gets or sets what the user answers to a confirmation that has no answer in <see cref="ConfirmAnswers" />.
+    /// </summary>
+    public bool ConfirmDefault { get; set; }
+
+    /// <summary>
+    ///     Gets or sets the text that the user types in a prompt, or <see langword="null" /> for cancel.
+    /// </summary>
+    public string? PromptResult { get; set; }
+
+    /// <summary>
+    ///     Gets the confirmations that were asked, as title, message, and the label of the button.
+    /// </summary>
+    public List<(string Title, string Message, string ConfirmText)> Confirmations { get; } = [];
+
+    /// <summary>
+    ///     Gets the prompts that were asked, as title, message, and the text to start with.
+    /// </summary>
+    public List<(string Title, string Message, string InitialText)> Prompts { get; } = [];
+
+    /// <inheritdoc />
+    public Task ShowStyleKitManagerAsync(StyleKitManagerViewModel viewModel)
+    {
+        Managers.Add(viewModel);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task ShowStyleKitEditorAsync(StyleKitEditorViewModel viewModel)
+    {
+        Editors.Add(viewModel);
+        if (OnEditor is null)
+        {
+            viewModel.CancelCommand.Execute(null);
+        }
+        else
+        {
+            OnEditor(viewModel);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public Task<string?> PickZipToImportAsync(string? initialFolder) => Task.FromResult(ZipToImport);
+
+    /// <inheritdoc />
+    public Task<string?> PickZipToExportAsync(string suggestedFileName)
+    {
+        SuggestedZipNames.Add(suggestedFileName);
+        return Task.FromResult(ZipToExport);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<string>> PickExampleFilesAsync(string? initialFolder) => Task.FromResult(ExampleFiles);
+
+    /// <inheritdoc />
+    public Task<bool> ConfirmAsync(string title, string message, string confirmText)
+    {
+        Confirmations.Add((title, message, confirmText));
+        return Task.FromResult(ConfirmAnswers.TryGetValue(confirmText, out var answer) ? answer : ConfirmDefault);
+    }
+
+    /// <inheritdoc />
+    public Task<string?> PromptAsync(string title, string message, string initialText, string confirmText)
+    {
+        Prompts.Add((title, message, initialText));
+        return Task.FromResult(PromptResult);
+    }
+}
+
+/// <summary>
+///     Hand-written render service for the pictures of the examples: every render completes at once with a small picture,
+///     fails for the files whose names the test lists, and is recorded.
+/// </summary>
+public sealed class RecordingRenderService : IImageRenderService
+{
+    /// <summary>
+    ///     Holds the renders that were requested, which may come from several threads.
+    /// </summary>
+    private readonly List<(string File, string Folder, RenderSettings? Settings)> _requests = [];
+
+    /// <summary>
+    ///     Gets the names of the files that fail to render.
+    /// </summary>
+    public HashSet<string> FailingFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    ///     Gets or sets a task that every render waits for before it completes, or <see langword="null" /> for none.
+    /// </summary>
+    public Task? Gate { get; set; }
+
+    /// <summary>
+    ///     Gets the renders that were requested, in order.
+    /// </summary>
+    public IReadOnlyList<(string File, string Folder, RenderSettings? Settings)> Requests
+    {
+        get
+        {
+            lock (_requests)
+            {
+                return _requests.ToArray();
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<RenderResult> RenderAsync(string filePath, string projectFolder, CancellationToken cancellationToken) =>
+        RenderAsync(filePath, projectFolder, null, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<RenderResult> RenderAsync(string filePath, string projectFolder, RenderSettings? settings, CancellationToken cancellationToken)
+    {
+        lock (_requests)
+        {
+            _requests.Add((filePath, projectFolder, settings));
+        }
+
+        if (Gate is { } gate)
+        {
+            await gate.WaitAsync(cancellationToken);
+        }
+
+        return FailingFiles.Contains(Path.GetFileName(filePath))
+            ? RenderResult.Failure(new RenderError(RenderErrorCodes.CannotDraw, $"{Path.GetFileName(filePath)} has a syntax error."))
+            : RenderResult.Success(TestImages.Create(filePath, 24, 12));
+    }
+
+    /// <inheritdoc />
+    public byte[] EncodePng(RenderedImage image) => [];
+
+    /// <inheritdoc />
+    public byte[] EncodePng(RenderedImage image, double? dpi) => [];
 }

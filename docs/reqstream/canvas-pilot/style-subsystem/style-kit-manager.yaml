@@ -1,0 +1,92 @@
+---
+# Software Unit Requirements for the StyleKitManager Unit
+#
+# The StyleKitManager unit is the window in which the user sees the style kits that were found, with a preview of the kit
+# that is chosen, and manages them. It does not change a kit itself: it asks the catalog, the archive, the active style, and
+# the editor to, and keeps the commands that cannot apply to a kit of the program or of a team out of reach.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Style Subsystem Requirements
+        sections:
+          - title: StyleKitManager Requirements
+            requirements:
+              - id: CanvasPilot-StyleKitManager-ListKitsWithPreview
+                title: >-
+                  The StyleKitManager shall list the kits that were found in groups by place (the open project, the user, the
+                  shared folders, and the program), leaving out the group of the project while no project is open, with a
+                  strip of the first colors of each kit, dim a kit that a more local kit with the same id hides and say what
+                  hides it, mark the kit that the open project uses, say in its group that a shared folder cannot be reached,
+                  that a folder holds a kit that cannot be used, and that a group has no kit, and, for the kit that is
+                  chosen, show the colors with their roles, the fonts, the line width, corner radius, and spacing, the
+                  Mermaid and Vega-Lite parts, the advice, the export sizes, the warnings of the reader, the text that an
+                  assistant would be given with its length, and a small picture of each example image with its caption.
+                justification: |
+                  A style is chosen by looking at it. Showing a kit as colors and pictures beside the list, and showing what
+                  the kit would tell an assistant, lets the user compare kits without opening a file. A kit that is missing
+                  from the list must never be a mystery, so a folder that cannot be read and a kit that cannot be used are
+                  said where the kit would have been, and a kit that another kit hides is shown, dimmed, with the reason.
+                tests:
+                  - StyleKitManager_Groups_PlacesKitsAndNotes_AreListedByPlace
+                  - StyleKitManager_Groups_EmptyPlaces_SayWhatToDo
+                  - StyleKitManager_Groups_OverriddenKit_IsDimmedAndCannotBeUsed
+                  - StyleKitManager_Select_Kit_ShowsPreviewData
+                  - StyleKitManager_Thumbnails_ChosenKit_AreDrawnOnceAndAgainWhenTheFileChanges
+                  - StyleKitManager_Thumbnails_FailingRender_ShowsAPlaceholderWithTheReason
+                  - StyleKitManager_Thumbnails_AnotherKitChosenWhileDrawing_DoesNotShowTheOldPictures
+                  - StyleKitManager_RefreshCloseAndProjectChanges_FollowTheCatalogAndTheProject
+                  - StyleKitManager_Dispose_StopsFollowingAndArgumentsAreChecked
+                  - StyleThumbnailCache_GetAsync_ConcurrentRepeatedAndAbandoned_DrawsOnce
+                  - StyleThumbnailCache_GetAsync_FullCache_ForgetsTheOneUsedLeastRecently
+                  - StyleThumbnailCache_GetAsync_MissingFileAndFailures_AreReportedAndNotRemembered
+
+              - id: CanvasPilot-StyleKitManager-ManageKits
+                title: >-
+                  The StyleKitManager shall let the user make the chosen kit the style of the open project, make a new kit
+                  with a starter palette or a copy of the chosen kit with its example images under a name that the user types,
+                  in the kits of the user or in the project, and open the new kit in the editor, edit the chosen kit,
+                  delete a kit and its folder after the user confirmed, export the chosen kit as a zip file, import a kit
+                  from a zip file into the kits of the user or of the project and ask whether to replace a kit that has the
+                  same id, keep both, or stop, copy the chosen kit into the project, and read the places again, shall draw
+                  the example images that it shows from the folder of the kit only, and shall say, and not throw, when a
+                  command cannot be done.
+                justification: |
+                  A kit is useful when it is easy to try one, make a variation of it, and pass it on. Making a copy and
+                  editing it is how a kit that is not the user's is changed, zip files are how a kit travels, and a kit that
+                  is copied into the project keeps the project's look when the original changes. A command that fails must
+                  tell the user why, because the user cannot see a log, and the example images of a kit that comes from
+                  somewhere else must not be able to read other files of the computer when they are drawn.
+                tests:
+                  - StyleKitManager_UseInProject_ChosenKit_IsMadeTheActiveStyleOrTheReasonIsSaid
+                  - StyleKitManager_New_NamePromptAndTargets_MakesTheKitAndOpensTheEditor
+                  - StyleKitManager_Duplicate_BuiltInKit_MakesAnEditableCopyWithItsExamples
+                  - StyleKitManager_Edit_UserKit_OpensTheEditorAndShowsTheSavedKit
+                  - StyleKitManager_Edit_ExamplePicker_IsTheWindowPicker
+                  - StyleKitManager_Delete_UserKit_AsksAndRemovesTheFolder
+                  - StyleKitManager_Export_ChosenKit_WritesAZipFileOrSaysWhy
+                  - StyleKitManager_Import_ZipFile_ImportsAndAsksAboutAnExistingKit
+                  - StyleKitManager_Import_HostileZipAndMissingProject_AreRefusedWithAReason
+                  - StyleKitManager_CopyIntoProject_BuiltInKit_FreezesACopyInTheProject
+                  - StyleKitManager_Thumbnails_ChosenKit_AreDrawnOnceAndAgainWhenTheFileChanges
+
+              - id: CanvasPilot-StyleKitManager-ProtectBuiltInAndSharedKits
+                title: >-
+                  The StyleKitManager shall make the commands that change a kit, edit and delete, unavailable for a kit that
+                  comes with the program or that a team shares, say in the preview that such a kit cannot be changed and
+                  that a copy can, keep the commands that read a kit (duplicate, export, use in the project, copy into the
+                  project) available for it, make the command that uses a kit in the project and the command that copies it
+                  unavailable while no project is open, and make the command that uses a kit unavailable for a kit that
+                  another kit hides.
+                justification: |
+                  The kits of the program are the same for everyone and the kits of a team belong to the team, so the
+                  application must not change them, and the way to change one is to change a copy. Showing the commands
+                  that cannot apply as unavailable, with the reason beside the kit, is clearer than letting the user try and
+                  fail. A kit that another kit hides cannot be what the id of the project names, so it cannot be chosen as
+                  the style of the project.
+                tests:
+                  - StyleKitManager_Commands_BuiltInSharedAndOwnKits_EnableOnlyWhatApplies
+                  - StyleKitManager_Groups_OverriddenKit_IsDimmedAndCannotBeUsed
+                  - StyleKitManager_Duplicate_BuiltInKit_MakesAnEditableCopyWithItsExamples
+                  - StyleKitManager_CopyIntoProject_BuiltInKit_FreezesACopyInTheProject
+                  - StyleKitManager_Import_HostileZipAndMissingProject_AreRefusedWithAReason

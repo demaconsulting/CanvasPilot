@@ -159,6 +159,11 @@ sections:
               - CanvasPilot-StyleKitEditor-EditEveryPartOfAKit
               - CanvasPilot-StyleKitEditor-RefuseInvalidKits
               - CanvasPilot-StyleKitEditor-EditExamplesAndPresets
+              - CanvasPilot-StyleKitManager-ListKitsWithPreview
+              - CanvasPilot-StyleKitManager-ManageKits
+              - CanvasPilot-StyleKitManager-ProtectBuiltInAndSharedKits
+            tests:
+              - StyleSubsystem_ManageKitsInWindow_ManagerAndEditor_CreateEditExportImportAndDeleteAKit
 
           - id: CanvasPilot-Style-StayProviderNeutral
             title: >-

@@ -73,6 +73,7 @@ includes:
   - docs/reqstream/canvas-pilot/style-subsystem/style-picker.yaml
   - docs/reqstream/canvas-pilot/style-subsystem/style-settings-page.yaml
   - docs/reqstream/canvas-pilot/style-subsystem/style-kit-editor.yaml
+  - docs/reqstream/canvas-pilot/style-subsystem/style-kit-manager.yaml
   - docs/reqstream/canvas-pilot/style-subsystem/style-guidance.yaml
   - docs/reqstream/canvas-pilot/style-subsystem/style-checker.yaml
   - docs/reqstream/canvas-pilot/style-subsystem/style-tools.yaml

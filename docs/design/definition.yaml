@@ -89,6 +89,7 @@ input-files:
   - docs/design/canvas-pilot/style-subsystem/style-picker.md
   - docs/design/canvas-pilot/style-subsystem/style-settings-page.md
   - docs/design/canvas-pilot/style-subsystem/style-kit-editor.md
+  - docs/design/canvas-pilot/style-subsystem/style-kit-manager.md
   - docs/design/canvas-pilot/style-subsystem/style-guidance.md
   - docs/design/canvas-pilot/style-subsystem/style-checker.md
   - docs/design/canvas-pilot/style-subsystem/style-tools.md

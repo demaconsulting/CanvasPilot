@@ -410,6 +410,64 @@ public sealed class StyleSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Validates that the window that manages kits, the editor, the catalog, and the archive work together on temporary
+    ///     folders: a kit is made, edited with an example image, drawn as a small picture, exported, deleted, and imported
+    ///     again, and every step shows in the list of the window.
+    /// </summary>
+    [Fact]
+    public async Task StyleSubsystem_ManageKitsInWindow_ManagerAndEditor_CreateEditExportImportAndDeleteAKit()
+    {
+        // Arrange: places that hold kits, a window over them, and a picture to use as an example
+        using var places = new StyleKitPlaces();
+        using var catalog = places.CreateCatalog();
+        var dialogs = new FakeStyleKitDialogs();
+        var renderer = new RecordingRenderService();
+        await catalog.RefreshAsync(TestContext.Current.CancellationToken);
+        using var manager = new StyleKitManagerViewModel(catalog, new FakeActiveStyle(), renderer, dialogs, places.Projects);
+        var picture = Path.Combine(places.Root, "logo.svg");
+        await File.WriteAllTextAsync(picture, "<svg xmlns='http://www.w3.org/2000/svg'/>", TestContext.Current.CancellationToken);
+        var zip = Path.Combine(places.Root, "poster.zip");
+
+        // Act: make a kit and, in the editor, change its name and palette and add the picture as an example with a caption
+        dialogs.PromptResult = "Poster";
+        dialogs.OnEditor = editor =>
+        {
+            editor.Name = "Poster Look";
+            editor.AddColorCommand.Execute(null);
+            editor.PaletteRows[^1].Hex = "#DB2777";
+            editor.AddExampleFiles([picture]);
+            editor.Examples[0].Caption = "The logo.";
+            editor.SaveCommand.Execute(null);
+        };
+        await manager.NewCommand.ExecuteAsync(null);
+        await manager.ThumbnailTask;
+        var made = manager.SelectedItem!;
+
+        // Act: export the kit, delete it, and import it again
+        dialogs.ZipToExport = zip;
+        await manager.ExportCommand.ExecuteAsync(null);
+        dialogs.ConfirmDefault = true;
+        await manager.DeleteCommand.ExecuteAsync(null);
+        var deleted = !Directory.Exists(Path.Combine(places.User, "poster"));
+        dialogs.ZipToImport = zip;
+        await manager.ImportCommand.ExecuteAsync(null);
+        await manager.ThumbnailTask;
+
+        // Assert: the kit was made and edited, drawn, deleted, and is back with the example and the new color
+        var back = manager.SelectedItem!;
+        Assert.Equal("Poster Look", made.Name);
+        Assert.Equal(["#DB2777"], made.Swatches.Where(swatch => swatch.Role == "secondary").Select(swatch => swatch.Hex));
+        Assert.Equal(["logo.svg: The logo."], made.Thumbnails.Select(thumbnail => thumbnail.Label));
+        Assert.True(made.Thumbnails[0].HasImage);
+        Assert.Contains(renderer.Requests, request => Path.GetFileName(request.File) == "logo.svg" && request.Folder == made.Entry.FolderPath);
+        Assert.True(deleted);
+        Assert.Equal("poster", back.Id);
+        Assert.Equal("Poster Look", back.Name);
+        Assert.Equal(["The logo."], back.Entry.Kit.Examples.Select(example => example.Caption));
+        Assert.True(File.Exists(Path.Combine(places.User, "poster", "examples", "logo.svg")));
+        Assert.Equal(["Poster Look"], manager.Groups.Single(group => group.Location == StyleKitLocation.User).Items.Select(item => item.Name));
+    }
+    /// <summary>
     ///     Validates that the library of the subsystem refers to no package of a language model or agent, by its
     ///     referenced assemblies and by the packages that its dependency file lists.
     /// </summary>

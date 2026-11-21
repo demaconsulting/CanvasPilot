@@ -1177,6 +1177,28 @@ reviews:
       - "src/**/StyleSubsystem/StyleTextRowViewModel.cs"
       - "test/**/StyleSubsystem/StyleKitEditorTests.cs"
 
+  - id: CanvasPilot-Style-StyleKitManager
+    title: Review of CanvasPilot StyleKitManager unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/style-subsystem.md
+      - docs/reqstream/canvas-pilot/style-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/style-subsystem/style-kit-manager.yaml"
+      - "docs/design/canvas-pilot/style-subsystem/style-kit-manager.md"
+      - "docs/verification/canvas-pilot/style-subsystem/style-kit-manager.md"
+      - "src/**/StyleSubsystem/IStyleKitDialogs.cs"
+      - "src/**/StyleSubsystem/StyleKitGroupViewModel.cs"
+      - "src/**/StyleSubsystem/StyleKitItemViewModel.cs"
+      - "src/**/StyleSubsystem/StyleKitManagerViewModel.cs"
+      - "src/**/StyleSubsystem/StyleSwatch.cs"
+      - "src/**/StyleSubsystem/StyleThumbnail.cs"
+      - "src/**/StyleSubsystem/StyleThumbnailCache.cs"
+      - "src/**/StyleSubsystem/StyleThumbnailViewModel.cs"
+      - "test/**/StyleSubsystem/StyleKitManagerTests.cs"
+      - "test/**/StyleSubsystem/StyleSubsystemFakes.cs"
+
   - id: CanvasPilot-Style-StyleGuidance
     title: Review of CanvasPilot StyleGuidance unit implementation
     context:
