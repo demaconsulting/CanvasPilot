@@ -67,6 +67,23 @@ sections:
             tests:
               - KnowledgeSubsystem_PromptBuilder_IndexSearchAndCard_AreReadyForAPrompt
 
+          - id: CanvasPilot-Knowledge-DescribeAgentTools
+            title: >-
+              The Knowledge subsystem shall describe a tool that an assistant can call to get the index of the cards, a
+              card, an example, or the result of a search, as plain values and a function from the arguments as text to
+              an answer as text, so that it can be given to any provider of a language model.
+            justification: |
+              The assistant is told only the index of the cards and needs a way to ask for the rest. A description that is
+              plain values, with a function that takes and returns text, is what every provider's tool mechanism needs,
+              so the choice of provider can be made later without changing the knowledge. A tool that answers a mistaken
+              call with a message lets the assistant correct itself.
+            children:
+              - CanvasPilot-KnowledgeTools-AnswerIndexTopicExampleQuery
+              - CanvasPilot-KnowledgeTools-SuggestForUnknownTopic
+              - CanvasPilot-KnowledgeTools-NeverThrowOnBadArguments
+            tests:
+              - KnowledgeSubsystem_Tools_HelpTool_AnswersFromTheApplicationCatalog
+
           - id: CanvasPilot-Knowledge-StayProviderNeutral
             title: >-
               The Knowledge subsystem shall offer the knowledge as values and text of its own, with no reference to the

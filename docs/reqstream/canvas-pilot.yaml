@@ -426,6 +426,7 @@ sections:
           - CanvasPilot-Knowledge-OfferDrawingCards
           - CanvasPilot-Knowledge-FindCards
           - CanvasPilot-Knowledge-BuildPromptParts
+          - CanvasPilot-Knowledge-DescribeAgentTools
           - CanvasPilot-Knowledge-StayProviderNeutral
 
       - id: CanvasPilot-System-BrowseDrawingKnowledge

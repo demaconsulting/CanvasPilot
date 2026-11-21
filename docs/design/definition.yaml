@@ -45,6 +45,7 @@ input-files:
   - docs/design/canvas-pilot/knowledge-subsystem/knowledge-catalog.md
   - docs/design/canvas-pilot/knowledge-subsystem/knowledge-search.md
   - docs/design/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.md
+  - docs/design/canvas-pilot/knowledge-subsystem/knowledge-tools.md
   - docs/design/canvas-pilot/logging-subsystem.md
   - docs/design/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/design/canvas-pilot/payload-subsystem.md

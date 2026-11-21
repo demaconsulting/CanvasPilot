@@ -473,6 +473,21 @@ reviews:
       - "src/**/KnowledgeSubsystem/KnowledgePromptBuilder.cs"
       - "test/**/KnowledgeSubsystem/KnowledgePromptBuilderTests.cs"
 
+  - id: CanvasPilot-Knowledge-KnowledgeTools
+    title: Review of CanvasPilot KnowledgeTools unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/knowledge-subsystem.md
+      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-tools.yaml"
+      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-tools.md"
+      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-tools.md"
+      - "src/**/KnowledgeSubsystem/KnowledgeTool.cs"
+      - "src/**/KnowledgeSubsystem/KnowledgeTools.cs"
+      - "test/**/KnowledgeSubsystem/KnowledgeToolsTests.cs"
+
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging
     title: Review of CanvasPilot Logging subsystem architecture and interfaces

@@ -14,10 +14,11 @@ how to read the marks and attachments of a message, and what the user sees. The 
 interface and none on any provider of a language model or on any agent library, so the knowledge can be given to any
 assistant that is added later.
 
-The subsystem contains three units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
-which finds the cards that fit some words, and `KnowledgePromptBuilder`, which writes the cards as text for the prompt
-of an assistant. It depends on CanvasNet for the help cards and on `Project`, `Composer`, and `Annotation` only in its
-tests, which check that what the cards of CanvasPilot say about the application is what the code says.
+The subsystem contains four units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
+which finds the cards that fit some words, `KnowledgePromptBuilder`, which writes the cards as text for the prompt of an
+assistant, and `KnowledgeTools`, which describes the tool the assistant calls to get them. It depends on CanvasNet for
+the help cards and on `Project`, `Composer`, and `Annotation` only in its tests, which check that what the cards of
+CanvasPilot say about the application is what the code says.
 
 ### Interfaces
 
@@ -51,6 +52,18 @@ tests, which check that what the cards of CanvasPilot say about the application 
   The index of the catalog of the application is limited to `IndexBudgetCharacters`, 12,000 characters.
 - *Constraints*: Plain text with line feeds, the same for the same cards, and no state. Safe for concurrent use.
 
+**KnowledgeTools**: The tool that an assistant calls to get the knowledge.
+
+- *Type*: In-process static class, with the immutable value `KnowledgeTool`.
+- *Role*: Provider.
+- *Contract*: `CreateHelpTool` and `CreateAll` give the tool `canvasnet_help`: a name, a description, the JSON Schema of
+  its arguments as a JSON text, and a function that takes the arguments as a JSON text and returns text. With no
+  arguments it answers the index; with `topic` a card; with `example` the text of an example, or the choices written as
+  `card-id#name`; with `query` the cards that fit some words. A topic or example that nothing has is answered with the
+  closest cards.
+- *Constraints*: The function never throws; arguments that cannot be used are answered with a message that names the
+  arguments. The same arguments on the same cards give the same answer. Safe for concurrent use.
+
 ### Design
 
 **Extend first, filter second.** The catalog is made from the help catalog of CanvasNet by adding the cards that are
@@ -83,10 +96,16 @@ identifier, so the answer never depends on the order of a dictionary, the cultur
 assistant is given an index with one line for each card and asks for the cards it needs. The size of the index has a
 limit that the tests check on the real catalog, so a card that makes it too large fails the build.
 
+**A tool that answers in messages.** The assistant reaches the cards through one tool whose description is plain values
+and whose function takes and returns text, so that it can be handed to the tool mechanism of any provider that is
+chosen later. The function never throws, because an assistant corrects itself from a message that says what to send
+and cannot from an exception; a name that does not exist is answered with the cards that are closest to it.
+
 ### Dependencies
 
 - **KnowledgeCatalog** unit: the tree of cards.
 - **KnowledgeSearch** unit: the search of the cards, which reads the catalog through its interface.
 - **KnowledgePromptBuilder** unit: the text for a prompt, which reads the catalog through its interface and writes the
   results of the search.
+- **KnowledgeTools** unit: the tool for an assistant, which answers from the catalog, the search, and the text writer.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.

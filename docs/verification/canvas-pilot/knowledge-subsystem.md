@@ -25,6 +25,8 @@ the project file of the application library from the repository; no network, dis
   word that no card has.
 - The index of the catalog of the application is within its budget, lists the cards of both sources, and the text of the
   card that a search found holds its example.
+- The tool of the application answers the index, a card, an example, and a search from the catalog of the
+  application, and answers bad arguments with a message.
 - No assembly that the application library refers to, no package that the test project resolves, and no package that
   the project file of the application library declares is a language model or agent library.
 
@@ -50,6 +52,12 @@ is within its budget and has the lines of a card of CanvasNet and a card of Canv
 search for a framed figure with a callout starts with the card of framed figures, and the text of that card with its
 examples holds the text of its first example in a fenced block of its language. This scenario is tested by
 `KnowledgeSubsystem_PromptBuilder_IndexSearchAndCard_AreReadyForAPrompt`.
+
+**KnowledgeSubsystem_Tools_HelpTool_AnswersFromTheApplicationCatalog**: The tool made for the catalog of the
+application, called by the JSON text that an assistant sends, answers the index, the card of the layout of a project,
+the text of an example of the card of framed figures, and a search for a Gantt chart, and answers a topic that does not
+exist with the closest cards and text that is not JSON with an error message. This scenario is tested by
+`KnowledgeSubsystem_Tools_HelpTool_AnswersFromTheApplicationCatalog`.
 
 **KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers
 to, the packages in the dependency file of the test project, and the package references in the project file of the

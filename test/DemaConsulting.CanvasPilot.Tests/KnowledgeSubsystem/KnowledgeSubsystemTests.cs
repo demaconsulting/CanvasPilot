@@ -145,6 +145,39 @@ public sealed class KnowledgeSubsystemTests
     }
 
     /// <summary>
+    ///     Validates that the tool of the application answers from the catalog of the application, called as an assistant
+    ///     calls it with a JSON text: the index, a card of CanvasPilot, an example, and a search; and that it answers a
+    ///     topic that does not exist with the closest cards and text that is not JSON with an error message.
+    /// </summary>
+    [Fact]
+    public void KnowledgeSubsystem_Tools_HelpTool_AnswersFromTheApplicationCatalog()
+    {
+        // Arrange: the tool of the application, and the example that the card of framed figures starts with
+        var catalog = KnowledgeCatalog.Default;
+        var tool = Assert.Single(KnowledgeTools.CreateAll(catalog));
+        var framed = catalog.Find("svg/framed-figure")!;
+
+        // Act
+        var index = tool.Invoke("{}");
+        var layout = tool.Invoke("""{"topic":"canvaspilot project-layout"}""");
+        var example = tool.Invoke(JsonSerializer.Serialize(new { example = $"{framed.Id}#{framed.Examples[0].Name}" }));
+        var search = tool.Invoke("""{"query":"gantt chart"}""");
+        var unknown = tool.Invoke("""{"topic":"gantt"}""");
+        var broken = tool.Invoke("this is not JSON");
+
+        // Assert: each answer is the text of the cards it is about, and mistakes are answered, not thrown
+        Assert.Equal("canvasnet_help", tool.Name);
+        Assert.StartsWith(new KnowledgePromptBuilder(catalog).BuildIndex(), index, StringComparison.Ordinal);
+        Assert.StartsWith("# ", layout, StringComparison.Ordinal);
+        Assert.Contains("id: canvaspilot/project-layout\n", layout, StringComparison.Ordinal);
+        Assert.StartsWith("Example ", example, StringComparison.Ordinal);
+        Assert.Contains("```xml\n<svg", example, StringComparison.Ordinal);
+        Assert.StartsWith("Cards found, best first:\n- mermaid/gantt: ", search, StringComparison.Ordinal);
+        Assert.StartsWith("No card matches 'gantt'. Closest cards:\n- mermaid/gantt: ", unknown, StringComparison.Ordinal);
+        Assert.StartsWith("Error: the arguments are not valid JSON.", broken, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Validates that the library of the subsystem refers to no package of a language model or agent, by its
     ///     referenced assemblies and by the packages that its dependency file lists.
     /// </summary>

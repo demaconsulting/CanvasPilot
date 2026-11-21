@@ -1,0 +1,69 @@
+---
+# Software Unit Requirements for the KnowledgeTools Unit
+#
+# The KnowledgeTools unit describes the tool that gives an assistant the drawing knowledge: its name, description, and
+# argument schema as plain values, and a function that answers the index of the cards, a card, an example, or a search from
+# the arguments as JSON text. It never throws on bad arguments and has no dependency on the user interface or on any
+# provider of a language model.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Knowledge Subsystem Requirements
+        sections:
+          - title: KnowledgeTools Requirements
+            requirements:
+              - id: CanvasPilot-KnowledgeTools-AnswerIndexTopicExampleQuery
+                title: >-
+                  The KnowledgeTools unit shall describe a tool named canvasnet_help with a description and a JSON
+                  Schema of the arguments topic, example, and query, and shall answer a call with no arguments with the
+                  index of the cards, a call with a topic with the card of that identifier, path, or other name,
+                  ignoring case, a call with an example with the text of that example, or the choices written as
+                  card-id#name when several cards have one of that name, and a call with a query with the cards that
+                  the search finds, in that order of precedence.
+                justification: |
+                  The index is small enough to be in every prompt, and the assistant gets what it needs from the cards
+                  one request at a time. A description that is plain values, with the schema as JSON text and the
+                  function that answers it, can be handed to the tool mechanism of any provider that is chosen later.
+                  Choices that the assistant can repeat as card-id#name let it settle an example that several cards
+                  have without guessing.
+                tests:
+                  - KnowledgeTools_CreateHelpTool_Descriptor_NamesTheToolAndItsThreeArguments
+                  - KnowledgeTools_Invoke_NoArguments_AnswersTheIndex
+                  - KnowledgeTools_Invoke_Topic_AnswersTheCardWithAHintForItsExamples
+                  - KnowledgeTools_Invoke_Topic_PathWithSpaceAndCardWithoutExamples_AreFound
+                  - KnowledgeTools_Invoke_Example_Single_AnswersTheFencedText
+                  - KnowledgeTools_Invoke_Example_Ambiguous_ListsChoicesAndCanBeScopedByTopicOrId
+                  - KnowledgeTools_Invoke_Query_AnswersTheSearchResults
+                  - KnowledgeTools_Invoke_SeveralArguments_ExampleThenTopicThenQuery
+                  - KnowledgeTools_CreateAll_RealCatalog_AnswersIndexTopicExampleAndQuery
+
+              - id: CanvasPilot-KnowledgeTools-SuggestForUnknownTopic
+                title: >-
+                  The KnowledgeTools unit shall answer a topic or an example that no card has with a message that
+                  names what was not found, lists the cards that the search finds for its words, closest first, and
+                  says how to get the full index, and shall repeat no more than 80 characters of what was asked.
+                justification: |
+                  An assistant that guesses the name of a card is often close. The cards that fit its words let it
+                  correct itself in the next call instead of giving up or starting again from the index, and a limit on
+                  the text that is repeated keeps a mistaken or hostile argument from filling the answer.
+                tests:
+                  - KnowledgeTools_Invoke_UnknownTopic_SuggestsTheClosestCards
+                  - KnowledgeTools_Invoke_Example_Unknown_SuggestsCards
+                  - KnowledgeTools_Invoke_UnusualArguments_AreAnsweredAndNeverThrow
+
+              - id: CanvasPilot-KnowledgeTools-NeverThrowOnBadArguments
+                title: >-
+                  The KnowledgeTools unit shall answer arguments that are not JSON, not an object, or have a value that
+                  is not a string with a message that starts with Error and names the three arguments, shall answer a
+                  failure of the catalog with a message that names the kind of failure, and shall refuse only a missing
+                  collaborator when the tool is made.
+                justification: |
+                  An assistant corrects itself from a message and cannot from an exception, and an exception from a tool
+                  can end the turn of a conversation. Every input that an assistant can send must therefore have an
+                  answer, and only a mistake of the program that makes the tool is reported as an exception.
+                tests:
+                  - KnowledgeTools_Invoke_BadArguments_AnswerAnErrorThatNamesTheArguments
+                  - KnowledgeTools_Invoke_UnusualArguments_AreAnsweredAndNeverThrow
+                  - KnowledgeTools_Invoke_CatalogThatFails_AnswersAnError
+                  - KnowledgeTools_CreateHelpTool_Descriptor_NamesTheToolAndItsThreeArguments
