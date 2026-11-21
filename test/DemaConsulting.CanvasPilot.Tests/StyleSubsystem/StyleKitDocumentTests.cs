@@ -548,7 +548,7 @@ public sealed class StyleKitDocumentTests : IDisposable
     public void StyleKitDocument_Parse_TextLengths_AreErrorsOneCharacterOverTheLimit()
     {
         // Arrange
-        string Text(int length) => "\"" + new string('a', length) + "\"";
+        static string Text(int length) => "\"" + new string('a', length) + "\"";
         var atLimit = Edit(
             FullKitJson,
             ("description", Text(300)),
@@ -594,7 +594,7 @@ public sealed class StyleKitDocumentTests : IDisposable
     public void StyleKitDocument_Parse_VegaLiteConfigSize_IsMeasuredOnCompactJson()
     {
         // Arrange: a compact configuration of exactly the limit, one byte more, and the same as indented text
-        string Config(int bytes) => "{\"k\":\"" + new string('a', bytes - 8) + "\"}";
+        static string Config(int bytes) => "{\"k\":\"" + new string('a', bytes - 8) + "\"}";
         var atLimit = Edit(MinimalKitJson, ("vegaLite", "{\"config\":" + Config(StyleKitSerializer.MaxVegaLiteConfigBytes) + "}"));
         var over = Edit(MinimalKitJson, ("vegaLite", "{\"config\":" + Config(StyleKitSerializer.MaxVegaLiteConfigBytes + 1) + "}"));
         var spaced = Edit(MinimalKitJson, ("vegaLite", "{\"config\": {\n  \"k\" :  \"v\"\n }}"));

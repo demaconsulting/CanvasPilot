@@ -66,7 +66,7 @@ public sealed class ImageChipThumbnailProvider : IChipThumbnailProvider, IDispos
     /// <summary>
     ///     Guards <see cref="_cache" />.
     /// </summary>
-    private readonly object _gate = new();
+    private readonly Lock _gate = new();
 
     /// <inheritdoc />
     public Task<Bitmap?> GetThumbnailAsync(ChipSegment chip, CancellationToken cancellationToken)
