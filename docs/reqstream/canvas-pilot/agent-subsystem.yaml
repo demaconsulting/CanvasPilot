@@ -162,6 +162,24 @@ sections:
             tests:
               - AgentSubsystem_InstructTheCopilot_ProjectWithKit_InstructionsNameExactlyTheToolsThatAreOffered
 
+          - id: CanvasPilot-Agent-GiveTheModelTheMessage
+            title: >-
+              The Agent subsystem shall give the model the message that the user sent as one user message made of the words
+              of the user, a compact description of the attachments, pictures, and marks, and the annotated pictures and
+              close-ups of the marks as PNG images in a stated order with a cap, using only paths relative to the project.
+            justification: |
+              The user talks to the copilot by words, marks on pictures, and attachments, and the model sees only text and
+              images. One pure mapping from the payload of the Payload subsystem to a provider message keeps what the model
+              is told in one place that can be tested against golden text, without any provider or model.
+            children:
+              - CanvasPilot-PayloadMessageMapper-MapToUserMessage
+              - CanvasPilot-PayloadMessageMapper-DescribeSourceElements
+              - CanvasPilot-PayloadMessageMapper-OrderAndCapImages
+              - CanvasPilot-PayloadMessageMapper-WriteOnlyProjectPaths
+              - CanvasPilot-PayloadMessageMapper-BeDeterministic
+            tests:
+              - AgentSubsystem_SendMessage_RealPayloadWithMarks_MapsToTextAndPngImagesInOrder
+
           - id: CanvasPilot-Agent-LocateCopilotCli
             title: >-
               The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the

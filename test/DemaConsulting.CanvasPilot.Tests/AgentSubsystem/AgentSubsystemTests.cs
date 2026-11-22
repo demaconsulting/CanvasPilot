@@ -21,6 +21,8 @@
 using System.Runtime.CompilerServices;
 using DemaConsulting.AgentKit.Core;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
+using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
@@ -296,6 +298,55 @@ public sealed class AgentSubsystemTests
             Assert.Contains("## Example images", full, StringComparison.Ordinal);
             Assert.DoesNotContain("## Example images", compact, StringComparison.Ordinal);
             Assert.Equal(offered.Order().ToArray(), named.Order().ToArray());
+        }
+        finally
+        {
+            Directory.Delete(project, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that a message with marks, built by the real payload builder from a real picture, is mapped to a user message
+    ///     as the model receives it: the text of the user with the block of context that has the picture by its path in the
+    ///     project and the numbers of the marks, then the annotated picture and one close-up for each mark, all as real PNG
+    ///     files, and no full path of the computer in the text.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_SendMessage_RealPayloadWithMarks_MapsToTextAndPngImagesInOrder()
+    {
+        // Arrange: a project with a picture, two marks on it, and the payload that the real builder makes from them
+        var token = TestContext.Current.CancellationToken;
+        var project = Directory.CreateTempSubdirectory("canvaspilot-agent-message-").FullName;
+        try
+        {
+            var file = Path.Combine(project, "art", "logo.svg");
+            Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+            await File.WriteAllTextAsync(file, "<svg xmlns='http://www.w3.org/2000/svg' width='64' height='32'><rect width='64' height='32' fill='#336699'/></svg>", token);
+            var renderer = new ImageRenderService();
+            var picture = (await renderer.RenderAsync(file, project, token)).Image!;
+            var registry = new MarkRegistry();
+            var first = registry.Add(picture, MarkKind.Rectangle, [new RenderPoint(4, 4), new RenderPoint(40, 20)]);
+            var second = registry.Add(picture, MarkKind.Arrow, [new RenderPoint(50, 5), new RenderPoint(30, 25)]);
+            var document = new ComposerDocument();
+            document.InsertChip(0, new MarkChip(first.Id, first.Number));
+            document.InsertChip(1, new MarkChip(second.Id, second.Number));
+            var payload = await new PayloadBuilder(new MarkImageComposer(renderer)).BuildAsync(document.Snapshot(), registry.Marks, [], token);
+
+            // Act
+            var message = PayloadMessageMapper.Map(payload, project);
+
+            // Assert: the text, the order of the images, and that every image is a PNG file
+            var text = Assert.IsType<TextContent>(message.Contents[0]).Text;
+            var images = message.Contents.OfType<DataContent>().ToList();
+            Assert.Equal(ChatRole.User, message.Role);
+            Assert.StartsWith("[Mark 1][Mark 2]", text, StringComparison.Ordinal);
+            Assert.Contains("- Picture 1: art/logo.svg (svg, 64 x 32 px)", text, StringComparison.Ordinal);
+            Assert.Contains("  - Mark 1: rectangle; no note; box x=4, y=4, w=36, h=16;", text, StringComparison.Ordinal);
+            Assert.Contains("  - Mark 2: arrow; no note;", text, StringComparison.Ordinal);
+            Assert.Contains("Source elements: not available (svg provides no element positions)", text, StringComparison.Ordinal);
+            Assert.DoesNotContain(project, text, StringComparison.Ordinal);
+            Assert.Equal(["picture-1.png", "mark-1.png", "mark-2.png"], images.Select(image => image.Name ?? string.Empty).ToArray());
+            Assert.All(images, image => Assert.Equal(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, image.Data.Span[..4].ToArray()));
         }
         finally
         {

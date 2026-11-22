@@ -231,6 +231,20 @@ reviews:
       - "src/**/AgentSubsystem/Instructions/RolePrompt.md"
       - "test/**/AgentSubsystem/AgentInstructionsTests.cs"
 
+  - id: CanvasPilot-Agent-PayloadMessageMapper
+    title: Review of CanvasPilot PayloadMessageMapper unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/payload-message-mapper.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/payload-message-mapper.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/payload-message-mapper.md"
+      - "src/**/AgentSubsystem/PayloadMessageMapper.cs"
+      - "test/**/AgentSubsystem/PayloadMessageMapperTests.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces

@@ -32,9 +32,10 @@ Local items:
     environment seams), **AgentReadiness** unit (the check of whether the chosen AI provider can be used, with the gated
     starter of the Copilot runtime and the probe of the Ollama server), **AgentToolRegistry** unit (the tools of the
     copilot for one project, confined to the project folder), **ProjectTools** unit (the tools that list, read, write,
-    and draw the files of the project, with links refused and files replaced directly), and **AgentInstructions** unit
-    (the role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier); the units
-    that implement the contract are added as they are built.
+    and draw the files of the project, with links refused and files replaced directly), **AgentInstructions** unit
+    (the role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier), and
+    **PayloadMessageMapper** unit (the message of the user as a model message with the marks described and the pictures
+    as images); the units that implement the contract are added as they are built.
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.

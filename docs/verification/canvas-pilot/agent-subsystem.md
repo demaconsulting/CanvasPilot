@@ -43,6 +43,9 @@ temporary project folder and delete it.
 - The instructions and the tools of a project written together agree: the large window gets the full tier and the small
   window the compact tier, which is less than half the size and has no example images, both have the project facts, and
   the tool names that the role prompt gives are exactly the names of the tools that the registry offers.
+- A message with marks, built by the real payload builder from a real picture, is mapped to a user message whose text
+  has the picture by its path in the project and the numbers of the marks, with no full path of the computer, and whose
+  images are three real PNG files in the stated order: the annotated picture and one close-up for each mark.
 
 ### Test Scenarios
 
@@ -94,6 +97,15 @@ tools. The compact text is less than half the full text, both have the name of t
 text has the example images of the kit, and the tool names in the role prompt are exactly the tools that the registry
 offers. This scenario is tested by
 `AgentSubsystem_InstructTheCopilot_ProjectWithKit_InstructionsNameExactlyTheToolsThatAreOffered`.
+
+**AgentSubsystem_SendMessage_RealPayloadWithMarks_MapsToTextAndPngImagesInOrder**: A project has a picture
+`art/logo.svg`. A rectangle and an arrow are marked on it, the message is composed from the two chips, and the real
+payload builder makes the payload with the real composer of mark pictures. Mapped for the project, the message is of the
+role user; its text starts with the two references, names `art/logo.svg` with its format and size, describes the
+rectangle with its box and the arrow, and says that an SVG gives no element positions; it holds none of the folder of
+the project. The contents after the text are three PNG files named `picture-1.png`, `mark-1.png`, and `mark-2.png`, each
+starting with the PNG signature. This scenario is tested by
+`AgentSubsystem_SendMessage_RealPayloadWithMarks_MapsToTextAndPngImagesInOrder`.
 
 **AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
 good Copilot CLI and a GitHub CLI under the program files that prints a token, and a scripted Ollama server has one
