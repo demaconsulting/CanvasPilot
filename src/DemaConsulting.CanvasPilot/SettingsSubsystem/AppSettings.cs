@@ -51,7 +51,9 @@ public enum ReasoningLevel
 }
 
 /// <summary>
-///     Persisted AI provider choices. These values are stored only; no component consumes them yet.
+///     Persisted AI provider choices. The Agent subsystem reads the provider, model, endpoint, context window, and
+///     Copilot CLI path from them. The reasoning level and the unrestricted tools flag are stored and kept as they are
+///     but nothing acts on them yet.
 /// </summary>
 public sealed record AiProviderSettings
 {
@@ -98,7 +100,8 @@ public sealed record AiProviderSettings
     public int ContextWindowTokens { get; init; } = DefaultContextWindowTokens;
 
     /// <summary>
-    ///     Gets the requested reasoning effort.
+    ///     Gets the requested reasoning effort. It is stored only: the AI library does not expose it yet, so the settings
+    ///     page shows it disabled.
     /// </summary>
     public ReasoningLevel ReasoningLevel { get; init; } = ReasoningLevel.Auto;
 
@@ -108,7 +111,8 @@ public sealed record AiProviderSettings
     public string OllamaEndpoint { get; init; } = DefaultOllamaEndpoint;
 
     /// <summary>
-    ///     Gets a value indicating whether the user has opted in to unrestricted agent tools. Off by default.
+    ///     Gets a value indicating whether the user has opted in to unrestricted agent tools. Off by default. The
+    ///     copilot has no unrestricted tools, so the settings page does not offer the choice and keeps the stored value.
     /// </summary>
     public bool UnrestrictedAgentTools { get; init; }
 
