@@ -1,0 +1,117 @@
+---
+# Software Unit Requirements for the AgentEventMapper Unit
+#
+# The AgentEventMapper unit turns the stream of updates that an AI agent produces for one turn into the events of the
+# turn that do not depend on the AI provider (answer text, tool calls and their results, usage, completion, failure), and
+# turns the exception of a failed turn into a failure of a named kind with a sentence that says what to do. GitHub Copilot
+# and Ollama produce the same kinds of content, so one mapping serves both. A mapper serves one turn.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: AgentEventMapper Requirements
+            requirements:
+              - id: CanvasPilot-AgentEventMapper-MapContentToEvents
+                title: >-
+                  The AgentEventMapper shall map the content of the updates of a turn to events in the order of the
+                  content: the pieces of text of one update joined into one text event and an update or a piece without
+                  text dropped (a piece of white space is kept), usage with the counts that the provider reported, an
+                  error that the provider sent as content as a failure that ends the turn, and the end of the updates as
+                  completion, and shall ignore reasoning and pictures outside a tool result.
+                justification: |
+                  The chat shows text as it arrives and a row for each tool call, so the order of the content must be
+                  kept, an empty update must cost nothing, and the end of the stream must be an event that the chat can
+                  act on. A white space can lie between two words of two pieces, so it must not be dropped. Content that
+                  the chat does not show must not be an event that it has to ignore.
+                tests:
+                  - AgentEventMapper_Map_TextContent_JoinsPiecesAndDropsEmptyUpdates
+                  - AgentEventMapper_Map_TextAroundACall_KeepsTheOrder
+                  - AgentEventMapper_Map_UsageAndOtherContent_UsageIsMappedOthersAreIgnored
+                  - AgentEventMapper_Map_ErrorContent_BecomesFailedAndStopsTheUpdate
+                  - AgentEventMapper_MapAsync_StreamEnds_EndsWithCompleted
+                  - AgentEventMapper_MapAsync_ErrorContent_EndsWithFailedOnly
+                  - AgentEventMapper_Arguments_Null_AreRefused
+                  - AgentEventMapper_Constants_Rule_AreTheDocumentedValues
+
+              - id: CanvasPilot-AgentEventMapper-TieCallsToResults
+                title: >-
+                  The AgentEventMapper shall tie the end of each tool call to its start by the id of the call and name the
+                  tool from the start, shall report a call that is sent twice once, shall give a call that has no id an id
+                  of its own and pair the results that have no id with those calls in order, and shall name the tool of a
+                  result whose call was never seen with a stand-in name, the same for GitHub Copilot and for Ollama.
+                justification: |
+                  The chat shows one row per call that changes from running to finished, so the two events must carry the
+                  same id and the result does not carry the name of the tool. Providers differ in what they send (Ollama
+                  may send no id), and the chat must not have to know the difference.
+                tests:
+                  - AgentEventMapper_Map_CallAndResult_AreTiedByIdWithSummaries
+                  - AgentEventMapper_Map_DuplicateCallAndUnknownResult_AreHandled
+                  - AgentEventMapper_Map_CallsWithoutIds_GetMadeIdsAndPairInOrder
+                  - AgentEventMapper_MapAsync_RealAgentToolTurn_GivesTheEventsInOrder
+
+              - id: CanvasPilot-AgentEventMapper-SummarizeToolResults
+                title: >-
+                  The AgentEventMapper shall summarize the arguments of a call and the result of a call on one line of at
+                  most 200 characters, showing a long text argument by its length and never in full, shall give the text of
+                  the result as the summary so that the answer that a file was created or replaced reaches the chat, shall
+                  report a refusal of a tool and a result with an exception as not succeeded, and shall tell whether the
+                  result carried a picture, whatever shape the AI library gave the result.
+                justification: |
+                  The user must see what the copilot did to the project, and the application keeps no backup, so the
+                  answer of the write tool that says created or replaced is what the chat shows. A drawing sent as an
+                  argument must not fill the chat, and a refusal must not look like a success.
+                tests:
+                  - AgentEventMapper_Map_ReplacedFileAnswer_SummaryShowsReplacedAndIsShort
+                  - AgentEventMapper_Map_ManyArguments_SummaryIsShortened
+                  - AgentEventMapper_Map_RefusalAndException_AreNotSucceeded
+                  - AgentEventMapper_Map_ImageResult_SetsHasImage
+                  - AgentEventMapper_Map_OtherResultShapes_AreSummarized
+
+              - id: CanvasPilot-AgentEventMapper-ExplainFailures
+                title: >-
+                  The AgentEventMapper shall turn the exception of a failed turn into a failure of a named kind with a
+                  sentence that says what to do, searching the exception and its inner exceptions by type and then by the
+                  words of the message: a refused sign-in (for GitHub Copilot the sentence that names gh auth login and
+                  COPILOT_GITHUB_TOKEN), a protocol version that the Copilot CLI and the AI library do not share (the
+                  sentence names winget upgrade), a model that the provider does not have (for Ollama, which reports only
+                  a 404 status, the sentence names ollama pull and the model), a connection that was lost or timed out,
+                  and any other cause with the words of the exception on one line.
+                justification: |
+                  The libraries report their problems as exceptions with technical words, or, for the Copilot SDK, only as
+                  text. A user can act on "run ollama pull gemma3" and cannot act on "404". The wording is in one place so
+                  that it is the same wherever a turn fails and can be tested without a provider.
+                tests:
+                  - AgentEventMapper_MapFailure_Ollama404_IsModelNotFoundWithPullCommand
+                  - AgentEventMapper_MapFailure_OllamaCauses_AreClassified
+                  - AgentEventMapper_MapFailure_CopilotMessages_AreClassifiedByTheirWords
+                  - AgentEventMapper_MapFailure_CopilotGuidance_NamesTheRemedy
+                  - AgentEventMapper_MapFailure_OllamaWithoutModelName_StillGivesASentence
+                  - AgentEventMapper_MapFailure_WrappedCause_IsFound
+                  - AgentEventMapper_MapFailure_ExceptionWithoutMessage_GivesTheTypeName
+                  - AgentEventMapper_MapAsync_ExceptionAfterText_YieldsTextThenFailed
+
+              - id: CanvasPilot-AgentEventMapper-TreatCancellationAsNotAFailure
+                title: >-
+                  The AgentEventMapper shall end the events of a turn without a failure and without completion when the
+                  caller canceled the turn, whatever exception the provider raised after that, and shall not report an
+                  operation that was canceled by itself as a failure or as completion.
+                justification: |
+                  Stop is a request of the user and not a fault. A provider may answer a canceled request with an exception
+                  of any type, and the chat must not show an error for what the user asked for.
+                tests:
+                  - AgentEventMapper_MapAsync_CancelledByCaller_EndsWithoutFailureOrCompletion
+                  - AgentEventMapper_MapAsync_CancelLikeExceptions_AreNotFailures
+                  - AgentEventMapper_MapFailure_Cancellation_IsNull
+
+              - id: CanvasPilot-AgentEventMapper-LogMetadataOnly
+                title: >-
+                  The AgentEventMapper shall write to the log only metadata of a turn (the provider, the kind of a failure,
+                  the type of the exception, and counts) and never the text of a message, an argument or a result of a tool,
+                  or the message of an exception.
+                justification: |
+                  The log is a file on the user's computer that people attach to bug reports, and the copilot works on the
+                  user's words and drawings. The log may say what happened and never what was said.
+                tests:
+                  - AgentEventMapper_Logging_Turn_HoldsMetadataOnly

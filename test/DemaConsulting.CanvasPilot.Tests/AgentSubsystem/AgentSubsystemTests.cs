@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Runtime.CompilerServices;
+using DemaConsulting.AgentKit.Agents.ChatClient;
 using DemaConsulting.AgentKit.Core;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
@@ -407,6 +408,69 @@ public sealed class AgentSubsystemTests
             Assert.Equal(
                 ["Brochure.canvaspilot", "art", Path.Combine("art", "box.svg")],
                 Directory.EnumerateFileSystemEntries(project, "*", SearchOption.AllDirectories).Select(entry => Path.GetRelativePath(project, entry)).Order(StringComparer.Ordinal).ToArray());
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that a whole turn of a real agent is reported as events as the chat will meet them: a scripted model writes a
+    ///     drawing, looks at it, and tries to write outside the project, with the real project tools. The events carry the text,
+    ///     each call with its arguments in brief, the answer that says the file was created, the picture flag of the look, the
+    ///     refusal as a call that did not succeed, and the end of the turn, and the drawing is in the project.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_RunTurn_ScriptedModelWritesAndLooksAtADrawing_EventsShowTheCreatedFileThePictureAndTheRefusal()
+    {
+        // Arrange: a project, the real tools, and an agent on a scripted model that asks for three tool calls and then answers
+        var token = TestContext.Current.CancellationToken;
+        var root = Directory.CreateTempSubdirectory("canvaspilot-agent-events-").FullName;
+        try
+        {
+            var project = Directory.CreateDirectory(Path.Combine(root, "project")).FullName;
+            var projectTools = new ProjectTools(new ImageRenderService());
+            var registry = new AgentToolRegistry(KnowledgeTools.CreateAll(KnowledgeCatalog.Default), [], projectTools.CreatePacks);
+            var tools = registry.CreateTools(new AgentToolContext(project), new HashSet<string>());
+            const string drawing = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"20\"><rect width=\"40\" height=\"20\" fill=\"#2563EB\"/></svg>";
+            var model = new ScriptedChatClient(
+                [
+                    new ChatResponseUpdate(ChatRole.Assistant, "I will draw a box. "),
+                    new ChatResponseUpdate(
+                        ChatRole.Assistant,
+                        [
+                            new FunctionCallContent("w1", "project_write", new Dictionary<string, object?> { ["path"] = "art/box.svg", ["content"] = drawing }),
+                            new FunctionCallContent("r1", "render_image", new Dictionary<string, object?> { ["path"] = "art/box.svg" }),
+                            new FunctionCallContent("w2", "project_write", new Dictionary<string, object?> { ["path"] = "../planted.txt", ["content"] = "x" }),
+                        ]),
+                ],
+                [new ChatResponseUpdate(ChatRole.Assistant, "The box is drawn.")]);
+            var agent = ChatClientAgentFactory.Create(model, [.. tools], "You draw.", AgentProviderFactory.AgentName);
+            var session = await agent.CreateSessionAsync(token);
+            var mapper = new AgentEventMapper(AiProviderKind.Ollama, "gemma3", cancellationToken: token);
+
+            // Act: run the turn and collect the events
+            var events = new List<AgentEvent>();
+            await foreach (var mapped in mapper.MapAsync(agent.RunStreamingAsync("Draw a box.", session, cancellationToken: token)))
+            {
+                events.Add(mapped);
+            }
+
+            // Assert: the text, the three calls tied by id with their summaries, the picture, and the refusal
+            Assert.Equal("I will draw a box. The box is drawn.", string.Concat(events.OfType<AgentEvent.TextDelta>().Select(delta => delta.Text)));
+            var started = events.OfType<AgentEvent.ToolStarted>().ToDictionary(item => item.CallId);
+            var finished = events.OfType<AgentEvent.ToolFinished>().ToDictionary(item => item.CallId);
+            Assert.Equal(["r1", "w1", "w2"], started.Keys.Order(StringComparer.Ordinal).ToArray());
+            Assert.Equal($"path=art/box.svg, content=({drawing.Length} characters)", started["w1"].ArgumentSummary);
+            Assert.True(finished["w1"].Succeeded);
+            Assert.StartsWith("File 'art/box.svg' created", finished["w1"].Summary, StringComparison.Ordinal);
+            Assert.True(finished["r1"].Succeeded);
+            Assert.True(finished["r1"].HasImage);
+            Assert.False(finished["w2"].Succeeded);
+            Assert.IsType<AgentEvent.Completed>(events[^1]);
+            Assert.Equal(drawing, await File.ReadAllTextAsync(Path.Combine(project, "art", "box.svg"), token));
+            Assert.False(File.Exists(Path.Combine(root, "planted.txt")));
         }
         finally
         {

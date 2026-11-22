@@ -11,7 +11,7 @@ chosen provider can be used. It has no user interface. Its parts are the readine
 that the copilot may call and the instructions that it is given, the agent of the chosen provider, and the service that
 keeps one conversation for the open project and runs one turn at a time.
 
-The subsystem is built contract first. It contains seven units so far. `AgentContract` is `IAgentService`, the request
+The subsystem is built contract first. It contains eight units so far. `AgentContract` is `IAgentService`, the request
 and history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds
 the GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks
 its version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader).
@@ -28,7 +28,9 @@ instructions that the copilot is given: a role prompt, the index of the drawing 
 the style of the project, in a full form or a compact form depending on the context window of the model, with sizes that
 its tests measure. `PayloadMessageMapper` turns the message that the user sent (the `MessagePayload`) into the user
 message that a model is given: the words, a compact description of the attachments, pictures, and marks, and the
-pictures as PNG images, annotated pictures first and then the close-ups of the marks, at most ten. The units that
+pictures as PNG images, annotated pictures first and then the close-ups of the marks, at most ten. `AgentEventMapper`
+turns the stream of updates that an agent produces for a turn into the events of the contract, the same for both
+providers, and turns the exception of a failed turn into a failure with a sentence that says what to do. The units that
 implement the contract are added to this design, and to the model, the requirements, and the verification design,
 together with their code; until then no implementation of `IAgentService` exists in the application.
 
@@ -140,6 +142,18 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 - *Constraints*: Pure and deterministic, the same in every culture; only paths relative to the project folder are
   written, and every value that the user supplies is written on one line.
 
+**AgentEventMapper**: What happens in a turn, as the events of the contract.
+
+- *Type*: In-process .NET class, one instance for each turn, documented in the design of the `AgentEventMapper` unit.
+- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the `AgentResponseUpdate` stream
+  of the Microsoft Agent Framework and the content types of Microsoft.Extensions.AI.
+- *Contract*: `MapAsync(updates)` returns the events of the turn and ends them with `Completed`, with `Failed`, or, when
+  the token of the turn was canceled, with neither; `Map(update)` maps one update; `MapFailure(exception)` returns the
+  `Failed` event for an exception, or `null` for a cancellation.
+- *Constraints*: The same for GitHub Copilot and Ollama; a call is tied to its result by id and a summary is at most 200
+  characters, a long text argument being shown by its length; every failure has a kind and a sentence that names the
+  remedy; the log gets metadata only.
+
 **IProviderCheck**: The connection check that the settings dialog can ask for.
 
 - *Type*: In-process .NET interface owned by the `Settings` subsystem, with the `ProviderCheckResult(IsUsable, Message)`
@@ -175,10 +189,12 @@ the real cards and the real kits: their sizes are measured for the full and the 
 test builds the instructions and the tools of one project together and shows that the tools that the role prompt names
 are exactly the tools that are offered. The mapper of the message is tested with golden text for each rule, and with a
 real payload that the real builder made from a real picture and real marks, which shows the text and the images that a
-model would receive.
+model would receive. The mapper of the updates is tested with scripted streams for every kind of content, every cause of
+failure, and the rules for a canceled turn, and with a real agent, on a scripted model, that writes a drawing, looks at
+it, and tries to write outside the project with the real project tools, which shows the events that the chat will get.
 
-The sections of the units are added to this design as the units are built: the mapper of provider updates to events and
-the provider factory, and the service that implements `IAgentService`.
+The sections of the units are added to this design as the units are built: the provider factory, and the service that
+implements `IAgentService`.
 
 ### Dependencies
 
@@ -197,6 +213,8 @@ the provider factory, and the service that implements `IAgentService`.
   subsystems that the payload exposes, and names none of their services.
 - **AgentKit** and **Microsoft.Extensions.AI** (OTS): the path policy, the tool packs, the limits for answers, and the
   function type that carry the tools.
+- **Microsoft Agent Framework** (OTS): the stream of updates (`AgentResponseUpdate`) of an agent that the event mapper
+  reads; **Microsoft.Extensions.AI** also gives it the content types (text, call, result, usage, error, picture).
 - **Settings** subsystem: the AI provider choices (`SettingsService`), the recommended minimum context window that
   chooses the tier of the instructions, and the `IProviderCheck` interface that
   `AgentReadiness` implements (documented with `AiProviderSettingsPage`); `Settings` does not depend on this subsystem.

@@ -11,6 +11,7 @@ includes:
   - docs/reqstream/canvas-pilot.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem/agent-contract.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/agent-event-mapper.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem/agent-instructions.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem/agent-readiness.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem/agent-tool-registry.yaml

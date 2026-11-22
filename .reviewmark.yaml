@@ -245,6 +245,21 @@ reviews:
       - "src/**/AgentSubsystem/PayloadMessageMapper.cs"
       - "test/**/AgentSubsystem/PayloadMessageMapperTests.cs"
 
+  - id: CanvasPilot-Agent-AgentEventMapper
+    title: Review of CanvasPilot AgentEventMapper unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-event-mapper.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-event-mapper.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-event-mapper.md"
+      - "src/**/AgentSubsystem/AgentEventMapper.cs"
+      - "test/**/AgentSubsystem/AgentEventMapperTests.cs"
+      - "test/**/AgentSubsystem/ScriptedChatClient.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces

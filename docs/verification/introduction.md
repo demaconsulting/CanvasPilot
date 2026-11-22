@@ -36,6 +36,8 @@ This document covers the verification design for the following software items:
       project, and the style, in a full and a compact tier, with measured sizes
     - **PayloadMessageMapper** — the message of the user as a model message: the words, the described attachments,
       pictures, and marks, and the pictures and close-ups as images in a stated order
+    - **AgentEventMapper** — the updates of an agent as the provider-independent events of a turn, and the failures of a
+      turn as sentences that say what to do
   - **Annotation** subsystem
     - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
     - **MarkSourceResolver** — the parts of the source file under a mark

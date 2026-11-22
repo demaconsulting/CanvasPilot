@@ -180,6 +180,26 @@ sections:
             tests:
               - AgentSubsystem_SendMessage_RealPayloadWithMarks_MapsToTextAndPngImagesInOrder
 
+          - id: CanvasPilot-Agent-ReportTurnAsEvents
+            title: >-
+              The Agent subsystem shall report what an AI agent does in a turn (its text, its tool calls with their results
+              and the picture of a look, its usage, and its end) as the events of the provider-independent contract, the
+              same for GitHub Copilot and for Ollama, and shall end a failed turn with a failure whose sentence says what
+              to do, and a stopped turn with no failure.
+            justification: |
+              The chat shows a row for each thing that happens in a turn and must not know which provider answered. One
+              mapping from the updates of the agent to the events keeps the rows, the summaries of what the copilot did to
+              the project, and the explanation of each failure in one place that can be tested with a scripted model.
+            children:
+              - CanvasPilot-AgentEventMapper-MapContentToEvents
+              - CanvasPilot-AgentEventMapper-TieCallsToResults
+              - CanvasPilot-AgentEventMapper-SummarizeToolResults
+              - CanvasPilot-AgentEventMapper-ExplainFailures
+              - CanvasPilot-AgentEventMapper-TreatCancellationAsNotAFailure
+              - CanvasPilot-AgentEventMapper-LogMetadataOnly
+            tests:
+              - AgentSubsystem_RunTurn_ScriptedModelWritesAndLooksAtADrawing_EventsShowTheCreatedFileThePictureAndTheRefusal
+
           - id: CanvasPilot-Agent-LocateCopilotCli
             title: >-
               The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the

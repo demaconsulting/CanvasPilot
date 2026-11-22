@@ -46,6 +46,11 @@ temporary project folder and delete it.
 - A message with marks, built by the real payload builder from a real picture, is mapped to a user message whose text
   has the picture by its path in the project and the numbers of the marks, with no full path of the computer, and whose
   images are three real PNG files in the stated order: the annotated picture and one close-up for each mark.
+- A whole turn of a real agent on a scripted model, with the real project tools, gives the events that the chat will
+  get: the text of both answers, three calls tied by id with their summaries (the drawing sent to `project_write` shown
+  by its length, the answer that the file was created), the picture flag of the look at the drawing, the refused write
+  outside the project as a call that did not succeed, and `Completed` last; the drawing is in the project and nothing is
+  outside it.
 
 ### Test Scenarios
 
@@ -106,6 +111,15 @@ rectangle with its box and the arrow, and says that an SVG gives no element posi
 the project. The contents after the text are three PNG files named `picture-1.png`, `mark-1.png`, and `mark-2.png`, each
 starting with the PNG signature. This scenario is tested by
 `AgentSubsystem_SendMessage_RealPayloadWithMarks_MapsToTextAndPngImagesInOrder`.
+
+**AgentSubsystem_RunTurn_ScriptedModelWritesAndLooksAtADrawing_EventsShowTheCreatedFileThePictureAndTheRefusal**: A
+project folder and the real tools of the registry with the real project tools. A scripted model says a sentence and asks
+for three calls at once: `project_write` of `art/box.svg`, `render_image` of it, and `project_write` of
+`../planted.txt`; it then answers with a second sentence. The events have the two sentences in order, the three starts
+with the summary `path=art/box.svg, content=(n characters)` for the first, the answer `File 'art/box.svg' created` for
+the first finish, a finish with a picture for the look, a finish that did not succeed for the write outside the project,
+and `Completed` last. The drawing is in the project and the file outside it was not written. This scenario is tested by
+`AgentSubsystem_RunTurn_ScriptedModelWritesAndLooksAtADrawing_EventsShowTheCreatedFileThePictureAndTheRefusal`.
 
 **AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
 good Copilot CLI and a GitHub CLI under the program files that prints a token, and a scripted Ollama server has one
