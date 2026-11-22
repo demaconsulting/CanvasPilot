@@ -586,6 +586,85 @@ public sealed class AgentSubsystemTests
     }
 
     /// <summary>
+    ///     Test that a conversation with Ollama works end to end through the agent service as the application will run it:
+    ///     the service makes the agent of the open project on a stand-in server through the real factory, the model asks for
+    ///     a drawing to be written, and the events show the answer, the call, the file, and the end; the drawing is in the
+    ///     project, the shell was told, the server got the model and the window of the settings, and the project holds
+    ///     nothing besides the drawing and its project file.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_ConverseWithOllama_ServiceOnStandInServer_WritesTheDrawingAndKeepsTheProjectClean()
+    {
+        // Arrange: the service on the real factory over a stand-in server that asks for the tool and then answers
+        var token = TestContext.Current.CancellationToken;
+        var handler = new QueuedOllamaHandler(
+            string.Join(
+                "\n",
+                """{"model":"m","created_at":"2026-11-21T00:00:00Z","message":{"role":"assistant","content":"Drawing it. "},"done":false}""",
+                """{"model":"m","created_at":"2026-11-21T00:00:00Z","message":{"role":"assistant","content":"","tool_calls":[{"function":{"name":"project_write","arguments":{"path":"box.svg","content":"<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'/>"}}}]},"done":false}""",
+                """{"model":"m","created_at":"2026-11-21T00:00:00Z","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop"}"""),
+            """{"model":"m","created_at":"2026-11-21T00:00:00Z","message":{"role":"assistant","content":"Done."},"done":true,"done_reason":"stop"}""");
+        var settings = new AiProviderSettings
+        {
+            Provider = AiProviderKind.Ollama,
+            OllamaEndpoint = "http://localhost:11434",
+            ModelName = "gemma3:12b",
+            ContextWindowTokens = 32768,
+        };
+        using var rig = new AgentServiceRig(new ScriptedChatClient(), factory: new AgentProviderFactory(handler: handler), settings: settings);
+        var told = new List<string>();
+        rig.Service.FileWritten += (_, args) => told.Add(args.RelativePath);
+        var before = AgentServiceRig.Snapshot(rig.ProjectFolder);
+
+        // Act: run a turn through the service
+        var events = await AgentServiceRig.CollectAsync(rig.Service.RunTurnAsync(new AgentTurnRequest(CreatePayload("Draw a box.")), token), token);
+
+        // Assert: the events show the answer, the call, the file, and the end, and the shell was told of the file
+        Assert.Equal("Drawing it. Done.", string.Concat(events.OfType<AgentEvent.TextDelta>().Select(delta => delta.Text)));
+        Assert.Equal(("project_write", true), (Assert.Single(events.OfType<AgentEvent.ToolFinished>()).Name, true));
+        Assert.Equal(new AgentEvent.FileWritten("box.svg", false), Assert.Single(events.OfType<AgentEvent.FileWritten>()));
+        Assert.IsType<AgentEvent.Completed>(events[^1]);
+        Assert.Equal(["box.svg"], told);
+
+        // Assert: the drawing is in the project and nothing else was added to it, and the server got the settings
+        Assert.Contains("width='40'", await File.ReadAllTextAsync(Path.Combine(rig.ProjectFolder, "box.svg"), token), StringComparison.Ordinal);
+        Assert.Equal(before.Append("box.svg").Order(StringComparer.Ordinal).ToArray(), AgentServiceRig.Snapshot(rig.ProjectFolder));
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.All(handler.Requests, request =>
+        {
+            Assert.Contains("\"model\":\"gemma3:12b\"", request.Body, StringComparison.Ordinal);
+            Assert.Contains("\"num_ctx\":32768", request.Body, StringComparison.Ordinal);
+        });
+    }
+
+    /// <summary>
+    ///     Test that the service in this build, whose starter of the Copilot runtime is gated, answers a turn for GitHub
+    ///     Copilot with one failure that says that Copilot support needs an update of the AI library, without starting a
+    ///     runtime, and that the same conversation works after the user switches to Ollama.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence()
+    {
+        // Arrange: the development machine with a good CLI, the real factory with the shipped starter, and Copilot chosen
+        var token = TestContext.Current.CancellationToken;
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        var locator = new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), DevMachine.CreateEnvironment());
+        using var rig = new AgentServiceRig(
+            new ScriptedChatClient(),
+            factory: new AgentProviderFactory(locator, new GatedCopilotRuntimeStarter()),
+            settings: new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot });
+
+        // Act
+        var events = await AgentServiceRig.CollectAsync(rig.Service.RunTurnAsync(new AgentTurnRequest(CreatePayload("Draw a box.")), token), token);
+
+        // Assert: one typed failure with the sentence of the gate, and the log says why without any words of the message
+        var failed = Assert.IsType<AgentEvent.Failed>(Assert.Single(events));
+        Assert.Equal((AgentFailureKind.NotReady, "Copilot support needs an AgentKit update; use Ollama meanwhile."), (failed.Kind, failed.Message));
+        Assert.DoesNotContain("Draw a box", rig.ReadLog(), StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Creates a payload that holds only text.
     /// </summary>
     /// <param name="text">The text of the message.</param>
@@ -615,6 +694,20 @@ public sealed class AgentSubsystemTests
         ///     Gets how many times the conversation was reset.
         /// </summary>
         public int ResetCount { get; private set; }
+
+        /// <inheritdoc />
+        public event EventHandler<FileWrittenEventArgs>? FileWritten
+        {
+            add
+            {
+                // The scripted service never writes a file, so nothing is raised.
+            }
+
+            remove
+            {
+                // See the add accessor.
+            }
+        }
 
         /// <inheritdoc />
         public Task<AgentReadinessReport> GetReadinessAsync(CancellationToken cancellationToken = default)

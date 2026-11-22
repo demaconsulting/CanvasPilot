@@ -20,9 +20,11 @@
 
 using System.Globalization;
 using DemaConsulting.AgentKit.Agents.ChatClient;
+using DemaConsulting.AgentKit.Agents.Copilot;
 using DemaConsulting.AgentKit.Agents.Ollama;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using Microsoft.Agents.AI;
 using OllamaSharp;
 
 namespace DemaConsulting.CanvasPilot.AgentSubsystem;
@@ -154,6 +156,35 @@ public sealed class AgentProviderFactory : IAgentFactory
     }
 
     /// <inheritdoc />
+    public async Task DeleteSessionAsync(AgentSession session, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        // Only a Copilot session leaves anything behind (in the data folder of the runtime); the id exists once a run began
+        if (session is not CopilotAgentSession copilot || string.IsNullOrEmpty(copilot.SessionId))
+        {
+            return;
+        }
+
+        ICopilotAgentSource? source;
+        await _startGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            source = _copilot;
+        }
+        finally
+        {
+            _startGate.Release();
+        }
+
+        if (source is not null)
+        {
+            await source.DeleteSessionAsync(copilot.SessionId, cancellationToken).ConfigureAwait(false);
+            Write("Copilot session deleted");
+        }
+    }
+
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         ICopilotAgentSource? source;
@@ -242,7 +273,13 @@ public sealed class AgentProviderFactory : IAgentFactory
             return Unavailable(status, cli.Message);
         }
 
-        var source = await GetCopilotSourceAsync(new CopilotStartRequest(cli.Path, cli.Version, CheckOnly: false), cancellationToken)
+        var source = await GetCopilotSourceAsync(
+                new CopilotStartRequest(cli.Path, cli.Version, CheckOnly: false)
+                {
+                    DataDirectory = request.CopilotDataDirectory,
+                    Logger = request.CopilotLogger,
+                },
+                cancellationToken)
             .ConfigureAwait(false);
         if (source.Agents is null)
         {

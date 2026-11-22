@@ -21,6 +21,7 @@
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 
 namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 
@@ -35,7 +36,20 @@ public sealed record AgentCreationRequest(
     AiProviderSettings Settings,
     IReadOnlyList<AIFunction> Tools,
     string Instructions,
-    string ProjectFolder);
+    string ProjectFolder)
+{
+    /// <summary>
+    ///     Gets the full path of the folder where the Copilot runtime keeps its own data, which the factory passes to the
+    ///     starter of the runtime when it starts the runtime; <see langword="null" /> for none. It is chosen by the agent
+    ///     service and is never inside a project.
+    /// </summary>
+    public string? CopilotDataDirectory { get; init; }
+
+    /// <summary>
+    ///     Gets the logger that the Copilot runtime writes to, which records metadata only; <see langword="null" /> for none.
+    /// </summary>
+    public ILogger? CopilotLogger { get; init; }
+}
 
 /// <summary>
 ///     The answer of the factory: an agent together with what must be disposed when the agent is no longer used, or the
@@ -139,4 +153,14 @@ public interface IAgentFactory : IAsyncDisposable
     /// <param name="cancellationToken">A token that cancels the start of a runtime.</param>
     /// <returns>The agent, or the reason that none could be made; a provider that cannot be used is a result, not an exception.</returns>
     Task<AgentCreationResult> CreateAsync(AgentCreationRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Deletes what the provider kept for a conversation (for GitHub Copilot, the session that its runtime persists in
+    ///     its data folder) so that conversations do not accumulate there. A conversation on a provider that keeps nothing,
+    ///     and a session of a runtime that was never started, are left alone.
+    /// </summary>
+    /// <param name="session">The session of the conversation that ends.</param>
+    /// <param name="cancellationToken">A token that cancels the deletion.</param>
+    /// <returns>A task that completes when the session is deleted.</returns>
+    Task DeleteSessionAsync(AgentSession session, CancellationToken cancellationToken = default);
 }

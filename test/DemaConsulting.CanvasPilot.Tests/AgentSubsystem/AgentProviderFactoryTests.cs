@@ -24,6 +24,7 @@ using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using NSubstitute;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -492,5 +493,76 @@ public sealed class AgentProviderFactoryTests
         Assert.All(results, result => Assert.True(result.IsCreated));
         Assert.Equal(8, source.Requests.Count);
         Assert.Equal(1, source.DisposeCount);
+    }
+
+    /// <summary>
+    ///     Test that the data folder and the logger of the request reach the starter of the runtime, and that a request
+    ///     without them gives the starter none, so that the starter never has to choose a default of the library itself.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_Create_Copilot_DataDirectoryAndLogger_ReachTheStarter()
+    {
+        // Arrange: a request that names a data folder and a logger, and a starter that records what it gets
+        var token = TestContext.Current.CancellationToken;
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient());
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
+        await using var factory = new AgentProviderFactory(Locator(), starter);
+        var logger = Substitute.For<Microsoft.Extensions.Logging.ILogger>();
+        var request = Request(new AiProviderSettings()) with { CopilotDataDirectory = @"C:\data\CanvasPilot\copilot", CopilotLogger = logger };
+
+        // Act
+        await using var result = await factory.CreateAsync(request, token);
+
+        // Assert
+        var start = Assert.Single(starter.Requests);
+        Assert.Equal(@"C:\data\CanvasPilot\copilot", start.DataDirectory);
+        Assert.Same(logger, start.Logger);
+        Assert.Null(new CopilotStartRequest("copilot.exe", new Version(1, 0, 114), false).DataDirectory);
+    }
+
+    /// <summary>
+    ///     Test that deleting the session of a conversation reaches the runtime only for a Copilot session that has an id,
+    ///     and does nothing for an Ollama session, for a session of a runtime that was never started, or for a missing
+    ///     session.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_DeleteSession_CopilotSessionOnly_DeletesThroughTheRuntime()
+    {
+        // Arrange: a factory with a started fake runtime, and sessions of both providers
+        var token = TestContext.Current.CancellationToken;
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient());
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
+        await using var factory = new AgentProviderFactory(Locator(), starter);
+        await using var neverStarted = new AgentProviderFactory(Locator(), starter);
+        await using var made = await factory.CreateAsync(Request(new AiProviderSettings()), token);
+        var ollamaSession = await made.Agent!.CreateSessionAsync(token);
+        var copilotSession = MakeCopilotSession("session-42");
+        var withoutId = MakeCopilotSession(string.Empty);
+
+        // Act
+        await factory.DeleteSessionAsync(ollamaSession, token);
+        await factory.DeleteSessionAsync(withoutId, token);
+        await neverStarted.DeleteSessionAsync(copilotSession, token);
+        await factory.DeleteSessionAsync(copilotSession, token);
+
+        // Assert: only the Copilot session with an id on the started runtime was deleted
+        Assert.Equal(["session-42"], source.DeletedSessions);
+        await Assert.ThrowsAsync<ArgumentNullException>(() => factory.DeleteSessionAsync(null!, token));
+    }
+
+    /// <summary>
+    ///     Makes a session of the Copilot agent with an id, which the AI library only makes while a conversation runs on a
+    ///     started runtime.
+    /// </summary>
+    /// <param name="id">The id of the session.</param>
+    /// <returns>The session.</returns>
+    private static Microsoft.Agents.AI.AgentSession MakeCopilotSession(string id)
+    {
+        return (Microsoft.Agents.AI.AgentSession)Activator.CreateInstance(
+            typeof(DemaConsulting.AgentKit.Agents.Copilot.CopilotAgentSession),
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public,
+            null,
+            [id, new Microsoft.Agents.AI.AgentSessionStateBag()],
+            null)!;
     }
 }

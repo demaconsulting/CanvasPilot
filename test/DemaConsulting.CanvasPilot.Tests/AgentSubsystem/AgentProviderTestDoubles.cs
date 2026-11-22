@@ -50,17 +50,45 @@ internal sealed class ScriptedAgentFactory : IAgentFactory
     /// </summary>
     internal List<AgentCreationRequest> Requests { get; } = [];
 
+    /// <summary>
+    ///     Gets the sessions that were deleted, in order.
+    /// </summary>
+    internal List<AgentSession> DeletedSessions { get; } = [];
+
+    /// <summary>
+    ///     Gets the number of times that the factory was disposed.
+    /// </summary>
+    internal int DisposeCount { get; private set; }
+
+    /// <summary>
+    ///     Gets or sets the failure that every request gets instead of an agent, or <see langword="null" /> for agents.
+    /// </summary>
+    internal AgentReadinessReport? Failure { get; set; }
+
     /// <inheritdoc />
     public Task<AgentCreationResult> CreateAsync(AgentCreationRequest request, CancellationToken cancellationToken = default)
     {
         Requests.Add(request);
+        if (Failure is not null)
+        {
+            return Task.FromResult(AgentCreationResult.Unavailable(Failure));
+        }
+
         var agent = ChatClientAgentFactory.Create(_client, [.. request.Tools], request.Instructions, AgentProviderFactory.AgentName);
         return Task.FromResult(AgentCreationResult.Created(agent));
     }
 
     /// <inheritdoc />
+    public Task DeleteSessionAsync(AgentSession session, CancellationToken cancellationToken = default)
+    {
+        DeletedSessions.Add(session);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
+        DisposeCount++;
         return ValueTask.CompletedTask;
     }
 }

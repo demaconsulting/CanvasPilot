@@ -27,6 +27,13 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 public interface IAgentService : IDisposable
 {
     /// <summary>
+    ///     Occurs after the copilot created or replaced a file of the project, so that the shell can select the file in the
+    ///     project explorer. It is raised on the thread that ran the tool, not on the thread of the user interface, so a
+    ///     handler must hand the work over to that thread itself.
+    /// </summary>
+    event EventHandler<FileWrittenEventArgs>? FileWritten;
+
+    /// <summary>
     ///     Checks whether the AI provider that the current settings choose can be used.
     /// </summary>
     /// <param name="cancellationToken">A token that cancels the check.</param>

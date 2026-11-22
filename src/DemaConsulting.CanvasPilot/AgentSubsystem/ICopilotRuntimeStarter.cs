@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Microsoft.Extensions.Logging;
+
 namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 
 /// <summary>
@@ -47,7 +49,20 @@ public enum CopilotStartStatus
 ///     <see langword="true" /> to learn whether the runtime could be started without starting it, which is what a
 ///     readiness check asks.
 /// </param>
-public sealed record CopilotStartRequest(string CliPath, Version CliVersion, bool CheckOnly);
+public sealed record CopilotStartRequest(string CliPath, Version CliVersion, bool CheckOnly)
+{
+    /// <summary>
+    ///     Gets the full path of the folder where the runtime keeps its own data (its home and its sessions), or
+    ///     <see langword="null" /> for none. The agent service always names a folder below the local data of the user and
+    ///     never one inside a project, and a starter must pass it on instead of using the default of the library.
+    /// </summary>
+    public string? DataDirectory { get; init; }
+
+    /// <summary>
+    ///     Gets the logger that a started runtime writes to, which records metadata only, or <see langword="null" /> for none.
+    /// </summary>
+    public ILogger? Logger { get; init; }
+}
 
 /// <summary>
 ///     The answer of the starter of the Copilot runtime.

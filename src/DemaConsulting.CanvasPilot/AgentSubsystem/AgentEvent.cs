@@ -43,6 +43,12 @@ public enum AgentFailureKind
     /// <summary>Another turn is still running; only one turn runs at a time.</summary>
     Busy,
 
+    /// <summary>
+    ///     A folder where CanvasPilot keeps its own data (the Copilot runtime files or the chat history) lies inside the
+    ///     project folder, so the turn is refused to keep that data out of the project.
+    /// </summary>
+    DataInsideProject,
+
     /// <summary>Anything else; the message holds what is known.</summary>
     Unexpected,
 }
