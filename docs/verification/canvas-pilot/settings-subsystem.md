@@ -27,8 +27,8 @@ external services, or display are required.
 ### Test Scenarios
 
 **SettingsSubsystem_PersistSettings_DialogOk_SurvivesRestart**: A recent project is stored, a dialog over the
-AI provider page is opened, Ollama is selected, a model name is typed, and unrestricted agent tools are
-checked; OK is chosen and a fresh service loads the file. The provider, model name, and opt-in are restored
+AI provider page is opened, Ollama is selected, a model name is typed, and the stored unrestricted agent tools value
+is set; OK is chosen and a fresh service loads the file. The provider, model name, and stored value are restored
 and the recent project is unchanged. This scenario is tested by
 `SettingsSubsystem_PersistSettings_DialogOk_SurvivesRestart`.
 

@@ -3,7 +3,7 @@ package CanvasPilot_AiProviderSettingsPage {
     private import CanvasPilot_SettingsDialog::*;
 
     part def AiProviderSettingsPage {
-        doc /* The AI Provider page of the settings dialog; edits and validates persisted provider choices. */
+        doc /* The AI Provider page of the settings dialog; edits and validates persisted provider choices and checks the connection to the provider through the IProviderCheck interface that the Settings subsystem owns. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
