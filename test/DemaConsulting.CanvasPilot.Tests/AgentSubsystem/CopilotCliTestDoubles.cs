@@ -61,6 +61,28 @@ internal static class DevMachine
     /// <summary>The folder of the npm programs of the user.</summary>
     internal const string NpmFolder = @"C:\Users\dev\AppData\Roaming\npm";
 
+    /// <summary>
+    ///     A Copilot CLI that is a full path on the platform that runs the tests. The locator searches for Windows paths
+    ///     only, but a path in the settings is used as it is, so it is how a test gets a CLI that the real starter accepts
+    ///     (the AI library refuses a path that is not a full path of the platform, as the Windows paths are on Linux and
+    ///     macOS).
+    /// </summary>
+    internal static string PlatformCli { get; } = TestPlatformPaths.FullPath("canvaspilot-tests", "copilot", "copilot.exe");
+
+    /// <summary>
+    ///     Makes a locator that finds <see cref="PlatformCli" />, which the settings must name, and answers with a version.
+    /// </summary>
+    /// <param name="version">The version that the CLI reports.</param>
+    /// <returns>The locator.</returns>
+    internal static CopilotCliLocator CreatePlatformLocator(string version = "1.0.114")
+    {
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(PlatformCli, version);
+        var fileSystem = new FakeCliFileSystem();
+        fileSystem.AddFile(PlatformCli, RealCliBytes);
+        return new CopilotCliLocator(runner, fileSystem, new FakeEnvironment(null, null));
+    }
+
     /// <summary>The text that <c>copilot --version</c> prints, with the line that suggests an update.</summary>
     /// <param name="version">The version.</param>
     /// <returns>The text.</returns>
@@ -120,7 +142,7 @@ internal sealed class FakeCliFileSystem : ICliFileSystem
     internal void AddFile(string path, long length)
     {
         _files[path] = length;
-        AddFolder(path[..path.LastIndexOf('\\')]);
+        AddFolder(path[..path.LastIndexOfAny(['\\', '/'])]);
     }
 
     /// <summary>
@@ -131,7 +153,7 @@ internal sealed class FakeCliFileSystem : ICliFileSystem
     internal void AddLink(string path, string target)
     {
         _links[path] = target;
-        AddFolder(path[..path.LastIndexOf('\\')]);
+        AddFolder(path[..path.LastIndexOfAny(['\\', '/'])]);
     }
 
     /// <summary>

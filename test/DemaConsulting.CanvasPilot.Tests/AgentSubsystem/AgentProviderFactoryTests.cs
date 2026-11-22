@@ -612,20 +612,23 @@ public sealed class AgentProviderFactoryTests
     [Fact]
     public async Task AgentProviderFactory_DisposeAsync_OwnedStarter_StopsTheRuntimeOnce()
     {
-        // Arrange: the real starter over a start function that gives a fake runtime, owned by the factory
+        // Arrange: the real starter over a start function that gives a fake runtime, owned by the factory, and a CLI that is
+        // a full path of this platform, which the real starter requires
         var token = TestContext.Current.CancellationToken;
         var source = new FakeCopilotAgentSource(new ScriptedChatClient());
         var starter = new CopilotRuntimeStarter(Path.Combine(Path.GetTempPath(), "canvaspilot-factory-data"), (_, _) => Task.FromResult<ICopilotAgentSource>(source));
-        var factory = new AgentProviderFactory(Locator(), starter, ownsStarter: true);
-        await using var made = await factory.CreateAsync(Request(new AiProviderSettings()), token);
+        var factory = new AgentProviderFactory(DevMachine.CreatePlatformLocator(), starter, ownsStarter: true);
+        var settings = new AiProviderSettings { CopilotCliPath = DevMachine.PlatformCli };
+        await using var made = await factory.CreateAsync(Request(settings), token);
 
         // Act: dispose the factory twice
         await factory.DisposeAsync();
         await factory.DisposeAsync();
 
         // Assert: the runtime was stopped once, and the factory refuses more requests
+        Assert.True(made.IsCreated);
         Assert.Equal(1, source.DisposeCount);
-        await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(new AiProviderSettings()), token));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(settings), token));
     }
 
     /// <summary>
@@ -676,12 +679,13 @@ public sealed class AgentProviderFactoryTests
                 await Task.Delay(50, cancellation);
                 return source;
             });
-        var factory = new AgentProviderFactory(Locator(), starter, ownsStarter: true);
+        var factory = new AgentProviderFactory(DevMachine.CreatePlatformLocator(), starter, ownsStarter: true);
+        var settings = new AiProviderSettings { CopilotCliPath = DevMachine.PlatformCli };
 
         // Act: eight requests at once, then dispose the factory and ask again
-        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => factory.CreateAsync(Request(new AiProviderSettings()), token)));
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => factory.CreateAsync(Request(settings), token)));
         await factory.DisposeAsync();
-        await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(new AiProviderSettings()), token));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(settings), token));
 
         // Assert
         Assert.Equal(1, starts);

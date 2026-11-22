@@ -656,16 +656,14 @@ public sealed class AgentSubsystemTests
     {
         // Arrange: the development machine with a good CLI, the real factory with a starter that is not signed in
         var token = TestContext.Current.CancellationToken;
-        var runner = new FakeProcessRunner();
-        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
-        var locator = new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), DevMachine.CreateEnvironment());
+        var locator = DevMachine.CreatePlatformLocator();
         var starter = new CopilotRuntimeStarter(
             Path.Combine(Path.GetTempPath(), "canvaspilot-service-data"),
             (_, _) => throw new InvalidOperationException("The Copilot runtime started but is not signed in to GitHub, so AgentKit stopped it."));
         using var rig = new AgentServiceRig(
             new ScriptedChatClient(),
             factory: new AgentProviderFactory(locator, starter, ownsStarter: true),
-            settings: new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot });
+            settings: new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot, CopilotCliPath = DevMachine.PlatformCli });
 
         // Act
         var events = await AgentServiceRig.CollectAsync(rig.Service.RunTurnAsync(new AgentTurnRequest(CreatePayload("Draw a box.")), token), token);
