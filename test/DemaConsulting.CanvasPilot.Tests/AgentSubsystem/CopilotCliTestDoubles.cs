@@ -175,7 +175,7 @@ internal sealed class FakeCliFileSystem : ICliFileSystem
 }
 
 /// <summary>
-///     An environment with the two variables that the locator reads.
+///     An environment with the variables that the locator and the readiness checks read.
 /// </summary>
 internal sealed class FakeEnvironment : IEnvironmentReader
 {
@@ -191,6 +191,16 @@ internal sealed class FakeEnvironment : IEnvironmentReader
     {
         _variables["LOCALAPPDATA"] = localAppData;
         _variables["PATH"] = path;
+    }
+
+    /// <summary>
+    ///     Sets a variable, such as a token variable or <c>ProgramFiles</c>.
+    /// </summary>
+    /// <param name="name">The name of the variable.</param>
+    /// <param name="value">The value; <see langword="null" /> for not set.</param>
+    internal void Set(string name, string? value)
+    {
+        _variables[name] = value;
     }
 
     /// <inheritdoc />

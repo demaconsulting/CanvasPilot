@@ -151,6 +151,26 @@ reviews:
       - "test/**/AgentSubsystem/CopilotCliTestDoubles.cs"
       - "test/**/AgentSubsystem/ProcessRunnerTests.cs"
 
+  - id: CanvasPilot-Agent-AgentReadiness
+    title: Review of CanvasPilot AgentReadiness unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-readiness.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-readiness.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-readiness.md"
+      - "src/**/AgentSubsystem/AgentReadiness.cs"
+      - "src/**/AgentSubsystem/GatedCopilotRuntimeStarter.cs"
+      - "src/**/AgentSubsystem/ICopilotRuntimeStarter.cs"
+      - "src/**/AgentSubsystem/IOllamaProbe.cs"
+      - "src/**/AgentSubsystem/OllamaProbe.cs"
+      - "test/**/AgentSubsystem/AgentReadinessTests.cs"
+      - "test/**/AgentSubsystem/OllamaProbeTests.cs"
+      - "test/**/AgentSubsystem/ReadinessTestDoubles.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces

@@ -28,8 +28,10 @@ Local items:
 
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
   - **Agent** subsystem: **AgentContract** unit (`IAgentService`, the turn request, the events, and the readiness
-    report) and **CopilotCliLocator** unit (the installed Copilot CLI, with its process runner, file system, and
-    environment seams); the units that implement the contract are added as they are built.
+    report), **CopilotCliLocator** unit (the installed Copilot CLI, with its process runner, file system, and
+    environment seams), and **AgentReadiness** unit (the check of whether the chosen AI provider can be used, with the
+    gated starter of the Copilot runtime and the probe of the Ollama server); the units that implement the contract are
+    added as they are built.
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.

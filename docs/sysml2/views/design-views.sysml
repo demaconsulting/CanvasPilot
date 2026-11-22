@@ -162,6 +162,16 @@ package CanvasPilotDesignViews {
     // Focused dependency views. Each exposes the units of one theme plus the suppliers that
     // their 'dependency' statements name; the hub suppliers are omitted (see the header).
 
+    view AgentSubsystemRuntimeView : GeneralView {
+        doc /* Dependencies of the readiness checks of the AI provider on the Copilot CLI locator, the settings, and the OllamaSharp client. No hub supplier is used by these units. */
+        expose CanvasPilot_AgentReadiness::AgentReadiness;
+        expose CanvasPilot_CopilotCliLocator::CopilotCliLocator;
+        expose CanvasPilot_SettingsService::SettingsService;
+        expose CanvasPilot_AiProviderSettingsPage::AiProviderSettingsPage;
+        expose OtsDependencies::OllamaSharp;
+        filter not (@SysML::Documentation);
+    }
+
     view AppShellSubsystemWorkspaceView : GeneralView {
         doc /* Dependencies of the main window shell and the project workspace on the workspace panels they host. Hub supplier omitted: ProjectService. */
         expose CanvasPilot_MainWindowShell::MainWindowShell;
