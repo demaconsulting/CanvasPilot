@@ -463,6 +463,13 @@ installer package's file table fails when it lists such a file. This scenario is
 `Copilot_RuntimeNotPublished`, which is run in CI only on Windows and is described in the verification of the AgentKit
 OTS item.
 
+**CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath**: The file system,
+environment, and programs are replaced by the layout of the development machine, which has the winget Copilot CLI and
+the VS Code shim on the `PATH`. With the default settings the locator finds the winget CLI and runs only it. A settings
+file that holds a path to a file that does not exist is saved and loaded by a new service; the result for that path is
+not found, names the path, and no program is run, so the installed CLI is not used instead. This scenario is tested by
+`CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath`.
+
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the
 image and the title names the project. The user changes the AI model name in the settings dialog and the

@@ -48,3 +48,23 @@ sections:
               - CanvasPilot-AgentContract-ReportReadiness
             tests:
               - AgentSubsystem_Readiness_ScriptedReports_SeparateUsableFromBlockedProviders
+
+          - id: CanvasPilot-Agent-LocateCopilotCli
+            title: >-
+              The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the
+              launchers that editors put on the PATH, honor a path chosen in the settings, check that the CLI reports
+              a version that works, and explain what it found and what to do when it cannot be used.
+            justification: |
+              The application never ships the Copilot CLI, so it can only use the one that the user installed, and on
+              a machine with VS Code the first copilot.exe on the PATH may be an editor launcher and not the CLI. The
+              readiness checks and, later, the start of the Copilot runtime need the path and version of the real
+              CLI, or a sentence that tells the user how to get one.
+            children:
+              - CanvasPilot-CopilotCliLocator-PreferRealCli
+              - CanvasPilot-CopilotCliLocator-RejectShims
+              - CanvasPilot-CopilotCliLocator-HonorSettingsOverride
+              - CanvasPilot-CopilotCliLocator-ValidateVersion
+              - CanvasPilot-CopilotCliLocator-DiagnoseRejections
+              - CanvasPilot-CopilotCliLocator-RunProbeSafely
+            tests:
+              - AgentSubsystem_LocateCopilotCli_MachinesWithShim_FindsRealCliAndExplainsShimOnly

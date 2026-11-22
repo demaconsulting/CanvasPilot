@@ -402,23 +402,27 @@ sections:
 
       - id: CanvasPilot-System-UseInstalledCopilotCli
         title: >-
-          The application shall not include or download the GitHub Copilot runtime in its installed files or in its
-          build output, so that the only GitHub Copilot CLI that it can ever use is the one that the user installed.
+          The application shall locate and check the GitHub Copilot CLI that the user installed, and shall not include
+          or download the GitHub Copilot runtime in its installed files or in its build output, so that the only
+          GitHub Copilot CLI that it can ever use is the one that the user installed.
         tags: [system]
         justification: |
           The GitHub Copilot CLI is a separate product that the user installs, updates, and signs in to. Shipping a
           copy of it, or downloading one when the application is built, would put about 180 MB of third-party code with
           its own updates and licensing into every installation. The libraries that the AI copilot is built on would
           bring such a runtime unless they are told not to, so the absence is checked on the published folder of every
-          Windows build and, with the file table of the installer, in the package itself. Locating and checking the
-          installed CLI is added to this requirement by the units that do it.
+          Windows build and, with the file table of the installer, in the package itself. The application finds the
+          installed CLI by a documented rule that tells it from the launchers that editors put on the PATH, honors a
+          path that the user sets, and checks its version.
         children:
+          - CanvasPilot-Agent-LocateCopilotCli
           - CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
           - CanvasPilot-OTS-CopilotSdk-HonorExplicitCliPath
           - CanvasPilot-OTS-CopilotSdk-ReadCliPathFromConnectionEnvironment
           - CanvasPilot-OTS-CopilotSdk-DeclareSupportedCliVersion
         tests:
           - windows@Copilot_RuntimeNotPublished
+          - CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath
 
       - id: CanvasPilot-System-ConfineCopilotToProject
         title: >-

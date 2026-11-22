@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -181,6 +182,36 @@ public sealed class CanvasPilotTests : IDisposable
         // Assert: the fresh installation has the new default, and the stored value was not replaced by it
         Assert.Equal(32768, fresh.ContextWindowTokens);
         Assert.Equal(8192, afterChange.ContextWindowTokens);
+    }
+
+    /// <summary>
+    ///     Test that the application uses only the Copilot CLI that the user installed: on a machine with the winget CLI and
+    ///     the VS Code shim it finds the winget CLI, never the shim, and a path stored in the settings is the one that is
+    ///     checked, with no fallback to the installed CLI when that path is wrong.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath()
+    {
+        // Arrange: the settings of the user, stored and loaded again, and the layout of the development machine
+        var token = TestContext.Current.CancellationToken;
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "CliSettings");
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        runner.AnswerVersion(DevMachine.ShimCli, "1.0.114");
+        var locator = new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), DevMachine.CreateEnvironment());
+        var service = new SettingsService(settingsFolder);
+
+        // Act: locate with the default settings, then with a path to a missing file stored and loaded again
+        var automatic = await locator.LocateAsync(service.Load().AiProvider.CopilotCliPath, cancellationToken: token);
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { CopilotCliPath = @"C:\nowhere\copilot.exe" } });
+        var stored = await locator.LocateAsync(new SettingsService(settingsFolder).Load().AiProvider.CopilotCliPath, cancellationToken: token);
+
+        // Assert: the installed CLI was found by default; the wrong stored path fails visibly and the CLI is not used
+        Assert.Equal(CopilotCliStatus.Found, automatic.Status);
+        Assert.Equal(DevMachine.RealCli, automatic.Path);
+        Assert.Equal(CopilotCliStatus.NotFound, stored.Status);
+        Assert.Contains(@"C:\nowhere\copilot.exe", stored.Message, StringComparison.Ordinal);
+        Assert.Equal([DevMachine.RealCli], runner.Runs.Select(run => run.Path));
     }
 
     /// <summary>

@@ -11,10 +11,12 @@ chosen provider can be used. It has no user interface. Its parts are the readine
 that the copilot may call and the instructions that it is given, the agent of the chosen provider, and the service that
 keeps one conversation for the open project and runs one turn at a time.
 
-The subsystem is built contract first. At present it contains one unit, `AgentContract`: `IAgentService`, the request
-and history records, the event records, and the readiness report, all free of any AI library. The units that implement
-the contract are added to this design, and to the model, the requirements, and the verification design, together with
-their code; until then no implementation of `IAgentService` exists in the application.
+The subsystem is built contract first. It contains two units so far. `AgentContract` is `IAgentService`, the request and
+history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds the
+GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks its
+version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader). The
+units that implement the contract are added to this design, and to the model, the requirements, and the verification
+design, together with their code; until then no implementation of `IAgentService` exists in the application.
 
 The subsystem will depend on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
 message), `Knowledge`, `Style`, and `Preview` (the content and the rendering that its tools give the copilot),
@@ -46,6 +48,17 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   events that end with `Completed` or `Failed`; the readiness report carries a status and one sentence.
 - *Constraints*: None of the records names a type of an AI library.
 
+**CopilotCliLocator**: The installed GitHub Copilot CLI, as the readiness checks need it.
+
+- *Type*: In-process .NET class with the result record `CopilotCliInfo`, documented in the design of the
+  `CopilotCliLocator` unit.
+- *Role*: Provider (the readiness checks and the Copilot runtime start are consumers).
+- *Contract*: `LocateAsync` takes the path from the settings (empty for automatic detection) and returns the status,
+  path, version, one sentence for the user, and the candidates that were rejected with the reason for each.
+- *Constraints*: The CLI is never included or downloaded; a path from the settings is the only candidate and never falls
+  back to automatic detection; a shim of an editor is never used for automatic detection; every problem is a result and
+  only cancellation is thrown.
+
 **IProviderCheck**: The connection check that the settings dialog can ask for.
 
 - *Type*: In-process .NET interface owned by the `Settings` subsystem, with the `ProviderCheckResult(IsUsable, Message)`
@@ -66,8 +79,11 @@ so the stream just ends and the chat marks the reply as stopped.
 
 The subsystem tests act as the chat will: a hand-written scripted implementation of `IAgentService` stands in for an AI
 provider, and the tests run a turn through the interface and read the readiness report, so that the contract is proven
-usable before any provider is written against it.
+usable before any provider is written against it. The Copilot CLI is found by a rule that is part of the design of the
+`CopilotCliLocator` unit; the subsystem test reproduces the layout of a real machine that has both the CLI and the VS
+Code shim, and checks that the CLI is found, that a machine with only the shim is told so, and that a path chosen in the
+settings is used.
 
-The sections of the units are added to this design as the units are built: the readiness checks and the Copilot CLI
-locator, the tool registry and the project tools, the instructions and the mapper of the payload to a provider message,
-the mapper of provider updates to events and the provider factory, and the service that implements `IAgentService`.
+The sections of the units are added to this design as the units are built: the readiness checks, the tool registry and
+the project tools, the instructions and the mapper of the payload to a provider message, the mapper of provider updates
+to events and the provider factory, and the service that implements `IAgentService`.

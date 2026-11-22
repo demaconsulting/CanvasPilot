@@ -133,6 +133,38 @@ public sealed class AgentSubsystemTests
     }
 
     /// <summary>
+    ///     Test that the subsystem finds the Copilot CLI that the user installed on a machine that also has the VS Code shim,
+    ///     explains a machine that has only the shim, and accepts a path from the settings on that machine, with the file
+    ///     system, environment, and programs replaced by the layout of the development machine.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_LocateCopilotCli_MachinesWithShim_FindsRealCliAndExplainsShimOnly()
+    {
+        // Arrange: the development machine, and a machine that has the shim only; the real CLI answers on both disks
+        var token = TestContext.Current.CancellationToken;
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        runner.AnswerVersion(DevMachine.ShimCli, "1.0.114");
+        var withCli = new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), DevMachine.CreateEnvironment());
+        var shimOnly = new CopilotCliLocator(
+            runner,
+            DevMachine.CreateFileSystem(),
+            new FakeEnvironment(DevMachine.LocalAppData + @"\Elsewhere", DevMachine.ShimFolder));
+
+        // Act: locate on both machines, and on the second with the real CLI chosen in the settings
+        var found = await withCli.LocateAsync(cancellationToken: token);
+        var notFound = await shimOnly.LocateAsync(cancellationToken: token);
+        var chosen = await shimOnly.LocateAsync(DevMachine.RealCli, cancellationToken: token);
+
+        // Assert: the real CLI is found and the shim is not; the shim-only machine is told so; the choice is accepted
+        Assert.Equal(DevMachine.RealCli, found.Path);
+        Assert.Equal(CopilotCliStatus.NotFound, notFound.Status);
+        Assert.Contains("Only the VS Code copilot shim was found", notFound.Message, StringComparison.Ordinal);
+        Assert.Equal(CopilotCliStatus.Found, chosen.Status);
+        Assert.Equal(DevMachine.RealCli, chosen.Path);
+    }
+
+    /// <summary>
     ///     Creates a payload that holds only text.
     /// </summary>
     /// <param name="text">The text of the message.</param>
