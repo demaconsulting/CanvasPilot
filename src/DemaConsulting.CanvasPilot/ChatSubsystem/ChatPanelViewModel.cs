@@ -28,6 +28,7 @@ using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
+using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
 
 namespace DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -44,8 +45,16 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         <b>The transcript.</b> The panel appends one <see cref="TranscriptEntryViewModel" /> for every
 ///         <see cref="ComposerViewModel.MessageSent" />, with the immutable message, so the transcript never shows a
 ///         draft. When the panel has an AI copilot, the message starts a turn, and the rows of the answer (the reply that
-///         streams, the tools it called, and the notices) follow the entry in the order things happen. The transcript is
-///         kept in memory only: it is dropped when the project changes or closes, and when the application ends.
+///         streams, the tools it called, and the notices) follow the entry in the order things happen.
+///     </para>
+///     <para>
+///         <b>History.</b> When the panel is given a history store and the project service, the text of every message and
+///         of what followed it is saved on this computer, outside the project, when its turn has ended, and is shown again
+///         as text rows when the project is opened. A restored message is a <see cref="RestoredEntryViewModel" />
+///         (words only: the history keeps no pictures and no payload). What was saved is given as text to the copilot with
+///         the next turn, so that the conversation can go on. <see cref="ClearHistoryCommand" /> deletes the saved history,
+///         empties the transcript, and makes the copilot forget the conversation. Without a store the transcript is in
+///         memory only and is dropped when the project changes or closes.
 ///     </para>
 ///     <para>
 ///         <b>A turn.</b> While a turn runs <see cref="IsCopilotBusy" /> is <see langword="true" />, the composer cannot
@@ -102,6 +111,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public const string WorkingText = "The copilot is working...";
 
     /// <summary>
+    ///     The notice that says that the chat history was cleared, which is not saved.
+    /// </summary>
+    public const string ClearedText = "Chat history cleared.";
+
+    /// <summary>
     ///     The composer of the message.
     /// </summary>
     private readonly ComposerViewModel _composer;
@@ -135,6 +149,21 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Optional logger for diagnostics.
     /// </summary>
     private readonly RollingFileLogger? _logger;
+
+    /// <summary>
+    ///     Where the text of the conversation is kept on this computer, or <see langword="null" /> for nowhere.
+    /// </summary>
+    private readonly IChatHistoryStore? _history;
+
+    /// <summary>
+    ///     The open project, which tells where its history is kept, or <see langword="null" /> for none.
+    /// </summary>
+    private readonly IProjectService? _projects;
+
+    /// <summary>
+    ///     The clock that dates the rows of a turn.
+    /// </summary>
+    private readonly TimeProvider _clock;
 
     /// <summary>
     ///     The handler of the composer's property changes, kept so that it can be removed.
@@ -177,6 +206,17 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     private Task _latestTurn = Task.CompletedTask;
 
     /// <summary>
+    ///     The history of the open project, or <see langword="null" /> when none is kept.
+    /// </summary>
+    private HistorySession? _session;
+
+    /// <summary>
+    ///     Counts the times the conversation was dropped or cleared, so that a turn that ends afterwards does not save rows
+    ///     that belong to what was dropped.
+    /// </summary>
+    private int _generation;
+
+    /// <summary>
     ///     Whether the panel was disposed.
     /// </summary>
     private bool _disposed;
@@ -193,7 +233,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// <param name="logger">Optional logger for diagnostics.</param>
     /// <param name="agent">The AI copilot that answers the messages, or <see langword="null" /> for none: a sent message is then only added to the transcript.</param>
     /// <param name="clock">The clock and timers of the turns, or <see langword="null" /> for the system's.</param>
-    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, and the clock is <see langword="null" />.</exception>
+    /// <param name="history">Where the text of the conversation is kept on this computer, or <see langword="null" /> for nowhere: the transcript is then only in memory.</param>
+    /// <param name="projects">The project service, which tells which project is open and so where its history is kept, or <see langword="null" /> for none: nothing is then saved or restored.</param>
+    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, the clock, the history store, and the project service is <see langword="null" />.</exception>
     public ChatPanelViewModel(
         ComposerViewModel composer,
         MarkRegistry marks,
@@ -202,7 +244,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         IDictationService? dictation = null,
         RollingFileLogger? logger = null,
         IAgentService? agent = null,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        IChatHistoryStore? history = null,
+        IProjectService? projects = null)
     {
         ArgumentNullException.ThrowIfNull(composer);
         ArgumentNullException.ThrowIfNull(marks);
@@ -214,6 +258,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _dictation = dictation;
         _agent = agent;
         _logger = logger;
+        _history = history;
+        _projects = projects;
+        _clock = clock ?? TimeProvider.System;
         Transcript = [];
         _sink = new TranscriptSink(Transcript);
         Transcript.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTranscript));
@@ -222,6 +269,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         StopCommand = new RelayCommand(Stop, () => IsCopilotBusy);
         OpenSettingsCommand = new RelayCommand(RaiseOpenSettings);
         CheckAgainCommand = new AsyncRelayCommand(RefreshReadinessAsync);
+        ClearHistoryCommand = new RelayCommand(ClearHistory);
 
         // With a copilot, a sent message starts a turn whose rows follow the entry of the message
         if (agent is not null)
@@ -241,6 +289,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer.Changed += _composerChanged;
         _annotation.MarkAdded += _markAdded;
         JoinAnnotationToComposer();
+
+        // A project that is already open has a saved conversation
+        BeginHistory();
     }
 
     /// <summary>
@@ -294,6 +345,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Gets the command that checks the copilot again, for the banner.
     /// </summary>
     public IAsyncRelayCommand CheckAgainCommand { get; }
+
+    /// <summary>
+    ///     Gets the command that clears the chat history: the saved history of the open project is deleted, the transcript
+    ///     is emptied, and the copilot forgets the conversation. There is no question first.
+    /// </summary>
+    public IRelayCommand ClearHistoryCommand { get; }
 
     /// <summary>
     ///     Gets a value indicating whether a turn of the copilot runs.
@@ -520,10 +577,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
                 break;
 
             case nameof(ComposerViewModel.ProjectFolder):
-                // Another project is another conversation: the transcript is only in memory and belongs to its project
+                // Another project is another conversation: the transcript belongs to its project, and the saved text of the
+                // new project, if there is any, comes back below
                 if (!string.Equals(_transcriptProject, _composer.ProjectFolder, StringComparison.OrdinalIgnoreCase))
                 {
                     _transcriptProject = _composer.ProjectFolder;
+                    _generation++;
 
                     // A turn of the old project is stopped, and what it still says is dropped until it has ended
                     if (_runner is { IsBusy: true })
@@ -533,6 +592,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
                     }
 
                     ClearTranscript();
+
+                    // The conversation of the new project, if it was saved, takes the place of the old one
+                    BeginHistory();
                 }
 
                 break;
@@ -540,15 +602,22 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     }
 
     /// <summary>
-    ///     Adds a sent message to the end of the transcript and, with a copilot, starts the turn that answers it.
+    ///     Adds a sent message to the end of the transcript and, with a copilot, starts the turn that answers it. The
+    ///     message and what follows it are saved when the turn has ended.
     /// </summary>
     /// <param name="message">The message.</param>
     private void OnMessageSent(SentMessage message)
     {
-        AppendEntry(message);
+        var session = _session;
+        var generation = _generation;
+        var start = AppendEntry(message);
         if (_runner is not null)
         {
-            _latestTurn = RunTurnAsync(_runner, message);
+            _latestTurn = RunTurnAsync(_runner, message, session, generation, start);
+        }
+        else
+        {
+            SaveTurn(session, generation, start);
         }
     }
 
@@ -558,17 +627,117 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// </summary>
     /// <param name="runner">The runner.</param>
     /// <param name="message">The message that was sent.</param>
+    /// <param name="session">The history that the turn belongs to, or <see langword="null" /> for none.</param>
+    /// <param name="generation">The generation of the conversation when the message was sent.</param>
+    /// <param name="start">The index in the transcript of the row of the message.</param>
     /// <returns>A task that completes when the turn has ended.</returns>
-    private async Task RunTurnAsync(ChatTurnRunner runner, SentMessage message)
+    private async Task RunTurnAsync(ChatTurnRunner runner, SentMessage message, HistorySession? session, int generation, int start)
     {
         try
         {
-            await runner.RunTurnAsync(message);
+            // The text of what was said before goes to the copilot with the message; the service gives it to a new
+            // provider session once and ignores it for a session that has it
+            var earlier = session is { Rows.Count: > 0 } ? ChatHistoryMapper.ToAgentTurns(session.Rows) : null;
+            var outcome = await runner.RunTurnAsync(message, earlier);
+            if (outcome != ChatTurnOutcome.Refused)
+            {
+                SaveTurn(session, generation, start);
+            }
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             _logger?.Log(LogLevel.Error, $"The turn of the copilot ended with {ex.GetType().Name}.");
         }
+    }
+
+    /// <summary>
+    ///     Saves the message of a turn and what followed it, unless the conversation was dropped or cleared meanwhile.
+    ///     A failure to save is a notice in the transcript, which is not saved, and never an exception.
+    /// </summary>
+    /// <param name="session">The history that the turn belongs to, or <see langword="null" /> for none.</param>
+    /// <param name="generation">The generation of the conversation when the message was sent.</param>
+    /// <param name="start">The index in the transcript of the row of the message.</param>
+    private void SaveTurn(HistorySession? session, int generation, int start)
+    {
+        if (session is null || _history is null || _disposed || generation != _generation || start >= Transcript.Count)
+        {
+            return;
+        }
+
+        var rows = ChatHistoryMapper.ToHistoryRows(Transcript.Skip(start), _clock.GetUtcNow());
+        session.Rows = ChatHistoryStore.Cap([.. session.Rows, .. rows]);
+        var result = _history.Save(session.Project, session.Rows);
+        if (!result.Succeeded)
+        {
+            _logger?.Log(LogLevel.Warning, "The chat history of the project could not be saved.");
+            Transcript.Add(new NoticeRowViewModel(NoticeSeverity.Error, result.Message));
+        }
+    }
+
+    /// <summary>
+    ///     Opens the saved conversation of the open project: its rows are shown as text and are what the copilot is given
+    ///     with the next turn. Nothing happens without a history store, a project service, or an open project.
+    /// </summary>
+    private void BeginHistory()
+    {
+        _session = null;
+        var folder = _composer.ProjectFolder;
+        if (_history is null || folder is null || _projects?.Current is not { } project || !IsSameFolder(project.FolderPath, folder))
+        {
+            return;
+        }
+
+        var rows = _history.Load(project);
+        _session = new HistorySession(project) { Rows = rows };
+        foreach (var row in rows)
+        {
+            Transcript.Add(ChatHistoryMapper.ToTranscriptRow(row));
+        }
+
+        if (rows.Count > 0)
+        {
+            _logger?.Log(LogLevel.Info, $"The chat history of the project was restored: {rows.Count} rows.");
+        }
+
+        OnPropertyChanged(nameof(HasTranscript));
+    }
+
+    /// <summary>
+    ///     Deletes the saved history of the open project, empties the transcript, and makes the copilot forget the
+    ///     conversation, so that nothing of what was said is left on the screen, on the disk, or with the provider. A turn
+    ///     that runs is stopped and what it still says is dropped.
+    /// </summary>
+    private void ClearHistory()
+    {
+        _generation++;
+        if (_runner is { IsBusy: true })
+        {
+            _sink.Discarding = true;
+            _runner.Stop();
+        }
+
+        ClearTranscript();
+        var session = _session;
+        var result = session is null ? ChatHistoryResult.Ok : _history!.Clear(session.Project);
+        _session = session is null ? null : new HistorySession(session.Project) { Rows = [] };
+        _agent?.ResetConversation();
+        Transcript.Add(result.Succeeded
+            ? new NoticeRowViewModel(NoticeSeverity.Information, ClearedText)
+            : new NoticeRowViewModel(NoticeSeverity.Error, result.Message));
+    }
+
+    /// <summary>
+    ///     Determines whether two paths name the same folder, without regard to case or a trailing separator.
+    /// </summary>
+    /// <param name="first">The first path.</param>
+    /// <param name="second">The second path.</param>
+    /// <returns><see langword="true" /> when they name the same folder.</returns>
+    private static bool IsSameFolder(string first, string second)
+    {
+        return string.Equals(
+            Path.TrimEndingDirectorySeparator(first),
+            Path.TrimEndingDirectorySeparator(second),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
@@ -602,10 +771,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Adds a sent message to the end of the transcript.
     /// </summary>
     /// <param name="message">The message.</param>
-    private void AppendEntry(SentMessage message)
+    /// <returns>The index of its row in the transcript.</returns>
+    private int AppendEntry(SentMessage message)
     {
         Transcript.Add(new TranscriptEntryViewModel(message, _composer.ProjectFolder, () => InspectorLauncher));
         OnPropertyChanged(nameof(HasTranscript));
+        return Transcript.Count - 1;
     }
 
     /// <summary>
@@ -620,6 +791,32 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
 
         Transcript.Clear();
         OnPropertyChanged(nameof(HasTranscript));
+    }
+
+    /// <summary>
+    ///     The saved conversation of the open project: which project it belongs to and the rows that are saved, which the
+    ///     panel keeps so that it can give them to the copilot and save them again with the rows of the next turn.
+    /// </summary>
+    private sealed class HistorySession
+    {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="HistorySession" /> class.
+        /// </summary>
+        /// <param name="project">The project.</param>
+        public HistorySession(ProjectInfo project)
+        {
+            Project = project;
+        }
+
+        /// <summary>
+        ///     Gets the project that the history belongs to.
+        /// </summary>
+        public ProjectInfo Project { get; }
+
+        /// <summary>
+        ///     Gets or sets the rows that are saved, oldest first.
+        /// </summary>
+        public IReadOnlyList<ChatHistoryRow> Rows { get; set; } = [];
     }
 
     /// <summary>

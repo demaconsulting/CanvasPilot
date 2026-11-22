@@ -35,6 +35,7 @@ using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
+using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
@@ -282,9 +283,12 @@ internal sealed class ScriptedAgentService : IAgentService
     }
 
     /// <inheritdoc />
-    public void ResetConversation()
-    {
-    }
+    public void ResetConversation() => ResetCount++;
+
+    /// <summary>
+    ///     Gets the number of times the conversation was reset.
+    /// </summary>
+    public int ResetCount { get; private set; }
 
     /// <inheritdoc />
     public void Dispose()
@@ -327,6 +331,60 @@ internal sealed class ScriptedAgentService : IAgentService
 }
 
 /// <summary>
+///     A project service for the chat UI tests that reports one project as open and does nothing else.
+/// </summary>
+internal sealed class FixedProjectService : IProjectService
+{
+    /// <summary>
+    ///     The handlers of the change of the project, which is never raised.
+    /// </summary>
+    private EventHandler? _changed;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="FixedProjectService" /> class.
+    /// </summary>
+    /// <param name="current">The project that is open.</param>
+    public FixedProjectService(ProjectInfo current)
+    {
+        Current = current;
+    }
+
+    /// <inheritdoc />
+    public event EventHandler? CurrentChanged
+    {
+        add => _changed += value;
+        remove => _changed -= value;
+    }
+
+    /// <inheritdoc />
+    public ProjectInfo? Current { get; }
+
+    /// <inheritdoc />
+    public string? ValidateProjectName(string? name) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public string? ValidateParentFolder(string? parentFolder) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public string? ValidateNewProject(string? parentFolder, string? name) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task<ProjectResult> CreateAsync(string parentFolder, string name, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task<ProjectResult> OpenAsync(string projectFile, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task<ProjectResult> SaveAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public Task<ProjectResult> SetActiveStyleKitAsync(string? styleKitId, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+
+    /// <inheritdoc />
+    public void Close() => throw new NotSupportedException();
+}
+
+/// <summary>
 ///     A window with the chat panel, its composer, the annotation layer, and a project folder, for the headless tests of
 ///     the panel. Only dictation, the builder of sent messages, the pictures of marks, and, when a test asks for one, the
 ///     AI copilot are replaced.
@@ -338,25 +396,29 @@ internal sealed class ChatHarness : IDisposable
     /// </summary>
     /// <param name="openProject"><see langword="true" /> to open the project, which makes the message editable.</param>
     /// <param name="agent">The AI copilot of the panel, or <see langword="null" /> for none.</param>
-    public ChatHarness(bool openProject = true, IAgentService? agent = null)
+    /// <param name="history">The store of the chat history, or <see langword="null" /> for none; it needs the project to be open.</param>
+    /// <param name="prepare">Called with the project folder before the project is opened, to make what the test needs in it or in the history.</param>
+    public ChatHarness(bool openProject = true, IAgentService? agent = null, IChatHistoryStore? history = null, Action<ProjectInfo>? prepare = null)
     {
         Folder = Directory.CreateTempSubdirectory("canvaspilot-ui-chat-").FullName;
         Project = Path.Combine(Folder, "project");
         Directory.CreateDirectory(Project);
+        ProjectInfo = new ProjectInfo("Demo", Project, Path.Combine(Project, "Demo.canvaspilot"), new ProjectDocument { Name = "Demo" });
+        prepare?.Invoke(ProjectInfo);
         Marks = new MarkRegistry();
         Dictation = new ScriptedDictationService();
         Picture = AnnotationUiPictures.Picture();
         Composer = new ComposerViewModel(new TextPayloadBuilder(), Marks, Dictation);
         Annotation = new AnnotationOverlayViewModel(Marks, new FixedPictureSource { CurrentImage = Picture }, _ => { });
-        Chat = new ChatPanelViewModel(Composer, Marks, Annotation, new StubMarkImageComposer(), Dictation, agent: agent);
-        View = new ChatPanelView { DataContext = Chat };
-        Window = new Window { Width = 420, Height = 640, Content = View };
-        Window.Show();
         if (openProject)
         {
             Composer.SetProject(Project);
         }
 
+        Chat = new ChatPanelViewModel(Composer, Marks, Annotation, new StubMarkImageComposer(), Dictation, agent: agent, history: history, projects: new FixedProjectService(ProjectInfo));
+        View = new ChatPanelView { DataContext = Chat };
+        Window = new Window { Width = 420, Height = 640, Content = View };
+        Window.Show();
         Layout();
     }
 
@@ -369,6 +431,11 @@ internal sealed class ChatHarness : IDisposable
     ///     Gets the folder of the project.
     /// </summary>
     public string Project { get; }
+
+    /// <summary>
+    ///     Gets the project that the project service of the panel reports as open.
+    /// </summary>
+    public ProjectInfo ProjectInfo { get; }
 
     /// <summary>
     ///     Gets the marks of the draft.
@@ -444,6 +511,16 @@ internal sealed class ChatHarness : IDisposable
     ///     Gets the notices that are shown in the transcript.
     /// </summary>
     public IReadOnlyList<NoticeRowView> Notices => FindAll<NoticeRowView>("NoticeRow");
+
+    /// <summary>
+    ///     Gets the restored messages that are shown in the transcript.
+    /// </summary>
+    public IReadOnlyList<RestoredEntryView> RestoredEntries => FindAll<RestoredEntryView>("RestoredEntry");
+
+    /// <summary>
+    ///     Gets the button that clears the chat history.
+    /// </summary>
+    public Button ClearHistoryButton => Find<Button>("ChatClearHistoryButton");
 
     /// <summary>
     ///     Gets the stop button.

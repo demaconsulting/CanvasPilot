@@ -24,6 +24,7 @@ using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
+using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -354,6 +355,97 @@ public sealed class ChatSubsystemTests : IDisposable
         Assert.False(panel.HasReadinessIssue);
         Assert.Equal(string.Empty, panel.ReadinessMessage);
     }
+
+    /// <summary>
+    ///     Test that a full scripted turn in a project made by the real project service saves its words on this computer
+    ///     outside the project, that a panel made later in the same project shows them as text and gives them to the copilot,
+    ///     that Clear deletes them and resets the copilot, and that through all of it the project folder holds only the
+    ///     files that were meant to be there: the project file, its data folder (empty), and the file that the copilot
+    ///     created.
+    /// </summary>
+    [Fact]
+    public async Task ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject()
+    {
+        // Arrange: a project made by the real project service, and the real store in a folder of the user's computer
+        var token = TestContext.Current.CancellationToken;
+        var parent = Directory.CreateDirectory(Path.Combine(_root, "parent")).FullName;
+        var projects = new ProjectService();
+        var created = await projects.CreateAsync(parent, "Demo", token);
+        var info = Assert.IsType<ProjectInfo>(created.Project);
+        var historyRoot = Path.Combine(_root, "local", "history");
+        var store = new ChatHistoryStore(historyRoot);
+        var expectedInProject = new[] { ".canvaspilot", "Demo.canvaspilot", "box.svg" };
+
+        // Act: a scripted turn in which the copilot creates a file, in a first panel
+        var marks = new MarkRegistry();
+        var markImages = new MarkImageComposer(_renderer);
+        using (var composer = new ComposerViewModel(new PayloadBuilder(markImages), marks, new FakeDictationService()))
+        using (var annotation = new AnnotationOverlayViewModel(marks, new FakeRenderedImageSource(), _ => { }))
+        using (var agent = new ControlledAgentService())
+        {
+            composer.SetProject(info.FolderPath);
+            using var panel = new ChatPanelViewModel(composer, marks, annotation, markImages, agent: agent, clock: new ManualTimeProvider(), history: store, projects: projects);
+            composer.InsertTyped("Draw a box");
+            await panel.SendCommand.ExecuteAsync(null);
+            await File.WriteAllTextAsync(Path.Combine(info.FolderPath, "box.svg"), "<svg xmlns=\"http://www.w3.org/2000/svg\" />", token);
+            agent.Emit(
+                new AgentEvent.TextDelta("Done."),
+                new AgentEvent.ToolStarted("c1", "project_write", "path=box.svg"),
+                new AgentEvent.FileWritten("box.svg", false),
+                new AgentEvent.ToolFinished("c1", "project_write", true, "File 'box.svg' created.", false),
+                new AgentEvent.Completed());
+            await panel.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(10), token);
+        }
+
+        // Assert: the words are saved below the root with the sidecar, and the project holds only the expected files
+        var folder = Path.Combine(historyRoot, ProjectHistoryKey.Compute(info.FilePath));
+        Assert.Equal(["history.json", "project.json"], Directory.GetFiles(folder).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+        Assert.Equal(expectedInProject, ProjectEntries(info.FolderPath));
+        Assert.Empty(Directory.GetFileSystemEntries(Path.Combine(info.FolderPath, ".canvaspilot")));
+        Assert.Equal([ChatHistoryRowKind.User, ChatHistoryRowKind.Assistant, ChatHistoryRowKind.Tool], store.Load(info).Select(row => row.Kind));
+
+        // Act: the application is started again: a second panel in the same project, and a message
+        var marks2 = new MarkRegistry();
+        using var composer2 = new ComposerViewModel(new PayloadBuilder(markImages), marks2, new FakeDictationService());
+        using var annotation2 = new AnnotationOverlayViewModel(marks2, new FakeRenderedImageSource(), _ => { });
+        using var agent2 = new ControlledAgentService();
+        composer2.SetProject(info.FolderPath);
+        using var panel2 = new ChatPanelViewModel(composer2, marks2, annotation2, markImages, agent: agent2, clock: new ManualTimeProvider(), history: store, projects: projects);
+
+        // Assert: the earlier conversation is there as text, and it is not a message of this session
+        Assert.Equal(
+            [typeof(RestoredEntryViewModel), typeof(AssistantReplyViewModel), typeof(ToolActivityRowViewModel)],
+            panel2.Transcript.Select(row => row.GetType()));
+        Assert.Empty(panel2.SentEntries);
+        composer2.InsertTyped("Now a circle");
+        await panel2.SendCommand.ExecuteAsync(null);
+        agent2.Emit(new AgentEvent.Completed());
+        await panel2.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(10), token);
+
+        // Assert: the copilot was given the saved words with the message, and the project is as it was
+        var restored = Assert.Single(agent2.Requests).RestoredHistory;
+        Assert.Equal(new AgentHistoryTurn(AgentHistoryRole.User, "Draw a box"), restored[0]);
+        Assert.Equal(new AgentHistoryTurn(AgentHistoryRole.Assistant, "Done."), restored[1]);
+        Assert.Equal(expectedInProject, ProjectEntries(info.FolderPath));
+
+        // Act: Clear chat history
+        panel2.ClearHistoryCommand.Execute(null);
+
+        // Assert: the history is gone from the computer, the copilot forgot the conversation, and the project is as it was
+        Assert.False(Directory.Exists(folder));
+        Assert.Empty(store.Load(info));
+        Assert.Equal(1, agent2.ResetCount);
+        Assert.Equal(expectedInProject, ProjectEntries(info.FolderPath));
+        Assert.Empty(Directory.EnumerateFiles(info.FolderPath, "history.json*", SearchOption.AllDirectories));
+    }
+
+    /// <summary>
+    ///     Lists the names of what is directly in a project folder, in order.
+    /// </summary>
+    /// <param name="folder">The folder of the project.</param>
+    /// <returns>The names.</returns>
+    private static string[] ProjectEntries(string folder) =>
+        [.. Directory.GetFileSystemEntries(folder).Select(entry => Path.GetFileName(entry)).Order(StringComparer.Ordinal)];
 
     /// <summary>
     ///     Draws a file in the project and returns its picture.
