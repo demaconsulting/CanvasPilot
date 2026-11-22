@@ -23,6 +23,7 @@ using DemaConsulting.AgentKit.Core;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using Microsoft.Extensions.AI;
 
@@ -249,6 +250,66 @@ public sealed class AgentSubsystemTests
         finally
         {
             Directory.Delete(project, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that the project tools work on a real project as the copilot meets them: a drawing is written, listed, read,
+    ///     replaced directly, and drawn by the real render service into a picture; nothing is kept in the project but the
+    ///     drawing; every path that leaves the project or reaches the project file is refused; and the shell is told of each
+    ///     write with the path of the file relative to the project.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject()
+    {
+        // Arrange: a project folder with a project file, a secret beside it, and a registry supplied by the project tools
+        var token = TestContext.Current.CancellationToken;
+        var root = Directory.CreateTempSubdirectory("canvaspilot-agent-project-tools-").FullName;
+        try
+        {
+            var project = Directory.CreateDirectory(Path.Combine(root, "project")).FullName;
+            var projectFile = Path.Combine(project, "Brochure.canvaspilot");
+            await File.WriteAllTextAsync(projectFile, "PROJECT-FILE", token);
+            await File.WriteAllTextAsync(Path.Combine(root, "secret.txt"), "SECRET", token);
+            var written = new List<FileWrittenEventArgs>();
+            var projectTools = new ProjectTools(new ImageRenderService());
+            projectTools.FileWritten += (_, args) => written.Add(args);
+            var registry = new AgentToolRegistry(KnowledgeTools.CreateAll(KnowledgeCatalog.Default), [], projectTools.CreatePacks);
+            var tools = registry.CreateTools(new AgentToolContext(project), new HashSet<string>()).ToDictionary(tool => tool.Name);
+            const string drawing = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"20\"><rect width=\"40\" height=\"20\" fill=\"#2563EB\"/></svg>";
+
+            // Act: write a drawing, list, read it, replace it, draw it, and try to leave the project
+            var create = await tools["project_write"].InvokeAsync(new AIFunctionArguments { ["path"] = "art/box.svg", ["content"] = drawing }, token);
+            var list = await tools["project_list"].InvokeAsync(new AIFunctionArguments(), token);
+            var read = await tools["project_read"].InvokeAsync(new AIFunctionArguments { ["path"] = "art/box.svg" }, token);
+            var replace = await tools["project_write"].InvokeAsync(new AIFunctionArguments { ["path"] = "art/box.svg", ["content"] = drawing + "\n" }, token);
+            var picture = await tools["render_image"].InvokeAsync(new AIFunctionArguments { ["path"] = "art/box.svg" }, token);
+            var escape = await tools["project_write"].InvokeAsync(new AIFunctionArguments { ["path"] = "../planted.txt", ["content"] = "x" }, token);
+            var overProjectFile = await tools["project_write"].InvokeAsync(new AIFunctionArguments { ["path"] = "Brochure.canvaspilot", ["content"] = "x" }, token);
+            var readSecret = await tools["project_read"].InvokeAsync(new AIFunctionArguments { ["path"] = Path.Combine(root, "secret.txt") }, token);
+
+            // Assert: the tools answer as designed, the shell is told of both writes, and nothing else is in the project
+            Assert.Equal(
+                ["canvasnet_help", "project_list", "project_read", "project_write", "render_image"],
+                tools.Keys.ToArray());
+            Assert.Contains("created", ToolAnswers.Text(create), StringComparison.Ordinal);
+            Assert.Contains("art/box.svg (", ToolAnswers.Text(list), StringComparison.Ordinal);
+            Assert.Equal(drawing, ToolAnswers.Text(read));
+            Assert.Contains("replaced", ToolAnswers.Text(replace), StringComparison.Ordinal);
+            Assert.NotNull(ToolAnswers.Picture(picture));
+            Assert.Contains("40 x 20", ToolAnswers.Text(picture), StringComparison.Ordinal);
+            Assert.DoesNotContain("created", ToolAnswers.Text(escape) + ToolAnswers.Text(overProjectFile), StringComparison.Ordinal);
+            Assert.DoesNotContain("SECRET", ToolAnswers.Text(readSecret), StringComparison.Ordinal);
+            Assert.Equal([("art/box.svg", true), ("art/box.svg", false)], written.Select(args => (args.RelativePath, args.Created)).ToArray());
+            Assert.False(File.Exists(Path.Combine(root, "planted.txt")));
+            Assert.Equal("PROJECT-FILE", await File.ReadAllTextAsync(projectFile, token));
+            Assert.Equal(
+                ["Brochure.canvaspilot", "art", Path.Combine("art", "box.svg")],
+                Directory.EnumerateFileSystemEntries(project, "*", SearchOption.AllDirectories).Select(entry => Path.GetRelativePath(project, entry)).Order(StringComparer.Ordinal).ToArray());
+        }
+        finally
+        {
+            Directory.Delete(root, true);
         }
     }
 

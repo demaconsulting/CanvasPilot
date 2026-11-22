@@ -557,7 +557,7 @@ internal sealed class ProjectFilesToolPack : IToolPack
     }
 
     /// <summary>
-    ///     Writes a number of bytes as kibibytes, rounded up.
+    ///     Writes a number of bytes as KiB (units of 1,024 bytes), rounded up.
     /// </summary>
     /// <param name="bytes">The number of bytes.</param>
     /// <returns>The number of KiB as text.</returns>

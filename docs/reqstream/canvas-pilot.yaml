@@ -427,7 +427,9 @@ sections:
       - id: CanvasPilot-System-ConfineCopilotToProject
         title: >-
           The AI copilot shall act only through CanvasPilot's own tools, which are confined to the project folder, so
-          that it can read and change only the files of the project, with the limits that the tools set.
+          that it can read and change only the files of the project, with the limits that the tools set: it writes only
+          text image sources and small data files, and never the data folder of the application, the project file, or
+          the style kits of the project.
         tags: [system]
         justification: |
           A language model that writes files is only as safe as the paths and sizes its tools allow. Offering the model
@@ -436,11 +438,13 @@ sections:
           and their own limits to this requirement; the confining library it rests on is verified as an OTS item.
         children:
           - CanvasPilot-Agent-ConfineToolsToProject
+          - CanvasPilot-Agent-ConfineProjectFileTools
           - CanvasPilot-OTS-AgentKit-ConfineToolPaths
           - CanvasPilot-OTS-AgentKit-ComposeToolPacks
           - CanvasPilot-OTS-AgentKit-BoundToolResults
         tests:
           - CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach
+          - CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse
 
       - id: CanvasPilot-System-ConverseWithCopilot
         title: >-
@@ -454,6 +458,7 @@ sections:
           subsystems add the behavior of the application on top of them and link to this requirement.
         children:
           - CanvasPilot-Agent-RunTurnAsEvents
+          - CanvasPilot-Agent-WorkOnProjectFiles
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
           - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces

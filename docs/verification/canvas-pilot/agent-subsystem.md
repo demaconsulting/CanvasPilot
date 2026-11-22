@@ -19,7 +19,8 @@ are not part of this document until then.
 
 ### Test Environment
 
-N/A - standard test environment. The tests use no files, network, display, or external services.
+N/A - standard test environment. The tests use no network, display, or external services. The tests of the tools make a
+temporary project folder and delete it.
 
 ### Acceptance Criteria
 
@@ -35,6 +36,10 @@ N/A - standard test environment. The tests use no files, network, display, or ex
 - The tools built for a project are only the application's own tools, in a fixed order, the knowledge tool answers from
   the real cards, and the policy that every pack receives permits a picture file of the project and refuses the data
   folder, a project file, and every place outside the project.
+- The project tools, supplied to the registry, write a drawing into a real project, list and read it, replace it
+  directly, and draw it with the real render service; the shell is told of both writes; nothing but the drawing is added
+  to the project; and a path that climbs out of the project, the project file, and a secret beside the project are
+  refused.
 
 ### Test Scenarios
 
@@ -68,6 +73,16 @@ project folder the tools are `canvasnet_help`, `style_get`, and the pack's tool,
 tool answers with the index of the real cards; and the policy that the pack received permits writing a picture file in
 the project and refuses the data folder, a project file, and a path that climbs out of the project. This scenario is
 tested by `AgentSubsystem_ConfineTools_ProjectFolder_OffersOnlyApplicationToolsUnderTheConfiningPolicy`.
+
+**AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject**: A registry over the real drawing
+knowledge is supplied by the project tools, which use the real render service, for a real project folder with a project
+file and a secret beside it. A drawing is written into a new folder (the answer says created), the project is listed,
+the drawing is read back exactly, it is replaced (the answer says replaced), and it is drawn into a picture of 40 by 20
+pixels. Then a write above the project folder, a write over the project file, and a read of the secret by its full path
+are tried, and none of them has an effect. The shell was told of the two writes with the relative path and the new flag,
+the secret and the project file are as they were, and the project holds only the project file and the folder with the
+drawing. This scenario is tested by
+`AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject`.
 
 **AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
 good Copilot CLI and a GitHub CLI under the program files that prints a token, and a scripted Ollama server has one

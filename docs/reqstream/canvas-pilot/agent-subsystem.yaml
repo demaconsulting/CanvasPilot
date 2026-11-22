@@ -98,6 +98,51 @@ sections:
             tests:
               - AgentSubsystem_ConfineTools_ProjectFolder_OffersOnlyApplicationToolsUnderTheConfiningPolicy
 
+          - id: CanvasPilot-Agent-ConfineProjectFileTools
+            title: >-
+              The Agent subsystem shall give the copilot tools that list, read, write, and draw files of the project and
+              that are confined to the project folder, so that no path leaves the project or goes through a link, a name
+              that means something else is refused, the data folder, the project files, and the style kits of the project
+              are never written, and only text image sources and small data files are written.
+            justification: |
+              Writing files is the one power of the copilot that can hurt the user, and the application asks nothing before
+              it replaces a file. The tools therefore decide, in one place and for every path, what may be touched, and they
+              do not rest on the path policy of the AI library alone, which does not follow links. The example images of the
+              active style kit are the one place outside the project that may be drawn, read only and images only.
+            children:
+              - CanvasPilot-ProjectTools-ConfinePaths
+              - CanvasPilot-ProjectTools-RefuseDisguisedNames
+              - CanvasPilot-ProjectTools-RefuseLinks
+              - CanvasPilot-ProjectTools-LimitWrittenFiles
+              - CanvasPilot-ProjectTools-ProtectProjectFiles
+              - CanvasPilot-ProjectTools-RenderStyleKitExamples
+            tests:
+              - AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject
+
+          - id: CanvasPilot-Agent-WorkOnProjectFiles
+            title: >-
+              The Agent subsystem shall let the copilot work on the files of the project through tools that list the files,
+              read a text file, create or replace a text file directly and say which, tell the shell which file was written,
+              and draw a picture that comes back scaled for a model, with a failed drawing answered as text, and shall log
+              only the metadata of each call.
+            justification: |
+              The copilot draws by writing the source of a picture and looking at the result, so it needs to see the
+              project, to write a file, and to see what it wrote. Replacing a file directly is the user's decision, so the
+              change is made visible instead: in the answer, in the chat, and in the project explorer. The log may say what
+              happened and never what was in a file or a message.
+            children:
+              - CanvasPilot-ProjectTools-OfferTools
+              - CanvasPilot-ProjectTools-ListFiles
+              - CanvasPilot-ProjectTools-ReadTextFiles
+              - CanvasPilot-ProjectTools-WriteDirectly
+              - CanvasPilot-ProjectTools-ReportCreatedOrReplaced
+              - CanvasPilot-ProjectTools-RenderPictures
+              - CanvasPilot-ProjectTools-ScalePictures
+              - CanvasPilot-ProjectTools-AnswerRenderFailures
+              - CanvasPilot-ProjectTools-LogMetadataOnly
+            tests:
+              - AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject
+
           - id: CanvasPilot-Agent-LocateCopilotCli
             title: >-
               The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the

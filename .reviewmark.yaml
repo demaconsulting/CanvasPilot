@@ -191,6 +191,30 @@ reviews:
       - "test/**/AgentSubsystem/DescriptorToolPackTests.cs"
       - "test/**/AgentSubsystem/ToolTestDoubles.cs"
 
+  - id: CanvasPilot-Agent-ProjectTools
+    title: Review of CanvasPilot ProjectTools unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/project-tools.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/project-tools.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/project-tools.md"
+      - "src/**/AgentSubsystem/FileWrittenEventArgs.cs"
+      - "src/**/AgentSubsystem/ImageScaler.cs"
+      - "src/**/AgentSubsystem/ProjectFileKinds.cs"
+      - "src/**/AgentSubsystem/ProjectFilesToolPack.cs"
+      - "src/**/AgentSubsystem/ProjectPathGuard.cs"
+      - "src/**/AgentSubsystem/ProjectTools.cs"
+      - "src/**/AgentSubsystem/RenderImageToolPack.cs"
+      - "src/**/AgentSubsystem/ToolCallLog.cs"
+      - "test/**/AgentSubsystem/ProjectToolsSupportTests.cs"
+      - "test/**/AgentSubsystem/ProjectToolsTestDoubles.cs"
+      - "test/**/AgentSubsystem/ProjectToolsTests.cs"
+      - "test/**/AgentSubsystem/RenderImageToolTests.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces

@@ -30,6 +30,8 @@ This document covers the verification design for the following software items:
       gated runtime; the Ollama server, model, and context window) and says what to do
     - **AgentToolRegistry** — builds the tools of the copilot for one project, confined to the project folder, from the
       drawing knowledge and style tool descriptions, the project packs, and the optional pack catalog
+    - **ProjectTools** — the tools with which the copilot lists, reads, writes, and draws the files of the project:
+      confined to the project folder, links refused, files replaced directly, pictures kept in memory
   - **Annotation** subsystem
     - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
     - **MarkSourceResolver** — the parts of the source file under a mark

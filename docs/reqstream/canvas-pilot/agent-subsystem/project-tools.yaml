@@ -1,0 +1,252 @@
+---
+# Software Unit Requirements for the ProjectTools Unit
+#
+# The ProjectTools unit gives the AI copilot its hands on the project: it lists, reads, and writes the files of the project
+# and draws pictures of them. Every tool is confined to the project folder by the path policy of the tool registry, and the
+# tools themselves refuse what the policy does not see (links, names that mean something else). Writing is direct: a file is
+# created or replaced at once, the application keeps no other copy and asks nothing, and the answer and an event say what
+# happened so that the change is visible. Pictures are drawn in memory, scaled for a model, and never saved. Its supporting
+# types (the two tool packs, the path guard, the file kinds, the picture scaler, the log of calls, and the event arguments)
+# are part of the unit.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: ProjectTools Requirements
+            requirements:
+              - id: CanvasPilot-ProjectTools-OfferTools
+                title: >-
+                  The ProjectTools shall offer the tools project_list, project_read, project_write, and render_image as two
+                  tool packs (the prefixes project and render) that the tool registry takes as its supplier of project packs
+                  and that are given the confining path policy, shall describe each tool and each argument to the model in
+                  words, and shall refuse a missing renderer or context.
+                justification: |
+                  The copilot can only work on the files of the project through these tools, so they must come in the form
+                  that the registry composes and confines, with the names that do not clash with the tools of the Copilot
+                  CLI or of the AI library. The words of the description are the only manual the model has.
+                tests:
+                  - ProjectTools_ArgumentsAreChecked_NullRendererAndContext_AreRefused
+                  - ProjectTools_CreatePacks_AsTheRegistrySupplier_OffersTheFourToolsAfterTheBuiltInTools
+
+              - id: CanvasPilot-ProjectTools-ConfinePaths
+                title: >-
+                  The ProjectTools shall let a tool use a path only when the path policy of the project permits it and the
+                  path is inside the project folder, and shall refuse, with a sentence and without an exception, a path that
+                  is empty, climbs out with .., is a full path outside the project, is a network path, is relative to a
+                  drive, or names a folder beside the project that begins like it, for reading, writing, listing, and
+                  drawing.
+                justification: |
+                  A language model that writes files is only as safe as the paths its tools allow. The policy of the AI
+                  library decides which locations are granted; the tools check once more that the result is inside the
+                  project, so that the guarantee does not rest on one library alone. A refusal is an answer, because a model
+                  corrects itself from an answer and not from an exception.
+                tests:
+                  - ProjectTools_Read_EscapingPaths_AreRefusedForEveryClass
+                  - ProjectTools_Read_AbsolutePathOutsideTheProject_IsRefused
+                  - ProjectTools_Write_EscapingPaths_AreRefusedForEveryClassAndNothingIsWritten
+                  - ProjectTools_Write_AbsolutePathsOutsideTheProject_AreRefused
+                  - ProjectTools_List_EscapingFolderAndLinks_AreRefusedAndNotFollowed
+                  - ProjectTools_Calls_MissingOrEmptyPath_AreAnswers
+                  - RenderImageTool_Render_RefusedFilesAndEscapingPaths_AreNeverDrawn
+                  - RenderImageTool_Render_MissingPath_IsAnAnswer
+                  - ProjectPathGuard_IsInside_FolderBesideWithTheSamePrefix_IsOutside
+                  - ProjectPathGuard_TryResolveUnder_PathsOutsideTheFolder_AreRefused
+
+              - id: CanvasPilot-ProjectTools-RefuseDisguisedNames
+                title: >-
+                  The ProjectTools shall refuse a name in a path that means something other than the file it seems to name:
+                  a name with a colon (a hidden stream of a file), a name that ends with a dot or a space, a short 8.3 name,
+                  and the name of a device.
+                justification: |
+                  The path policy denies the data folder and the project file by their long names. Windows has other
+                  spellings of the same files (a short name such as CANVAS~1) and of other things (a stream of a file, a
+                  device such as NUL), and a model that guesses them must not get past the policy.
+                tests:
+                  - ProjectPathGuard_TryResolveUnder_Names_AreCheckedForSpellingsThatMeanSomethingElse
+                  - ProjectTools_Read_EscapingPaths_AreRefusedForEveryClass
+                  - ProjectTools_Write_EscapingPaths_AreRefusedForEveryClassAndNothingIsWritten
+
+              - id: CanvasPilot-ProjectTools-RefuseLinks
+                title: >-
+                  The ProjectTools shall refuse to read, write, list, or draw anything through a link in the project (a
+                  folder junction, a symbolic link to a folder, or a symbolic link to a file) wherever it is in the path,
+                  shall not list a link, and shall replace a file that has a second name outside the project as a name
+                  without writing through to the other name.
+                justification: |
+                  The path policy of the AI library judges a path by its spelling and does not follow links, so a link
+                  inside the project that leads outside it is permitted by the policy. Whoever made the link, a model must
+                  not use it to leave the project, so the tools look at every part of the path themselves. A file with a
+                  second name (a hard link) cannot be told from a file without one, so the write replaces the name and
+                  leaves the other name as it was.
+                tests:
+                  - ProjectTools_Read_ThroughJunction_IsRefused
+                  - ProjectTools_Write_ThroughJunction_IsRefusedAndNothingIsWrittenOutside
+                  - ProjectTools_Write_HardLinkToAFileOutside_IsNotWrittenThrough
+                  - ProjectTools_List_EscapingFolderAndLinks_AreRefusedAndNotFollowed
+                  - ProjectPathGuard_IsLink_JunctionIsALinkAndOrdinaryEntriesAreNot
+                  - ProjectPathGuard_FindLink_DanglingJunctionAndNestedPath_NamesTheFirstLink
+
+              - id: CanvasPilot-ProjectTools-ListFiles
+                title: >-
+                  The ProjectTools shall list the files of the project, or of one folder of it, with their paths relative to
+                  the project folder, their sizes, and whether CanvasNet can draw them, in a fixed order with the files of a
+                  folder before its subfolders, shall leave out the data folder, the project files, folders whose names
+                  begin with a dot, hidden files, and links, and shall stop at 200 files and say that the list is not
+                  complete.
+                justification: |
+                  The model has to know what the project holds before it can change it, and it must not be told about the
+                  application's own files or be flooded by a large project. A fixed order makes the answer the same for the
+                  same project, and the note tells the model to ask for a folder.
+                tests:
+                  - ProjectTools_List_Project_ShowsRelativePathsSizesAndImageSourceFlagAndHidesApplicationFiles
+                  - ProjectTools_List_Folder_ShowsOnlyThatFolderAndRefusesAMissingOne
+                  - ProjectTools_List_MoreFilesThanTheCeiling_StopsAndSaysItIsNotComplete
+
+              - id: CanvasPilot-ProjectTools-ReadTextFiles
+                title: >-
+                  The ProjectTools shall read a file of the project as UTF-8 text, without a byte order mark, only when it is
+                  a text image source or a .csv, .json, or .txt file, is at most 64 KiB, and fits in one answer, and shall
+                  refuse a picture in a binary format (and point to render_image), another kind of file, a missing file, a
+                  folder, a file that is too large, and bytes that are not UTF-8, each with its reason.
+                justification: |
+                  The model reads the sources that a drawing is made of and the small data that it uses. Everything else
+                  would waste its context or cannot be read as text. A reason that names what to do instead lets the model
+                  take the next step.
+                tests:
+                  - ProjectTools_Read_TextFiles_ReturnTheirText
+                  - ProjectTools_Read_FilesThatAreNotSmallTextSources_AreRefusedWithTheReason
+                  - ProjectFileKinds_Classify_TextSourcesDataFilesAndBinaryPictures
+
+              - id: CanvasPilot-ProjectTools-LimitWrittenFiles
+                title: >-
+                  The ProjectTools shall write only a file whose name ends with the extension of a text image source (such
+                  as .svg, .mmd, .puml, .scad, or .vl.json) or with .csv, .json, or .txt, shall write at most 256 KiB of
+                  UTF-8 text into a file, counted in bytes, and shall leave the old file as it was when it refuses.
+                justification: |
+                  A model that writes into the user's folder must not be able to produce programs, scripts, or pictures that
+                  are not text, or to fill the disk. The kinds of file are those that a drawing is made of, and the ceiling
+                  is far above the size of any drawing source. A refused write must not damage what is there.
+                tests:
+                  - ProjectTools_Write_Extension_IsAllowedOnlyForTextImageSourcesAndSmallDataFiles
+                  - ProjectTools_Write_SizeCeiling_Is256KiBInBytesAndARefusedWriteLeavesTheOldFile
+                  - ProjectFileKinds_Classify_TextSourcesDataFilesAndBinaryPictures
+
+              - id: CanvasPilot-ProjectTools-ProtectProjectFiles
+                title: >-
+                  The ProjectTools shall never write the data folder of the application (.canvaspilot), a project file
+                  (*.canvaspilot), or a file in the styles folder of the project, which holds the style kits, at the top of
+                  the project or at any depth and in any letter case, shall say that style kit files cannot be written, and
+                  shall create folders only inside the project.
+                justification: |
+                  The data folder and the project file belong to the application, and a style kit belongs to the user, who
+                  made it with the style kit editor. The copilot may read them but must not change them, so that the
+                  application keeps working and the user's styles are not rewritten by a model.
+                tests:
+                  - ProjectTools_Write_ApplicationFilesAndStyleKits_AreNeverWritten
+                  - ProjectTools_Write_ExistingStyleKitFile_IsNotReplacedAndTheAnswerSaysWhy
+                  - ProjectTools_Write_NewFile_IsCreatedWithItsFoldersAndTheShellIsTold
+
+              - id: CanvasPilot-ProjectTools-WriteDirectly
+                title: >-
+                  The ProjectTools shall create a file or replace an existing file at once, without asking the user and
+                  without keeping a copy of the old content, shall write through a temporary file in the same folder that
+                  is removed in every case, shall leave the old file as it was when the write fails, and shall leave nothing
+                  in the project but the written file (no other folder, no other file, and no data folder that did not
+                  exist).
+                justification: |
+                  The user decided that the copilot replaces files directly, because drawings are kept in source control or
+                  copied before a session, and a question for every change would stop the conversation. The application
+                  therefore keeps nothing of its own in the project. Writing through a temporary file means that a failure
+                  never leaves half a file, and that nothing but the result is in the folder afterwards.
+                tests:
+                  - ProjectTools_Write_ExistingFile_IsReplacedDirectlyAndLeavesNothingElseInTheProject
+                  - ProjectTools_Write_NewFile_IsCreatedWithItsFoldersAndTheShellIsTold
+                  - ProjectTools_Write_BadRequestsAndFailures_AreAnswersAndLeaveTheOldFileAndNoTemporaryFile
+
+              - id: CanvasPilot-ProjectTools-ReportCreatedOrReplaced
+                title: >-
+                  The ProjectTools shall say in the answer of a write whether the file was created or replaced (with the old
+                  and new sizes), shall raise the event FileWritten with the path of the file relative to the project and
+                  whether it is new, never with the content, and shall not let a listener that fails fail the write.
+                justification: |
+                  Nothing is asked before a file is replaced, so the change must be plain afterwards: the model reads what it
+                  did, the chat shows the same words, and the shell selects the file in the project explorer so that the user
+                  sees where to look. A listener is outside the tool and cannot undo a write that has happened.
+                tests:
+                  - ProjectTools_Write_NewFile_IsCreatedWithItsFoldersAndTheShellIsTold
+                  - ProjectTools_Write_ExistingFile_IsReplacedDirectlyAndLeavesNothingElseInTheProject
+                  - ProjectTools_Write_ListenerThatThrows_DoesNotFailTheTool
+
+              - id: CanvasPilot-ProjectTools-RenderPictures
+                title: >-
+                  The ProjectTools shall draw an image source or picture of the project through the render service, with the
+                  project folder as the only folder that the drawing may read from, and shall return the picture as a PNG
+                  together with a text that has the size, the format, and every note of the renderer, without saving any
+                  file.
+                justification: |
+                  A model draws blind unless it can look at the result, and looking at the result of every change is how it
+                  corrects itself. The picture is kept in memory and goes straight into the answer, so that nothing but the
+                  files that the user asked for is written. The notes of the renderer say why a part of a picture is
+                  missing.
+                tests:
+                  - RenderImageTool_Render_ProjectFile_ReturnsThePngAndItsDescriptionAndWritesNoFile
+                  - RenderImageTool_Render_RealSvgWithTheRealRenderService_ReturnsARealScaledPng
+                  - RenderImageTool_Render_StyleKitInsideTheProject_IsDrawnAsAProjectFile
+
+              - id: CanvasPilot-ProjectTools-ScalePictures
+                title: >-
+                  The ProjectTools shall scale a picture down so that its longer side is at most 1280 pixels, keeping its
+                  proportions, shall not enlarge a smaller picture, shall make the picture smaller in steps when its PNG is
+                  larger than an answer may be, and shall refuse a picture that never fits.
+                justification: |
+                  A model takes in a picture of a limited size, and a larger one costs context for nothing. Averaging the
+                  pixels with their opacity keeps thin lines and transparent edges readable. A ceiling for the size of an
+                  answer is a ceiling, so a picture over it is made smaller or refused and never sent.
+                tests:
+                  - RenderImageTool_Render_LargePicture_IsScaledToAtMost1280PixelsAndSmallOnesAreNotEnlarged
+                  - RenderImageTool_Render_PngOverTheCeiling_IsMadeSmallerInStepsOrRefused
+                  - ImageScaler_FitWithin_SizesAreScaledByTheLongerSideAndSmallOnesAreKept
+                  - ImageScaler_FitWithin_Pixels_AreAveragedWeightedByOpacity
+                  - ImageScaler_FitWithin_BadArguments_AreRefused
+
+              - id: CanvasPilot-ProjectTools-AnswerRenderFailures
+                title: >-
+                  The ProjectTools shall answer a picture that cannot be drawn with the code, the message, and the hint of
+                  the renderer, shall answer a renderer that throws with a sentence that names only the type of the
+                  exception, and shall let only the cancellation of a stopped turn through as an exception.
+                justification: |
+                  A file with a syntax error is the normal case for a model that is learning to draw, and the error text is
+                  what it fixes the file from. The text of an exception can hold a path of the user's computer, so only its
+                  type is named. A stopped turn must stop.
+                tests:
+                  - RenderImageTool_Render_FailureOfTheRender_IsAnAnswerWithCodeMessageAndHint
+                  - RenderImageTool_Render_CanceledTurn_ThrowsCancellationAndDoesNotDraw
+
+              - id: CanvasPilot-ProjectTools-RenderStyleKitExamples
+                title: >-
+                  The ProjectTools shall draw an example image of the active style kit, given by its full path, with the
+                  folder of the kit as the only folder that the drawing may read from, shall decide this when the call is
+                  made from the kit that is active then, shall draw only image sources inside the kit folder and not through
+                  a link, and shall treat a kit that lies inside the project as part of the project.
+                justification: |
+                  The style tool shows the model the example images of the kit by their full paths, and the kit may be in a
+                  folder of the user or of the program, outside the project. Looking at an example is useful and harmless as
+                  long as the grant is the kit folder and images only. Reading the active kit at the call means that a kit
+                  that the user changes during the conversation applies at once.
+                tests:
+                  - RenderImageTool_Render_StyleKitExample_IsAllowedFromTheActiveKitFolderOnly
+                  - RenderImageTool_Render_StyleKitInsideTheProject_IsDrawnAsAProjectFile
+
+              - id: CanvasPilot-ProjectTools-LogMetadataOnly
+                title: >-
+                  The ProjectTools shall log each call as the name of the tool, the path of the file relative to the project
+                  (not for a refused request), a size, and the outcome, shall never log the content of a file or the words
+                  of a message, and shall not let a log that cannot be written fail a call.
+                justification: |
+                  Users attach the log to bug reports, and the copilot works on their drawings and words, so the log may say
+                  what happened and never what was in it. A call that has happened is not undone by a full disk.
+                tests:
+                  - ProjectTools_Log_CallsOfTheTools_RecordOnlyMetadata
+                  - ProjectTools_Log_LoggerThatCannotWrite_DoesNotFailTheTool

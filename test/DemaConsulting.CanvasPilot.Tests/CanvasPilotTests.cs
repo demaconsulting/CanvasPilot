@@ -290,6 +290,48 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the copilot's project tools, on a project that the project service created, write a drawing, replace it
+    ///     directly, and draw it, while the project file, the data folder, and every place outside the project stay as they
+    ///     were, the data folder stays empty (nothing is kept in it), and nothing but the drawing is added to the project.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse()
+    {
+        // Arrange: a project that the project service created, a secret beside it, and the project tools over the real renderer
+        var token = TestContext.Current.CancellationToken;
+        var parent = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "ProjectToolsDocuments")).FullName;
+        var project = (await new ProjectService().CreateAsync(parent, "Brochure", token)).Project!;
+        var projectFileText = await File.ReadAllTextAsync(project.FilePath, token);
+        await File.WriteAllTextAsync(Path.Combine(parent, "secret.svg"), "<svg/>", token);
+        var projectTools = new ProjectTools(new ImageRenderService());
+        var registry = new AgentToolRegistry(KnowledgeTools.CreateAll(KnowledgeCatalog.Default), [], projectTools.CreatePacks);
+        var tools = registry.CreateTools(new AgentToolContext(project.FolderPath), new HashSet<string>()).ToDictionary(tool => tool.Name);
+
+        // Act: create and replace a drawing, draw it, and try the project file, the data folder, and the way out
+        var first = await tools["project_write"].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["path"] = "cover.svg", ["content"] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>" }, token);
+        var second = await tools["project_write"].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["path"] = "cover.svg", ["content"] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"10\"/>" }, token);
+        var picture = await tools["render_image"].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["path"] = "cover.svg" }, token);
+        var refused = new List<string>();
+        foreach (var path in new[] { Path.GetFileName(project.FilePath), ".canvaspilot/backups/cover.svg", ".canvaspilot/notes.txt", "../secret.svg" })
+        {
+            refused.Add(ToolAnswers.Text(await tools["project_write"].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["path"] = path, ["content"] = "x" }, token)));
+        }
+
+        // Assert: created, then replaced, then drawn at the new size; every attempt on the application's files was refused;
+        // and the project holds only the drawing, its project file, and the empty data folder
+        Assert.Contains("created", ToolAnswers.Text(first), StringComparison.Ordinal);
+        Assert.Contains("replaced", ToolAnswers.Text(second), StringComparison.Ordinal);
+        Assert.Contains("20 x 10", ToolAnswers.Text(picture), StringComparison.Ordinal);
+        Assert.All(refused, answer => Assert.DoesNotContain("created", answer, StringComparison.Ordinal));
+        Assert.Equal(projectFileText, await File.ReadAllTextAsync(project.FilePath, token));
+        Assert.Equal("<svg/>", await File.ReadAllTextAsync(Path.Combine(parent, "secret.svg"), token));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(Path.Combine(project.FolderPath, ProjectDocument.DataFolderName)));
+        Assert.Equal(
+            [ProjectDocument.DataFolderName, Path.GetFileName(project.FilePath), "cover.svg"],
+            Directory.EnumerateFileSystemEntries(project.FolderPath).Select(entry => new FileInfo(entry).Name).Order(StringComparer.Ordinal).ToArray());
+    }
+
+    /// <summary>
     ///     Test that a user can create a project, close it, and open it again from the recent projects list, and
     ///     that an unusable project file is refused with a message.
     /// </summary>

@@ -487,6 +487,14 @@ project file and the data folder that the project service made, and a path that 
 is tested by
 `CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach`.
 
+**CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse**: On a project
+that the project service created, with a secret picture beside the project folder, the copilot's project tools create a
+drawing, replace it directly, and draw it at the new size. The project file, a file in the data folder (also under a
+`backups` name), and a path that climbs out to the secret are written without effect, each answer being a refusal.
+Afterwards the project file and the secret are unchanged, the data folder is still empty, and the project folder holds
+only the data folder, the project file, and the drawing. This scenario is tested by
+`CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse`.
+
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the
 image and the title names the project. The user changes the AI model name in the settings dialog and the

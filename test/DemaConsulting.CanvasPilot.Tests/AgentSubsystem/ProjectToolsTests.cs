@@ -52,7 +52,7 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
             "sub/Brochure.canvaspilot",
             "other.canvaspilot",
             "CANVAS~1/draft.txt",
-            "BROCHU~1.CAN",
+            "A~1.CAN",
             "notes.txt:hidden",
             "NUL",
             "con.txt",
@@ -322,7 +322,7 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
     ///     file, all of which lead outside the project and are permitted by the path policy of the AI library.
     /// </summary>
     [Fact]
-    public async Task ProjectTools_Read_ThroughJunctionAndSymbolicLinks_IsRefused()
+    public async Task ProjectTools_Read_ThroughJunction_IsRefused()
     {
         // Arrange: the secret behind a junction
         var secret = Path.Combine(Root, "secret");
@@ -352,12 +352,12 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
         var secret = Path.Combine(Root, "secret");
         Directory.CreateDirectory(secret);
         Put(Path.Combine(secret, "key.txt"), Secret);
-        Links.CreateFolderSymlinkOrSkip(Path.Combine(Project, "folderlink"), secret);
-        Links.CreateFileSymlinkOrSkip(Path.Combine(Project, "filelink.txt"), Path.Combine(Root, "outside.txt"));
+        Links.CreateFolderSymlinkOrSkip(Path.Combine(Project, "folder-link"), secret);
+        Links.CreateFileSymlinkOrSkip(Path.Combine(Project, "file-link.txt"), Path.Combine(Root, "outside.txt"));
 
         // Act
-        var viaFolder = ToolAnswers.Text(await Call("project_read", ("path", "folderlink/key.txt")));
-        var viaFile = ToolAnswers.Text(await Call("project_read", ("path", "filelink.txt")));
+        var viaFolder = ToolAnswers.Text(await Call("project_read", ("path", "folder-link/key.txt")));
+        var viaFile = ToolAnswers.Text(await Call("project_read", ("path", "file-link.txt")));
 
         // Assert
         Assert.DoesNotContain(Secret, viaFolder, StringComparison.Ordinal);
@@ -392,7 +392,7 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
     ///     temporary file, no data folder created.
     /// </summary>
     [Fact]
-    public async Task ProjectTools_Write_ExistingFile_IsReplacedDirectlyWithNoBackupAnywhere()
+    public async Task ProjectTools_Write_ExistingFile_IsReplacedDirectlyAndLeavesNothingElseInTheProject()
     {
         // Arrange: a project with a file and the state of the project before the write
         var path = Path.Combine(Project, "cover.svg");
@@ -591,7 +591,7 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
     ///     not told. The symbolic links are skipped where they cannot be made.
     /// </summary>
     [Fact]
-    public async Task ProjectTools_Write_ThroughJunctionAndSymbolicLinks_IsRefusedAndNothingIsWrittenOutside()
+    public async Task ProjectTools_Write_ThroughJunction_IsRefusedAndNothingIsWrittenOutside()
     {
         // Arrange: the places behind the links
         var behind = Path.Combine(Root, "behind");
@@ -625,12 +625,12 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
         Directory.CreateDirectory(behind);
         Put(Path.Combine(behind, "key.svg"), "KEEP");
         var before = Snapshot(behind);
-        Links.CreateFolderSymlinkOrSkip(Path.Combine(Project, "folderlink"), behind);
-        Links.CreateFileSymlinkOrSkip(Path.Combine(Project, "filelink.txt"), Path.Combine(Root, "outside.txt"));
+        Links.CreateFolderSymlinkOrSkip(Path.Combine(Project, "folder-link"), behind);
+        Links.CreateFileSymlinkOrSkip(Path.Combine(Project, "file-link.txt"), Path.Combine(Root, "outside.txt"));
 
         // Act
-        var viaFolder = ToolAnswers.Text(await Call("project_write", ("path", "folderlink/new.svg"), ("content", "pwned")));
-        var viaFile = ToolAnswers.Text(await Call("project_write", ("path", "filelink.txt"), ("content", "pwned")));
+        var viaFolder = ToolAnswers.Text(await Call("project_write", ("path", "folder-link/new.svg"), ("content", "pwned")));
+        var viaFile = ToolAnswers.Text(await Call("project_write", ("path", "file-link.txt"), ("content", "pwned")));
 
         // Assert
         Assert.DoesNotContain("created", viaFolder, StringComparison.Ordinal);
