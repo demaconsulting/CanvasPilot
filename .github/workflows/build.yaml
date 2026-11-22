@@ -197,9 +197,10 @@ jobs:
       # This section publishes the self-contained win-x64 application and builds the MSI installer.
       # It runs on the Windows leg only, because the Windows Installer format is a Windows-only
       # dependency. The installer project is not part of the solution, so it is built explicitly.
-      # FileAssert asserts the package, the native speech runtime, and the style kits in the published output (all are
-      # tagged "installer" and run by one step), and its TRX is the WiX OTS evidence and the speech runtime evidence that
-      # ReqStream consumes. A separate step reads the MSI file table, which proves that the files are in the package.
+      # FileAssert asserts the package, the native speech runtime, the style kits, and the absence of a Copilot runtime
+      # in the published output (all are tagged "installer" and run by one step), and its TRX is the WiX OTS evidence,
+      # the speech runtime evidence, and the no-Copilot-runtime evidence that ReqStream consumes. A separate step reads
+      # the MSI file table, which proves that the files are in the package and that no Copilot runtime is.
       # Downstream projects: Add any additional packaging steps here.
 
       - name: Publish self-contained build (win-x64)
@@ -251,7 +252,7 @@ jobs:
           Copy-Item "src/DemaConsulting.CanvasPilot.Installer/bin/x64/Release/*.msi" `
             "package/CanvasPilot-${{ inputs.version }}-win-x64.msi"
 
-      - name: Check MSI file table for the native speech runtime and the style kits
+      - name: Check MSI file table for the native speech runtime and the style kits, and for any Copilot runtime
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
@@ -262,6 +263,9 @@ jobs:
           # them as well. The installer harvests publish/win-x64 with its sub-folders, and this reads what
           # the MSI actually lists in its File table (names are stored as "short|long", so the long name
           # is the one that counts).
+          # The package must also not carry a GitHub Copilot runtime: the application uses only the Copilot
+          # CLI that the user installed, and the Copilot SDK would otherwise put a runtime of about 180 MB
+          # into the published folder (CopilotSkipCliDownload in Directory.Build.props prevents that).
           $required = @('onnxruntime.dll', 'sherpa-onnx-c-api.dll', 'portaudio.dll', 'style.json', 'title-card.svg', 'flow.mmd', 'chart.vl.json')
           $msi = (Resolve-Path "package/CanvasPilot-${{ inputs.version }}-win-x64.msi").Path
           $installer = New-Object -ComObject WindowsInstaller.Installer
@@ -282,9 +286,15 @@ jobs:
             Write-Error "The MSI does not contain the required file(s): $($missing -join ', ')"
             exit 1
           }
+          $copilot = $files | Where-Object { $_ -like 'copilot*' -or $_ -like 'libcopilot*' -or $_ -eq 'runtime.node' -or $_ -eq '.copilot-explicit-cli' }
+          if ($copilot) {
+            Write-Error "The MSI contains a GitHub Copilot runtime, which must not be shipped: $($copilot -join ', ')"
+            exit 1
+          }
           Write-Host "✓ MSI contains the native speech runtime and the style kits: $($required -join ', ')"
+          Write-Host "✓ MSI contains no GitHub Copilot runtime"
 
-      - name: Assert MSI installer and native speech runtime with FileAssert
+      - name: Assert MSI installer, native speech runtime, and absence of a Copilot runtime with FileAssert
         if: matrix.os == 'windows-latest'
         run: >
           dotnet fileassert

@@ -35,8 +35,8 @@ the project file of the application library from the repository; no network, dis
   them.
 - The browser over the catalog of the application shows the tree of its roots, finds a card by search, shows a card with
   its text and related cards, and copies an example to the clipboard that it was given.
-- No assembly that the application library refers to, no package that the test project resolves, and no package that
-  the project file of the application library declares is a language model or agent library.
+- No type of the subsystem uses a type of a language model or agent library in its signatures, and no source file of
+  the subsystem has a using directive for such a library.
 
 ### Test Scenarios
 
@@ -85,8 +85,9 @@ search, shows the card of the marks with its text and its related cards as the c
 its first example on a clipboard that records, with a status that names the example. This scenario is tested by
 `KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample`.
 
-**KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers
-to, the packages in the dependency file of the test project, and the package references in the project file of the
-application library do not include the SDKs of GitHub Copilot, OllamaSharp, the AI extensions of Microsoft, AgentKit, or
-the other libraries of language models that are listed. This scenario is tested by
-`KnowledgeSubsystem_Assembly_ReferencesNoLanguageModelPackage`.
+**KnowledgeSubsystem_Types_ReferenceNoLanguageModelPackage**: The types of the subsystem, in their base types,
+interfaces, fields, properties, events, constructors, and methods, use no type of the SDKs of GitHub Copilot,
+OllamaSharp, the AI extensions of Microsoft, the Microsoft Agent Framework, AgentKit, or the other libraries of language
+models that are listed, and no source file in the folder of the subsystem has a using directive for them. The
+application library as a whole refers to the libraries of the AI copilot, so the rule is checked on the subsystem and
+not on the assembly. This scenario is tested by `KnowledgeSubsystem_Types_ReferenceNoLanguageModelPackage`.

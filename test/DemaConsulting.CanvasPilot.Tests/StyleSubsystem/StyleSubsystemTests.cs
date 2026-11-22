@@ -32,23 +32,6 @@ namespace DemaConsulting.CanvasPilot.Tests;
 public sealed class StyleSubsystemTests : IDisposable
 {
     /// <summary>
-    ///     The names of packages of language models and agent libraries that the Style subsystem must not depend on.
-    /// </summary>
-    private static readonly string[] LanguageModelPackageNames =
-    [
-        "Microsoft.Copilot.SDK",
-        "GitHub.Copilot.SDK",
-        "OllamaSharp",
-        "Microsoft.Extensions.AI",
-        "AgentKit",
-        "Microsoft.SemanticKernel",
-        "OpenAI",
-        "Azure.AI",
-        "Anthropic",
-        "LLamaSharp"
-    ];
-
-    /// <summary>
     ///     Temporary folder removed on disposal.
     /// </summary>
     private readonly string _root = Directory.CreateTempSubdirectory("canvaspilot-style-").FullName;
@@ -467,41 +450,29 @@ public sealed class StyleSubsystemTests : IDisposable
         Assert.True(File.Exists(Path.Combine(places.User, "poster", "examples", "logo.svg")));
         Assert.Equal(["Poster Look"], manager.Groups.Single(group => group.Location == StyleKitLocation.User).Items.Select(item => item.Name));
     }
+
     /// <summary>
-    ///     Validates that the library of the subsystem refers to no package of a language model or agent, by its
-    ///     referenced assemblies and by the packages that its dependency file lists.
+    ///     Validates that the subsystem refers to no type of a language model or agent library: no type of the
+    ///     subsystem uses such a type in its signatures, and no source file of the subsystem has a using directive for
+    ///     such a library. The application library as a whole refers to the libraries of the AI copilot, so the rule is
+    ///     checked on the subsystem and not on the assembly.
     /// </summary>
     [Fact]
-    public void StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage()
+    public void StyleSubsystem_Types_ReferenceNoLanguageModelPackage()
     {
-        // Arrange: the assembly of the application library, the packages that the application library and the test
-        // project resolve (the dependency file of the test project lists the packages of the project it references), and
-        // the project file of the application library
+        // Arrange: the types of the subsystem, and the folder of its source files beside the project file of the
+        // application library
         var assembly = typeof(StyleKitSerializer).Assembly;
-        var references = assembly.GetReferencedAssemblies().Select(a => a.Name ?? string.Empty).ToList();
-        var dependencyFile = Path.Combine(AppContext.BaseDirectory, "DemaConsulting.CanvasPilot.Tests.deps.json");
-        Assert.True(File.Exists(dependencyFile), "The dependency file of the test project is missing.");
-        var projectFile = FindProjectFile();
+        var sourceFolder = Path.Combine(Path.GetDirectoryName(FindProjectFile())!, "StyleSubsystem");
+        Assert.True(Directory.Exists(sourceFolder), "The source folder of the subsystem is missing.");
 
         // Act
-        using var document = JsonDocument.Parse(File.ReadAllText(dependencyFile));
-        var packages = document.RootElement.GetProperty("libraries").EnumerateObject()
-            .Select(p => p.Name)
-            .ToList();
-        var declared = File.ReadAllLines(projectFile)
-            .Where(l => l.Contains("PackageReference", StringComparison.Ordinal))
-            .ToList();
+        var typeFindings = LanguageModelDependencyCheck.FindTypeReferences(assembly, "DemaConsulting.CanvasPilot.StyleSubsystem");
+        var sourceFindings = LanguageModelDependencyCheck.FindUsingDirectives(sourceFolder);
 
-        // Assert: no referenced assembly, resolved package, or declared package is a language model or agent library
-        Assert.NotEmpty(references);
-        Assert.NotEmpty(packages);
-        Assert.NotEmpty(declared);
-        foreach (var name in LanguageModelPackageNames)
-        {
-            Assert.DoesNotContain(references, r => r.StartsWith(name, StringComparison.OrdinalIgnoreCase));
-            Assert.DoesNotContain(packages, p => p.StartsWith(name + "/", StringComparison.OrdinalIgnoreCase));
-            Assert.DoesNotContain(declared, l => l.Contains($"\"{name}", StringComparison.OrdinalIgnoreCase));
-        }
+        // Assert: no type and no source file of the subsystem refers to a language model or agent library
+        Assert.Empty(typeFindings);
+        Assert.Empty(sourceFindings);
     }
 
     /// <summary>

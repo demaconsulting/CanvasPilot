@@ -18,6 +18,14 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
+
+    <!-- The Microsoft.Copilot.SDK package, which the AgentKit Copilot package brings, downloads and bundles its own
+         GitHub Copilot runtime (a native copilot-runtime wrapper, runtime.node, and a CLI of about 180 MB) into the
+         output of every project that references it, directly or transitively. CanvasPilot must not ship or download
+         that runtime: it uses only the Copilot CLI that the user installed. Setting the property here, and not in one
+         project, makes every project of the solution (application, executable, and the test projects) skip the
+         download. The packaging guard in .fileassert.yaml and the OTS tests fail when a Copilot runtime appears. -->
+    <CopilotSkipCliDownload>true</CopilotSkipCliDownload>
   </PropertyGroup>
 
   <!-- Code Analysis Dependencies (C# projects only, so non-C# projects such as the installer are unaffected) -->

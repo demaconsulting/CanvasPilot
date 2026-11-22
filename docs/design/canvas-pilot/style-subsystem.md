@@ -206,10 +206,11 @@ need (a source of export sizes, a sink for notes of a render) are declared in `P
 is a plain text in the project file, and the style settings are a plain record in the settings. `Style` depends on those
 subsystems, and `AppShell`, which builds every unit in one place, is the only place that knows all of them.
 
-**No provider.** The subsystem refers to no package of a language model, of an agent library, or of an AI extension
+**No provider.** The subsystem refers to no type of a language model, of an agent library, or of an AI extension
 library, and adds no package at all. Its guidance and tools are plain values and text. The test
-`StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage` checks the referenced assemblies, the packages that the test
-project resolves, and the package references of the project file, the same way that the `Knowledge` subsystem does.
+`StyleSubsystem_Types_ReferenceNoLanguageModelPackage` checks the signatures of the types of the subsystem and the using
+directives of its source files, the same way that the `Knowledge` subsystem does; the application library as a whole
+refers to the libraries of the AI copilot, so the rule is checked on the subsystem and not on the assembly.
 
 **A kit is a folder.** A kit is the folder `{id}` with the file `style.json` and the folder `examples`, so that a kit
 can be copied, zipped, committed, and shared as a folder and read by a person. The id is a lower-case kebab text of 1 to

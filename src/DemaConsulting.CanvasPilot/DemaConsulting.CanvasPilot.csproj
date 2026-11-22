@@ -16,6 +16,14 @@
     <PackageReference Include="DemaConsulting.Speech" Version="0.2.0-beta.2" />
     <PackageReference Include="DemaConsulting.Speech.Sherpa" Version="0.2.0-beta.2" />
     <PackageReference Include="DemaConsulting.CanvasNet.Viewer" Version="0.2.0-beta.13" />
+    <!-- The AI agent library. Core gives the confined tool framework, Agents.Copilot the GitHub Copilot agent factory
+         (its runtime is never shipped, see CopilotSkipCliDownload in Directory.Build.props), Agents.ChatClient the
+         agent factory for any chat client, and Agents.Ollama the Ollama context sizing. DemaConsulting.AgentKit.Tools
+         is deliberately not referenced: it pins an older DemaConsulting.CanvasNet. -->
+    <PackageReference Include="DemaConsulting.AgentKit.Core" Version="0.1.0-beta.3" />
+    <PackageReference Include="DemaConsulting.AgentKit.Agents.Copilot" Version="0.1.0-beta.3" />
+    <PackageReference Include="DemaConsulting.AgentKit.Agents.ChatClient" Version="0.1.0-beta.3" />
+    <PackageReference Include="DemaConsulting.AgentKit.Agents.Ollama" Version="0.1.0-beta.3" />
   </ItemGroup>
 
   <ItemGroup>

@@ -8,7 +8,7 @@ checked, written to a folder with its example files, and read back from that fol
 the kit that is read is the kit that was written, the examples are found from the files of the folder, and the warnings
 are the ones that the kit calls for. The subsystem is built up unit by unit, and the scenarios below are the ones that
 exist; each unit that is added extends the subsystem tests with the scenarios that need more than one unit. One test
-also checks that the application library refers to no package of a language model or agent library.
+also checks that the subsystem refers to no type or source file of a language model or agent library.
 
 ### Test Environment
 
@@ -34,8 +34,8 @@ project file of the application library from the repository; no network, display
   kit passes, and a picture with another color fails and names it.
 - The tools of an assistant over the real units give the style of the project (within the budget), check a picture of
   the project and name the color that is off the palette, and refuse a file outside the project.
-- No assembly that the application library refers to, no package that the test project resolves, and no package that the
-  project file of the application library declares is a language model or agent library.
+- No type of the subsystem uses a type of a language model or agent library in its signatures, and no source file of
+  the subsystem has a using directive for such a library.
 
 ### Test Scenarios
 
@@ -86,8 +86,9 @@ it with half of the pixels off the palette and names the color, and a path that 
 This scenario is tested by
 `StyleSubsystem_GuideTheAssistant_ToolsOverRealUnits_GiveTheStyleAndCheckAPictureOfTheProject`.
 
-**StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage**: The assemblies that the application library refers to, the
-packages in the dependency file of the test project, and the package references in the project file of the application
-library do not include the SDKs of GitHub Copilot, OllamaSharp, the AI extensions of Microsoft, AgentKit, or the other
-libraries of language models that are listed. This scenario is tested by
-`StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage`.
+**StyleSubsystem_Types_ReferenceNoLanguageModelPackage**: The types of the subsystem, in their base types, interfaces,
+fields, properties, events, constructors, and methods, use no type of the SDKs of GitHub Copilot, OllamaSharp, the AI
+extensions of Microsoft, the Microsoft Agent Framework, AgentKit, or the other libraries of language models that are
+listed, and no source file in the folder of the subsystem has a using directive for them. The application library as a
+whole refers to the libraries of the AI copilot, so the rule is checked on the subsystem and not on the assembly. This
+scenario is tested by `StyleSubsystem_Types_ReferenceNoLanguageModelPackage`.
