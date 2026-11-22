@@ -11,12 +11,15 @@ chosen provider can be used. It has no user interface. Its parts are the readine
 that the copilot may call and the instructions that it is given, the agent of the chosen provider, and the service that
 keeps one conversation for the open project and runs one turn at a time.
 
-The subsystem is built contract first. It contains two units so far. `AgentContract` is `IAgentService`, the request and
-history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds the
-GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks its
-version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader). The
-units that implement the contract are added to this design, and to the model, the requirements, and the verification
-design, together with their code; until then no implementation of `IAgentService` exists in the application.
+The subsystem is built contract first. It contains three units so far. `AgentContract` is `IAgentService`, the request
+and history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds
+the GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks
+its version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader).
+`AgentReadiness` checks whether the chosen provider can be used and implements the `IProviderCheck` of the `Settings`
+subsystem; it comes with the starter of the Copilot runtime (the one this build ships is gated) and the probe of the
+Ollama server. The units that implement the contract are added to this design, and to the model, the requirements, and
+the verification design, together with their code; until then no implementation of `IAgentService` exists in the
+application.
 
 The subsystem will depend on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
 message), `Knowledge`, `Style`, and `Preview` (the content and the rendering that its tools give the copilot),
@@ -59,11 +62,24 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   back to automatic detection; a shim of an editor is never used for automatic detection; every problem is a result and
   only cancellation is thrown.
 
+**AgentReadiness**: The check of whether the chosen AI provider can be used.
+
+- *Type*: In-process .NET class that implements `IProviderCheck`, with `ICopilotRuntimeStarter` (and the gated starter),
+  `IOllamaProbe` (and the real probe), documented in the design of the `AgentReadiness` unit.
+- *Role*: Provider (the service, the chat banner, and the connection check of the settings dialog are consumers).
+- *Contract*: `GetReportAsync(settings, refresh, cancellationToken)` returns an `AgentReadinessReport`; `CheckAsync` is
+  the settings dialog's connection check, which always searches again. For Copilot the checks run in order (CLI,
+  version, credentials, runtime) and the first failure gives the sentence; for Ollama they are the settings, the server,
+  the model, and the window.
+- *Constraints*: Copilot is never reported ready by this build (the starter that is shipped answers that an update of
+  the AI library is needed, and the Copilot runtime is neither bundled nor downloaded); a token is never stored, shown,
+  or logged; every problem is a report and only cancellation is thrown.
+
 **IProviderCheck**: The connection check that the settings dialog can ask for.
 
 - *Type*: In-process .NET interface owned by the `Settings` subsystem, with the `ProviderCheckResult(IsUsable, Message)`
   record; both are documented in the design of the `AiProviderSettingsPage` unit.
-- *Role*: Consumer (the `Agent` subsystem implements it when its readiness checks exist).
+- *Role*: Consumer (the `AgentReadiness` unit of the `Agent` subsystem implements it).
 - *Contract*: `CheckAsync(AiProviderSettings, CancellationToken)` checks settings that may not have been saved yet and
   returns a result; a provider that cannot be used is a result, not an exception.
 - *Constraints*: The interface names no type of the `Agent` subsystem, so `Settings` does not depend on it.
@@ -82,8 +98,23 @@ provider, and the tests run a turn through the interface and read the readiness 
 usable before any provider is written against it. The Copilot CLI is found by a rule that is part of the design of the
 `CopilotCliLocator` unit; the subsystem test reproduces the layout of a real machine that has both the CLI and the VS
 Code shim, and checks that the CLI is found, that a machine with only the shim is told so, and that a path chosen in the
-settings is used.
+settings is used. The readiness checks are tested through `IProviderCheck`, as the settings dialog uses them: GitHub
+Copilot on a machine with a signed-in GitHub CLI is not usable because this build cannot start the runtime, and Ollama
+with a small window is usable with a warning.
 
-The sections of the units are added to this design as the units are built: the readiness checks, the tool registry and
+The sections of the units are added to this design as the units are built: the tool registry and
 the project tools, the instructions and the mapper of the payload to a provider message, the mapper of provider updates
 to events and the provider factory, and the service that implements `IAgentService`.
+
+### Dependencies
+
+- **CopilotCliLocator** unit: the Copilot CLI and its version, used by the readiness checks.
+- **Settings** subsystem: the AI provider choices (`SettingsService`) and the `IProviderCheck` interface that
+  `AgentReadiness` implements (documented with `AiProviderSettingsPage`); `Settings` does not depend on this subsystem.
+- **OllamaSharp** (OTS): the client that lists the models of an Ollama server and shows the context length of a model,
+  used by the probe of the readiness checks.
+
+The view below shows these dependencies from the SysML2 model; more are added as the units that use `Project`,
+`Payload`, `Knowledge`, `Style`, `Preview`, and the AI libraries are built.
+
+![Agent runtime dependencies](AgentSubsystemRuntimeView.svg)

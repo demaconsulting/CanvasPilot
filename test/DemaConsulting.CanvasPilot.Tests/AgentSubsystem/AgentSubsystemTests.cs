@@ -21,6 +21,7 @@
 using System.Runtime.CompilerServices;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
+using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -162,6 +163,46 @@ public sealed class AgentSubsystemTests
         Assert.Contains("Only the VS Code copilot shim was found", notFound.Message, StringComparison.Ordinal);
         Assert.Equal(CopilotCliStatus.Found, chosen.Status);
         Assert.Equal(DevMachine.RealCli, chosen.Path);
+    }
+
+    /// <summary>
+    ///     Test that the subsystem checks both providers through the interface that the settings dialog owns: GitHub
+    ///     Copilot on a machine with a signed-in GitHub CLI is not usable because this build cannot start the runtime,
+    ///     and Ollama with a model and a small window is usable with a warning.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface()
+    {
+        // Arrange: the development machine with a GitHub CLI that is signed in, and a server that has one model
+        var token = TestContext.Current.CancellationToken;
+        const string gh = @"C:\Program Files\GitHub CLI\gh.exe";
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        runner.Answer(gh, new ProcessResult(true, 0, "a-token-text", false));
+        var environment = DevMachine.CreateEnvironment();
+        environment.Set("ProgramFiles", @"C:\Program Files");
+        var fileSystem = DevMachine.CreateFileSystem();
+        fileSystem.AddFile(gh, 1_000);
+        var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]), ContextLength = 131072 };
+        IProviderCheck check = new AgentReadiness(
+            new CopilotCliLocator(runner, fileSystem, environment),
+            null,
+            runner,
+            environment,
+            fileSystem,
+            probe);
+
+        // Act: check Copilot, then Ollama with a window that is too small
+        var copilot = await check.CheckAsync(new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot }, token);
+        var ollama = await check.CheckAsync(
+            new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3", ContextWindowTokens = 8192 },
+            token);
+
+        // Assert: Copilot is gated and not usable; Ollama is usable and warns about the window
+        Assert.False(copilot.IsUsable);
+        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", copilot.Message);
+        Assert.True(ollama.IsUsable);
+        Assert.Contains("8,192", ollama.Message, StringComparison.Ordinal);
     }
 
     /// <summary>

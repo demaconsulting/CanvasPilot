@@ -451,7 +451,6 @@ sections:
           subsystems add the behavior of the application on top of them and link to this requirement.
         children:
           - CanvasPilot-Agent-RunTurnAsEvents
-          - CanvasPilot-Agent-DescribeReadiness
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
           - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces
@@ -465,6 +464,26 @@ sections:
           - CanvasPilot-OTS-OllamaSharp-ReportMissingModel
           - CanvasPilot-OTS-OllamaSharp-StreamTextAndToolCalls
           - CanvasPilot-OTS-OllamaSharp-SendContextLength
+
+      - id: CanvasPilot-System-ReportProviderReadiness
+        title: >-
+          The application shall tell the user, before the first message and when asked in the settings, whether the
+          configured AI provider can be used: for GitHub Copilot whether the installed Copilot CLI was found (by a rule
+          that rejects editor shims) and is new enough, whether credentials exist, and whether this build can start the
+          runtime, and for Ollama whether the server answers, has the model, and has a context window of at least
+          16,384 tokens, each as one sentence that says what to do.
+        tags: [system]
+        justification: |
+          A chat that fails on the first message with an error of a library is a poor first experience. Both providers
+          depend on things outside the application (a CLI and a sign-in, or a server and a model), so the application
+          checks them itself and words the remedy, including the honest statement that GitHub Copilot cannot be used
+          in this build yet. A small context window is a warning and not a block, because it is a common but not
+          certain cause of failed drawings.
+        children:
+          - CanvasPilot-Agent-DescribeReadiness
+          - CanvasPilot-Agent-CheckProviderReadiness
+        tests:
+          - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
 
       - id: CanvasPilot-System-StartApplication
         title: >-

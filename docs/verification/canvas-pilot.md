@@ -470,6 +470,15 @@ file that holds a path to a file that does not exist is saved and loaded by a ne
 not found, names the path, and no program is run, so the installed CLI is not used instead. This scenario is tested by
 `CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath`.
 
+**CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach**: The settings of a new
+installation (GitHub Copilot) are loaded by a settings service and checked on the development machine, whose Copilot CLI
+is good but which has no token variable and no GitHub CLI: the status is not signed in and the sentence names
+`gh auth login` and `COPILOT_GITHUB_TOKEN`. With a token variable set, the same check says that Copilot support needs an
+AgentKit update. A settings file that holds an Ollama choice with a window of 8,192 tokens is saved and loaded by a new
+service; against a scripted server that has the model, the result is the warning status, which can run a turn, with the
+sentence that tells the user to raise the window in Settings to the recommended 32,768. This scenario is tested by
+`CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach`.
+
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the
 image and the title names the project. The user changes the AI model name in the settings dialog and the

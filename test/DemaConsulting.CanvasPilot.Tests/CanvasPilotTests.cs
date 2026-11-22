@@ -215,6 +215,48 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the user is told, for each provider, one sentence that says what to do: the settings of a new
+    ///     installation (GitHub Copilot) on a machine without a sign-in say how to sign in, the same machine with a token
+    ///     says that this build cannot start Copilot, and a stored Ollama choice with a small window warns about it.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach()
+    {
+        // Arrange: the settings of the user, stored and loaded again, and the development machine
+        var token = TestContext.Current.CancellationToken;
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "ReadinessSettings");
+        var service = new SettingsService(settingsFolder);
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        var environment = DevMachine.CreateEnvironment();
+        var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]), ContextLength = null };
+        var readiness = new AgentReadiness(
+            new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), environment),
+            null,
+            runner,
+            environment,
+            DevMachine.CreateFileSystem(),
+            probe);
+
+        // Act: a new installation without a sign-in, then with a token, then a stored Ollama choice with a small window
+        var fresh = await readiness.GetReportAsync(service.Load().AiProvider, cancellationToken: token);
+        environment.Set("COPILOT_GITHUB_TOKEN", "some-token");
+        var withToken = await readiness.GetReportAsync(service.Load().AiProvider, cancellationToken: token);
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3", ContextWindowTokens = 8192 } });
+        var ollama = await readiness.GetReportAsync(new SettingsService(settingsFolder).Load().AiProvider, cancellationToken: token);
+
+        // Assert: each answer is one sentence with its remedy
+        Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, fresh.Status);
+        Assert.Contains("gh auth login", fresh.Message, StringComparison.Ordinal);
+        Assert.Contains("COPILOT_GITHUB_TOKEN", fresh.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, withToken.Status);
+        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", withToken.Message);
+        Assert.Equal(AgentReadinessStatus.OllamaContextTooSmall, ollama.Status);
+        Assert.True(ollama.IsUsable);
+        Assert.Contains("Raise it in Settings (32,768 recommended)", ollama.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that a user can create a project, close it, and open it again from the recent projects list, and
     ///     that an unusable project file is refused with a message.
     /// </summary>

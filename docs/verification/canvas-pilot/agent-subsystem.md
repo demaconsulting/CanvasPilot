@@ -9,8 +9,10 @@ reports, and the test runs a turn through the interface, collects the events, an
 what the service received with the request. The scripted service is the only substitute and stands in for an AI
 provider; no real provider, model, network connection, or Copilot runtime is used. The Copilot CLI locator is verified
 at this level with the file system, environment, and process runner replaced by the layout of a real machine (the paths
-and sizes of the development machine, which has both the installed CLI and the VS Code shim). The rules of the records
-and of the locator themselves are verified in the unit verification documents.
+and sizes of the development machine, which has both the installed CLI and the VS Code shim). The readiness checks are
+verified at this level through `IProviderCheck`, the interface that the settings dialog uses, with the same replaced
+machine, a scripted starter, and a scripted Ollama server. The rules of the records, of the locator, and of the
+readiness checks themselves are verified in the unit verification documents.
 
 The units that implement the contract add their own verification documents and tests as they are built; their scenarios
 are not part of this document until then.
@@ -28,6 +30,8 @@ N/A - standard test environment. The tests use no files, network, display, or ex
 - Readiness reports pass through the interface unchanged, and a reset of the conversation reaches the service.
 - On a machine with the installed Copilot CLI and the VS Code shim the CLI is found and the shim is not; a machine with
   only the shim is told that only the shim was found; a path chosen in the settings is used.
+- Through `IProviderCheck`, GitHub Copilot on a machine with a signed-in GitHub CLI is not usable and says that an
+  update of the AI library is needed, and Ollama with a window of 8,192 tokens is usable and warns about it.
 
 ### Test Scenarios
 
@@ -54,3 +58,10 @@ package folder and not the shim. On a machine whose `PATH` holds only the shim, 
 says that only the VS Code copilot shim was found; with the path of the real CLI chosen in the settings on that machine,
 the CLI is found. This scenario is tested by
 `AgentSubsystem_LocateCopilotCli_MachinesWithShim_FindsRealCliAndExplainsShimOnly`.
+
+**AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
+good Copilot CLI and a GitHub CLI under the program files that prints a token, and a scripted Ollama server has one
+model with a large window. Asked through `IProviderCheck`, GitHub Copilot is not usable and the sentence says that
+Copilot support needs an AgentKit update; Ollama with a configured window of 8,192 tokens is usable and the sentence
+names the window. This scenario is tested by
+`AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface`.

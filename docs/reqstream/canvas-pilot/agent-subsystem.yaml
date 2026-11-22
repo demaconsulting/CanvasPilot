@@ -49,6 +49,31 @@ sections:
             tests:
               - AgentSubsystem_Readiness_ScriptedReports_SeparateUsableFromBlockedProviders
 
+          - id: CanvasPilot-Agent-CheckProviderReadiness
+            title: >-
+              The Agent subsystem shall check the AI provider that the settings choose and report it as one status with
+              one sentence that says what to do: for GitHub Copilot the Copilot CLI, its version, the credentials, and
+              the runtime (which this build cannot start, so Copilot is never reported as ready), and for Ollama the
+              settings, the server, the model, and the size of the context window.
+            justification: |
+              Both providers depend on things outside the application, and the user should learn what is missing before
+              the first message. The subsystem owns the checks because it owns the knowledge of how each provider is
+              reached, and it offers them to the settings dialog through the interface that the dialog owns. Saying
+              plainly that GitHub Copilot cannot be started yet, instead of reporting it ready, keeps the user from a
+              chat that cannot answer and points to the provider that can.
+            children:
+              - CanvasPilot-AgentReadiness-CheckCopilotInOrder
+              - CanvasPilot-AgentReadiness-DetectCopilotCredentials
+              - CanvasPilot-AgentReadiness-ExplainCopilotAuthentication
+              - CanvasPilot-AgentReadiness-ReportGatedCopilotRuntime
+              - CanvasPilot-AgentReadiness-NeverRetainCredentials
+              - CanvasPilot-AgentReadiness-CheckOllamaServerAndModel
+              - CanvasPilot-AgentReadiness-WarnSmallOllamaContext
+              - CanvasPilot-AgentReadiness-ProbeOllamaSafely
+              - CanvasPilot-AgentReadiness-ServeConnectionCheck
+            tests:
+              - AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface
+
           - id: CanvasPilot-Agent-LocateCopilotCli
             title: >-
               The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the
