@@ -4,17 +4,18 @@
 
 ### Overview
 
-The `AppShell` subsystem is the part of CanvasPilot the user sees and starts. Its boundary starts with the
-user's choices in the main window, its menus, and its dialogs, and ends with calls on the `Project` and
-`Settings` subsystems and the files and windows the user sees as a result. It contains three units:
-`MainWindowShell`, the main window and its view model, which owns the File, Edit, Image, Tools, and Help commands, the
-window title, the recent projects menu, the Undo and Redo of the focused part, and the talk key; `ProjectWorkspace`,
-the content area with the project explorer, the place where the image preview is shown, and the chat column; and
-`AboutDialog`, the window that identifies the application and
-its open source libraries. The subsystem also contains the composition root that builds the application's units at
-startup (`ApplicationComposition`, started by `App`), the `ViewLocator` that maps a view model to its view, and the
-thin desktop head `Program` that starts the Avalonia application. These items have no requirements of their own
-and are described here because they only join the units together.
+The `AppShell` subsystem is the part of CanvasPilot the user sees and starts. Its boundary starts with the user's
+choices in the main window, its menus, and its dialogs, and ends with calls on the `Project` and `Settings` subsystems
+and the files and windows the user sees as a result. It contains four units: `MainWindowShell`, the main window and its
+view model, which owns the File, Edit, Image, Tools, and Help commands, the window title, the recent projects menu, the
+Undo and Redo of the focused part, and the talk key; `ProjectWorkspace`, the content area with the project explorer, the
+place where the image preview is shown, and the chat column; `AboutDialog`, the window that identifies the application
+and its open source libraries; and `ThemeResources`, the design tokens (colors, spacing, radii, type, and shadows) of
+the dark and the light theme and the palettes that make the standard controls follow the brand, from which every view
+takes its look. The subsystem also contains the composition root that builds the application's units at startup
+(`ApplicationComposition`, started by `App`), the `ViewLocator` that maps a view model to its view, and the thin desktop
+head `Program` that starts the Avalonia application. These items have no requirements of their own and are described
+here because they only join the units together.
 
 ### Interfaces
 
@@ -87,6 +88,10 @@ and are described here because they only join the units together.
 
 ### Design
 
+0. The application merges the dictionary of design tokens of `ThemeResources` after the Fluent theme and sets the
+   palettes of the theme for each variant (`App.axaml`), so the standard controls follow the brand accent and the pane
+   surface, and the application asks for the theme variant of the system (`RequestedThemeVariant=Default`), so it is
+   dark or light as the system is. Views take colors from the tokens with dynamic resources.
 1. At startup `App` calls `ApplicationComposition.CreateDefault`, which creates the logger, the settings service (and
    loads the settings), the project service, the recent projects list, the project explorer with its image source filter
    and refresh scheduler, the render service, the preview pane, the workspace (which shows the preview pane), the image

@@ -428,6 +428,19 @@ sections:
         tests:
           - CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip
 
+      - id: CanvasPilot-System-ThemedInterface
+        title: >-
+          The application shall present its windows in a dark and a light theme, with one accent color and text that
+          is easy to read in both.
+        tags: [system]
+        justification: |
+          People use the application for long stretches in rooms of every brightness. A dark and a light look that
+          follow the system, with readable text and one consistent set of colors, make it comfortable to use and
+          accessible to people with low vision.
+        children:
+          - CanvasPilot-AppShell-ProvideThemes
+        tests:
+          - CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight
       - id: CanvasPilot-System-WindowsInstaller
         title: >-
           The application shall be delivered for 64-bit Windows as one self-contained Windows Installer (MSI)

@@ -33,6 +33,7 @@ flowchart TD
         MainWindowShell
         ProjectWorkspace
         AboutDialog
+        ThemeResources
     end
     subgraph Chat
         ChatPanel
@@ -349,10 +350,11 @@ scheduler that these units use, so the `Project` subsystem does not depend on th
 
 `MainWindowShell` is the view model of the main window and the only item that talks to the user about projects and
 settings: it runs the File, Edit, Image, Tools, and Help commands and shows its dialogs through an `IDialogService` that
-the window implements. The Edit commands, Undo and Redo, act on the part of the window that has the focus (the
-message editor), and the shell starts and stops the chat panel's dictation while the talk key (F8) is held.
-`ProjectWorkspace` holds the project explorer, the preview pane, and, while a project is open, the chat column, and
-`AboutDialog` identifies the application. At startup the application builds all units in one place,
+the window implements. The Edit commands, Undo and Redo, act on the part of the window that has the focus (the message
+editor), and the shell starts and stops the chat panel's dictation while the talk key (F8) is held. `ProjectWorkspace`
+holds the project explorer, the preview pane, and, while a project is open, the chat column, and `AboutDialog`
+identifies the application, and `ThemeResources` holds the design tokens of the dark and the light theme from which
+every view takes its colors, spacing, and type. At startup the application builds all units in one place,
 `ApplicationComposition`, which system tests also use without a window.
 
 `AudioDeviceService` is the only item that uses the audio system and `SpeechModelService` the only item that uses

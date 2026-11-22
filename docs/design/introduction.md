@@ -45,7 +45,7 @@ Local items:
     GitHub Copilot, on the shared runtime of the starter), and **AgentService** unit (the conversation of the open
     project, one turn at a time, with the data of the Copilot runtime kept outside the project).
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
-  - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
+  - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, **AboutDialog**, and **ThemeResources** units.
   - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, **ChatHistoryStore**, and **PayloadInspector** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
@@ -149,7 +149,8 @@ and Style subsystems beside them, and the third-party items and the local data t
       chosen provider, and the service that keeps the conversation of the open project
     - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, drawn with the pointer
       or the keyboard on a layer over the picture, and mapped to the parts of the source file under them
-    - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
+    - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, view locator, and the
+      design tokens of the dark and light themes (`Styles/`)
     - **ChatSubsystem/** - the chat panel with the transcript of the sent messages, the composer, the send and
       hold-to-talk buttons and the joining of marks to the message, and the payload inspector window
     - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, the

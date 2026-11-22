@@ -3,6 +3,7 @@ package CanvasPilot_AppShellSubsystem {
     private import CanvasPilot_AboutDialog::*;
     private import CanvasPilot_MainWindowShell::*;
     private import CanvasPilot_ProjectWorkspace::*;
+    private import CanvasPilot_ThemeResources::*;
 
     part def AppShellSubsystem {
         doc /* The main window with its menus, the project workspace, the About dialog, and the composition root that builds the application's units at startup, including the AI copilot with its history, and joins them to the chat panel, the settings page, and the project explorer. */
@@ -29,5 +30,6 @@ package CanvasPilot_AppShellSubsystem {
         part mainWindowShell : MainWindowShell;
         part projectWorkspace : ProjectWorkspace;
         part aboutDialog : AboutDialog;
+        part themeResources : ThemeResources;
     }
 }

@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Runtime.InteropServices;
-using Avalonia;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
@@ -125,23 +123,8 @@ public sealed class ScreenshotSmokeTests : IDisposable
     /// <returns>The number of distinct sampled colors.</returns>
     private static int CountDistinctSampledColors(Bitmap picture)
     {
-        // Copy the pixels (BGRA, 4 bytes each) out of the bitmap
         var size = picture.PixelSize;
-        var stride = size.Width * 4;
-        var buffer = new byte[stride * size.Height];
-        var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
-        try
-        {
-            picture.CopyPixels(
-                new PixelRect(size),
-                handle.AddrOfPinnedObject(),
-                buffer.Length,
-                stride);
-        }
-        finally
-        {
-            handle.Free();
-        }
+        var (buffer, stride) = ScreenshotSupport.ReadPixels(picture);
 
         // Sample every 16th pixel in both directions
         var colors = new HashSet<int>();

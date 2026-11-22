@@ -1,0 +1,48 @@
+---
+# Software Unit Requirements for the ThemeResources Unit
+#
+# The ThemeResources unit is the set of design tokens of the user interface (Styles/Tokens.axaml): the colors,
+# spacing, corner radii, type sizes, and shadows, for the dark and the light theme variant, from which every view
+# takes its look, and the palettes (in App.axaml) that make the standard controls follow them.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: ThemeResources Requirements
+            requirements:
+              - id: CanvasPilot-ThemeResources-DefineDesignTokens
+                title: >-
+                  The ThemeResources shall provide, for both the dark and the light theme variant, one set of surface,
+                  line, text, accent, state, and mark colors, spacing steps, corner radii, type sizes with their line
+                  heights, and shadows from which the views of the application take their look.
+                justification: |
+                  One visual system keeps every window consistent and lets the look change in one place. Both variants
+                  must be complete, because the application follows the theme of the operating system and a missing
+                  value in one variant would show as a wrong color or a missing space.
+                tests:
+                  - ThemeResources_Tokens_ResolveInBothVariants
+
+              - id: CanvasPilot-ThemeResources-MeetContrast
+                title: >-
+                  The ThemeResources shall give text at least 4.5 to 1 contrast on each surface it is shown on, and
+                  give the focus ring, the outline of an input, and the marks on a picture at least 3 to 1 contrast on
+                  the pane and on raised surfaces, in both theme variants.
+                justification: |
+                  Text that cannot be read is of no use, and people with low vision or a bright room need the
+                  contrast that accessibility guidelines ask for. Lines and shapes that show where the focus is or
+                  where an input ends must also be seen, or the keyboard cannot be used with confidence.
+                tests:
+                  - ThemeResources_Tokens_TextColorsMeetContrastOnTheirSurfaces
+                  - ThemeResources_Tokens_NonTextColorsMeetContrast
+
+              - id: CanvasPilot-ThemeResources-FollowVariantSwitch
+                title: >-
+                  The ThemeResources shall change the colors of the windows and controls that are already shown when
+                  the theme variant changes, without the windows being opened again.
+                justification: |
+                  The user may change the theme of the operating system or the choice in the settings while the
+                  application is open, and expects what is on the screen to follow at once.
+                tests:
+                  - ThemeResources_DynamicResource_FollowsVariantSwitch

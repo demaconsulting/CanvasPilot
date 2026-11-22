@@ -6,7 +6,7 @@
 # - The AppShell subsystem spans MainWindowShell (MainWindowShell.cs, IDialogService.cs,
 #   MainWindowView.axaml, MessageDialogViewModel.cs, MessageDialogView.axaml), ProjectWorkspace
 #   (ProjectWorkspaceViewModel.cs, ProjectWorkspaceView.axaml), and AboutDialog (AboutDialogViewModel.cs,
-#   AboutDialogView.axaml), plus the composition root (ApplicationComposition.cs, App.axaml.cs) and the view
+#   AboutDialogView.axaml), ThemeResources (Styles/Tokens.axaml and the palettes of App.axaml), plus the composition root (ApplicationComposition.cs, App.axaml.cs) and the view
 #   locator (ViewLocator.cs)
 # - Subsystem requirements describe the application shell behavior that satisfies the system-level requirements
 
@@ -134,6 +134,21 @@ sections:
             tests:
               - AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries
 
+          - id: CanvasPilot-AppShell-ProvideThemes
+            title: >-
+              The AppShell subsystem shall show the main window and the standard controls in a dark and a light theme
+              variant, with the brand accent and text that is easy to read, and shall change them when the theme variant
+              that is asked for changes.
+            justification: |
+              People work in rooms and at hours that suit a dark or a light screen, and the operating system says which
+              they prefer. A window that follows the theme with readable text and one accent looks like part of the
+              system and can be read in both.
+            children:
+              - CanvasPilot-ThemeResources-DefineDesignTokens
+              - CanvasPilot-ThemeResources-MeetContrast
+              - CanvasPilot-ThemeResources-FollowVariantSwitch
+            tests:
+              - AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants
           - id: CanvasPilot-AppShell-DrawingKnowledgeMenu
             title: >-
               The AppShell subsystem shall let the user open the browser of the drawing knowledge from the Help menu of the

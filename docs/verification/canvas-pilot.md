@@ -706,6 +706,11 @@ image and the title names the project. The user changes the AI model name in the
 application is restarted: the project is in the recent projects menu and the model name is in effect. This
 scenario is tested by `CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip`.
 
+**CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight**: The composed application's main window is drawn
+headless in the dark and in the light theme variant (a headless UI test in `CanvasPilotThemeTests.cs`); the picture of
+the dark window is dark on average and the picture of the light window is light. This scenario is tested by
+`CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight`.
+
 **WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64, builds the
 installer project with the numeric build version, and copies the package, FileAssert asserts that exactly one
 `package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by `WiX_MsiPackage`, which

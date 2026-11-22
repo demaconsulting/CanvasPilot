@@ -1,0 +1,135 @@
+<!--
+  Design tokens of CanvasPilot: the one source of every color, space, radius, type size, and shadow of the user
+  interface. Views refer to these keys with {DynamicResource Cp...} and never write a literal value, so a theme
+  variant switch repaints the whole window without a reload.
+
+  Colors differ per theme variant and live in the Dark and Light theme dictionaries; space, radius, and type are
+  the same in both variants. Every text color is at least 4.5:1 on the surfaces it is used on, and the colors of
+  lines, icons, and the focus ring are at least 3:1. CpTextTertiary is for hints on the window, pane, stage, and
+  raised surfaces only (not on overlays or on tinted rows), and is never used below 11 px.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <!-- Dark variant -->
+    <ResourceDictionary x:Key="Dark">
+      <!-- Surfaces -->
+      <SolidColorBrush x:Key="CpSurfaceWindow" Color="#0d0f1f" />
+      <SolidColorBrush x:Key="CpSurfacePane" Color="#131530" />
+      <SolidColorBrush x:Key="CpSurfaceStage" Color="#0a0b18" />
+      <SolidColorBrush x:Key="CpSurfaceRaised" Color="#1c1f42" />
+      <SolidColorBrush x:Key="CpSurfaceOverlay" Color="#262a56" />
+
+      <!-- Lines. CpBorderSubtle and CpBorderStrong separate and decorate; CpBorderControl is the outline that
+           marks the edge of an input and is at least 3:1 on the pane and on raised surfaces. -->
+      <SolidColorBrush x:Key="CpBorderSubtle" Color="#2a2d55" />
+      <SolidColorBrush x:Key="CpBorderStrong" Color="#2f3366" />
+      <SolidColorBrush x:Key="CpBorderControl" Color="#646c9f" />
+
+      <!-- Text -->
+      <SolidColorBrush x:Key="CpTextPrimary" Color="#eef0ff" />
+      <SolidColorBrush x:Key="CpTextSecondary" Color="#b4b9de" />
+      <SolidColorBrush x:Key="CpTextTertiary" Color="#8087b3" />
+
+      <!-- Accent -->
+      <SolidColorBrush x:Key="CpAccentText" Color="#a5b4fc" />
+      <SolidColorBrush x:Key="CpAccentTint" Color="#424f46e5" />
+      <SolidColorBrush x:Key="CpAccentTintHover" Color="#214f46e5" />
+      <SolidColorBrush x:Key="CpFocusRing" Color="#818cf8" />
+
+      <!-- State -->
+      <SolidColorBrush x:Key="CpSuccess" Color="#34d399" />
+      <SolidColorBrush x:Key="CpWarning" Color="#fbbf24" />
+      <SolidColorBrush x:Key="CpDanger" Color="#f87171" />
+
+      <!-- Elevation: floating bars (E3), menus and dialogs (E4), and the picture on the stage -->
+      <BoxShadows x:Key="CpShadowFloating">0 4 16 0 #66000000</BoxShadows>
+      <BoxShadows x:Key="CpShadowDialog">0 12 32 0 #80000000</BoxShadows>
+      <BoxShadows x:Key="CpShadowPicture">0 14 32 0 #66000000</BoxShadows>
+    </ResourceDictionary>
+
+    <!-- Light variant -->
+    <ResourceDictionary x:Key="Light">
+      <!-- Surfaces -->
+      <SolidColorBrush x:Key="CpSurfaceWindow" Color="#eceef8" />
+      <SolidColorBrush x:Key="CpSurfacePane" Color="#f7f8fd" />
+      <SolidColorBrush x:Key="CpSurfaceStage" Color="#e4e7f3" />
+      <SolidColorBrush x:Key="CpSurfaceRaised" Color="#ffffff" />
+      <SolidColorBrush x:Key="CpSurfaceOverlay" Color="#ffffff" />
+
+      <!-- Lines -->
+      <SolidColorBrush x:Key="CpBorderSubtle" Color="#dcdff0" />
+      <SolidColorBrush x:Key="CpBorderStrong" Color="#cdd1e8" />
+      <SolidColorBrush x:Key="CpBorderControl" Color="#7a80a8" />
+
+      <!-- Text -->
+      <SolidColorBrush x:Key="CpTextPrimary" Color="#14162e" />
+      <SolidColorBrush x:Key="CpTextSecondary" Color="#454a74" />
+      <SolidColorBrush x:Key="CpTextTertiary" Color="#646a92" />
+
+      <!-- Accent -->
+      <SolidColorBrush x:Key="CpAccentText" Color="#4338ca" />
+      <SolidColorBrush x:Key="CpAccentTint" Color="#1f4f46e5" />
+      <SolidColorBrush x:Key="CpAccentTintHover" Color="#0f4f46e5" />
+      <SolidColorBrush x:Key="CpFocusRing" Color="#4f46e5" />
+
+      <!-- State -->
+      <SolidColorBrush x:Key="CpSuccess" Color="#047857" />
+      <SolidColorBrush x:Key="CpWarning" Color="#a84e08" />
+      <SolidColorBrush x:Key="CpDanger" Color="#b91c1c" />
+
+      <!-- Elevation -->
+      <BoxShadows x:Key="CpShadowFloating">0 3 12 0 #331E1B4B</BoxShadows>
+      <BoxShadows x:Key="CpShadowDialog">0 12 32 0 #401E1B4B</BoxShadows>
+      <BoxShadows x:Key="CpShadowPicture">0 14 32 0 #331E1B4B</BoxShadows>
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+
+  <!-- Colors that are the same in both variants: the brand accent and the gradient of the brand, white on the
+       accent (6.3:1), and the color of marks drawn on a picture, with its 16 percent tint for mark chips -->
+  <SolidColorBrush x:Key="CpAccent" Color="#4f46e5" />
+  <SolidColorBrush x:Key="CpTextOnAccent" Color="#ffffff" />
+  <SolidColorBrush x:Key="CpMark" Color="#ec4899" />
+  <SolidColorBrush x:Key="CpMarkTint" Color="#29ec4899" />
+  <LinearGradientBrush x:Key="CpAccentGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+    <GradientStop Color="#4f46e5" Offset="0" />
+    <GradientStop Color="#06b6d4" Offset="1" />
+  </LinearGradientBrush>
+
+  <!-- Spacing scale -->
+  <x:Double x:Key="CpSpace1">4</x:Double>
+  <x:Double x:Key="CpSpace2">8</x:Double>
+  <x:Double x:Key="CpSpace3">12</x:Double>
+  <x:Double x:Key="CpSpace4">16</x:Double>
+  <x:Double x:Key="CpSpace5">24</x:Double>
+  <x:Double x:Key="CpSpace6">32</x:Double>
+  <x:Double x:Key="CpSpace7">48</x:Double>
+
+  <!-- Radii: key caps, rows and buttons, inputs, composer and bubbles and cards, welcome cards, pills and chips -->
+  <CornerRadius x:Key="CpRadiusKey">4</CornerRadius>
+  <CornerRadius x:Key="CpRadiusRow">6</CornerRadius>
+  <CornerRadius x:Key="CpRadiusInput">8</CornerRadius>
+  <CornerRadius x:Key="CpRadiusCard">14</CornerRadius>
+  <CornerRadius x:Key="CpRadiusWelcome">16</CornerRadius>
+  <CornerRadius x:Key="CpRadiusPill">999</CornerRadius>
+
+  <!-- Type scale: sizes and the line heights that go with them -->
+  <x:Double x:Key="CpFontCaption">11</x:Double>
+  <x:Double x:Key="CpFontSmall">12</x:Double>
+  <x:Double x:Key="CpFontBody">13</x:Double>
+  <x:Double x:Key="CpFontBodyLarge">14</x:Double>
+  <x:Double x:Key="CpFontSubtitle">16</x:Double>
+  <x:Double x:Key="CpFontTitle">20</x:Double>
+  <x:Double x:Key="CpFontDisplay">34</x:Double>
+  <x:Double x:Key="CpLineCaption">16</x:Double>
+  <x:Double x:Key="CpLineSmall">16</x:Double>
+  <x:Double x:Key="CpLineBody">20</x:Double>
+  <x:Double x:Key="CpLineBodyLarge">20</x:Double>
+  <x:Double x:Key="CpLineSubtitle">24</x:Double>
+  <x:Double x:Key="CpLineTitle">28</x:Double>
+  <x:Double x:Key="CpLineDisplay">40</x:Double>
+
+</ResourceDictionary>

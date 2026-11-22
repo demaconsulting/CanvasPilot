@@ -72,6 +72,7 @@ reviews:
       - "docs/verification/introduction.md"
       - "docs/verification/canvas-pilot.md"
       - "test/**/CanvasPilotTests.cs"
+      - "test/**/CanvasPilotThemeTests.cs"
 
   - id: CanvasPilot-Design
     title: Review of CanvasPilot architectural and design consistency
@@ -406,6 +407,7 @@ reviews:
       - "src/**/AppShellSubsystem/ViewLocator.cs"
       - "src/DemaConsulting.CanvasPilot.Desktop/Program.cs"
       - "test/**/AppShellSubsystem/AppShellSubsystemTests.cs"
+      - "test/**/AppShellThemeTests.cs"
       - "test/DemaConsulting.CanvasPilot.UiTests/TestAppBuilder.cs"
       - "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotSupport.cs"
       - "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotSmokeTests.cs"
@@ -465,6 +467,20 @@ reviews:
       - "src/**/AppShellSubsystem/AboutDialogView.axaml"
       - "src/**/AppShellSubsystem/AboutDialogView.axaml.cs"
       - "test/**/AppShellSubsystem/AboutDialogTests.cs"
+
+  - id: CanvasPilot-AppShell-ThemeResources
+    title: Review of CanvasPilot ThemeResources unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/theme-resources.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/theme-resources.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/theme-resources.md"
+      - "src/**/AppShellSubsystem/Styles/Tokens.axaml"
+      - "test/**/ThemeResourcesViewTests.cs"
 
   # CanvasPilot - Chat
   - id: CanvasPilot-Chat

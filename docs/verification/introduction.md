@@ -51,6 +51,7 @@ This document covers the verification design for the following software items:
     - **MainWindowShell** — main window, menus, and dialog service
     - **ProjectWorkspace** — explorer and preview content area
     - **AboutDialog** — application identity window
+    - **ThemeResources** — design tokens and palettes of the dark and light themes
   - **Chat** subsystem
     - **ChatPanel** — the transcript of the sent messages, the composer with its send and hold-to-talk buttons, and the
       joining of marks to the message

@@ -47,6 +47,7 @@ input-files:
   - docs/design/canvas-pilot/app-shell-subsystem/main-window-shell.md
   - docs/design/canvas-pilot/app-shell-subsystem/project-workspace.md
   - docs/design/canvas-pilot/app-shell-subsystem/about-dialog.md
+  - docs/design/canvas-pilot/app-shell-subsystem/theme-resources.md
   - docs/design/canvas-pilot/chat-subsystem.md
   - docs/design/canvas-pilot/chat-subsystem/chat-panel.md
   - docs/design/canvas-pilot/chat-subsystem/chat-turn-runner.md

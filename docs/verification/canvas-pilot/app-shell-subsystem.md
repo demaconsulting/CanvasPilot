@@ -53,6 +53,8 @@ services, or display are required.
   makes the panel check the provider again (the banner follows), and a change of other settings does not.
 - A file that the copilot writes while it answers is listed and selected in the explorer, and the preview draws it.
 - Disposing the composition disposes the copilot and its factory once, and the settings are no longer looked at.
+- A stock window and the text on it take the pane surface and the primary text color of the theme variant that is
+  asked for, and the system accent is the brand accent, in the dark and in the light variant.
 
 ### Test Scenarios
 
@@ -154,6 +156,11 @@ words, the tool row, and the last words. This scenario is tested by
 composition is disposed twice and the AI provider settings are changed; the factory of the agents was disposed once and
 the server was not asked again. This scenario is tested by
 `AppShellSubsystem_ComposeApplication_DisposeStopsTheCopilotAndTheWiring`.
+
+**AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants**: A stock window with a text block is shown in the
+dark and in the light variant (a headless UI test in `AppShellThemeTests.cs`); its background is the pane surface of the
+variant, the text is the primary text color, the system accent is the brand accent, and the two variants differ. This
+scenario is tested by `AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants`.
 
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler
 is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_Throw`.

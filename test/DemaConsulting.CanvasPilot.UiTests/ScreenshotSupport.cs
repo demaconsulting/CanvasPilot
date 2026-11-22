@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -107,5 +108,29 @@ internal static class ScreenshotSupport
         var path = Path.Combine(folder, fileName);
         frame.Save(path, new PngBitmapEncoderOptions());
         return path;
+    }
+
+    /// <summary>
+    ///     Reads the pixels of a picture so a test can look at what was drawn.
+    /// </summary>
+    /// <param name="picture">The picture to read.</param>
+    /// <returns>The pixels as bytes in blue, green, red, alpha order, row by row, and the width of a row in bytes.</returns>
+    public static (byte[] Pixels, int Stride) ReadPixels(Bitmap picture)
+    {
+        // Copy the pixels (BGRA, 4 bytes each) out of the bitmap into a pinned buffer
+        var size = picture.PixelSize;
+        var stride = size.Width * 4;
+        var buffer = new byte[stride * size.Height];
+        var handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+        try
+        {
+            picture.CopyPixels(new PixelRect(size), handle.AddrOfPinnedObject(), buffer.Length, stride);
+        }
+        finally
+        {
+            handle.Free();
+        }
+
+        return (buffer, stride);
     }
 }

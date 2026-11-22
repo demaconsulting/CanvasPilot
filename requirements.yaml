@@ -30,6 +30,7 @@ includes:
   - docs/reqstream/canvas-pilot/app-shell-subsystem/main-window-shell.yaml
   - docs/reqstream/canvas-pilot/app-shell-subsystem/project-workspace.yaml
   - docs/reqstream/canvas-pilot/app-shell-subsystem/about-dialog.yaml
+  - docs/reqstream/canvas-pilot/app-shell-subsystem/theme-resources.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-history-store.yaml
