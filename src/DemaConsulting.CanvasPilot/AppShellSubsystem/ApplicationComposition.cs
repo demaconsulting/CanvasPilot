@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
@@ -34,9 +35,9 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
 /// <summary>
 ///     The application's composition root: creates the units in dependency order (logger, settings, project
-///     service, recent projects, explorer, workspace, shell) and holds them for the application's lifetime.
-///     The application creates it at startup and disposes it on shutdown; system tests create it with
-///     temporary folders and no window.
+///     service, recent projects, explorer, workspace, shell, and, when the folders for its data are given, the AI
+///     copilot) and holds them for the application's lifetime. The application creates it at startup and disposes it
+///     on shutdown; system tests create it with temporary folders and no window.
 /// </summary>
 public sealed class ApplicationComposition : IDisposable
 {
@@ -74,6 +75,7 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="stylePicker">The list in the status bar with which the user chooses the style kit.</param>
     /// <param name="styleCheck">What the Check Against Style item of the Image menu runs.</param>
     /// <param name="styleTools">The descriptors of the tools that give and check the style, for an assistant.</param>
+    /// <param name="agent">The AI copilot, or <see langword="null" /> when the composition has none.</param>
     /// <param name="ownedServices">The services the composition created and must dispose.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
@@ -92,6 +94,7 @@ public sealed class ApplicationComposition : IDisposable
         StylePickerViewModel stylePicker,
         ICheckAgainstStyle styleCheck,
         IReadOnlyList<KnowledgeTool> styleTools,
+        IAgentService? agent,
         IReadOnlyList<IDisposable> ownedServices)
     {
         Logger = logger;
@@ -110,6 +113,7 @@ public sealed class ApplicationComposition : IDisposable
         StylePicker = stylePicker;
         StyleCheck = styleCheck;
         StyleToolDescriptors = styleTools;
+        Agent = agent;
         _ownedServices = ownedServices;
 
         // The message is written in the open project: follow it, and start with the one that is open now
@@ -202,15 +206,22 @@ public sealed class ApplicationComposition : IDisposable
 
     /// <summary>
     ///     Gets the descriptors of the two tools that give the style (<c>style_get</c>) and check a picture against it
-    ///     (<c>style_check</c>), in the form of the descriptors of the drawing knowledge, to be given to an assistant
-    ///     together with them when one is added. Nothing in the application calls them yet.
+    ///     (<c>style_check</c>), in the form of the descriptors of the drawing knowledge. The composition gives them, with
+    ///     the descriptors of the drawing knowledge, to the registry of the tools of the AI copilot.
     /// </summary>
     public IReadOnlyList<KnowledgeTool> StyleToolDescriptors { get; }
 
     /// <summary>
+    ///     Gets the AI copilot that the chat panel talks to, or <see langword="null" /> when the composition was made
+    ///     without the folders for its data, in which case the panel has no copilot.
+    /// </summary>
+    public IAgentService? Agent { get; }
+
+    /// <summary>
     ///     Creates the units for the running application: the log under the per-user local application data
     ///     folder, the settings under the per-user application data folder, the Documents folder as the place
-    ///     offered for new projects, and the dispatcher-based refresh scheduler.
+    ///     offered for new projects, the dispatcher-based refresh scheduler, and the AI copilot, which keeps its data
+    ///     (the Copilot runtime files and the chat history) under <c>CanvasPilot</c> in the local application data folder.
     /// </summary>
     /// <returns>The composition, with the settings already loaded.</returns>
     public static ApplicationComposition CreateDefault()
@@ -218,12 +229,15 @@ public sealed class ApplicationComposition : IDisposable
         var logger = RollingFileLogger.CreateDefault();
         var settings = SettingsService.CreateDefault(logger);
         var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var localDataRoot = AgentService.GetDefaultLocalDataRoot();
         return Create(
             logger,
             settings,
             new DispatcherRefreshScheduler(),
             defaultProjectsFolder: string.IsNullOrWhiteSpace(documents) ? null : documents,
-            dragFolder: ImageDragSource.DefaultFolder);
+            dragFolder: ImageDragSource.DefaultFolder,
+            localDataRoot: localDataRoot,
+            historyRoot: ChatHistoryStore.DefaultHistoryRoot);
     }
 
     /// <summary>
@@ -271,6 +285,28 @@ public sealed class ApplicationComposition : IDisposable
     ///     The folder of the style kits of the user, or <see langword="null" /> for <c>styles</c> in the data folder of the
     ///     application. Tests pass a temporary folder so that they do not read the kits of the person who runs them.
     /// </param>
+    /// <param name="localDataRoot">
+    ///     The folder that holds the data folder of the application (<c>CanvasPilot</c>), which is where the Copilot runtime
+    ///     keeps its files. The running application passes the local application data folder of the user. When this is
+    ///     <see langword="null" /> the composition has no AI copilot and the chat panel works without one, so a test that
+    ///     does not need it never touches the folders, the processes, or the network of the user.
+    /// </param>
+    /// <param name="historyRoot">
+    ///     The folder of the chat history, or <see langword="null" /> for <c>CanvasPilot\history</c> below
+    ///     <paramref name="localDataRoot" />. It is never a place in a project. It is used only with
+    ///     <paramref name="localDataRoot" />.
+    /// </param>
+    /// <param name="agentFactory">
+    ///     Makes the agents of the AI copilot, or <see langword="null" /> for the factory of the providers (Ollama, and
+    ///     GitHub Copilot, which this build cannot start). The composition passes it to the AI copilot, which disposes it.
+    /// </param>
+    /// <param name="processRunner">
+    ///     Runs the Copilot CLI and the GitHub CLI for the readiness check, or <see langword="null" /> for the real
+    ///     processes.
+    /// </param>
+    /// <param name="ollamaProbe">Asks the Ollama server for its models, or <see langword="null" /> for the real server.</param>
+    /// <param name="environment">Reads the environment for the readiness check, or <see langword="null" /> for the real one.</param>
+    /// <param name="cliFileSystem">Looks for the Copilot CLI in the file system, or <see langword="null" /> for the real one.</param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -285,7 +321,14 @@ public sealed class ApplicationComposition : IDisposable
         string? dragFolder = null,
         IDictationService? dictation = null,
         IMessageBuilder? messageBuilder = null,
-        string? styleUserFolder = null)
+        string? styleUserFolder = null,
+        string? localDataRoot = null,
+        string? historyRoot = null,
+        IAgentFactory? agentFactory = null,
+        IProcessRunner? processRunner = null,
+        IOllamaProbe? ollamaProbe = null,
+        IEnvironmentReader? environment = null,
+        ICliFileSystem? cliFileSystem = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -346,12 +389,50 @@ public sealed class ApplicationComposition : IDisposable
         owned.Insert(0, stylePicker);
         owned.Insert(0, styleCheck);
 
+        // The AI copilot: the tools of the drawing knowledge, the style, and the project, the instructions, the factory of
+        // the agents of the provider, and the check that tells whether the provider can be used, which the Settings page
+        // also offers as Check connection. Its data is kept in the folders given here, outside every project. It is
+        // disposed first of all, so it stops listening to the project and the settings before they go.
+        AgentService? agent = null;
+        AgentReadiness? readiness = null;
+        ChatHistoryStore? chatHistory = null;
+        if (localDataRoot is not null)
+        {
+            var runner = processRunner ?? new ProcessRunner();
+            var fileSystem = cliFileSystem ?? new CliFileSystem();
+            var environmentReader = environment ?? new SystemEnvironmentReader();
+            var locator = new CopilotCliLocator(runner, fileSystem, environmentReader);
+            readiness = new AgentReadiness(locator, null, runner, environmentReader, fileSystem, ollamaProbe);
+            var projectTools = new ProjectTools(renderer, styleSelection, logger: logger);
+            var registry = new AgentToolRegistry(
+                KnowledgeTools.CreateAll(KnowledgeCatalog.Default),
+                styleTools,
+                projectTools.CreatePacks);
+            var instructions = new AgentInstructions(new KnowledgePromptBuilder(KnowledgeCatalog.Default));
+            var factory = agentFactory ?? new AgentProviderFactory(locator, null, null, logger);
+            var historyFolder = historyRoot ?? AgentService.GetHistoryDirectory(localDataRoot);
+            agent = new AgentService(
+                projects,
+                settings,
+                registry,
+                instructions,
+                factory,
+                readiness,
+                projectTools,
+                styleSelection,
+                logger,
+                localDataRoot,
+                historyFolder);
+            chatHistory = new ChatHistoryStore(historyFolder, logger);
+            owned.Insert(0, agent);
+        }
+
         // The Style Kits page browses for folders through the dialog service of the main window, which the shell has only
         // once the window attaches itself; the page asks the shell when the user asks to browse
         MainWindowShell? pickerOwner = null;
         IReadOnlyList<ISettingsPage> pages = settingsPages ??
         [
-            new AiProviderSettingsPageViewModel(),
+            new AiProviderSettingsPageViewModel(readiness),
             new SpeechSettingsPageViewModel(audioDevices, speechModels),
             new StyleSettingsPageViewModel(styleCatalog, () => pickerOwner?.FolderPicker),
         ];
@@ -386,18 +467,191 @@ public sealed class ApplicationComposition : IDisposable
         preview.Toolbar = new AnnotationToolbarViewModel(annotation);
 
         // The chat panel joins the two: every mark that is drawn becomes a chip of the message, and the layer shows the
-        // marks whose chips the message holds
-        var chat = new ChatPanelViewModel(composer, marks, annotation, markImages, dictation, logger);
+        // marks whose chips the message holds. It talks to the AI copilot and keeps its conversation in the history
+        var chat = new ChatPanelViewModel(
+            composer,
+            marks,
+            annotation,
+            markImages,
+            dictation,
+            logger,
+            agent,
+            history: chatHistory,
+            projects: projects);
 
         // The chat panel is the right-hand column of the workspace, which shows it while a project is open, and it is
         // what the talk key of the window listens for
         workspace.Chat = chat;
         shell.PushToTalk = chat;
 
+        // What the copilot does to the rest of the application: a file it writes is shown in the explorer, the chat asks
+        // for the settings, and a change of the provider is checked again. These are released before the copilot.
+        if (agent is not null)
+        {
+            owned.Insert(0, new CopilotWiring(agent, settings, explorer, chat, shell, logger));
+        }
+
         logger.Log(LogLevel.Info, "Application started.");
         return new ApplicationComposition(
             logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat,
-            styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, owned);
+            styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, agent, owned);
+    }
+
+    /// <summary>
+    ///     What the AI copilot does to the rest of the application, joined in one place because none of the units knows
+    ///     the others: a file that the copilot writes is shown in the project explorer and selected, which shows its
+    ///     picture; the chat panel's request for the settings opens the settings dialog of the shell; and a change of the
+    ///     AI provider settings makes the chat panel check the provider again. Everything runs on the thread of the user
+    ///     interface that created the composition, or on the calling thread when there was none (in tests).
+    /// </summary>
+    private sealed class CopilotWiring : IDisposable
+    {
+        /// <summary>The thread context of the user interface, or <see langword="null" /> without one.</summary>
+        private readonly SynchronizationContext? _context = SynchronizationContext.Current;
+
+        /// <summary>The copilot that reports the files it wrote.</summary>
+        private readonly IAgentService _agent;
+
+        /// <summary>The settings whose changes are watched.</summary>
+        private readonly ISettingsService _settings;
+
+        /// <summary>The explorer that shows the files of the project.</summary>
+        private readonly ProjectExplorerViewModel _explorer;
+
+        /// <summary>The chat panel that checks the provider and asks for the settings.</summary>
+        private readonly ChatPanelViewModel _chat;
+
+        /// <summary>The shell whose settings command is run.</summary>
+        private readonly MainWindowShell _shell;
+
+        /// <summary>The application log.</summary>
+        private readonly RollingFileLogger _logger;
+
+        /// <summary>The AI provider settings that the provider was last checked for.</summary>
+        private AiProviderSettings _provider;
+
+        /// <summary>Whether the wiring was disposed.</summary>
+        private volatile bool _disposed;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="CopilotWiring" /> class and starts listening.
+        /// </summary>
+        /// <param name="agent">The copilot.</param>
+        /// <param name="settings">The settings service.</param>
+        /// <param name="explorer">The project explorer.</param>
+        /// <param name="chat">The chat panel.</param>
+        /// <param name="shell">The main window shell.</param>
+        /// <param name="logger">The application log.</param>
+        internal CopilotWiring(
+            IAgentService agent,
+            ISettingsService settings,
+            ProjectExplorerViewModel explorer,
+            ChatPanelViewModel chat,
+            MainWindowShell shell,
+            RollingFileLogger logger)
+        {
+            _agent = agent;
+            _settings = settings;
+            _explorer = explorer;
+            _chat = chat;
+            _shell = shell;
+            _logger = logger;
+            _provider = settings.Current.AiProvider;
+
+            _agent.FileWritten += OnFileWritten;
+            _chat.OpenSettingsRequested += OnOpenSettingsRequested;
+            _settings.Changed += OnSettingsChanged;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            _disposed = true;
+            _agent.FileWritten -= OnFileWritten;
+            _chat.OpenSettingsRequested -= OnOpenSettingsRequested;
+            _settings.Changed -= OnSettingsChanged;
+        }
+
+        /// <summary>
+        ///     Shows a file that the copilot wrote: the explorer reads the folder again and selects the file.
+        /// </summary>
+        /// <param name="sender">The copilot.</param>
+        /// <param name="e">The project-relative path of the file.</param>
+        private void OnFileWritten(object? sender, FileWrittenEventArgs e)
+        {
+            Post(() =>
+            {
+                _explorer.Refresh();
+                if (_explorer.FolderPath is { } folder)
+                {
+                    _explorer.SelectFile(Path.GetFullPath(Path.Combine(folder, e.RelativePath)));
+                }
+            });
+        }
+
+        /// <summary>
+        ///     Opens the settings dialog of the shell when the chat panel asks for the settings.
+        /// </summary>
+        /// <param name="sender">The chat panel.</param>
+        /// <param name="e">Nothing.</param>
+        private void OnOpenSettingsRequested(object? sender, EventArgs e)
+        {
+            Post(() => _ = _shell.OpenSettingsCommand.ExecuteAsync(null));
+        }
+
+        /// <summary>
+        ///     Checks the provider again when the AI provider settings changed; other changes of the settings are not its business.
+        /// </summary>
+        /// <param name="sender">The settings service.</param>
+        /// <param name="e">The settings now in effect.</param>
+        private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
+        {
+            var provider = e.Settings.AiProvider;
+            if (provider == _provider)
+            {
+                return;
+            }
+
+            _provider = provider;
+            Post(() => _ = _chat.RefreshReadinessAsync());
+        }
+
+        /// <summary>
+        ///     Runs an action on the thread of the user interface, and logs a failure instead of letting it reach the caller.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        private void Post(Action action)
+        {
+            if (_context is null || SynchronizationContext.Current == _context)
+            {
+                Run(action);
+            }
+            else
+            {
+                _context.Post(_ => Run(action), null);
+            }
+        }
+
+        /// <summary>
+        ///     Runs an action unless the wiring was disposed, and logs a failure.
+        /// </summary>
+        /// <param name="action">The action.</param>
+        private void Run(Action action)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            try
+            {
+                action();
+            }
+            catch (Exception ex) when (ex is not OutOfMemoryException)
+            {
+                _logger.Log(LogLevel.Warning, "The copilot's change could not be shown.", ex);
+            }
+        }
     }
 
     /// <summary>
