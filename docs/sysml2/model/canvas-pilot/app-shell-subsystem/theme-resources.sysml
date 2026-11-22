@@ -6,6 +6,7 @@ package CanvasPilot_ThemeResources {
 
         metadata info : SoftwareInfo {
             sourceFiles = (
+                "src/DemaConsulting.CanvasPilot/AppShellSubsystem/ThemeVariantApplier.cs",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/Styles/Tokens.axaml",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/Styles/Icons.axaml",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/Styles/Controls.axaml",
@@ -13,7 +14,8 @@ package CanvasPilot_ThemeResources {
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.UiTests/ThemeResourcesViewTests.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/ControlThemesViewTests.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/ControlThemesViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/ThemeVariantApplierViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/app-shell-subsystem/theme-resources.md");
             verificationFiles = ("docs/verification/canvas-pilot/app-shell-subsystem/theme-resources.md");

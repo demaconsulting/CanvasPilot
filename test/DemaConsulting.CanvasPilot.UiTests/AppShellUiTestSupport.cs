@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
@@ -113,8 +114,9 @@ internal static class AppShellUiHelpers
     /// </summary>
     /// <param name="root">The temporary root that holds the log, settings, and projects folders.</param>
     /// <param name="exporter">What the Image menu exports, or <see langword="null" /> for none.</param>
+    /// <param name="application">The application whose theme the composition follows the settings for, or <see langword="null" />.</param>
     /// <returns>The composition.</returns>
-    public static ApplicationComposition Compose(string root, IImageExporter? exporter = null)
+    public static ApplicationComposition Compose(string root, IImageExporter? exporter = null, Application? application = null)
     {
         var projects = Directory.CreateDirectory(Path.Combine(root, "projects")).FullName;
         var logger = new RollingFileLogger(Path.Combine(root, "logs"));
@@ -127,7 +129,8 @@ internal static class AppShellUiHelpers
             defaultProjectsFolder: projects,
             audioDevices: new FakeAudioDeviceService(),
             speechModels: new FakeSpeechModelService(),
-            styleUserFolder: Path.Combine(root, "styles"));
+            styleUserFolder: Path.Combine(root, "styles"),
+            application: application);
     }
 
     /// <summary>

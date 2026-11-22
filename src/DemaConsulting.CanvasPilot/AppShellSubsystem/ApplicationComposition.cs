@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -223,8 +224,12 @@ public sealed class ApplicationComposition : IDisposable
     ///     offered for new projects, the dispatcher-based refresh scheduler, and the AI copilot, which keeps its data
     ///     (the Copilot runtime files and the chat history) under <c>CanvasPilot</c> in the local application data folder.
     /// </summary>
+    /// <param name="application">
+    ///     The running application, whose theme variant follows the theme choice of the settings, or <see langword="null" />
+    ///     for a composition that has no application (the theme then stays as it is).
+    /// </param>
     /// <returns>The composition, with the settings already loaded.</returns>
-    public static ApplicationComposition CreateDefault()
+    public static ApplicationComposition CreateDefault(Application? application = null)
     {
         var logger = RollingFileLogger.CreateDefault();
         var settings = SettingsService.CreateDefault(logger);
@@ -237,7 +242,8 @@ public sealed class ApplicationComposition : IDisposable
             defaultProjectsFolder: string.IsNullOrWhiteSpace(documents) ? null : documents,
             dragFolder: ImageDragSource.DefaultFolder,
             localDataRoot: localDataRoot,
-            historyRoot: ChatHistoryStore.DefaultHistoryRoot);
+            historyRoot: ChatHistoryStore.DefaultHistoryRoot,
+            application: application);
     }
 
     /// <summary>
@@ -316,6 +322,11 @@ public sealed class ApplicationComposition : IDisposable
     ///     Gives the catalog of the Ollama server for the readiness check, the factory of the agents, and the model list of
     ///     the settings page, or <see langword="null" /> for catalogs on the real network.
     /// </param>
+    /// <param name="application">
+    ///     The running application, whose theme variant follows the theme choice of the settings (it is applied before the
+    ///     composition is returned, so the first window opens in the right theme), or <see langword="null" /> for a
+    ///     composition that has no application, such as a test without a window, which leaves the theme as it is.
+    /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -339,7 +350,8 @@ public sealed class ApplicationComposition : IDisposable
         IEnvironmentReader? environment = null,
         ICliFileSystem? cliFileSystem = null,
         ICopilotRuntimeStarter? copilotStarter = null,
-        IOllamaModelCatalogs? ollamaCatalogs = null)
+        IOllamaModelCatalogs? ollamaCatalogs = null,
+        Application? application = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -463,6 +475,7 @@ public sealed class ApplicationComposition : IDisposable
             new AiProviderSettingsPageViewModel(readiness, modelSource),
             new SpeechSettingsPageViewModel(audioDevices, speechModels),
             new StyleSettingsPageViewModel(styleCatalog, () => pickerOwner?.FolderPicker),
+            new AppearanceSettingsPageViewModel(),
         ];
 
         var shell = new MainWindowShell(
@@ -517,6 +530,12 @@ public sealed class ApplicationComposition : IDisposable
         if (agent is not null)
         {
             owned.Insert(0, new CopilotWiring(agent, settings, explorer, chat, shell, logger));
+        }
+
+        // The theme variant of the application follows the choice of the settings, from the first window on
+        if (application is not null)
+        {
+            owned.Add(new ThemeVariantApplier(application, settings));
         }
 
         logger.Log(LogLevel.Info, "Application started.");

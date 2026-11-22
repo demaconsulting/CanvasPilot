@@ -73,6 +73,7 @@ includes:
   - docs/reqstream/canvas-pilot/settings-subsystem/settings-service.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem/settings-dialog.yaml
   - docs/reqstream/canvas-pilot/settings-subsystem/ai-provider-settings-page.yaml
+  - docs/reqstream/canvas-pilot/settings-subsystem/appearance-settings-page.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/audio-device-service.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/speech-model-service.yaml

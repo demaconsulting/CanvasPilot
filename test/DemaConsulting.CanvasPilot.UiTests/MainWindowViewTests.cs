@@ -440,7 +440,7 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that the Settings menu item opens the settings dialog with the AI Provider, Speech, and Style Kits pages, and
+    ///     Test that the Settings menu item opens the settings dialog with the AI Provider, Speech, Style Kits, and Appearance pages, and
     ///     that Cancel closes it.
     /// </summary>
     [AvaloniaFact]
@@ -458,8 +458,8 @@ public sealed class MainWindowViewTests : IDisposable
         SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "SettingsCancelButton"));
         await shown;
 
-        // Assert: the dialog listed all three pages, and Cancel closed it
-        Assert.Equal(["AI Provider", "Speech", "Style Kits"], titles);
+        // Assert: the dialog listed all four pages, and Cancel closed it
+        Assert.Equal(["AI Provider", "Speech", "Style Kits", "Appearance"], titles);
         Assert.Empty(window.OwnedWindows);
 
         window.Close();

@@ -1,6 +1,7 @@
 package CanvasPilot_SettingsSubsystem {
     private import SoftwareItemMetadata::*;
     private import CanvasPilot_AiProviderSettingsPage::*;
+    private import CanvasPilot_AppearanceSettingsPage::*;
     private import CanvasPilot_SettingsDialog::*;
     private import CanvasPilot_SettingsService::*;
 
@@ -17,5 +18,6 @@ package CanvasPilot_SettingsSubsystem {
         part settingsService : SettingsService;
         part settingsDialog : SettingsDialog;
         part aiProviderSettingsPage : AiProviderSettingsPage;
+        part appearanceSettingsPage : AppearanceSettingsPage;
     }
 }

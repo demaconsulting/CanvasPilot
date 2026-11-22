@@ -711,6 +711,12 @@ headless in the dark and in the light theme variant (a headless UI test in `Canv
 the dark window is dark on average and the picture of the light window is light. This scenario is tested by
 `CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight`.
 
+**CanvasPilot_Theme_ChoiceInSettingsDialogChangesTheWindowAndIsRemembered**: The application is composed for the running
+application with its main window shown (a headless UI test in `CanvasPilotThemeTests.cs`); the user opens Settings from
+the Tools menu, chooses the Appearance page, chooses Dark, and chooses OK. The window turns dark and a new settings
+service over the same folder reads the dark choice. This scenario is tested by
+`CanvasPilot_Theme_ChoiceInSettingsDialogChangesTheWindowAndIsRemembered`.
+
 **ThirdPartyNotices_Published**: After the Windows build job publishes the application self-contained for win-x64,
 FileAssert asserts that the published folder, which the installer takes whole, holds exactly one
 `THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License, so the notice of the vendored icons is in

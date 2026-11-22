@@ -79,6 +79,34 @@ public sealed class SettingsSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the theme and the explorer options chosen on the Appearance page and accepted with OK are stored,
+    ///     are present after a restart, and leave the choices of the other pages as they were.
+    /// </summary>
+    [Fact]
+    public void SettingsSubsystem_Appearance_DialogOk_StoresThemeAndOptions()
+    {
+        // Arrange: stored AI provider settings, and a dialog over the AI provider page and the Appearance page
+        var service = new SettingsService(_tempRoot);
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "gpt-x" } });
+        var provider = new AiProviderSettingsPageViewModel();
+        var appearance = new AppearanceSettingsPageViewModel();
+        var dialog = new SettingsDialogViewModel(service, [provider, appearance]);
+
+        // Act: choose the dark theme without thumbnails on the Appearance page, choose OK, and restart
+        dialog.SelectedPage = appearance;
+        appearance.SelectedTheme = appearance.Themes[1];
+        appearance.ShowThumbnails = false;
+        dialog.OkCommand.Execute(null);
+        var restarted = new SettingsService(_tempRoot).Load();
+
+        // Assert: the appearance was stored and the model name of the other page is unchanged
+        Assert.Equal(ThemeChoice.Dark, restarted.Appearance.Theme);
+        Assert.False(restarted.Appearance.ShowThumbnails);
+        Assert.False(restarted.Appearance.ComfortableRows);
+        Assert.Equal("gpt-x", restarted.AiProvider.ModelName);
+    }
+
+    /// <summary>
     ///     Test that choices made in the dialog survive an application restart.
     /// </summary>
     [Fact]

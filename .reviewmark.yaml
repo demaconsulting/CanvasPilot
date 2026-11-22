@@ -479,11 +479,13 @@ reviews:
       - "docs/reqstream/canvas-pilot/app-shell-subsystem/theme-resources.yaml"
       - "docs/design/canvas-pilot/app-shell-subsystem/theme-resources.md"
       - "docs/verification/canvas-pilot/app-shell-subsystem/theme-resources.md"
+      - "src/**/AppShellSubsystem/ThemeVariantApplier.cs"
       - "src/**/AppShellSubsystem/Styles/Tokens.axaml"
       - "src/**/AppShellSubsystem/Styles/Icons.axaml"
       - "src/**/AppShellSubsystem/Styles/Controls.axaml"
       - "test/**/ThemeResourcesViewTests.cs"
       - "test/**/ControlThemesViewTests.cs"
+      - "test/**/ThemeVariantApplierViewTests.cs"
 
   # CanvasPilot - Chat
   - id: CanvasPilot-Chat
@@ -1316,6 +1318,23 @@ reviews:
       - "src/**/SpeechSubsystem/ModelParameterEditorView.axaml"
       - "src/**/SpeechSubsystem/ModelParameterEditorView.axaml.cs"
       - "test/**/SpeechSubsystem/ModelParameterEditorTests.cs"
+
+  - id: CanvasPilot-Settings-AppearanceSettingsPage
+    title: Review of CanvasPilot AppearanceSettingsPage unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/settings-subsystem.md
+      - docs/reqstream/canvas-pilot/settings-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/settings-subsystem/appearance-settings-page.yaml"
+      - "docs/design/canvas-pilot/settings-subsystem/appearance-settings-page.md"
+      - "docs/verification/canvas-pilot/settings-subsystem/appearance-settings-page.md"
+      - "src/**/SettingsSubsystem/AppearanceSettingsPageViewModel.cs"
+      - "src/**/SettingsSubsystem/AppearanceSettingsPageView.axaml"
+      - "src/**/SettingsSubsystem/AppearanceSettingsPageView.axaml.cs"
+      - "test/**/SettingsSubsystem/AppearanceSettingsPageTests.cs"
+      - "test/**/AppearanceSettingsPageViewTests.cs"
 
   - id: CanvasPilot-Speech-SpeechSettingsPage
     title: Review of CanvasPilot SpeechSettingsPage unit implementation

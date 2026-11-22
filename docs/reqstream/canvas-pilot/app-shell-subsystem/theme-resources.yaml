@@ -47,6 +47,23 @@ sections:
                 tests:
                   - ThemeResources_DynamicResource_FollowsVariantSwitch
 
+              - id: CanvasPilot-ThemeResources-ApplyThemeChoice
+                title: >-
+                  The ThemeResources shall make the application dark, light, or the theme of the operating system as the
+                  settings choose, when the application starts and every time the choice is changed, also when it is
+                  changed on another thread, and stop doing so when it is disposed.
+                justification: |
+                  A choice in the settings must take effect in the windows that are open without a restart, and the choice
+                  to follow the system must give the control back to the operating system. The settings may be changed from
+                  a thread other than the one that owns the windows, and nothing may touch a window from there.
+                tests:
+                  - ThemeVariantApplier_ToVariant_EachChoice_IsTheVariantItNames
+                  - ThemeVariantApplier_New_StoredChoice_IsAppliedAtOnce
+                  - ThemeVariantApplier_SettingsChanged_FollowsTheChoice
+                  - ThemeVariantApplier_SettingsChangedOnAnotherThread_IsAppliedOnTheUserInterfaceThread
+                  - ThemeVariantApplier_Dispose_StopsFollowingTheSettings
+                  - ThemeVariantApplier_New_NullArguments_Throw
+
               - id: CanvasPilot-ThemeResources-ProvideIcons
                 title: >-
                   The ThemeResources shall provide the line icons that the views need, drawn 16 by 16 in the foreground

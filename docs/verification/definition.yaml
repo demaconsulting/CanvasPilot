@@ -87,6 +87,7 @@ input-files:
   - docs/verification/canvas-pilot/settings-subsystem/settings-service.md
   - docs/verification/canvas-pilot/settings-subsystem/settings-dialog.md
   - docs/verification/canvas-pilot/settings-subsystem/ai-provider-settings-page.md
+  - docs/verification/canvas-pilot/settings-subsystem/appearance-settings-page.md
   - docs/verification/canvas-pilot/speech-subsystem.md
   - docs/verification/canvas-pilot/speech-subsystem/audio-device-service.md
   - docs/verification/canvas-pilot/speech-subsystem/speech-model-service.md

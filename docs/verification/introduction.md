@@ -99,6 +99,7 @@ This document covers the verification design for the following software items:
     - **SettingsService** — versioned per-user settings file
     - **SettingsDialog** — modal settings window hosting settings pages
     - **AiProviderSettingsPage** — AI provider settings page
+    - **AppearanceSettingsPage** — theme and explorer options page
   - **Speech** subsystem
     - **AudioDeviceService** — audio device listing and capture device creation through the Speech library
     - **SpeechModelService** — speech model listing, downloading, and engine loading through the Speech library

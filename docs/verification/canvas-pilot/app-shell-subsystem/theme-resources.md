@@ -29,6 +29,8 @@ parallelization disabled; no display is required.
 - The icon button, tool toggle, pill button, and splitter show a 2 px ring in the focus color when focused with the
   keyboard and none when focused with the pointer, and the ring is really drawn just outside the button.
 - A splitter draws a 1 px line and a 4 by 40 grip, and the arrow keys resize the column before it in steps of 16.
+- The theme applier shows the stored choice at once, follows each change (dark, light, and the system again), applies a
+  change from another thread on the user interface thread, stops after it is disposed, and refuses missing arguments.
 - A border that takes its background from a token shows the color of the requested variant, and the color of the other
   variant after the window switches, without being created again.
 
@@ -81,6 +83,28 @@ keyboard. This scenario is tested by `ThemeResources_Controls_FocusRingShowsForK
 **ThemeResources_Controls_FocusRingIsDrawnOutsideTheButton**: After keyboard focus an icon button is drawn headless and
 the pixel just above the middle of its top edge has the focus color in both variants, so the ring is not clipped away.
 This scenario is tested by `ThemeResources_Controls_FocusRingIsDrawnOutsideTheButton`.
+**ThemeVariantApplier_ToVariant_EachChoice_IsTheVariantItNames**: Dark and Light are the variants of the same name and
+following the system is the default variant. This scenario is tested by
+`ThemeVariantApplier_ToVariant_EachChoice_IsTheVariantItNames`.
+
+**ThemeVariantApplier_New_StoredChoice_IsAppliedAtOnce**: Settings that pin the dark theme are stored; an applier is
+created while the application asks for light, and the application is dark. This scenario is tested by
+`ThemeVariantApplier_New_StoredChoice_IsAppliedAtOnce`.
+
+**ThemeVariantApplier_SettingsChanged_FollowsTheChoice**: Updating the settings to dark, to light, and to follow the
+system makes the application dark, light, and the default variant. This scenario is tested by
+`ThemeVariantApplier_SettingsChanged_FollowsTheChoice`.
+
+**ThemeVariantApplier_SettingsChangedOnAnotherThread_IsAppliedOnTheUserInterfaceThread**: The settings are updated on a
+thread of the pool and the user interface thread runs its work; the application is dark. This scenario is tested by
+`ThemeVariantApplier_SettingsChangedOnAnotherThread_IsAppliedOnTheUserInterfaceThread`.
+
+**ThemeVariantApplier_Dispose_StopsFollowingTheSettings**: After the applier is disposed (twice) a change of the
+settings does not change the application. This scenario is tested by
+`ThemeVariantApplier_Dispose_StopsFollowingTheSettings`.
+
+**ThemeVariantApplier_New_NullArguments_Throw**: A missing application or settings service is refused. This scenario is
+tested by `ThemeVariantApplier_New_NullArguments_Throw`.
 **ThirdPartyNotices_Published**: After the Windows build job publishes the application self-contained for win-x64,
 FileAssert asserts that the published folder, which the installer takes whole, holds exactly one
 `THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License. This scenario is tested by

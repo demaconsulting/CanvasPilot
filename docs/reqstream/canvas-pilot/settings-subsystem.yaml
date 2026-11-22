@@ -77,6 +77,19 @@ sections:
             tests:
               - SettingsSubsystem_RememberLayoutAndAppearance_SavedWithOthers_SurviveRestartAndDialogChanges
 
+          - id: CanvasPilot-Settings-ChooseAppearance
+            title: >-
+              The Settings subsystem shall let the user choose the theme of the application and the options of the project
+              explorer on an Appearance page of the settings dialog, and store the choices with the other settings.
+            justification: |
+              Where people look for how the application looks is the settings dialog. The choices must be stored with
+              the other settings so that they are in effect the next time the application starts.
+            children:
+              - CanvasPilot-AppearanceSettingsPage-ChooseAppearance
+              - CanvasPilot-AppearanceSettingsPage-ShowPageInDialog
+            tests:
+              - SettingsSubsystem_Appearance_DialogOk_StoresThemeAndOptions
+
           - id: CanvasPilot-Settings-ConfigureAiProvider
             title: >-
               The Settings subsystem shall let the user choose and store the AI provider, the model from the list that the

@@ -84,6 +84,7 @@ flowchart TD
         SettingsService
         SettingsDialog
         AiProviderSettingsPage
+        AppearanceSettingsPage
     end
     subgraph Speech
         AudioDeviceService
@@ -199,6 +200,7 @@ flowchart TD
     SettingsService --> RollingFileLogger
     SettingsDialog --> SettingsService
     AiProviderSettingsPage --> SettingsDialog
+    AppearanceSettingsPage --> SettingsDialog
     AudioDeviceService --> RollingFileLogger
     SpeechModelService --> RollingFileLogger
     DictationService --> SettingsService

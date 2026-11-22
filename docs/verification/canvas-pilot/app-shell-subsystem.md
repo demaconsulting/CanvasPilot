@@ -26,7 +26,7 @@ services, or display are required.
   from the Recent Projects menu with its files.
 - Renaming and deleting the selected file through the workspace changes the project folder and the explorer list.
 - Choices made in the settings dialog opened from the shell are stored and in effect in the next run, and the
-  dialog hosts the AI Provider page followed by the Speech page.
+  dialog hosts the AI Provider page followed by the Speech page, the Style Kits page, and the Appearance page.
 - The About dialog opened from the composed shell shows the application name, a version, and the five libraries.
 - The Drawing Knowledge command of the composed shell gives the dialog service a browser over the catalog of the
   application, whose tree is the roots of the catalog.
@@ -55,6 +55,8 @@ services, or display are required.
 - Disposing the composition disposes the copilot and its factory once, and the settings are no longer looked at.
 - A stock window and the text on it take the pane surface and the primary text color of the theme variant that is
   asked for, and the system accent is the brand accent, in the dark and in the light variant.
+- A change of the theme choice in the settings of the application composed for a running application changes the theme
+  variant of the open main window, to dark, to light, and back to the system.
 - Walking through a window with the Tab key shows the focus ring on the control that has the focus and on no other.
 - An icon in a stock button is 16 by 16 and has the primary text color of the theme variant that is asked for.
 - The published folder holds the notice of the third-party icons (checked in the build of the installer).
@@ -102,10 +104,10 @@ each change and no message was shown. This scenario is tested by
 settings dialog opened from the shell and chooses OK; a new composition has the model name in effect. This scenario
 is tested by `AppShellSubsystem_Settings_DialogOk_StoresChoicesForNextRun`.
 
-**AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages**: The Settings command of a composed
-shell shows a dialog whose pages are titled AI Provider, Speech, and Style Kits, in that order, and the second page is
-the Speech page and the third is the Style Kits page. This scenario is tested by
-`AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
+**AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages**: The Settings command of a composed shell
+shows a dialog whose pages are titled AI Provider, Speech, Style Kits, and Appearance, in that order, and the second
+page is the Speech page, the third is the Style Kits page, and the fourth is the Appearance page. This scenario is
+tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
 
 **AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries**: The About command of a composed shell
 shows a dialog with the application name, a non-blank version, and five libraries. This scenario is tested by
@@ -164,6 +166,12 @@ the server was not asked again. This scenario is tested by
 dark and in the light variant (a headless UI test in `AppShellThemeTests.cs`); its background is the pane surface of the
 variant, the text is the primary text color, the system accent is the brand accent, and the two variants differ. This
 scenario is tested by `AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants`.
+
+**AppShellSubsystem_Themes_SettingsChoiceChangesTheVariantOfTheOpenWindow**: The application is composed for the running
+application and its main window is shown (a headless UI test in `AppShellThemeTests.cs`); the settings are updated to
+the dark theme, to the light theme, and to follow the system; after each the window has the variant, and the background
+of the window is the pane surface of the variant. This scenario is tested by
+`AppShellSubsystem_Themes_SettingsChoiceChangesTheVariantOfTheOpenWindow`.
 
 **AppShellSubsystem_Themes_TabKeyShowsTheFocusRingOnTheFocusedControlOnly**: An icon button, a tool toggle, a pill
 button, and a splitter are in a window (a headless UI test in `AppShellThemeTests.cs`); the Tab key is pressed four

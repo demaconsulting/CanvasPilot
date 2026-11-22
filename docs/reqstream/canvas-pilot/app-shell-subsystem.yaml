@@ -150,6 +150,18 @@ sections:
               - CanvasPilot-ThemeResources-ProvideControlThemes
             tests:
               - AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants
+          - id: CanvasPilot-AppShell-ApplyThemeChoice
+            title: >-
+              The AppShell subsystem shall show the open windows in the theme that the settings choose, dark, light, or the
+              one of the operating system, from the start of the application and at once when the choice changes.
+            justification: |
+              People who choose a theme expect the window to follow without a restart, and the application composes the
+              settings and the windows, which do not know each other, so it is the place that joins them.
+            children:
+              - CanvasPilot-ThemeResources-ApplyThemeChoice
+            tests:
+              - AppShellSubsystem_Themes_SettingsChoiceChangesTheVariantOfTheOpenWindow
+
           - id: CanvasPilot-AppShell-ShowKeyboardFocus
             title: >-
               The AppShell subsystem shall show which of its buttons and splitters has the focus when the focus is moved

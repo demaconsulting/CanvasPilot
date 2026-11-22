@@ -227,7 +227,7 @@ public sealed class AppShellSubsystemTests : IDisposable
         await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
 
         // Assert: both pages are hosted
-        Assert.Equal(["AI Provider", "Speech", "Style Kits"], titles);
+        Assert.Equal(["AI Provider", "Speech", "Style Kits", "Appearance"], titles);
         Assert.Equal(typeof(SpeechSettingsPageViewModel), secondPageType);
         Assert.Equal(typeof(StyleSettingsPageViewModel), thirdPageType);
     }

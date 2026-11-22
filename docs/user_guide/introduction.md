@@ -42,7 +42,7 @@ This user guide covers:
   copying examples
 - Style kits: choosing the style of a project, the Style Kits window, where kits are kept and which copy wins, making,
   editing, importing, and exporting kits, exporting at sizes, and checking a picture against the style
-- The Settings dialog, with the AI Provider, Speech, and Style Kits pages
+- The Settings dialog, with the AI Provider, Speech, Style Kits, and Appearance pages
 - Where CanvasPilot keeps its settings, logs, chat history, speech models, and attachments
 - Troubleshooting
 
@@ -926,6 +926,16 @@ The Style Kits page stores where CanvasPilot looks for the kits of your team and
   and a folder that is already in the list, is refused.
 - **Default kit for new projects** chooses the kit that a project that you create starts with. Projects that exist keep
   the kit they have.
+
+## Appearance Page
+
+The Appearance page chooses how CanvasPilot looks.
+
+- **Theme** chooses **Follow system** (the default), **Dark**, or **Light**. With **Follow system**, CanvasPilot is dark
+  or light as your operating system is, and changes with it while it runs. **Dark** and **Light** keep that look
+  whatever the system does. The theme changes in every open window as soon as you choose **OK** or **Apply**.
+- **Show a small picture beside each file** and **Comfortable rows** are choices for the project explorer. They are
+  stored with your other settings.
 
 # About CanvasPilot
 

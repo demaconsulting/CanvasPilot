@@ -431,7 +431,8 @@ sections:
 
       - id: CanvasPilot-System-ThemedInterface
         title: >-
-          The application shall present its windows in a dark and a light theme, with one accent color, line icons that
+          The application shall present its windows in a dark or a light theme, as the operating system is unless the user
+          chooses one in the settings, with one accent color, line icons that
           follow the text color, a visible mark of the keyboard focus, and text that is easy to read in both.
         tags: [system]
         justification: |
@@ -442,8 +443,12 @@ sections:
           - CanvasPilot-AppShell-ProvideThemes
           - CanvasPilot-AppShell-ProvideIcons
           - CanvasPilot-AppShell-ShowKeyboardFocus
+          - CanvasPilot-AppShell-ApplyThemeChoice
+          - CanvasPilot-Settings-ChooseAppearance
         tests:
           - CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight
+          - CanvasPilot_Theme_ChoiceInSettingsDialogChangesTheWindowAndIsRemembered
+
       - id: CanvasPilot-System-ShipThirdPartyNotices
         title: >-
           The installed application shall carry the license notices of the third-party material that is part of it but

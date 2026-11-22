@@ -28,6 +28,8 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
@@ -35,8 +37,38 @@ namespace DemaConsulting.CanvasPilot.UiTests;
 ///     Headless subsystem test of the themes of the AppShell subsystem: the palettes of the theme make the stock
 ///     controls follow the brand in each theme variant.
 /// </summary>
-public sealed class AppShellThemeTests
+public sealed class AppShellThemeTests : IDisposable
 {
+    /// <summary>
+    ///     Temporary root removed on disposal.
+    /// </summary>
+    private readonly string _root = Directory.CreateTempSubdirectory("canvaspilot-ui-tests-").FullName;
+
+    /// <summary>
+    ///     The compositions created by a test, disposed with the fixture so no watcher outlives it.
+    /// </summary>
+    private readonly List<ApplicationComposition> _compositions = [];
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        // The application is shared by all tests of the assembly, so the variant that a test chose is taken back
+        if (Application.Current is { } application)
+        {
+            application.RequestedThemeVariant = ThemeVariant.Default;
+        }
+
+        foreach (var composition in _compositions)
+        {
+            composition.Dispose();
+        }
+
+        if (Directory.Exists(_root))
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+    }
+
     /// <summary>
     ///     Test that a stock window and the text on it take the surface and the text color of the requested theme
     ///     variant, and that the system accent is the brand accent in both variants.
@@ -69,6 +101,40 @@ public sealed class AppShellThemeTests
             ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Light));
     }
 
+    /// <summary>
+    ///     Test that a change of the theme choice in the settings of the application composed for a running application
+    ///     changes the theme variant that the open main window shows, and that following the system gives the variant of the system back.
+    /// </summary>
+    [AvaloniaFact]
+    public void AppShellSubsystem_Themes_SettingsChoiceChangesTheVariantOfTheOpenWindow()
+    {
+        // Arrange: the composed application with its main window shown and a theme applier on its settings
+        var composition = AppShellUiHelpers.Compose(_root, application: Application.Current);
+        _compositions.Add(composition);
+        var window = new MainWindowView(composition.Shell);
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        // Act / Assert: pin dark, then light
+        composition.Settings.Update(s => s with { Appearance = s.Appearance with { Theme = ThemeChoice.Dark } });
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(ThemeVariant.Dark, window.ActualThemeVariant);
+        Assert.Equal(
+            ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Dark),
+            Assert.IsAssignableFrom<ISolidColorBrush>(window.Background).Color);
+        composition.Settings.Update(s => s with { Appearance = s.Appearance with { Theme = ThemeChoice.Light } });
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(ThemeVariant.Light, window.ActualThemeVariant);
+        Assert.Equal(
+            ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Light),
+            Assert.IsAssignableFrom<ISolidColorBrush>(window.Background).Color);
+
+        // Act / Assert: follow the system again, which is the default variant of the application
+        composition.Settings.Update(s => s with { Appearance = s.Appearance with { Theme = ThemeChoice.FollowSystem } });
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(ThemeVariant.Default, Application.Current!.RequestedThemeVariant);
+        window.Close();
+    }
     /// <summary>
     ///     Test that walking through a window with the Tab key shows the focus ring on the control that has the focus
     ///     and on no other, on an icon button, a tool toggle, a pill button, and a splitter.

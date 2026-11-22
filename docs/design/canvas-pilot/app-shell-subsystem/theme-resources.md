@@ -70,6 +70,15 @@ accent to the brand accent, the region color (the window surface of dialogs) to 
 to the primary text color, and the error text color to the danger color. This makes the standard controls follow the
 brand without overriding single brushes.
 
+**ThemeVariantApplier** (`AppShellSubsystem/ThemeVariantApplier.cs`): a small class that makes the application show the
+theme that the settings choose. It is created by the composition root for a running application (the `application`
+argument of `ApplicationComposition.Create`), applies `AppSettings.Appearance.Theme` at once, and applies it again on
+every `ISettingsService.Changed`. `ToVariant` maps the choices: `Dark` and `Light` are the Avalonia variants of the same
+name, and `FollowSystem` is `ThemeVariant.Default`, which lets the operating system decide and follow. A change that
+comes from a thread other than the user interface thread (the settings service raises its event on the thread that
+changed the settings) is posted to the user interface thread, and a variant that is already requested is not set again.
+`Dispose` stops following; the composition disposes it with the other units.
+
 **Contrast**: every text color is at least 4.5 to 1 on the surfaces it is documented for, and the focus ring, the
 input outline, and the mark color are at least 3 to 1 on the pane and on raised surfaces. The light warning color is a
 little darker than the first proposal of the design (`#a84e08` instead of `#b45309`) so that it reaches 4.5 to 1 on the
@@ -92,7 +101,10 @@ application when it loads the style file, which the headless tests would show at
 #### Dependencies
 
 - **Avalonia** and the Fluent theme — resource dictionaries, theme variants, and the palettes of the theme.
+- **SettingsService** — `ISettingsService` and `AppearanceSettings`, from which `ThemeVariantApplier` reads the theme
+  choice and whose change event it follows.
 
 #### Callers
 
 - Every view of the application, through dynamic resources. `App` merges the dictionary and sets the palettes.
+- The composition root, which creates the `ThemeVariantApplier` when it is given the running application.

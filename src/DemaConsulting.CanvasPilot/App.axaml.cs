@@ -50,7 +50,8 @@ public sealed class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var composition = ApplicationComposition.CreateDefault();
+            // The composition also makes the application dark or light as the settings choose
+            var composition = ApplicationComposition.CreateDefault(this);
             _composition = composition;
             HookUnhandledErrors();
 
