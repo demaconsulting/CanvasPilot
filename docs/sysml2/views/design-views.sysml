@@ -21,9 +21,10 @@
 // dependency views: each exposes the units of one theme plus the suppliers that their
 // 'dependency' statements name, so the dependency edges render. A subsystem whose edges
 // would pass about 15 in one diagram is split into themed views. Four hub suppliers that
-// many units depend on are omitted from every one of them - RollingFileLogger (18 units),
-// ImageRenderService (11), PathHelpers (11), and ProjectService (11) - and each view's
-// 'doc' names the hubs that its units use. The small LoggingSubsystem, UtilitiesSubsystem,
+// many units depend on are omitted from every one of them - RollingFileLogger (23 units),
+// ImageRenderService (12), PathHelpers (12), and ProjectService (15) - and each view's
+// 'doc' names the hubs that its units use; ChatSubsystemHistoryView is the one exception, which
+// shows ProjectService because the key of the chat history comes from the project. The small LoggingSubsystem, UtilitiesSubsystem,
 // AnnotationSubsystem, ProjectSubsystem, SettingsSubsystem, and PreviewSubsystem have few
 // edges that are not hub edges, so they have no dependency view; use
 // 'sysml2tools query dependencies' for them.
@@ -245,7 +246,7 @@ package CanvasPilotDesignViews {
     }
 
     view ChatSubsystemPanelView : GeneralView {
-        doc /* Dependencies of the chat panel on the units that compose a message, on the turn runner that runs the turn of the AI copilot, on the contract of the Agent subsystem through which it asks whether the provider can be used, and on the Markdown reader of the Knowledge subsystem that draws the final text of a reply. Hub suppliers omitted: RollingFileLogger and PathHelpers. */
+        doc /* Dependencies of the chat panel on the units that compose a message, on the turn runner that runs the turn of the AI copilot, on the contract of the Agent subsystem through which it asks whether the provider can be used, and on the Markdown reader of the Knowledge subsystem that draws the final text of a reply. Hub suppliers omitted: RollingFileLogger, PathHelpers, and ProjectService; the dependencies on the chat history store and the project service are in ChatSubsystemHistoryView. */
         expose CanvasPilot_ChatPanel::ChatPanel;
         expose CanvasPilot_ChatTurnRunner::ChatTurnRunner;
         expose CanvasPilot_AgentContract::AgentContract;
@@ -268,6 +269,14 @@ package CanvasPilotDesignViews {
         expose CanvasPilot_AgentContract::AgentContract;
         expose CanvasPilot_ComposerViewModel::ComposerViewModel;
         expose CanvasPilot_MessagePayload::MessagePayload;
+        filter not (@SysML::Documentation);
+    }
+
+    view ChatSubsystemHistoryView : GeneralView {
+        doc /* Dependencies of the chat history store and of the chat panel on it: the store takes the project information types of the project service, whose project file names the history, and the panel takes the open project from the same service. The project service is a hub supplier that the other views omit; it is shown here on purpose, because the key of the history comes from the project. Hub suppliers omitted: RollingFileLogger and PathHelpers. */
+        expose CanvasPilot_ChatHistoryStore::ChatHistoryStore;
+        expose CanvasPilot_ChatPanel::ChatPanel;
+        expose CanvasPilot_ProjectService::ProjectService;
         filter not (@SysML::Documentation);
     }
 

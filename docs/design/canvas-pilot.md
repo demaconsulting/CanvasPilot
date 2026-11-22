@@ -26,6 +26,7 @@ flowchart TD
     subgraph Chat
         ChatPanel
         ChatTurnRunner
+        ChatHistoryStore
         PayloadInspector
     end
     subgraph Composer
@@ -123,6 +124,8 @@ flowchart TD
     ChatPanel --> DictationService
     ChatPanel --> PayloadInspector
     ChatPanel --> ChatTurnRunner
+    ChatPanel --> ChatHistoryStore
+    ChatPanel --> ProjectService
     ChatPanel --> AgentContract
     ChatPanel --> KnowledgeMarkdown
     ChatPanel --> RollingFileLogger
@@ -132,6 +135,9 @@ flowchart TD
     ChatTurnRunner --> ComposerViewModel
     ChatTurnRunner --> MessagePayload
     ChatTurnRunner --> RollingFileLogger
+    ChatHistoryStore --> ProjectService
+    ChatHistoryStore --> RollingFileLogger
+    ChatHistoryStore --> PathHelpers
     PayloadInspector --> PayloadDescriber
     PayloadInspector --> MessagePayload
     MainWindowShell --> PayloadInspector
@@ -395,35 +401,41 @@ subsystem uses the `Annotation` subsystem except `Payload`, `Composer`, `Chat`, 
 project, oldest first; below, the composer's editing control; and between them and the user, a button that listens while
 it is held and a button that sends. The transcript shows only sent messages, each once, with its words in the order they
 were written (dictated words with the same subtle background as in the editing control), the chips of its attachments
-and marks in their places with their pictures, and a button, "View payload". The panel keeps nothing on disk: the
-transcript lives in memory and is dropped when the project changes or closes. Sending is the composer's own command, so
-the panel only follows its state and shows the result: an entry for a message that was sent, and, when sending failed,
-the composer's status text with the draft untouched. The talk button listens exactly as long as it is held: pressing the
-pointer starts it and captures the pointer, and letting go anywhere, losing the capture, losing the focus, or removing
-the panel ends it; when dictation cannot work, the composer's status line in the panel says why and what to do. The
-panel also joins the annotation layer to the composer, which do not know each other: it adds the chip of every mark that
-is drawn to the message at the caret as one undo step, and each time the message changes it tells the layer which mark
-chips the message holds and whether marks can be made. It prepares dictation when it is shown and gives the chips their
-pictures: the area around the mark, cut from the picture the mark was drawn on, and the preview of an attached picture
-file. `PayloadInspector` is the window that "View payload" opens: it shows the text that `PayloadDescriber` writes for
-the payload of the message, which is exactly what the assistant would receive, and, next to it, the pictures of the
-payload: the annotated picture of every marked file and the area around every mark, each with a caption. The window
-cannot change anything. The panel does not know what shows the inspector; it asks an `IPayloadInspectorLauncher`, which
-`IDialogService` extends, so the main window shows it as a dialog. `ChatTurnRunner` holds the logic of one turn of the
-conversation without a window: it gives the message that was sent to the AI copilot through `IAgentService`, shows the
-events of the turn as rows of the transcript (the streamed answer, one line for each tool that the copilot calls, and
-notices and errors), stops on request and keeps what was written, never throws into the interface, and tells the panel
-when it is busy, so that the panel can block sending while the copilot works. The panel starts a turn for every message
-that was sent when it has a copilot (without one, it only adds the entry), shows the moving indicator and the Stop
-button while the turn runs, shows the text of a reply as plain selectable text while it streams and as Markdown, with
-the `MarkdownBlocksPanel` of the `Knowledge` subsystem, once it is whole, shows a banner with the sentence of the
-readiness report of the copilot when the provider cannot be used (or can be used with a warning), and raises a request
-to open the settings, from the banner and from an error row, which the shell turns into its own command; it does not
-depend on `Settings`. The `Chat` subsystem depends on `Composer`, `Annotation`, `Payload`, `Speech`, `Logging`,
-`Knowledge` (to draw Markdown only), and, through `IAgentService` and the events of a turn only, `Agent`, and not on
-`AppShell`. The `Agent` subsystem does not depend on `Chat`. The main window places the panel in the chat column of the
-workspace, which is shown while a project is open, and the shell makes the panel the target of the Edit menu (through
-the composer) and of the talk key.
+and marks in their places with their pictures, and a button, "View payload". The panel writes nothing itself and keeps
+nothing in the project: the transcript is dropped from the screen when the project changes or closes, and the words of
+the conversation are kept on the user's computer by `ChatHistoryStore`, below `%LOCALAPPDATA%\CanvasPilot\history` in a
+folder named by a hash of the path of the project file, never in the project folder, which may be copied or put under
+source control. When a project is opened again the panel shows its saved conversation as text (no pictures, no payload),
+gives the saved words to the copilot with the next message, and offers "Clear chat history", which deletes the saved
+history, empties the transcript, and makes the copilot forget the conversation. Sending is the composer's own command,
+so the panel only follows its state and shows the result: an entry for a message that was sent, and, when sending
+failed, the composer's status text with the draft untouched. The talk button listens exactly as long as it is held:
+pressing the pointer starts it and captures the pointer, and letting go anywhere, losing the capture, losing the focus,
+or removing the panel ends it; when dictation cannot work, the composer's status line in the panel says why and what to
+do. The panel also joins the annotation layer to the composer, which do not know each other: it adds the chip of every
+mark that is drawn to the message at the caret as one undo step, and each time the message changes it tells the layer
+which mark chips the message holds and whether marks can be made. It prepares dictation when it is shown and gives the
+chips their pictures: the area around the mark, cut from the picture the mark was drawn on, and the preview of an
+attached picture file. `PayloadInspector` is the window that "View payload" opens: it shows the text that
+`PayloadDescriber` writes for the payload of the message, which is exactly what the assistant would receive, and, next
+to it, the pictures of the payload: the annotated picture of every marked file and the area around every mark, each with
+a caption. The window cannot change anything. The panel does not know what shows the inspector; it asks an
+`IPayloadInspectorLauncher`, which `IDialogService` extends, so the main window shows it as a dialog. `ChatTurnRunner`
+holds the logic of one turn of the conversation without a window: it gives the message that was sent to the AI copilot
+through `IAgentService`, shows the events of the turn as rows of the transcript (the streamed answer, one line for each
+tool that the copilot calls, and notices and errors), stops on request and keeps what was written, never throws into the
+interface, and tells the panel when it is busy, so that the panel can block sending while the copilot works. The panel
+starts a turn for every message that was sent when it has a copilot (without one, it only adds the entry), shows the
+moving indicator and the Stop button while the turn runs, shows the text of a reply as plain selectable text while it
+streams and as Markdown, with the `MarkdownBlocksPanel` of the `Knowledge` subsystem, once it is whole, shows a banner
+with the sentence of the readiness report of the copilot when the provider cannot be used (or can be used with a
+warning), and raises a request to open the settings, from the banner and from an error row, which the shell turns into
+its own command; it does not depend on `Settings`. The `Chat` subsystem depends on `Composer`, `Annotation`, `Payload`,
+`Speech`, `Logging`, `Project` (the open project and the path of its file, for the history), `Knowledge` (to draw
+Markdown only), and, through `IAgentService` and the events of a turn only, `Agent`, and not on `AppShell`. The `Agent`
+subsystem does not depend on `Chat`. The main window places the panel in the chat column of the workspace, which is
+shown while a project is open, and the shell makes the panel the target of the Edit menu (through the composer) and of
+the talk key.
 
 `KnowledgeCatalog` holds the knowledge of how to draw and how to work in a project as a tree of cards: the help of
 CanvasNet, without the few cards that are only about the host program, extended with cards of CanvasPilot that are
@@ -980,9 +992,10 @@ an example to the clipboard that the window supplies and says in the status line
   the message holds, and the chat panel joins the two, so that the dependency between `Composer` and `Annotation`
   runs one way. It shall draw a mark with the colors and sizes of the annotated picture of a message, so that the user
   sees what the assistant gets.
-- The `Chat` subsystem shall keep the transcript only in memory, shall list only messages that were sent, and shall show
-  in the payload inspector exactly the text that `PayloadDescriber` writes and the picture bytes that the payload holds;
-  it shall not depend on `AppShell`, and it shall not write anything anywhere.
+- The `Chat` subsystem shall list only messages that were sent, shall keep the words of a conversation, and only the
+  words, on the user's computer outside the project folder, shall refuse a history folder inside the project, and shall
+  show in the payload inspector exactly the text that `PayloadDescriber` writes and the picture bytes that the payload
+  holds; it shall not depend on `AppShell`, and it shall not write anything into a project.
 - The `Chat` subsystem shall reach the AI copilot only through `IAgentService` and the `AgentEvent` records, shall never
   refer to a provider, a tool, or a library of the `Agent` subsystem, and shall never let a failure of the copilot throw
   into the interface; the `Agent` subsystem shall not depend on `Chat`. The composer decides whether a message can be

@@ -5,24 +5,28 @@
 ### Overview
 
 The `Chat` subsystem is the panel in which the user composes the messages for the AI copilot and follows its answers:
-above, the transcript of the messages that were sent in the open project; below, the composer's editing control; and
-under it the button that sends and the button that listens while it is held. It also joins the layer on which the user
-marks the picture to the message, so that every mark becomes a chip in it, and it opens the window that shows exactly
-what the assistant would receive for a message. It holds no rule of editing, sending, dictation, marking, payload
-building, or of the AI provider; those belong to the `Composer`, `Speech`, `Annotation`, `Payload`, and `Agent`
-subsystems, and the `Chat` subsystem connects what they do to what the user sees.
+above, the header with the button that clears the chat history and the transcript of the conversation in the open
+project; below, the composer's editing control; and under it the button that sends and the button that listens while it
+is held. It also joins the layer on which the user marks the picture to the message, so that every mark becomes a chip
+in it, and it opens the window that shows exactly what the assistant would receive for a message. It keeps the words of
+the conversation of each project on the user's computer, outside the project, and shows them again when the project is
+opened. It holds no rule of editing, sending, dictation, marking, payload building, or of the AI provider; those belong
+to the `Composer`, `Speech`, `Annotation`, `Payload`, and `Agent` subsystems, and the `Chat` subsystem connects what
+they do to what the user sees.
 
-The subsystem contains three units: `ChatPanel`, the panel with the transcript, its rows, the buttons, the banner of the
+The subsystem contains four units: `ChatPanel`, the panel with the transcript, its rows, the buttons, the banner of the
 readiness of the copilot, and the joining of marks, `ChatTurnRunner`, the logic of one turn of the conversation with the
-copilot, and `PayloadInspector`, the window that shows a payload. It depends on `Composer` (the view model of the
-message, the editing view, and the chips), `Annotation` (the registry and the layer of marks), `Payload` (the payload,
-its describer, and the composer of mark pictures), `Speech` (dictation, only to prepare it), `Knowledge` (only the
-Markdown reader and its panel, to draw the final text of a reply), `Agent` (only `IAgentService`, the readiness report,
-and the events of a turn; never a provider, a tool, or a library), and `Logging`, and on nothing else of the
-application; in particular it does not depend on `AppShell` or `Settings`, and the `Agent` and `Knowledge` subsystems do
-not depend on it. `AppShell` depends on `Chat`: the composition root builds the panel, and the main window shows the
-inspector, places the panel in the chat column of the workspace, and opens the settings when the panel asks. The Edit
-menu and the talk key of the main window reach the composer and the panel through the seams that `Composer` owns.
+copilot, `ChatHistoryStore`, which keeps the words of the conversation of each project on this computer, and
+`PayloadInspector`, the window that shows a payload. It depends on `Composer` (the view model of the message, the
+editing view, and the chips), `Annotation` (the registry and the layer of marks), `Payload` (the payload, its describer,
+and the composer of mark pictures), `Speech` (dictation, only to prepare it), `Knowledge` (only the Markdown reader and
+its panel, to draw the final text of a reply), `Agent` (only `IAgentService`, the readiness report, and the events of a
+turn; never a provider, a tool, or a library), `Project` (the open project and the path of its file, which name its
+history), and `Logging`, and on nothing else of the application; in particular it does not depend on `AppShell` or
+`Settings`, and the `Agent` and `Knowledge` subsystems do not depend on it. `AppShell` depends on `Chat`: the
+composition root builds the panel and the store, and the main window shows the inspector, places the panel in the chat
+column of the workspace, and opens the settings when the panel asks. The Edit menu and the talk key of the main window
+reach the composer and the panel through the seams that `Composer` owns.
 
 ### Interfaces
 
@@ -35,19 +39,37 @@ menu and the talk key of the main window reach the composer and the panel throug
 - *Role*: Provider to the host that places it, and consumer of the composer, the registry and the layer of marks, the
   mark picture composer, dictation, and, through the turn runner, the AI copilot.
 - *Contract*: The constructor takes the `ComposerViewModel`, the `MarkRegistry`, the `AnnotationOverlayViewModel`, an
-  `IMarkImageComposer`, optionally the `IDictationService`, a logger, the `IAgentService` of the copilot, and a
-  `TimeProvider`, and joins the layer to the composer. `Transcript` holds the rows of the conversation (one
-  `TranscriptEntryViewModel` per sent message, which `SentEntries` lists, followed by the rows of the copilot);
-  `SendCommand`, `CanSend`, `CanTalk`, `IsTalking`, and `TalkText` are what the buttons bind to; `BeginPushToTalkAsync`
-  and `EndPushToTalkAsync` implement `IPushToTalkTarget`, so that a talk key can be given the panel later;
-  `PrepareDictationAsync` loads the speech engine ahead of time; `InspectorLauncher` is set by the host and is what
-  "View payload" asks. With a copilot, `IsCopilotBusy`, `StopCommand`, and `Stop` follow and stop the turn,
+  `IMarkImageComposer`, optionally the `IDictationService`, a logger, the `IAgentService` of the copilot, a
+  `TimeProvider`, an `IChatHistoryStore`, and an `IProjectService`, and joins the layer to the composer. `Transcript`
+  holds the rows of the conversation (one `TranscriptEntryViewModel` per sent message, which `SentEntries` lists,
+  followed by the rows of the copilot, and, for a project that was opened again, `RestoredEntryViewModel` rows of saved
+  text); `SendCommand`, `CanSend`, `CanTalk`, `IsTalking`, and `TalkText` are what the buttons bind to;
+  `BeginPushToTalkAsync` and `EndPushToTalkAsync` implement `IPushToTalkTarget`, so that a talk key can be given the
+  panel later; `PrepareDictationAsync` loads the speech engine ahead of time; `InspectorLauncher` is set by the host and
+  is what "View payload" asks. With a copilot, `IsCopilotBusy`, `StopCommand`, and `Stop` follow and stop the turn,
   `WaitForTurnAsync` completes when it has ended, `RefreshReadinessAsync` and `CheckAgainCommand` check the provider and
   set `HasReadinessIssue` and `ReadinessMessage`, and `OpenSettingsCommand` raises `OpenSettingsRequested`, which the
-  host handles. `Dispose` stops following the composer and the layer and stops a turn that runs.
+  host handles. With a history store and a project service, the words of each turn are saved when it ends, a project
+  that is opened shows its saved conversation, and `ClearHistoryCommand` clears it. `Dispose` stops following the
+  composer and the layer and stops a turn that runs.
 - *Constraints*: Owned by the user interface thread; not safe for concurrent use. It does not own the composer, the
-  registry, the layer, or the copilot, which the composition root disposes. Without a copilot nothing of the copilot is
-  shown and nothing is blocked.
+  registry, the layer, the copilot, or the history store, which the composition root disposes. Without a copilot nothing
+  of the copilot is shown and nothing is blocked.
+
+**ChatHistoryStore**: Where the words of the conversation of each project are kept on this computer.
+
+- *Type*: In-process .NET class (`ChatHistoryStore`) behind the interface `IChatHistoryStore`, with the data types
+  `ChatHistoryRow`, `ChatHistoryMark`, `ChatHistoryResult`, and the key rule `ProjectHistoryKey`.
+- *Role*: Provider to the chat panel; consumer of the project information types of the `Project` subsystem
+  (`ProjectInfo`), the logger, and the path helper.
+- *Contract*: The constructor takes the history root (a folder, which is created at the first save), and optionally a
+  logger and a `TimeProvider`. `Load(project)` gives the saved rows, oldest first; `Save(project, rows)` keeps the
+  newest rows within the limits and returns a `ChatHistoryResult`; `Clear(project)` deletes the history of the project.
+  `ChatHistoryStore.DefaultHistoryRoot` is `%LOCALAPPDATA%\CanvasPilot\history`. The history of a project is
+  `{root}\{key}\history.json`, with `project.json` next to it, and the key is `ProjectHistoryKey.Compute` of the path of
+  the project file.
+- *Constraints*: Thread-safe (its operations are serialized). It never throws for what the disk or a file does. It
+  refuses to work when its root is the project folder or inside it.
 
 **ChatTurnRunner**: The logic of one turn of the conversation with the AI copilot.
 
@@ -79,8 +101,25 @@ menu and the talk key of the main window reach the composer and the panel throug
 **The conversation is what was sent and what the copilot answered.** The panel adds an entry for each
 `ComposerViewModel.MessageSent`, with the immutable `SentMessage`, and for nothing else of the user, so a draft is never
 shown as a message and nothing in the transcript can change. With a copilot, the rows of its turn follow the entry. The
-rows are in memory only; they are dropped when the composer's project changes or closes, because a message belongs to
-the project it was sent in, and when the panel is disposed. Nothing is written anywhere in this unit.
+rows are dropped when the composer's project changes or closes, because a message belongs to the project it was sent in,
+and when the panel is disposed. What is kept for the next time is the words only, by the history store, on the user's
+computer, outside the project (see the next paragraph); the panel itself writes nothing.
+
+**The history is on this computer, never in the project.** A project folder may be copied or put under source control,
+and the words of a conversation are the user's own, so the history of a project is kept below
+`%LOCALAPPDATA%\CanvasPilot\history\{key}\`, in `history.json` (version 1, the newest 200 rows, at most 2 MB, words
+only: no pictures, no payloads, no tool results) with `project.json` next to it, which names the project and its file
+for the person who finds the folder. The key is the first 16 bytes of the SHA-256 hash of the full, normalized path of
+the project file (lower case where the file system ignores case), as 32 hexadecimal characters. **A project that is
+moved or renamed has another key and a fresh history; the old folder stays where it was.** The store refuses a root that
+is the project folder or inside it, so a configuration mistake cannot put the history into the project. The panel saves
+when a turn has ended (completed, stopped, or failed), shows the saved rows as text when the project is opened (a
+restored message has its words, the labels of its marks and attachments, and lines for the notes and paths, but no
+picture and no "View payload"), and gives the saved words to the copilot as `RestoredHistory`, which the `Agent`
+subsystem turns into one digest at the start of the first message of a new provider session, in memory only.
+`ClearHistoryCommand` deletes the folder of the project, empties the transcript, and resets the copilot's conversation,
+with no question first. The audit of what else is written into a project folder is in the design of the
+`ChatHistoryStore`.
 
 **The copilot's turn is its own unit.** `ChatTurnRunner` reads the events that `IAgentService` streams for a turn and
 keeps the rows that show them, in the order in which things happened: the text of the copilot in a reply that grows (a
@@ -147,13 +186,13 @@ the panel needs no window and the dependency runs from `AppShell` to `Chat`.
 
 ### Dependencies
 
-The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`) and are split into two
+The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`) and are split into four
 views. The hub suppliers `RollingFileLogger` and `PathHelpers`, which many units use, are left out of the first.
 
 `ChatPanel` depends on `ComposerViewModel` and `ComposerEditor` (`Composer`), `MarkRegistry` and `AnnotationOverlay`
 (`Annotation`), `MarkImageComposer` and `MessagePayload` (`Payload`), `DictationService` (`Speech`), `AgentContract`
 (`Agent`, for the readiness report), `KnowledgeMarkdown` (`Knowledge`, for the Markdown of a reply), `PayloadInspector`,
-and `ChatTurnRunner`.
+`ChatTurnRunner`, and `ChatHistoryStore`.
 
 ![Chat panel dependencies](ChatSubsystemPanelView.svg)
 
@@ -165,3 +204,10 @@ and `ChatTurnRunner`.
 the `Agent` subsystem), on `ComposerViewModel` (the sent message), and on `MessagePayload`.
 
 ![Chat turn dependencies](ChatSubsystemTurnView.svg)
+
+`ChatHistoryStore` depends on the project information types of `ProjectService` (`Project`), and on the hub suppliers
+`RollingFileLogger` and `PathHelpers`; the panel depends on the store and on `ProjectService`. The view shows the
+`ProjectService` edges on purpose, although the project service is a hub that the other views leave out, because the
+key of the history comes from the project.
+
+![Chat history dependencies](ChatSubsystemHistoryView.svg)

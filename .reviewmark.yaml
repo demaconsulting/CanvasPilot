@@ -460,6 +460,7 @@ reviews:
       - "src/**/ChatSubsystem/AssistantReplyView.axaml"
       - "src/**/ChatSubsystem/AssistantReplyView.axaml.cs"
       - "src/**/ChatSubsystem/AssistantReplyViewModel.cs"
+      - "src/**/ChatSubsystem/ChatHistoryMapper.cs"
       - "src/**/ChatSubsystem/ChatPanelView.axaml"
       - "src/**/ChatSubsystem/ChatPanelView.axaml.cs"
       - "src/**/ChatSubsystem/ChatPanelViewModel.cs"
@@ -467,6 +468,9 @@ reviews:
       - "src/**/ChatSubsystem/NoticeRowView.axaml"
       - "src/**/ChatSubsystem/NoticeRowView.axaml.cs"
       - "src/**/ChatSubsystem/NoticeRowViewModel.cs"
+      - "src/**/ChatSubsystem/RestoredEntryView.axaml"
+      - "src/**/ChatSubsystem/RestoredEntryView.axaml.cs"
+      - "src/**/ChatSubsystem/RestoredEntryViewModel.cs"
       - "src/**/ChatSubsystem/ToolActivityRowView.axaml"
       - "src/**/ChatSubsystem/ToolActivityRowView.axaml.cs"
       - "src/**/ChatSubsystem/ToolActivityRowViewModel.cs"
@@ -476,12 +480,31 @@ reviews:
       - "src/**/ChatSubsystem/TranscriptItem.cs"
       - "src/**/ChatSubsystem/TranscriptRowViewModel.cs"
       - "test/**/ChatSubsystem/ChatPanelCopilotTests.cs"
+      - "test/**/ChatSubsystem/ChatPanelHistoryTests.cs"
       - "test/**/ChatSubsystem/ChatPanelTests.cs"
       - "test/**/ChatSubsystem/ChatSubsystemFakes.cs"
       - "test/**/ChatSubsystem/TranscriptRowTests.cs"
       - "test/**/ChatPanelCopilotViewTests.cs"
+      - "test/**/ChatPanelHistoryViewTests.cs"
       - "test/**/ChatPanelViewTests.cs"
       - "test/**/ChatUiTestSupport.cs"
+
+  - id: CanvasPilot-Chat-ChatHistoryStore
+    title: Review of CanvasPilot ChatHistoryStore unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/chat-history-store.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/chat-history-store.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/chat-history-store.md"
+      - "src/**/ChatSubsystem/ChatHistoryRow.cs"
+      - "src/**/ChatSubsystem/ChatHistoryStore.cs"
+      - "src/**/ChatSubsystem/IChatHistoryStore.cs"
+      - "src/**/ChatSubsystem/ProjectHistoryKey.cs"
+      - "test/**/ChatSubsystem/ChatHistoryStoreTests.cs"
 
   - id: CanvasPilot-Chat-ChatTurnRunner
     title: Review of CanvasPilot ChatTurnRunner unit implementation

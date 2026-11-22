@@ -55,6 +55,8 @@ This document covers the verification design for the following software items:
       joining of marks to the message
     - **ChatTurnRunner** — one turn of the conversation: the events of the AI copilot as rows of the transcript, stop,
       and failure
+    - **ChatHistoryStore** — the words of the conversation of each project kept on this computer outside the project,
+      restored when the project is opened and cleared on request
     - **PayloadInspector** — the window that shows exactly what the assistant would receive for a sent message
   - **Composer** subsystem
     - **ComposerDocument** — the message being composed as ordered segments of text and chips

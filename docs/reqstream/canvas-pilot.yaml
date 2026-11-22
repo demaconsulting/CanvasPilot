@@ -499,7 +499,8 @@ sections:
       - id: CanvasPilot-System-KeepAgentDataOutsideProject
         title: >-
           The application shall never write the data of the AI copilot into the project folder: the Copilot runtime keeps
-          its files in a folder below the local data of the user that the application chooses, the log holds only facts
+          its files in a folder below the local data of the user that the application chooses, the chat history is kept
+          on the user's computer and a history folder inside the project is refused, the log holds only facts
           about what happened and never the words of messages or the contents of files, and the project folder receives
           only the files that the user or the copilot is asked to create.
         tags: [system]
@@ -507,11 +508,36 @@ sections:
           A project folder is copied, shared, and put under source control, so anything of the application's own that
           landed in it would travel with it, and the words of a conversation are the user's to keep. The data of the
           Copilot runtime, the log, and the text that restores a conversation therefore live on the user's computer
-          outside every project, and a configuration that would put them inside a project is refused. The units that
+          outside every project, and a configuration that would put them inside a project is refused. The one thing of
+          the chat that the project folder does hold is the transient staging of a picture that was pasted and not sent
+          yet, which belongs to the message being written and is removed when it is sent or discarded. The units that
           keep such data link to this requirement.
         children:
           - CanvasPilot-Agent-KeepRuntimeDataOutsideProject
           - CanvasPilot-Agent-LogMetadataOnly
+          - CanvasPilot-Chat-KeepHistoryOutsideProject
+        tests:
+          - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+
+      - id: CanvasPilot-System-KeepChatHistoryOnThisComputer
+        title: >-
+          The application shall keep the words of the conversation of each project, and only the words, on the user's
+          computer outside the project folder, shall show them again as text when the project is opened and give them to
+          the AI copilot so that the conversation can go on, and shall let the user clear them with one button, which
+          also makes the copilot forget the conversation.
+        tags: [system]
+        justification: |
+          A conversation that is gone when the project is closed makes the copilot start over every day, but the words
+          of a conversation are the user's own and a project folder is copied, shared, and put under source control.
+          The history therefore lives on the user's computer, keyed by the place of the project file, holds no pictures
+          or payloads, is bounded, and can be deleted by the user at any time. A project that is moved or renamed starts
+          a fresh history, which the user guide says. The units that keep, show, and clear the history link to this
+          requirement.
+        children:
+          - CanvasPilot-Chat-KeepChatHistoryOnThisComputer
+          - CanvasPilot-Chat-ClearChatHistory
+        tests:
+          - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
 
       - id: CanvasPilot-System-ReportProviderReadiness
         title: >-

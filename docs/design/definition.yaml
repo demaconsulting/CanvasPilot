@@ -48,6 +48,7 @@ input-files:
   - docs/design/canvas-pilot/chat-subsystem.md
   - docs/design/canvas-pilot/chat-subsystem/chat-panel.md
   - docs/design/canvas-pilot/chat-subsystem/chat-turn-runner.md
+  - docs/design/canvas-pilot/chat-subsystem/chat-history-store.md
   - docs/design/canvas-pilot/chat-subsystem/payload-inspector.md
   - docs/design/canvas-pilot/composer-subsystem.md
   - docs/design/canvas-pilot/composer-subsystem/composer-document.md
