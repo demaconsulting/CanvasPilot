@@ -37,8 +37,8 @@
     └── OtsSoftwareTests/                      # tests of the runtime OTS libraries
 ```
 
-The application library holds one folder per subsystem (`AnnotationSubsystem`, `AppShellSubsystem`, `ChatSubsystem`,
-`ComposerSubsystem`, `KnowledgeSubsystem`, `LoggingSubsystem`, `PayloadSubsystem`, `PreviewSubsystem`,
+The application library holds one folder per subsystem (`AgentSubsystem`, `AnnotationSubsystem`, `AppShellSubsystem`,
+`ChatSubsystem`, `ComposerSubsystem`, `KnowledgeSubsystem`, `LoggingSubsystem`, `PayloadSubsystem`, `PreviewSubsystem`,
 `ProjectSubsystem`, `SettingsSubsystem`, `SpeechSubsystem`, `StyleSubsystem`, and `UtilitiesSubsystem`).
 
 # Language and Spelling (ALL Agents)
