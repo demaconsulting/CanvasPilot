@@ -44,8 +44,12 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         entry owns the picture provider it made and releases it in <see cref="Dispose" />. It is owned by the user
 ///         interface thread.
 ///     </para>
+///     <para>
+///         The entry is the row of the user in the transcript (<see cref="TranscriptRowViewModel" />); the answer of the
+///         copilot, the tools it called, and the notices are other rows.
+///     </para>
 /// </remarks>
-public sealed class TranscriptEntryViewModel : IDisposable
+public sealed class TranscriptEntryViewModel : TranscriptRowViewModel
 {
     /// <summary>
     ///     Gives the launcher of the inspector at the time the command runs, because the launcher can be set after the
@@ -86,6 +90,9 @@ public sealed class TranscriptEntryViewModel : IDisposable
         SentText = message.SentUtc.ToLocalTime().ToString("t", CultureInfo.CurrentCulture);
         ViewPayloadCommand = new AsyncRelayCommand(ViewPayloadAsync, () => HasPayload);
     }
+
+    /// <inheritdoc />
+    public override TranscriptRowKind Kind => TranscriptRowKind.User;
 
     /// <summary>
     ///     Gets the message that was sent.
@@ -131,9 +138,15 @@ public sealed class TranscriptEntryViewModel : IDisposable
     /// <summary>
     ///     Releases the pictures that were made for the chips.
     /// </summary>
-    public void Dispose()
+    /// <param name="disposing"><see langword="true" /> when called from the public method, <see langword="false" /> from a finalizer.</param>
+    protected override void Dispose(bool disposing)
     {
-        _thumbnails.Dispose();
+        if (disposing)
+        {
+            _thumbnails.Dispose();
+        }
+
+        base.Dispose(disposing);
     }
 
     /// <summary>
