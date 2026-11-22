@@ -49,8 +49,9 @@ Available now:
   can clear it
 - **Safe by default**: The copilot has only CanvasPilot's own tools, confined to the project folder. It overwrites the
   files it changes directly, with no backup and no question, so keep your projects under source control
-- **Settings**: Choose the AI provider (with a connection check), and the speech devices and models, with model
-  downloads
+- **Settings**: Choose the AI provider (with a connection check), pick its model from the list that the provider
+  offers, with what each model can do and a warning for what it lacks, and set the model's reasoning level; and the
+  speech devices and models, with model downloads
 - **Windows installer**: One MSI package for 64-bit Windows
 
 Planned:
@@ -69,14 +70,15 @@ CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
    CanvasPilot from the Start Menu.
 2. Choose an AI provider in **Tools > Settings... > AI Provider**, then choose **Check connection**:
    - **Ollama** (works now): Install [Ollama][link-ollama], pull a model that can call tools, and a vision-capable one
-     if you want the copilot to see your marks and pictures, enter the endpoint (default `http://localhost:11434`) and
-     the model name, and keep the context window at 32,768 tokens or more (CanvasPilot warns below 16,384). No GitHub
-     account is needed.
+     if you want the copilot to see your marks and pictures, enter the endpoint (default `http://localhost:11434`),
+     choose the model from the list (or type its name), and keep the context window at 32,768 tokens or more
+     (CanvasPilot warns below 16,384). No GitHub account is needed.
    - **GitHub Copilot**: Install the GitHub Copilot CLI (version 1.0.113 or later), and sign in with the GitHub CLI
      (`gh auth login`) or set `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` or `GITHUB_TOKEN` also work) before you start
      CanvasPilot. CanvasPilot finds the CLI, checks its version and your credentials, and starts it. Signing in inside
-     the Copilot CLI with `/login` does not apply to CanvasPilot. Leave the model name empty to use the default model of
-     the Copilot runtime.
+     the Copilot CLI with `/login` does not apply to CanvasPilot. Leave the model empty to use the default model of the
+     Copilot runtime, or choose one from the list of the models of your account; a reasoning level can be chosen when
+     the model offers some.
 3. Optionally set up speech in **Tools > Settings... > Speech**: pick your microphone and speakers, and download the
    speech models.
 4. Choose **File > New Project...**, then start describing a picture in the chat panel.

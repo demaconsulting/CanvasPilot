@@ -6,11 +6,11 @@
 
 `CopilotRuntimeStarter` starts the GitHub Copilot runtime of the AI library on the Copilot CLI that the user installed,
 shares that one runtime among everyone who asks for it, and turns every way that the start can fail into one sentence
-for the user. The readiness check ("Check connection"), the factory of the agents (for every conversation), and later
-the list of models all get the same running runtime, because the runtime keeps its data in one folder that two runtimes
-must not use. The unit also holds its supporting types: `ICopilotRuntimeStarter` with `CopilotStartRequest`,
-`CopilotStartResult`, and `CopilotStartStatus`, and `ICopilotAgentSource` with `CopilotAgentRequest` and
-`CopilotRuntimeAgentSource`, the running runtime as the factory uses it.
+for the user. The readiness check ("Check connection"), the factory of the agents (for every conversation), and the list
+of models of the settings page all get the same running runtime, because the runtime keeps its data in one folder that
+two runtimes must not use. The unit also holds its supporting types: `ICopilotRuntimeStarter` with
+`CopilotStartRequest`, `CopilotStartResult`, and `CopilotStartStatus`, and `ICopilotAgentSource` with
+`CopilotAgentRequest` and `CopilotRuntimeAgentSource`, the running runtime as the factory uses it.
 
 #### Data Model
 
@@ -34,15 +34,18 @@ readiness check and the factory ask the same question and get the same runtime.
 when the status is `Started`, otherwise `null`. `ReadinessStatus` maps `Started` to `Ready`, `CliTooOld` to
 `CopilotCliTooOld`, `NotSignedIn` to `CopilotNotSignedIn`, and `Failed` to `CopilotRuntimeUnavailable`.
 
-**ICopilotAgentSource**: the started runtime as the factory uses it: `CreateAgent(CopilotAgentRequest)`,
-`DeleteSessionAsync(sessionId, cancellationToken)`, and `DisposeAsync`. **CopilotAgentRequest** carries the tools, the
-instructions, the name, the model (`null` for the default model of the runtime), and the working directory.
-**CopilotRuntimeAgentSource** is the implementation on a real `CopilotRuntime`; it holds the one call of
-`CopilotAgentFactory.Create` of the application and passes no permission handler (`onPermissionRequest` is `null`), so
-the AI library installs its default-deny handler, which approves exactly the supplied tools, one call at a time, and
-refuses everything else, including the tools of the Copilot CLI itself. This is a property of the running runtime, so no
-test reads the source to infer it; it is verified by the manual check of the live runtime (check 10 of the manual
-verification in the verification of the system).
+**ICopilotAgentSource**: the started runtime as the factory uses it: `Models` (the `IModelCatalog` of the runtime),
+`CreateAgent(CopilotAgentRequest)`, `DeleteSessionAsync(sessionId, cancellationToken)`, and `DisposeAsync`.
+**CopilotAgentRequest** carries the tools, the instructions, the name, the working directory, and the `ModelSelection`
+(`null` for the default model of the runtime) that the catalog validated for the settings. **CopilotRuntimeAgentSource**
+is the implementation on a real `CopilotRuntime`; it makes one `CopilotModelCatalog` for the runtime when it is made
+(the catalog keeps what it read for five minutes, and `RefreshAsync` reads again), so the one catalog is shared by the
+factory, the readiness check, and the model list. It holds the one call of `CopilotAgentFactory.Create` of the
+application, which takes the model and the reasoning effort from the selection, and passes no permission handler
+(`onPermissionRequest` is `null`), so the AI library installs its default-deny handler, which approves exactly the
+supplied tools, one call at a time, and refuses everything else, including the tools of the Copilot CLI itself. This is
+a property of the running runtime, so no test reads the source to infer it; it is verified by the manual check of the
+live runtime (check 10 of the manual verification in the verification of the system).
 
 #### How the Runtime Is Started
 
@@ -143,6 +146,6 @@ Framework (`AIAgent`), and Microsoft.Extensions.AI (`AIFunction`) with its logge
 
 #### Callers
 
-The `AgentReadiness` unit (the last check of GitHub Copilot) and the `AgentProviderFactory` unit (every Copilot
-conversation), both through `ICopilotRuntimeStarter`. The `AppShell` subsystem builds the one starter that both share
-and stops it when the application ends.
+The `AgentReadiness` unit (the last checks of GitHub Copilot), the `AgentProviderFactory` unit (every Copilot
+conversation), and the `ProviderModelCatalog` unit (the list of models), all through `ICopilotRuntimeStarter`. The
+`AppShell` subsystem builds the one starter that all three share and stops it when the application ends.

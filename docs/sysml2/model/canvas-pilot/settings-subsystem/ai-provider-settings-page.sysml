@@ -3,14 +3,16 @@ package CanvasPilot_AiProviderSettingsPage {
     private import CanvasPilot_SettingsDialog::*;
 
     part def AiProviderSettingsPage {
-        doc /* The AI Provider page of the settings dialog; edits and validates persisted provider choices and checks the connection to the provider through the IProviderCheck interface that the Settings subsystem owns. */
+        doc /* The AI Provider page of the settings dialog; edits and validates persisted provider choices, lists the models of the selected provider with what each can do (tool calling, pictures, reasoning levels, context window) and a warning for what it lacks through the IProviderModelSource interface that the Settings subsystem owns, enables the reasoning level only among the levels that the chosen model offers, keeps the typed model name and the stored choices when the models cannot be listed, and checks the connection to the provider through the IProviderCheck interface that the Settings subsystem owns. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
                 "src/DemaConsulting.CanvasPilot/SettingsSubsystem/AiProviderSettingsPageViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/SettingsSubsystem/AiProviderSettingsPageView.axaml",
                 "src/DemaConsulting.CanvasPilot/SettingsSubsystem/AiProviderSettingsPageView.axaml.cs",
-                "src/DemaConsulting.CanvasPilot/SettingsSubsystem/IProviderCheck.cs"
+                "src/DemaConsulting.CanvasPilot/SettingsSubsystem/IProviderCheck.cs",
+                "src/DemaConsulting.CanvasPilot/SettingsSubsystem/IProviderModelSource.cs",
+                "src/DemaConsulting.CanvasPilot/SettingsSubsystem/ModelChoice.cs"
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/SettingsSubsystem/AiProviderSettingsPageTests.cs",

@@ -454,6 +454,103 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user who opens Settings sees the models that GitHub Copilot offers with what each can do, chooses a
+    ///     model and a reasoning level that the model offers, and finds them stored in the settings file and used by the
+    ///     agent of the next conversation, with a clear banner.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ChooseModel_CopilotModelAndReasoningLevel_AreStoredAndReachTheAgent()
+    {
+        // Arrange: the application over a runtime whose catalog offers a model with reasoning levels and one without vision
+        var token = TestContext.Current.CancellationToken;
+        var source = new FakeCopilotAgentSource(
+            DrawingModel(),
+            new FakeModelCatalog(
+                "copilot",
+                TestModels.Make("copilot", "claude-haiku-5.5", efforts: ["low", "medium", "xhigh"], displayName: "Claude Haiku 5.5"),
+                TestModels.Make("copilot", "blind-model", vision: false)));
+        var app = await ComposeCopilotAsync(
+            scripted: false,
+            tokenVariable: true,
+            starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
+        AiProviderSettingsPageViewModel? page = null;
+        app.Dialogs.OnSettings = dialog =>
+        {
+            page = Assert.IsType<AiProviderSettingsPageViewModel>(dialog.Pages[0]);
+            page.ModelListLoaded.GetAwaiter().GetResult();
+            page.SelectedModel = page.Models.Single(choice => choice.Id == "claude-haiku-5.5");
+            page.SelectedReasoningEffort = page.ReasoningEfforts.Single(choice => choice.Value == "xhigh");
+            dialog.OkCommand.Execute(null);
+        };
+
+        // Act: the user opens Settings, chooses the model and the level, and then sends a message
+        await app.Composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        await app.Composition.Chat.RefreshReadinessAsync();
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await app.Composition.Chat.SendCommand.ExecuteAsync(null);
+        await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+
+        // Assert: the page listed both models with their capabilities, the choice is in the settings file, the banner is
+        // clear, and the agent was made with the model and the level
+        Assert.Equal(["", "blind-model", "claude-haiku-5.5"], page!.Models.Select(choice => choice.Id).Order(StringComparer.Ordinal).ToArray());
+        Assert.Contains("low, medium, xhigh", page.ModelDetails, StringComparison.Ordinal);
+        var stored = new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot")).Load().AiProvider;
+        Assert.Equal(("claude-haiku-5.5", "xhigh"), (stored.ModelName, stored.ReasoningEffort));
+        Assert.False(app.Composition.Chat.HasReadinessIssue);
+        var selection = Assert.Single(source.Requests).Selection!;
+        Assert.Equal(("claude-haiku-5.5", "xhigh"), (selection.Model.Id, selection.Settings.ReasoningEffort));
+        Assert.Equal("The box is drawn.", Assert.IsType<AssistantReplyViewModel>(app.Composition.Chat.Transcript[^1]).Text);
+    }
+
+    /// <summary>
+    ///     Test that model settings that cannot work are told before the first turn: a model that cannot call tools makes
+    ///     the banner say so and no agent is made, a reasoning level that the model does not offer makes the banner say what
+    ///     the model offers, and a model that cannot take pictures is a warning with which a message still runs.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ChooseModel_SettingsThatCannotWork_BannerSaysSoBeforeTheFirstTurn()
+    {
+        // Arrange: a runtime whose catalog offers a model without tools, one that cannot see, and one with levels
+        var token = TestContext.Current.CancellationToken;
+        var source = new FakeCopilotAgentSource(
+            DrawingModel(),
+            new FakeModelCatalog(
+                "copilot",
+                TestModels.Make("copilot", "no-tools", toolCalls: false),
+                TestModels.Make("copilot", "blind-model", vision: false),
+                TestModels.Make("copilot", "thinker", efforts: ["low", "high"])));
+        var app = await ComposeCopilotAsync(
+            scripted: false,
+            tokenVariable: true,
+            starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
+        var banners = new List<(bool Issue, string Message)>();
+
+        // Act: store each choice and let the panel check the provider, and send a message with the model that cannot call tools
+        foreach (var (model, effort) in new[] { ("no-tools", ""), ("thinker", "bogus"), ("blind-model", "") })
+        {
+            app.Composition.Settings.Update(settings => settings with { AiProvider = settings.AiProvider with { ModelName = model, ReasoningEffort = effort } });
+            await app.Composition.Chat.RefreshReadinessAsync();
+            banners.Add((app.Composition.Chat.HasReadinessIssue, app.Composition.Chat.ReadinessMessage));
+            if (model == "no-tools")
+            {
+                app.Composition.Composer.InsertTyped("Draw a box");
+                await app.Composition.Chat.SendCommand.ExecuteAsync(null);
+                await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+            }
+        }
+
+        // Assert: each banner names its problem, and no agent was made for the model that cannot call tools
+        Assert.Contains("does not support tool calling", banners[0].Message, StringComparison.Ordinal);
+        Assert.Contains("does not support reasoning effort 'bogus'. Supported: low, high.", banners[1].Message, StringComparison.Ordinal);
+        Assert.Contains("blind-model does not accept pictures", banners[2].Message, StringComparison.Ordinal);
+        Assert.All(banners, banner => Assert.True(banner.Issue));
+        Assert.Empty(source.Requests);
+        Assert.Contains(
+            app.Composition.Chat.Transcript.OfType<NoticeRowViewModel>(),
+            notice => notice.Message.Contains("does not support tool calling", StringComparison.Ordinal));
+    }
+
+    /// <summary>
     ///     Test that a user whose settings choose GitHub Copilot on a machine with the installed CLI and a sign-in has a
     ///     conversation through the real factory of the providers and a runtime that the starter runs: the banner is clear,
     ///     the runtime is asked for with the CLI that was found, the words and the tool row appear, and the drawing is
@@ -1944,6 +2041,7 @@ public sealed class CanvasPilotTests : IDisposable
         }
 
         var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]) };
+        var ollamaCatalog = new FakeModelCatalog("ollama", TestModels.Make("ollama", "gemma3:latest"));
         var factory = scripted ? new ScriptedAgentFactory(model ?? DrawingModel()) : null;
         var starter = new FakeCopilotRuntimeStarter(
             starterResult ?? new CopilotStartResult(CopilotStartStatus.Failed, "The Copilot runtime must not be started in this test."));
@@ -1962,7 +2060,8 @@ public sealed class CanvasPilotTests : IDisposable
             ollamaProbe: probe,
             environment: environment,
             cliFileSystem: DevMachine.CreateFileSystem(),
-            copilotStarter: starter);
+            copilotStarter: starter,
+            ollamaCatalogs: new FakeOllamaCatalogs(ollamaCatalog));
         _disposables.Add(composition);
         composition.Shell.AttachDialogService(dialogs);
         if (scripted)

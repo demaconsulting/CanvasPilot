@@ -33,27 +33,9 @@ public enum AiProviderKind
 }
 
 /// <summary>
-///     How much reasoning effort the language model is asked to spend.
-/// </summary>
-public enum ReasoningLevel
-{
-    /// <summary>Let the provider choose.</summary>
-    Auto,
-
-    /// <summary>Minimal reasoning effort.</summary>
-    Low,
-
-    /// <summary>Balanced reasoning effort.</summary>
-    Medium,
-
-    /// <summary>Maximum reasoning effort.</summary>
-    High,
-}
-
-/// <summary>
-///     Persisted AI provider choices. The Agent subsystem reads the provider, model, endpoint, context window, and
-///     Copilot CLI path from them. The reasoning level is stored and applied unchanged, and the unrestricted tools flag is
-///     stored and kept as it is, but the AI library cannot act on the first and the dialog does not offer the second.
+///     Persisted AI provider choices. The Agent subsystem reads the provider, model, reasoning effort, endpoint, context
+///     window, and Copilot CLI path from them. The unrestricted tools flag is stored and kept as it is, but the dialog does
+///     not offer it.
 /// </summary>
 public sealed record AiProviderSettings
 {
@@ -90,7 +72,8 @@ public sealed record AiProviderSettings
     public AiProviderKind Provider { get; init; } = AiProviderKind.GitHubCopilot;
 
     /// <summary>
-    ///     Gets the model name, or an empty string to use the provider's default model.
+    ///     Gets the id of the model as the provider names it (for example <c>claude-haiku-5.5</c> or <c>gemma3:latest</c>),
+    ///     or an empty string to use the provider's default model.
     /// </summary>
     public string ModelName { get; init; } = string.Empty;
 
@@ -100,10 +83,15 @@ public sealed record AiProviderSettings
     public int ContextWindowTokens { get; init; } = DefaultContextWindowTokens;
 
     /// <summary>
-    ///     Gets the requested reasoning effort. It is stored only: the AI library does not expose it yet, so the settings
-    ///     page shows it disabled.
+    ///     Gets the id of the reasoning effort that the chosen model is asked to spend, as the provider spells it (for
+    ///     example <c>none</c>, <c>low</c>, <c>medium</c>, <c>high</c>, <c>xhigh</c>, or <c>max</c>), or an empty string to
+    ///     leave the choice to the provider.
     /// </summary>
-    public ReasoningLevel ReasoningLevel { get; init; } = ReasoningLevel.Auto;
+    /// <remarks>
+    ///     Which ids exist depends on the model, so the value is text and not an enumeration. Files written by earlier
+    ///     builds stored the choice as <c>reasoningLevel</c>; the settings service reads that value into this one.
+    /// </remarks>
+    public string ReasoningEffort { get; init; } = string.Empty;
 
     /// <summary>
     ///     Gets the Ollama server endpoint.

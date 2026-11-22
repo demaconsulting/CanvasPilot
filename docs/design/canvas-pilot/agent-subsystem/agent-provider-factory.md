@@ -38,15 +38,27 @@ address (`AiProviderSettings.IsValidOllamaEndpoint`), the model name must not be
 in the range of the settings (512 to 2,000,000 tokens). Otherwise the result is `NotConfigured` with a sentence that
 says what to enter, and no request is made. Address and model are trimmed.
 
+The model settings are then validated by the catalog of the server (`IOllamaModelCatalogs`), in 15 seconds at most:
+`SelectAsync(ModelSettings(model){ReasoningEffort, ContextWindowTokens}, ToolCalls)` of AgentKit. A model that the
+server does not have, that cannot call tools, that cannot be used (an embedding model), that does not offer the chosen
+effort, or that was trained for fewer tokens than the window is the result `ModelSettingsInvalid` with the problems of
+the library joined by a space, and no agent is made and no chat request is sent. The name is replaced by the id that the
+catalog spells (`qwen3` becomes `qwen3:latest`). A server that does not answer, answers something else, or is too slow
+is not an error here: the model is then tried as it was typed, with no selection, so that the typed name still works as
+it did before the model list. (That is the manual-entry path; the readiness check and the settings page say why the list
+is missing.)
+
 With usable settings the factory builds, for each agent:
 
 1. an `HttpClient` with `BaseAddress` set to the address and `Timeout` infinite (a local model may need minutes to load,
    and Stop is what ends a turn), over the handler that it was given for tests or over the real network;
-2. an `OllamaApiClient` for the model, which is an `IChatClient`;
+2. an `OllamaApiClient` for the model (the id of the catalog), which is an `IChatClient`;
 3. an `OllamaContextSizingChatClient` around it with the context window of the settings, which puts `num_ctx` on every
    request, because Ollama loads a model at the window that a request names and otherwise at its own small default;
-4. the agent, by `ChatClientAgentFactory.Create(client, tools, instructions, "CanvasPilot")`, which adds the decorator
-   that lets the model see a picture that a tool returned.
+4. the agent, by `ChatClientAgentFactory.Create(client, tools, instructions, "CanvasPilot", selection)`, which puts the
+   model, the thinking level of the reasoning effort, and the window of the selection on every request (the window is
+   the one that the sizing client sends, so the two agree) and adds the decorator that lets the model see a picture that
+   a tool returned.
 
 The result owns the sizing client (which disposes the Ollama client) and the `HttpClient`; disposing it releases both
 once. The handler that a test supplies is never disposed by the factory. When the library refuses the tools (none, or a
@@ -65,14 +77,23 @@ sentence of the starter; a `Started` answer without a source gives `CopilotRunti
 `NoAgentSourceMessage`, "The Copilot runtime started but cannot make an agent. Choose Check connection to try again."
 The next request asks the starter again, so a fix is noticed.
 
-An agent is made with `CopilotAgentRequest(Tools, Instructions, "CanvasPilot", Model, WorkingDirectory)`: exactly the
-supplied tools, instructions, and name, the model of the settings, trimmed, or `null` for the default model of the
-runtime when the name is blank, and the project folder as the working directory (it grants nothing; the tools decide
-what may be touched). The one call of `CopilotAgentFactory.Create` (in `CopilotRuntimeAgentSource`) passes no permission
-handler, so the AI library installs its default-deny handler, which approves exactly the supplied tools, one call at a
-time, and refuses everything else, including the tools of the Copilot CLI itself. This is a property of the running
-Copilot runtime, so no test reads the source to infer it; it is verified by the manual check of the live runtime (check
-10 of the manual verification in the verification of the system).
+The model is then validated with the catalog of the running runtime (`ICopilotAgentSource.Models`): when the settings
+name a model, `SelectAsync(ModelSettings(model){ReasoningEffort}, ToolCalls)` gives the selection, and a model that is
+not offered to the account, cannot be used, cannot call tools, or does not offer the chosen effort is the result
+`ModelSettingsInvalid` with the problems of the library and no agent. No context window is stated, because the runtime
+sets its own and the library refuses one for a plain Copilot agent. A catalog that cannot be read (the runtime is not
+connected, or was stopped) is `CopilotRuntimeUnavailable` with its message. Settings that name no model make no
+selection, and the runtime uses its default model; a reasoning effort without a model is not used, because it cannot be
+checked.
+
+An agent is made with `CopilotAgentRequest(Tools, Instructions, "CanvasPilot", WorkingDirectory, Selection)`: exactly
+the supplied tools, instructions, and name, the project folder as the working directory (it grants nothing; the tools
+decide what may be touched), and the selection (or `null`), from which the library takes the model and the reasoning
+effort. The one call of `CopilotAgentFactory.Create` (in `CopilotRuntimeAgentSource`) passes no permission handler, so
+the AI library installs its default-deny handler, which approves exactly the supplied tools, one call at a time, and
+refuses everything else, including the tools of the Copilot CLI itself. This is a property of the running Copilot
+runtime, so no test reads the source to infer it; it is verified by the manual check of the live runtime (check 10 of
+the manual verification in the verification of the system).
 
 **The installed CLI is run, never bundled.** The runtime runs on the CLI that the user installed, at the path that the
 locator found, so nothing is shipped or downloaded: the packaging guards (`CopilotSkipCliDownload`, the FileAssert test
@@ -97,25 +118,29 @@ sign-in that the runtime uses and its limits are described in the design of the 
 
 #### Logging
 
-The log gets one line for each agent that is made (`Agent created: provider=Ollama model=… tools=n contextTokens=n`,
-`Agent created: provider=GitHubCopilot model=… tools=n`) and one for a Copilot agent that could not be made (`Agent not
-created: provider=GitHubCopilot status=…`). It never gets the instructions, the address of the server, a token, or a
-path. A log that cannot be written never fails the request.
+The log gets one line for each agent that is made
+(`Agent created: provider=Ollama model=… effort=… tools=n contextTokens=n`,
+`Agent created: provider=GitHubCopilot model=… effort=… tools=n`, the effort being `(default)` when none is chosen) and
+one for an agent that could not be made (`Agent not created: provider=… status=…`, and
+`Ollama model settings not validated: the server did not describe its models` when the typed model is tried as it is).
+It never gets the instructions, the address of the server, a token, or a path. A log that cannot be written never fails
+the request.
 
 #### Data Model
 
 `AgentProviderFactory` is a `sealed class` with the constants `AgentName` (`CanvasPilot`), `InvalidEndpointMessage`,
 `MissingModelMessage`, `InvalidContextWindowMessage`, and `NoAgentSourceMessage`. The constructor takes the locator, the
-starter, the handler of the HTTP requests, the logger, and `ownsStarter`, each optional (the real ones when absent; a
-starter that the factory makes is always owned). The supporting types are `AgentCreationRequest`,
-`AgentCreationResult`, and `IAgentFactory`; none has a part definition of its own. The Copilot source types are those of
-the `CopilotRuntimeStarter` unit.
+starter, the handler of the HTTP requests, the logger, `ownsStarter`, and the Ollama catalogs, each optional (the real
+ones when absent, the catalogs over the given handler; a starter that the factory makes is always owned). The supporting
+types are `AgentCreationRequest`, `AgentCreationResult`, and `IAgentFactory`; none has a part definition of its own. The
+Copilot source types are those of the `CopilotRuntimeStarter` unit.
 
 #### Error Handling
 
 A provider that cannot be used is a result, not an exception: unusable settings (`NotConfigured`), a CLI that is missing
-or too old, and a runtime that cannot be started (`CopilotCliTooOld`, `CopilotNotSignedIn`, or
-`CopilotRuntimeUnavailable`). Exceptions are for programming errors and for what the AI library refuses: a missing
+or too old, a runtime that cannot be started (`CopilotCliTooOld`, `CopilotNotSignedIn`, or
+`CopilotRuntimeUnavailable`), and model settings that the catalog refuses (`ModelSettingsInvalid`). Exceptions are for
+programming errors and for what the AI library refuses: a missing
 argument, a blank project folder, a set of tools that the library refuses, a cancellation of the start, and a request
 after the factory was disposed.
 
@@ -132,10 +157,11 @@ setting, used as given.
 
 `AgentCreationResult` carries the `AgentReadinessReport` of the `AgentContract` unit; the Copilot branch uses
 `CopilotCliLocator` and the `CopilotRuntimeStarter` unit (through `ICopilotRuntimeStarter`, `CopilotStartResult`, and
-`ICopilotAgentSource`); `AiProviderSettings` and `AiProviderKind` of the `Settings` subsystem; `RollingFileLogger` of
-the `Logging` subsystem; DemaConsulting.AgentKit (`ChatClientAgentFactory`, `OllamaContextSizingChatClient`),
-OllamaSharp (`OllamaApiClient`), the Microsoft Agent Framework (`AIAgent`), and Microsoft.Extensions.AI (`AIFunction`,
-`IChatClient`).
+`ICopilotAgentSource`); both branches use `ModelRequirements` (the policy of the `ProviderModelCatalog` unit) and
+`IOllamaModelCatalogs`; `AiProviderSettings` and `AiProviderKind` of the `Settings` subsystem; `RollingFileLogger` of
+the `Logging` subsystem; DemaConsulting.AgentKit (`ChatClientAgentFactory`, `OllamaContextSizingChatClient`, and the
+model catalog, `ModelSettings`, and `ModelSelection` types of its Core package), OllamaSharp (`OllamaApiClient`), the
+Microsoft Agent Framework (`AIAgent`), and Microsoft.Extensions.AI (`AIFunction`, `IChatClient`).
 
 #### Callers
 

@@ -20,6 +20,13 @@ answers. The shape of the `/api/show` answer is the assumption that only a live 
 manual check recorded in the system verification, and until it is done the tests show that an answer in any other shape
 means "not known" and never an error.
 
+The catalogs of the models are fakes too: a stand-in catalog (`FakeModelCatalog`) that holds the models that a test
+gives it and can fail the way a provider that cannot be asked does, for Copilot behind the fake source of the fake
+starter, and for Ollama through a fake of `IOllamaModelCatalogs`. The readiness tests that do not concern the model
+settings use a catalog that cannot be read, so that they never touch a network. The sentences of the library are
+asserted in part (the words that name the problem), because they are the library's; the real catalogs are verified in
+the OTS tests of AgentKit and in the verification of `ProviderModelCatalog`.
+
 The token rule is verified two ways: a sentinel text that stands for a token is printed by the fake GitHub CLI and
 must appear in no report, and the credential tests show that only emptiness decides.
 
@@ -43,10 +50,21 @@ the probe wait for a limit of a tenth of a second.
   is ready.", and the starter is asked once with the path and the version of the CLI that the locator found.
 - A starter that answers CLI too old, not signed in, or failed gives `CopilotCliTooOld`, `CopilotNotSignedIn`, or
   `CopilotRuntimeUnavailable` with the sentence of the starter unchanged, and the report is not usable.
+- With a model in the settings, the catalog of the started runtime validates it: a model that can call tools and see
+  pictures is ready, and the sentence names it; a model that is not offered, cannot be used, cannot call tools, or does
+  not offer the chosen effort gives `ModelSettingsInvalid` with the sentence of the AI library and is not usable; a
+  model that cannot take pictures gives `ModelLacksVision`, which is usable; a catalog that fails gives
+  `CopilotRuntimeUnavailable` with its message. Settings that name no model are ready as before.
 - No token text is in any report.
 - Ollama: an invalid address or an empty model name is not configured and the server is not asked; no answer is
-  unreachable; a missing model gives the `ollama pull` sentence; a model that is there is ready with the vision hint, in
-  any letter case and with the implied `latest` tag, and the window is asked for under the name that the server lists.
+  unreachable; a missing model gives the `ollama pull` sentence; a model that is there is ready with the vision hint
+  (when the catalog cannot be read), in any letter case and with the implied `latest` tag, and the window is asked for
+  under the name that the server lists.
+- With a catalog of the server, a model that can do everything is ready and named by the id of the catalog; a model that
+  cannot call tools, and a window above what the model was trained for, give `ModelSettingsInvalid` and are not usable;
+  a model that cannot take pictures is `ModelLacksVision` and usable; with a window that is also too small the status is
+  the window warning and the sentence has both; the trained length of the catalog is used for the window warning when
+  the server does not answer the question about the context.
 - A window of 16,383 tokens warns and 16,384 does not; the smaller of the configured and the detected window decides;
   an unknown detected window uses the configured one; both sentences are exact.
 - The probe turns a refused connection, an error status, text that is not JSON, and a time out into an unreachable
@@ -121,6 +139,25 @@ status is ready and usable with the sentence "GitHub Copilot CLI 1.0.114 is read
 and the version of the CLI that the locator found. This scenario is tested by
 `AgentReadiness_Copilot_StarterStarted_ReportsReadyAndAsksWithTheCliThatWasFound`.
 
+**AgentReadiness_Copilot_ModelOfTheSettings_IsValidatedByTheRuntimeCatalogAndNamedWhenReady**: A runtime whose catalog
+offers `claude-haiku-5.5` with the efforts `low` and `xhigh`. Settings that name that model with the effort `xhigh` give
+ready with "GitHub Copilot CLI 1.0.114 is ready with the model claude-haiku-5.5."; settings with no model give the plain
+ready sentence. This scenario is tested by
+`AgentReadiness_Copilot_ModelOfTheSettings_IsValidatedByTheRuntimeCatalogAndNamedWhenReady`.
+
+**AgentReadiness_Copilot_ModelSettingsTheCatalogRefuses_ReportModelSettingsInvalid**: Four settings against a catalog of
+three models: a model that cannot call tools ("does not support tool calling"), a model that the catalog does not have
+("is not available from provider 'copilot'"), an effort that a model does not offer ("does not support reasoning effort
+'bogus'. Supported: low, high."), and a model that cannot be used with its reason. Each gives `ModelSettingsInvalid`
+with that part of the sentence of the library and is not usable. This scenario is tested by
+`AgentReadiness_Copilot_ModelSettingsTheCatalogRefuses_ReportModelSettingsInvalid`.
+
+**AgentReadiness_Copilot_ModelWithoutVisionAndUnreadableCatalog_WarnsAndReportsTheRuntime**: A model that cannot take
+pictures gives `ModelLacksVision`, usable, with the sentence "blind does not accept pictures"; after the catalog is made
+to fail with the message of a runtime that is not signed in, the same settings give `CopilotRuntimeUnavailable` with
+that message. This scenario is tested by
+`AgentReadiness_Copilot_ModelWithoutVisionAndUnreadableCatalog_WarnsAndReportsTheRuntime`.
+
 **AgentReadiness_Copilot_RefreshAndCheckAsync_SearchAgainOnlyWhenAsked**: Two plain checks run `--version` once; the
 connection check through `IProviderCheck` runs it again; the result is not usable (there is no sign-in on that machine).
 This scenario is tested by
@@ -165,6 +202,18 @@ detected windows: a model limit of 8,192, 16,383, or 2,048 (with a configured 4,
 sentence; a limit of 16,384 or more with a large setting is ready; a configured 8,192 with a large model limit gives the
 "raise it in Settings" sentence; an unknown limit uses the configured window. This scenario is tested by
 `AgentReadiness_Ollama_DetectedContext_TheSmallerOfConfiguredAndDetectedDecides`.
+
+**AgentReadiness_Ollama_ModelSettings_AreValidatedByTheCatalogOfTheServer**: A server that lists four models, described
+by a fake catalog: a model that does everything (asked as `full`) is ready with "Ollama is running with the model
+full:latest."; a model without tool calling and a window of 32,768 for a model trained for 8,192 tokens are
+`ModelSettingsInvalid` and not usable, with the sentences of the library; a model that cannot see pictures is
+`ModelLacksVision`, usable; the same model with a window of 4,096 is the window warning with both sentences. This
+scenario is tested by `AgentReadiness_Ollama_ModelSettings_AreValidatedByTheCatalogOfTheServer`.
+
+**AgentReadiness_Ollama_NoContextAnswer_UsesTheTrainedLengthOfTheCatalog**: A model trained for 16,000 tokens, asked
+with a window of 16,000, while the server gives no answer to the question about the context: the status is the window
+warning and the sentence holds 16,000. This scenario is tested by
+`AgentReadiness_Ollama_NoContextAnswer_UsesTheTrainedLengthOfTheCatalog`.
 
 **AgentReadiness_DescribeSmallContext_Boundaries_AreTheRecommendedMinimum**: The recommended minimum is 16,384; 16,383
 gives a sentence and 16,384 does not, for the configured window and for the model's limit. This scenario is tested by

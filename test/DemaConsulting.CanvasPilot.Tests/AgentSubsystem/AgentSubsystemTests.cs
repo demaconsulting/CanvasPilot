@@ -511,7 +511,9 @@ public sealed class AgentSubsystemTests
                 ModelName = "gemma3:12b",
                 ContextWindowTokens = 32768,
             };
-            await using var factory = new AgentProviderFactory(handler: handler);
+            await using var factory = new AgentProviderFactory(
+                handler: handler,
+                ollamaCatalogs: new FakeOllamaCatalogs(new FakeModelCatalog("ollama", TestModels.Make("ollama", "gemma3:12b"))));
 
             // Act: make the agent from the settings and run a turn through the mapper
             await using var made = await factory.CreateAsync(new AgentCreationRequest(settings, tools, "You draw.", root), token);
@@ -580,7 +582,7 @@ public sealed class AgentSubsystemTests
             var made = Assert.Single(source.Requests);
             Assert.Equal(tools.Select(tool => tool.Name).ToArray(), made.Tools.Select(tool => tool.Name).ToArray());
             Assert.Equal(root, made.WorkingDirectory);
-            Assert.Null(made.Model);
+            Assert.Null(made.Selection);
         }
         finally
         {
@@ -614,7 +616,11 @@ public sealed class AgentSubsystemTests
             ModelName = "gemma3:12b",
             ContextWindowTokens = 32768,
         };
-        using var rig = new AgentServiceRig(new ScriptedChatClient(), factory: new AgentProviderFactory(handler: handler), settings: settings);
+        var catalogs = new FakeOllamaCatalogs(new FakeModelCatalog("ollama", TestModels.Make("ollama", "gemma3:12b")));
+        using var rig = new AgentServiceRig(
+            new ScriptedChatClient(),
+            factory: new AgentProviderFactory(handler: handler, ollamaCatalogs: catalogs),
+            settings: settings);
         var told = new List<string>();
         rig.Service.FileWritten += (_, args) => told.Add(args.RelativePath);
         var before = AgentServiceRig.Snapshot(rig.ProjectFolder);

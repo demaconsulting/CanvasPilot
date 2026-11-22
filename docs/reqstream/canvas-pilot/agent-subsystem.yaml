@@ -52,20 +52,23 @@ sections:
           - id: CanvasPilot-Agent-CheckProviderReadiness
             title: >-
               The Agent subsystem shall check the AI provider that the settings choose and report it as one status with
-              one sentence that says what to do: for GitHub Copilot the Copilot CLI, its version, the credentials, and
-              the runtime (which is started on the installed CLI, or reused, and must be signed in), and for Ollama the
-              settings, the server, the model, and the size of the context window.
+              one sentence that says what to do: for GitHub Copilot the Copilot CLI, its version, the credentials, the
+              runtime (which is started on the installed CLI, or reused, and must be signed in), and the model settings,
+              and for Ollama the settings, the server, the model and the model settings, and the size of the context
+              window.
             justification: |
               Both providers depend on things outside the application, and the user should learn what is missing before
               the first message. The subsystem owns the checks because it owns the knowledge of how each provider is
               reached, and it offers them to the settings dialog through the interface that the dialog owns. Starting the
               runtime is the one check that proves that the CLI runs and that the sign-in works, so a Copilot that is
-              reported ready can answer.
+              reported ready can answer; the catalog of the running runtime then proves that the chosen model exists and
+              can do the work.
             children:
               - CanvasPilot-AgentReadiness-CheckCopilotInOrder
               - CanvasPilot-AgentReadiness-DetectCopilotCredentials
               - CanvasPilot-AgentReadiness-ExplainCopilotAuthentication
               - CanvasPilot-AgentReadiness-ReportCopilotRuntimeStart
+              - CanvasPilot-AgentReadiness-ValidateModelSettings
               - CanvasPilot-AgentReadiness-NeverRetainCredentials
               - CanvasPilot-AgentReadiness-CheckOllamaServerAndModel
               - CanvasPilot-AgentReadiness-WarnSmallOllamaContext
@@ -221,9 +224,10 @@ sections:
           - id: CanvasPilot-Agent-GiveTheAgentOnlyTheTools
             title: >-
               The Agent subsystem shall make the agent of GitHub Copilot, on the shared Copilot runtime, with exactly the
-              tools of the project, the instructions, the model of the settings (the default model of the runtime when it
-              is blank), and the project folder as its working directory, with the default-deny permission handler of the
-              AI library, so that the runtime of Copilot can call nothing else.
+              tools of the project, the instructions, the model selection that the catalog of the runtime validated for
+              the settings (the default model of the runtime when no model is named), and the project folder as its
+              working directory, with the default-deny permission handler of the AI library, so that the runtime of Copilot
+              can call nothing else.
             justification: |
               The Copilot runtime has tools of its own (a shell, file access, a web fetch). The copilot may act only through
               the tools that the application builds and confines, so the agent is made with that list and with no
@@ -232,6 +236,29 @@ sections:
               - CanvasPilot-AgentProviderFactory-MakeCopilotAgentThroughStarter
             tests:
               - AgentSubsystem_ConverseWithCopilot_RefusingAndRunningStarter_RefusalGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+
+          - id: CanvasPilot-Agent-ListModelsAndValidateSettings
+            title: >-
+              The Agent subsystem shall list the models that the AI provider offers, in the terms of the application (what
+              each model can do: call tools, accept pictures, reason at which levels, how large a context window), for the
+              settings page, and shall validate the model, the reasoning effort, and the context window of the settings
+              against the same catalog when the conversation starts, so that settings that cannot work are answered with
+              the sentence of the AI library and not with a failed turn.
+            justification: |
+              A user cannot be expected to know the id of a model or which levels it offers, and the models differ in what
+              the application needs from them (tool calling for every drawing, pictures to see the marks and the result).
+              Offering the list with the capabilities, and refusing a choice that cannot work before a turn is spent on it,
+              puts the knowledge of the provider in one place. The list comes from the catalog of the one running runtime
+              (or of the Ollama server), so no second runtime is started for it.
+            children:
+              - CanvasPilot-ProviderModelCatalog-ListProviderModels
+              - CanvasPilot-ProviderModelCatalog-DescribeEachModel
+              - CanvasPilot-ProviderModelCatalog-AnswerWithAMessage
+              - CanvasPilot-ProviderModelCatalog-ShareTheOllamaCatalog
+              - CanvasPilot-AgentProviderFactory-ValidateModelSettings
+            tests:
+              - CanvasPilot_ChooseModel_CopilotModelAndReasoningLevel_AreStoredAndReachTheAgent
+              - CanvasPilot_ChooseModel_SettingsThatCannotWork_BannerSaysSoBeforeTheFirstTurn
 
           - id: CanvasPilot-Agent-RunCopilotOnInstalledCli
             title: >-
@@ -256,8 +283,9 @@ sections:
           - id: CanvasPilot-Agent-ExplainUnavailableCopilot
             title: >-
               The Agent subsystem shall answer a request for an agent of GitHub Copilot that cannot be served (the CLI is
-              missing or too old, the runtime is not signed in, or it could not be started) with a typed result and no
-              agent, with the status and sentence of the readiness check for the same cause.
+              missing or too old, the runtime is not signed in, it could not be started, or the model settings cannot be
+              used) with a typed result and no agent, with the status and sentence of the readiness check for the same
+              cause.
             justification: |
               The user who chose Copilot must be told, in the words of the readiness check and not by a failed turn, what
               is wrong and what to do about it: install or upgrade the CLI, sign in with the GitHub CLI or a token

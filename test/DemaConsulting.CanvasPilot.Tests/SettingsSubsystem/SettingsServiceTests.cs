@@ -147,7 +147,8 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal("Ollama", ai.GetProperty("provider").GetString());
         Assert.Equal("llama3", ai.GetProperty("modelName").GetString());
         Assert.Equal(32768, ai.GetProperty("contextWindowTokens").GetInt32());
-        Assert.Equal("High", ai.GetProperty("reasoningLevel").GetString());
+        Assert.Equal("high", ai.GetProperty("reasoningEffort").GetString());
+        Assert.False(ai.TryGetProperty("reasoningLevel", out _));
         Assert.Equal("http://example.test:11434", ai.GetProperty("ollamaEndpoint").GetString());
         Assert.True(ai.GetProperty("unrestrictedAgentTools").GetBoolean());
         Assert.Equal("C:\\Tools\\copilot.exe", ai.GetProperty("copilotCliPath").GetString());
@@ -370,20 +371,87 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that an unrecognized enumeration value falls back to the first member.
+    ///     Test that an unrecognized provider falls back to the first member and an unusable legacy reasoning value is
+    ///     ignored.
     /// </summary>
     [Fact]
     public void SettingsService_Load_UnknownEnumValue_UsesFirstValue()
     {
-        // Arrange: a provider and reasoning level this build does not know
+        // Arrange: a provider this build does not know and a legacy reasoning level that is not a name
         WriteSettingsFile("""{ "aiProvider": { "provider": "SomethingNew", "reasoningLevel": 42 } }""");
 
         // Act: load
         var loaded = new SettingsService(SettingsFolder).Load();
 
-        // Assert: the defaults for those enumerations are used and the file still loads
+        // Assert: the default provider is used, no effort is invented, and the file still loads
         Assert.Equal(AiProviderKind.GitHubCopilot, loaded.AiProvider.Provider);
-        Assert.Equal(ReasoningLevel.Auto, loaded.AiProvider.ReasoningLevel);
+        Assert.Equal(string.Empty, loaded.AiProvider.ReasoningEffort);
+    }
+
+    /// <summary>
+    ///     Test that a file of an earlier build, which stored the reasoning as a level, keeps its meaning as a reasoning
+    ///     effort, and that saving writes the effort and no longer the level.
+    /// </summary>
+    [Theory]
+    [InlineData("high", "high")]
+    [InlineData("Medium", "medium")]
+    [InlineData("low", "low")]
+    [InlineData("auto", "")]
+    [InlineData("extreme", "")]
+    public void SettingsService_Load_LegacyReasoningLevel_BecomesTheReasoningEffort(string legacy, string expected)
+    {
+        // Arrange: a version 1 file with the old key and the model of the user
+        WriteSettingsFile($$"""{ "version": 1, "aiProvider": { "modelName": "gpt-x", "reasoningLevel": "{{legacy}}" } }""");
+        var service = new SettingsService(SettingsFolder);
+
+        // Act: load, then save what was loaded
+        var loaded = service.Load();
+        service.Save(loaded);
+        var written = File.ReadAllText(Path.Combine(SettingsFolder, SettingsService.FileName));
+
+        // Assert: the level became the effort, the version is unchanged, and the old key is gone from the file
+        Assert.Equal(expected, loaded.AiProvider.ReasoningEffort);
+        Assert.Equal("gpt-x", loaded.AiProvider.ModelName);
+        Assert.Equal(1, loaded.Version);
+        Assert.DoesNotContain("reasoningLevel", written, StringComparison.Ordinal);
+        Assert.Contains("\"reasoningEffort\"", written, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a reasoning effort that the file states is kept, and wins over a legacy level that the file also holds.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_ReasoningEffortAndLegacyLevel_EffortWins()
+    {
+        // Arrange: a file written by a later build that was then edited by an earlier one
+        WriteSettingsFile("""{ "aiProvider": { "reasoningEffort": " xhigh ", "reasoningLevel": "low" } }""");
+
+        // Act: load
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: the effort is the trimmed one of the new key
+        Assert.Equal("xhigh", loaded.AiProvider.ReasoningEffort);
+    }
+
+    /// <summary>
+    ///     Test that a file that has neither key loads with the effort that leaves the choice to the provider, and that an
+    ///     effort survives a save and a load.
+    /// </summary>
+    [Fact]
+    public void SettingsService_SaveLoad_ReasoningEffort_RoundTripsAndDefaultsToEmpty()
+    {
+        // Arrange: a file without the key, loaded first
+        WriteSettingsFile("""{ "aiProvider": { "modelName": "m" } }""");
+        var service = new SettingsService(SettingsFolder);
+        var withoutKey = service.Load().AiProvider.ReasoningEffort;
+
+        // Act: save an effort, and load it with a new service
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "m", ReasoningEffort = "max" } });
+        var reloaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: nothing was invented, and the effort came back
+        Assert.Equal(string.Empty, withoutKey);
+        Assert.Equal("max", reloaded.AiProvider.ReasoningEffort);
     }
 
     /// <summary>
@@ -628,7 +696,7 @@ public sealed class SettingsServiceTests : IDisposable
                 Provider = AiProviderKind.Ollama,
                 ModelName = "llama3",
                 ContextWindowTokens = 32768,
-                ReasoningLevel = ReasoningLevel.High,
+                ReasoningEffort = "high",
                 OllamaEndpoint = "http://example.test:11434",
                 UnrestrictedAgentTools = true,
                 CopilotCliPath = "C:\\Tools\\copilot.exe",

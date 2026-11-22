@@ -14,7 +14,10 @@ verified at this level through `IProviderCheck`, the interface that the settings
 machine, a scripted starter, and a scripted Ollama server. The rules of the records, of the locator, and of the
 readiness checks themselves are verified in the unit verification documents. The starter of the Copilot runtime
 (`CopilotRuntimeStarter`) is verified in its own unit verification document over a start function that stands in for the
-runtime, so no Copilot CLI is run; the tests at this level use it or scripted starters.
+runtime, so no Copilot CLI is run; the tests at this level use it or scripted starters. The models that a provider
+offers (`ProviderModelCatalog`) are verified in their own unit verification document, and the validation of the model
+settings is verified in the units that apply it (the readiness check and the factory of the agents) and in the system
+tests.
 
 The service that implements the contract (`AgentService`) is also verified here as the application will use it: one test
 runs it over the real factory and a stand-in Ollama server with the real tools of a project, and one runs it for GitHub

@@ -16,10 +16,12 @@ unit.
 (`SpeechSettings`), and `Styles` (`StyleSettings`). Immutable; changed with `with` expressions.
 
 **AiProviderSettings**: `record` — `Provider` (`AiProviderKind`: `GitHubCopilot` or `Ollama`), `ModelName` (`string`,
-empty for the provider default), `ContextWindowTokens` (`int`, 512 to 2,000,000, default 32768 through
-`AiProviderSettings.DefaultContextWindowTokens`; a stored value within bounds, such as the 8192 that an earlier build
-used as its default, is kept; `AiProviderSettings.RecommendedMinimumContextTokens`, 16384, is the smallest value that is
-recommended and is not enforced here), `ReasoningLevel` (`Auto`, `Low`, `Medium`, `High`), `OllamaEndpoint` (`string`,
+the id of the model as the provider names it; empty for the provider default), `ContextWindowTokens` (`int`, 512 to
+2,000,000, default 32768 through `AiProviderSettings.DefaultContextWindowTokens`; a stored value within bounds, such as
+the 8192 that an earlier build used as its default, is kept; `AiProviderSettings.RecommendedMinimumContextTokens`,
+16384, is the smallest value that is recommended and is not enforced here), `ReasoningEffort` (`string`, the id of the
+reasoning effort as the provider spells it, such as `none`, `low`, `medium`, `high`, `xhigh`, or `max`; empty to leave
+the choice to the provider; it is text because the efforts that exist depend on the model), `OllamaEndpoint` (`string`,
 default `http://localhost:11434`), `UnrestrictedAgentTools` (`bool`, default `false`), and `CopilotCliPath` (`string`,
 empty for automatic discovery).
 
@@ -37,6 +39,14 @@ settings subsystem does not depend on the style subsystem.
 `{"version":1,"recentProjects":[],"aiProvider":{"provider":"GitHubCopilot",...},"speech":{...}}`. Enumerations
 are written as names. Reading is case-insensitive, skips comments, allows trailing commas, ignores unknown
 properties, and treats an unrecognized or non-text enumeration value as the first member.
+
+**Reasoning effort and the old reasoning level**: builds before the model list stored `aiProvider.reasoningLevel`, an
+enumeration of `Auto`, `Low`, `Medium`, and `High` that nothing acted on (the page showed it disabled). The version of
+the file stays 1, because the change adds a key and an earlier build ignores it. When a file has no `reasoningEffort`
+(or an empty one), the reader takes the old key: `low`, `medium`, and `high`, in any letter case, become the effort of
+the same name; `auto`, any other text, and a value that is not text give no effort. A `reasoningEffort` that the file
+states wins over the old key. The old key is never written again, so the next save drops it. A build from before this
+change that reads a newer file ignores `reasoningEffort` and shows no level.
 
 **SettingsFolder / SettingsFilePath**: `string` — the folder given to the constructor and `settings.json`
 inside it, resolved with `PathHelpers.SafePathCombine`.
@@ -61,14 +71,15 @@ Algorithm: when the file does not exist, use defaults. Read the text; an `IOExce
 `UnauthorizedAccessException` is logged and defaults are used. Deserialize; a `JsonException` or a null result
 marks the file corrupt, so it is moved to `settings.json.bad` (replacing any earlier `.bad` file), an error is
 logged, and defaults are used. When the file's version is newer than the supported version, log a warning and
-use the known values. Normalize the result.
+use the known values. Migrate the old reasoning level (see the file format), then normalize the result.
 
 **Normalize**: Makes parsed or caller-supplied settings safe to use. Sets the version to the current version; replaces
 null sections, strings, and dictionary entries with defaults; drops blank recent-project entries; replaces a context
 window outside its bounds and an endpoint that is not an absolute `http` or `https` URL with their defaults; trims text
-values; keeps the shared style kit folders that are full paths, each once (ignoring case, in the first spelling) and in
-their order, drops a relative, blank, or invalid entry with a warning in the log, and keeps a folder that does not exist
-because a network folder may be back later; and replaces a default style kit id that no kit can have with none.
+values (the model name and the reasoning effort among them); keeps the shared style kit folders that are full paths,
+each once (ignoring case, in the first spelling) and in their order, drops a relative, blank, or invalid entry with a
+warning in the log, and keeps a folder that does not exist because a network folder may be back later; and replaces a
+default style kit id that no kit can have with none.
 
 **Save**: Replaces the settings in effect and writes them.
 

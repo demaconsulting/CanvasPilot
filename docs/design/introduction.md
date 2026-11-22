@@ -32,17 +32,18 @@ Local items:
   - **Agent** subsystem: **AgentContract** unit (`IAgentService`, the turn request, the events, and the readiness
     report), **CopilotCliLocator** unit (the installed Copilot CLI, with its process runner, file system, and
     environment seams), **CopilotRuntimeStarter** unit (the one Copilot runtime on the installed CLI, shared by the
-    readiness check and the conversations, with the supporting types of the starter and of the source of Copilot
-    agents), **AgentReadiness** unit (the check of whether the chosen AI provider can be used, with the probe of the
-    Ollama server), **AgentToolRegistry** unit (the tools of the
+    readiness check, the model list, and the conversations, with the supporting types of the starter and of the source
+    of Copilot agents), **ProviderModelCatalog** unit (the models that the chosen provider offers, with what each can
+    do, and the policy of what the application needs of a model), **AgentReadiness** unit (the check of whether the
+    chosen AI provider can be used, with the probe of the Ollama server), **AgentToolRegistry** unit (the tools of the
     copilot for one project, confined to the project folder), **ProjectTools** unit (the tools that list, read, write,
     and draw the files of the project, with links refused and files replaced directly), **AgentInstructions** unit (the
     role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier),
     **PayloadMessageMapper** unit (the message of the user as a model message with the marks described and the pictures
     as images), **AgentEventMapper** unit (the updates of an agent as the events of a turn, and the failures of a turn
     as sentences that say what to do), **AgentProviderFactory** unit (the agent of a conversation for Ollama or for
-    GitHub Copilot, on the shared runtime of the starter), and **AgentService** unit (the conversation of the
-    open project, one turn at a time, with the data of the Copilot runtime kept outside the project).
+    GitHub Copilot, on the shared runtime of the starter), and **AgentService** unit (the conversation of the open
+    project, one turn at a time, with the data of the Copilot runtime kept outside the project).
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, **ChatHistoryStore**, and **PayloadInspector** units.
@@ -57,7 +58,8 @@ Local items:
     **ExportPresetDialog** units.
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
     **ProjectExplorer** units.
-  - **Settings** subsystem: **SettingsService**, **SettingsDialog**, and **AiProviderSettingsPage** units.
+  - **Settings** subsystem: **SettingsService**, **SettingsDialog**, and **AiProviderSettingsPage** units (the page
+    lists the models of the provider and offers the reasoning levels that the chosen model has).
   - **Speech** subsystem: **AudioDeviceService**, **SpeechModelService**, **DictationService**, **DeviceSelection**,
     **ModelCatalogPanel**, **ModelParameterEditor**, and **SpeechSettingsPage** units.
   - **Style** subsystem: **StyleKitDocument**, **StyleKitCatalog**, **StyleKitArchive**, **StyleSelection**,
@@ -112,24 +114,24 @@ uses](SoftwareStructureView.svg)
 ## Architecture
 
 The next diagram shows how the parts fit together at run time. The small executable project only starts the Avalonia
-application. The application library holds the subsystems: the AppShell subsystem builds every unit in one place
-(the composition root) and hosts the others, and nothing else refers to it. The Chat subsystem is the panel in which the
-user converses; it uses the Composer subsystem (the message, its undo steps, and the attachments), the Annotation
-subsystem (marks on the picture), the Payload subsystem (the message that is sent), and the Speech subsystem
-(dictation). Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in
-the Project explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing:
-the AppShell opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards,
-so the copilot can be given the same cards. The Style subsystem holds the style kits: the AppShell shows
-its window from the Tools menu and its list of kits in the status bar, the Preview subsystem offers the sizes of the
-kit of the project when a picture is exported, and the check of a picture against the palette puts its result among the
-notes of the preview; it depends on Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none
-of them depends on it. The Agent subsystem is the AI copilot: the Chat subsystem reaches it only through `IAgentService`
-and the events of a turn, it uses Settings (the provider choices), Project (the open folder), Payload (the message to
-answer), Knowledge, Style, and Preview (what its tools give the copilot), and the AI libraries, and it implements the
-connection check that Settings declares, so Settings never refers to it. Every subsystem logs through Logging, and the
+application. The application library holds the subsystems: the AppShell subsystem builds every unit in one place (the
+composition root) and hosts the others, and nothing else refers to it. The Chat subsystem is the panel in which the user
+converses; it uses the Composer subsystem (the message, its undo steps, and the attachments), the Annotation subsystem
+(marks on the picture), the Payload subsystem (the message that is sent), and the Speech subsystem (dictation).
+Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in the Project
+explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing: the AppShell
+opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards, so the
+copilot can be given the same cards. The Style subsystem holds the style kits: the AppShell shows its window from the
+Tools menu and its list of kits in the status bar, the Preview subsystem offers the sizes of the kit of the project when
+a picture is exported, and the check of a picture against the palette puts its result among the notes of the preview; it
+depends on Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none of them depends on it.
+The Agent subsystem is the AI copilot: the Chat subsystem reaches it only through `IAgentService` and the events of a
+turn, it uses Settings (the provider choices), Project (the open folder), Payload (the message to answer), Knowledge,
+Style, and Preview (what its tools give the copilot), and the AI libraries, and it implements the connection check and
+the model list that Settings declares, so Settings never refers to it. Every subsystem logs through Logging, and the
 subsystems that build file locations use Utilities. The third-party items are used inside the library, and the
-application reads and writes only the local data in the bottom row. Section *Architecture* of the system design
-explains the dependencies between the subsystems, which run one way, and why no subsystem refers to AppShell.
+application reads and writes only the local data in the bottom row. Section *Architecture* of the system design explains
+the dependencies between the subsystems, which run one way, and why no subsystem refers to AppShell.
 
 ![Architecture of CanvasPilot: the desktop head starts the application library, whose AppShell subsystem builds and
 hosts the other thirteen subsystems, from Chat, Composer, and Agent down to Logging and Utilities, with the Knowledge
@@ -141,9 +143,10 @@ and Style subsystems beside them, and the third-party items and the local data t
   - **DemaConsulting.CanvasPilot/** - main application library source
     - **AgentSubsystem/** - the AI copilot behind the chat: the provider-independent contract that runs a turn and
       reports readiness, the check of the Copilot CLI and of the Ollama server, the one Copilot runtime on the installed
-      CLI (`CopilotRuntimeStarter.cs`, with `ICopilotRuntimeStarter.cs` and `CopilotAgentSource.cs`), the tools that are
-      confined to the project, the instructions, the mapping of messages and events, the agent of the chosen provider,
-      and the service that keeps the conversation of the open project
+      CLI (`CopilotRuntimeStarter.cs`, with `ICopilotRuntimeStarter.cs` and `CopilotAgentSource.cs`), the models that
+      the provider offers (`ProviderModelCatalog.cs`, with `ModelRequirements.cs` and `OllamaModelCatalogs.cs`), the
+      tools that are confined to the project, the instructions, the mapping of messages and events, the agent of the
+      chosen provider, and the service that keeps the conversation of the open project
     - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, drawn with the pointer
       or the keyboard on a layer over the picture, and mapped to the parts of the source file under them
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator

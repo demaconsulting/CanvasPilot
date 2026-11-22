@@ -7,9 +7,10 @@ defined in the AgentKit OTS Software Requirements document.
 
 AgentKit confines the copilot's tools to the project with its path policy, composes tool packs with unique family
 prefixes and valid names, bounds tool results and shapes image results, runs a tool-calling turn on a chat client with
-picture promotion, adds the context length to Ollama requests, and runs the Copilot CLI that the user installed at an
-explicit path (version 0.1.0-beta.4 of the library) without ever bundling or downloading a Copilot runtime. The
-application relies on each of these behaviors, so each has a requirement and a test.
+picture promotion, adds the context length to Ollama requests, validates model settings against what a model offers and
+applies the selected model and reasoning effort to requests, describes the models of an Ollama server, and runs the
+Copilot CLI that the user installed at an explicit path (version 0.1.0-beta.4 of the library) without ever bundling or
+downloading a Copilot runtime. The application relies on each of these behaviors, so each has a requirement and a test.
 
 ### Verification Approach
 
@@ -117,6 +118,45 @@ and with options that already name `num_ctx`; a sizing client for zero is create
 object is not changed, the named length is left alone, and the length of zero is refused.
 
 **Requirement coverage**: `CanvasPilot-OTS-AgentKit-SizeOllamaContext`.
+
+#### AgentKit_ModelSettings_Validate_RefusesWhatTheModelCannotDoAndBindsWhatFits
+
+**Scenario**: Model settings are validated against a model that calls tools and offers the efforts `low` and `high` with
+a window of 8,192 tokens, a model that cannot call tools, and a model that cannot be used. The settings that fit, an
+effort `xhigh`, a window of 16,384, tool calling for the model without it, and the disabled model are each checked; a
+catalog then selects the settings for `gemma3` with the effort `low`, and a model that it does not have is asked for.
+
+**Expected**: The settings that fit have no problem; each of the others has exactly one problem that names the model and
+the cause (the efforts that the model offers, the largest window, tool calling, and the reason that the model is
+disabled); the selection has the catalog's id `gemma3:latest`, the effort `low`, and the standard effort low; the
+missing model is a refusal with a problem that names the provider; binding the bad effort is refused, and a blank model
+id is refused.
+
+**Requirement coverage**: `CanvasPilot-OTS-AgentKit-ValidateModelSettings`.
+
+#### AgentKit_ModelSettingsChatClient_GetResponse_AddsTheModelAndEffortWithoutChangingCallersOptions
+
+**Scenario**: A selection with the effort `high` and a window of 4,096 is put over a client that sizes the window to
+4,096, and two requests are sent, one without options and one with options of the caller. A selection with a window is
+then put over a client that applies no window.
+
+**Expected**: Both requests carry the model id and the high reasoning effort; the caller's temperature is kept and the
+caller's options object is unchanged; the selection over the client that applies no window is refused with an argument
+exception.
+
+**Requirement coverage**: `CanvasPilot-OTS-AgentKit-ValidateModelSettings`.
+
+#### AgentKit_OllamaModelCatalog_ListAsync_DescribesCapabilitiesWindowAndEfforts
+
+**Scenario**: The Ollama catalog reads a stand-in server whose tags list a model that completes, calls tools, sees
+pictures, and thinks (trained for 262,144 tokens) and an embedding model. All models are listed, then the models that
+can be used, and a model is found by its id and by a name without a tag in other letter case.
+
+**Expected**: The first model has the three capabilities, the window, and the efforts `none`, `low`, `medium`, and
+`high`; the embedding model is not usable; the plain list holds only the first model; both finds succeed and give the
+catalog's ids.
+
+**Requirement coverage**: `CanvasPilot-OTS-AgentKit-DescribeOllamaModels`.
 
 #### AgentKit_BuildOutput_HasNoBundledCopilotRuntime
 

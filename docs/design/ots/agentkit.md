@@ -22,16 +22,22 @@ selectable tool packs*); CanvasPilot still builds its tools itself.
 - **Core**: `PathPolicy` and `PathRule` (the grants and their denied folder names), `IToolPack` and `ToolPackBuilder`
   (composition of tool families with a unique prefix each), `GuardedToolFactory` (tool names and the delivery of a
   result in the shape a provider can read, and `AsGuarded` to bound any function by `ToolLimits`), and `ToolResult`
-  (text, structured, image, and refusal results).
+  (text, structured, image, and refusal results); and the model catalog and settings of version 0.1.0-beta.4:
+  `IModelCatalog` and `ModelInfo` (what a model can do: `ModelCapabilities`, the reasoning efforts, the context window,
+  and whether it can be used), `ModelSettings` (the model, the reasoning effort, and the window that the application
+  chooses) with `SelectAsync`, which validates them against the catalog and gives a `ModelSelection` or a
+  `ModelSettingsException` whose problems are sentences, and `ModelSettingsChatClient`, which applies a selection to the
+  requests of a chat client.
 - **Agents.ChatClient**: `ChatClientAgentFactory.Create`, which builds an agent on any chat client with the
-  image-promoting decorator installed, so that a picture returned by a tool reaches a model whose tool channel cannot
-  carry one. The Ollama provider is built this way.
-- **Agents.Ollama**: `OllamaContextSizingChatClient`, which adds the Ollama option `num_ctx` to every request.
+  image-promoting decorator installed (and, given a selection, the decorator that applies it), so that a picture
+  returned by a tool reaches a model whose tool channel cannot carry one. The Ollama provider is built this way.
+- **Agents.Ollama**: `OllamaContextSizingChatClient`, which adds the Ollama option `num_ctx` to every request, and
+  `OllamaModelCatalog`, which lists the models of a server and describes each from `/api/show`.
 - **Agents.Copilot**: `CopilotRuntime`, `CopilotRuntimeOptions`, `CopilotRuntimeSource`, and `CopilotAgentFactory`,
-  which start a Copilot runtime on the Copilot CLI that the user installed and build a Copilot agent on it. The
-  installed CLI is the default source (`CopilotRuntimeSource.InstalledCli`); `CopilotCli.MinimumVersion` is the oldest
-  CLI that the library accepts. The model catalog and the model settings that this version offers are not used yet; they
-  are a later step.
+  which start a Copilot runtime on the Copilot CLI that the user installed and build a Copilot agent on it (with a model
+  selection, from which the model and the reasoning effort are taken), and `CopilotModelCatalog`, which lists the models
+  that the signed-in account may use. The installed CLI is the default source (`CopilotRuntimeSource.InstalledCli`);
+  `CopilotCli.MinimumVersion` is the oldest CLI that the library accepts.
 
 ### Integration Pattern
 
@@ -74,6 +80,41 @@ chosen, so the installed CLI is the only runtime that is started, and no Copilot
 the published output, or the MSI. The OTS test `AgentKit_BuildOutput_HasNoBundledCopilotRuntime` asserts the build
 output, the FileAssert test `Copilot_RuntimeNotPublished` asserts the published output, and the MSI file table is
 checked in the same build.
+
+### The model catalogs and the model settings
+
+The `ProviderModelCatalog` unit lists models from the two catalogs, and the readiness check and the factory validate
+with them. These are the rules of the library that the design relies on (read from the 0.1.0-beta.4 source and verified
+on 2026-11-22 against a Copilot CLI 1.0.114 that was signed in through the GitHub CLI, which listed 23 models):
+
+- A catalog lists `ModelInfo` for the signed-in account. `ModelQuery.IncludeUnusable` also lists the models that the
+  provider disables for the account, each with the reason; the plain list leaves them out. `RefreshAsync` makes the
+  catalog read again; otherwise it keeps the answer for five minutes.
+- `CopilotModelCatalog` treats tool calling as supported unless the service says otherwise, vision only when the service
+  says so, and leaves out the pseudo-model `auto`. Its efforts are the ids of the service (none, minimal, low, medium,
+  high, xhigh, max), no default effort is invented (the live list had none), and the context window is the maximum of
+  the model. A runtime that is not signed in makes the catalog fail with an `InvalidOperationException` that names the
+  working routes.
+- `OllamaModelCatalog` takes the capabilities from `/api/show` (an older server is inferred and noted), lists an
+  embedding model as unusable, offers `none`, `low`, `medium`, and `high` for a model that thinks (not `none` for a
+  model that always thinks), and gives the context length that the model was trained for as its maximum window.
+  `ModelSettings.Validate` refuses a window above that maximum before any request. A name without a tag is matched to
+  the `latest` tag, and the selection carries the catalog's own id.
+- `ModelSettings.Validate(model, required)` gives a list of sentences: a capability that the application requires and
+  the model lacks, a model that cannot be used, an effort that the model does not offer (with the ones that it offers),
+  and a window above the maximum. `SelectAsync` throws a `ModelSettingsException` (a kind of
+  `InvalidOperationException`, to be caught first) with those problems. A plain Copilot agent refuses a selection that
+  carries a window, so the application states a window for Ollama only.
+- A selection reaches the provider through the agent factory: `CopilotAgentFactory.Create(..., selection:)` takes the
+  model and the effort, and `ChatClientAgentFactory.Create(..., selection:)` installs `ModelSettingsChatClient`, which
+  sets the model, the standard reasoning effort, and nothing that the caller already set. An effort with no
+  provider-neutral equivalent (`xhigh`, `max`) cannot be applied through a chat client, and the library refuses it when
+  the client is built; Ollama offers only `none`, `low`, `medium`, and `high`, which have one.
+
+The OTS tests `AgentKit_ModelSettings_Validate_RefusesWhatTheModelCannotDoAndBindsWhatFits`,
+`AgentKit_ModelSettingsChatClient_GetResponse_AddsTheModelAndEffortWithoutChangingCallersOptions`, and
+`AgentKit_OllamaModelCatalog_ListAsync_DescribesCapabilitiesWindowAndEfforts` call the library as the application does
+and pin these rules.
 
 ### Upstream request
 

@@ -22,6 +22,7 @@ using System.Globalization;
 using DemaConsulting.AgentKit.Agents.ChatClient;
 using DemaConsulting.AgentKit.Agents.Copilot;
 using DemaConsulting.AgentKit.Agents.Ollama;
+using DemaConsulting.AgentKit.Core;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using Microsoft.Agents.AI;
@@ -37,17 +38,23 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 /// <remarks>
 ///     <para>
 ///         For Ollama the factory builds an HTTP client on the address of the settings (without a time limit, because a
-///         local model may take minutes to load and the Stop button is what ends a turn), an Ollama client for the model,
-///         and an <see cref="OllamaContextSizingChatClient" /> around it so that <c>num_ctx</c> of the settings is sent on
-///         every request. The agent is made by <see cref="ChatClientAgentFactory" />, which adds the decorator that lets
-///         the model see pictures that a tool returned. The result owns the clients and disposes them with the agent.
+///         local model may take minutes to load and the Stop button is what ends a turn) and an Ollama client for the
+///         model. Before that the catalog of the server validates the model settings (the model exists, can call tools,
+///         accepts the context window, and offers the reasoning effort) and a failure is answered with
+///         <see cref="AgentReadinessStatus.ModelSettingsInvalid" />; a server that does not describe its models leaves the
+///         typed model to be tried without a check. An <see cref="OllamaContextSizingChatClient" /> around the client sends
+///         <c>num_ctx</c> of the settings on every request. The agent is made by <see cref="ChatClientAgentFactory" />,
+///         which applies the selection and adds the decorator that lets the model see pictures that a tool returned. The
+///         result owns the clients and disposes them with the agent.
 ///     </para>
 ///     <para>
 ///         For GitHub Copilot the factory finds the Copilot CLI with the locator, asks the starter of the runtime for the
-///         runtime that runs on it, and makes agents on that runtime with the model of the settings (the default model of
-///         the runtime when the name is empty), the project folder as the working directory, and the default-deny
-///         permission handler. A CLI that is missing or too old, a runtime that is not signed in, and a runtime that could
-///         not be started are each answered with a typed status and the sentence of the cause, and no agent. The runtime is
+///         runtime that runs on it, validates the model and the reasoning effort of the settings with the catalog of that
+///         runtime (no model named means the default model of the runtime), and makes agents on that runtime with the
+///         selection, the project folder as the working directory, and the default-deny
+///         permission handler. A CLI that is missing or too old, a runtime that is not signed in, a runtime that could
+///         not be started, and model settings that the catalog refuses are each answered with a typed status and the
+///         sentence of the cause, and no agent. The runtime is
 ///         shared with the readiness check and belongs to the starter; the factory stops it when it is disposed only when it
 ///         was told that it owns the starter.
 ///     </para>
@@ -67,8 +74,7 @@ public sealed class AgentProviderFactory : IAgentFactory
     /// <summary>
     ///     The sentence for settings of Ollama without an address that can be used.
     /// </summary>
-    public const string InvalidEndpointMessage =
-        "Enter the address of the Ollama server in Settings, for example http://localhost:11434.";
+    public const string InvalidEndpointMessage = ProviderModelCatalog.InvalidEndpointMessage;
 
     /// <summary>
     ///     The sentence for settings of Ollama without a model.
@@ -83,7 +89,7 @@ public sealed class AgentProviderFactory : IAgentFactory
     /// <summary>
     ///     The sentence for a runtime that started but gave no way to make agents.
     /// </summary>
-    public const string NoAgentSourceMessage = "The Copilot runtime started but cannot make an agent. Choose Check connection to try again.";
+    public const string NoAgentSourceMessage = ProviderModelCatalog.NoAgentSourceMessage;
 
     /// <summary>
     ///     Finds the Copilot CLI.
@@ -111,6 +117,11 @@ public sealed class AgentProviderFactory : IAgentFactory
     private readonly bool _ownsStarter;
 
     /// <summary>
+    ///     Gives the catalog of the Ollama server, which validates the model settings.
+    /// </summary>
+    private readonly IOllamaModelCatalogs _ollamaCatalogs;
+
+    /// <summary>
     ///     The Copilot runtime that made the last agent, or <see langword="null" /> when none was made. It belongs to the
     ///     starter and is kept only to delete the sessions that it holds.
     /// </summary>
@@ -135,18 +146,24 @@ public sealed class AgentProviderFactory : IAgentFactory
     ///     <see langword="true" /> when the factory stops the starter, and with it the runtime, as it is disposed; a starter
     ///     that the factory makes itself is always owned.
     /// </param>
+    /// <param name="ollamaCatalogs">
+    ///     Gives the catalog of the Ollama server; a catalog on the real network (through <paramref name="handler" /> when
+    ///     one is given) when <see langword="null" />.
+    /// </param>
     public AgentProviderFactory(
         CopilotCliLocator? locator = null,
         ICopilotRuntimeStarter? starter = null,
         HttpMessageHandler? handler = null,
         RollingFileLogger? logger = null,
-        bool ownsStarter = false)
+        bool ownsStarter = false,
+        IOllamaModelCatalogs? ollamaCatalogs = null)
     {
         _locator = locator ?? new CopilotCliLocator();
         _starter = starter ?? new CopilotRuntimeStarter();
         _ownsStarter = ownsStarter || starter is null;
         _handler = handler;
         _logger = logger;
+        _ollamaCatalogs = ollamaCatalogs ?? new OllamaModelCatalogs(handler);
     }
 
     /// <inheritdoc />
@@ -159,7 +176,7 @@ public sealed class AgentProviderFactory : IAgentFactory
         ArgumentException.ThrowIfNullOrWhiteSpace(request.ProjectFolder);
 
         return request.Settings.Provider == AiProviderKind.Ollama
-            ? Task.FromResult(CreateOllama(request))
+            ? CreateOllamaAsync(request, cancellationToken)
             : CreateCopilotAsync(request, cancellationToken);
     }
 
@@ -208,8 +225,9 @@ public sealed class AgentProviderFactory : IAgentFactory
     ///     Makes the Ollama agent.
     /// </summary>
     /// <param name="request">The request.</param>
+    /// <param name="cancellationToken">A token that cancels the reading of the catalog.</param>
     /// <returns>The agent, or the reason that settings cannot be used.</returns>
-    private AgentCreationResult CreateOllama(AgentCreationRequest request)
+    private async Task<AgentCreationResult> CreateOllamaAsync(AgentCreationRequest request, CancellationToken cancellationToken)
     {
         var settings = request.Settings;
         var endpoint = settings.OllamaEndpoint?.Trim();
@@ -234,16 +252,28 @@ public sealed class AgentProviderFactory : IAgentFactory
                 AiProviderSettings.MaxContextWindowTokens.ToString("N0", CultureInfo.CurrentCulture)));
         }
 
+        // The catalog of the server validates the model and the settings (tools, window, effort) before any turn; a server
+        // that does not describe its models leaves the typed name to be tried as it is, so that typing a name still works
+        var selection = await SelectOllamaModelAsync(settings, endpoint!, cancellationToken).ConfigureAwait(false);
+        if (selection.Invalid is not null)
+        {
+            return selection.Invalid;
+        }
+
+        var modelId = selection.Selection?.Model.Id ?? model;
         var http = _handler is null ? new HttpClient() : new HttpClient(_handler, disposeHandler: false);
         OllamaContextSizingChatClient? sized = null;
         try
         {
             http.BaseAddress = new Uri(endpoint!, UriKind.Absolute);
             http.Timeout = Timeout.InfiniteTimeSpan;
-            sized = new OllamaContextSizingChatClient(new OllamaApiClient(http, model), settings.ContextWindowTokens);
-            var agent = ChatClientAgentFactory.Create(sized, [.. request.Tools], request.Instructions, AgentName);
 
-            Write($"Agent created: provider=Ollama model={model} tools={request.Tools.Count} contextTokens={settings.ContextWindowTokens}");
+            // The window of the settings is what the selection states, so the one client sizes every request
+            sized = new OllamaContextSizingChatClient(new OllamaApiClient(http, modelId), settings.ContextWindowTokens);
+            var agent = ChatClientAgentFactory.Create(sized, [.. request.Tools], request.Instructions, AgentName, selection.Selection);
+
+            var effort = selection.Selection?.Settings.ReasoningEffort ?? "(default)";
+            Write($"Agent created: provider=Ollama model={modelId} effort={effort} tools={request.Tools.Count} contextTokens={settings.ContextWindowTokens}");
             return AgentCreationResult.Created(agent, new OwnedResources(sized, http));
         }
         catch
@@ -252,6 +282,41 @@ public sealed class AgentProviderFactory : IAgentFactory
             sized?.Dispose();
             http.Dispose();
             throw;
+        }
+    }
+
+    /// <summary>
+    ///     Validates the model settings against the catalog of the Ollama server.
+    /// </summary>
+    /// <param name="settings">The provider choices; the model is named and the endpoint is valid.</param>
+    /// <param name="endpoint">The address of the server.</param>
+    /// <param name="cancellationToken">A token that cancels the request.</param>
+    /// <returns>
+    ///     The selection that the agent is made with, or the answer for settings that cannot be used, or neither when the
+    ///     server did not describe its models.
+    /// </returns>
+    private async Task<(ModelSelection? Selection, AgentCreationResult? Invalid)> SelectOllamaModelAsync(
+        AiProviderSettings settings,
+        string endpoint,
+        CancellationToken cancellationToken)
+    {
+        var modelSettings = ModelRequirements.ToModelSettings(settings, withContextWindow: true)!;
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        limit.CancelAfter(ProviderModelCatalog.OllamaListTimeout);
+        try
+        {
+            var selection = await _ollamaCatalogs.For(new Uri(endpoint)).SelectAsync(modelSettings, ModelRequirements.Required, limit.Token).ConfigureAwait(false);
+            return (selection, null);
+        }
+        catch (ModelSettingsException ex)
+        {
+            return (null, Unavailable("Ollama", AgentReadinessStatus.ModelSettingsInvalid, ModelRequirements.Describe(ex)));
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or NotSupportedException
+                                       || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            Write("Ollama model settings not validated: the server did not describe its models");
+            return (null, null);
         }
     }
 
@@ -268,7 +333,7 @@ public sealed class AgentProviderFactory : IAgentFactory
         if (!cli.IsFound || cli.Path is null || cli.Version is null)
         {
             var status = cli.Status == CopilotCliStatus.TooOld ? AgentReadinessStatus.CopilotCliTooOld : AgentReadinessStatus.CopilotCliMissing;
-            return Unavailable(status, cli.Message);
+            return Unavailable("GitHubCopilot", status, cli.Message);
         }
 
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -283,18 +348,39 @@ public sealed class AgentProviderFactory : IAgentFactory
             .ConfigureAwait(false);
         if (started.Status != CopilotStartStatus.Started)
         {
-            return Unavailable(started.ReadinessStatus, started.Message);
+            return Unavailable("GitHubCopilot", started.ReadinessStatus, started.Message);
         }
 
         if (started.Agents is null)
         {
-            return Unavailable(AgentReadinessStatus.CopilotRuntimeUnavailable, NoAgentSourceMessage);
+            return Unavailable("GitHubCopilot", AgentReadinessStatus.CopilotRuntimeUnavailable, NoAgentSourceMessage);
+        }
+
+        // The catalog of the runtime validates the model and the effort before the agent is made, so that a bad choice is
+        // told at the start of the session and not by a failure in the middle of a turn; no model named is the default one
+        ModelSelection? selection = null;
+        var modelSettings = ModelRequirements.ToModelSettings(settings, withContextWindow: false);
+        if (modelSettings is not null)
+        {
+            try
+            {
+                selection = await started.Agents.Models.SelectAsync(modelSettings, ModelRequirements.Required, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ModelSettingsException ex)
+            {
+                return Unavailable("GitHubCopilot", AgentReadinessStatus.ModelSettingsInvalid, ModelRequirements.Describe(ex));
+            }
+            catch (InvalidOperationException ex)
+            {
+                // The catalog could not be read: the runtime is not connected, or was stopped
+                return Unavailable("GitHubCopilot", AgentReadinessStatus.CopilotRuntimeUnavailable, ex.Message);
+            }
         }
 
         _copilot = started.Agents;
-        var model = string.IsNullOrWhiteSpace(settings.ModelName) ? null : settings.ModelName.Trim();
-        var agent = started.Agents.CreateAgent(new CopilotAgentRequest(request.Tools, request.Instructions, AgentName, model, request.ProjectFolder));
-        Write($"Agent created: provider=GitHubCopilot model={model ?? "(default)"} tools={request.Tools.Count}");
+        var agent = started.Agents.CreateAgent(new CopilotAgentRequest(request.Tools, request.Instructions, AgentName, request.ProjectFolder, selection));
+        var effort = selection?.Settings.ReasoningEffort ?? "(default)";
+        Write($"Agent created: provider=GitHubCopilot model={selection?.Model.Id ?? "(default)"} effort={effort} tools={request.Tools.Count}");
 
         // The runtime belongs to the starter and is shared by the agents, so the result owns nothing
         return AgentCreationResult.Created(agent);
@@ -313,12 +399,13 @@ public sealed class AgentProviderFactory : IAgentFactory
     /// <summary>
     ///     Makes the answer for a provider that cannot start, and logs it.
     /// </summary>
+    /// <param name="provider">The provider, for the log.</param>
     /// <param name="status">The status of the readiness check for the same cause.</param>
     /// <param name="message">The sentence for the user.</param>
     /// <returns>The result.</returns>
-    private AgentCreationResult Unavailable(AgentReadinessStatus status, string message)
+    private AgentCreationResult Unavailable(string provider, AgentReadinessStatus status, string message)
     {
-        Write($"Agent not created: provider=GitHubCopilot status={status}");
+        Write($"Agent not created: provider={provider} status={status}");
         return AgentCreationResult.Unavailable(new AgentReadinessReport(status, message));
     }
 

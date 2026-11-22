@@ -4,7 +4,7 @@ package CanvasPilot_SettingsService {
     private import CanvasPilot_RollingFileLogger::*;
 
     part def SettingsService {
-        doc /* Loads, validates, and atomically saves the versioned per-user settings file. */
+        doc /* Loads, validates, and atomically saves the versioned per-user settings file, including the reasoning effort of the AI provider as the text of the provider's own id and the read of the reasoning level of earlier files as that effort (without a new version of the file). */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

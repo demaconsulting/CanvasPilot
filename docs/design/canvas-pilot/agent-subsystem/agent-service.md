@@ -38,8 +38,9 @@ definition of its own.
   runtime is shared by the whole application and not owned by the conversation.
 - **One conversation per open project.** The conversation is kept for the next turns. It is dropped, and made again by
   the next turn, when the open project changes or closes (the event of the project service), when a setting that the
-  agent was made from changes (the *signature*: the provider, the model, the Ollama address, the context window, and the
-  path of the Copilot CLI; the reasoning level and the other settings are not part of it), and when `ResetConversation`
+  agent was made from changes (the *signature*: the provider, the model, the reasoning effort, the Ollama address, the
+  context window, and the
+  path of the Copilot CLI; the other settings are not part of it), and when `ResetConversation`
   is called.
 - **Release.** Dropping a conversation never blocks the caller. A background task waits (at most ten seconds) for the
   turn that runs on the conversation, deletes the session that the provider kept through

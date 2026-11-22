@@ -31,7 +31,8 @@ namespace DemaConsulting.CanvasPilot.Tests;
 ///     A live test of GitHub Copilot through the agent service of the application, on the Copilot CLI that is installed on
 ///     the machine and the credentials that the machine has. It is skipped unless <c>CANVASPILOT_LIVE_COPILOT=1</c> is set,
 ///     so that no build needs a Copilot CLI, a sign-in, or the network. The model is the runtime default unless
-///     <c>CANVASPILOT_LIVE_COPILOT_MODEL</c> names one. The test belongs to no requirement; the manual verification of the
+///     <c>CANVASPILOT_LIVE_COPILOT_MODEL</c> names one (and <c>CANVASPILOT_LIVE_COPILOT_EFFORT</c> a reasoning level, for the
+///     test of the model settings). The test belongs to no requirement; the manual verification of the
 ///     system records its result.
 /// </summary>
 public sealed class LiveCopilotTurnTests
@@ -109,17 +110,7 @@ public sealed class LiveCopilotTurnTests
         await using var starter = new CountingStarter(new CopilotRuntimeStarter(AgentService.GetCopilotDataDirectory(localData)));
         var settings = new SettingsService(Path.Combine(root, "settings"), logger);
         var dialogs = new FakeDialogService();
-        var composition = ApplicationComposition.Create(
-            logger,
-            settings,
-            new FakeRefreshScheduler(),
-            defaultProjectsFolder: Directory.CreateDirectory(Path.Combine(root, "Documents")).FullName,
-            audioDevices: SpeechTestData.AudioDevices([], []),
-            speechModels: SpeechTestData.Models(),
-            dragFolder: Path.Combine(root, "drag"),
-            styleUserFolder: Path.Combine(root, "styles"),
-            localDataRoot: localData,
-            copilotStarter: starter);
+        var composition = ComposeLiveApplication(root, logger, localData, starter, settings);
         try
         {
             composition.Shell.AttachDialogService(dialogs);
@@ -163,6 +154,135 @@ public sealed class LiveCopilotTurnTests
             composition.Dispose();
             Directory.Delete(root, recursive: true);
         }
+    }
+
+    /// <summary>
+    ///     Test the model settings through the product path on a real runtime: the Settings page of the composed application
+    ///     lists the models that the signed-in Copilot account is offered (their number and the ones that lack tool calling
+    ///     or pictures are recorded), the user chooses a model and a reasoning level that the model offers, the choice is
+    ///     stored, the banner is clear, and a real message runs a turn with the chosen model and level. The model is
+    ///     <c>CANVASPILOT_LIVE_COPILOT_MODEL</c> when set, otherwise <c>claude-haiku-5.5</c> when listed, otherwise the first
+    ///     model with tools and levels; the level is <c>CANVASPILOT_LIVE_COPILOT_EFFORT</c> when set, otherwise <c>low</c>.
+    /// </summary>
+    [Fact]
+    public async Task LiveCopilotTurn_SettingsPage_ListsModelsAndTheChosenModelAndEffortRun()
+    {
+        // Arrange: skipped unless asked for
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT") == "1",
+            "Set CANVASPILOT_LIVE_COPILOT=1 to run a real GitHub Copilot turn on the installed Copilot CLI.");
+        var token = TestContext.Current.CancellationToken;
+        var root = Directory.CreateTempSubdirectory("canvaspilot-live-models-").FullName;
+        var wantedModel = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_MODEL")?.Trim() ?? string.Empty;
+        var wantedEffort = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_EFFORT")?.Trim() ?? "low";
+        var logger = new RollingFileLogger(Path.Combine(root, "logs"));
+        var localData = Path.Combine(root, "local");
+        await using var starter = new CountingStarter(new CopilotRuntimeStarter(AgentService.GetCopilotDataDirectory(localData)));
+        var settings = new SettingsService(Path.Combine(root, "settings"), logger);
+        var dialogs = new FakeDialogService();
+        var composition = ComposeLiveApplication(root, logger, localData, starter, settings);
+        try
+        {
+            composition.Shell.AttachDialogService(dialogs);
+            var summary = new StringBuilder();
+            AiProviderSettingsPageViewModel? page = null;
+            dialogs.OnSettings = dialog =>
+            {
+                // The page lists the models when it is shown; the user then chooses one and a level, and chooses OK
+                page = Assert.IsType<AiProviderSettingsPageViewModel>(dialog.Pages[0]);
+                page.ModelListLoaded.GetAwaiter().GetResult();
+                var listed = page.Models.Where(choice => choice.Info is not null).Select(choice => choice.Info!).ToList();
+                summary.AppendLine($"Models listed: {listed.Count}; message: '{page.ModelListMessage}'");
+                summary.AppendLine($"Without tool calling: [{string.Join(", ", listed.Where(model => !model.SupportsToolCalls).Select(model => model.Id))}]");
+                summary.AppendLine($"Without pictures: [{string.Join(", ", listed.Where(model => !model.SupportsVision).Select(model => model.Id))}]");
+                summary.AppendLine($"Not usable: [{string.Join(", ", listed.Where(model => !model.IsUsable).Select(model => model.Id))}]");
+                summary.AppendLine($"With reasoning levels: {listed.Count(model => model.ReasoningEfforts.Count > 0)}");
+                summary.AppendLine($"Models: {string.Join(", ", listed.Select(model => $"{model.Id}[{string.Join('/', model.ReasoningEfforts.Select(effort => effort.Id))}]"))}");
+                var chosen = listed.FirstOrDefault(model => model.Id == wantedModel)
+                    ?? listed.FirstOrDefault(model => model.Id == "claude-haiku-5.5")
+                    ?? listed.First(model => model.IsUsable && model.SupportsToolCalls && model.ReasoningEfforts.Count > 0);
+                page.SelectedModel = page.Models.Single(choice => choice.Id == chosen.Id);
+                var effort = page.ReasoningEfforts.FirstOrDefault(choice => choice.Value == wantedEffort);
+                if (effort is not null)
+                {
+                    page.SelectedReasoningEffort = effort;
+                }
+
+                summary.AppendLine($"Chosen: {chosen.Id}, level '{page.SelectedReasoningEffort?.Value}', details: {page.ModelDetails.Replace('\n', ';')}");
+                dialog.OkCommand.Execute(null);
+            };
+
+            var opened = await composition.Projects.CreateAsync(Path.Combine(root, "Documents"), "Demo", token);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeout.CancelAfter(TurnTimeout);
+
+            // Act: the user chooses the model in Settings, the banner is checked, and a message asks for a drawing
+            await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+            await composition.Chat.RefreshReadinessAsync();
+            var banner = (composition.Chat.HasReadinessIssue, composition.Chat.ReadinessMessage);
+            composition.Composer.InsertTyped(
+                "Write a file box.svg with the project_write tool that holds an SVG of an 80 by 40 blue rectangle, then say in one sentence that it is drawn.");
+            await composition.Chat.SendCommand.ExecuteAsync(null);
+            await composition.Chat.WaitForTurnAsync().WaitAsync(TurnTimeout, token);
+            var stored = settings.Current.AiProvider;
+            summary.AppendLine($"Banner: issue={banner.HasReadinessIssue} message={banner.ReadinessMessage}");
+            summary.AppendLine($"Stored: model={stored.ModelName} effort={stored.ReasoningEffort}");
+            summary.AppendLine($"Rows: {string.Join(" | ", composition.Chat.Transcript.Select(row => row.Kind.ToString()))}");
+            summary.AppendLine($"Starter asks: {starter.Asks}, distinct runtimes: {starter.Runtimes}");
+
+            // A reasoning effort that the model does not offer is refused by the catalog of the live runtime and told in the banner
+            settings.Update(current => current with { AiProvider = current.AiProvider with { ReasoningEffort = "bogus" } });
+            await composition.Chat.RefreshReadinessAsync();
+            var refused = (composition.Chat.HasReadinessIssue, composition.Chat.ReadinessMessage);
+            summary.AppendLine($"Banner with the effort 'bogus': issue={refused.HasReadinessIssue} message={refused.ReadinessMessage}");
+            TestContext.Current.SendDiagnosticMessage(summary.ToString());
+
+            // Assert: models were listed, the choice was stored, the banner is clear, and the turn wrote the drawing
+            Assert.NotEmpty(page!.Models);
+            Assert.NotEqual(string.Empty, stored.ModelName);
+            Assert.False(banner.Item1, summary.ToString());
+            Assert.True(refused.HasReadinessIssue, summary.ToString());
+            Assert.Contains("does not support reasoning effort 'bogus'. Supported:", refused.ReadinessMessage, StringComparison.Ordinal);
+            Assert.True(File.Exists(Path.Combine(opened.Project!.FolderPath, "box.svg")), summary.ToString());
+            Assert.Contains(composition.Chat.Transcript, row => row.Kind == TranscriptRowKind.Tool);
+            Assert.Equal(TranscriptRowKind.Assistant, composition.Chat.Transcript[^1].Kind);
+            Assert.Equal(1, starter.Runtimes);
+        }
+        finally
+        {
+            composition.Dispose();
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    ///     Composes the application as at startup over temporary folders, with the real locator, readiness check, factory of
+    ///     the providers, and model list, all sharing the one starter that is given.
+    /// </summary>
+    /// <param name="root">The temporary folder.</param>
+    /// <param name="logger">The logger.</param>
+    /// <param name="localData">The root of the local data.</param>
+    /// <param name="starter">The starter of the Copilot runtime.</param>
+    /// <param name="settings">The settings service.</param>
+    /// <returns>The composition.</returns>
+    private static ApplicationComposition ComposeLiveApplication(
+        string root,
+        RollingFileLogger logger,
+        string localData,
+        ICopilotRuntimeStarter starter,
+        SettingsService settings)
+    {
+        return ApplicationComposition.Create(
+            logger,
+            settings,
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: Directory.CreateDirectory(Path.Combine(root, "Documents")).FullName,
+            audioDevices: SpeechTestData.AudioDevices([], []),
+            speechModels: SpeechTestData.Models(),
+            dragFolder: Path.Combine(root, "drag"),
+            styleUserFolder: Path.Combine(root, "styles"),
+            localDataRoot: localData,
+            copilotStarter: starter);
     }
 
     /// <summary>

@@ -1,0 +1,85 @@
+---
+# Software Unit Requirements for the ProviderModelCatalog Unit
+#
+# The ProviderModelCatalog unit lists the models that the AI provider of the settings offers, in the types of the
+# application, for the AI Provider page of the Settings: for GitHub Copilot through the catalog of the shared runtime, for
+# Ollama through the catalog of the server at the address of the settings. Every model is listed with what it can do (tool
+# calling, pictures, reasoning levels, context window) and whether it can be used. A provider that cannot be asked gives
+# no models and one sentence. Its supporting types are the rule of what the application needs of a model (which the
+# readiness check and the factory share) and the catalogs of the Ollama servers that the application asked.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: ProviderModelCatalog Requirements
+            requirements:
+              - id: CanvasPilot-ProviderModelCatalog-ListProviderModels
+                title: >-
+                  The ProviderModelCatalog shall list the models of the provider that the settings choose: for GitHub
+                  Copilot those of the one shared runtime, started on the installed CLI that the locator found and not
+                  started a second time, and for Ollama those of the server at the trimmed address of the settings; shall
+                  list every model that the provider reports, those that cannot be used as well, with the models that can
+                  be used first and each group by name; and shall ask the provider again, and not use what it said a short
+                  while ago, when a refresh is asked for.
+                justification: |
+                  The settings page must show the user the models that exist for them, because nobody remembers model ids
+                  and the ids differ from account to account. Hiding a model that lacks something would leave the user
+                  wondering where it went, so all are listed and the page says what each lacks. The runtime keeps its data
+                  in one folder that two runtimes must not use, so the list comes from the runtime that the readiness check
+                  and the conversations already use. A user who was just given access to a model, or who has just pulled
+                  one, chooses Refresh and must see it.
+                tests:
+                  - ProviderModelCatalog_ListModels_Copilot_ListsEveryModelOfTheSharedRuntime
+                  - ProviderModelCatalog_ListModels_CopilotRefresh_AsksTheRuntimeAgain
+                  - ProviderModelCatalog_ListModels_Ollama_ListsTheModelsOfTheServerAtTheAddress
+                  - ProviderModelCatalog_ListModels_OllamaOnStandInServer_MapsWhatTheServerDescribes
+
+              - id: CanvasPilot-ProviderModelCatalog-DescribeEachModel
+                title: >-
+                  The ProviderModelCatalog shall describe each model with its id, its name, whether it can call tools,
+                  whether it accepts pictures, whether it can reason, its largest context window, the reasoning efforts
+                  that it offers (only when the effort can be adjusted) with the provider's own ids, the effort that the
+                  provider uses by default, whether it can be used and why not, and the notes of the provider that ask for
+                  attention, in types of the application and not of the AI library.
+                justification: |
+                  The effort ids differ by model and provider (none, low, medium, high, xhigh, max, and others later), so
+                  they are carried as the provider spells them and not as a fixed set. What the application needs of a
+                  model (tool calling, pictures) must be visible to the page, which is owned by another subsystem and must
+                  not depend on the AI library.
+                tests:
+                  - ProviderModelCatalog_Map_Model_CarriesCapabilitiesEffortsWindowAndWarnings
+                  - ProviderModelCatalog_Map_PlainAndUnusableModels_AreMappedWithTheirLimits
+
+              - id: CanvasPilot-ProviderModelCatalog-AnswerWithAMessage
+                title: >-
+                  The ProviderModelCatalog shall answer a provider that cannot be asked (no Copilot CLI, a CLI that is too
+                  old, a runtime that is not signed in or could not be started or was stopped, a catalog that cannot be
+                  read, an Ollama address that is not valid, a server that does not answer in 15 seconds or answers
+                  something else, or a server without models) with no models and one sentence that says why and what to do,
+                  and not with an exception, and shall pass on a cancellation by the caller.
+                justification: |
+                  The page must always be usable: when the list is missing, the user types the name of the model and reads
+                  why the list is missing. An exception would end the page, and a wait on a server that is not there would
+                  freeze it, so the wait is bounded and every failure is data. A cancellation is not a failure, it is the
+                  page asking to stop.
+                tests:
+                  - ProviderModelCatalog_ListModels_CopilotCannotBeAsked_IsAMessageAndNoModels
+                  - ProviderModelCatalog_ListModels_OllamaCannotBeAsked_IsAMessageAndNoModels
+                  - ProviderModelCatalog_ListModels_OllamaServerError_IsAMessageAndNoModels
+                  - ProviderModelCatalog_ListModels_CancelledToken_ThrowsOperationCanceled
+
+              - id: CanvasPilot-ProviderModelCatalog-ShareTheOllamaCatalog
+                title: >-
+                  The OllamaModelCatalogs shall give one catalog for the address of an Ollama server that was asked for
+                  last, so that the readiness check, the factory of the agents, and the list of the settings page describe
+                  the models of the server once and not once each, and shall give a new catalog when another address is
+                  asked for.
+                justification: |
+                  Describing a model costs one request to the server per model, and the three users ask in turn when the
+                  user changes the settings. A catalog keeps what it read for a few minutes, so sharing it makes the check,
+                  the list, and the start of a conversation cheap. A different address is a different server, whose answer
+                  must not be reused.
+                tests:
+                  - OllamaModelCatalogs_For_SameAddress_SharesWhatTheServerSaid

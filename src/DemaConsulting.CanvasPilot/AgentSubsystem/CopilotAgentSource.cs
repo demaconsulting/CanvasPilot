@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.AgentKit.Agents.Copilot;
+using DemaConsulting.AgentKit.Core;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 
@@ -30,14 +31,17 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 /// <param name="Tools">The tools that the agent may call and nothing else.</param>
 /// <param name="Instructions">The instructions of the agent.</param>
 /// <param name="Name">The name of the agent.</param>
-/// <param name="Model">The Copilot model; <see langword="null" /> for the default model of the runtime.</param>
 /// <param name="WorkingDirectory">The full path of the project folder; it grants nothing, the tools decide what may be touched.</param>
+/// <param name="Selection">
+///     The model, with the reasoning effort, that the model catalog of the runtime validated for the settings;
+///     <see langword="null" /> for the default model of the runtime.
+/// </param>
 public sealed record CopilotAgentRequest(
     IReadOnlyList<AIFunction> Tools,
     string Instructions,
     string Name,
-    string? Model,
-    string WorkingDirectory);
+    string WorkingDirectory,
+    ModelSelection? Selection = null);
 
 /// <summary>
 ///     A running Copilot runtime, as the factory uses it: it makes agents that run on the runtime, deletes the sessions
@@ -48,10 +52,17 @@ public sealed record CopilotAgentRequest(
 public interface ICopilotAgentSource : IAsyncDisposable
 {
     /// <summary>
+    ///     Gets the catalog of the models that the runtime offers to the signed-in user. The catalog is made once for the
+    ///     runtime, caches what it read for a few minutes, and is the one place that validates the model settings of an
+    ///     agent (<c>SelectAsync</c>) and lists the models for the settings page.
+    /// </summary>
+    IModelCatalog Models { get; }
+
+    /// <summary>
     ///     Makes an agent that runs on the runtime with exactly the given tools. The permission handler is the default of
     ///     the AI library, which approves the given tools by name and refuses everything else.
     /// </summary>
-    /// <param name="request">The tools, instructions, name, model, and working directory.</param>
+    /// <param name="request">The tools, instructions, name, working directory, and model selection.</param>
     /// <returns>The agent. The runtime is not owned by the agent; the source disposes it.</returns>
     AIAgent CreateAgent(CopilotAgentRequest request);
 
@@ -90,22 +101,28 @@ public sealed class CopilotRuntimeAgentSource : ICopilotAgentSource
         ArgumentNullException.ThrowIfNull(runtime);
 
         _runtime = runtime;
+        Models = new CopilotModelCatalog(runtime);
     }
+
+    /// <inheritdoc />
+    public IModelCatalog Models { get; }
 
     /// <inheritdoc />
     public AIAgent CreateAgent(CopilotAgentRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // onPermissionRequest stays null: the library then approves exactly the supplied tools and refuses everything else
+        // onPermissionRequest stays null: the library then approves exactly the supplied tools and refuses everything else.
+        // The model comes from the selection; none means the default model of the runtime
         return CopilotAgentFactory.Create(
             _runtime,
             [.. request.Tools],
             request.Instructions,
             onPermissionRequest: null,
             name: request.Name,
-            model: request.Model,
-            workingDirectory: request.WorkingDirectory);
+            model: null,
+            workingDirectory: request.WorkingDirectory,
+            selection: request.Selection);
     }
 
     /// <inheritdoc />

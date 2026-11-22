@@ -35,6 +35,7 @@ input-files:
   - docs/verification/canvas-pilot/agent-subsystem/copilot-runtime-starter.md
   - docs/verification/canvas-pilot/agent-subsystem/payload-message-mapper.md
   - docs/verification/canvas-pilot/agent-subsystem/project-tools.md
+  - docs/verification/canvas-pilot/agent-subsystem/provider-model-catalog.md
   - docs/verification/canvas-pilot/annotation-subsystem.md
   - docs/verification/canvas-pilot/annotation-subsystem/annotation-overlay.md
   - docs/verification/canvas-pilot/annotation-subsystem/mark-registry.md

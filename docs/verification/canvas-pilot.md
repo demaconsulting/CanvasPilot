@@ -46,6 +46,11 @@ services, or display is required.
   the context window of a new installation is 32768 and a stored one is kept, and Check connection on the page shows one
   sentence from the readiness check of the copilot, for Ollama (over a stand-in server) and for GitHub Copilot (over a
   fake machine), without saving anything.
+- The model of the AI provider is chosen from the list that the provider offers (shown with what each model can do and a
+  warning for what it lacks), with a reasoning level that the model offers; the choice is stored and reaches the agent
+  as the model selection; model settings that cannot work (a model without tool calling, a level that the model does not
+  offer) are told in the banner with the sentence of the AI library before the first turn, no agent is made for them,
+  and a model that cannot see pictures is a warning that does not stop a turn.
 - A message sent in the composed application gets a streamed answer from the configured provider (a scripted Ollama
   model) with the tool row, the drawing that the copilot wrote exists in the project, the explorer selects it and the
   preview draws it, and the copilot was given only the tools of the drawing knowledge, the style, and the project.
@@ -235,15 +240,38 @@ steps are in the verification of the unit or subsystem named at each check.
           was clear (no readiness issue); the message produced the transcript rows User, Tool, Tool, and Assistant;
           `box.svg` was written in the project; and the starter was asked 3 times and handed out exactly 1 runtime, so
           the readiness check and the conversation share one runtime.
-       A run of the packaged application with a window, and the list and the choice of the model, are later steps and
-       are not covered by these runs.
+       A run of the packaged application with a window is a later step and is not covered by these runs.
+       4. *Run 4 (model settings through the Settings page of the composed application; the opt-in test
+          `LiveCopilotTurn_SettingsPage_ListsModelsAndTheChosenModelAndEffortRun`, with `CANVASPILOT_LIVE_COPILOT_MODEL`
+          and `CANVASPILOT_LIVE_COPILOT_EFFORT` for another choice).* The page listed 23 models of the account in one
+          list (no message): none lacks tool calling, none lacks pictures, none is unusable, and all 23 offer reasoning
+          levels. The ids and levels were `claude-haiku-5.5`, `claude-opus-5.5`, `claude-sonnet-5`, and
+          `claude-sonnet-5.5` (low, medium, high, xhigh, max); four `gemini-4` models (low, medium, high);
+          `gpt-5.3-codex` (low to xhigh); `gpt-5.6-luna`, `gpt-5.6-sol`, `gpt-6-luna`, and `gpt-6-sol` (none to max);
+          five more `gpt-6` models (low to max); `grok-4.6` and `grok-4.7` (low to xhigh); `mai-code-2` and
+          `mai-code-2-flash` (low to max); and `mai-code-1.1-flash` (low, medium, high). The test chose
+          `claude-haiku-5.5` and the level
+          `low` on the page (the details read "Tool calling: yes", "Pictures: yes", "Reasoning levels: low, medium,
+          high, xhigh, max", and "Context window: up to 1,000,000 tokens"); OK stored `claude-haiku-5.5` and `low`; the
+          banner was clear; the message produced the rows User, Tool, Tool, and Assistant and wrote `box.svg`; the
+          starter was asked 4 times and handed out exactly 1 runtime. With the stored level changed by hand to `bogus`,
+          the banner said "Model 'claude-haiku-5.5' does not support reasoning effort 'bogus'. Supported: low, medium,
+          high, xhigh, max." (the sentence of the AI library, from the live catalog). Not covered: a model that lacks
+          tool calling or pictures (this account has none), and the packaged application.
     7. *Packaging with beta.4.* On 2026-11-22 the win-x64 single-file publish of this change was inspected: no file
        whose name starts with `copilot` or `libcopilot`, no `runtime.node`, and no `.copilot-explicit-cli` anywhere in
        the published folder; `CanvasPilot.exe` is 125.4 MB (131.3 MB with AgentKit 0.1.0-beta.3); the MSI built from it
        is 55.6 MB (55.5 MB with beta.3) and its file table lists 19 files and none of those names;
        `dotnet fileassert installer` passed, including `Copilot_RuntimeNotPublished`. The build output of the test
        projects holds no Copilot runtime file either.
-    8. *To be run with the final build; not yet run in this change.* A live turn in the packaged application with a
+    8. *Model list and reasoning level in the packaged application (not yet run in this change).* Open Settings > AI
+       Provider with GitHub Copilot selected: the models of the account are listed with their notes, the choice of a
+       model shows its capabilities, the reasoning level is enabled with the levels of the model, and OK stores them;
+       **Refresh models** asks again. With the Copilot path set to a missing file the page says why there is no list and
+       the model name can still be typed. For Ollama (check 9): the models that are pulled are listed, a model without
+       tool calling is warned about and refused by the banner, and with the server stopped the page keeps the typed name
+       and says that Ollama did not answer.
+    9. *To be run with the final build; not yet run in this change.* A live turn in the packaged application with a
        picture, a tool that returns a picture, and Stop, and a look that the project folder holds only intentional files
        afterwards. In the same turn, ask the copilot to run a shell command: it is refused and the transcript shows no
        tool line for a tool that is not one of the tools of the application (the default-deny permission handling of the
@@ -587,6 +615,23 @@ that Ollama did not answer. With GitHub Copilot chosen on the fake machine it na
 variable it says "GitHub Copilot CLI 1.0.114 is ready."; with a path of a file that does not exist it names the
 path. The stored settings are the same afterwards. This scenario is tested by
 `CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach`.
+
+**CanvasPilot_ChooseModel_CopilotModelAndReasoningLevel_AreStoredAndReachTheAgent**: The application is composed over
+the real factory on a fake machine with the installed CLI and a token variable and a fake runtime whose catalog offers
+`claude-haiku-5.5` (with the levels low, medium, and xhigh) and `blind-model`. The settings dialog opens, the AI
+Provider page lists the models of the runtime (the default entry and the two), the test chooses `claude-haiku-5.5` and
+the level `xhigh` as a user would, and OK stores them. The panel checks the provider and the banner is clear; a message
+is sent, and the agent was made on the runtime with a selection of that model and that level. The settings file holds
+`claude-haiku-5.5` and `xhigh`, and the answer is shown. This scenario is tested by
+`CanvasPilot_ChooseModel_CopilotModelAndReasoningLevel_AreStoredAndReachTheAgent`.
+
+**CanvasPilot_ChooseModel_SettingsThatCannotWork_BannerSaysSoBeforeTheFirstTurn**: The same application with a catalog
+of a model that cannot call tools, a model that cannot see pictures, and a model with levels. With each model stored in
+turn (and for the last, the level `bogus`) the panel checks the provider: the banner says that the model does not
+support tool calling, says that the model does not support the reasoning effort `bogus` and which are supported, and
+says that the model does not accept pictures; all three are readiness issues. A message sent with the model that cannot
+call tools shows the sentence as a notice, and no agent was made on the runtime. This scenario is tested by
+`CanvasPilot_ChooseModel_SettingsThatCannotWork_BannerSaysSoBeforeTheFirstTurn`.
 
 **CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing**: The application is
 composed over the real factory of the providers on a fake machine that has the installed CLI and a token variable, with

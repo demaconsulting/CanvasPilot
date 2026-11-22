@@ -312,6 +312,10 @@ public sealed class ApplicationComposition : IDisposable
     ///     for a starter of the real runtime on the Copilot CLI that the user installed. The composition stops the starter that it
     ///     makes itself and never one that it is given.
     /// </param>
+    /// <param name="ollamaCatalogs">
+    ///     Gives the catalog of the Ollama server for the readiness check, the factory of the agents, and the model list of
+    ///     the settings page, or <see langword="null" /> for catalogs on the real network.
+    /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -334,7 +338,8 @@ public sealed class ApplicationComposition : IDisposable
         IOllamaProbe? ollamaProbe = null,
         IEnvironmentReader? environment = null,
         ICliFileSystem? cliFileSystem = null,
-        ICopilotRuntimeStarter? copilotStarter = null)
+        ICopilotRuntimeStarter? copilotStarter = null,
+        IOllamaModelCatalogs? ollamaCatalogs = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -401,6 +406,7 @@ public sealed class ApplicationComposition : IDisposable
         // disposed first of all, so it stops listening to the project and the settings before they go.
         AgentService? agent = null;
         AgentReadiness? readiness = null;
+        ProviderModelCatalog? modelSource = null;
         ChatHistoryStore? chatHistory = null;
         if (localDataRoot is not null)
         {
@@ -414,14 +420,19 @@ public sealed class ApplicationComposition : IDisposable
             // or with the composition when the factory is not the one made here.
             var ownedStarter = copilotStarter is null ? new CopilotRuntimeStarter(AgentService.GetCopilotDataDirectory(localDataRoot)) : null;
             var starter = copilotStarter ?? ownedStarter!;
-            readiness = new AgentReadiness(locator, starter, runner, environmentReader, fileSystem, ollamaProbe);
+
+            // The catalogs of Ollama are shared as well, so that the check, the agents, and the model list describe the
+            // models of the server once
+            var catalogs = ollamaCatalogs ?? new OllamaModelCatalogs();
+            readiness = new AgentReadiness(locator, starter, runner, environmentReader, fileSystem, ollamaProbe, catalogs);
+            modelSource = new ProviderModelCatalog(locator, starter, catalogs);
             var projectTools = new ProjectTools(renderer, styleSelection, logger: logger);
             var registry = new AgentToolRegistry(
                 KnowledgeTools.CreateAll(KnowledgeCatalog.Default),
                 styleTools,
                 projectTools.CreatePacks);
             var instructions = new AgentInstructions(new KnowledgePromptBuilder(KnowledgeCatalog.Default));
-            var factory = agentFactory ?? new AgentProviderFactory(locator, starter, null, logger, ownsStarter: ownedStarter is not null);
+            var factory = agentFactory ?? new AgentProviderFactory(locator, starter, null, logger, ownsStarter: ownedStarter is not null, ollamaCatalogs: catalogs);
             if (agentFactory is not null && ownedStarter is not null)
             {
                 owned.Add(new AsyncOwner(ownedStarter));
@@ -449,7 +460,7 @@ public sealed class ApplicationComposition : IDisposable
         MainWindowShell? pickerOwner = null;
         IReadOnlyList<ISettingsPage> pages = settingsPages ??
         [
-            new AiProviderSettingsPageViewModel(readiness),
+            new AiProviderSettingsPageViewModel(readiness, modelSource),
             new SpeechSettingsPageViewModel(audioDevices, speechModels),
             new StyleSettingsPageViewModel(styleCatalog, () => pickerOwner?.FolderPicker),
         ];

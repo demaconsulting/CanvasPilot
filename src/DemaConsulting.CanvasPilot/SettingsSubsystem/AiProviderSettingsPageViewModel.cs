@@ -31,17 +31,44 @@ namespace DemaConsulting.CanvasPilot.SettingsSubsystem;
 ///     before saving them.
 /// </summary>
 /// <remarks>
-///     The reasoning level is shown disabled with a note, because the AI library does not expose it yet, and the
-///     unrestricted agent tools flag is not offered at all because the copilot has no such tools; both values are loaded
-///     and applied unchanged. The context window belongs to Ollama only, and its warning (a window below
-///     <see cref="AiProviderSettings.RecommendedMinimumContextTokens" />) is shown only while Ollama is selected.
+///     <para>
+///         When the page is given an <see cref="IProviderModelSource" /> it lists the models of the selected provider
+///         (when the page is shown, when the provider changes, when the endpoint or the Copilot CLI path is edited, and when
+///         the user chooses Refresh models) and lets the user pick one. Every model is listed; what a model cannot do is
+///         shown with it, as a note in the list and as a warning under it, and a model that the provider says cannot be used
+///         is shown disabled. The typed model name always stays, so that a provider that cannot be asked, or a model that
+///         is not listed, can still be used; the page says why the list is missing.
+///     </para>
+///     <para>
+///         The reasoning level is a choice among the efforts that the selected model offers and is enabled only while the
+///         model offers some; the stored value is the id that the provider uses. The unrestricted agent tools flag is not
+///         offered at all because the copilot has no such tools; the value is loaded and applied unchanged. The context
+///         window belongs to Ollama only, and its warning (a window below
+///         <see cref="AiProviderSettings.RecommendedMinimumContextTokens" />) is shown only while Ollama is selected.
+///     </para>
 /// </remarks>
 public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, ISettingsPage
 {
     /// <summary>
-    ///     The note shown beside the disabled reasoning level.
+    ///     The text of the entry that stands for the default model of the provider.
     /// </summary>
-    public const string ReasoningLevelNoteText = "Not available yet: the AI library does not expose it";
+    public const string DefaultModelLabel = "Provider default model";
+
+    /// <summary>
+    ///     The text of the entry that stands for the effort that the provider chooses.
+    /// </summary>
+    public const string DefaultEffortLabel = "Provider default";
+
+    /// <summary>
+    ///     The text shown while the models are listed.
+    /// </summary>
+    public const string LoadingModelsText = "Loading the models...";
+
+    /// <summary>
+    ///     The delay, in milliseconds, between the last keystroke in an address or a path and the new list of models, so that
+    ///     typing does not ask the provider once per letter.
+    /// </summary>
+    public const int DefaultTypingDelayMilliseconds = 600;
 
     /// <summary>
     ///     The note shown under the context window while GitHub Copilot is selected.
@@ -76,6 +103,16 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     private readonly IProviderCheck? _providerCheck;
 
     /// <summary>
+    ///     Lists the models of the provider; <see langword="null" /> when the page offers no model list.
+    /// </summary>
+    private readonly IProviderModelSource? _modelSource;
+
+    /// <summary>
+    ///     The time to wait after an edit of an address or a path before the models are listed again.
+    /// </summary>
+    private readonly TimeSpan _typingDelay;
+
+    /// <summary>
     ///     The settings that were loaded last, which the entries are applied to for a connection check.
     /// </summary>
     private AppSettings _loaded = new();
@@ -89,6 +126,36 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     ///     Counts the checks and the changes of entries, so that the answer of an old check is dropped.
     /// </summary>
     private int _checkVersion;
+
+    /// <summary>
+    ///     Cancels the listing of models that runs, or <see langword="null" /> when none runs.
+    /// </summary>
+    private CancellationTokenSource? _modelCancellation;
+
+    /// <summary>
+    ///     Counts the listings of models, so that the answer of an old listing is dropped.
+    /// </summary>
+    private int _modelVersion;
+
+    /// <summary>
+    ///     The listing of models that was started last.
+    /// </summary>
+    private Task _modelLoad = Task.CompletedTask;
+
+    /// <summary>
+    ///     Whether the entries are being loaded, which keeps the changes of the entries from being taken for edits.
+    /// </summary>
+    private bool _loading;
+
+    /// <summary>
+    ///     Whether the page itself is setting the selected model, which keeps that from being taken for a choice of the user.
+    /// </summary>
+    private bool _syncing;
+
+    /// <summary>
+    ///     The id of the chosen reasoning effort; an empty string for the effort that the provider chooses.
+    /// </summary>
+    private string _effortId = string.Empty;
 
     /// <summary>
     ///     Selected provider.
@@ -111,17 +178,77 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     private string _modelName = string.Empty;
 
     /// <summary>
+    ///     The models of the selected provider, led by the entry for the default model; empty while none is listed.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasModelList))]
+    private IReadOnlyList<ModelChoice> _models = [];
+
+    /// <summary>
+    ///     The entry of the list that the model name stands for, or <see langword="null" /> when the name is not in the list.
+    /// </summary>
+    [ObservableProperty]
+    private ModelChoice? _selectedModel;
+
+    /// <summary>
+    ///     Whether the models are being listed.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isLoadingModels;
+
+    /// <summary>
+    ///     The sentence about the list of models: that it is loading, or why there is none and what to do.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasModelListMessage))]
+    private string _modelListMessage = string.Empty;
+
+    /// <summary>
+    ///     What the chosen model can do, one fact per line; an empty string when nothing is known about it.
+    /// </summary>
+    [ObservableProperty]
+    private string _modelDetails = string.Empty;
+
+    /// <summary>
+    ///     What the chosen model cannot do that CanvasPilot wants, one sentence per line; an empty string when nothing is
+    ///     missing or nothing is known.
+    /// </summary>
+    [ObservableProperty]
+    private string _modelWarning = string.Empty;
+
+    /// <summary>
+    ///     The reasoning efforts that can be chosen: the effort that the provider chooses, then the ones that the chosen
+    ///     model offers.
+    /// </summary>
+    [ObservableProperty]
+    private IReadOnlyList<SettingsChoice<string>> _reasoningEfforts = [new SettingsChoice<string>(string.Empty, DefaultEffortLabel)];
+
+    /// <summary>
+    ///     The chosen reasoning effort.
+    /// </summary>
+    [ObservableProperty]
+    private SettingsChoice<string>? _selectedReasoningEffort;
+
+    /// <summary>
+    ///     Whether the reasoning effort can be chosen: the chosen model offers efforts.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isReasoningEffortEnabled;
+
+    /// <summary>
+    ///     The sentence that says why the reasoning effort cannot be chosen, or that the stored one was reset; an empty
+    ///     string when there is nothing to say.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReasoningNote))]
+    private string _reasoningNote = string.Empty;
+
+    /// <summary>
     ///     Context window text as typed.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ContextWindowError), nameof(ContextWindowWarning), nameof(IsValid))]
     private string _contextWindowText = AiProviderSettings.DefaultContextWindowTokens.ToString(CultureInfo.InvariantCulture);
-
-    /// <summary>
-    ///     Selected reasoning level. It is kept and applied unchanged; the combo box that shows it is disabled.
-    /// </summary>
-    [ObservableProperty]
-    private SettingsChoice<ReasoningLevel> _selectedReasoningLevel;
 
     /// <summary>
     ///     Ollama endpoint text as typed.
@@ -171,23 +298,29 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     ///     Checks the provider that the entries describe; <see langword="null" /> for a page without the Check connection
     ///     button.
     /// </param>
-    public AiProviderSettingsPageViewModel(IProviderCheck? providerCheck = null)
+    /// <param name="modelSource">
+    ///     Lists the models of the provider that the entries describe; <see langword="null" /> for a page without a model
+    ///     list, which leaves the model name to be typed.
+    /// </param>
+    /// <param name="typingDelay">
+    ///     The time to wait after an edit of the address or the path before the models are listed again; the default of
+    ///     <see cref="DefaultTypingDelayMilliseconds" /> milliseconds when <see langword="null" />.
+    /// </param>
+    public AiProviderSettingsPageViewModel(
+        IProviderCheck? providerCheck = null,
+        IProviderModelSource? modelSource = null,
+        TimeSpan? typingDelay = null)
     {
         _providerCheck = providerCheck;
+        _modelSource = modelSource;
+        _typingDelay = typingDelay ?? TimeSpan.FromMilliseconds(DefaultTypingDelayMilliseconds);
         Providers =
         [
             new SettingsChoice<AiProviderKind>(AiProviderKind.GitHubCopilot, "GitHub Copilot"),
             new SettingsChoice<AiProviderKind>(AiProviderKind.Ollama, "Ollama"),
         ];
-        ReasoningLevels =
-        [
-            new SettingsChoice<ReasoningLevel>(ReasoningLevel.Auto, "Auto"),
-            new SettingsChoice<ReasoningLevel>(ReasoningLevel.Low, "Low"),
-            new SettingsChoice<ReasoningLevel>(ReasoningLevel.Medium, "Medium"),
-            new SettingsChoice<ReasoningLevel>(ReasoningLevel.High, "High"),
-        ];
         _selectedProvider = Providers[0];
-        _selectedReasoningLevel = ReasoningLevels[0];
+        _selectedReasoningEffort = _reasoningEfforts[0];
     }
 
     /// <inheritdoc />
@@ -199,9 +332,30 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     public IReadOnlyList<SettingsChoice<AiProviderKind>> Providers { get; }
 
     /// <summary>
-    ///     Gets the reasoning levels that can be chosen.
+    ///     Gets a value indicating whether the page offers the list of models and the Refresh models button.
     /// </summary>
-    public IReadOnlyList<SettingsChoice<ReasoningLevel>> ReasoningLevels { get; }
+    public bool HasModelSource => _modelSource is not null;
+
+    /// <summary>
+    ///     Gets a value indicating whether the provider listed models, which makes the list of models the way to choose one.
+    /// </summary>
+    public bool HasModelList => Models.Count > 0;
+
+    /// <summary>
+    ///     Gets a value indicating whether there is a sentence about the list of models to show.
+    /// </summary>
+    public bool HasModelListMessage => ModelListMessage.Length > 0;
+
+    /// <summary>
+    ///     Gets a value indicating whether there is a note about the reasoning effort to show.
+    /// </summary>
+    public bool HasReasoningNote => ReasoningNote.Length > 0;
+
+    /// <summary>
+    ///     Gets a task that completes when the listing of models that was started last is over, which lets a test or a
+    ///     caller wait for the list that follows a change of the entries.
+    /// </summary>
+    public Task ModelListLoaded => _modelLoad;
 
     /// <summary>
     ///     Gets a value indicating whether Ollama is the selected provider, which enables the endpoint entry.
@@ -289,13 +443,28 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
 
         _loaded = settings;
         var ai = settings.AiProvider;
-        SelectedProvider = Providers.First(choice => choice.Value == ai.Provider);
-        ModelName = ai.ModelName;
-        ContextWindowText = ai.ContextWindowTokens.ToString(CultureInfo.InvariantCulture);
-        SelectedReasoningLevel = ReasoningLevels.First(choice => choice.Value == ai.ReasoningLevel);
-        OllamaEndpoint = ai.OllamaEndpoint;
-        UnrestrictedAgentTools = ai.UnrestrictedAgentTools;
-        CopilotCliPath = ai.CopilotCliPath;
+
+        // The entries are set one by one; none of the changes is an edit of the user, and the list is asked for once, last
+        _loading = true;
+        try
+        {
+            Models = [];
+            ModelListMessage = string.Empty;
+            SelectedProvider = Providers.First(choice => choice.Value == ai.Provider);
+            ModelName = ai.ModelName;
+            _effortId = ai.ReasoningEffort ?? string.Empty;
+            ContextWindowText = ai.ContextWindowTokens.ToString(CultureInfo.InvariantCulture);
+            OllamaEndpoint = ai.OllamaEndpoint;
+            UnrestrictedAgentTools = ai.UnrestrictedAgentTools;
+            CopilotCliPath = ai.CopilotCliPath;
+            UpdateModelPresentation(reconcile: false);
+        }
+        finally
+        {
+            _loading = false;
+        }
+
+        StartModelLoad(refresh: false, debounce: false);
     }
 
     /// <inheritdoc />
@@ -323,7 +492,7 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
                 Provider = SelectedProvider.Value,
                 ModelName = ModelName.Trim(),
                 ContextWindowTokens = contextWindow,
-                ReasoningLevel = SelectedReasoningLevel.Value,
+                ReasoningEffort = _effortId,
                 OllamaEndpoint = endpoint,
                 UnrestrictedAgentTools = UnrestrictedAgentTools,
                 CopilotCliPath = cliPath,
@@ -334,9 +503,12 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     /// <inheritdoc />
     public void OnClosed()
     {
-        // A check that still runs has nobody to tell
+        // A check or a listing that still runs has nobody to tell
         ForgetCheck();
         _checkCancellation?.Cancel();
+        _modelVersion++;
+        _modelCancellation?.Cancel();
+        IsLoadingModels = false;
     }
 
     /// <inheritdoc />
@@ -352,10 +524,395 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
 
         // An answer about other entries is not an answer about these
         if (e.PropertyName is nameof(SelectedProvider) or nameof(ModelName) or nameof(ContextWindowText)
-            or nameof(OllamaEndpoint) or nameof(CopilotCliPath))
+            or nameof(OllamaEndpoint) or nameof(CopilotCliPath) or nameof(SelectedReasoningEffort))
         {
             ForgetCheck();
         }
+
+        // Entries that decide which models exist ask for a new list; what the user typed is not asked for letter by letter
+        if (!_loading)
+        {
+            if (e.PropertyName is nameof(SelectedProvider))
+            {
+                // A model id of one provider means nothing to the other, so the choice starts again
+                _effortId = string.Empty;
+                ModelName = string.Empty;
+                Models = [];
+                ModelListMessage = string.Empty;
+                UpdateModelPresentation(reconcile: false);
+                StartModelLoad(refresh: false, debounce: false);
+            }
+            else if ((e.PropertyName is nameof(OllamaEndpoint) && IsOllamaSelected)
+                     || (e.PropertyName is nameof(CopilotCliPath) && IsCopilotSelected))
+            {
+                StartModelLoad(refresh: false, debounce: true);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Keeps the choice in the list and the reasoning efforts in step with the text of the model name.
+    /// </summary>
+    /// <param name="value">The new text.</param>
+    partial void OnModelNameChanged(string value)
+    {
+        if (!_loading)
+        {
+            UpdateModelPresentation(reconcile: true);
+        }
+    }
+
+    /// <summary>
+    ///     Takes the model that the user chose in the list as the model name.
+    /// </summary>
+    /// <param name="value">The chosen entry; <see langword="null" /> when the list was replaced, which is not a choice.</param>
+    partial void OnSelectedModelChanged(ModelChoice? value)
+    {
+        if (_syncing || value is null || !value.IsSelectable)
+        {
+            return;
+        }
+
+        ModelName = value.Id;
+    }
+
+    /// <summary>
+    ///     Takes the effort that the user chose as the effort to store.
+    /// </summary>
+    /// <param name="value">The chosen entry; <see langword="null" /> when the list was replaced, which is not a choice.</param>
+    partial void OnSelectedReasoningEffortChanged(SettingsChoice<string>? value)
+    {
+        if (_syncing || value is null)
+        {
+            return;
+        }
+
+        _effortId = value.Value;
+        ReasoningNote = string.Empty;
+    }
+
+    /// <summary>
+    ///     Lists the models of the provider again, asking the provider and not the answer of a short while ago.
+    /// </summary>
+    /// <returns>A task that completes when the list is shown.</returns>
+    [RelayCommand(CanExecute = nameof(HasModelSource))]
+    private Task RefreshModelsAsync()
+    {
+        return StartModelLoad(refresh: true, debounce: false);
+    }
+
+    /// <summary>
+    ///     Starts the listing of the models, which ends the one that runs.
+    /// </summary>
+    /// <param name="refresh">Whether to ask the provider again.</param>
+    /// <param name="debounce">Whether to wait a moment first, because the user may still be typing.</param>
+    /// <returns>A task that completes when the answer is shown or dropped.</returns>
+    private Task StartModelLoad(bool refresh, bool debounce)
+    {
+        if (_modelSource is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        // A listing that runs is about older entries
+        _modelCancellation?.Cancel();
+        var version = ++_modelVersion;
+
+        // Entries that are not valid cannot be asked about; the list that is shown stays
+        if (!IsValid)
+        {
+            IsLoadingModels = false;
+            return _modelLoad = Task.CompletedTask;
+        }
+
+        var cancellation = new CancellationTokenSource();
+        _modelCancellation = cancellation;
+        var settings = _loaded.AiProvider with
+        {
+            Provider = SelectedProvider.Value,
+            OllamaEndpoint = OllamaEndpoint,
+            CopilotCliPath = CopilotCliPath.Trim(),
+        };
+        IsLoadingModels = true;
+        ModelListMessage = LoadingModelsText;
+        return _modelLoad = LoadModelsAsync(_modelSource, settings, refresh, debounce, version, cancellation);
+    }
+
+    /// <summary>
+    ///     Asks the source for the models and shows the answer, unless the entries changed meanwhile.
+    /// </summary>
+    /// <param name="source">The source of the models.</param>
+    /// <param name="settings">The settings that describe the provider.</param>
+    /// <param name="refresh">Whether to ask the provider again.</param>
+    /// <param name="debounce">Whether to wait a moment first.</param>
+    /// <param name="version">The number of this listing.</param>
+    /// <param name="cancellation">Cancels this listing; it is not disposed, because a later listing may still cancel it.</param>
+    /// <returns>A task that completes when the answer is shown or dropped.</returns>
+    private async Task LoadModelsAsync(
+        IProviderModelSource source,
+        AiProviderSettings settings,
+        bool refresh,
+        bool debounce,
+        int version,
+        CancellationTokenSource cancellation)
+    {
+        ProviderModelList answer;
+        try
+        {
+            if (debounce && _typingDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(_typingDelay, cancellation.Token);
+            }
+
+            answer = await source.ListModelsAsync(settings, refresh, cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Another listing or the closing of the page ended this one, and whoever did that shows what is needed
+            return;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            answer = ProviderModelList.Failed($"The models could not be listed: {ex.Message}");
+        }
+
+        // The entries changed meanwhile: the answer is about another provider or address
+        if (version != _modelVersion)
+        {
+            return;
+        }
+
+        var choices = new List<ModelChoice>();
+        if (answer.Models.Count > 0)
+        {
+            choices.Add(new ModelChoice(string.Empty, DefaultModelLabel, null));
+            choices.AddRange(answer.Models.Select(model => new ModelChoice(model.Id, LabelOf(model), model)));
+        }
+
+        Models = choices;
+        ModelListMessage = answer.Message;
+        IsLoadingModels = false;
+        UpdateModelPresentation(reconcile: true);
+    }
+
+    /// <summary>
+    ///     Words the entry of the list for a model: its name, and in a few words what it cannot do.
+    /// </summary>
+    /// <param name="model">The model.</param>
+    /// <returns>The text of the entry.</returns>
+    private static string LabelOf(ProviderModelInfo model)
+    {
+        var name = string.Equals(model.DisplayName, model.Id, StringComparison.Ordinal)
+            ? model.Id
+            : $"{model.DisplayName} ({model.Id})";
+        var missing = new List<string>();
+        if (!model.IsUsable)
+        {
+            missing.Add("unavailable");
+        }
+        else
+        {
+            if (!model.SupportsToolCalls)
+            {
+                missing.Add("no tool calling");
+            }
+
+            if (!model.SupportsVision)
+            {
+                missing.Add("no pictures");
+            }
+        }
+
+        return missing.Count == 0 ? name : $"{name} - {string.Join(", ", missing)}";
+    }
+
+    /// <summary>
+    ///     Finds the entry of the list that the model name stands for. A name without a tag stands for the <c>latest</c> tag,
+    ///     as it does for Ollama, and an empty name for the default entry.
+    /// </summary>
+    /// <returns>The entry, or <see langword="null" /> when the name is not in the list.</returns>
+    private ModelChoice? FindChoice()
+    {
+        var name = ModelName?.Trim() ?? string.Empty;
+        var withTag = name.Length > 0 && !name.Contains(':', StringComparison.Ordinal) ? name + ":latest" : name;
+        return Models.FirstOrDefault(choice => string.Equals(choice.Id, name, StringComparison.OrdinalIgnoreCase))
+               ?? Models.FirstOrDefault(choice => choice.Id.Length > 0 && string.Equals(choice.Id, withTag, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    ///     Shows what is known about the model that the name stands for: the choice in the list, what the model can do and
+    ///     lacks, and the efforts that it offers.
+    /// </summary>
+    /// <param name="reconcile">
+    ///     <see langword="true" /> to reset a stored effort that the known model does not offer; <see langword="false" />
+    ///     while the entries are loaded, when the stored values are shown as they are.
+    /// </param>
+    private void UpdateModelPresentation(bool reconcile)
+    {
+        var choice = FindChoice();
+        var info = choice?.Info;
+        var name = ModelName?.Trim() ?? string.Empty;
+
+        // The choice in the list follows the text, without that being taken for a choice of the user
+        _syncing = true;
+        try
+        {
+            SelectedModel = choice;
+        }
+        finally
+        {
+            _syncing = false;
+        }
+
+        ModelDetails = DescribeModel(info, choice, name);
+        ModelWarning = WarnAbout(info);
+        UpdateReasoningEfforts(info, name, reconcile);
+    }
+
+    /// <summary>
+    ///     Words what a model can do, one fact per line.
+    /// </summary>
+    /// <param name="info">What the provider says about the model; <see langword="null" /> when it is not in the list.</param>
+    /// <param name="choice">The entry of the list; <see langword="null" /> when the name is not in the list.</param>
+    /// <param name="name">The model name as typed.</param>
+    /// <returns>The text, or an empty string when there is nothing to say.</returns>
+    private string DescribeModel(ProviderModelInfo? info, ModelChoice? choice, string name)
+    {
+        if (info is null)
+        {
+            if (choice is not null)
+            {
+                return "The default model of the provider is used; what it can do is not listed.";
+            }
+
+            return name.Length > 0 && HasModelList
+                ? $"{name} is not in the list; CanvasPilot tries it as typed and the first message tells whether it works."
+                : string.Empty;
+        }
+
+        string efforts;
+        if (info.ReasoningEfforts.Count > 0)
+        {
+            efforts = string.Join(", ", info.ReasoningEfforts.Select(effort => effort.Id));
+        }
+        else
+        {
+            efforts = info.SupportsReasoning ? "reasons, no level to choose" : "none";
+        }
+
+        var lines = new List<string>
+        {
+            $"Tool calling: {(info.SupportsToolCalls ? "yes" : "no")}",
+            $"Pictures: {(info.SupportsVision ? "yes" : "no")}",
+            $"Reasoning levels: {efforts}",
+        };
+        if (info.ContextWindowTokens is { } window)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"Context window: up to {window:N0} tokens"));
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>
+    ///     Words what a model lacks that CanvasPilot needs or wants, one sentence per line.
+    /// </summary>
+    /// <param name="info">What the provider says about the model; <see langword="null" /> when nothing is known.</param>
+    /// <returns>The text, or an empty string when nothing is missing.</returns>
+    private static string WarnAbout(ProviderModelInfo? info)
+    {
+        if (info is null)
+        {
+            return string.Empty;
+        }
+
+        var lines = new List<string>();
+        if (!info.IsUsable)
+        {
+            lines.Add($"{info.DisplayName} cannot be used: {info.UnusableReason ?? "the provider says it is unavailable."}");
+        }
+
+        if (!info.SupportsToolCalls)
+        {
+            lines.Add($"{info.DisplayName} cannot call tools, and CanvasPilot needs tool calling to draw; it cannot use this model.");
+        }
+
+        if (!info.SupportsVision)
+        {
+            lines.Add($"{info.DisplayName} does not accept pictures; it cannot see your marks or its own drawings.");
+        }
+
+        lines.AddRange(info.Warnings);
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>
+    ///     Offers the efforts that the model offers, enables the choice only when it offers some, and resets a stored effort
+    ///     that it does not offer.
+    /// </summary>
+    /// <param name="info">What the provider says about the model; <see langword="null" /> when nothing is known.</param>
+    /// <param name="name">The model name as typed.</param>
+    /// <param name="reconcile">Whether to reset a stored effort that the known model does not offer.</param>
+    private void UpdateReasoningEfforts(ProviderModelInfo? info, string name, bool reconcile)
+    {
+        var choices = new List<SettingsChoice<string>> { new(string.Empty, DefaultEffortLabel) };
+        var note = string.Empty;
+        var enabled = false;
+
+        if (info is { ReasoningEfforts.Count: > 0 })
+        {
+            // The model offers efforts: its ids are what the provider accepts
+            enabled = true;
+            choices.AddRange(info.ReasoningEfforts.Select(effort => new SettingsChoice<string>(effort.Id, effort.DisplayName)));
+            if (reconcile && _effortId.Length > 0 && !choices.Any(choice => string.Equals(choice.Value, _effortId, StringComparison.OrdinalIgnoreCase)))
+            {
+                note = $"{info.DisplayName} does not offer the reasoning level {_effortId}; the provider chooses instead.";
+                _effortId = string.Empty;
+            }
+        }
+        else if (info is not null)
+        {
+            // A model that is listed and offers none has no effort to keep
+            note = "This model has no reasoning levels to choose.";
+            if (reconcile)
+            {
+                _effortId = string.Empty;
+            }
+        }
+        else if (name.Length == 0)
+        {
+            note = "Choose a model to set its reasoning level.";
+            if (reconcile)
+            {
+                _effortId = string.Empty;
+            }
+        }
+        else
+        {
+            // The model is not known (no list, or not in it): the stored level is kept as it is and cannot be changed
+            note = "The reasoning levels of this model are not known, so the level cannot be changed here.";
+        }
+
+        // A stored effort that is not offered is still shown, so that the page does not hide what is stored
+        if (_effortId.Length > 0 && !choices.Any(choice => string.Equals(choice.Value, _effortId, StringComparison.OrdinalIgnoreCase)))
+        {
+            choices.Add(new SettingsChoice<string>(_effortId, _effortId));
+        }
+
+        var selected = choices.FirstOrDefault(choice => string.Equals(choice.Value, _effortId, StringComparison.OrdinalIgnoreCase)) ?? choices[0];
+        _syncing = true;
+        try
+        {
+            ReasoningEfforts = choices;
+            SelectedReasoningEffort = selected;
+        }
+        finally
+        {
+            _syncing = false;
+        }
+
+        IsReasoningEffortEnabled = enabled;
+        ReasoningNote = note;
     }
 
     /// <summary>

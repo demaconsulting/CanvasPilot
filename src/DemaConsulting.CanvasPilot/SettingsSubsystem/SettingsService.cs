@@ -57,7 +57,6 @@ public sealed class SettingsService : ISettingsService
         Converters =
         {
             new TolerantEnumConverter<AiProviderKind>(),
-            new TolerantEnumConverter<ReasoningLevel>(),
         },
     };
 
@@ -222,6 +221,7 @@ public sealed class SettingsService : ISettingsService
             AiProvider = ai with
             {
                 ModelName = ai.ModelName?.Trim() ?? string.Empty,
+                ReasoningEffort = ai.ReasoningEffort?.Trim() ?? string.Empty,
                 ContextWindowTokens = AiProviderSettings.IsValidContextWindow(ai.ContextWindowTokens)
                     ? ai.ContextWindowTokens
                     : AiProviderSettings.DefaultContextWindowTokens,
@@ -325,7 +325,52 @@ public sealed class SettingsService : ISettingsService
                 $"{AppSettings.CurrentVersion}; unknown values are ignored.");
         }
 
-        return Normalize(parsed);
+        return Normalize(MigrateLegacyReasoningLevel(parsed, text));
+    }
+
+    /// <summary>
+    ///     Reads the reasoning level that files of earlier builds stored under <c>aiProvider.reasoningLevel</c> into the
+    ///     reasoning effort, so that a file keeps its meaning without a change of the schema version.
+    /// </summary>
+    /// <remarks>
+    ///     The old values were <c>auto</c> (the provider chooses, which is an empty effort), <c>low</c>, <c>medium</c>, and
+    ///     <c>high</c> (the same ids as efforts). A file that states a reasoning effort of its own is not changed, and a
+    ///     value that is none of these is ignored. The old key is not written again.
+    /// </remarks>
+    /// <param name="parsed">The settings as parsed.</param>
+    /// <param name="text">The text of the file that they were parsed from.</param>
+    /// <returns>The settings with the effort of the old key when the file had no effort.</returns>
+    private static AppSettings MigrateLegacyReasoningLevel(AppSettings parsed, string text)
+    {
+        if (!string.IsNullOrWhiteSpace(parsed.AiProvider?.ReasoningEffort))
+        {
+            return parsed;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(text, new JsonDocumentOptions { CommentHandling = JsonCommentHandling.Skip, AllowTrailingCommas = true });
+            var provider = document.RootElement.EnumerateObject()
+                .FirstOrDefault(property => string.Equals(property.Name, "aiProvider", StringComparison.OrdinalIgnoreCase))
+                .Value;
+            if (provider.ValueKind != JsonValueKind.Object)
+            {
+                return parsed;
+            }
+
+            var level = provider.EnumerateObject()
+                .FirstOrDefault(property => string.Equals(property.Name, "reasoningLevel", StringComparison.OrdinalIgnoreCase))
+                .Value;
+            var effort = level.ValueKind == JsonValueKind.String ? level.GetString()?.Trim().ToLowerInvariant() : null;
+            return effort is "low" or "medium" or "high"
+                ? parsed with { AiProvider = (parsed.AiProvider ?? new AiProviderSettings()) with { ReasoningEffort = effort } }
+                : parsed;
+        }
+        catch (JsonException)
+        {
+            // The text was parsed once already, so this cannot happen; the settings stay as they are if it ever does
+            return parsed;
+        }
     }
 
     /// <summary>

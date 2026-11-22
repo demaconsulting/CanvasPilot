@@ -4,7 +4,8 @@
 # The AgentProviderFactory unit makes the agent of a conversation for the AI provider that the settings choose, from the
 # settings, the tools, and the instructions: for Ollama an agent on an Ollama client that is told the context window on
 # every request, and for GitHub Copilot an agent on the Copilot runtime that the starter of the runtime gives, which the
-# readiness check shares. A Copilot that cannot be served gives a typed answer and no agent. The unit owns what it
+# readiness check shares. The model and the reasoning effort of the settings are validated against the catalog of the
+# provider first. A provider that cannot be served gives a typed answer and no agent. The unit owns what it
 # starts for Ollama and disposes it; the Copilot runtime belongs to the starter, which the factory stops only when it
 # was told that it owns it. Its seam is IAgentFactory, with which tests put an agent on a scripted chat client; its
 # supporting types are the request and the result.
@@ -50,9 +51,10 @@ sections:
                 title: >-
                   The AgentProviderFactory shall make the agent for GitHub Copilot on the runtime that the starter of the
                   runtime gives for the Copilot CLI that the locator found, and make each agent with exactly the supplied
-                  tools, the instructions, the name CanvasPilot, the model of the settings (none when it is blank), and the
-                  project folder as the working directory, and shall pass the data folder and the logger of the request on
-                  to the starter of the runtime.
+                  tools, the instructions, the name CanvasPilot, the model selection that the catalog of the runtime
+                  validated for the settings (none when no model is named, which is the default model of the runtime),
+                  and the project folder as the working directory, and shall pass the data folder and the logger of the
+                  request on to the starter of the runtime.
                 justification: |
                   The runtime is one process for the whole application, and the agents of several projects share it; the
                   starter shares it, so the factory asks it for every agent. The tools that the application builds are the
@@ -62,6 +64,32 @@ sections:
                   - AgentProviderFactory_Create_Copilot_FakeStarter_MakesAgentsOnTheRuntimeThatBelongsToTheStarter
                   - AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse
                   - AgentProviderFactory_Create_Copilot_DataDirectoryAndLogger_ReachTheStarter
+
+              - id: CanvasPilot-AgentProviderFactory-ValidateModelSettings
+                title: >-
+                  The AgentProviderFactory shall validate the model, the reasoning effort, and (for Ollama) the context
+                  window of the settings against the catalog of the provider before it makes an agent, and shall make the
+                  agent with the validated selection (the model as the catalog spells it, with the chosen reasoning
+                  effort, and for Ollama the context window and the thinking level on every request); shall answer a
+                  model that is not offered, cannot be used, cannot call tools, does not offer the chosen reasoning
+                  effort, or is asked for more context than it was trained for with the typed status ModelSettingsInvalid,
+                  the sentence of the AI library, and no agent; shall answer a Copilot catalog that cannot be read with the
+                  status that the runtime is not usable; and shall try the typed Ollama model without a check when the
+                  server does not describe its models.
+                justification: |
+                  A wrong model or effort that is found in the middle of the first turn looks like a broken application,
+                  and a model that cannot call tools cannot draw at all. Validating when the conversation starts puts the
+                  explanation of the library, which names what is supported, in front of the user before anything runs.
+                  The selection is what makes the effort and the window real: the library sends the level of thinking and
+                  the window with each request. A server that is not reachable must not stop a user who typed a model name
+                  that may be right, so the typed name is tried as it was before.
+                tests:
+                  - AgentProviderFactory_Create_Copilot_ModelAndEffort_ReachTheAgentAsTheSelection
+                  - AgentProviderFactory_Create_Copilot_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid
+                  - AgentProviderFactory_Create_Copilot_CatalogCannotBeRead_IsRuntimeUnavailable
+                  - AgentProviderFactory_Create_Ollama_ModelEffortAndWindow_ReachTheWire
+                  - AgentProviderFactory_Create_Ollama_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid
+                  - AgentProviderFactory_Create_Ollama_CatalogUnreachable_UsesTheTypedModelWithoutACheck
 
               - id: CanvasPilot-AgentProviderFactory-ReportUnavailableCopilot
                 title: >-

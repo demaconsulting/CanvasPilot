@@ -14,6 +14,7 @@ flowchart TD
         AgentContract
         CopilotCliLocator
         CopilotRuntimeStarter
+        ProviderModelCatalog
         AgentReadiness
         AgentToolRegistry
         ProjectTools
@@ -280,6 +281,10 @@ flowchart TD
     AgentReadiness --> CopilotCliLocator
     AgentReadiness --> CopilotRuntimeStarter
     CopilotRuntimeStarter --> AgentContract
+    ProviderModelCatalog --> CopilotRuntimeStarter
+    ProviderModelCatalog --> CopilotCliLocator
+    ProviderModelCatalog --> AiProviderSettingsPage
+    AgentReadiness --> ProviderModelCatalog
     AgentReadiness --> SettingsService
     AgentReadiness --> AiProviderSettingsPage
     AgentToolRegistry --> KnowledgeTools
@@ -301,6 +306,7 @@ flowchart TD
     AgentEventMapper --> RollingFileLogger
     AgentProviderFactory --> AgentContract
     AgentProviderFactory --> CopilotRuntimeStarter
+    AgentProviderFactory --> ProviderModelCatalog
     AgentProviderFactory --> CopilotCliLocator
     AgentProviderFactory --> SettingsService
     AgentProviderFactory --> RollingFileLogger
@@ -329,7 +335,8 @@ log file outside that folder.
 pages from the application, so the `Settings` subsystem does not depend on the subsystems that contribute pages. The AI
 provider choices are stored by the service and read by the `Agent` subsystem: the readiness checks and the agent of a
 conversation take them from the service and react to its `Changed` event, while `Settings` declares only the
-`IProviderCheck` interface that the settings dialog uses to check a connection, and never refers to `Agent`.
+`IProviderCheck` interface that the settings dialog uses to check a connection and the `IProviderModelSource` interface
+that the page uses to list the models of the provider, and never refers to `Agent`.
 
 `ProjectService` owns projects: a project is a folder holding a `{name}.canvaspilot` project file, a hidden
 `.canvaspilot` folder for application data (the pictures that the user pastes into a message while it is a draft), and
@@ -498,10 +505,13 @@ that the chat shows, the same for both providers. The copilot has only locked-do
 folder, refuses links, the hidden `.canvaspilot` folder, and the project file, and a write replaces a file directly,
 with no backup and no question, and says `created` or `replaced`. `AgentReadiness` answers whether the chosen provider
 can be used, for the chat banner and for the connection check of the settings dialog: for Ollama it checks the settings,
-the server, the model, and the context window (a warning below 16,384 tokens), and for GitHub Copilot it checks in order
+the server, the model, the model settings (the model can call tools and the window and level fit it), and the context
+window (a warning below 16,384 tokens), and for GitHub Copilot it checks in order
 that the Copilot CLI is found (`CopilotCliLocator`, which finds the real `copilot.exe`, never an editor's shim), that
-its version is 1.0.113 or later, that credentials exist, and that the one shared Copilot runtime
-(`CopilotRuntimeStarter`) starts on that CLI and is signed in. `AgentService` never writes into a project except through
+its version is 1.0.113 or later, that credentials exist, that the one shared Copilot runtime
+(`CopilotRuntimeStarter`) starts on that CLI and is signed in, and that the model settings are valid for it.
+`ProviderModelCatalog` lists the models of the provider for the AI Provider page. `AgentService` never writes into a
+project except through
 `project_write`, keeps the data of the Copilot runtime in a folder of its own and the restored history in memory, and
 logs metadata only. The `Agent` subsystem depends on `Settings`, `Project`, `Payload`, `Knowledge`, `Style`, `Preview`,
 `Logging`, and the AI libraries, and not on `Chat` or `AppShell`; `AppShell` builds it, and `Settings` does not depend
@@ -563,7 +573,8 @@ and `Preview`. The `Agent` subsystem sits above `Settings`, `Project`, `Payload`
 and below `Chat`: it reads what they offer (the provider choices, the open project, the message, the drawing knowledge
 and style as plain tool descriptions, and the render service) and none of them refers to it, and it never refers to
 `Chat` or `AppShell`. Its one seam towards a lower subsystem is the connection check of the settings dialog:
-`Settings` owns `IProviderCheck`, which names no type of `Agent`, and `AgentReadiness` implements it, just as `Composer`
+`Settings` owns `IProviderCheck` and `IProviderModelSource`, which name no type of `Agent`, and `AgentReadiness` and
+`ProviderModelCatalog` implement them, just as `Composer`
 owns `IMessageBuilder` for `Payload`; `Settings` therefore never refers to `Agent`, and the composition root hands the
 check to the AI Provider page. The `Knowledge` subsystem follows the same rule: the seam by which the shell asks for the
 browser,
@@ -589,18 +600,49 @@ The AI copilot answers the messages through one of two providers, chosen in the 
 works end to end in this release (covered by automated tests; live checks against a running server are pending), and
 GitHub Copilot, which runs on the Copilot CLI that the user installed. Everything provider-specific is behind the
 `Agent` subsystem; `Chat` sees only
-`IAgentService` and the events of a turn, and `Settings` sees only the `IProviderCheck` interface that it owns.
+`IAgentService` and the events of a turn, and `Settings` sees only the `IProviderCheck` and `IProviderModelSource`
+interfaces that it owns.
 
 **The seam.** The input of a turn is the `MessagePayload` that is built for every sent message (and shown in the payload
-inspector) together with the `AiProviderSettings` of the settings file (provider, model name, context window, reasoning
-level, Ollama endpoint, Copilot command-line tool path, and the flag for unrestricted agent tools). `AgentService` reads
-the settings through `SettingsService` and rebuilds its conversation when the project or one of the settings that decide
-the agent changes. The agent is detached from the user interface: it takes its settings, the project folder, and the
+inspector) together with the `AiProviderSettings` of the settings file (provider, model id, reasoning effort, context
+window, Ollama endpoint, Copilot command-line tool path, and the flag for unrestricted agent tools). `AgentService`
+reads the settings through `SettingsService` and rebuilds its conversation when the project or one of the settings that
+decide the agent changes (the signature holds the provider, the model, the reasoning effort, the address, the window,
+and the CLI path). The agent is detached from the user interface: it takes its settings, the project folder, and the
 payload, answers through events, and is tested without a window against a scripted model. The default context window is
 32,768 tokens for new settings, a stored value is kept as it is, and a window below 16,384 tokens is reported as a
-warning that does not block sending. The reasoning level is stored and applied unchanged but shown as not available,
-because the AI library does not expose it, and the flag for unrestricted tools is not offered in the dialog: the copilot
-has only the locked-down tools of the `Agent` subsystem.
+warning that does not block sending. The flag for unrestricted tools is not offered in the dialog: the copilot has only
+the locked-down tools of the `Agent` subsystem.
+
+**Choosing a Model.** The model is chosen from the models that the provider offers, not typed from memory.
+`ProviderModelCatalog` of the `Agent` subsystem lists them for the AI Provider page through `IProviderModelSource`: for
+GitHub Copilot from the catalog of the one shared runtime (the models of the signed-in account, as the AI library
+reports them), for Ollama from the catalog of the server at the address of the settings (the models that are pulled,
+described by `/api/show`). Every model is listed, those that cannot be used as well, with what it can do in
+CanvasPilot's own terms: tool calling, pictures, reasoning (and which levels), and the context window. The page states
+what a model lacks and does not decide for the user.
+
+- *What the application needs.* Tool calling is required: every drawing is made by calling tools, so the check and the
+  factory refuse a model without it (`ModelSettingsInvalid`, with the sentence of the AI library). Pictures are wanted
+  and not required: a model that cannot see still reads and writes text and files, so it is a warning in the page, in
+  the readiness banner (`ModelLacksVision`, usable), and in the list. The policy is in one place (`ModelRequirements`)
+  so the list, the check, and the factory agree.
+- *Reasoning level.* The efforts that exist are the model's (none, low, medium, high, xhigh, max, and whatever a
+  provider adds), so the setting is the provider's own id as text (`ReasoningEffort`), the page offers only the efforts
+  that the chosen model lists and enables the choice only then, and the AI library applies it when the agent is made:
+  for Copilot as the reasoning effort of the session, and for Ollama as the thinking level of each request. The window
+  of Ollama is validated against the model's trained length, so a window that cannot be honored is reported at the start
+  and not by a failed request.
+- *Validation at the start.* When a conversation starts (and in the readiness check), the catalog of the provider
+  validates the model and the effort of the settings with `SelectAsync`; a model that the account does not have, a model
+  that cannot be used, one that cannot call tools, or an effort that the model does not offer is told in the banner with
+  the sentence of the library, which names what is supported, before any turn is spent. No model named means the default
+  model of the runtime, and then nothing is validated.
+- *Manual entry.* When the list cannot be read (the server is down, the runtime is not signed in), the page says why and
+  the model name stays a text box, with the stored model and level kept as they are; Refresh models asks again. A server
+  that does not describe its models at the start of a conversation leaves the typed Ollama model to be tried as it is.
+- *Settings compatibility.* The reasoning effort replaces the `reasoningLevel` of earlier builds in the same settings
+  file without a new version number: the old values are read into the new setting (see the design of `SettingsService`).
 
 **Running the Installed Copilot CLI.** GitHub Copilot is reached through the Copilot CLI that the user installed, which
 the AI library runs at the explicit path that `CopilotCliLocator` found (the path in the settings first). CanvasPilot
@@ -609,11 +651,12 @@ installed CLI is the only source that is ever chosen (the `Bundled` source is no
 the published output nor the installer holds a Copilot file. The readiness checks run in order: the real CLI is located
 by a rule that rejects the launchers (shims) of editors, its version must be 1.0.113 or later, credentials must exist
 (a signed-in GitHub CLI, or one of the variables `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN`; a token is
-never stored, shown, or logged), and the shared runtime must start. The last check is the authoritative one, and it goes
-through the single seam `ICopilotRuntimeStarter`.
+never stored, shown, or logged), the shared runtime must start, and the model settings must be valid for it. The runtime
+start is the authoritative check of the CLI and the sign-in, and it goes through the single seam
+`ICopilotRuntimeStarter`.
 
 - *One shared runtime.* The `CopilotRuntimeStarter` starts one runtime, and the readiness check ("Check connection"),
-  the agent factory for every conversation, and later the list of models all get that same running runtime. A start is
+  the agent factory for every conversation, and the list of models all get that same running runtime. A start is
   single-flight and keyed by the CLI path and the data folder: the same key returns the running runtime, another key
   stops the old runtime and starts a new one (only one runtime may use one data folder), and a failed start is not
   remembered, so a fix is noticed by the next request. The application stops the runtime once when it ends.
@@ -1206,7 +1249,8 @@ forget the conversation and delete the session of the provider.
   into the interface; the `Agent` subsystem shall not depend on `Chat`. The composer decides whether a message can be
   sent: the chat only gives it the reason that blocks sending while a turn runs.
 - The `Agent` subsystem shall not depend on `Chat`, `AppShell`, or any subsystem above it, and no lower subsystem shall
-  depend on it: `Settings` owns `IProviderCheck`, which `AgentReadiness` implements, and `Settings` shall never refer to
+  depend on it: `Settings` owns `IProviderCheck` and `IProviderModelSource`, which `AgentReadiness` and
+  `ProviderModelCatalog` implement, and `Settings` shall never refer to
   `Agent`. Only the composition root shall build its units.
 - The copilot shall have only the tools of the `Agent` subsystem, each confined to the project folder through the path
   policy and the link guard; it shall write only text image sources and small data files, directly, and shall say

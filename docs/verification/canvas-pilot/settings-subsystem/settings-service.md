@@ -20,6 +20,9 @@ services are required.
   camel-case names, version, and value shapes.
 - A missing file, missing properties, unknown properties, out-of-range values, and unrecognized enumeration
   values never fail a load.
+- A file of an earlier build that stores the reasoning as `reasoningLevel` loads with the level `low`, `medium`, or
+  `high` (in any letter case) as the reasoning effort and `auto` or an unusable value as none, keeps its version, loses
+  to an effort that the file states, and is written back with `reasoningEffort` and without the old key.
 - A corrupt or empty file is renamed `settings.json.bad`, defaults are used, and an error is logged; a newer
   file is read and a warning is logged.
 - A save replaces the file without leaving a temporary file, and a failed save throws `IOException`, leaves the
@@ -98,8 +101,22 @@ default context window and endpoint, an empty model name, default speech values,
 project. This scenario is tested by `SettingsService_Load_OutOfRangeValues_ReplacedWithDefaults`.
 
 **SettingsService_Load_UnknownEnumValue_UsesFirstValue**: A file has an unknown provider name and a numeric
-reasoning level; load returns the first member of each enumeration. This scenario is tested by
+reasoning level of the old key; load returns the first provider and no reasoning effort. This scenario is tested by
 `SettingsService_Load_UnknownEnumValue_UsesFirstValue`.
+
+**SettingsService_Load_LegacyReasoningLevel_BecomesTheReasoningEffort**: A version 1 file of an earlier build holds
+`reasoningLevel` of `high`, `Medium`, `low`, `auto`, or `extreme` (five cases) and a model name. Load gives the effort
+`high`, `medium`, `low`, none, and none; the model name and the version 1 are kept; after a save of what was loaded the
+file holds `reasoningEffort` and no `reasoningLevel`. This scenario is tested by
+`SettingsService_Load_LegacyReasoningLevel_BecomesTheReasoningEffort`.
+
+**SettingsService_Load_ReasoningEffortAndLegacyLevel_EffortWins**: A file holds both `reasoningEffort` (with spaces
+around `xhigh`) and the old `reasoningLevel` of `low`; load gives the trimmed `xhigh`. This scenario is tested by
+`SettingsService_Load_ReasoningEffortAndLegacyLevel_EffortWins`.
+
+**SettingsService_SaveLoad_ReasoningEffort_RoundTripsAndDefaultsToEmpty**: A file without either key loads with no
+effort; saving the effort `max` and loading it with a new service gives `max`. This scenario is tested by
+`SettingsService_SaveLoad_ReasoningEffort_RoundTripsAndDefaultsToEmpty`.
 
 **SettingsService_Save_ExistingFile_ReplacesContentAndLeavesNoTemporaryFile**: Settings are saved over an
 existing file; a fresh service loads the new content and the folder holds only `settings.json`. This scenario

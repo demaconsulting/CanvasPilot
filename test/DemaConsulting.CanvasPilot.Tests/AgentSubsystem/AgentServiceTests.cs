@@ -219,7 +219,7 @@ public sealed class AgentServiceTests
     [InlineData("endpoint", true)]
     [InlineData("context", true)]
     [InlineData("cli", true)]
-    [InlineData("reasoning", false)]
+    [InlineData("reasoning", true)]
     [InlineData("unrestricted", false)]
     [InlineData("same", false)]
     public async Task AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent(string change, bool rebuilds)
@@ -238,7 +238,7 @@ public sealed class AgentServiceTests
             "endpoint" => settings with { OllamaEndpoint = "http://other:11434" },
             "context" => settings with { ContextWindowTokens = 16384 },
             "cli" => settings with { CopilotCliPath = @"C:\tools\copilot.exe" },
-            "reasoning" => settings with { ReasoningLevel = ReasoningLevel.High },
+            "reasoning" => settings with { ReasoningEffort = "high" },
             "unrestricted" => settings with { UnrestrictedAgentTools = true },
             _ => settings,
         });

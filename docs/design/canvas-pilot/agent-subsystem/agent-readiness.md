@@ -8,18 +8,20 @@
 found and what to do about it. The chat shows the sentence before the first message, and the settings dialog shows it
 when the user chooses Check connection. The unit implements `IProviderCheck`, which the Settings subsystem owns, so the
 dialog never depends on the Agent subsystem. The unit also holds its supporting types: `IOllamaProbe` with its real
-`OllamaProbe`. The starter of the Copilot runtime, which the check asks last, is the `CopilotRuntimeStarter` unit.
+`OllamaProbe`. The starter of the Copilot runtime, which the check asks, is the `CopilotRuntimeStarter` unit; the
+catalogs of the models, with which the check validates the model settings, come from the running runtime (GitHub
+Copilot) or from `IOllamaModelCatalogs` (Ollama; see the `ProviderModelCatalog` unit).
 
 #### Data Model
 
 **AgentReadiness**: `sealed class`, implements `IProviderCheck`. The constructor takes `CopilotCliLocator`,
-`ICopilotRuntimeStarter`, `IProcessRunner`, `IEnvironmentReader`, `ICliFileSystem`, and `IOllamaProbe`, each defaulting
-to the real implementation (the starter defaults to a `CopilotRuntimeStarter`; the application passes the one that it
-shares with the factory of the agents). Its fields are these collaborators only: it holds no
-text, no settings, and no logger. Constants: `TokenVariableNames` (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`),
-`CredentialProbeTimeout` (5 seconds), `OllamaProbeTimeout` (5 seconds), and `NotSignedInMessage`, which equals
-`CopilotRuntimeStarter.NotSignedInMessage`. The result is the `AgentReadinessReport` of the contract (a status and one
-sentence).
+`ICopilotRuntimeStarter`, `IProcessRunner`, `IEnvironmentReader`, `ICliFileSystem`, `IOllamaProbe`, and
+`IOllamaModelCatalogs`, each defaulting to the real implementation (the starter defaults to a `CopilotRuntimeStarter`;
+the application passes the one that it shares with the factory of the agents, and the one set of Ollama catalogs that it
+shares with them). Its fields are these collaborators only: it holds no text, no settings, and no logger. Constants:
+`TokenVariableNames` (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`), `CredentialProbeTimeout` (5 seconds),
+`OllamaProbeTimeout` (5 seconds), and `NotSignedInMessage`, which equals `CopilotRuntimeStarter.NotSignedInMessage`. The
+result is the `AgentReadinessReport` of the contract (a status and one sentence).
 
 **ICopilotRuntimeStarter**, with `CopilotStartRequest`, `CopilotStartResult`, and `CopilotStartStatus`, is described in
 the design of the `CopilotRuntimeStarter` unit. The check passes the path and the version that the locator found and no
@@ -52,6 +54,13 @@ can stand in for the server.
    `CopilotRuntimeUnavailable`, each with the sentence of the starter. The check starts no second runtime: the runtime
    that it starts is the one that the conversations then use, so a ready check means that the first message finds a
    running runtime.
+5. *Model settings.* When the settings name a model, `ICopilotAgentSource.Models.SelectAsync` of the running runtime
+   validates it with the reasoning effort of the settings and the requirement that the model can call tools (the policy
+   of `ModelRequirements`, see the design of `ProviderModelCatalog`). Settings that name no model use the default model
+   of the runtime, and there is nothing to validate (an effort without a model is not used). A refusal of the catalog is
+   `ModelSettingsInvalid` with the sentence of the AI library, which names what is supported; a catalog that cannot be
+   read (the runtime is not connected, or was stopped) is `CopilotRuntimeUnavailable` with its message; a model that
+   cannot take pictures is the usable `ModelLacksVision`.
 
 The sentences (exact text; the design and the tests are the same words):
 
@@ -65,7 +74,14 @@ The sentences (exact text; the design and the tests are the same words):
   Copilot CLI with /login does not apply to CanvasPilot." (the sentence of the starter).
 - `CopilotRuntimeUnavailable`: the sentence of the starter for a start that failed for another reason (the message of
   the AI library, or "The Copilot runtime could not be started. Choose Check connection to try again.").
-- `Ready` (Copilot): "GitHub Copilot CLI {version} is ready."
+- `Ready` (Copilot): "GitHub Copilot CLI {version} is ready." (no model named), or "GitHub Copilot CLI {version} is
+  ready with the model {id}."
+- `ModelSettingsInvalid`: the sentence of the AI library, for example "Model 'x' does not support tool calling, which
+  this application requires." or "Model 'claude-haiku-5.5' does not support reasoning effort 'bogus'. Supported: low,
+  medium, high, xhigh, max." or "Model 'x' is not available from provider 'copilot'. It may have been removed or you may
+  no longer have access." (problems are joined with a space).
+- `ModelLacksVision`: "The model {id} does not accept pictures, so it cannot see the drawings and marks; choose a model
+  with vision for the best results." The status is usable.
 
 **Why the sign-in sentence says what it says.** The AI library starts its own Copilot runtime with a home of its own and
 signs in with a GitHub token, from the variables above or from a signed-in GitHub CLI. The sign-in that the Copilot CLI
@@ -84,16 +100,28 @@ item): a way to use the CLI's own session.
 3. *Model.* The model matches a listed name ignoring case, where a name without a tag means the `latest` tag, as it does
    for `ollama pull`. No match is `OllamaModelMissing`: "Ollama does not have the model {model}; run
    `ollama pull {model}`, then choose Check connection."
-4. *Context window.* `GetContextLengthAsync` (5 seconds, optional) gives the largest window of the model, read from the
-   entry of the model information whose key ends in `.context_length`. The effective window is the smaller of the
+4. *Model settings.* The catalog of the server (`IOllamaModelCatalogs.For(address)`, which describes each model from
+   `/api/show` and keeps the answer for a few minutes) validates the model with the context window and the reasoning
+   effort of the settings and the requirement that the model can call tools; the name is matched to the id that the
+   catalog spells (`qwen3` is `qwen3:latest`). A refusal is `ModelSettingsInvalid` with the sentence of the AI library:
+   the model cannot call tools or is an embedding model, the window is larger than the model was trained for ("Model 'x'
+   supports at most 8,192 tokens; a 32,768-token window is not supported."), or the effort is not offered. A catalog
+   that cannot be read in 15 seconds (`ProviderModelCatalog.OllamaListTimeout`) leaves the settings unchecked, because
+   the list of models just answered: the first turn finds a problem, if there is one.
+5. *Context window.* `GetContextLengthAsync` (5 seconds, optional) gives the largest window of the model, read from the
+   entry of the model information whose key ends in `.context_length`, or, when the server does not answer, the length
+   that the catalog gave. The effective window is the smaller of the
    configured window and that value (the configured window alone when it is not known). Below 16,384 tokens
    (`AiProviderSettings.RecommendedMinimumContextTokens`) the status is `OllamaContextTooSmall`, which can still run a
    turn. When the setting is the smaller value: "The context window ({n} tokens) is below 16,384; drawings with images
    and tools may fail. Raise it in Settings (32,768 recommended)." When the model's limit is the smaller value (so
    raising the setting cannot help): "The model supports only {d} tokens, below 16,384; drawings with images and tools
    may fail, so choose a model with a larger context window." Numbers use thousands separators.
-5. *Ready.* "Ollama is running with the model {model}; pictures work only with a vision-capable model." The hint is
-   only in this sentence; the check cannot tell whether the model can see pictures.
+6. *Ready.* With the catalog: "Ollama is running with the model {id}." and, for a model that cannot take pictures, the
+   usable `ModelLacksVision` with the sentence above; when the window of step 5 is also too small, the status is
+   `OllamaContextTooSmall` and the sentence is the one of step 5 followed by the sentence about pictures. Without the
+   catalog the hint stays: "Ollama is running with the model {model}; pictures work only with a vision-capable model."
+   The hint is only in this sentence; without the catalog the check cannot tell whether the model can see pictures.
 
 #### Key Methods
 
@@ -128,9 +156,11 @@ fixed text with the CLI version, a path, an address, or a model name as the only
 
 `CopilotCliLocator` (the CLI and its version, and the process runner, file system reader, and environment reader that
 the locator and the credential check share), `AiProviderSettings` and `IProviderCheck` of the Settings subsystem, the
-`AgentReadinessReport` of the contract, and the OllamaSharp library (`OllamaApiClient`) in `OllamaProbe` only. The unit
-does not use AgentKit or the Copilot SDK: the Copilot runtime is behind the starter, which the `CopilotRuntimeStarter`
-unit implements.
+`AgentReadinessReport` of the contract, `ModelRequirements` (the policy of what the application needs of a model, of the
+`ProviderModelCatalog` unit), the model types and catalogs of DemaConsulting.AgentKit.Core (`ModelSelection`,
+`ModelSettingsException`, `SelectAsync`), and the OllamaSharp library (`OllamaApiClient`) in `OllamaProbe` only. The
+unit does not use the Copilot SDK: the Copilot runtime is behind the starter, which the `CopilotRuntimeStarter` unit
+implements, and the Ollama catalogs are behind `IOllamaModelCatalogs`.
 
 #### Callers
 

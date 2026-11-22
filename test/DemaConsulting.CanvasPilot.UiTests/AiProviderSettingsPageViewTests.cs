@@ -112,29 +112,174 @@ public sealed class AiProviderSettingsPageViewTests
     }
 
     /// <summary>
-    ///     Test that the reasoning level is shown disabled, with the stored value and the note that says why.
+    ///     Test that the reasoning level of a model that offers none is disabled, and that the stored value is still shown
+    ///     while nothing is known about the model.
     /// </summary>
     [AvaloniaFact]
-    public void AiProviderSettingsPageView_ReasoningLevel_IsDisabledWithNote()
+    public void AiProviderSettingsPageView_ReasoningEffort_IsDisabledWhileTheModelIsNotKnown()
     {
-        // Arrange: a shown page loaded with a stored reasoning level
+        // Arrange: a shown page without a model list, loaded with a stored model and reasoning effort
         var viewModel = new AiProviderSettingsPageViewModel();
-        viewModel.Load(new AppSettings { AiProvider = new AiProviderSettings { ReasoningLevel = ReasoningLevel.High } });
+        viewModel.Load(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "typed-model", ReasoningEffort = "xhigh" } });
         var window = new Window { Content = new AiProviderSettingsPageView { DataContext = viewModel } };
         window.Show();
 
         // Act: find the combo box and its note
-        var combo = SettingsUiHelpers.Find<ComboBox>(window, "AiReasoningLevelComboBox");
-        var note = SettingsUiHelpers.Find<TextBlock>(window, "AiReasoningLevelNote");
+        var combo = SettingsUiHelpers.Find<ComboBox>(window, "AiReasoningEffortComboBox");
+        var note = SettingsUiHelpers.Find<TextBlock>(window, "AiReasoningEffortNote");
 
-        // Assert: the combo box cannot be used, still shows the stored value, and the note is the agreed sentence
+        // Assert: the combo box cannot be used, still shows the stored value, and the note says why
         Assert.False(combo.IsEnabled);
-        Assert.Equal(ReasoningLevel.High, viewModel.SelectedReasoningLevel.Value);
-        Assert.Equal(viewModel.SelectedReasoningLevel, combo.SelectedItem);
-        Assert.Equal("Not available yet: the AI library does not expose it", note.Text);
+        Assert.Equal("xhigh", ((SettingsChoice<string>)combo.SelectedItem!).Value);
         Assert.True(note.IsVisible);
+        Assert.Contains("not known", note.Text, StringComparison.Ordinal);
 
         window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the page lists the models with a note on what each lacks, shows the capabilities and the warnings of the
+    ///     chosen model, enables the reasoning level from the model, and stores the model and the level that were chosen.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AiProviderSettingsPageView_ModelList_ShowsCapabilitiesWarningsAndReasoningLevels()
+    {
+        // Arrange: a shown page over a source with a model that can do everything and one that cannot see pictures
+        var source = new FixedModels(
+            Model("full-model", vision: true, efforts: ["low", "high", "xhigh"]),
+            Model("blind-model", vision: false));
+        var viewModel = new AiProviderSettingsPageViewModel(null, source, TimeSpan.Zero);
+        viewModel.Load(new AppSettings());
+        await viewModel.ModelListLoaded;
+        var window = new Window { Width = 520, Height = 1300, Content = new AiProviderSettingsPageView { DataContext = viewModel } };
+        window.Show();
+        var models = SettingsUiHelpers.Find<ComboBox>(window, "AiModelComboBox");
+        var details = SettingsUiHelpers.Find<TextBlock>(window, "AiModelDetails");
+        var warning = SettingsUiHelpers.Find<TextBlock>(window, "AiModelWarning");
+        var efforts = SettingsUiHelpers.Find<ComboBox>(window, "AiReasoningEffortComboBox");
+        var shownBefore = models.IsVisible;
+        var effortsEnabledBefore = efforts.IsEnabled;
+
+        // Act: choose the model that sees pictures and a level, then the one that cannot see
+        models.SelectedItem = viewModel.Models.Single(choice => choice.Id == "full-model");
+        var effortsEnabledForFull = efforts.IsEnabled;
+        var detailsOfFull = details.Text;
+        var warningShownForFull = warning.IsVisible;
+        efforts.SelectedItem = viewModel.ReasoningEfforts.Single(choice => choice.Value == "xhigh");
+        var stored = viewModel.Apply(new AppSettings()).AiProvider;
+        models.SelectedItem = viewModel.Models.Single(choice => choice.Id == "blind-model");
+
+        // Assert: the list was shown with its entries, the capabilities were listed, the warning appeared only for the model
+        // that lacks pictures, the level was enabled only while the model offers some, and the choice was stored
+        Assert.True(shownBefore);
+        Assert.False(effortsEnabledBefore);
+        Assert.Equal(3, models.ItemCount);
+        Assert.Contains(viewModel.Models, choice => choice.Label.Contains("no pictures", StringComparison.Ordinal));
+        Assert.True(effortsEnabledForFull);
+        Assert.Contains("Tool calling: yes", detailsOfFull, StringComparison.Ordinal);
+        Assert.Contains("low, high, xhigh", detailsOfFull, StringComparison.Ordinal);
+        Assert.False(warningShownForFull);
+        Assert.Equal("full-model", stored.ModelName);
+        Assert.Equal("xhigh", stored.ReasoningEffort);
+        Assert.True(warning.IsVisible);
+        Assert.Contains("does not accept pictures", warning.Text, StringComparison.Ordinal);
+        Assert.False(efforts.IsEnabled);
+        Assert.Equal(string.Empty, viewModel.Apply(new AppSettings()).AiProvider.ReasoningEffort);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that a model that cannot be used is shown disabled in the list, and that the typed model name and the message
+    ///     stay available when the list could not be read, with the Refresh models button asking again.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AiProviderSettingsPageView_ModelListFails_KeepsTheTypedNameAndShowsTheMessage()
+    {
+        // Arrange: a page over a source that cannot be asked
+        var source = new FixedModels { Message = "Ollama did not answer at http://localhost:11434." };
+        var viewModel = new AiProviderSettingsPageViewModel(null, source, TimeSpan.Zero);
+        viewModel.Load(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "typed-model" } });
+        await viewModel.ModelListLoaded;
+        var window = new Window { Width = 520, Height = 1300, Content = new AiProviderSettingsPageView { DataContext = viewModel } };
+        window.Show();
+        var models = SettingsUiHelpers.Find<ComboBox>(window, "AiModelComboBox");
+        var message = SettingsUiHelpers.Find<TextBlock>(window, "AiModelListMessage");
+        var refresh = SettingsUiHelpers.Find<Button>(window, "AiRefreshModelsButton");
+        var typed = SettingsUiHelpers.Find<TextBox>(window, "AiModelNameTextBox");
+        var messageBefore = message.Text;
+        var listShownBefore = models.IsVisible;
+
+        // Act: the server comes up, and the user chooses Refresh models
+        source.Message = string.Empty;
+        source.Models = [Model("typed-model"), Model("disabled-model", usable: false)];
+        SettingsUiHelpers.Click(window, refresh);
+        await viewModel.ModelListLoaded;
+
+        // Assert: before, no list but the message and the typed name; after, the list with the typed name chosen and the
+        // model that cannot be used disabled
+        Assert.Equal(2, source.Calls);
+        Assert.False(listShownBefore);
+        Assert.Contains("did not answer", messageBefore ?? string.Empty, StringComparison.Ordinal);
+        Assert.Equal("typed-model", typed.Text);
+        Assert.True(models.IsVisible);
+        Assert.Equal("typed-model", ((ModelChoice)models.SelectedItem!).Id);
+        Assert.True(source.LastRefresh);
+        Assert.False(viewModel.Models.Single(choice => choice.Id == "disabled-model").IsSelectable);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     A source of models that answers at once with what the test sets.
+    /// </summary>
+    /// <param name="models">The models to answer with.</param>
+    private sealed class FixedModels(params ProviderModelInfo[] models) : IProviderModelSource
+    {
+        /// <summary>Gets or sets the models to answer with.</summary>
+        public ProviderModelInfo[] Models { get; set; } = models;
+
+        /// <summary>Gets or sets the message to answer with.</summary>
+        public string Message { get; set; } = string.Empty;
+
+        /// <summary>Gets the number of calls.</summary>
+        public int Calls { get; private set; }
+
+        /// <summary>Gets a value indicating whether the last call asked to refresh.</summary>
+        public bool LastRefresh { get; private set; }
+
+        /// <inheritdoc />
+        public Task<ProviderModelList> ListModelsAsync(AiProviderSettings settings, bool refresh = false, CancellationToken cancellationToken = default)
+        {
+            Calls++;
+            LastRefresh = refresh;
+            return Task.FromResult(new ProviderModelList(Models, Message));
+        }
+    }
+
+    /// <summary>
+    ///     Makes a model of the provider.
+    /// </summary>
+    /// <param name="id">The id of the model.</param>
+    /// <param name="vision">Whether the model accepts pictures.</param>
+    /// <param name="efforts">The ids of the efforts that the model offers.</param>
+    /// <param name="usable">Whether the model can be used.</param>
+    /// <returns>The model.</returns>
+    private static ProviderModelInfo Model(string id, bool vision = true, string[]? efforts = null, bool usable = true)
+    {
+        var offered = efforts ?? [];
+        return new ProviderModelInfo(
+            id,
+            id,
+            true,
+            vision,
+            offered.Length > 0,
+            256_000,
+            [.. offered.Select(effort => new ProviderEffortChoice(effort, effort))],
+            null,
+            usable,
+            usable ? null : "Disabled by the organization.",
+            []);
     }
 
     /// <summary>

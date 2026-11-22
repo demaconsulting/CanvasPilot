@@ -85,6 +85,40 @@ sections:
             tests:
               - AgentKit_OllamaContextSizingChatClient_GetResponse_AddsContextLengthWithoutChangingCallersOptions
 
+          - id: CanvasPilot-OTS-AgentKit-ValidateModelSettings
+            title: >-
+              The AgentKit model settings shall report as a sentence each way in which settings do not fit a model (a
+              capability that the application requires and the model lacks, a reasoning effort that the model does not
+              offer with the efforts that it offers, a model that cannot be used with the reason, a context window larger
+              than the model supports), refuse to bind such settings to a selection, spell the model of a selection as the
+              catalog does, and the model settings chat client shall add the model and the standard reasoning effort of
+              the selection to the options of every request without changing the options of its caller and shall refuse a
+              context window that no client beneath applies.
+            justification: |
+              The application validates the model and the effort that the user chose when a conversation starts, and shows
+              the sentences of the library to the user unchanged, so the sentences must name the problem and what is
+              supported. The effort reaches the provider only through the selection, so the client that applies it must
+              do so on every request, including the ones that follow a tool call, and must not alter options that other
+              code shares.
+            tags: [ots]
+            tests:
+              - AgentKit_ModelSettings_Validate_RefusesWhatTheModelCannotDoAndBindsWhatFits
+              - AgentKit_ModelSettingsChatClient_GetResponse_AddsTheModelAndEffortWithoutChangingCallersOptions
+
+          - id: CanvasPilot-OTS-AgentKit-DescribeOllamaModels
+            title: >-
+              The AgentKit Ollama model catalog shall list the models of a server from its tags and describe each from the
+              description that the server gives: the capabilities that it reports (tool calling, pictures, thinking), the
+              context length that it was trained for, the reasoning efforts of a model that thinks, and an embedding model
+              as one that cannot be used, and shall find a model by a name without a tag as the latest tag.
+            justification: |
+              The settings page lists the models of an Ollama server and the readiness check validates the model that the
+              user chose, from what the catalog says. The shape of the answers of the server is an assumption that only a
+              test of the real library against answers in that shape confirms, so a change in either shows here.
+            tags: [ots]
+            tests:
+              - AgentKit_OllamaModelCatalog_ListAsync_DescribesCapabilitiesWindowAndEfforts
+
           - id: CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
             title: >-
               With the Copilot SDK download of its runtime switched off, the AgentKit Copilot libraries shall add no

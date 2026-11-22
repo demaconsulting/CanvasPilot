@@ -8,7 +8,10 @@ the chat requests from a queue of newline-delimited JSON bodies (the form in whi
 address and the body of every request. A real `OllamaApiClient`, the real context sizing client, and the real agent of
 the AI library run on it, so the tests see what would go over the wire: the address, the model, the `num_ctx` of every
 request, the instructions, the tool schema, and the result of the tool in the second request, and they run a whole tool
-turn whose updates are mapped by the real `AgentEventMapper`. The Copilot runtime cannot be started in a test that runs
+turn whose updates are mapped by the real `AgentEventMapper`. The model settings are verified two ways: with a fake
+`IOllamaModelCatalogs` (and, for Copilot, the fake catalog of the fake runtime) that holds the models of a test and can
+fail, and with the real `OllamaModelCatalog` of the AI library over the same stand-in server, to show that the real
+catalog's answers reach the validation and the wire. The Copilot runtime cannot be started in a test that runs
 everywhere, so the Copilot branch is verified with a fake starter that hands over a fake `ICopilotAgentSource` whose
 agents talk to a scripted chat client, with starters that refuse the runtime for each cause, and with the real
 `CopilotRuntimeStarter` over a start function that stands in for the runtime (to show the sharing, the data folder, and
@@ -53,10 +56,22 @@ is used.
 - On a machine with no CLI the result is `CopilotCliMissing` with the install sentence, with a CLI of 1.0.100 it is
   `CopilotCliTooOld` that names the version, and the starter was not asked in either case.
 - With a fake starter every request asks the starter with the path and the version of the real CLI of the machine; two
-  agents are made on the runtime of the starter, each with the supplied tools, the instructions, the name
-  `CanvasPilot`, and the project folder, the first with no model for a blank name and the second with the model
-  `gpt-5.4-mini` for the name with spaces around it; a turn on the first runs through its agent; disposing the results
-  and a factory that does not own the starter does not dispose the runtime, which belongs to the starter.
+  agents are made on the runtime of the starter, each with the supplied tools, the instructions, the name `CanvasPilot`,
+  and the project folder, the first with no model selection for a blank name and the second with the selection of the
+  model `gpt-5.4-mini` for the name with spaces around it; a turn on the first runs through its agent; disposing the
+  results and a factory that does not own the starter does not dispose the runtime, which belongs to the starter.
+- The model and the reasoning effort of Copilot settings are validated by the catalog of the runtime: the selection that
+  reaches the agent has the id of the model and the effort and no window; an effort without a model is not used; a model
+  that cannot call tools, a model that the catalog does not have, an effort that the model does not offer (with the
+  effort that it offers named), an effort for a model that offers none, and a model that cannot be used each give
+  `ModelSettingsInvalid` with the sentence of the library and no agent; a catalog that fails gives
+  `CopilotRuntimeUnavailable` with its message.
+- The model, window, and effort of Ollama settings are validated by the catalog of the server: through the real catalog
+  and a stand-in server, `qwen3` with the effort `high` and a window of 24,576 sends the chat request for `qwen3:latest`
+  with `num_ctx` 24576 and a thinking level; a model without tool calling, a window above what a model was trained for,
+  an effort that a model does not offer, and a model that the server does not have give `ModelSettingsInvalid` with the
+  sentence of the library, no agent, and no chat request; a catalog that cannot be read (an unreachable server) leaves
+  the typed model to be tried as it was typed.
 - A factory that owns its starter stops the runtime once when it is disposed twice, and then refuses a request.
 - A starter that fails gives `CopilotRuntimeUnavailable` with its sentence, a starter that says started without a
   source gives `NoAgentSourceMessage`, and in both cases the starter is asked again by the next request.
@@ -102,6 +117,39 @@ first disposed twice, and a turn on the second. This scenario is tested by
 starter that answers CLI too old, not signed in, or failed in turn, with the sentence "The sentence of the starter."
 Each gives the matching status, that sentence, and no agent. This scenario is tested by
 `AgentProviderFactory_Create_Copilot_StarterRefuses_ReturnsTheMatchingStatusAndNoAgent`.
+
+**AgentProviderFactory_Create_Copilot_ModelAndEffort_ReachTheAgentAsTheSelection**: A runtime whose catalog offers
+`claude-haiku-5.5` with the efforts `low`, `medium`, and `xhigh`. Settings with that model and `xhigh` make an agent
+whose request carries a selection with that model, that effort, and no window; settings with an effort and no model make
+an agent with no selection. This scenario is tested by
+`AgentProviderFactory_Create_Copilot_ModelAndEffort_ReachTheAgentAsTheSelection`.
+
+**AgentProviderFactory_Create_Copilot_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid**: Five settings against a
+catalog of four models: a model without tool calling, a model that the catalog does not have, an effort `bogus` (the
+sentence names `low, medium`), an effort for a model that offers none, and a model that cannot be used. Each gives
+`ModelSettingsInvalid`, the matching part of the sentence of the library, and no agent request. This scenario is tested
+by `AgentProviderFactory_Create_Copilot_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid`.
+
+**AgentProviderFactory_Create_Copilot_CatalogCannotBeRead_IsRuntimeUnavailable**: A catalog that fails with the message
+of a runtime that is not signed in gives `CopilotRuntimeUnavailable` with that message. This scenario is tested by
+`AgentProviderFactory_Create_Copilot_CatalogCannotBeRead_IsRuntimeUnavailable`.
+
+**AgentProviderFactory_Create_Ollama_ModelEffortAndWindow_ReachTheWire**: The real catalog of the AI library over a
+stand-in server whose `/api/tags` lists `qwen3:latest` and whose `/api/show` says that it can complete, call tools, and
+think and was trained for 40,960 tokens. Settings with the model `qwen3`, the effort `high`, and a window of 24,576 make
+an agent; a turn sends one chat request that names `qwen3:latest`, `num_ctx` 24576, and a `think` setting. This scenario
+is tested by `AgentProviderFactory_Create_Ollama_ModelEffortAndWindow_ReachTheWire`.
+
+**AgentProviderFactory_Create_Ollama_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid**: A fake catalog with an
+ordinary model, a model without tool calling, and a model trained for 8,192 tokens. A model without tools ("does not
+support tool calling"), a window of 24,576 for the small model ("supports at most 8,192 tokens; a 24,576-token window is
+not supported"), the effort `high` for a model that offers none, and a model that the catalog does not have each give
+`ModelSettingsInvalid` and the sentence, and the server was never asked a chat request. This scenario is tested by
+`AgentProviderFactory_Create_Ollama_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid`.
+
+**AgentProviderFactory_Create_Ollama_CatalogUnreachable_UsesTheTypedModelWithoutACheck**: A catalog that fails like a
+server that does not answer. The agent is made and a turn runs with the typed model name on the wire. This scenario is
+tested by `AgentProviderFactory_Create_Ollama_CatalogUnreachable_UsesTheTypedModelWithoutACheck`.
 
 **AgentProviderFactory_Create_Copilot_NoCliOrOldCli_ReportsTheCliAndDoesNotStart**: A machine with nothing installed
 and a machine with a CLI of 1.0.100, with a starter that records its requests. This scenario is tested by

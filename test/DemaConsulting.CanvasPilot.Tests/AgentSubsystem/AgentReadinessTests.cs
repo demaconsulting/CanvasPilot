@@ -61,13 +61,18 @@ public sealed class AgentReadinessTests
     /// <param name="fileSystem">The file system; the development machine when not given.</param>
     /// <param name="starter">The starter; one that starts the runtime when <see langword="null" />.</param>
     /// <param name="probe">The Ollama probe; one that finds no server when <see langword="null" />.</param>
+    /// <param name="ollamaCatalogs">
+    ///     The catalog of the Ollama server; one that cannot be read when <see langword="null" />, which leaves the model
+    ///     settings unchecked, as for a server that does not describe its models.
+    /// </param>
     /// <returns>The readiness check.</returns>
     private static AgentReadiness Create(
         FakeProcessRunner? runner = null,
         FakeEnvironment? environment = null,
         FakeCliFileSystem? fileSystem = null,
         ICopilotRuntimeStarter? starter = null,
-        IOllamaProbe? probe = null)
+        IOllamaProbe? probe = null,
+        IOllamaModelCatalogs? ollamaCatalogs = null)
     {
         if (runner is null)
         {
@@ -83,7 +88,8 @@ public sealed class AgentReadinessTests
             runner,
             environment,
             fileSystem,
-            probe ?? new FakeOllamaProbe());
+            probe ?? new FakeOllamaProbe(),
+            ollamaCatalogs ?? new FakeOllamaCatalogs(new FakeModelCatalog("ollama") { Failure = new HttpRequestException("No server.") }));
     }
 
     /// <summary>
@@ -441,6 +447,95 @@ public sealed class AgentReadinessTests
     }
 
     /// <summary>
+    ///     Test that the model of the settings is validated by the catalog of the running runtime: a model that can call
+    ///     tools and take pictures is ready, and the sentence names it; no model named is ready on the default model.
+    /// </summary>
+    [Fact]
+    public async Task AgentReadiness_Copilot_ModelOfTheSettings_IsValidatedByTheRuntimeCatalogAndNamedWhenReady()
+    {
+        // Arrange: a runtime whose catalog offers a model with reasoning efforts
+        var environment = DevMachine.CreateEnvironment();
+        environment.Set("GITHUB_TOKEN", SecretToken);
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient(), new FakeModelCatalog("copilot", TestModels.Make("copilot", "claude-haiku-5.5", efforts: ["low", "xhigh"])));
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started", source));
+        var readiness = Create(environment: environment, starter: starter);
+        var token = TestContext.Current.CancellationToken;
+
+        // Act: the model with an effort that it offers, and no model
+        var chosen = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "claude-haiku-5.5", ReasoningEffort = "xhigh" }, cancellationToken: token);
+        var none = await readiness.GetReportAsync(CopilotSettings, cancellationToken: token);
+
+        // Assert
+        Assert.Equal(AgentReadinessStatus.Ready, chosen.Status);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready with the model claude-haiku-5.5.", chosen.Message);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", none.Message);
+    }
+
+    /// <summary>
+    ///     Test that model settings that the catalog of the runtime refuses are reported as invalid, with the sentence of
+    ///     the library, and are not usable.
+    /// </summary>
+    /// <param name="model">The model of the settings.</param>
+    /// <param name="effort">The reasoning effort of the settings.</param>
+    /// <param name="sentence">The part of the sentence of the library.</param>
+    [Theory]
+    [InlineData("no-tools", "", "does not support tool calling")]
+    [InlineData("absent", "", "is not available from provider 'copilot'")]
+    [InlineData("full", "bogus", "does not support reasoning effort 'bogus'. Supported: low, high.")]
+    [InlineData("disabled", "", "cannot be used: The model is disabled by your organization.")]
+    public async Task AgentReadiness_Copilot_ModelSettingsTheCatalogRefuses_ReportModelSettingsInvalid(string model, string effort, string sentence)
+    {
+        // Arrange: a runtime with a few models
+        var environment = DevMachine.CreateEnvironment();
+        environment.Set("GITHUB_TOKEN", SecretToken);
+        var catalog = new FakeModelCatalog(
+            "copilot",
+            TestModels.Make("copilot", "full", efforts: ["low", "high"]),
+            TestModels.Make("copilot", "no-tools", toolCalls: false),
+            TestModels.Make("copilot", "disabled", usable: false));
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient(), catalog);
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started", source));
+        var readiness = Create(environment: environment, starter: starter);
+
+        // Act
+        var report = await readiness.GetReportAsync(new AiProviderSettings { ModelName = model, ReasoningEffort = effort }, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, report.Status);
+        Assert.False(report.IsUsable);
+        Assert.Contains(sentence, report.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a model that cannot take pictures is a warning that does not stop the provider, and that a catalog that
+    ///     cannot be read is reported as a runtime that cannot be used.
+    /// </summary>
+    [Fact]
+    public async Task AgentReadiness_Copilot_ModelWithoutVisionAndUnreadableCatalog_WarnsAndReportsTheRuntime()
+    {
+        // Arrange: a runtime with a model that cannot see
+        var environment = DevMachine.CreateEnvironment();
+        environment.Set("GITHUB_TOKEN", SecretToken);
+        var catalog = new FakeModelCatalog("copilot", TestModels.Make("copilot", "blind", vision: false));
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient(), catalog);
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started", source));
+        var readiness = Create(environment: environment, starter: starter);
+        var token = TestContext.Current.CancellationToken;
+
+        // Act: the model that cannot see, then a catalog that fails
+        var blind = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "blind" }, cancellationToken: token);
+        catalog.Failure = new InvalidOperationException("The Copilot runtime could not list models: it is not signed in.");
+        var failed = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "blind" }, cancellationToken: token);
+
+        // Assert: a usable warning that says why, and then the runtime problem
+        Assert.Equal(AgentReadinessStatus.ModelLacksVision, blind.Status);
+        Assert.True(blind.IsUsable);
+        Assert.Contains("blind does not accept pictures", blind.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, failed.Status);
+        Assert.Contains("could not list models", failed.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that the plain check searches again only when asked: the second plain check reuses the answer, and Check
     ///     connection (through the settings interface) asks the CLI again.
     /// </summary>
@@ -675,6 +770,71 @@ public sealed class AgentReadinessTests
         {
             Assert.Equal(sentence, report.Message);
         }
+    }
+
+    /// <summary>
+    ///     Test that the model settings are validated by the catalog of the server: a model that can do everything is ready
+    ///     and named by the catalog's id, a model without tool calling and a window above the trained length are invalid,
+    ///     and a model that cannot see is a usable warning that is combined with the warning for a small window.
+    /// </summary>
+    [Fact]
+    public async Task AgentReadiness_Ollama_ModelSettings_AreValidatedByTheCatalogOfTheServer()
+    {
+        // Arrange: a server that lists four models, described by the catalog
+        var probe = new FakeOllamaProbe
+        {
+            Models = new OllamaModelList(true, ["full:latest", "no-tools:latest", "small:latest", "blind:latest"]),
+            ContextLength = null,
+        };
+        var catalog = new FakeModelCatalog(
+            "ollama",
+            TestModels.Make("ollama", "full:latest", windowTokens: 131_072),
+            TestModels.Make("ollama", "no-tools:latest", toolCalls: false),
+            TestModels.Make("ollama", "small:latest", windowTokens: 8192),
+            TestModels.Make("ollama", "blind:latest", vision: false, windowTokens: 131_072));
+        var readiness = Create(probe: probe, ollamaCatalogs: new FakeOllamaCatalogs(catalog));
+        var token = TestContext.Current.CancellationToken;
+
+        // Act
+        var ready = await readiness.GetReportAsync(OllamaSettings("full"), cancellationToken: token);
+        var noTools = await readiness.GetReportAsync(OllamaSettings("no-tools"), cancellationToken: token);
+        var tooLarge = await readiness.GetReportAsync(OllamaSettings("small", contextTokens: 32768), cancellationToken: token);
+        var blind = await readiness.GetReportAsync(OllamaSettings("blind"), cancellationToken: token);
+        var blindAndSmall = await readiness.GetReportAsync(OllamaSettings("blind", contextTokens: 4096), cancellationToken: token);
+
+        // Assert
+        Assert.Equal((AgentReadinessStatus.Ready, "Ollama is running with the model full:latest."), (ready.Status, ready.Message));
+        Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, noTools.Status);
+        Assert.False(noTools.IsUsable);
+        Assert.Contains("does not support tool calling", noTools.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, tooLarge.Status);
+        Assert.Contains("supports at most 8,192 tokens; a 32,768-token window is not supported", tooLarge.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentReadinessStatus.ModelLacksVision, blind.Status);
+        Assert.True(blind.IsUsable);
+        Assert.Contains("does not accept pictures", blind.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentReadinessStatus.OllamaContextTooSmall, blindAndSmall.Status);
+        Assert.Contains("4,096 tokens", blindAndSmall.Message, StringComparison.Ordinal);
+        Assert.Contains("does not accept pictures", blindAndSmall.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that the catalog's own limit is used for the small-window warning when the server did not answer the
+    ///     question about the context, so that a model trained for a small window is warned about.
+    /// </summary>
+    [Fact]
+    public async Task AgentReadiness_Ollama_NoContextAnswer_UsesTheTrainedLengthOfTheCatalog()
+    {
+        // Arrange: a model trained for 16,000 tokens, asked with a window that it can honor
+        var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["tiny:latest"]), ContextLength = null };
+        var catalog = new FakeModelCatalog("ollama", TestModels.Make("ollama", "tiny:latest", windowTokens: 16_000));
+        var readiness = Create(probe: probe, ollamaCatalogs: new FakeOllamaCatalogs(catalog));
+
+        // Act
+        var report = await readiness.GetReportAsync(OllamaSettings("tiny", contextTokens: 16_000), cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert: the window is the one the model supports, which is below the recommendation
+        Assert.Equal(AgentReadinessStatus.OllamaContextTooSmall, report.Status);
+        Assert.Contains("16,000", report.Message, StringComparison.Ordinal);
     }
 
     /// <summary>
