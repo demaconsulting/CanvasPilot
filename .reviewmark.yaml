@@ -101,6 +101,35 @@ reviews:
     paths:
       - "docs/reqstream/canvas-pilot/**/*.yaml"
 
+  # CanvasPilot - Agent
+  - id: CanvasPilot-Agent
+    title: Review of CanvasPilot Agent subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem.md"
+      - "docs/verification/canvas-pilot/agent-subsystem.md"
+      - "test/**/AgentSubsystem/AgentSubsystemTests.cs"
+
+  - id: CanvasPilot-Agent-AgentContract
+    title: Review of CanvasPilot AgentContract unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-contract.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-contract.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-contract.md"
+      - "src/**/AgentSubsystem/AgentEvent.cs"
+      - "src/**/AgentSubsystem/AgentReadinessReport.cs"
+      - "src/**/AgentSubsystem/AgentTurnRequest.cs"
+      - "src/**/AgentSubsystem/IAgentService.cs"
+      - "test/**/AgentSubsystem/AgentContractTests.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces

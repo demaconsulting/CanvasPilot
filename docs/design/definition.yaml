@@ -3,6 +3,7 @@ resource-path:
   - docs/design
   - docs/design/generated
   - docs/design/canvas-pilot
+  - docs/design/canvas-pilot/agent-subsystem
   - docs/design/canvas-pilot/annotation-subsystem
   - docs/design/canvas-pilot/app-shell-subsystem
   - docs/design/canvas-pilot/chat-subsystem
@@ -25,6 +26,8 @@ input-files:
   - docs/design/title.txt
   - docs/design/introduction.md
   - docs/design/canvas-pilot.md
+  - docs/design/canvas-pilot/agent-subsystem.md
+  - docs/design/canvas-pilot/agent-subsystem/agent-contract.md
   - docs/design/canvas-pilot/annotation-subsystem.md
   - docs/design/canvas-pilot/annotation-subsystem/annotation-overlay.md
   - docs/design/canvas-pilot/annotation-subsystem/mark-registry.md

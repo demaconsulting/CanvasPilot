@@ -32,6 +32,7 @@ package CanvasPilotDesignViews {
     private import Views::*;
     private import OtsDependencies::*;
     private import CanvasPilot::*;
+    private import CanvasPilot_AgentSubsystem::*;
     private import CanvasPilot_AnnotationSubsystem::*;
     private import CanvasPilot_AppShellSubsystem::*;
     private import CanvasPilot_ChatSubsystem::*;
@@ -71,6 +72,12 @@ package CanvasPilotDesignViews {
     view CanvasPilotView {
         expose CanvasPilotSystem;
         expose CanvasPilotSystem::*;
+        render asInterconnectionDiagram;
+    }
+
+    view AgentSubsystemView {
+        expose AgentSubsystem;
+        expose AgentSubsystem::*;
         render asInterconnectionDiagram;
     }
 

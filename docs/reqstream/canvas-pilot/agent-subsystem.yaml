@@ -1,0 +1,50 @@
+---
+# Agent Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Agent subsystem
+# - The Agent subsystem is the AI copilot behind the chat: it checks whether the chosen AI provider can be used, runs a
+#   turn (a message in, a stream of events out), and holds the conversation with that provider. It has no user
+#   interface, and the Chat subsystem reaches it only through the provider-independent IAgentService contract
+# - This file holds the requirements of the subsystem as a whole. Its first unit is AgentContract, the contract itself;
+#   the units that implement the contract (the provider, the tools, the readiness checks) add their requirements in
+#   their own files and are linked here as children as they are added
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Agent-RunTurnAsEvents
+            title: >-
+              The Agent subsystem shall give its consumers one interface, independent of the AI provider, that runs a
+              turn for a sent message, with the text of the earlier turns when a conversation was restored, as an
+              ordered stream of events (answer text, tool calls, files written, usage) that ends with completion or
+              with a failure of a named kind, and that resets the conversation.
+            justification: |
+              The chat must work the same whichever AI provider answers, and must not depend on the libraries of any of
+              them. One interface with plain records for the request and for the events lets the chat be written and
+              tested against a scripted service, lets a turn be stopped by cancellation, and gives every failure a kind
+              that the chat can explain to the user. Only one turn may run at a time, so a request made while a turn runs
+              has its own failure kind.
+            children:
+              - CanvasPilot-AgentContract-StreamTurnEvents
+            tests:
+              - AgentSubsystem_RunTurn_ScriptedService_StreamsEventsInOrderAndReceivesTheRequest
+              - AgentSubsystem_RunTurn_ScriptedBusyService_EndsWithFailedEventOfKindBusy
+
+          - id: CanvasPilot-Agent-DescribeReadiness
+            title: >-
+              The Agent subsystem shall describe whether the AI provider that the settings choose can be used as a
+              report with one status and one sentence for the user, and shall tell a provider that can be used, with or
+              without a warning, from one that cannot.
+            justification: |
+              The user must learn before the first message, and not from a failed turn, that the provider is missing,
+              not signed in, not running, or short of context, and what to do about it. A status that the chat can
+              act on, with a sentence that it can show unchanged, keeps the explanation in one place. A warning, such as
+              a small context window, must not stop the user from working, so it is a status that can still run a turn.
+            children:
+              - CanvasPilot-AgentContract-ReportReadiness
+            tests:
+              - AgentSubsystem_Readiness_ScriptedReports_SeparateUsableFromBlockedProviders

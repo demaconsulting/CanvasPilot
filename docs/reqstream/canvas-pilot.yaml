@@ -446,6 +446,8 @@ sections:
           carry the pictures, and talk to the Ollama server are verified as OTS items; the units of the Agent and Chat
           subsystems add the behavior of the application on top of them and link to this requirement.
         children:
+          - CanvasPilot-Agent-RunTurnAsEvents
+          - CanvasPilot-Agent-DescribeReadiness
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
           - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces

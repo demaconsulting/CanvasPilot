@@ -27,6 +27,8 @@ requirements; it explains how they are realized.
 Local items:
 
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
+  - **Agent** subsystem: **AgentContract** unit (`IAgentService`, the turn request, the events, and the readiness
+    report); the units that implement it are added as they are built.
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.
@@ -118,6 +120,8 @@ subsystems beside them, and the third-party items and the local data the applica
 
 - **src/** - source files and projects
   - **DemaConsulting.CanvasPilot/** - main application library source
+    - **AgentSubsystem/** - the AI copilot behind the chat: the provider-independent contract that runs a turn and
+      reports readiness
     - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, drawn with the pointer
       or the keyboard on a layer over the picture, and mapped to the parts of the source file under them
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
