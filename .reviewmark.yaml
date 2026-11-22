@@ -407,6 +407,8 @@ reviews:
       - "src/DemaConsulting.CanvasPilot.Desktop/Program.cs"
       - "test/**/AppShellSubsystem/AppShellSubsystemTests.cs"
       - "test/DemaConsulting.CanvasPilot.UiTests/TestAppBuilder.cs"
+      - "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotSupport.cs"
+      - "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotSmokeTests.cs"
 
   - id: CanvasPilot-AppShell-MainWindowShell
     title: Review of CanvasPilot MainWindowShell unit implementation

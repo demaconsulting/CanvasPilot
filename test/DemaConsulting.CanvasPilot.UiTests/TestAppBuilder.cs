@@ -39,10 +39,16 @@ public static class TestAppBuilder
     /// <summary>
     ///     Configures the headless Avalonia application instance shared by this assembly's Avalonia-backed tests.
     /// </summary>
+    /// <remarks>
+    ///     The embedded Inter font is registered, exactly as the desktop program registers it, so headless text is
+    ///     measured and drawn with the same font on every machine: layout assertions and screenshots do not depend on
+    ///     the system fonts of the machine that runs them.
+    /// </remarks>
     /// <returns>An <see cref="AppBuilder" /> configured for headless rendering.</returns>
     public static AppBuilder BuildAvaloniaApp()
     {
         return AppBuilder.Configure<App>()
+            .WithInterFont()
             .UseSkia()
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false });
     }

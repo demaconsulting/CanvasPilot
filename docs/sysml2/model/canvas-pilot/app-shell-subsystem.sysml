@@ -17,7 +17,9 @@ package CanvasPilot_AppShellSubsystem {
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/AppShellSubsystem/AppShellSubsystemTests.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/TestAppBuilder.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/TestAppBuilder.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotSupport.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotSmokeTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/app-shell-subsystem.md");
             verificationFiles = ("docs/verification/canvas-pilot/app-shell-subsystem.md");

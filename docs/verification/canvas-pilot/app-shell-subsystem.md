@@ -157,3 +157,17 @@ the server was not asked again. This scenario is tested by
 
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler
 is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_Throw`.
+
+### Screenshot Generation (Opt-In Tool)
+
+The pictures of the README and the user guide are drawn from the real application by headless UI tests of the `UiTests`
+project, so that they cannot drift from what the program shows. `ScreenshotSupport` shows a window at a fixed size and
+theme in the headless Avalonia platform with Skia and the embedded Inter font, lets it settle, and saves the drawn frame
+as a PNG. The screenshot tests carry the category `Screenshots` and skip themselves unless the environment variable
+`CANVASPILOT_SCREENSHOT_DIR` names an output folder, so the normal run of `build.ps1` writes nothing. The script
+`docs/images/render-screenshots.ps1` sets the variable and runs only those tests; with `-Check` it compares fresh
+pictures with the committed ones using a tolerance, and it is not part of the continuous integration because text
+hinting is not bit-for-bit the same on every operating system. The tool is not linked to a requirement; two tests keep
+it honest in every run: `ScreenshotSupport_Capture_WritesPngOfRequestedSize` proves that a drawn window is saved as a
+PNG of exactly the requested size that is not a single flat color, in both theme variants, and
+`ScreenshotSmoke_MainWindow_WritesBothThemes` is the opt-in smoke test of the whole route.
