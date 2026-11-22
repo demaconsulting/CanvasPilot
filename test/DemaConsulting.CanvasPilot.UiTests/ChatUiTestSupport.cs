@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Runtime.CompilerServices;
+using System.Threading.Channels;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -27,6 +29,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
@@ -211,8 +214,122 @@ internal sealed class RecordingInspectorLauncher : IPayloadInspectorLauncher
 }
 
 /// <summary>
+///     An AI copilot for the chat UI tests that answers a turn with the events that the test gives it, when the test
+///     gives them, and that reports the readiness that the test chooses.
+/// </summary>
+internal sealed class ScriptedAgentService : IAgentService
+{
+    /// <summary>
+    ///     The events of the turn that runs, which the test writes.
+    /// </summary>
+    private Channel<AgentEvent> _events = Channel.CreateUnbounded<AgentEvent>();
+
+    /// <inheritdoc />
+    public event EventHandler<FileWrittenEventArgs>? FileWritten;
+
+    /// <summary>
+    ///     Raises <see cref="FileWritten" />, as the real service does when a tool wrote a file.
+    /// </summary>
+    /// <param name="e">What the event carries.</param>
+    public void RaiseFileWritten(FileWrittenEventArgs e) => FileWritten?.Invoke(this, e);
+
+    /// <summary>
+    ///     Gets or sets what the readiness check finds.
+    /// </summary>
+    public AgentReadinessReport Readiness { get; set; } = new(AgentReadinessStatus.Ready, "Ready.");
+
+    /// <summary>
+    ///     Gets the number of readiness checks that were made.
+    /// </summary>
+    public int ReadinessCalls { get; private set; }
+
+    /// <summary>
+    ///     Gets the requests that were made, in order.
+    /// </summary>
+    public List<AgentTurnRequest> Requests { get; } = [];
+
+    /// <summary>
+    ///     Gets the cancellation token of the latest turn.
+    /// </summary>
+    public CancellationToken LatestToken { get; private set; }
+
+    /// <summary>
+    ///     Gives events to the turn that runs.
+    /// </summary>
+    /// <param name="events">The events, in order.</param>
+    public void Emit(params AgentEvent[] events)
+    {
+        foreach (var agentEvent in events)
+        {
+            _events.Writer.TryWrite(agentEvent);
+        }
+    }
+
+    /// <inheritdoc />
+    public Task<AgentReadinessReport> GetReadinessAsync(CancellationToken cancellationToken = default)
+    {
+        ReadinessCalls++;
+        return Task.FromResult(Readiness);
+    }
+
+    /// <inheritdoc />
+    public IAsyncEnumerable<AgentEvent> RunTurnAsync(AgentTurnRequest request, CancellationToken cancellationToken = default)
+    {
+        Requests.Add(request);
+        LatestToken = cancellationToken;
+        _events = Channel.CreateUnbounded<AgentEvent>();
+        return Read(_events, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public void ResetConversation()
+    {
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+    }
+
+    /// <summary>
+    ///     Reads the events of a turn as they are given; a canceled turn just ends, as the real service does.
+    /// </summary>
+    /// <param name="channel">The events of the turn.</param>
+    /// <param name="cancellationToken">The token of the turn.</param>
+    /// <returns>The events.</returns>
+    private static async IAsyncEnumerable<AgentEvent> Read(
+        Channel<AgentEvent> channel,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        while (true)
+        {
+            var more = false;
+            try
+            {
+                more = await channel.Reader.WaitToReadAsync(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // The real service ends the stream of a canceled turn without an event
+            }
+
+            if (!more)
+            {
+                yield break;
+            }
+
+            while (channel.Reader.TryRead(out var agentEvent))
+            {
+                yield return agentEvent;
+            }
+        }
+    }
+}
+
+/// <summary>
 ///     A window with the chat panel, its composer, the annotation layer, and a project folder, for the headless tests of
-///     the panel. Only dictation, the builder of sent messages, and the pictures of marks are replaced.
+///     the panel. Only dictation, the builder of sent messages, the pictures of marks, and, when a test asks for one, the
+///     AI copilot are replaced.
 /// </summary>
 internal sealed class ChatHarness : IDisposable
 {
@@ -220,7 +337,8 @@ internal sealed class ChatHarness : IDisposable
     ///     Initializes a new instance of the <see cref="ChatHarness" /> class and shows the window.
     /// </summary>
     /// <param name="openProject"><see langword="true" /> to open the project, which makes the message editable.</param>
-    public ChatHarness(bool openProject = true)
+    /// <param name="agent">The AI copilot of the panel, or <see langword="null" /> for none.</param>
+    public ChatHarness(bool openProject = true, IAgentService? agent = null)
     {
         Folder = Directory.CreateTempSubdirectory("canvaspilot-ui-chat-").FullName;
         Project = Path.Combine(Folder, "project");
@@ -230,7 +348,7 @@ internal sealed class ChatHarness : IDisposable
         Picture = AnnotationUiPictures.Picture();
         Composer = new ComposerViewModel(new TextPayloadBuilder(), Marks, Dictation);
         Annotation = new AnnotationOverlayViewModel(Marks, new FixedPictureSource { CurrentImage = Picture }, _ => { });
-        Chat = new ChatPanelViewModel(Composer, Marks, Annotation, new StubMarkImageComposer(), Dictation);
+        Chat = new ChatPanelViewModel(Composer, Marks, Annotation, new StubMarkImageComposer(), Dictation, agent: agent);
         View = new ChatPanelView { DataContext = Chat };
         Window = new Window { Width = 420, Height = 640, Content = View };
         Window.Show();
@@ -311,6 +429,36 @@ internal sealed class ChatHarness : IDisposable
     ///     Gets the entries that are shown in the transcript.
     /// </summary>
     public IReadOnlyList<TranscriptEntryView> Entries => FindAll<TranscriptEntryView>("TranscriptEntry");
+
+    /// <summary>
+    ///     Gets the parts of the answer of the copilot that are shown in the transcript.
+    /// </summary>
+    public IReadOnlyList<AssistantReplyView> Replies => FindAll<AssistantReplyView>("AssistantReply");
+
+    /// <summary>
+    ///     Gets the lines about tools that are shown in the transcript.
+    /// </summary>
+    public IReadOnlyList<ToolActivityRowView> ToolRows => FindAll<ToolActivityRowView>("ToolActivityRow");
+
+    /// <summary>
+    ///     Gets the notices that are shown in the transcript.
+    /// </summary>
+    public IReadOnlyList<NoticeRowView> Notices => FindAll<NoticeRowView>("NoticeRow");
+
+    /// <summary>
+    ///     Gets the stop button.
+    /// </summary>
+    public Button StopButton => Find<Button>("ChatStopButton");
+
+    /// <summary>
+    ///     Gets the row with the indicator that the copilot works and the stop button.
+    /// </summary>
+    public Grid BusyRow => Find<Grid>("ChatBusyIndicator");
+
+    /// <summary>
+    ///     Gets the banner of the readiness of the copilot.
+    /// </summary>
+    public Border Banner => Find<Border>("ChatReadinessBanner");
 
     /// <summary>
     ///     Gets the words of a transcript entry as the text block shows them, without the chips.

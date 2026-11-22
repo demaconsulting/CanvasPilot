@@ -89,9 +89,27 @@ internal sealed class ControlledAgentService : IAgentService
     /// <param name="exception">The exception.</param>
     public void Fault(Exception exception) => _events.Writer.TryComplete(exception);
 
+    /// <summary>
+    ///     Gets or sets what the readiness check finds.
+    /// </summary>
+    public AgentReadinessReport Readiness { get; set; } = new(AgentReadinessStatus.Ready, "Ready.");
+
+    /// <summary>
+    ///     Gets or sets an exception that the readiness check throws, or <see langword="null" /> for none.
+    /// </summary>
+    public Exception? ReadinessFailure { get; set; }
+
+    /// <summary>
+    ///     Gets the number of readiness checks that were made.
+    /// </summary>
+    public int ReadinessCalls { get; private set; }
+
     /// <inheritdoc />
-    public Task<AgentReadinessReport> GetReadinessAsync(CancellationToken cancellationToken = default) =>
-        throw new NotSupportedException("The chat turn does not check readiness.");
+    public Task<AgentReadinessReport> GetReadinessAsync(CancellationToken cancellationToken = default)
+    {
+        ReadinessCalls++;
+        return ReadinessFailure is null ? Task.FromResult(Readiness) : Task.FromException<AgentReadinessReport>(ReadinessFailure);
+    }
 
     /// <inheritdoc />
     public IAsyncEnumerable<AgentEvent> RunTurnAsync(AgentTurnRequest request, CancellationToken cancellationToken = default)

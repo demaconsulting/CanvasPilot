@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.ChatSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.ChatSubsystem.ToolActivityRowView"
+             x:DataType="vm:ToolActivityRowViewModel"
+             AutomationProperties.AutomationId="ToolActivityRow">
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.failed">
+      <Setter Property="Foreground" Value="#C0392B" />
+    </Style>
+  </UserControl.Styles>
+
+  <!-- One line about a tool that the copilot called: what it did, or what is under way -->
+  <Border Margin="12,0,0,6"
+          Padding="8,3"
+          CornerRadius="4"
+          Background="#10808080">
+    <StackPanel Orientation="Horizontal" Spacing="8">
+      <ProgressBar Name="RunningBar"
+                   AutomationProperties.AutomationId="ToolActivityRunning"
+                   Width="40"
+                   Height="4"
+                   IsIndeterminate="True"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsRunning}" />
+      <TextBlock Name="SummaryText"
+                 AutomationProperties.AutomationId="ToolActivitySummary"
+                 FontSize="12"
+                 TextWrapping="Wrap"
+                 Classes.failed="{Binding !Succeeded}"
+                 Text="{Binding Summary}" />
+    </StackPanel>
+  </Border>
+
+</UserControl>

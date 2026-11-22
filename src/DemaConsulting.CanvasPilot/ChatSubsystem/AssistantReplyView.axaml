@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.ChatSubsystem"
+             xmlns:knowledge="using:DemaConsulting.CanvasPilot.KnowledgeSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.ChatSubsystem.AssistantReplyView"
+             x:DataType="vm:AssistantReplyViewModel"
+             AutomationProperties.AutomationId="AssistantReply">
+
+  <!-- A part of the answer of the copilot: plain selectable text while it streams, and the same text drawn from its
+       Markdown once the part is whole; a part that was stopped or failed stays plain, because it may end in the middle
+       of a construct -->
+  <Border Margin="0,0,0,8"
+          Padding="8"
+          CornerRadius="6"
+          BorderThickness="1"
+          BorderBrush="#33808080">
+    <StackPanel Spacing="4">
+
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock FontWeight="SemiBold" Text="Copilot" />
+        <TextBlock Name="StatusLabelText"
+                   AutomationProperties.AutomationId="AssistantReplyStatus"
+                   Opacity="0.7"
+                   Text="{Binding StatusLabel}"
+                   IsVisible="{Binding StatusLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+
+      <SelectableTextBlock Name="ReplyText"
+                           AutomationProperties.AutomationId="AssistantReplyText"
+                           TextWrapping="Wrap"
+                           Text="{Binding Text}"
+                           IsVisible="{Binding !IsComplete}" />
+
+      <knowledge:MarkdownBlocksPanel Name="ReplyMarkdown"
+                                     AutomationProperties.AutomationId="AssistantReplyMarkdown"
+                                     Blocks="{Binding Blocks}"
+                                     IsVisible="{Binding IsComplete}" />
+
+    </StackPanel>
+  </Border>
+
+</UserControl>

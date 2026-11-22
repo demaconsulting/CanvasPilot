@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+
 namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
@@ -66,6 +68,11 @@ public sealed class AssistantReplyViewModel : TranscriptRowViewModel
     ///     What became of the reply.
     /// </summary>
     private AssistantReplyState _state;
+
+    /// <summary>
+    ///     The Markdown blocks of the text, read when they are first asked for.
+    /// </summary>
+    private IReadOnlyList<MarkdownBlock>? _blocks;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="AssistantReplyViewModel" /> class for a reply that starts to stream,
@@ -118,6 +125,13 @@ public sealed class AssistantReplyViewModel : TranscriptRowViewModel
     ///     Gets a value indicating whether the text is whole and final, so that the view can show it as Markdown.
     /// </summary>
     public bool IsComplete => _state == AssistantReplyState.Completed;
+
+    /// <summary>
+    ///     Gets the Markdown blocks of the text once the reply is complete, and <see langword="null" /> while it is
+    ///     streaming, stopped, or failed, when the text is shown as plain text. The text is read once and the blocks are
+    ///     kept.
+    /// </summary>
+    public IReadOnlyList<MarkdownBlock>? Blocks => IsComplete ? _blocks ??= KnowledgeMarkdown.Parse(_text) : null;
 
     /// <summary>
     ///     Gets the word that says what became of a reply that did not end normally: <c>Stopped</c> or <c>Failed</c>, and
@@ -183,6 +197,7 @@ public sealed class AssistantReplyViewModel : TranscriptRowViewModel
         OnPropertyChanged(nameof(State));
         OnPropertyChanged(nameof(IsStreaming));
         OnPropertyChanged(nameof(IsComplete));
+        OnPropertyChanged(nameof(Blocks));
         OnPropertyChanged(nameof(StatusLabel));
     }
 }

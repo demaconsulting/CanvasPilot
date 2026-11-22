@@ -189,6 +189,58 @@ public sealed class TranscriptRowTests
     }
 
     /// <summary>
+    ///     Test that the "Open Settings" command of a notice calls what the notice was given, and does nothing when it was
+    ///     given nothing.
+    /// </summary>
+    [Fact]
+    public void NoticeRowViewModel_OpenSettingsCommand_CallsWhatItWasGivenOrNothing()
+    {
+        // Arrange: a notice that opens the settings and one that has nothing to call
+        var opened = 0;
+        var withAction = new NoticeRowViewModel(NoticeSeverity.Error, "m", "r", canOpenSettings: true, openSettings: () => opened++);
+        var withoutAction = new NoticeRowViewModel(NoticeSeverity.Error, "m", "r", canOpenSettings: true);
+
+        // Act
+        withAction.OpenSettingsCommand.Execute(null);
+        withoutAction.OpenSettingsCommand.Execute(null);
+
+        // Assert: only the first one called its action, once
+        Assert.Equal(1, opened);
+    }
+
+    /// <summary>
+    ///     Test that a reply has Markdown blocks only when it is complete, read once from its final text, and none when it
+    ///     is streaming, stopped, or failed.
+    /// </summary>
+    [Fact]
+    public void AssistantReplyViewModel_Blocks_AreMarkdownOnlyOnceCompleted()
+    {
+        // Arrange: a reply that streams a heading and a paragraph
+        var announced = new List<string?>();
+        var reply = new AssistantReplyViewModel();
+        reply.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
+        reply.AppendText("# Title\n\nSome **bold** text.");
+        var whileStreaming = reply.Blocks;
+
+        // Act: complete it
+        reply.Complete();
+        var blocks = reply.Blocks;
+
+        // Assert: no blocks while streaming, a heading and a paragraph afterwards, the same list each time, and announced
+        Assert.Null(whileStreaming);
+        Assert.NotNull(blocks);
+        Assert.Equal(2, blocks.Count);
+        Assert.Same(blocks, reply.Blocks);
+        Assert.Contains(nameof(AssistantReplyViewModel.Blocks), announced);
+
+        // Assert: a stopped or failed reply stays plain
+        var stopped = new AssistantReplyViewModel("# cut", AssistantReplyState.Stopped);
+        var failed = new AssistantReplyViewModel("# cut", AssistantReplyState.Failed);
+        Assert.Null(stopped.Blocks);
+        Assert.Null(failed.Blocks);
+    }
+
+    /// <summary>
     ///     Test that the rows of the user, the copilot, the tools, and the notices tell their kind, and that the row of a
     ///     sent message is still the entry of the transcript with its payload and its summary.
     /// </summary>

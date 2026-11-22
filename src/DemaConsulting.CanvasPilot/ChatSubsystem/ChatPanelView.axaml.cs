@@ -43,8 +43,10 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         what listening does are the composer's.
 ///     </para>
 ///     <para>
-///         <b>Transcript.</b> The list shows one entry per sent message through the application's view locator, and
-///         scrolls to the newest entry when one is added. <b>Pictures.</b> The composer's editing control gets the panel's
+///         <b>Transcript.</b> The list shows one row per sent message, part of the answer, tool, and notice through the
+///         application's view locator, and scrolls to the newest row when one is added and while a reply grows. The banner
+///         of the readiness of the copilot, the indicator that it works, and the Stop button are bound to the view model.
+///         <b>Pictures.</b> The composer's editing control gets the panel's
 ///         provider of chip pictures, so that mark chips show the area around the mark.
 ///     </para>
 ///     <para>
@@ -113,10 +115,12 @@ public sealed partial class ChatPanelView : UserControl
     {
         base.OnAttachedToVisualTree(e);
 
-        // Load the speech engine now so that the first press of the talk button does not wait for it
+        // Load the speech engine now so that the first press of the talk button does not wait for it, and find out whether
+        // the copilot can be used so that the banner is right from the start
         if (_viewModel is not null)
         {
             _ = _viewModel.PrepareDictationAsync();
+            _ = _viewModel.RefreshReadinessAsync();
         }
     }
 
@@ -238,7 +242,7 @@ public sealed partial class ChatPanelView : UserControl
     }
 
     /// <summary>
-    ///     Scrolls to the newest message when one was added.
+    ///     Scrolls to the newest row when one was added, and to the end again while a reply of the copilot grows.
     /// </summary>
     /// <param name="sender">The transcript.</param>
     /// <param name="e">What changed.</param>
@@ -246,7 +250,31 @@ public sealed partial class ChatPanelView : UserControl
     {
         if (e.Action == NotifyCollectionChangedAction.Add)
         {
-            Dispatcher.UIThread.Post(() => TranscriptScroll.ScrollToEnd(), DispatcherPriority.Background);
+            foreach (var reply in e.NewItems?.OfType<AssistantReplyViewModel>() ?? [])
+            {
+                reply.PropertyChanged += OnReplyChanged;
+            }
+
+            ScrollToEndLater();
         }
     }
+
+    /// <summary>
+    ///     Scrolls to the end because the text of a reply grew.
+    /// </summary>
+    /// <param name="sender">The reply.</param>
+    /// <param name="e">The name of the property that changed.</param>
+    private void OnReplyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AssistantReplyViewModel.Text))
+        {
+            ScrollToEndLater();
+        }
+    }
+
+    /// <summary>
+    ///     Scrolls to the end when the layout has caught up.
+    /// </summary>
+    private void ScrollToEndLater() =>
+        Dispatcher.UIThread.Post(() => TranscriptScroll.ScrollToEnd(), DispatcherPriority.Background);
 }

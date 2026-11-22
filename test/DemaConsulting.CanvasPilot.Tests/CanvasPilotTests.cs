@@ -907,7 +907,7 @@ public sealed class CanvasPilotTests : IDisposable
         composition.Composer.InsertTyped(" green");
         var canSend = composition.Chat.CanSend;
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var entry = Assert.Single(composition.Chat.Transcript);
+        var entry = Assert.Single(composition.Chat.SentEntries);
         await entry.ViewPayloadCommand.ExecuteAsync(null);
         var shown = Assert.Single(launcher.Shown);
         var description = shown.Description;
@@ -1180,7 +1180,7 @@ public sealed class CanvasPilotTests : IDisposable
         var canSend = composition.Chat.CanSend;
         var attachmentsWhileDrafting = Directory.Exists(Path.Combine(folder, "attachments"));
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var entry = Assert.Single(composition.Chat.Transcript);
+        var entry = Assert.Single(composition.Chat.SentEntries);
         var items = entry.Items.Select(item => item.Text ?? "#").ToList();
         var chips = entry.Items.Select(item => item.Chip).ToList();
         var summary = entry.Summary;
@@ -1317,7 +1317,7 @@ public sealed class CanvasPilotTests : IDisposable
         Directory.CreateDirectory(store.AttachmentsFolder);
         await File.WriteAllTextAsync(Path.Combine(store.AttachmentsFolder, "brief.txt"), "mine", token);
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        var payload = Assert.Single(composition.Chat.SentEntries).Payload!;
         var paths = payload.Attachments.Select(attachment => attachment.ProjectRelativePath).ToList();
         var briefCopy = await File.ReadAllTextAsync(Path.Combine(folder, paths[0]), token);
         var folderCopy = (
@@ -1402,7 +1402,7 @@ public sealed class CanvasPilotTests : IDisposable
         var statusAfterDrop = composition.Composer.StatusText;
         var stillShown = composition.Preview.Image;
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        var payload = Assert.Single(composition.Chat.SentEntries).Payload!;
         var copies = new Dictionary<string, string>();
         foreach (var attachment in payload.Attachments)
         {
@@ -1499,7 +1499,7 @@ public sealed class CanvasPilotTests : IDisposable
         var afterSecond = (composition.Composer.Document.FlatText, composition.Composer.DictationState, composition.Chat.IsTalking);
         var canSend = composition.Chat.CanSend;
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var sent = Assert.Single(composition.Chat.Transcript).Payload!.Text;
+        var sent = Assert.Single(composition.Chat.SentEntries).Payload!.Text;
         composition.Dispose();
 
         // Assert: each answer says what to do and is not a failure, nothing was added or lost, no talk state is left over,
@@ -1593,7 +1593,7 @@ public sealed class CanvasPilotTests : IDisposable
         var onNewPicture = (composition.Annotation.VisibleMarks.Count, composition.Annotation.HiddenMarkCount, composition.Composer.MarkChipIds.Count);
         var afterEdit = (mark.Snapshot, mark.Geometry.Points.ToList());
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        var payload = Assert.Single(composition.Chat.SentEntries).Payload!;
         composition.Dispose();
 
         // Assert: the unchanged picture shows the mark where it was; the edited one has other pixels and does not show it

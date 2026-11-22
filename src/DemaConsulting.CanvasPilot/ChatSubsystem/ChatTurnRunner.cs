@@ -100,6 +100,11 @@ public sealed class ChatTurnRunner : IDisposable
     private readonly RollingFileLogger? _logger;
 
     /// <summary>
+    ///     What opens the settings from the error notices, or <see langword="null" /> for nothing.
+    /// </summary>
+    private readonly Action? _openSettings;
+
+    /// <summary>
     ///     Guards the text that waits and the rows that it is added to, which a timer and the turn can both reach.
     /// </summary>
     private readonly Lock _gate = new();
@@ -121,12 +126,14 @@ public sealed class ChatTurnRunner : IDisposable
     /// <param name="transcript">The transcript that the rows of a turn are added to.</param>
     /// <param name="clock">The clock and timers, or <see langword="null" /> for the system's.</param>
     /// <param name="logger">Optional logger for diagnostics.</param>
+    /// <param name="openSettings">What opens the settings when the user chooses it on an error notice, or <see langword="null" /> for nothing.</param>
     /// <exception cref="ArgumentNullException">Thrown when the agent or the transcript is <see langword="null" />.</exception>
     public ChatTurnRunner(
         IAgentService agent,
         ICollection<TranscriptRowViewModel> transcript,
         TimeProvider? clock = null,
-        RollingFileLogger? logger = null)
+        RollingFileLogger? logger = null,
+        Action? openSettings = null)
     {
         ArgumentNullException.ThrowIfNull(agent);
         ArgumentNullException.ThrowIfNull(transcript);
@@ -135,6 +142,7 @@ public sealed class ChatTurnRunner : IDisposable
         _transcript = transcript;
         _clock = clock ?? TimeProvider.System;
         _logger = logger;
+        _openSettings = openSettings;
     }
 
     /// <summary>
@@ -521,7 +529,8 @@ public sealed class ChatTurnRunner : IDisposable
             NoticeSeverity.Error,
             string.IsNullOrWhiteSpace(message) ? "The copilot failed." : message,
             ToolActivityText.RemedyFor(kind),
-            ToolActivityText.SettingsCanHelp(kind)));
+            ToolActivityText.SettingsCanHelp(kind),
+            _openSettings));
         return ChatTurnOutcome.Failed;
     }
 

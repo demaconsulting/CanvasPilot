@@ -183,7 +183,7 @@ public sealed class ChatPanelTests : IDisposable
         await _panel.SendCommand.ExecuteAsync(null);
 
         // Assert: the transcript holds that one message with its words, and nothing of it is left in the composer
-        var entry = Assert.Single(_panel.Transcript);
+        var entry = Assert.Single(_panel.SentEntries);
         var item = Assert.Single(entry.Items);
         Assert.Equal("Make the box blue", item.Text);
         Assert.Equal(TextOrigin.Typed, item.Origin);
@@ -209,7 +209,7 @@ public sealed class ChatPanelTests : IDisposable
         _composer.InsertTyped("draft");
 
         // Assert: the draft is not in the transcript, and the sent messages are in the order they were sent
-        Assert.Equal(["first", "second"], _panel.Transcript.Select(entry => entry.Items[0].Text));
+        Assert.Equal(["first", "second"], _panel.SentEntries.Select(entry => entry.Items[0].Text));
     }
 
     /// <summary>
@@ -231,7 +231,7 @@ public sealed class ChatPanelTests : IDisposable
         await _panel.SendCommand.ExecuteAsync(null);
 
         // Assert: typed, dictated, and the mark chip, in that order, with a summary naming the mark
-        var entry = Assert.Single(_panel.Transcript);
+        var entry = Assert.Single(_panel.SentEntries);
         Assert.Equal(3, entry.Items.Count);
         Assert.Equal(("Hello ", TextOrigin.Typed), (entry.Items[0].Text, entry.Items[0].Origin));
         Assert.Equal(("box", TextOrigin.Dictated), (entry.Items[1].Text, entry.Items[1].Origin));
@@ -488,7 +488,7 @@ public sealed class ChatPanelTests : IDisposable
         Assert.Contains(nameof(ChatPanelViewModel.HasTranscript), announced);
         _composer.InsertTyped("two");
         await _panel.SendCommand.ExecuteAsync(null);
-        Assert.Equal("two", Assert.Single(_panel.Transcript).Items[0].Text);
+        Assert.Equal("two", Assert.Single(_panel.SentEntries).Items[0].Text);
 
         // Act / Assert: closing the project drops it as well
         _composer.SetProject(null);
@@ -512,7 +512,7 @@ public sealed class ChatPanelTests : IDisposable
         panel.InspectorLauncher = launcher;
         composer.InsertTyped("look");
         await composer.SendCommand.ExecuteAsync(null);
-        var entry = Assert.Single(panel.Transcript);
+        var entry = Assert.Single(panel.SentEntries);
 
         // Act: choose "View payload"
         Assert.True(entry.HasPayload);
@@ -539,10 +539,10 @@ public sealed class ChatPanelTests : IDisposable
         using var panel = new ChatPanelViewModel(composer, _marks, new AnnotationOverlayViewModel(_marks, _source, _ => { }), _markImages);
         composer.InsertTyped("plain");
         await composer.SendCommand.ExecuteAsync(null);
-        var withPayload = Assert.Single(panel.Transcript);
+        var withPayload = Assert.Single(panel.SentEntries);
         _composer.InsertTyped("no payload");
         await _panel.SendCommand.ExecuteAsync(null);
-        var withoutPayload = Assert.Single(_panel.Transcript);
+        var withoutPayload = Assert.Single(_panel.SentEntries);
 
         // Act: choose "View payload" on both
         await withPayload.ViewPayloadCommand.ExecuteAsync(null);

@@ -18,10 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
@@ -31,22 +33,38 @@ using DemaConsulting.CanvasPilot.SpeechSubsystem;
 namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     The view model of the chat panel: the transcript of the messages that were sent, the message being composed, the
-///     buttons that send it and that listen while they are held, and the joining of the marks drawn on the picture to the
-///     message. It holds no rule of editing, sending, or dictation, which belong to the composer; it connects what the
-///     composer and the annotation layer do to what the panel shows.
+///     The view model of the chat panel: the transcript of the conversation (the messages that were sent and what the AI
+///     copilot answered), the message being composed, the buttons that send it and that listen while they are held, the
+///     button that stops the copilot, the banner that says whether the copilot can be used, and the joining of the marks
+///     drawn on the picture to the message. It holds no rule of editing, sending, dictation, or answering, which belong to
+///     the composer and the turn runner; it connects what they do to what the panel shows.
 /// </summary>
 /// <remarks>
 ///     <para>
-///         <b>The transcript is only what was sent.</b> The panel appends one <see cref="TranscriptEntryViewModel" /> for
-///         every <see cref="ComposerViewModel.MessageSent" />, with the immutable message, so the transcript never shows a
-///         draft and nothing in it changes. It is kept in memory only: it is dropped when the project changes or closes, and
-///         when the application ends.
+///         <b>The transcript.</b> The panel appends one <see cref="TranscriptEntryViewModel" /> for every
+///         <see cref="ComposerViewModel.MessageSent" />, with the immutable message, so the transcript never shows a
+///         draft. When the panel has an AI copilot, the message starts a turn, and the rows of the answer (the reply that
+///         streams, the tools it called, and the notices) follow the entry in the order things happen. The transcript is
+///         kept in memory only: it is dropped when the project changes or closes, and when the application ends.
+///     </para>
+///     <para>
+///         <b>A turn.</b> While a turn runs <see cref="IsCopilotBusy" /> is <see langword="true" />, the composer cannot
+///         send (the message can still be written), and <see cref="StopCommand" /> stops the turn, which keeps the text
+///         written so far. Without a copilot (<see langword="null" />) the panel only appends the entry of the message, as
+///         before, and nothing is blocked.
+///     </para>
+///     <para>
+///         <b>Readiness.</b> <see cref="RefreshReadinessAsync" /> asks the copilot whether the provider chosen in the
+///         settings can be used, and <see cref="ReadinessMessage" /> shows the answer in a banner that is hidden when
+///         everything is ready. The panel does not know the settings; whoever does calls the refresh when they change.
+///         <see cref="OpenSettingsRequested" /> is raised when the user asks, from the banner or from an error row, to open
+///         the settings; the window shell opens them.
 ///     </para>
 ///     <para>
 ///         <b>Send.</b> <see cref="SendCommand" /> is the composer's own command, so what makes sending possible (a project
-///         is open, the message has content, nobody holds the talk button, nothing is being sent) is decided in one place.
-///         When sending fails, the composer keeps the draft and says why in its status text, which the panel shows.
+///         is open, the message has content, nobody holds the talk button, nothing is being sent, the copilot is not
+///         working) is decided in one place. When sending fails, the composer keeps the draft and says why in its status
+///         text, which the panel shows.
 ///     </para>
 ///     <para>
 ///         <b>Hold to talk.</b> <see cref="BeginPushToTalkAsync" /> and <see cref="EndPushToTalkAsync" /> follow the talk
@@ -62,8 +80,8 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         can be made, so that undoing the chip hides the mark and redoing it shows the mark again.
 ///     </para>
 ///     <para>
-///         The class is owned by the user interface thread. It does not own the composer, the registry, or the layer; the
-///         composition root does.
+///         The class is owned by the user interface thread. It does not own the composer, the registry, the layer, or the
+///         copilot; the composition root does.
 ///     </para>
 /// </remarks>
 public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTarget, IDisposable
@@ -79,6 +97,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public const string EmptyTranscriptText = "Messages you send appear here.";
 
     /// <summary>
+    ///     The words of the indicator that shows while the copilot works on a message.
+    /// </summary>
+    public const string WorkingText = "The copilot is working...";
+
+    /// <summary>
     ///     The composer of the message.
     /// </summary>
     private readonly ComposerViewModel _composer;
@@ -92,6 +115,21 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Speech, which is prepared ahead of the first press of the talk button, or <see langword="null" /> for none.
     /// </summary>
     private readonly IDictationService? _dictation;
+
+    /// <summary>
+    ///     The AI copilot, or <see langword="null" /> for none.
+    /// </summary>
+    private readonly IAgentService? _agent;
+
+    /// <summary>
+    ///     Runs the turns of the copilot and adds their rows, or <see langword="null" /> without a copilot.
+    /// </summary>
+    private readonly ChatTurnRunner? _runner;
+
+    /// <summary>
+    ///     What the runner adds its rows to; it drops them while a turn of another project ends.
+    /// </summary>
+    private readonly TranscriptSink _sink;
 
     /// <summary>
     ///     Optional logger for diagnostics.
@@ -124,6 +162,26 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     private string? _transcriptProject;
 
     /// <summary>
+    ///     What the latest check of the copilot found, or <see langword="null" /> when none was made.
+    /// </summary>
+    private AgentReadinessReport? _readiness;
+
+    /// <summary>
+    ///     Counts the checks, so that only the latest answer is shown.
+    /// </summary>
+    private int _readinessVersion;
+
+    /// <summary>
+    ///     The latest turn, which completes when the turn has ended.
+    /// </summary>
+    private Task _latestTurn = Task.CompletedTask;
+
+    /// <summary>
+    ///     Whether the panel was disposed.
+    /// </summary>
+    private bool _disposed;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ChatPanelViewModel" /> class and joins the composer and the
     ///     annotation layer.
     /// </summary>
@@ -133,14 +191,18 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// <param name="markImages">Cuts the area around a mark out of its picture, for the picture of a mark chip.</param>
     /// <param name="dictation">Speech, which is prepared ahead of the first press of the talk button, or <see langword="null" /> for none.</param>
     /// <param name="logger">Optional logger for diagnostics.</param>
-    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service and the logger is <see langword="null" />.</exception>
+    /// <param name="agent">The AI copilot that answers the messages, or <see langword="null" /> for none: a sent message is then only added to the transcript.</param>
+    /// <param name="clock">The clock and timers of the turns, or <see langword="null" /> for the system's.</param>
+    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, and the clock is <see langword="null" />.</exception>
     public ChatPanelViewModel(
         ComposerViewModel composer,
         MarkRegistry marks,
         AnnotationOverlayViewModel annotation,
         IMarkImageComposer markImages,
         IDictationService? dictation = null,
-        RollingFileLogger? logger = null)
+        RollingFileLogger? logger = null,
+        IAgentService? agent = null,
+        TimeProvider? clock = null)
     {
         ArgumentNullException.ThrowIfNull(composer);
         ArgumentNullException.ThrowIfNull(marks);
@@ -150,15 +212,28 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer = composer;
         _annotation = annotation;
         _dictation = dictation;
+        _agent = agent;
         _logger = logger;
         Transcript = [];
+        _sink = new TranscriptSink(Transcript);
+        Transcript.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTranscript));
         Thumbnails = new ChipThumbnailProvider(chip => CropOfDraftMark(marks, markImages, chip));
         _transcriptProject = composer.ProjectFolder;
+        StopCommand = new RelayCommand(Stop, () => IsCopilotBusy);
+        OpenSettingsCommand = new RelayCommand(RaiseOpenSettings);
+        CheckAgainCommand = new AsyncRelayCommand(RefreshReadinessAsync);
+
+        // With a copilot, a sent message starts a turn whose rows follow the entry of the message
+        if (agent is not null)
+        {
+            _runner = new ChatTurnRunner(agent, _sink, clock, logger, RaiseOpenSettings);
+            _runner.BusyChanged += OnBusyChanged;
+        }
 
         // The panel follows the composer: what depends on it is announced again, a changed project drops the transcript,
         // and a sent message joins the transcript
         _composerPropertyChanged = OnComposerPropertyChanged;
-        _messageSent = (_, e) => AppendEntry(e.Message);
+        _messageSent = (_, e) => OnMessageSent(e.Message);
         _composerChanged = (_, _) => JoinAnnotationToComposer();
         _markAdded = (_, e) => _composer.AddMark(e.Mark);
         _composer.PropertyChanged += _composerPropertyChanged;
@@ -169,17 +244,29 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     }
 
     /// <summary>
+    ///     Raised when the user asks to open the settings, from the banner or from the notice of an error. The window shell
+    ///     handles it.
+    /// </summary>
+    public event EventHandler? OpenSettingsRequested;
+
+    /// <summary>
     ///     Gets the composer of the message, which the panel's editing control shows.
     /// </summary>
     public ComposerViewModel Composer => _composer;
 
     /// <summary>
-    ///     Gets the messages that were sent, oldest first. The panel adds to it; nothing else does.
+    ///     Gets the rows of the conversation, oldest first: the messages that were sent, the answers of the copilot, the
+    ///     tools it called, and the notices. The panel and the turn runner add to it; nothing else does.
     /// </summary>
-    public ObservableCollection<TranscriptEntryViewModel> Transcript { get; }
+    public ObservableCollection<TranscriptRowViewModel> Transcript { get; }
 
     /// <summary>
-    ///     Gets a value indicating whether any message was sent in the open project.
+    ///     Gets the rows of the messages that were sent, oldest first.
+    /// </summary>
+    public IEnumerable<TranscriptEntryViewModel> SentEntries => Transcript.OfType<TranscriptEntryViewModel>();
+
+    /// <summary>
+    ///     Gets a value indicating whether the transcript has any row in the open project.
     /// </summary>
     public bool HasTranscript => Transcript.Count > 0;
 
@@ -192,6 +279,38 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Gets the command that sends the message, which is the composer's.
     /// </summary>
     public IAsyncRelayCommand SendCommand => _composer.SendCommand;
+
+    /// <summary>
+    ///     Gets the command that stops the turn of the copilot that runs; it cannot run when none does.
+    /// </summary>
+    public IRelayCommand StopCommand { get; }
+
+    /// <summary>
+    ///     Gets the command that opens the settings, which raises <see cref="OpenSettingsRequested" />.
+    /// </summary>
+    public IRelayCommand OpenSettingsCommand { get; }
+
+    /// <summary>
+    ///     Gets the command that checks the copilot again, for the banner.
+    /// </summary>
+    public IAsyncRelayCommand CheckAgainCommand { get; }
+
+    /// <summary>
+    ///     Gets a value indicating whether a turn of the copilot runs.
+    /// </summary>
+    public bool IsCopilotBusy => _runner?.IsBusy == true;
+
+    /// <summary>
+    ///     Gets a value indicating whether the banner of the readiness of the copilot is shown: the latest check found that
+    ///     the copilot cannot be used, or can be used with a warning.
+    /// </summary>
+    public bool HasReadinessIssue => _readiness is { Status: not AgentReadinessStatus.Ready };
+
+    /// <summary>
+    ///     Gets what the banner says: what the latest check found and what to do, or an empty string when everything is
+    ///     ready.
+    /// </summary>
+    public string ReadinessMessage => HasReadinessIssue ? _readiness!.Message : string.Empty;
 
     /// <summary>
     ///     Gets a value indicating whether the message can be sent now.
@@ -225,6 +344,56 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     do nothing. The window sets it when the panel is placed in it.
     /// </summary>
     public IPayloadInspectorLauncher? InspectorLauncher { get; set; }
+
+    /// <summary>
+    ///     Stops the turn of the copilot that runs, if any. The text written so far is kept and marked as stopped, and the
+    ///     composer can send again when the turn has ended, which is soon.
+    /// </summary>
+    public void Stop() => _runner?.Stop();
+
+    /// <summary>
+    ///     Gets a task that completes when the latest turn has ended; it is completed when no turn was started.
+    /// </summary>
+    /// <returns>The task.</returns>
+    public Task WaitForTurnAsync() => _latestTurn;
+
+    /// <summary>
+    ///     Asks the copilot whether the provider chosen in the settings can be used and shows the answer in the banner. A
+    ///     check that is overtaken by a later one is forgotten, so the banner shows the latest. The panel does not know the
+    ///     settings, so whoever does calls this when they change. Nothing happens without a copilot. A failure is logged
+    ///     and shown in the banner, never thrown.
+    /// </summary>
+    /// <returns>A task that completes when the answer was shown.</returns>
+    public async Task RefreshReadinessAsync()
+    {
+        if (_agent is null)
+        {
+            return;
+        }
+
+        var version = ++_readinessVersion;
+        AgentReadinessReport report;
+        try
+        {
+            report = await _agent.GetReadinessAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _logger?.Log(LogLevel.Warning, $"Checking the copilot failed: {ex.GetType().Name}.");
+            report = new AgentReadinessReport(AgentReadinessStatus.NotConfigured, $"The copilot could not be checked: {ex.Message}");
+        }
+
+        if (version == _readinessVersion && !_disposed)
+        {
+            _readiness = report;
+            OnPropertyChanged(nameof(HasReadinessIssue));
+            OnPropertyChanged(nameof(ReadinessMessage));
+        }
+    }
 
     /// <summary>
     ///     Starts listening because the talk button was pressed. The composer decides whether dictation can work and, when
@@ -273,10 +442,19 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// </summary>
     public void Dispose()
     {
+        _disposed = true;
         _composer.PropertyChanged -= _composerPropertyChanged;
         _composer.MessageSent -= _messageSent;
         _composer.Changed -= _composerChanged;
         _annotation.MarkAdded -= _markAdded;
+        if (_runner is not null)
+        {
+            // Nothing is added to a transcript that is dropped, and a turn that is still running is stopped
+            _sink.Discarding = true;
+            _runner.BusyChanged -= OnBusyChanged;
+            _runner.Dispose();
+        }
+
         ClearTranscript();
         if (Thumbnails is IDisposable disposable)
         {
@@ -346,12 +524,79 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
                 if (!string.Equals(_transcriptProject, _composer.ProjectFolder, StringComparison.OrdinalIgnoreCase))
                 {
                     _transcriptProject = _composer.ProjectFolder;
+
+                    // A turn of the old project is stopped, and what it still says is dropped until it has ended
+                    if (_runner is { IsBusy: true })
+                    {
+                        _sink.Discarding = true;
+                        _runner.Stop();
+                    }
+
                     ClearTranscript();
                 }
 
                 break;
         }
     }
+
+    /// <summary>
+    ///     Adds a sent message to the end of the transcript and, with a copilot, starts the turn that answers it.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    private void OnMessageSent(SentMessage message)
+    {
+        AppendEntry(message);
+        if (_runner is not null)
+        {
+            _latestTurn = RunTurnAsync(_runner, message);
+        }
+    }
+
+    /// <summary>
+    ///     Runs the turn of a message. The runner reports what happens as rows and never throws for it, but nothing that
+    ///     goes wrong may escape from a task that nobody awaits, so a failure is logged.
+    /// </summary>
+    /// <param name="runner">The runner.</param>
+    /// <param name="message">The message that was sent.</param>
+    /// <returns>A task that completes when the turn has ended.</returns>
+    private async Task RunTurnAsync(ChatTurnRunner runner, SentMessage message)
+    {
+        try
+        {
+            await runner.RunTurnAsync(message);
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            _logger?.Log(LogLevel.Error, $"The turn of the copilot ended with {ex.GetType().Name}.");
+        }
+    }
+
+    /// <summary>
+    ///     Follows the turn of the copilot: the composer cannot send while it runs, and the buttons and the indicator
+    ///     follow.
+    /// </summary>
+    /// <param name="sender">The runner.</param>
+    /// <param name="e">The event data.</param>
+    private void OnBusyChanged(object? sender, EventArgs e)
+    {
+        if (_runner!.IsBusy)
+        {
+            _composer.BlockSending(ComposerViewModel.CopilotWorkingText);
+        }
+        else
+        {
+            _sink.Discarding = false;
+            _composer.UnblockSending();
+        }
+
+        OnPropertyChanged(nameof(IsCopilotBusy));
+        StopCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    ///     Tells the shell that the user asked to open the settings.
+    /// </summary>
+    private void RaiseOpenSettings() => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
 
     /// <summary>
     ///     Adds a sent message to the end of the transcript.
@@ -368,12 +613,74 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// </summary>
     private void ClearTranscript()
     {
-        foreach (var entry in Transcript)
+        foreach (var row in Transcript)
         {
-            entry.Dispose();
+            row.Dispose();
         }
 
         Transcript.Clear();
         OnPropertyChanged(nameof(HasTranscript));
+    }
+
+    /// <summary>
+    ///     What the turn runner adds its rows to: the transcript, except while a turn that belongs to a project that was
+    ///     closed ends, when the rows are dropped. Only adding is meant to be used.
+    /// </summary>
+    private sealed class TranscriptSink : ICollection<TranscriptRowViewModel>
+    {
+        /// <summary>
+        ///     The transcript of the panel.
+        /// </summary>
+        private readonly ObservableCollection<TranscriptRowViewModel> _transcript;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="TranscriptSink" /> class.
+        /// </summary>
+        /// <param name="transcript">The transcript of the panel.</param>
+        public TranscriptSink(ObservableCollection<TranscriptRowViewModel> transcript)
+        {
+            _transcript = transcript;
+        }
+
+        /// <inheritdoc />
+        public int Count => _transcript.Count;
+
+        /// <inheritdoc />
+        public bool IsReadOnly => false;
+
+        /// <summary>
+        ///     Gets or sets a value indicating whether rows are dropped instead of added.
+        /// </summary>
+        public bool Discarding { get; set; }
+
+        /// <inheritdoc />
+        public void Add(TranscriptRowViewModel item)
+        {
+            if (Discarding)
+            {
+                item.Dispose();
+                return;
+            }
+
+            _transcript.Add(item);
+        }
+
+        /// <inheritdoc />
+        public void Clear() => _transcript.Clear();
+
+        /// <inheritdoc />
+        public bool Contains(TranscriptRowViewModel item) => _transcript.Contains(item);
+
+        /// <inheritdoc />
+        public void CopyTo(TranscriptRowViewModel[] array, int arrayIndex) => _transcript.CopyTo(array, arrayIndex);
+
+        /// <inheritdoc />
+        public bool Remove(TranscriptRowViewModel item) => _transcript.Remove(item);
+
+        /// <inheritdoc />
+        public IEnumerator<TranscriptRowViewModel> GetEnumerator() => _transcript.GetEnumerator();
+
+        /// <inheritdoc />
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
 }
