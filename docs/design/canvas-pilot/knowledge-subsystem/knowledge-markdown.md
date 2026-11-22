@@ -53,4 +53,5 @@ None: the unit reads text and makes its own values.
 
 #### Callers
 
-- The window that shows the cards of a later step draws the blocks with its own controls.
+- The window that shows the cards draws the blocks with its own controls, and so does the chat panel for the replies of
+  the copilot.

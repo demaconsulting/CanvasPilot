@@ -96,6 +96,6 @@ project's is not inside it; it does not follow links.
 #### Callers
 
 - `ChatPanelViewModel` loads when a project is opened, saves when a turn has ended, and clears on the user's request.
-- The composition root (`ApplicationComposition`, a later step) makes the store over `DefaultHistoryRoot`, gives it to
+- The composition root (`ApplicationComposition`) makes the store over `DefaultHistoryRoot`, gives it to
   the panel, and passes the same root to the `AgentService`, which refuses to run when that root lies inside the
   project.

@@ -22,7 +22,7 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 
 /// <summary>
 ///     What the tools of the copilot are built for: the open project. A tool pack that needs more than the folder of the
-///     project (the project tools that are added later need, for example, a picture renderer) gets it from the code
+///     project (the project tools, for example, need a picture renderer) gets it from the code
 ///     that supplies the pack and not from this record, so the record stays small.
 /// </summary>
 /// <param name="ProjectFolder">

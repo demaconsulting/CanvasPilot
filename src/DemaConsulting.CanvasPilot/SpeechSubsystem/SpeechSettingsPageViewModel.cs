@@ -29,7 +29,7 @@ namespace DemaConsulting.CanvasPilot.SpeechSubsystem;
 ///     The "Speech" settings page. It composes the device pickers, the model catalog panel, and the parameter
 ///     editors of the chosen models, and maps them to and from <see cref="SpeechSettings" />. Devices are stored by
 ///     name. Model downloads run at once and are not part of OK or Cancel; closing the dialog cancels the downloads
-///     that are still running. Nothing in the application consumes the choices yet.
+///     that are still running. The dictation service reads the choices.
 /// </summary>
 public sealed class SpeechSettingsPageViewModel : ObservableObject, ISettingsPage
 {

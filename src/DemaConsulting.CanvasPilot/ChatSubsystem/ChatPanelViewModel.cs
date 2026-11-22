@@ -53,8 +53,8 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         as text rows when the project is opened. A restored message is a <see cref="RestoredEntryViewModel" />
 ///         (words only: the history keeps no pictures and no payload). What was saved is given as text to the copilot with
 ///         the next turn, so that the conversation can go on. <see cref="ClearHistoryCommand" /> deletes the saved history,
-///         empties the transcript, and makes the copilot forget the conversation. Without a store the transcript is in
-///         memory only and is dropped when the project changes or closes.
+///         empties the transcript, and makes the copilot forget the conversation. Without a store or a project service
+///         the transcript is in memory only and is dropped when the project changes or closes.
 ///     </para>
 ///     <para>
 ///         <b>A turn.</b> While a turn runs <see cref="IsCopilotBusy" /> is <see langword="true" />, the composer cannot

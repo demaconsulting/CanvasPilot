@@ -21,7 +21,7 @@ a file at once, the application keeps no copy of the old content, and nothing is
 nothing into the project besides the file the model was asked to write: no backup folder, no history, no temporary file
 after the call. What replaces the safety net is visibility: the answer of the tool says `created` or `replaced` with the
 sizes (and the chat shows that text), the event `FileWritten` lets the shell select the file in the project explorer,
-and the role prompt of the copilot (a later step) tells it to read a file before it replaces it and to keep what the
+and the role prompt of the copilot tells it to read a file before it replaces it and to keep what the
 user did not ask it to change. The user guide says plainly that CanvasPilot keeps no copies and does not ask before the
 copilot replaces a file.
 
@@ -47,7 +47,7 @@ and is the supplier of project packs that `AgentToolRegistry` takes in its const
 (`new AgentToolRegistry(knowledge, style, projectTools.CreatePacks)`); the packs hold no project, because the registry
 gives each pack the policy of the project when it builds the tools. The event `FileWritten`
 (`EventHandler<FileWrittenEventArgs>`) is raised after a file was created or replaced, on the thread that ran the tool.
-The composition of the application (a later step) passes the object to the registry and handles the event on the thread
+The composition of the application passes the object to the registry and handles the event on the thread
 of the user interface.
 
 **FileWrittenEventArgs**: `sealed class`. `RelativePath` (the path below the project folder with forward slashes) and
@@ -179,6 +179,6 @@ subsystem: the names of the data folder and project file, and the filter for ima
 
 #### Callers
 
-`AgentToolRegistry` takes `CreatePacks` as its supplier of project packs, and the application composition (a later step)
+`AgentToolRegistry` takes `CreatePacks` as its supplier of project packs, and the application composition
 builds the `ProjectTools`, passes it to the registry, and handles `FileWritten` to refresh and select the file in the
 project explorer.

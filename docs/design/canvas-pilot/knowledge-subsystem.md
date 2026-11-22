@@ -4,7 +4,7 @@
 
 ### Overview
 
-The `Knowledge` subsystem holds what the drawing assistant of a later increment, and the user, need to know to draw with
+The `Knowledge` subsystem holds what the AI copilot, and the user, need to know to draw with
 the formats CanvasNet draws and to work in a CanvasPilot project. The knowledge is a tree of cards. Each card has a
 title, a one-line summary, tags, other names, a body in Markdown that links to other cards and examples, related cards,
 and examples with their text. The cards come from two places: the help of CanvasNet, which tells how to write each
@@ -12,7 +12,7 @@ format and is as current as the library that draws the files, and cards of Canva
 application and tell what the library cannot know: where files go in a project, how to make the picture the user uses,
 how to read the marks and attachments of a message, and what the user sees. Everything in it except one unit, the window
 that shows the cards to the user, has no dependency on the user interface; none of it depends on any provider of a
-language model or on any agent library, so the knowledge can be given to any assistant that is added later.
+language model or on any agent library, so the knowledge can be given to any provider of the copilot.
 
 The subsystem contains seven units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
 which finds the cards that fit some words, `KnowledgePromptBuilder`, which writes the cards as text for the prompt of an

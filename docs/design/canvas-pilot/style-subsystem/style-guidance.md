@@ -65,6 +65,6 @@ block within the budget.
 
 #### Callers
 
-- `StyleTools` (a later step) — the tool `style_get` returns the block or one section of it.
-- The builder of the prompt of an assistant (a later increment) — includes the block of the active kit.
-- The manager window of the kits (a later step) — shows the block and its size.
+- `StyleTools` — the tool `style_get` returns the block or one section of it.
+- `AgentInstructions` (the `Agent` subsystem) — includes the block of the active kit in the instructions of the copilot.
+- The manager window of the kits — shows the block and its size.

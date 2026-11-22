@@ -61,7 +61,7 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
 **Render Notes**: Notes about the shown picture from another part.
 
 - *Type*: In-process .NET API (`IRenderNoteSink`).
-- *Role*: Provider (declared here; the preview pane takes the notes in a later step).
+- *Role*: Provider (declared here; the preview pane takes the notes).
 - *Contract*: `ShowNotes(group, notes)` replaces the notes of a group in the list of notes of the picture.
 
 **Project Explorer**: The selection and project folder that drive the preview.

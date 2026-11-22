@@ -95,5 +95,4 @@ the one place where another thread enters, and it is handed to that context.
 #### Callers
 
 - The chat panel gives it the message when the composer raises `MessageSent`, blocks and unblocks the composer from
-  `BusyChanged`, calls `Stop` from the Stop button, and disposes it. (The panel is joined to the runner in a later step;
-  in this step only the tests call it.)
+  `BusyChanged`, calls `Stop` from the Stop button, and disposes it.

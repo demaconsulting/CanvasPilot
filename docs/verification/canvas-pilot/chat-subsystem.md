@@ -50,8 +50,8 @@ a requirement):
 7. *The history on this computer.* After a conversation, close the project and open it again, and then close and start
    the application: the earlier messages appear as text (no pictures); `%LOCALAPPDATA%\CanvasPilot\history\{key}\`
    holds `history.json` and `project.json`, and the project folder holds no history file; "Clear chat history" empties
-   the panel and removes the folder; a project that is moved or renamed starts with an empty history. (This needs the
-   composition root of a later step, which gives the panel the store.)
+   the panel and removes the folder; a project that is moved or renamed starts with an empty history. (The composition
+   root gives the panel the store; the live run is the Ollama item of *Manual Verification* in the system verification.)
 
 ### Acceptance Criteria
 

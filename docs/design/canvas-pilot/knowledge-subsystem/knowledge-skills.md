@@ -46,4 +46,5 @@ for concurrent use.
 
 #### Callers
 
-- The assistant of a later step hands the skills to its provider, or turns each into a tool.
+- The AI copilot could hand the skills to its provider, or turn each into a tool; this release gives it the index and
+  the one tool `canvasnet_help` instead.

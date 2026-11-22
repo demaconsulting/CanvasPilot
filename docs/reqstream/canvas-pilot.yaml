@@ -594,8 +594,8 @@ sections:
         justification: |
           A language model writes good drawing files only when it knows how the drawing library reads them, and the
           people who use the application want to read the same advice. Taking the cards from the drawing library keeps
-          the advice as current as the library, and adding the application's own cards tells the assistant where files go
-          and how to read the marks the user makes. The assistant is added later and may come from more than one
+          the advice as current as the library, and adding the application's own cards tells the copilot where files go
+          and how to read the marks the user makes. The copilot may come from more than one
           provider, so the knowledge is kept apart from every provider and offered as plain values and text.
         children:
           - CanvasPilot-Knowledge-OfferDrawingCards
@@ -707,7 +707,7 @@ sections:
           An assistant that writes drawing files should use the colors and fonts of the project without being told every
           time, and should be able to check what it drew. The text of a kit may come from a shared folder or a zip file,
           so it must not be taken for an instruction, and its size must be bounded because it is paid for in every
-          request. The assistant is added later and may come from more than one provider, so the parts are plain.
+          request. The copilot may come from more than one provider, so the parts are plain.
         children:
           - CanvasPilot-Style-GuideTheAssistant
           - CanvasPilot-Style-StayProviderNeutral

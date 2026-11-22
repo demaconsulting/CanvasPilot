@@ -2,9 +2,9 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
-AppShell, Annotation, Chat, Composer, Knowledge, Logging, Payload, Preview, Project, Settings, Speech, Style, and
-Utilities subsystems; the AI agent that will answer the messages is not part of this version and is added as a further
-subsystem when it is introduced.
+Agent, Annotation, AppShell, Chat, Composer, Knowledge, Logging, Payload, Preview, Project, Settings, Speech, Style, and
+Utilities subsystems; the AI copilot of the Agent subsystem answers the messages through Ollama and reports whether
+GitHub Copilot can be used, which is gated in this release.
 
 ## Purpose
 
@@ -22,8 +22,7 @@ This document covers the verification design for the following software items:
 
 - **CanvasPilot** — system, subsystem, and unit verification:
   - **Agent** subsystem
-    - **AgentContract** — the provider-independent contract of the AI copilot; the units that implement it are added as
-      they are built
+    - **AgentContract** — the provider-independent contract of the AI copilot
     - **CopilotCliLocator** — finds the Copilot CLI that the user installed, tells it from editor shims, and checks its
       version
     - **AgentReadiness** — checks whether the chosen AI provider can be used (the Copilot CLI, credentials, and the
@@ -145,9 +144,10 @@ The following topics are out of scope:
 - Verification documents are not produced for the test projects themselves — they are the
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
-- The AI agent is not part of this version, and so is not verified; the messages are composed and sent without an
-  agent, and only the stored settings that the agent will read, the payload that it will receive, the knowledge
-  and the style that it will be given, and the two style tools that it will use are verified
+- GitHub Copilot as a working provider is gated in this release and cannot be verified live: its readiness checks, the
+  messages, and the gated starter are verified, and a live run is a follow-up that depends on the AI library; the
+  live Ollama checks are manual checks of the system verification, because Ollama is not part of the build machines
+- User-selectable tool packs and spoken replies of the copilot are not part of this version
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified

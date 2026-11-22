@@ -52,8 +52,8 @@ public enum ReasoningLevel
 
 /// <summary>
 ///     Persisted AI provider choices. The Agent subsystem reads the provider, model, endpoint, context window, and
-///     Copilot CLI path from them. The reasoning level and the unrestricted tools flag are stored and kept as they are
-///     but nothing acts on them yet.
+///     Copilot CLI path from them. The reasoning level is stored and applied unchanged, and the unrestricted tools flag is
+///     stored and kept as it is, but the AI library cannot act on the first and the dialog does not offer the second.
 /// </summary>
 public sealed record AiProviderSettings
 {

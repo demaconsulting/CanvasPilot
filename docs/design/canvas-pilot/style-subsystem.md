@@ -8,10 +8,10 @@ The `Style` subsystem holds the look that pictures should have. A **style kit** 
 advice, export sizes, and example images that a person or a team keeps in a folder: a `style.json` file and an
 `examples` folder. Kits come from four places: the kits that come with the program, the kits of the user, the kits in
 the `styles` folder of the open project, and shared folders that the user lists; the most local copy of a kit wins. The
-project says which kit it uses, the application exports pictures at the sizes of the kit, an assistant that is added
-later is given the style as a block of text and two tools, and a picture can be checked against the palette of the kit.
+project says which kit it uses, the application exports pictures at the sizes of the kit, the AI copilot is given the
+style as a block of text and two tools, and a picture can be checked against the palette of the kit.
 None of it depends on any provider of a language model or on any agent library, so what the subsystem offers can be
-given to any assistant that is added later.
+given to any provider of the copilot.
 
 The subsystem contains eleven units, `StyleKitDocument`, `StyleKitCatalog`, `StyleKitArchive`, `StyleSelection`,
 `StyleGuidance`, `StyleChecker`, `StyleTools`, `StylePicker`, `StyleSettingsPage`, `StyleKitEditor`, and

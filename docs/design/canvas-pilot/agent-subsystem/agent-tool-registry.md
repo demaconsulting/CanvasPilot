@@ -14,8 +14,8 @@ and `OptionalPackEntry`.
 #### Data Model
 
 **AgentToolRegistry**: `sealed class`. The constructor takes the descriptions of the drawing knowledge tools and of the
-style tools (`IEnumerable<KnowledgeTool>`, in this step given by the caller; the composition of the application passes
-`KnowledgeTools.CreateAll` and `ApplicationComposition.StyleToolDescriptors` in a later step), an optional supplier of
+style tools (`IEnumerable<KnowledgeTool>`, given by the caller; the composition of the application passes
+`KnowledgeTools.CreateAll` and `ApplicationComposition.StyleToolDescriptors`), an optional supplier of
 project packs (`Func<AgentToolContext, IEnumerable<IToolPack>>`), an optional catalog of optional packs
 (`IReadOnlyDictionary<string, OptionalPackEntry>`, empty by default), the `ToolLimits` (the defaults of the AI library
 when not given), and the `HostCapabilities` of the model and provider (none by default). Both description lists are
@@ -49,7 +49,7 @@ exception.
 folder link (a junction or a symbolic link) inside the project that leads outside it is therefore *permitted* by the
 policy, and the resolved path keeps its spelling inside the project.
 `AgentToolRegistry_CreatePolicy_FolderLinkInsideTheProject_IsPermittedAndMustBeRefusedByTheTools` pins this. The
-registry does not hide it: the tools that read or write files (the project tools of a later step) must refuse a path
+registry does not hide it: the tools that read or write files (the project tools) must refuse a path
 that passes through a reparse point themselves, and the verification of those tools covers it. A descriptor pack reads
 no file, so it is not affected.
 

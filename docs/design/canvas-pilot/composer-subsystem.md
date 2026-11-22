@@ -105,7 +105,7 @@ it.
 `TextOrigin`) and the chips `FileChip`, `FolderChip`, `ImageChip` (a picture file of the user, or a picture that the
 application saved from the clipboard), and `MarkChip` (the identity and the number of a mark). Segments are immutable
 records, so snapshots, edits, and the history share them without copying. A chip counts as one position, which is what
-the editing control that is added later does too: it shows each chip as one placeholder character, and the i-th
+the editing control does too: it shows each chip as one placeholder character, and the i-th
 placeholder is the i-th chip, so offsets of the control are offsets of the model.
 
 **Canonical form.** The document keeps its segments in one form: neighboring text of the same origin is one segment,

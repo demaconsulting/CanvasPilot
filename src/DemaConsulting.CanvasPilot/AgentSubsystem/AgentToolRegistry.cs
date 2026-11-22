@@ -29,7 +29,7 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 /// <summary>
 ///     Builds the tools that the copilot may use for one project: confines them to the project folder with a path
 ///     policy, offers the built-in packs (the drawing knowledge and the style tools), adds the packs that the
-///     application supplies per project (the project tools of a later step), adds the optional packs that the user chose,
+///     application supplies per project (the project tools), adds the optional packs that the user chose,
 ///     and checks that the set is one that a model and its provider can be given.
 /// </summary>
 /// <remarks>
@@ -125,7 +125,7 @@ public sealed class AgentToolRegistry
     /// <param name="knowledgeTools">The descriptions of the drawing knowledge tools (<c>canvasnet_*</c>).</param>
     /// <param name="styleTools">The descriptions of the style tools (<c>style_*</c>).</param>
     /// <param name="projectPacks">
-    ///     Supplies the packs that depend on the project (the project tools of a later step); <see langword="null" /> for
+    ///     Supplies the packs that depend on the project (the project tools); <see langword="null" /> for
     ///     none.
     /// </param>
     /// <param name="optionalPacks">The catalog of optional packs; <see langword="null" /> for the empty catalog.</param>

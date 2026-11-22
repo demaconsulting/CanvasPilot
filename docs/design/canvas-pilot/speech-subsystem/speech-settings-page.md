@@ -6,8 +6,8 @@
 
 `SpeechSettingsPage` is the "Speech" page of the settings dialog. It composes the device pickers, the model catalog
 panel, and the parameter editors of the chosen models, and maps them to and from the `SpeechSettings` record. The
-values are persisted only; nothing in the application consumes them yet, and a later speech feature reads them
-through `ISettingsService`. Model downloads are not part of OK or Cancel: they start when the user asks, and the
+values are persisted and read through `ISettingsService` by `DictationService`, which loads the chosen model and
+opens the chosen microphone. Model downloads are not part of OK or Cancel: they start when the user asks, and the
 page cancels the ones that are still running when the dialog closes.
 
 #### Data Model

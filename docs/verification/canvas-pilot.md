@@ -12,8 +12,10 @@ The `AppShell` subsystem depends on the `Preview` subsystem and not the reverse 
 design). Verification follows that direction: the `Preview` units are verified with a substitute for the
 `IExportDialogs` interface that `Preview` owns, the shell is verified with a substitute image exporter and with the
 disabled default exporter, and only the system tests and the user interface tests compose the real shell with the real
-preview, which is also what proves that the two work together. The stored AI provider choices are verified through the
-settings service and the settings dialog; the agent that will use them does not exist yet and has no verification.
+preview, which is also what proves that the two work together. The AI copilot is verified in the `Agent` subsystem
+with a scripted model, a stand-in Ollama server, and a fake and the gated starter of the Copilot runtime, and the system
+tests compose the copilot, the history, and the settings check as the application does; live Ollama and live GitHub
+Copilot are not part of the automated evidence (see *Manual Verification* below).
 
 Dictation is verified at this level over the speech library's own recognition pipeline with a recognition backend
 written in managed code and a recorded sound file for the microphone, so no native speech runtime, model, or microphone

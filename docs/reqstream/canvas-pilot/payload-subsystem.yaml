@@ -3,8 +3,8 @@
 #
 # PURPOSE:
 # - Define requirements for the CanvasPilot Payload subsystem
-# - The Payload subsystem builds, from the message that the user sends, one immutable payload for the assistant that
-#   is added later: the text with its references in order, the attachments with their paths, and for each picture that
+# - The Payload subsystem builds, from the message that the user sends, one immutable payload for the AI copilot:
+#   the text with its references in order, the attachments with their paths, and for each picture that
 #   marks were drawn on the annotated picture, the area around each mark, the geometry and note of each mark, and the
 #   parts of the source file under it; and it describes a payload as text. The subsystem has no dependency on the
 #   user interface

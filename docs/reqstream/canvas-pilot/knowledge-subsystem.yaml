@@ -131,7 +131,8 @@ sections:
               The Knowledge subsystem shall offer the knowledge as values and text of its own, with no reference to the
               help types of CanvasNet in what it offers and to no type or source file of a language model or agent library.
             justification: |
-              The assistant that will use the knowledge is added later, and which provider it uses is a choice of the user.
+              The assistant that uses the knowledge may come from more than one provider, and which provider it uses is a
+              choice of the user.
               Knowledge that is tied to a provider could not be offered to another one, and knowledge that exposes the types
               of the help library would tie every reader to it. Plain values and text can be given to any provider.
             children:

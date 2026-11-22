@@ -40,11 +40,11 @@ instructions, the agent, and one provider session for the open project, runs one
 when the project or a setting that decides the agent changes, deletes what the provider kept when a conversation ends,
 gives the Copilot runtime a data folder that is never inside a project, and writes metadata only to the log.
 
-The subsystem will depend on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
+The subsystem depends on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
 message), `Knowledge`, `Style`, and `Preview` (the content and the rendering that its tools give the copilot),
-`Logging`, `Utilities`, and the third-party AI libraries. Nothing depends on it except `Chat`, through `IAgentService`,
+`Logging`, and the third-party AI libraries. Nothing depends on it except `Chat`, through `IAgentService`,
 and `AppShell`, which builds it. `Settings` does not depend on it: `Settings` owns the `IProviderCheck` interface
-through which the settings dialog can ask whether a provider works, and the `Agent` subsystem is expected to implement
+through which the settings dialog can ask whether a provider works, and the `Agent` subsystem implements
 that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payload` subsystem.
 
 ### Interfaces
@@ -100,7 +100,7 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 
 - *Type*: In-process .NET class, with `DescriptorToolPack` (an `IToolPack` of the AI library), `AgentToolContext`, and
   `OptionalPackEntry`, documented in the design of the `AgentToolRegistry` unit.
-- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the plain tool descriptions
+- *Role*: Provider (the agent service is the consumer); it consumes the plain tool descriptions
   (`KnowledgeTool`) of the `Knowledge` and `Style` subsystems.
 - *Contract*: `CreateTools(AgentToolContext, optionalPackIds)` returns the `AIFunction`s of the project in a fixed order
   (`canvasnet_help`, `style_get`, `style_check`, the project packs, the chosen optional packs); the static
@@ -129,7 +129,7 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 
 - *Type*: In-process .NET class with `AgentProjectFacts` and `InstructionTier`, and the role prompt as an embedded
   Markdown resource, documented in the design of the `AgentInstructions` unit.
-- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the index of the drawing knowledge
+- *Role*: Provider (the agent service is the consumer); it consumes the index of the drawing knowledge
   of the `Knowledge` subsystem and the style block of the `Style` subsystem.
 - *Contract*: `ChooseTier(provider, contextWindowTokens)` gives the full tier for GitHub Copilot and for a window of at
   least 16,384 tokens, otherwise the compact tier; `Build(facts, tier)` writes the role prompt, the index, the facts of
@@ -141,7 +141,7 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 **PayloadMessageMapper**: The message of the user as the model is given it.
 
 - *Type*: In-process .NET static class, documented in the design of the `PayloadMessageMapper` unit.
-- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the `MessagePayload` of the
+- *Role*: Provider (the agent service is the consumer); it consumes the `MessagePayload` of the
   `Payload` subsystem.
 - *Contract*: `Map(payload, projectFolder)` returns one `ChatMessage` of the role user: the text of the user, followed
   by a block of context with the attachments, the pictures, and the marks (with the parts of the source under each),
@@ -153,7 +153,7 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 **AgentEventMapper**: What happens in a turn, as the events of the contract.
 
 - *Type*: In-process .NET class, one instance for each turn, documented in the design of the `AgentEventMapper` unit.
-- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the `AgentResponseUpdate` stream
+- *Role*: Provider (the agent service is the consumer); it consumes the `AgentResponseUpdate` stream
   of the Microsoft Agent Framework and the content types of Microsoft.Extensions.AI.
 - *Contract*: `MapAsync(updates)` returns the events of the turn and ends them with `Completed`, with `Failed`, or, when
   the token of the turn was canceled, with neither; `Map(update)` maps one update; `MapFailure(exception)` returns the
@@ -166,7 +166,7 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 
 - *Type*: In-process .NET class behind the interface `IAgentFactory` (the test seam), with `AgentCreationRequest`,
   `AgentCreationResult`, and `ICopilotAgentSource`, documented in the design of the `AgentProviderFactory` unit.
-- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the `AiProviderSettings` of the
+- *Role*: Provider (the agent service is the consumer); it consumes the `AiProviderSettings` of the
   `Settings` subsystem, the tools of the registry, and the instructions.
 - *Contract*: `CreateAsync(request)` returns an `AgentCreationResult`, which holds an `AIAgent` of the Microsoft Agent
   Framework or the readiness status and sentence that say why none could be made; disposing the result releases what the
@@ -286,8 +286,9 @@ the project.
 - **OllamaSharp** (OTS): the client that lists the models of an Ollama server and shows the context length of a model,
   used by the probe of the readiness checks, and the chat client that the provider factory runs the Ollama agent on.
 
-The view below shows these dependencies from the SysML2 model; more are added as the units that use `Project`,
-`Payload`, `Knowledge`, `Style`, `Preview`, and the AI libraries are built.
+The views below show these dependencies from the SysML2 model, in four focused views because the subsystem has many
+edges: the readiness checks and their suppliers, the tools, and the dependencies of the service for a turn and for the
+project.
 
 ![Agent runtime dependencies](AgentSubsystemRuntimeView.svg)
 

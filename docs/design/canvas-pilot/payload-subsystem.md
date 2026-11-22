@@ -11,7 +11,7 @@ where the user had them and where they are in the project, and, for each picture
 picture with the marks drawn and numbered on it, an image of the area around each mark, the geometry and the note of
 each mark in the pixels of the picture, and the parts of the source file under each mark. The subsystem also describes a
 payload as text, so that the user can see exactly what is sent. It has no dependency on the user interface; the chat
-panel and the inspector that show the result are added later.
+panel and the inspector that show the result are in the `Chat` subsystem.
 
 The subsystem contains four units: `MessagePayload`, the immutable values of the contract, `MarkImageComposer`, which
 draws the marks and cuts the areas, `PayloadBuilder`, which assembles the payload, and `PayloadDescriber`, which writes
@@ -61,9 +61,9 @@ render service that encodes it), and uses CanvasNet to draw the marks.
 
 ### Design
 
-**The payload is a contract.** The payload is the input of the assistant that is added later, so it is
-made of plain, immutable values with a version, not of the objects of the user interface or of the composer. A reader
-that is added later depends on this subsystem and on nothing of the chat. A change that a reader would notice changes
+**The payload is a contract.** The payload is the input of the AI copilot, so it is made of plain, immutable values with
+a version, not of the objects of the user interface or of the composer. A reader such as the copilot's
+`PayloadMessageMapper` depends on this subsystem and on nothing of the chat. A change that a reader would notice changes
 the version.
 
 **What the payload holds.** The text is the message as one string with `[Mark n]` and `[Attachment n: name]` at the

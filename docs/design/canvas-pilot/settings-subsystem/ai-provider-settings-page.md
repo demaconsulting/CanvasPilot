@@ -4,11 +4,10 @@
 
 #### Purpose
 
-`AiProviderSettingsPage` is the "AI Provider" page of the settings dialog. It lets the user choose and
-validate the AI provider settings, and, when it is given an `IProviderCheck`, check the connection to the provider that
-the entries describe before they are saved. The Agent subsystem reads the stored values through `ISettingsService`; the
-page itself references no AI service, SDK, or client. The model name is free text for now; a later increment can
-replace it with a list supplied by the provider.
+`AiProviderSettingsPage` is the "AI Provider" page of the settings dialog. It lets the user choose and validate the AI
+provider settings, and, when it is given an `IProviderCheck`, check the connection to the provider that the entries
+describe before they are saved. The Agent subsystem reads the stored values through `ISettingsService`; the page itself
+references no AI service, SDK, or client. The model name is typed text, because the provider does not supply a list.
 
 Two settings are stored but not acted on, and the page says so. The reasoning level is shown disabled with the note
 "Not available yet: the AI library does not expose it", and its value is loaded and applied unchanged. The unrestricted
