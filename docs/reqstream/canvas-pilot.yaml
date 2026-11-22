@@ -64,11 +64,10 @@ sections:
 
       - id: CanvasPilot-System-ConfigureAiProvider
         title: >-
-          The application shall let the user choose and store which AI provider and model it uses, with a context window
-          of 32768 tokens for settings that do not state one and the context window that the user stored kept as it is,
-          warn about a small context window, show the settings that the AI library cannot act on yet (the reasoning level)
-          as not available and not offer the unrestricted agent tools, and let the user check the connection to the
-          provider before saving.
+          The application shall let the user choose and store which AI provider, model, and reasoning level it uses, with
+          a context window of 32768 tokens for settings that do not state one and the context window that the user stored
+          kept as it is, warn about a small context window, not offer the unrestricted agent tools, and let the user check
+          the connection to the provider before saving.
         tags: [system]
         justification: |
           The application's AI assistance can use different providers, and the choice, with its
@@ -76,13 +75,38 @@ sections:
           the assistant is used, and a connection check shows at the dialog whether the choice works. Drawings with
           pictures and tools need a large context window, so a new installation starts with 32768 tokens; a smaller
           value that the user chose, or that an earlier build stored, is a deliberate choice and is not replaced. A
-          choice that nothing acts on must not look like one that does, so it is shown as unavailable or not at all.
+          choice that nothing acts on must not look like one that does, so it is not offered.
         children:
           - CanvasPilot-Settings-ConfigureAiProvider
         tests:
           - CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn
           - CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue
           - CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach
+
+      - id: CanvasPilot-System-ChooseModel
+        title: >-
+          The application shall let the user choose the model of the AI provider from the models that the provider offers,
+          each with what it can do (tool calling, pictures, reasoning levels, context window) and a warning for what it
+          lacks, shall let the user choose a reasoning level only among the levels that the chosen model offers, shall
+          still let the user type a model name when the models cannot be listed, and shall refuse model settings that
+          cannot work (a model that cannot call tools, or that is not offered, or a level that it does not offer) with the
+          explanation of the provider before the first turn.
+        tags: [system]
+        justification: |
+          Every drawing is made by calling tools, and a model that cannot see pictures cannot see the marks of the user or
+          its own result, so the model matters more than anything else in the settings. Nobody remembers model ids, and
+          the models and the levels that they offer differ from account to account and from model to model. Listing the
+          models with what they can do, warning about what they lack, and offering only the levels that the model has
+          lets the user choose well; checking the choice when the conversation starts turns a failure in the middle of a
+          turn into a sentence that names what is supported. The typed name keeps the application usable when the provider
+          cannot be asked.
+        children:
+          - CanvasPilot-Agent-ListModelsAndValidateSettings
+          - CanvasPilot-OTS-AgentKit-ValidateModelSettings
+          - CanvasPilot-OTS-AgentKit-DescribeOllamaModels
+        tests:
+          - CanvasPilot_ChooseModel_CopilotModelAndReasoningLevel_AreStoredAndReachTheAgent
+          - CanvasPilot_ChooseModel_SettingsThatCannotWork_BannerSaysSoBeforeTheFirstTurn
 
       - id: CanvasPilot-System-ConfigureSpeech
         title: >-
@@ -421,9 +445,10 @@ sections:
 
       - id: CanvasPilot-System-UseInstalledCopilotCli
         title: >-
-          The application shall locate and check the GitHub Copilot CLI that the user installed, and shall not include
-          or download the GitHub Copilot runtime in its installed files or in its build output, so that the only
-          GitHub Copilot CLI that it can ever use is the one that the user installed.
+          The application shall locate and check the GitHub Copilot CLI that the user installed, shall run that CLI,
+          started once and shared, for the chat and the checks of GitHub Copilot, and shall not include or download the
+          GitHub Copilot runtime in its installed files or in its build output, so that the only GitHub Copilot CLI that
+          it can ever use is the one that the user installed.
         tags: [system]
         justification: |
           The GitHub Copilot CLI is a separate product that the user installs, updates, and signs in to. Shipping a
@@ -432,9 +457,12 @@ sections:
           bring such a runtime unless they are told not to, so the absence is checked on the published folder of every
           Windows build and, with the file table of the installer, in the package itself. The application finds the
           installed CLI by a documented rule that tells it from the launchers that editors put on the PATH, honors a
-          path that the user sets, and checks its version.
+          path that the user sets, checks its version, and then runs exactly that CLI. The user signs in with the GitHub
+          CLI or a token variable, because the sign-in of the Copilot CLI itself is not used by the AI library, and the
+          application has no token field and no login screen of its own.
         children:
           - CanvasPilot-Agent-LocateCopilotCli
+          - CanvasPilot-Agent-RunCopilotOnInstalledCli
           - CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
           - CanvasPilot-OTS-CopilotSdk-HonorExplicitCliPath
           - CanvasPilot-OTS-CopilotSdk-ReadCliPathFromConnectionEnvironment
@@ -442,6 +470,7 @@ sections:
         tests:
           - windows@Copilot_RuntimeNotPublished
           - CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath
+          - CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing
 
       - id: CanvasPilot-System-ConfineCopilotToProject
         title: >-
@@ -550,16 +579,17 @@ sections:
         title: >-
           The application shall tell the user, before the first message and when asked in the settings, whether the
           configured AI provider can be used: for GitHub Copilot whether the installed Copilot CLI was found (by a rule
-          that rejects editor shims) and is new enough, whether credentials exist, and whether this build can start the
-          runtime, and for Ollama whether the server answers, has the model, and has a context window of at least
-          16,384 tokens, each as one sentence that says what to do.
+          that rejects editor shims) and is new enough, whether credentials exist, and whether the runtime starts on
+          that CLI and is signed in, and whether the chosen model and reasoning level can be used (the model can call
+          tools and accepts pictures), and for Ollama whether the server answers, has the model, and has a context window
+          of at least 16,384 tokens, each as one sentence that says what to do.
         tags: [system]
         justification: |
           A chat that fails on the first message with an error of a library is a poor first experience. Both providers
           depend on things outside the application (a CLI and a sign-in, or a server and a model), so the application
-          checks them itself and words the remedy, including the honest statement that GitHub Copilot cannot be used
-          in this build yet. A small context window is a warning and not a block, because it is a common but not
-          certain cause of failed drawings.
+          checks them itself and words the remedy, including the honest statement that the sign-in of the Copilot CLI
+          itself does not apply to the application. A small context window and a model that cannot see pictures are
+          warnings and not blocks, because they are common but not certain causes of poor drawings.
         children:
           - CanvasPilot-Agent-DescribeReadiness
           - CanvasPilot-Agent-CheckProviderReadiness
@@ -567,7 +597,7 @@ sections:
           - CanvasPilot-Chat-ShowCopilotReadiness
         tests:
           - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
-          - CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt
+          - CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt
           - CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach
 
       - id: CanvasPilot-System-StartApplication
@@ -603,7 +633,6 @@ sections:
           - CanvasPilot-Knowledge-BuildPromptParts
           - CanvasPilot-Knowledge-DescribeAgentTools
           - CanvasPilot-Knowledge-DescribeAgentSkills
-          - CanvasPilot-Knowledge-StayProviderNeutral
         tests:
           - CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork
 
@@ -710,7 +739,6 @@ sections:
           request. The copilot may come from more than one provider, so the parts are plain.
         children:
           - CanvasPilot-Style-GuideTheAssistant
-          - CanvasPilot-Style-StayProviderNeutral
         tests:
           - CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree
 

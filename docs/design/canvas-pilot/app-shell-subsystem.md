@@ -130,12 +130,16 @@ and are described here because they only join the units together.
    (`CanvasPilot\history`, or the `historyRoot` it is given), so that neither the Copilot runtime data nor the history
    is ever a place in a project. From there it builds, in this order, the process runner, the file system and the
    environment reader that the locator and the readiness check use (each replaceable by a test), one
-   `CopilotCliLocator` shared by the readiness check and the factory, `AgentReadiness`, `ProjectTools` (over the render
+   `CopilotCliLocator` shared by the readiness check and the factory, one `CopilotRuntimeStarter` (its data folder is
+   `CanvasPilot\copilot` below the local data root, or the starter that a test passes as `copilotStarter`) that the
+   readiness check and the factory share, `AgentReadiness`, `ProjectTools` (over the render
    service and the active style), `AgentToolRegistry` (over `KnowledgeTools.CreateAll` of the catalog of the drawing
    knowledge, the two style tool descriptors that the composition already holds, and the packs of the project tools),
    `AgentInstructions` (over the prompt builder of the same catalog and the role prompt that comes with the program),
-   the factory of the agents (`AgentProviderFactory` over the locator and the gated starter, or the `IAgentFactory`
-   that a test passes), and `AgentService`. It gives `AgentReadiness` to the AI Provider page as its `IProviderCheck`
+   the factory of the agents (`AgentProviderFactory` over the locator and the shared starter, which it owns when the
+   composition made the starter, or the `IAgentFactory`
+   that a test passes, in which case the composition stops the starter that it made itself and never one that a test
+   passed), and `AgentService`. It gives `AgentReadiness` to the AI Provider page as its `IProviderCheck`
    (the Check connection button), and the service, the `ChatHistoryStore`, and the project service to the chat panel.
    A small inner class, `CopilotWiring`, joins the rest: a file that the service reports as written is shown by
    refreshing the project explorer and selecting the file, which makes the preview draw it; the chat panel's request for

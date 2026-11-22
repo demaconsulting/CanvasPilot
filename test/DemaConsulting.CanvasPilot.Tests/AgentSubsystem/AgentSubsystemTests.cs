@@ -122,7 +122,7 @@ public sealed class AgentSubsystemTests
         {
             new AgentReadinessReport(AgentReadinessStatus.Ready, "Ollama is ready."),
             new AgentReadinessReport(AgentReadinessStatus.OllamaContextTooSmall, "The context window is below 16,384."),
-            new AgentReadinessReport(AgentReadinessStatus.CopilotRuntimeUnavailable, "Copilot support needs an AgentKit update; use Ollama meanwhile."),
+            new AgentReadinessReport(AgentReadinessStatus.CopilotNotSignedIn, CopilotRuntimeStarter.NotSignedInMessage),
         };
 
         // Act: read each report through the interface and reset the conversation
@@ -175,13 +175,13 @@ public sealed class AgentSubsystemTests
 
     /// <summary>
     ///     Test that the subsystem checks both providers through the interface that the settings dialog owns: GitHub
-    ///     Copilot on a machine with a signed-in GitHub CLI is not usable because this build cannot start the runtime,
+    ///     Copilot on a machine with a signed-in GitHub CLI is usable because the runtime starts on the installed CLI,
     ///     and Ollama with a model and a small window is usable with a warning.
     /// </summary>
     [Fact]
     public async Task AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface()
     {
-        // Arrange: the development machine with a GitHub CLI that is signed in, and a server that has one model
+        // Arrange: the development machine with a GitHub CLI that is signed in, a runtime that starts, and a server that has one model
         var token = TestContext.Current.CancellationToken;
         const string gh = @"C:\Program Files\GitHub CLI\gh.exe";
         var runner = new FakeProcessRunner();
@@ -192,9 +192,10 @@ public sealed class AgentSubsystemTests
         var fileSystem = DevMachine.CreateFileSystem();
         fileSystem.AddFile(gh, 1_000);
         var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]), ContextLength = 131072 };
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started."));
         IProviderCheck check = new AgentReadiness(
             new CopilotCliLocator(runner, fileSystem, environment),
-            null,
+            starter,
             runner,
             environment,
             fileSystem,
@@ -206,9 +207,10 @@ public sealed class AgentSubsystemTests
             new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3", ContextWindowTokens = 8192 },
             token);
 
-        // Assert: Copilot is gated and not usable; Ollama is usable and warns about the window
-        Assert.False(copilot.IsUsable);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", copilot.Message);
+        // Assert: Copilot is ready on the CLI that was found; Ollama is usable and warns about the window
+        Assert.True(copilot.IsUsable);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", copilot.Message);
+        Assert.Equal(DevMachine.RealCli, Assert.Single(starter.Requests).CliPath);
         Assert.True(ollama.IsUsable);
         Assert.Contains("8,192", ollama.Message, StringComparison.Ordinal);
     }
@@ -509,7 +511,9 @@ public sealed class AgentSubsystemTests
                 ModelName = "gemma3:12b",
                 ContextWindowTokens = 32768,
             };
-            await using var factory = new AgentProviderFactory(handler: handler);
+            await using var factory = new AgentProviderFactory(
+                handler: handler,
+                ollamaCatalogs: new FakeOllamaCatalogs(new FakeModelCatalog("ollama", TestModels.Make("ollama", "gemma3:12b"))));
 
             // Act: make the agent from the settings and run a turn through the mapper
             await using var made = await factory.CreateAsync(new AgentCreationRequest(settings, tools, "You draw.", root), token);
@@ -542,12 +546,12 @@ public sealed class AgentSubsystemTests
     }
 
     /// <summary>
-    ///     Test that GitHub Copilot is gated in this build as the application will meet it: the factory with the starter that
-    ///     is shipped gives the typed answer and no agent, while a starter that could start a runtime gives an agent that is
-    ///     made on it with exactly the tools of the project and the project folder as its working directory.
+    ///     Test that GitHub Copilot works as the application will meet it: the factory with a starter that refuses the runtime
+    ///     gives the typed answer and no agent, while a starter that runs a runtime gives an agent that is made on it with
+    ///     exactly the tools of the project and the project folder as its working directory.
     /// </summary>
     [Fact]
-    public async Task AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools()
+    public async Task AgentSubsystem_ConverseWithCopilot_RefusingAndRunningStarter_RefusalGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools()
     {
         // Arrange: the development machine with the real CLI, the tools of a project, and two factories
         var token = TestContext.Current.CancellationToken;
@@ -563,21 +567,22 @@ public sealed class AgentSubsystemTests
             var request = new AgentCreationRequest(new AiProviderSettings(), tools, "You draw.", root);
             var source = new FakeCopilotAgentSource(new ScriptedChatClient());
             var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
-            await using var gated = new AgentProviderFactory(locator, new GatedCopilotRuntimeStarter());
+            var refusing = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.NotSignedIn, "Sign in first."));
+            await using var refused = new AgentProviderFactory(locator, refusing);
             await using var started = new AgentProviderFactory(locator, starter);
 
             // Act
-            var withoutRuntime = await gated.CreateAsync(request, token);
+            var withoutRuntime = await refused.CreateAsync(request, token);
             await using var withRuntime = await started.CreateAsync(request, token);
 
-            // Assert: the gate gives the typed answer, and the runtime gets exactly the tools and the folder of the project
+            // Assert: the refusal gives the typed answer, and the runtime gets exactly the tools and the folder of the project
             Assert.Null(withoutRuntime.Agent);
-            Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, withoutRuntime.Failure!.Status);
+            Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, withoutRuntime.Failure!.Status);
             Assert.NotNull(withRuntime.Agent);
             var made = Assert.Single(source.Requests);
             Assert.Equal(tools.Select(tool => tool.Name).ToArray(), made.Tools.Select(tool => tool.Name).ToArray());
             Assert.Equal(root, made.WorkingDirectory);
-            Assert.Null(made.Model);
+            Assert.Null(made.Selection);
         }
         finally
         {
@@ -611,7 +616,11 @@ public sealed class AgentSubsystemTests
             ModelName = "gemma3:12b",
             ContextWindowTokens = 32768,
         };
-        using var rig = new AgentServiceRig(new ScriptedChatClient(), factory: new AgentProviderFactory(handler: handler), settings: settings);
+        var catalogs = new FakeOllamaCatalogs(new FakeModelCatalog("ollama", TestModels.Make("ollama", "gemma3:12b")));
+        using var rig = new AgentServiceRig(
+            new ScriptedChatClient(),
+            factory: new AgentProviderFactory(handler: handler, ollamaCatalogs: catalogs),
+            settings: settings);
         var told = new List<string>();
         rig.Service.FileWritten += (_, args) => told.Add(args.RelativePath);
         var before = AgentServiceRig.Snapshot(rig.ProjectFolder);
@@ -638,29 +647,30 @@ public sealed class AgentSubsystemTests
     }
 
     /// <summary>
-    ///     Test that the service in this build, whose starter of the Copilot runtime is gated, answers a turn for GitHub
-    ///     Copilot with one failure that says that Copilot support needs an update of the AI library, without starting a
-    ///     runtime, and that the same conversation works after the user switches to Ollama.
+    ///     Test that the service on the starter of a runtime that is not signed in answers a turn for GitHub Copilot with
+    ///     one failure that carries the sign-in sentence, without making an agent, and that the log says why without any
+    ///     words of the message.
     /// </summary>
     [Fact]
-    public async Task AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence()
+    public async Task AgentSubsystem_ConverseWithCopilot_ServiceWithNotSignedInStarter_TurnFailsWithTheSignInSentence()
     {
-        // Arrange: the development machine with a good CLI, the real factory with the shipped starter, and Copilot chosen
+        // Arrange: the development machine with a good CLI, the real factory with a starter that is not signed in
         var token = TestContext.Current.CancellationToken;
-        var runner = new FakeProcessRunner();
-        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
-        var locator = new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), DevMachine.CreateEnvironment());
+        var locator = DevMachine.CreatePlatformLocator();
+        var starter = new CopilotRuntimeStarter(
+            Path.Combine(Path.GetTempPath(), "canvaspilot-service-data"),
+            (_, _) => throw new InvalidOperationException("The Copilot runtime started but is not signed in to GitHub, so AgentKit stopped it."));
         using var rig = new AgentServiceRig(
             new ScriptedChatClient(),
-            factory: new AgentProviderFactory(locator, new GatedCopilotRuntimeStarter()),
-            settings: new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot });
+            factory: new AgentProviderFactory(locator, starter, ownsStarter: true),
+            settings: new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot, CopilotCliPath = DevMachine.PlatformCli });
 
         // Act
         var events = await AgentServiceRig.CollectAsync(rig.Service.RunTurnAsync(new AgentTurnRequest(CreatePayload("Draw a box.")), token), token);
 
-        // Assert: one typed failure with the sentence of the gate, and the log says why without any words of the message
+        // Assert: one typed failure with the sign-in sentence
         var failed = Assert.IsType<AgentEvent.Failed>(Assert.Single(events));
-        Assert.Equal((AgentFailureKind.NotReady, "Copilot support needs an AgentKit update; use Ollama meanwhile."), (failed.Kind, failed.Message));
+        Assert.Equal((AgentFailureKind.NotReady, CopilotRuntimeStarter.NotSignedInMessage), (failed.Kind, failed.Message));
         Assert.DoesNotContain("Draw a box", rig.ReadLog(), StringComparison.Ordinal);
     }
 

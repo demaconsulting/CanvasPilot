@@ -95,6 +95,8 @@ words:
   - startuml
   - Ollama
   - ollamasharp
+  - qwen
+  - xhigh
   - libcopilot
   - thirdparty
   - unidirectionality

@@ -69,18 +69,21 @@ sections:
 
               - id: CanvasPilot-CopilotCliLocator-ValidateVersion
                 title: >-
-                  The CopilotCliLocator shall run each remaining candidate with --version, allow it 10 seconds, read
-                  the version from the text GitHub Copilot CLI x.y.z, continue with the next candidate when the
-                  candidate cannot be started, does not answer in time, or does not report a version, and accept the
-                  first candidate whose version is 1.0.113 or later; a version that is too old shall be reported only
+                  The CopilotCliLocator shall run each remaining candidate with --no-auto-update --version, allow it
+                  10 seconds, read the version from the text GitHub Copilot CLI x.y.z, continue with the next candidate
+                  when the candidate cannot be started, does not answer in time, or does not report a version, and accept
+                  the first candidate whose version is 1.0.113 or later; a version that is too old shall be reported only
                   when no candidate is new enough.
                 justification: |
                   A file that has the right size and place can still be damaged or be another program, and a CLI that
                   is too old speaks a protocol version that the AI library of the application does not understand
-                  (version 1.0.106 reports protocol 3, the library needs 4, and 1.0.114 works). Reading the version
-                  from the output, with a time limit, proves the program is the CLI and is usable, and trying the
-                  next candidate lets one broken installation not hide a good one.
+                  (version 1.0.106 reports protocol 3, the library needs 4, and 1.0.114 works). The library reads the
+                  version with --no-auto-update, which is the version built into the executable and not a newer one that
+                  the CLI cached, so the locator reads it the same way and never passes a CLI that the library then
+                  refuses. Reading the version from the output, with a time limit, proves the program is the CLI and is
+                  usable, and trying the next candidate lets one broken installation not hide a good one.
                 tests:
+                  - CopilotCliLocator_Locate_DevelopmentMachine_FindsTheRealCliAndNotTheShim
                   - CopilotCliLocator_TryParseVersion_OutputText_ReadsVersionOrNone
                   - CopilotCliLocator_IsSupportedVersion_Versions_AcceptsOnlyTheMinimumAndNewer
                   - CopilotCliLocator_Locate_FirstCandidateUnreadable_FallsThroughToTheNext

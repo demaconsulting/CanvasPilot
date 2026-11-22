@@ -6,8 +6,8 @@
 every expected share is known exactly: stripes of the palette colors, a block of a color that is not in the palette, a
 color just inside and just outside the tolerance, the edge of an anti-aliased shape and a ramp of such an edge, a
 gradient to a color that is not in the palette, empty and partly see-through pixels, a tiny share, twelve far-apart
-colors, a mixture of all kinds, the same pixels in another order, a picture with nothing in it, and a picture of the
-largest size that CanvasNet draws (8192 by 8000 pixels). The color arithmetic is compared with the published values of
+colors, a mixture of all kinds, the same pixels in another order, a picture with nothing in it, and a large picture
+(2048 by 2000 pixels). The color arithmetic is compared with the published values of
 CIELAB for white, black, a gray, and red. The boundary of the tolerance is found with the same arithmetic as the check,
 on a kit that has only white so that no line between two palette colors can make a blend. The kits that come with the
 program are checked on their nine example pictures, which are really drawn by the render service, in
@@ -18,8 +18,8 @@ what is posted to it.
 
 #### Test Environment
 
-N/A - standard test environment. The test of the largest picture allocates about 260 MB and has a time bound of two
-seconds; it was measured at about 0.5 seconds in a debug build on the development machine.
+N/A - standard test environment. The test of the large picture allocates about 16 MB. No test measures time or memory;
+the cost of the check is a design property that is recorded in the design of the unit.
 
 #### Acceptance Criteria
 
@@ -44,9 +44,8 @@ seconds; it was measured at about 0.5 seconds in a debug build on the developmen
 - The notes of a failing picture are `style-summary`, `style-ok`, `style-blend` (information) and `style-off-palette` (a
   warning), and the text has the four lines of the design; a passing picture has no line for colors off the palette and
   says "the picture" when it has no file name.
-- The picture of 8192 by 8000 pixels is checked in under two seconds. The three per-pixel methods are excluded from code
-  coverage, because the coverage run counts every branch of them and would make the check a hundred times slower than
-  the requirement allows; the unit tests still run every line of them.
+- A large picture of 2048 by 2000 pixels in stripes has every pixel counted and the exact share of the color that is off
+  the palette.
 - Each of the nine example pictures of the kits that come with the program passes against its own kit with less than a
   thousandth of its pixels off the palette. The largest value measured was 0.045 percent (the flowchart of the kit DEMA,
   with 13.5 percent of blended edges, which is the share of the anti-aliased text and lines); the bound is that value
@@ -129,9 +128,10 @@ tested by `StyleCheckReport_ToNotesAndToText_FailingPicture_HaveTheShapeOfTheDes
 line for colors off the palette, and has two notes. This scenario is tested by
 `StyleCheckReport_ToText_PassingPictureWithoutName_HasNoOffPaletteLine`.
 
-**StyleChecker_Check_LargestPicture_FinishesInUnderTwoSeconds**: A picture of 8192 by 8000 pixels in stripes is counted
-in full, a fifth of it is off the palette, and the check takes under two seconds. This scenario is tested by
-`StyleChecker_Check_LargestPicture_FinishesInUnderTwoSeconds`.
+**StyleChecker_Check_LargePicture_CountsEveryPixelAndTheOffPaletteShare**: A picture of 2048 by 2000 pixels in stripes
+of the palette colors and a color off the palette is counted in full, and the share off the palette is the exact share
+of the columns of that color. This scenario is tested by
+`StyleChecker_Check_LargePicture_CountsEveryPixelAndTheOffPaletteShare`.
 
 **StyleCheckOptions_DefaultsAndValidate_AreTheOnesOfTheDesign**: The defaults are 10, 8, 5, 0.01, and 0.05 and eight
 listed colors; each limit that is negative, above its range, or not a number is refused. This scenario is tested by

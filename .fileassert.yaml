@@ -37,10 +37,12 @@ tests:
         count: 1
         min-size: 100000
 
-  # The application drives the user's own, installed GitHub Copilot CLI and must never ship or download a Copilot
+  # The application runs the user's own, installed GitHub Copilot CLI (by its full path, through the installed-CLI
+  # source of AgentKit) and must never ship or download a Copilot
   # runtime. The Copilot SDK would otherwise copy a runtime of about 180 MB into every output folder
   # (CopilotSkipCliDownload in Directory.Build.props switches that off). The installer harvests every file of
   # publish/win-x64, so the absence asserted here is the absence in the MSI; the build also reads the MSI file table.
+  # The executable size below is re-measured after every upgrade of the AI libraries.
   - name: Copilot_RuntimeNotPublished
     description: "Published win-x64 application contains no GitHub Copilot runtime and stays within its size budget"
     tags: [installer]
@@ -55,8 +57,8 @@ tests:
         count: 0
       - pattern: "publish/win-x64/**/.copilot-explicit-cli"
         count: 0
-      # The self-contained single-file executable with the AI libraries is about 131 MB; a bundled Copilot runtime
-      # would add about 180 MB, so a limit of 160 MB catches it even if its file names change.
+      # The self-contained single-file executable with the AI libraries is about 125 MB (AgentKit 0.1.0-beta.4); a bundled
+      # Copilot runtime would add about 180 MB, so a limit of 160 MB catches it even if its file names change.
       - pattern: "publish/win-x64/CanvasPilot.exe"
         count: 1
         min-size: 20000000

@@ -3,8 +3,8 @@
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
 Agent, Annotation, AppShell, Chat, Composer, Knowledge, Logging, Payload, Preview, Project, Settings, Speech, Style, and
-Utilities subsystems; the AI copilot of the Agent subsystem answers the messages through Ollama and reports whether
-GitHub Copilot can be used, which is gated in this release.
+Utilities subsystems; the AI copilot of the Agent subsystem answers the messages through Ollama or through the GitHub
+Copilot CLI that the user installed.
 
 ## Purpose
 
@@ -25,8 +25,10 @@ This document covers the verification design for the following software items:
     - **AgentContract** — the provider-independent contract of the AI copilot
     - **CopilotCliLocator** — finds the Copilot CLI that the user installed, tells it from editor shims, and checks its
       version
+    - **CopilotRuntimeStarter** — starts the Copilot runtime on the installed CLI, shares that one runtime, and turns
+      every failure to start into a status and a sentence
     - **AgentReadiness** — checks whether the chosen AI provider can be used (the Copilot CLI, credentials, and the
-      gated runtime; the Ollama server, model, and context window) and says what to do
+      runtime that starts; the Ollama server, model, and context window) and says what to do
     - **AgentToolRegistry** — builds the tools of the copilot for one project, confined to the project folder, from the
       drawing knowledge and style tool descriptions, the project packs, and the optional pack catalog
     - **ProjectTools** — the tools with which the copilot lists, reads, writes, and draws the files of the project:
@@ -37,8 +39,8 @@ This document covers the verification design for the following software items:
       pictures, and marks, and the pictures and close-ups as images in a stated order
     - **AgentEventMapper** — the updates of an agent as the provider-independent events of a turn, and the failures of a
       turn as sentences that say what to do
-    - **AgentProviderFactory** — the agent of a conversation for Ollama or for GitHub Copilot, with the gated starter of
-      the Copilot runtime, and what it owns and disposes
+    - **AgentProviderFactory** — the agent of a conversation for Ollama or for GitHub Copilot, on the one runtime that
+      the starter of the Copilot runtime shares, and what it owns and disposes
     - **AgentService** — the conversation of the open project: made when the first message is sent, one turn at a time,
       the data of the Copilot runtime kept outside the project, and a log of metadata only
   - **Annotation** subsystem
@@ -144,9 +146,10 @@ The following topics are out of scope:
 - Verification documents are not produced for the test projects themselves — they are the
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
-- GitHub Copilot as a working provider is gated in this release and cannot be verified live: its readiness checks, the
-  messages, and the gated starter are verified, and a live run is a follow-up that depends on the AI library; the
-  live Ollama checks are manual checks of the system verification, because Ollama is not part of the build machines
+- A live conversation with GitHub Copilot needs the installed CLI and a sign-in, so it is not part of the tests that run
+  on every machine: the readiness checks, the starter, the messages, and the agent on a stand-in runtime are verified
+  by the tests, and the live runs are opt-in tests and the manual checks of the system verification; the live
+  Ollama checks are manual checks of the system verification, because Ollama is not part of the build machines
 - User-selectable tool packs and spoken replies of the copilot are not part of this version
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage

@@ -5,27 +5,31 @@ OTS item are defined in the Microsoft.Copilot.SDK OTS Software Requirements docu
 
 ### Required Functionality
 
-CanvasPilot does not start the Copilot SDK in this version. The facts on which the gating of the Copilot provider rests
-are verified instead: an explicit CLI path on a connection is honored and named in its error, the CLI path is read from
-the connection's own environment and not from the host process, and the CLI version that the SDK is built for is not
-below the minimum that CanvasPilot documents.
+CanvasPilot does not start the Copilot SDK itself: the runtime of AgentKit, which is built on the SDK, starts the
+Copilot CLI that the user installed at an explicit path. The facts on which that rests are verified at the level of the
+SDK: an explicit CLI path on a connection is honored and named in its error, the CLI path is read from the connection's
+own environment and not from the host process, and the oldest CLI version that AgentKit runs is not above the minimum
+that CanvasPilot documents and checks.
 
 ### Verification Approach
 
 The SDK has no self-validation mode. It is verified by tests in `test/OtsSoftwareTests/CopilotSdkTests.cs` that start
-clients that must fail, so that no Copilot CLI runs and no model or sign-in is needed, and that read the CLI version
-from the build props of the package, which the test project receives through a direct package reference and records in
-an assembly metadata attribute. The tests are run again before a version upgrade is accepted, and an upgrade is also the
-moment to check whether AgentKit has gained the CLI path option that removes the gate.
+clients that must fail, so that no Copilot CLI runs and no model or sign-in is needed, and that read the minimum CLI
+version from the AgentKit library (`CopilotCli.MinimumVersion`) and compare it with the minimum of the locator of
+CanvasPilot. The tests are run again before a version upgrade is accepted. An upgrade of the SDK or of AgentKit is also
+the moment to run the live tests of the manual verification of the system, which start a real runtime on the installed
+CLI.
 
 ### Test Scenarios
 
-#### CopilotSdk_BuiltForCliVersion_IsNotBelowCanvasPilotMinimum
+#### CopilotSdk_AgentKitMinimumCliVersion_IsNotAboveCanvasPilotMinimum
 
-**Scenario**: The version of the Copilot CLI that the SDK package declares is read from the test assembly and compared
-with the minimum CLI version that CanvasPilot documents, 1.0.113, the first with the protocol that the SDK speaks.
+**Scenario**: The oldest version of the Copilot CLI that AgentKit runs (`CopilotCli.MinimumVersion`) is compared with
+the minimum CLI version that CanvasPilot documents and checks (`CopilotCliLocator.MinimumCliVersion`, 1.0.113, the first
+with the protocol that the SDK speaks).
 
-**Expected**: The declared version is a version and is not below the minimum.
+**Expected**: The minimum of the library is not above the minimum of CanvasPilot, so the version check that the user
+sees never passes a CLI that the library then refuses.
 
 **Requirement coverage**: `CanvasPilot-OTS-CopilotSdk-DeclareSupportedCliVersion`.
 

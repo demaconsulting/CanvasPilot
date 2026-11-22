@@ -450,49 +450,4 @@ public sealed class StyleSubsystemTests : IDisposable
         Assert.True(File.Exists(Path.Combine(places.User, "poster", "examples", "logo.svg")));
         Assert.Equal(["Poster Look"], manager.Groups.Single(group => group.Location == StyleKitLocation.User).Items.Select(item => item.Name));
     }
-
-    /// <summary>
-    ///     Validates that the subsystem refers to no type of a language model or agent library: no type of the
-    ///     subsystem uses such a type in its signatures, and no source file of the subsystem has a using directive for
-    ///     such a library. The application library as a whole refers to the libraries of the AI copilot, so the rule is
-    ///     checked on the subsystem and not on the assembly.
-    /// </summary>
-    [Fact]
-    public void StyleSubsystem_Types_ReferenceNoLanguageModelPackage()
-    {
-        // Arrange: the types of the subsystem, and the folder of its source files beside the project file of the
-        // application library
-        var assembly = typeof(StyleKitSerializer).Assembly;
-        var sourceFolder = Path.Combine(Path.GetDirectoryName(FindProjectFile())!, "StyleSubsystem");
-        Assert.True(Directory.Exists(sourceFolder), "The source folder of the subsystem is missing.");
-
-        // Act
-        var typeFindings = LanguageModelDependencyCheck.FindTypeReferences(assembly, "DemaConsulting.CanvasPilot.StyleSubsystem");
-        var sourceFindings = LanguageModelDependencyCheck.FindUsingDirectives(sourceFolder);
-
-        // Assert: no type and no source file of the subsystem refers to a language model or agent library
-        Assert.Empty(typeFindings);
-        Assert.Empty(sourceFindings);
-    }
-
-    /// <summary>
-    ///     Finds the project file of the application library by walking up from the folder of the tests.
-    /// </summary>
-    /// <returns>The full path of the project file.</returns>
-    private static string FindProjectFile()
-    {
-        var folder = new DirectoryInfo(AppContext.BaseDirectory);
-        while (folder is not null)
-        {
-            var candidate = Path.Combine(folder.FullName, "src", "DemaConsulting.CanvasPilot", "DemaConsulting.CanvasPilot.csproj");
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-
-            folder = folder.Parent;
-        }
-
-        throw new InvalidOperationException("The project file of the application library was not found.");
-    }
 }

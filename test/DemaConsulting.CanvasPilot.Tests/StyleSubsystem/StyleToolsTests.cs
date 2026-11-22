@@ -281,17 +281,15 @@ public sealed class StyleToolsTests : IDisposable
 
     /// <summary>
     ///     Validates that <c>style_check</c> resolves a relative path against the project folder, draws that file with the
-    ///     project folder as the folder it may read, on a thread of the pool, and answers with the text of the report.
+    ///     project folder as the folder it may read, and answers with the text of the report.
     /// </summary>
     [Fact]
     public async Task StyleTools_Check_RelativePath_DrawsTheFileAndAnswersWithTheReport()
     {
-        // Arrange: a renderer that gives a picture of the palette color, and the thread that it was called on
+        // Arrange: a renderer that gives a picture of the palette color
         var renderer = Substitute.For<IImageRenderService>();
-        var onPoolThread = false;
         renderer.RenderAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(call =>
         {
-            onPoolThread = Thread.CurrentThread.IsThreadPoolThread;
             return Task.FromResult(RenderResult.Success(new RenderedImage((string)call[0], "svg", 2, 2, Enumerable.Repeat((byte)255, 16).ToArray())));
         });
         var check = await CreateCheckAsync(renderer, "clean");
@@ -302,9 +300,68 @@ public sealed class StyleToolsTests : IDisposable
 
         // Assert: the full path inside the project and the project folder were given to the renderer, and the answer is the text
         await renderer.Received(1).RenderAsync(Path.Combine(_project, "inside.svg"), _project, Arg.Any<CancellationToken>());
-        Assert.True(onPoolThread);
         Assert.StartsWith("Style check of inside.svg against \"Clean\" (clean): 2 x 2 px, 4 pixels counted (0 transparent).\n", answer, StringComparison.Ordinal);
         Assert.Contains("Result: PASSED", answer, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Validates that <c>style_check</c> still answers when it is called from a context that cannot run the
+    ///     continuations that are posted to it, the way the thread of the user interface is while it waits for the tool, and
+    ///     when the drawing of the file finishes only after it has yielded.
+    /// </summary>
+    [Fact]
+    public async Task StyleTools_Check_CalledFromABlockedSingleThreadedContext_StillAnswers()
+    {
+        // Arrange: a renderer that yields before it answers, so that its continuation would be posted to a context that
+        // captured it, and a check that is called from a thread whose context never runs what is posted to it
+        var renderer = Substitute.For<IImageRenderService>();
+        renderer.RenderAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(async call =>
+        {
+            await Task.Yield();
+            return RenderResult.Success(new RenderedImage((string)call[0], "svg", 2, 2, Enumerable.Repeat((byte)255, 16).ToArray()));
+        });
+        var check = await CreateCheckAsync(renderer, "clean");
+        _active.Use(_places.Catalog!.Resolve("clean"));
+        var answer = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var caller = new Thread(() =>
+        {
+            SynchronizationContext.SetSynchronizationContext(new BlockedSynchronizationContext());
+            try
+            {
+                answer.SetResult(check.Invoke("{\"path\":\"inside.svg\"}"));
+            }
+            catch (Exception exception)
+            {
+                answer.SetException(exception);
+            }
+        });
+
+        // Act: call the check from that thread, and wait for the answer for a bounded time
+        caller.Start();
+        var finished = await Task.WhenAny(answer.Task, Task.Delay(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken));
+
+        // Assert: the check answered with its report and did not wait for the context
+        Assert.Same(answer.Task, finished);
+        Assert.Contains("Result: PASSED", await answer.Task, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     A synchronization context that accepts what is posted to it and never runs it, like the context of a thread that
+    ///     is blocked.
+    /// </summary>
+    private sealed class BlockedSynchronizationContext : SynchronizationContext
+    {
+        /// <inheritdoc />
+        public override void Post(SendOrPostCallback d, object? state)
+        {
+            // Never run: the thread that owns this context is blocked in the call that is under test
+        }
+
+        /// <inheritdoc />
+        public override void Send(SendOrPostCallback d, object? state)
+        {
+            // Never run, for the same reason
+        }
     }
 
     /// <summary>

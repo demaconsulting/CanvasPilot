@@ -6,11 +6,13 @@
 folders in a temporary place and a hand-written stand-in for the active style (`FakeActiveStyle`), against the text that
 `StyleGuidance` writes. `style_check` is checked with an NSubstitute render service that answers with a picture, an
 error, a cancelled result, or an exception, so that every mode and every error is reached without drawing; the arguments
-that the renderer received are asserted, and the thread that it was called on. The containment of the path is checked
-with temporary folders: a project folder, a folder outside it with a picture in it, and, where the machine allows it, a
-junction (on Windows, made with `mklink /J`, which needs no privilege) or a symbolic link inside the project that leads
-outside and one that leads to another place in the project. One test draws real SVG files with the real render service.
-A subsystem test runs both tools over the real project service, catalog, selection, and render service.
+that the renderer received are asserted. One test calls the tool from a thread whose synchronization context never runs
+what is posted to it, with a renderer that yields before it answers, and waits for the answer for a bounded time. The
+containment of the path is checked with temporary folders: a project folder, a folder outside it with a picture in it,
+and, where the machine allows it, a junction (on Windows, made with `mklink /J`, which needs no privilege) or a symbolic
+link inside the project that leads outside and one that leads to another place in the project. One test draws real SVG
+files with the real render service. A subsystem test runs both tools over the real project service, catalog, selection,
+and render service.
 
 #### Test Environment
 
@@ -26,9 +28,10 @@ machine that does not let them make a junction or a link.
 - `style_get` with no arguments (in each of seven ways of saying so) gives the block of the active kit; with a kit it
   gives that kit; an unknown kit is answered with the known ids in order; no kit and a missing kit are answered with how
   to choose one; a section is the whole section, in any case; an unknown section lists the sections.
-- `style_check` draws the file at the full path inside the project with the project folder, on a thread of the pool, and
-  answers with the text of the report; with no path it uses the picture that is shown, and says what to send when there
-  is none; a full path inside the project is accepted.
+- `style_check` draws the file at the full path inside the project with the project folder and answers with the text of
+  the report, also when it is called from a context that cannot run the continuations that are posted to it; with no
+  path it uses the picture that is shown, and says what to send when there is none; a full path inside the project is
+  accepted.
 - The tolerance reaches the check; 0 and 100 are accepted; a value below 0, above 100, and a string are refused.
 - A relative path that climbs out (with either slash and in the middle of a path), a full path elsewhere, a network
   path, the data folder in either case, a folder, a missing file, and a name with a NUL are each refused with a message
@@ -70,8 +73,13 @@ of the guidance, every name of the list works, and `colors` is answered with the
 `the tool could not answer`. This scenario is tested by `StyleTools_Get_CatalogThrows_IsAnsweredWithAMessage`.
 
 **StyleTools_Check_RelativePath_DrawsTheFileAndAnswersWithTheReport**: A relative path is drawn at its full path with
-the project folder, on a thread of the pool, and the answer is the text of the report. This scenario is tested by
+the project folder, and the answer is the text of the report. This scenario is tested by
 `StyleTools_Check_RelativePath_DrawsTheFileAndAnswersWithTheReport`.
+
+**StyleTools_Check_CalledFromABlockedSingleThreadedContext_StillAnswers**: The tool is called from a thread whose
+synchronization context accepts what is posted to it and never runs it, with a renderer that yields before it answers;
+the tool answers with the report within a bound of 30 seconds and does not wait for the context. This scenario is tested
+by `StyleTools_Check_CalledFromABlockedSingleThreadedContext_StillAnswers`.
 
 **StyleTools_Check_NoPathOrFullPath_UsesTheShownPictureOrTheFullPath**: With no path the picture that is shown is
 checked; with neither the answer says what to send; a full path inside the project is accepted. This scenario is tested

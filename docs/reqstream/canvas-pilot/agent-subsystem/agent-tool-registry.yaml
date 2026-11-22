@@ -142,17 +142,14 @@ sections:
                 title: >-
                   The AgentToolRegistry shall refuse a set of tools that has no tool, that has two tools with the same
                   name, that has two packs with the same prefix, or that has a tool named like one of the built-in tools
-                  of the Copilot CLI, with a message that names every problem, and shall keep its list of the built-in
-                  names at least as complete as the list of the AI library.
+                  of the Copilot CLI, with a message that names every problem.
                 justification: |
                   The Copilot CLI answers its own tools of the names it has built in instead of ours, so a tool of the
                   application with one of those names would never be called, and an empty set or a repeated name cannot be
                   given to a provider. Refusing the set when it is built, with the names in the message, is cheaper than
-                  finding out from a conversation that does nothing. The list of the library is not public, so a test
-                  reads it and fails when an upgrade adds a name that ours lacks.
+                  finding out from a conversation that does nothing.
                 tests:
                   - AgentToolRegistry_CreateTools_RepeatedToolName_IsRefusedWithTheName
                   - AgentToolRegistry_CreateTools_CopilotBuiltInName_IsRefusedWithTheName
                   - AgentToolRegistry_CreateTools_RepeatedPackPrefix_IsRefusedWithThePrefix
                   - AgentToolRegistry_CreateTools_NoTool_IsRefused
-                  - AgentToolRegistry_CopilotBuiltInToolNames_CoverTheNamesTheLibraryReserves

@@ -511,6 +511,7 @@ public sealed class AgentService : IAgentService
             '\u001F',
             settings.Provider,
             settings.ModelName?.Trim() ?? string.Empty,
+            settings.ReasoningEffort?.Trim() ?? string.Empty,
             settings.OllamaEndpoint?.Trim() ?? string.Empty,
             settings.ContextWindowTokens,
             settings.CopilotCliPath?.Trim() ?? string.Empty);

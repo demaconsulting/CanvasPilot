@@ -298,7 +298,7 @@ public sealed class ApplicationComposition : IDisposable
     /// </param>
     /// <param name="agentFactory">
     ///     Makes the agents of the AI copilot, or <see langword="null" /> for the factory of the providers (Ollama, and
-    ///     GitHub Copilot, which this build cannot start). The composition passes it to the AI copilot, which disposes it.
+    ///     GitHub Copilot on the installed CLI). The composition passes it to the AI copilot, which disposes it.
     /// </param>
     /// <param name="processRunner">
     ///     Runs the Copilot CLI and the GitHub CLI for the readiness check, or <see langword="null" /> for the real
@@ -307,6 +307,15 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="ollamaProbe">Asks the Ollama server for its models, or <see langword="null" /> for the real server.</param>
     /// <param name="environment">Reads the environment for the readiness check, or <see langword="null" /> for the real one.</param>
     /// <param name="cliFileSystem">Looks for the Copilot CLI in the file system, or <see langword="null" /> for the real one.</param>
+    /// <param name="copilotStarter">
+    ///     Starts the Copilot runtime that the readiness check and the factory of the agents share, or <see langword="null" />
+    ///     for a starter of the real runtime on the Copilot CLI that the user installed. The composition stops the starter that it
+    ///     makes itself and never one that it is given.
+    /// </param>
+    /// <param name="ollamaCatalogs">
+    ///     Gives the catalog of the Ollama server for the readiness check, the factory of the agents, and the model list of
+    ///     the settings page, or <see langword="null" /> for catalogs on the real network.
+    /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -328,7 +337,9 @@ public sealed class ApplicationComposition : IDisposable
         IProcessRunner? processRunner = null,
         IOllamaProbe? ollamaProbe = null,
         IEnvironmentReader? environment = null,
-        ICliFileSystem? cliFileSystem = null)
+        ICliFileSystem? cliFileSystem = null,
+        ICopilotRuntimeStarter? copilotStarter = null,
+        IOllamaModelCatalogs? ollamaCatalogs = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -395,6 +406,7 @@ public sealed class ApplicationComposition : IDisposable
         // disposed first of all, so it stops listening to the project and the settings before they go.
         AgentService? agent = null;
         AgentReadiness? readiness = null;
+        ProviderModelCatalog? modelSource = null;
         ChatHistoryStore? chatHistory = null;
         if (localDataRoot is not null)
         {
@@ -402,14 +414,30 @@ public sealed class ApplicationComposition : IDisposable
             var fileSystem = cliFileSystem ?? new CliFileSystem();
             var environmentReader = environment ?? new SystemEnvironmentReader();
             var locator = new CopilotCliLocator(runner, fileSystem, environmentReader);
-            readiness = new AgentReadiness(locator, null, runner, environmentReader, fileSystem, ollamaProbe);
+
+            // One Copilot runtime is shared by the check of the readiness and by the agents: the runtime keeps its data in
+            // one folder, which two runtimes must not use. The runtime is stopped with the factory that owns the starter,
+            // or with the composition when the factory is not the one made here.
+            var ownedStarter = copilotStarter is null ? new CopilotRuntimeStarter(AgentService.GetCopilotDataDirectory(localDataRoot)) : null;
+            var starter = copilotStarter ?? ownedStarter!;
+
+            // The catalogs of Ollama are shared as well, so that the check, the agents, and the model list describe the
+            // models of the server once
+            var catalogs = ollamaCatalogs ?? new OllamaModelCatalogs();
+            readiness = new AgentReadiness(locator, starter, runner, environmentReader, fileSystem, ollamaProbe, catalogs);
+            modelSource = new ProviderModelCatalog(locator, starter, catalogs);
             var projectTools = new ProjectTools(renderer, styleSelection, logger: logger);
             var registry = new AgentToolRegistry(
                 KnowledgeTools.CreateAll(KnowledgeCatalog.Default),
                 styleTools,
                 projectTools.CreatePacks);
             var instructions = new AgentInstructions(new KnowledgePromptBuilder(KnowledgeCatalog.Default));
-            var factory = agentFactory ?? new AgentProviderFactory(locator, null, null, logger);
+            var factory = agentFactory ?? new AgentProviderFactory(locator, starter, null, logger, ownsStarter: ownedStarter is not null, ollamaCatalogs: catalogs);
+            if (agentFactory is not null && ownedStarter is not null)
+            {
+                owned.Add(new AsyncOwner(ownedStarter));
+            }
+
             var historyFolder = historyRoot ?? AgentService.GetHistoryDirectory(localDataRoot);
             agent = new AgentService(
                 projects,
@@ -432,7 +460,7 @@ public sealed class ApplicationComposition : IDisposable
         MainWindowShell? pickerOwner = null;
         IReadOnlyList<ISettingsPage> pages = settingsPages ??
         [
-            new AiProviderSettingsPageViewModel(readiness),
+            new AiProviderSettingsPageViewModel(readiness, modelSource),
             new SpeechSettingsPageViewModel(audioDevices, speechModels),
             new StyleSettingsPageViewModel(styleCatalog, () => pickerOwner?.FolderPicker),
         ];
@@ -495,6 +523,34 @@ public sealed class ApplicationComposition : IDisposable
         return new ApplicationComposition(
             logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat,
             styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, agent, owned);
+    }
+
+    /// <summary>
+    ///     Stops an asynchronously disposable service that the composition made, when the composition is disposed.
+    /// </summary>
+    private sealed class AsyncOwner : IDisposable
+    {
+        /// <summary>The longest time that the service may take to stop.</summary>
+        private static readonly TimeSpan StopWait = TimeSpan.FromSeconds(10);
+
+        /// <summary>The service to stop.</summary>
+        private readonly IAsyncDisposable _service;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="AsyncOwner" /> class.
+        /// </summary>
+        /// <param name="service">The service to stop; the owner stops it once.</param>
+        internal AsyncOwner(IAsyncDisposable service)
+        {
+            _service = service;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            // The wait is bounded so that a runtime that does not stop cannot keep the application open
+            _ = Task.Run(async () => await _service.DisposeAsync().ConfigureAwait(false)).Wait(StopWait);
+        }
     }
 
     /// <summary>

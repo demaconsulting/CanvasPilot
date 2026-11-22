@@ -40,7 +40,7 @@ public enum AgentReadinessStatus
     /// <summary>No credentials that the AI library can use were found for GitHub Copilot.</summary>
     CopilotNotSignedIn,
 
-    /// <summary>The GitHub Copilot runtime cannot be started by this build of the application.</summary>
+    /// <summary>The GitHub Copilot runtime could not be started.</summary>
     CopilotRuntimeUnavailable,
 
     /// <summary>The Ollama server did not answer.</summary>
@@ -51,6 +51,18 @@ public enum AgentReadinessStatus
 
     /// <summary>The Ollama context window is smaller than recommended; the provider can still be used.</summary>
     OllamaContextTooSmall,
+
+    /// <summary>
+    ///     The model or the reasoning effort of the settings cannot be used, for example because the model cannot call
+    ///     tools, is not offered to the user, or does not offer the effort; the provider cannot be used until the settings
+    ///     change.
+    /// </summary>
+    ModelSettingsInvalid,
+
+    /// <summary>
+    ///     The chosen model does not accept pictures; the provider can still be used, but the model cannot see the drawings.
+    /// </summary>
+    ModelLacksVision,
 }
 
 /// <summary>
@@ -88,5 +100,6 @@ public sealed record AgentReadinessReport
     ///     Gets a value indicating whether a turn can be run: the provider is ready, or it is ready with a warning that
     ///     does not stop it.
     /// </summary>
-    public bool IsUsable => Status is AgentReadinessStatus.Ready or AgentReadinessStatus.OllamaContextTooSmall;
+    public bool IsUsable => Status is AgentReadinessStatus.Ready or AgentReadinessStatus.OllamaContextTooSmall
+        or AgentReadinessStatus.ModelLacksVision;
 }

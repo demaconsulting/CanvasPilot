@@ -37,17 +37,18 @@ sections:
                 title: >-
                   The StyleTools shall describe the tool style_check with its name, a description of what it is for and how to
                   call it, and a JSON Schema of the arguments that allows only a path and a tolerance, and shall answer a call
-                  by drawing the file, on a thread of the pool and not on the thread of the caller, and answering with the text
-                  of the report of the check against the kit of the project, using the picture that is shown when no path is
+                  by drawing the file, even when it is called from a context that cannot run the continuations that are
+                  posted to it, and answering with the text of the report of the check against the kit of the project, using the picture that is shown when no path is
                   given and a tolerance from 0 to 100 when one is given, and shall answer a project that is not open, a project
                   with no kit or a missing kit, a path that is not given and a picture that cannot be drawn with a message that
                   says what is wrong.
                 justification: |
                   The check is the way an assistant sees whether a picture it drew keeps the style, so it must be a call with
-                  one obvious argument, must say in plain words why it cannot be made, and must not wait on the thread that
-                  shows the application.
+                  one obvious argument, must say in plain words why it cannot be made, and must answer even when the
+                  caller is the thread that shows the application, which is blocked while it waits for the answer.
                 tests:
                   - StyleTools_Check_RelativePath_DrawsTheFileAndAnswersWithTheReport
+                  - StyleTools_Check_CalledFromABlockedSingleThreadedContext_StillAnswers
                   - StyleTools_Check_NoPathOrFullPath_UsesTheShownPictureOrTheFullPath
                   - StyleTools_Check_Tolerance_ReachesTheCheckAndIsBounded
                   - StyleTools_Check_NoProjectNoKitOrDrawingFails_AreAnsweredWithAMessage

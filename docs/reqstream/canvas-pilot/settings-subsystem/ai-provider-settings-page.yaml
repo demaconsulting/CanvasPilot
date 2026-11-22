@@ -2,8 +2,9 @@
 # Software Unit Requirements for the AiProviderSettingsPage Unit
 #
 # The AiProviderSettingsPage unit is the "AI Provider" page of the settings dialog. It edits and validates
-# the persisted AI provider choices and, through the IProviderCheck interface that the Settings subsystem owns,
-# can check the connection to the provider. It has no dependency on the Agent subsystem that implements the check.
+# the persisted AI provider choices, lists the models of the selected provider through the IProviderModelSource interface
+# and checks the connection to the provider through the IProviderCheck interface, both of which the Settings subsystem
+# owns. It has no dependency on the Agent subsystem that implements them.
 
 sections:
   - title: CanvasPilot Requirements
@@ -15,7 +16,7 @@ sections:
               - id: CanvasPilot-AiProviderSettingsPage-EditProviderChoices
                 title: >-
                   The AiProviderSettingsPage shall let the user choose the provider, model name,
-                  context window, and reasoning level, enable only the entry that belongs to the
+                  context window, and reasoning effort, enable only the entry that belongs to the
                   selected provider, and merge the choices into the settings without changing values
                   it does not own.
                 justification: |
@@ -86,24 +87,86 @@ sections:
                   - AiProviderSettingsPageViewModel_UnrestrictedAgentTools_Stored_IsKeptUnchanged
                   - AiProviderSettingsPageView_UnrestrictedAgentTools_IsNotOffered
 
-              - id: CanvasPilot-AiProviderSettingsPage-ExplainDisabledReasoning
+              - id: CanvasPilot-AiProviderSettingsPage-ExplainEntries
                 title: >-
-                  The AiProviderSettingsPage shall show the reasoning level disabled, with the stored value and the note
-                  "Not available yet: the AI library does not expose it", and shall apply the value unchanged; it shall show
-                  the context window as an Ollama setting, with a note while GitHub Copilot is selected, and the path of the
-                  Copilot command-line tool with a note that the installed copilot.exe of version 1.0.113 or later is used,
-                  that a path set here wins, and that shims are ignored.
+                  The AiProviderSettingsPage shall show the context window as an Ollama setting, with a note while GitHub
+                  Copilot is selected, and the path of the Copilot command-line tool with a note that the installed
+                  copilot.exe of version 1.0.113 or later is used, that a path set here wins, and that shims are ignored.
                 justification: |
-                  A choice that nothing acts on must not look like one that does. Saying why the reasoning level is disabled,
-                  which provider the context window belongs to, and which executable is used keeps the page honest and
-                  saves the user from setting a value that has no effect.
+                  Which provider the context window belongs to, and which executable is used, are not obvious from the
+                  entries alone. Saying so keeps the page honest and saves the user from setting a value that has no
+                  effect.
                 tests:
-                  - AiProviderSettingsPageViewModel_Notes_ReasoningAndCliPath_ExplainTheLimits
+                  - AiProviderSettingsPageViewModel_Notes_CliPath_ExplainTheLimits
                   - AiProviderSettingsPageViewModel_CopilotCliPathNote_MinimumVersion_IsTheLocatorsMinimum
-                  - AiProviderSettingsPageViewModel_UnrestrictedAgentTools_Stored_IsKeptUnchanged
-                  - AiProviderSettingsPageView_ReasoningLevel_IsDisabledWithNote
                   - AiProviderSettingsPageView_CopilotCliPath_ShowsNoteOnInstalledExecutable
                   - AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum
+
+              - id: CanvasPilot-AiProviderSettingsPage-ListModels
+                title: >-
+                  The AiProviderSettingsPage shall, when it is given a source of models, list the models of the selected
+                  provider when the page is shown, when the provider changes, when the Ollama address or the Copilot tool
+                  path is edited (after the user pauses), and when the user chooses Refresh models; shall show every model
+                  with a note in the list for what it lacks (tool calling, pictures, availability), the capabilities of the
+                  chosen model (tool calling, pictures, reasoning levels, context window), and a warning that a model
+                  without tool calling cannot be used and that a model without pictures cannot see marks or drawings; shall
+                  show a model that the provider says cannot be used disabled with its reason; shall keep the typed model
+                  name, which chooses the entry of the list that it names and is applied as it is when it is not listed; and
+                  shall drop the answer of a listing that the entries overtook.
+                justification: |
+                  The user should choose a model from what exists and see what each can do, because the application needs
+                  tool calling for every drawing and wants pictures to see the result. Hiding a model that lacks something
+                  would leave the user wondering where it went, and refusing it would stop a user who knows better, so all
+                  models are listed and the page warns. The typed name stays so that a model that is not listed (just
+                  pulled, or an account that the list does not show) can still be used. An answer for another provider or
+                  address must never replace the list of the provider that is selected now. Entries that are not valid
+                  end a listing that runs and take away its loading text, while the list that is shown stays.
+                tests:
+                  - AiProviderSettingsPageViewModel_Load_WithModelSource_ListsTheModelsAndChoosesTheStoredOne
+                  - AiProviderSettingsPageViewModel_ModelWithoutCapabilities_IsListedWithNoteAndWarning
+                  - AiProviderSettingsPageViewModel_ModelChoiceAndTypedName_StayInStep
+                  - AiProviderSettingsPageViewModel_ChoosingAnUnusableModel_IsNotTakenAsTheModelName
+                  - AiProviderSettingsPageViewModel_StaleAnswer_IsDroppedWhenTheProviderChanged
+                  - AiProviderSettingsPageViewModel_ProviderChange_ClearsTheModelAndAsksTheNewProvider
+                  - AiProviderSettingsPageViewModel_EditedAddressOrPath_ListsAgainOnlyForTheSelectedProvider
+                  - AiProviderSettingsPageViewModel_InvalidEntriesDuringListing_ClearTheLoadingText
+                  - AiProviderSettingsPageViewModel_NoSourceOrClosed_ShowsNoList
+                  - AiProviderSettingsPageView_ModelList_ShowsCapabilitiesWarningsAndReasoningLevels
+
+              - id: CanvasPilot-AiProviderSettingsPage-FallBackToTypingTheModel
+                title: >-
+                  The AiProviderSettingsPage shall, when the models cannot be listed (the provider does not answer, the
+                  list is empty, or the source fails), show the sentence that says why and keep the model name to be typed,
+                  with the stored model and reasoning effort kept as they are, and shall offer Refresh models to ask again
+                  and show the new list.
+                justification: |
+                  A model server that is down, or a runtime that is not signed in, must not take the page away from the
+                  user: the stored choice must survive a failed list, so that a server that is down for a minute does not
+                  erase a setting, and the sentence says what to fix.
+                tests:
+                  - AiProviderSettingsPageViewModel_ListFails_KeepsTheTypedNameAndTheStoredEffort
+                  - AiProviderSettingsPageViewModel_RefreshModels_AsksAgainWithRefreshAndShowsTheNewList
+                  - AiProviderSettingsPageView_ModelListFails_KeepsTheTypedNameAndShowsTheMessage
+
+              - id: CanvasPilot-AiProviderSettingsPage-ChooseReasoningEffort
+                title: >-
+                  The AiProviderSettingsPage shall enable the reasoning level only while the chosen model offers levels,
+                  offer the levels that the model lists, spelled as the provider spells them, in addition to the choice that
+                  leaves it to the provider, apply the id of the chosen level, reset a stored level that the chosen model
+                  does not offer (with a note) when the model is known, and keep the stored level, shown and disabled, while
+                  nothing is known about the model.
+                justification: |
+                  Which levels exist depends on the model (none, low, medium, high, xhigh, max, and others), so a fixed list
+                  would offer levels that fail or hide levels that work. A choice that the model cannot honor would only
+                  fail at the start of a conversation, so the page enables it only when it can work. When the list is
+                  missing nothing can be said about the model, so the stored choice is kept and not erased.
+                tests:
+                  - AiProviderSettingsPageViewModel_ReasoningEffort_IsEnabledByTheModelAndAppliedByItsId
+                  - AiProviderSettingsPageViewModel_StoredReasoningEffort_IsKeptWhenOfferedAndResetWhenNot
+                  - AiProviderSettingsPageViewModel_ChangedModelOrEffort_ForgetsTheConnectionCheck
+                  - AiProviderSettingsPageViewModel_UnrestrictedAgentTools_Stored_IsKeptUnchanged
+                  - AiProviderSettingsPageView_ReasoningEffort_IsDisabledWhileTheModelIsNotKnown
+                  - AiProviderSettingsPageView_ModelList_ShowsCapabilitiesWarningsAndReasoningLevels
 
               - id: CanvasPilot-AiProviderSettingsPage-WarnBelowRecommendedContext
                 title: >-

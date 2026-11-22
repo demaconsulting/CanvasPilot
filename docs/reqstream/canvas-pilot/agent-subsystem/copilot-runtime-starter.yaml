@@ -1,0 +1,72 @@
+---
+# Software Unit Requirements for the CopilotRuntimeStarter Unit
+#
+# The CopilotRuntimeStarter unit starts the GitHub Copilot runtime of the AI library on the Copilot CLI that the user
+# installed, at the path that the locator found, shares that one runtime among the readiness check and the agents of the
+# conversations, and turns every way that the start can fail into a status and a sentence for the user. Its supporting
+# types are the interface of the starter with its request and answer, and the source of agents on a started runtime
+# (the stand-in for the sealed runtime of the AI library, and the one class that makes agents on the real runtime).
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: CopilotRuntimeStarter Requirements
+            requirements:
+              - id: CanvasPilot-CopilotRuntimeStarter-RunInstalledCli
+                title: >-
+                  The CopilotRuntimeStarter shall start the runtime of the AI library on the installed Copilot CLI at the
+                  full path of the request, with the data folder of the request (or the one that the starter was made
+                  with, or the folder of the application below the local data of the user), the logger of the request, and
+                  no token, and shall never choose the runtime that the AI library could bundle.
+                justification: |
+                  The user installs and signs in to the Copilot CLI, so the application runs that file and no other. The
+                  data folder is chosen by the application and is never a place in a project. The application has no token
+                  field and no login screen: the runtime signs in from the environment of the application or from the
+                  GitHub CLI, so no secret passes through the starter.
+                tests:
+                  - CopilotRuntimeStarter_Constants_Rule_AreTheDocumentedSentences
+                  - CopilotRuntimeStarter_StartAsync_InstalledCli_PassesThePathTheFolderAndNoToken
+                  - CopilotRuntimeStarter_StartAsync_RequestNamesAFolder_TheFolderOfTheRequestIsUsed
+                  - CopilotRuntimeStarter_StartAsync_NoFolderAnywhere_UsesTheApplicationFolder
+                  - CopilotRuntimeStarter_StartAsync_BadArguments_AreRefused
+
+              - id: CanvasPilot-CopilotRuntimeStarter-ShareOneRuntime
+                title: >-
+                  The CopilotRuntimeStarter shall keep one running runtime for the CLI and the data folder that were asked
+                  for and give it to every request for the same CLI and folder, start it once however many requests arrive
+                  at the same time, stop it and start another when another CLI or folder is asked for, not remember a
+                  start that failed or was cancelled, stop the runtime once when the starter is disposed, and refuse a
+                  start after that.
+                justification: |
+                  The runtime keeps its data in one folder, which two runtimes must not share, and a start takes seconds.
+                  The readiness check and every conversation therefore use the one runtime, started on demand. A problem
+                  that the user fixes (a sign-in, an installation) must be seen by the next request, so a failure is not
+                  kept, and a runtime must not outlive the application.
+                tests:
+                  - CopilotRuntimeStarter_StartAsync_SameCliAndFolder_SharesOneRuntime
+                  - CopilotRuntimeStarter_StartAsync_OtherCliOrOtherFolder_ReplacesTheRuntime
+                  - CopilotRuntimeStarter_StartAsync_FailureThenSuccess_TriesAgain
+                  - CopilotRuntimeStarter_StartAsync_Cancelled_ThrowsAndTheNextAskStartsAgain
+                  - CopilotRuntimeStarter_DisposeAsync_StopsTheRuntimeOnceAndRefusesFurtherStarts
+
+              - id: CanvasPilot-CopilotRuntimeStarter-ExplainFailures
+                title: >-
+                  The CopilotRuntimeStarter shall answer a start that fails with a status and one sentence and not with an
+                  exception: a CLI that is too old or speaks another protocol as too old with the explanation of the AI
+                  library, a runtime that is not signed in as not signed in with the sentence that names gh auth login and
+                  the token variables and says that the sign-in of the Copilot CLI with /login does not apply, a path that
+                  the AI library refuses (a relative path or a batch file) as a path in the Settings that cannot be used
+                  with the cause and without the name of the parameter, and any other failure as not started with the
+                  explanation of the AI library, or a sentence of its own when there is none.
+                justification: |
+                  Each of these has a different remedy (upgrade the CLI, sign in, choose another path, check the
+                  installation), and the user must find it in the banner of the chat and in Check connection, not in an
+                  exception. The AI library has no typed causes, only explanations in words, so the starter recognizes the
+                  words and keeps them in one place. The sign-in of the Copilot CLI itself is not used by the AI library,
+                  which a user who is signed in to the CLI would not expect, so the sentence says it.
+                tests:
+                  - CopilotRuntimeStarter_StartAsync_LibraryFailure_BecomesTheMatchingStatusAndSentence
+                  - CopilotRuntimeStarter_StartAsync_PathTheLibraryRefuses_ReportsItAsASentenceAndStartsNothing
+                  - CopilotRuntimeStarter_StartAsync_FailureThenSuccess_TriesAgain

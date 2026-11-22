@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Globalization;
+using DemaConsulting.AgentKit.Core;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AgentSubsystem;
@@ -30,18 +31,24 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 /// <remarks>
 ///     <para>
 ///         For GitHub Copilot the checks run in order and the first one that fails gives the answer: the Copilot CLI is
-///         found (by <see cref="CopilotCliLocator" />) and is new enough, credentials exist, and the starter of the runtime
-///         says that the runtime can be started. The credentials exist when one of the variables
+///         found (by <see cref="CopilotCliLocator" />) and is new enough, credentials exist, the starter of the runtime
+///         starts the runtime, or reuses the one that runs, on that CLI (the way that start fails is the answer), and the
+///         model settings are valid for the runtime (the model is offered to the user, can call tools, and offers the
+///         reasoning effort that is chosen). A model that cannot take pictures is a warning that does not stop the provider.
+///         The credentials exist when one of the variables
 ///         <c>COPILOT_GITHUB_TOKEN</c>, <c>GH_TOKEN</c>, or <c>GITHUB_TOKEN</c> is not empty, or when <c>gh auth token</c>
 ///         of the GitHub CLI succeeds with some output. Only whether the variable or the output is empty is looked at; the
-///         token itself is never kept, shown, or logged. The starter that this build ships is gated, so Copilot is never
-///         reported as ready here.
+///         token itself is never kept, shown, or logged. The runtime is the one that the factory of the agents uses, so the
+///         check starts no second runtime.
 ///     </para>
 ///     <para>
 ///         For Ollama the checks are: the address and the model name are set, the server answers, the server has the model,
-///         and the context window is large enough. A window below
-///         <see cref="AiProviderSettings.RecommendedMinimumContextTokens" /> (the smaller of the configured window and the
-///         one that the model supports, when the server says) is a warning that does not stop the provider.
+///         the model settings are valid for the model (it can call tools, the context window does not exceed what it was
+///         trained for, and it offers the reasoning effort that is chosen), and the context window is large enough. A window
+///         below <see cref="AiProviderSettings.RecommendedMinimumContextTokens" /> (the smaller of the configured window and
+///         the one that the model supports, when the server says) and a model that cannot take pictures are warnings that
+///         do not stop the provider. When the server answers the list of models but cannot describe them, the model
+///         settings are not validated and the first turn is what finds the problem.
 ///     </para>
 ///     <para>
 ///         The class implements <see cref="IProviderCheck" /> of the Settings subsystem, so the settings dialog can offer
@@ -61,11 +68,7 @@ public sealed class AgentReadiness : IProviderCheck
     public static readonly TimeSpan OllamaProbeTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>The sentence for a Copilot that has no credentials.</summary>
-    public const string NotSignedInMessage =
-        "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN environment variable), then choose Check connection. The Copilot CLI's own /login session is not shared with CanvasPilot's AI library yet.";
-
-    /// <summary>The sentence for a Copilot whose runtime this build cannot start.</summary>
-    public const string RuntimeUnavailableMessage = GatedCopilotRuntimeStarter.NeedsUpdateMessage;
+    public const string NotSignedInMessage = CopilotRuntimeStarter.NotSignedInMessage;
 
     /// <summary>The file name of the GitHub CLI on Windows.</summary>
     private const string GitHubCliName = "gh.exe";
@@ -79,7 +82,7 @@ public sealed class AgentReadiness : IProviderCheck
     /// <summary>Finds and checks the Copilot CLI.</summary>
     private readonly CopilotCliLocator _locator;
 
-    /// <summary>Starts, or says whether it can start, the Copilot runtime.</summary>
+    /// <summary>Starts, or reuses, the Copilot runtime.</summary>
     private readonly ICopilotRuntimeStarter _starter;
 
     /// <summary>Runs the GitHub CLI.</summary>
@@ -94,29 +97,35 @@ public sealed class AgentReadiness : IProviderCheck
     /// <summary>Asks the Ollama server.</summary>
     private readonly IOllamaProbe _ollama;
 
+    /// <summary>Gives the catalog of the Ollama server, which describes what each model can do.</summary>
+    private readonly IOllamaModelCatalogs _ollamaCatalogs;
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="AgentReadiness" /> class.
     /// </summary>
     /// <param name="locator">Finds the Copilot CLI; a locator on the real system when <see langword="null" />.</param>
-    /// <param name="starter">The starter of the Copilot runtime; the gated starter when <see langword="null" />.</param>
+    /// <param name="starter">The starter of the Copilot runtime; a starter of the real runtime when <see langword="null" />.</param>
     /// <param name="processRunner">Runs the GitHub CLI; the real runner when <see langword="null" />.</param>
     /// <param name="environment">Reads the environment; the real one when <see langword="null" />.</param>
     /// <param name="fileSystem">Asks the file system; the real one when <see langword="null" />.</param>
     /// <param name="ollama">Asks the Ollama server; the real probe when <see langword="null" />.</param>
+    /// <param name="ollamaCatalogs">Gives the catalog of the Ollama server; the real network when <see langword="null" />.</param>
     public AgentReadiness(
         CopilotCliLocator? locator = null,
         ICopilotRuntimeStarter? starter = null,
         IProcessRunner? processRunner = null,
         IEnvironmentReader? environment = null,
         ICliFileSystem? fileSystem = null,
-        IOllamaProbe? ollama = null)
+        IOllamaProbe? ollama = null,
+        IOllamaModelCatalogs? ollamaCatalogs = null)
     {
         _processRunner = processRunner ?? new ProcessRunner();
         _environment = environment ?? new SystemEnvironmentReader();
         _fileSystem = fileSystem ?? new CliFileSystem();
         _locator = locator ?? new CopilotCliLocator(_processRunner, _fileSystem, _environment);
-        _starter = starter ?? new GatedCopilotRuntimeStarter();
+        _starter = starter ?? new CopilotRuntimeStarter();
         _ollama = ollama ?? new OllamaProbe();
+        _ollamaCatalogs = ollamaCatalogs ?? new OllamaModelCatalogs();
     }
 
     /// <summary>
@@ -209,13 +218,59 @@ public sealed class AgentReadiness : IProviderCheck
             return new AgentReadinessReport(AgentReadinessStatus.CopilotNotSignedIn, NotSignedInMessage);
         }
 
-        // 4: the runtime; this build cannot start it, which the starter says and which is never reported as ready
+        // 4: the runtime, which the starter starts or reuses; it is the real check that the CLI runs and is signed in
         var started = await _starter
-            .StartAsync(new CopilotStartRequest(info.Path, info.Version, CheckOnly: true), cancellationToken)
+            .StartAsync(new CopilotStartRequest(info.Path, info.Version), cancellationToken)
             .ConfigureAwait(false);
-        return started.Status == CopilotStartStatus.Started
-            ? new AgentReadinessReport(AgentReadinessStatus.Ready, $"GitHub Copilot CLI {info.Version} is ready.")
-            : new AgentReadinessReport(AgentReadinessStatus.CopilotRuntimeUnavailable, started.Message);
+        if (started.Status != CopilotStartStatus.Started)
+        {
+            return new AgentReadinessReport(started.ReadinessStatus, started.Message);
+        }
+
+        // 5: the model settings, validated by the catalog of the runtime exactly as an agent will be made
+        return await CheckCopilotModelAsync(settings, info.Version, started.Agents, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    ///     Validates the model and the reasoning effort of the settings against the catalog of the running Copilot runtime.
+    /// </summary>
+    /// <param name="settings">The provider choices.</param>
+    /// <param name="version">The version of the Copilot CLI, for the sentence.</param>
+    /// <param name="agents">The running runtime.</param>
+    /// <param name="cancellationToken">A token that cancels the check.</param>
+    /// <returns>Ready, ready with the warning for a model without vision, or the reason that the settings cannot be used.</returns>
+    private static async Task<AgentReadinessReport> CheckCopilotModelAsync(
+        AiProviderSettings settings,
+        Version version,
+        ICopilotAgentSource? agents,
+        CancellationToken cancellationToken)
+    {
+        // No model named means the default model of the runtime; there is no choice to validate
+        var modelSettings = ModelRequirements.ToModelSettings(settings, withContextWindow: false);
+        if (modelSettings is null || agents is null)
+        {
+            return new AgentReadinessReport(AgentReadinessStatus.Ready, $"GitHub Copilot CLI {version} is ready.");
+        }
+
+        ModelSelection selection;
+        try
+        {
+            selection = await agents.Models.SelectAsync(modelSettings, ModelRequirements.Required, cancellationToken).ConfigureAwait(false);
+        }
+        catch (ModelSettingsException ex)
+        {
+            return new AgentReadinessReport(AgentReadinessStatus.ModelSettingsInvalid, ModelRequirements.Describe(ex));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The catalog could not be read: the runtime is not connected or was stopped
+            return new AgentReadinessReport(AgentReadinessStatus.CopilotRuntimeUnavailable, ex.Message);
+        }
+
+        var warning = ModelRequirements.VisionWarning(selection.Model);
+        return warning is null
+            ? new AgentReadinessReport(AgentReadinessStatus.Ready, $"GitHub Copilot CLI {version} is ready with the model {selection.Model.Id}.")
+            : new AgentReadinessReport(AgentReadinessStatus.ModelLacksVision, warning);
     }
 
     /// <summary>
@@ -300,7 +355,8 @@ public sealed class AgentReadiness : IProviderCheck
                 "Enter the name of an Ollama model in Settings, then choose Check connection.");
         }
 
-        // The server must answer and have the model
+        // The model settings are validated by the catalog of the server, which knows what the model can do; a catalog
+        // that cannot be read leaves the settings unchecked, because the list of models just answered
         var address = settings.OllamaEndpoint.Trim();
         var endpoint = new Uri(address);
         var list = await _ollama.ListModelsAsync(endpoint, OllamaProbeTimeout, cancellationToken).ConfigureAwait(false);
@@ -319,14 +375,75 @@ public sealed class AgentReadiness : IProviderCheck
                 $"Ollama does not have the model {model}; run `ollama pull {model}`, then choose Check connection.");
         }
 
+        var (selection, invalid) = await SelectOllamaModelAsync(settings, endpoint, cancellationToken).ConfigureAwait(false);
+        if (invalid is not null)
+        {
+            return invalid;
+        }
+
         // The context window is a warning, not an obstacle; the model's own limit is asked for but is optional
-        var detected = await _ollama.GetContextLengthAsync(endpoint, listed, OllamaProbeTimeout, cancellationToken).ConfigureAwait(false);
+        var detected = await _ollama.GetContextLengthAsync(endpoint, listed, OllamaProbeTimeout, cancellationToken).ConfigureAwait(false)
+            ?? selection?.Model.ContextWindowTokens;
         var warning = DescribeSmallContext(settings.ContextWindowTokens, detected);
-        return warning is null
-            ? new AgentReadinessReport(
-                AgentReadinessStatus.Ready,
-                $"Ollama is running with the model {model}; pictures work only with a vision-capable model.")
-            : new AgentReadinessReport(AgentReadinessStatus.OllamaContextTooSmall, warning);
+        var visionWarning = selection is null ? null : ModelRequirements.VisionWarning(selection.Model);
+        if (warning is not null)
+        {
+            return new AgentReadinessReport(
+                AgentReadinessStatus.OllamaContextTooSmall,
+                visionWarning is null ? warning : $"{warning} {visionWarning}");
+        }
+
+        if (visionWarning is not null)
+        {
+            return new AgentReadinessReport(AgentReadinessStatus.ModelLacksVision, visionWarning);
+        }
+
+        // Without the catalog nothing is known about pictures, so the sentence says what is true of every model
+        return new AgentReadinessReport(
+            AgentReadinessStatus.Ready,
+            selection is null
+                ? $"Ollama is running with the model {model}; pictures work only with a vision-capable model."
+                : $"Ollama is running with the model {selection.Model.Id}.");
+    }
+
+    /// <summary>
+    ///     Validates the model settings against the catalog of the Ollama server.
+    /// </summary>
+    /// <param name="settings">The provider choices.</param>
+    /// <param name="endpoint">The address of the server.</param>
+    /// <param name="cancellationToken">A token that cancels the check.</param>
+    /// <returns>
+    ///     The selection when the settings are valid; the report that says why they are not; or neither when the catalog
+    ///     could not be read, which leaves the settings unchecked.
+    /// </returns>
+    private async Task<(ModelSelection? Selection, AgentReadinessReport? Invalid)> SelectOllamaModelAsync(
+        AiProviderSettings settings,
+        Uri endpoint,
+        CancellationToken cancellationToken)
+    {
+        var modelSettings = ModelRequirements.ToModelSettings(settings, withContextWindow: true);
+        if (modelSettings is null)
+        {
+            return (null, null);
+        }
+
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        limit.CancelAfter(ProviderModelCatalog.OllamaListTimeout);
+        try
+        {
+            var selection = await _ollamaCatalogs.For(endpoint).SelectAsync(modelSettings, ModelRequirements.Required, limit.Token).ConfigureAwait(false);
+            return (selection, null);
+        }
+        catch (ModelSettingsException ex)
+        {
+            return (null, new AgentReadinessReport(AgentReadinessStatus.ModelSettingsInvalid, ModelRequirements.Describe(ex)));
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or NotSupportedException
+                                       || (ex is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            // The server did not describe its models in time; the first turn finds a problem, if there is one
+            return (null, null);
+        }
     }
 
     /// <summary>

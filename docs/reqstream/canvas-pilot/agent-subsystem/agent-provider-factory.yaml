@@ -3,11 +3,12 @@
 #
 # The AgentProviderFactory unit makes the agent of a conversation for the AI provider that the settings choose, from the
 # settings, the tools, and the instructions: for Ollama an agent on an Ollama client that is told the context window on
-# every request, and for GitHub Copilot an agent on the Copilot runtime that the starter of the runtime gives. The
-# starter that this build ships is gated, so Copilot gives a typed answer and no agent. The unit owns what it starts and
-# disposes it. Its seam is IAgentFactory, with which tests put an agent on a scripted chat client; its supporting types
-# are the request, the result, the stand-in for the Copilot runtime, and the one class that makes agents on the real
-# runtime.
+# every request, and for GitHub Copilot an agent on the Copilot runtime that the starter of the runtime gives, which the
+# readiness check shares. The model and the reasoning effort of the settings are validated against the catalog of the
+# provider first. A provider that cannot be served gives a typed answer and no agent. The unit owns what it
+# starts for Ollama and disposes it; the Copilot runtime belongs to the starter, which the factory stops only when it
+# was told that it owns it. Its seam is IAgentFactory, with which tests put an agent on a scripted chat client; its
+# supporting types are the request and the result.
 
 sections:
   - title: CanvasPilot Requirements
@@ -49,55 +50,79 @@ sections:
               - id: CanvasPilot-AgentProviderFactory-MakeCopilotAgentThroughStarter
                 title: >-
                   The AgentProviderFactory shall make the agent for GitHub Copilot on the runtime that the starter of the
-                  runtime gives for the Copilot CLI that the locator found, start the runtime once however many agents and
-                  requests there are, and make each agent with exactly the supplied tools, the instructions, the name
-                  CanvasPilot, the model of the settings (none when it is blank), and the project folder as the working
-                  directory, and shall make the agents in one place that gives no permission handler, so that the default
-                  handler of the AI library, which approves exactly the supplied tools and refuses everything else, applies,
-                  and shall pass the data folder and the logger of the request on to the starter of the runtime.
+                  runtime gives for the Copilot CLI that the locator found, and make each agent with exactly the supplied
+                  tools, the instructions, the name CanvasPilot, the model selection that the catalog of the runtime
+                  validated for the settings (none when no model is named, which is the default model of the runtime),
+                  and the project folder as the working directory, and shall pass the data folder and the logger of the
+                  request on to the starter of the runtime.
                 justification: |
-                  The runtime is one process for the whole application, and the agents of several projects share it. The
-                  tools that the application builds are the only ones that the copilot may call, and the library derives its
-                  permissions from the list of those tools. A handler of the application's own could widen that, so the one
-                  place that makes agents passes none. The place where the runtime keeps its files is chosen by the agent
-                  service, so the factory only carries it to the starter.
+                  The runtime is one process for the whole application, and the agents of several projects share it; the
+                  starter shares it, so the factory asks it for every agent. The tools that the application builds are the
+                  only ones that the copilot may call, so each agent is made with exactly that list. The place where the
+                  runtime keeps its files is chosen by the agent service, so the factory only carries it to the starter.
                 tests:
-                  - AgentProviderFactory_Create_Copilot_FakeStarter_StartsOnceAndMakesAgentsOnTheRuntime
+                  - AgentProviderFactory_Create_Copilot_FakeStarter_MakesAgentsOnTheRuntimeThatBelongsToTheStarter
                   - AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse
-                  - AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary
                   - AgentProviderFactory_Create_Copilot_DataDirectoryAndLogger_ReachTheStarter
+
+              - id: CanvasPilot-AgentProviderFactory-ValidateModelSettings
+                title: >-
+                  The AgentProviderFactory shall validate the model, the reasoning effort, and (for Ollama) the context
+                  window of the settings against the catalog of the provider before it makes an agent, and shall make the
+                  agent with the validated selection (the model as the catalog spells it, with the chosen reasoning
+                  effort, and for Ollama the context window and the thinking level on every request); shall answer a
+                  model that is not offered, cannot be used, cannot call tools, does not offer the chosen reasoning
+                  effort, or is asked for more context than it was trained for with the typed status ModelSettingsInvalid,
+                  the sentence of the AI library, and no agent; shall answer a Copilot catalog that cannot be read with the
+                  status that the runtime is not usable; and shall try the typed Ollama model without a check when the
+                  server does not describe its models.
+                justification: |
+                  A wrong model or effort that is found in the middle of the first turn looks like a broken application,
+                  and a model that cannot call tools cannot draw at all. Validating when the conversation starts puts the
+                  explanation of the library, which names what is supported, in front of the user before anything runs.
+                  The selection is what makes the effort and the window real: the library sends the level of thinking and
+                  the window with each request. A server that is not reachable must not stop a user who typed a model name
+                  that may be right, so the typed name is tried as it was before.
+                tests:
+                  - AgentProviderFactory_Create_Copilot_ModelAndEffort_ReachTheAgentAsTheSelection
+                  - AgentProviderFactory_Create_Copilot_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid
+                  - AgentProviderFactory_Create_Copilot_CatalogCannotBeRead_IsRuntimeUnavailable
+                  - AgentProviderFactory_Create_Ollama_ModelEffortAndWindow_ReachTheWire
+                  - AgentProviderFactory_Create_Ollama_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid
+                  - AgentProviderFactory_Create_Ollama_CatalogUnreachable_UsesTheTypedModelWithoutACheck
 
               - id: CanvasPilot-AgentProviderFactory-ReportUnavailableCopilot
                 title: >-
                   The AgentProviderFactory shall answer a request for GitHub Copilot that cannot be served with a typed
                   result that has no agent and the status and sentence of the readiness check for the same cause: the
-                  Copilot CLI is missing or too old (the starter is not asked), the starter of this build is gated and says
-                  that Copilot support needs an update of the AI library, the starter failed, or the runtime started but
-                  cannot make agents, and shall not keep a runtime that was not started.
+                  Copilot CLI is missing or too old (the starter is not asked), the starter says that the CLI is too old,
+                  that the runtime is not signed in, or that it could not be started, or the runtime started but cannot
+                  make agents, and shall not keep a runtime that was not started.
                 justification: |
-                  This build cannot start the Copilot runtime because the AI library cannot be pointed to the installed CLI,
-                  and the user must be told so and offered Ollama, with the same words as in the readiness check. A failure
-                  that was kept would turn a problem that can be fixed into one that lasts until the application restarts.
+                  The user must be told what is wrong with the same words as in the readiness check, whichever way the
+                  problem is found. A failure that was kept would turn a problem that can be fixed into one that lasts until
+                  the application restarts.
                 tests:
-                  - AgentProviderFactory_Create_Copilot_GatedStarter_ReturnsRuntimeUnavailableAndNoAgent
+                  - AgentProviderFactory_Create_Copilot_StarterRefuses_ReturnsTheMatchingStatusAndNoAgent
                   - AgentProviderFactory_Create_Copilot_NoCliOrOldCli_ReportsTheCliAndDoesNotStart
                   - AgentProviderFactory_Create_Copilot_StarterFailureOrNoSource_IsUnavailableAndNotCached
 
               - id: CanvasPilot-AgentProviderFactory-OwnWhatItStarts
                 title: >-
                   The AgentProviderFactory shall have each result own the clients of its Ollama agent and dispose them once
-                  when the result is disposed, without disposing the handler it was given or another agent, and shall have
-                  the factory own the Copilot runtime that it started, shared by all agents, dispose it once when the
-                  factory is disposed (and not when a result is), refuse a request for Copilot after that, and delete the
-                  Copilot session of a conversation through that runtime when the conversation ends, while leaving sessions
-                  of other providers and sessions without an id alone.
+                  when the result is disposed, without disposing the handler it was given or another agent, shall leave the
+                  Copilot runtime, which belongs to the starter, running when a result is disposed, shall stop the starter
+                  once when the factory is disposed if the factory owns it and refuse a request for Copilot after that, and
+                  shall delete the Copilot session of a conversation through the runtime when the conversation ends, while
+                  leaving sessions of other providers and sessions without an id alone.
                 justification: |
                   The connection to Ollama belongs to one agent and the runtime to the whole application, so each is
                   released by its owner at the right time. A runtime that is stopped while an agent still uses it fails that
                   agent, and one that is never stopped leaves a process behind. The runtime keeps each conversation on disk
-                  until it is told to delete it, and only the factory knows the runtime.
+                  until it is told to delete it, and the factory is the one that knows which conversation ends.
                 tests:
                   - AgentProviderFactory_Create_Ollama_DisposingAResult_LeavesOtherAgentsWorking
-                  - AgentProviderFactory_Create_Copilot_FakeStarter_StartsOnceAndMakesAgentsOnTheRuntime
+                  - AgentProviderFactory_Create_Copilot_FakeStarter_MakesAgentsOnTheRuntimeThatBelongsToTheStarter
+                  - AgentProviderFactory_DisposeAsync_OwnedStarter_StopsTheRuntimeOnce
                   - AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse
                   - AgentProviderFactory_DeleteSession_CopilotSessionOnly_DeletesThroughTheRuntime

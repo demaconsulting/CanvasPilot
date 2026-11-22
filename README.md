@@ -44,13 +44,14 @@ Available now:
 - **AI copilot chat**: An AI copilot answers your messages in the chat panel. It writes, renders, looks at, and fixes
   drawings in a self-checking loop, sees the pictures you attach and the marks you draw, and streams its answer, with a
   row for each tool it uses and a Stop button. **Ollama** is supported and covered by automated tests (live checks
-  against a running server are pending); **GitHub Copilot** is checked (the real CLI, its version, and your credentials)
-  but is not usable yet: CanvasPilot shows "Copilot support needs an AgentKit update; use Ollama meanwhile." The text of
-  the conversation is kept on your computer, outside the project, and you can clear it
+  against a running server are pending); **GitHub Copilot** runs through your installed GitHub Copilot CLI (CanvasPilot
+  never bundles or downloads it). The text of the conversation is kept on your computer, outside the project, and you
+  can clear it
 - **Safe by default**: The copilot has only CanvasPilot's own tools, confined to the project folder. It overwrites the
   files it changes directly, with no backup and no question, so keep your projects under source control
-- **Settings**: Choose the AI provider (with a connection check), and the speech devices and models, with model
-  downloads
+- **Settings**: Choose the AI provider (with a connection check), pick its model from the list that the provider
+  offers, with what each model can do and a warning for what it lacks, and set the model's reasoning level; and the
+  speech devices and models, with model downloads
 - **Windows installer**: One MSI package for 64-bit Windows
 
 Planned:
@@ -69,14 +70,15 @@ CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
    CanvasPilot from the Start Menu.
 2. Choose an AI provider in **Tools > Settings... > AI Provider**, then choose **Check connection**:
    - **Ollama** (works now): Install [Ollama][link-ollama], pull a model that can call tools, and a vision-capable one
-     if you want the copilot to see your marks and pictures, enter the endpoint (default `http://localhost:11434`) and
-     the model name, and keep the context window at 32,768 tokens or more (CanvasPilot warns below 16,384). No GitHub
-     account is needed.
-   - **GitHub Copilot** (not usable yet): Install the GitHub Copilot CLI (version 1.0.113 or later) and sign in with
-     `gh auth login` (or set `COPILOT_GITHUB_TOKEN`). CanvasPilot finds the CLI and checks the version and the
-     credentials, but the AI library that it uses cannot start your installed CLI yet, so the check ends with
-     "Copilot support needs an AgentKit update; use Ollama meanwhile." The sign-in of the CLI itself (`/login`) is not
-     shared with CanvasPilot.
+     if you want the copilot to see your marks and pictures, enter the endpoint (default `http://localhost:11434`),
+     choose the model from the list (or type its name), and keep the context window at 32,768 tokens or more
+     (CanvasPilot warns below 16,384). No GitHub account is needed.
+   - **GitHub Copilot**: Install the GitHub Copilot CLI (version 1.0.113 or later), and sign in with the GitHub CLI
+     (`gh auth login`) or set `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` or `GITHUB_TOKEN` also work) before you start
+     CanvasPilot. CanvasPilot finds the CLI, checks its version and your credentials, and starts it. Signing in inside
+     the Copilot CLI with `/login` does not apply to CanvasPilot. Leave the model empty to use the default model of the
+     Copilot runtime, or choose one from the list of the models of your account; a reasoning level can be chosen when
+     the model offers some.
 3. Optionally set up speech in **Tools > Settings... > Speech**: pick your microphone and speakers, and download the
    speech models.
 4. Choose **File > New Project...**, then start describing a picture in the chat panel.
@@ -86,7 +88,7 @@ CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
 - [User Guide][link-guide]: Installation, projects, the chat composer, marking pictures, working with the copilot, and
   settings
 - [CanvasNet][link-canvasnet]: The library that draws the pictures
-- [Ollama][link-ollama]: The local model server that the copilot works with today
+- [Ollama][link-ollama]: The local model server that the copilot can work with
 - [Speech][link-speech]: The library behind dictation and spoken replies
 - [Releases][link-releases]: Installer packages and release notes
 - [Contributing][link-contributing]: Reporting bugs, suggesting features, and submitting pull requests

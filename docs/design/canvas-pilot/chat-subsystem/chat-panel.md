@@ -138,7 +138,8 @@ what it does. The notice is not saved.
 only when no later check was started and the panel is not disposed: `HasReadinessIssue` is true for every status other
 than `Ready` (the warning for a small context window included, which does not block sending), and `ReadinessMessage` is
 the sentence of the report, which is the actionable sentence of the Agent subsystem, such as the one that says that
-Copilot support needs an AgentKit update. A check that throws is logged by the type of the exception and shown as "The
+Copilot is not signed in for CanvasPilot and how to sign in. A check that throws is logged by the type of the exception
+and shown as "The
 copilot could not be checked: ..."; cancellation shows nothing. The view calls it when it is shown, `CheckAgainCommand`
 calls it from the banner, and whoever knows the settings (the composition root) calls it when they change; the panel
 does not depend on the Settings subsystem. `OpenSettingsCommand` raises `OpenSettingsRequested`, which the window shell

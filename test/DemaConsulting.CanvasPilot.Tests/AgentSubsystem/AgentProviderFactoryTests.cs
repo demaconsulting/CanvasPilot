@@ -31,8 +31,7 @@ namespace DemaConsulting.CanvasPilot.Tests;
 /// <summary>
 ///     Unit tests for <see cref="AgentProviderFactory" />: the Ollama agent on a stand-in server (the address, the model,
 ///     the context window, the instructions, and the tools reach the wire, and a whole tool turn runs), the settings that
-///     cannot be used, the ownership of what the factory starts, and the Copilot branch with a fake starter of the runtime
-///     and with the gated starter that this build ships.
+///     cannot be used, the ownership of what the factory starts, and the Copilot branch with a fake starter of the runtime.
 /// </summary>
 public sealed class AgentProviderFactoryTests
 {
@@ -62,6 +61,195 @@ public sealed class AgentProviderFactoryTests
     private static AIFunction Tool()
     {
         return GuardedToolFactory.Create(() => ToolResult.Text("pong"), "demo_ping", "Answers a ping.");
+    }
+
+    /// <summary>
+    ///     Makes a factory whose Ollama requests go to the stand-in server and whose catalog knows the model of the tests.
+    /// </summary>
+    /// <param name="handler">The stand-in server for the chat requests.</param>
+    /// <param name="catalog">The catalog of the server; one with <c>gemma3:12b</c> when <see langword="null" />.</param>
+    /// <returns>The factory.</returns>
+    private static AgentProviderFactory OllamaFactory(QueuedOllamaHandler handler, FakeModelCatalog? catalog = null)
+    {
+        var models = catalog ?? new FakeModelCatalog("ollama", TestModels.Make("ollama", "gemma3:12b", windowTokens: 131_072));
+        return new AgentProviderFactory(handler: handler, ollamaCatalogs: new FakeOllamaCatalogs(models));
+    }
+
+    /// <summary>
+    ///     Makes a factory on the development machine whose Copilot runtime offers the given models.
+    /// </summary>
+    /// <param name="source">Receives the requests for agents.</param>
+    /// <param name="models">The models of the runtime.</param>
+    /// <returns>The factory.</returns>
+    private static AgentProviderFactory CopilotFactory(out FakeCopilotAgentSource source, params ModelInfo[] models)
+    {
+        source = new FakeCopilotAgentSource(new ScriptedChatClient(), new FakeModelCatalog("copilot", models));
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
+        return new AgentProviderFactory(Locator(), starter);
+    }
+
+    /// <summary>
+    ///     Test that Copilot model and reasoning effort of the settings are validated by the catalog of the runtime and
+    ///     reach the agent as the selection, and that settings that name no model give the default model and no selection.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_Create_Copilot_ModelAndEffort_ReachTheAgentAsTheSelection()
+    {
+        // Arrange: a runtime that offers a model with reasoning efforts
+        var token = TestContext.Current.CancellationToken;
+        await using var factory = CopilotFactory(out var source, TestModels.Make("copilot", "claude-haiku-5.5", efforts: ["low", "medium", "xhigh"]));
+        var settings = new AiProviderSettings { ModelName = "claude-haiku-5.5", ReasoningEffort = "xhigh" };
+
+        // Act: make an agent for the settings, and one for settings that name an effort but no model
+        await using var chosen = await factory.CreateAsync(Request(settings), token);
+        await using var unnamed = await factory.CreateAsync(Request(new AiProviderSettings { ReasoningEffort = "low" }), token);
+
+        // Assert: the selection carries the model and the effort, and an effort without a model is not used
+        Assert.True(chosen.IsCreated);
+        var selection = source.Requests[0].Selection!;
+        Assert.Equal("claude-haiku-5.5", selection.Model.Id);
+        Assert.Equal("xhigh", selection.Settings.ReasoningEffort);
+        Assert.Null(selection.Settings.ContextWindowTokens);
+        Assert.True(unnamed.IsCreated);
+        Assert.Null(source.Requests[1].Selection);
+    }
+
+    /// <summary>
+    ///     Test that Copilot model settings that the catalog refuses give the typed status with the sentence of the library
+    ///     and no agent: a model without tool calling, a model that is not offered, an effort that the model does not offer,
+    ///     and a model that cannot be used.
+    /// </summary>
+    [Theory]
+    [InlineData("no-tools", "", "does not support tool calling")]
+    [InlineData("missing-model", "", "is not available from provider 'copilot'")]
+    [InlineData("claude-haiku-5.5", "bogus", "does not support reasoning effort 'bogus'. Supported: low, medium.")]
+    [InlineData("plain", "low", "does not support reasoning effort settings")]
+    [InlineData("disabled", "", "cannot be used")]
+    public async Task AgentProviderFactory_Create_Copilot_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid(string model, string effort, string sentence)
+    {
+        // Arrange: a runtime with a few models
+        await using var factory = CopilotFactory(
+            out var source,
+            TestModels.Make("copilot", "claude-haiku-5.5", efforts: ["low", "medium"]),
+            TestModels.Make("copilot", "no-tools", toolCalls: false),
+            TestModels.Make("copilot", "plain"),
+            TestModels.Make("copilot", "disabled", usable: false));
+
+        // Act
+        await using var result = await factory.CreateAsync(Request(new AiProviderSettings { ModelName = model, ReasoningEffort = effort }), TestContext.Current.CancellationToken);
+
+        // Assert: no agent, the status, and the sentence of the library
+        Assert.False(result.IsCreated);
+        Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, result.Failure!.Status);
+        Assert.Contains(sentence, result.Failure.Message, StringComparison.Ordinal);
+        Assert.Empty(source.Requests);
+    }
+
+    /// <summary>
+    ///     Test that a catalog that cannot be read gives the status of a runtime that is not usable, with the sentence of
+    ///     the library, and no agent.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_Create_Copilot_CatalogCannotBeRead_IsRuntimeUnavailable()
+    {
+        // Arrange: a runtime whose catalog fails as a runtime that is not signed in does
+        await using var factory = CopilotFactory(out var source);
+        source.Catalog.Failure = new InvalidOperationException("The Copilot runtime could not list models: it is not signed in.");
+
+        // Act
+        await using var result = await factory.CreateAsync(Request(new AiProviderSettings { ModelName = "any-model" }), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, result.Failure!.Status);
+        Assert.Contains("could not list models", result.Failure.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that Ollama model, reasoning effort, and context window are validated by the catalog of the server and
+    ///     reach the wire: the canonical id of the model, the window, and the thinking level of the effort.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_Create_Ollama_ModelEffortAndWindow_ReachTheWire()
+    {
+        // Arrange: a server whose catalog describes a model that thinks, asked through the real catalog and a stand-in server
+        var token = TestContext.Current.CancellationToken;
+        var handler = new QueuedOllamaHandler(FinalAnswer)
+        {
+            Tags = """{"models":[{"name":"qwen3:latest","model":"qwen3:latest","size":1,"details":{"family":"qwen3"}}]}""",
+            Show = """{"capabilities":["completion","tools","thinking"],"model_info":{"general.architecture":"qwen3","qwen3.context_length":40960},"details":{"family":"qwen3"}}""",
+        };
+        await using var factory = new AgentProviderFactory(handler: handler);
+        var settings = Ollama(model: "qwen3", contextTokens: 24576) with { ReasoningEffort = "high" };
+
+        // Act: make the agent for the name without a tag, and run a turn
+        await using var result = await factory.CreateAsync(Request(settings), token);
+        var events = await RunTurn(result.Agent!, settings);
+
+        // Assert: the chat request names the model of the catalog, the window, and the level of thinking
+        Assert.True(result.IsCreated);
+        var chat = Assert.Single(handler.Requests, request => request.Address.AbsolutePath == "/api/chat");
+        Assert.Contains("\"model\":\"qwen3:latest\"", chat.Body, StringComparison.Ordinal);
+        Assert.Contains("\"num_ctx\":24576", chat.Body, StringComparison.Ordinal);
+        Assert.Matches("\"think\":\\s*(\"high\"|true)", chat.Body);
+        Assert.IsType<AgentEvent.Completed>(events[^1]);
+    }
+
+    /// <summary>
+    ///     Test that Ollama settings that the catalog refuses give the typed status with the sentence of the library and no
+    ///     agent: a model that cannot call tools, a window that is larger than the model was trained for, an effort that the
+    ///     model does not offer, and a model that the server does not have.
+    /// </summary>
+    [Theory]
+    [InlineData("no-tools", 24576, "", "does not support tool calling")]
+    [InlineData("small", 24576, "", "supports at most 8,192 tokens; a 24,576-token window is not supported")]
+    [InlineData("gemma3:12b", 24576, "high", "does not support reasoning effort settings")]
+    [InlineData("absent", 24576, "", "is not available from provider 'ollama'")]
+    public async Task AgentProviderFactory_Create_Ollama_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid(
+        string model,
+        int window,
+        string effort,
+        string sentence)
+    {
+        // Arrange: a server with a model without tools, a model trained for a small window, and an ordinary model
+        var handler = new QueuedOllamaHandler();
+        var catalog = new FakeModelCatalog(
+            "ollama",
+            TestModels.Make("ollama", "gemma3:12b", windowTokens: 131_072),
+            TestModels.Make("ollama", "no-tools:latest", toolCalls: false),
+            TestModels.Make("ollama", "small:latest", windowTokens: 8192));
+        await using var factory = OllamaFactory(handler, catalog);
+
+        // Act
+        await using var result = await factory.CreateAsync(Request(Ollama(model: model, contextTokens: window) with { ReasoningEffort = effort }), TestContext.Current.CancellationToken);
+
+        // Assert: no agent and no chat request, and the sentence of the library
+        Assert.False(result.IsCreated);
+        Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, result.Failure!.Status);
+        Assert.Contains(sentence, result.Failure.Message, StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+    }
+
+    /// <summary>
+    ///     Test that a server that cannot describe its models leaves the typed model to be tried as it is, so that typing a
+    ///     name still works when the catalog cannot be read.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_Create_Ollama_CatalogUnreachable_UsesTheTypedModelWithoutACheck()
+    {
+        // Arrange: a catalog that fails like a server that does not answer
+        var handler = new QueuedOllamaHandler(FinalAnswer);
+        var catalog = new FakeModelCatalog("ollama") { Failure = new HttpRequestException("Connection refused.") };
+        await using var factory = OllamaFactory(handler, catalog);
+        var settings = Ollama(model: "typed-model");
+
+        // Act: make the agent and run a turn
+        await using var result = await factory.CreateAsync(Request(settings), TestContext.Current.CancellationToken);
+        var events = await RunTurn(result.Agent!, settings);
+
+        // Assert: the agent works with the name as typed
+        Assert.True(result.IsCreated);
+        Assert.Contains("\"model\":\"typed-model\"", handler.Requests.Single().Body, StringComparison.Ordinal);
+        Assert.IsType<AgentEvent.Completed>(events[^1]);
     }
 
     /// <summary>
@@ -169,7 +357,7 @@ public sealed class AgentProviderFactoryTests
         // Arrange: a stand-in server that asks for the tool and then answers
         var token = TestContext.Current.CancellationToken;
         var handler = new QueuedOllamaHandler(ToolCallAnswer, FinalAnswer);
-        await using var factory = new AgentProviderFactory(handler: handler);
+        await using var factory = OllamaFactory(handler);
         var settings = Ollama();
 
         // Act: make the agent and run a turn
@@ -214,7 +402,7 @@ public sealed class AgentProviderFactoryTests
         // Arrange: a server that answers every chat with 404
         var token = TestContext.Current.CancellationToken;
         var handler = new QueuedOllamaHandler("""{"error":"model 'gemma3:12b' not found"}""") { Status = HttpStatusCode.NotFound };
-        await using var factory = new AgentProviderFactory(handler: handler);
+        await using var factory = OllamaFactory(handler);
         var settings = Ollama();
         await using var result = await factory.CreateAsync(Request(settings), token);
 
@@ -237,7 +425,7 @@ public sealed class AgentProviderFactoryTests
         // Arrange
         var token = TestContext.Current.CancellationToken;
         var handler = new QueuedOllamaHandler();
-        await using var factory = new AgentProviderFactory(handler: handler);
+        await using var factory = OllamaFactory(handler);
 
         // Act: an address that is no address, a blank address, a blank model, and a window out of range
         var badAddress = await factory.CreateAsync(Request(Ollama(endpoint: "not an address")), token);
@@ -271,7 +459,7 @@ public sealed class AgentProviderFactoryTests
         // Arrange
         var token = TestContext.Current.CancellationToken;
         var handler = new QueuedOllamaHandler(FinalAnswer);
-        await using var factory = new AgentProviderFactory(handler: handler);
+        await using var factory = OllamaFactory(handler);
         var settings = Ollama(endpoint: " http://ollama.test:12345 ", model: " gemma3:12b ");
 
         // Act: no tools is refused by the library; the next request works with the trimmed settings
@@ -293,7 +481,7 @@ public sealed class AgentProviderFactoryTests
         // Arrange: two agents from one factory over one handler
         var token = TestContext.Current.CancellationToken;
         var handler = new QueuedOllamaHandler(FinalAnswer);
-        await using var factory = new AgentProviderFactory(handler: handler);
+        await using var factory = OllamaFactory(handler);
         var settings = Ollama();
         var first = await factory.CreateAsync(Request(settings), token);
         await using var second = await factory.CreateAsync(Request(settings), token);
@@ -309,44 +497,22 @@ public sealed class AgentProviderFactoryTests
     }
 
     /// <summary>
-    ///     Test that the application makes Copilot agents in one place, with no permission handler of its own, so that the AI
-    ///     library installs its default-deny handler, which approves exactly the supplied tools and refuses everything else.
-    ///     The runtime that makes these agents cannot be started in a test, so the source is the evidence.
+    ///     Test that a starter that refuses the runtime for each cause gives the typed answer with the starter's own
+    ///     sentence and no agent, with the Copilot CLI of the development machine found.
     /// </summary>
-    [Fact]
-    public void AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary()
+    /// <param name="start">The status that the starter answers.</param>
+    /// <param name="expected">The status that the answer must have.</param>
+    [Theory]
+    [InlineData(CopilotStartStatus.CliTooOld, AgentReadinessStatus.CopilotCliTooOld)]
+    [InlineData(CopilotStartStatus.NotSignedIn, AgentReadinessStatus.CopilotNotSignedIn)]
+    [InlineData(CopilotStartStatus.Failed, AgentReadinessStatus.CopilotRuntimeUnavailable)]
+    public async Task AgentProviderFactory_Create_Copilot_StarterRefuses_ReturnsTheMatchingStatusAndNoAgent(
+        CopilotStartStatus start,
+        AgentReadinessStatus expected)
     {
-        // Arrange: the folder of the unit in the source tree, found from the folder of the tests
-        var folder = new DirectoryInfo(AppContext.BaseDirectory);
-        while (folder is not null && !File.Exists(Path.Combine(folder.FullName, "DemaConsulting.CanvasPilot.slnx")))
-        {
-            folder = folder.Parent;
-        }
-
-        Assert.NotNull(folder);
-        var unit = Path.Combine(folder.FullName, "src", "DemaConsulting.CanvasPilot", "AgentSubsystem");
-
-        // Act: read the file of the source and count the calls of the library's factory in the whole subsystem
-        var source = File.ReadAllText(Path.Combine(unit, "CopilotAgentSource.cs"));
-        var calls = Directory.EnumerateFiles(unit, "*.cs")
-            .Sum(file => File.ReadAllText(file).Split("CopilotAgentFactory.Create(", StringSplitOptions.None).Length - 1);
-
-        // Assert: one call, which passes no handler and names no permission type
-        Assert.Equal(1, calls);
-        Assert.Contains("onPermissionRequest: null", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("PermissionDecision", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("PermissionRequest(", source, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    ///     Test that the gated starter that this build ships gives the typed answer that Copilot support needs an update of
-    ///     the AI library and no agent, with the Copilot CLI of the development machine found.
-    /// </summary>
-    [Fact]
-    public async Task AgentProviderFactory_Create_Copilot_GatedStarter_ReturnsRuntimeUnavailableAndNoAgent()
-    {
-        // Arrange: the development machine and the starter that this build ships
-        await using var factory = new AgentProviderFactory(Locator(), new GatedCopilotRuntimeStarter());
+        // Arrange: the development machine and a starter that refuses
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(start, "The sentence of the starter."));
+        await using var factory = new AgentProviderFactory(Locator(), starter);
 
         // Act
         await using var result = await factory.CreateAsync(Request(new AiProviderSettings()), TestContext.Current.CancellationToken);
@@ -354,8 +520,8 @@ public sealed class AgentProviderFactoryTests
         // Assert
         Assert.False(result.IsCreated);
         Assert.Null(result.Agent);
-        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, result.Failure!.Status);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", result.Failure.Message);
+        Assert.Equal(expected, result.Failure!.Status);
+        Assert.Equal("The sentence of the starter.", result.Failure.Message);
     }
 
     /// <summary>
@@ -386,12 +552,13 @@ public sealed class AgentProviderFactoryTests
     }
 
     /// <summary>
-    ///     Test the Copilot branch with a fake starter: the runtime is started once on the CLI that was found, every agent
+    ///     Test the Copilot branch with a fake starter: the runtime is started on the CLI that was found, every agent
     ///     is made on it with the tools, the instructions, the name, the model of the settings (none when blank), and the
-    ///     project folder, a whole turn runs, and the factory, not the result, disposes the runtime.
+    ///     project folder, a whole turn runs, and neither the results nor a factory that does not own the starter dispose
+    ///     the runtime, which belongs to the starter.
     /// </summary>
     [Fact]
-    public async Task AgentProviderFactory_Create_Copilot_FakeStarter_StartsOnceAndMakesAgentsOnTheRuntime()
+    public async Task AgentProviderFactory_Create_Copilot_FakeStarter_MakesAgentsOnTheRuntimeThatBelongsToTheStarter()
     {
         // Arrange: a starter that gives a runtime whose agents talk to a scripted client
         var token = TestContext.Current.CancellationToken;
@@ -399,7 +566,7 @@ public sealed class AgentProviderFactoryTests
             [new ChatResponseUpdate(ChatRole.Assistant, [new FunctionCallContent("c1", "demo_ping", new Dictionary<string, object?>())])],
             [new ChatResponseUpdate(ChatRole.Assistant, "Pong received.")],
             [new ChatResponseUpdate(ChatRole.Assistant, "Second agent.")]);
-        var source = new FakeCopilotAgentSource(client);
+        var source = new FakeCopilotAgentSource(client, new FakeModelCatalog("copilot", TestModels.Make("copilot", "gpt-5.4-mini")));
         var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
         var factory = new AgentProviderFactory(Locator(), starter);
         var withModel = new AiProviderSettings { ModelName = " gpt-5.4-mini " };
@@ -411,13 +578,11 @@ public sealed class AgentProviderFactoryTests
         await first.DisposeAsync();
         var second = await factory.CreateAsync(Request(withModel, [tool]), token);
         await second.DisposeAsync();
-        var disposedWithAgents = source.DisposeCount;
         await factory.DisposeAsync();
         await factory.DisposeAsync();
 
-        // Assert: one start on the CLI that was found, for real and not as a check
-        var start = Assert.Single(starter.Requests);
-        Assert.Equal((DevMachine.RealCli, new Version(1, 0, 114), false), (start.CliPath, start.CliVersion, start.CheckOnly));
+        // Assert: both asks reached the starter with the CLI that was found
+        Assert.All(starter.Requests, start => Assert.Equal((DevMachine.RealCli, new Version(1, 0, 114)), (start.CliPath, start.CliVersion)));
 
         // Two agents were made on the runtime with the tools, the instructions, the name, the model, and the folder
         Assert.Equal(2, source.Requests.Count);
@@ -428,17 +593,42 @@ public sealed class AgentProviderFactoryTests
             Assert.Equal(ProjectFolder, request.WorkingDirectory);
             Assert.Equal([tool], request.Tools);
         });
-        Assert.Null(source.Requests[0].Model);
-        Assert.Equal("gpt-5.4-mini", source.Requests[1].Model);
+        Assert.Null(source.Requests[0].Selection);
+        Assert.Equal("gpt-5.4-mini", source.Requests[1].Selection!.Model.Id);
 
         // The turn ran through the agent of the runtime
         Assert.Equal("Pong received.", string.Concat(events.OfType<AgentEvent.TextDelta>().Select(delta => delta.Text)));
         Assert.Equal("demo_ping", Assert.Single(events.OfType<AgentEvent.ToolStarted>()).Name);
         Assert.IsType<AgentEvent.Completed>(events[^1]);
 
-        // The results did not dispose the runtime; the factory did, once
-        Assert.Equal(0, disposedWithAgents);
+        // The runtime belongs to the starter, which this factory does not own
+        Assert.Equal(0, source.DisposeCount);
+    }
+
+    /// <summary>
+    ///     Test that a factory that owns its starter stops the runtime once when it is disposed, and that a factory made
+    ///     without a starter owns the one that it makes.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_DisposeAsync_OwnedStarter_StopsTheRuntimeOnce()
+    {
+        // Arrange: the real starter over a start function that gives a fake runtime, owned by the factory, and a CLI that is
+        // a full path of this platform, which the real starter requires
+        var token = TestContext.Current.CancellationToken;
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient());
+        var starter = new CopilotRuntimeStarter(Path.Combine(Path.GetTempPath(), "canvaspilot-factory-data"), (_, _) => Task.FromResult<ICopilotAgentSource>(source));
+        var factory = new AgentProviderFactory(DevMachine.CreatePlatformLocator(), starter, ownsStarter: true);
+        var settings = new AiProviderSettings { CopilotCliPath = DevMachine.PlatformCli };
+        await using var made = await factory.CreateAsync(Request(settings), token);
+
+        // Act: dispose the factory twice
+        await factory.DisposeAsync();
+        await factory.DisposeAsync();
+
+        // Assert: the runtime was stopped once, and the factory refuses more requests
+        Assert.True(made.IsCreated);
         Assert.Equal(1, source.DisposeCount);
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(settings), token));
     }
 
     /// <summary>
@@ -471,25 +661,34 @@ public sealed class AgentProviderFactoryTests
     }
 
     /// <summary>
-    ///     Test that two requests at once start the runtime only once, and that a factory that was disposed refuses a
-    ///     request for Copilot.
+    ///     Test that eight requests at once start the runtime only once (the starter shares it), and that a factory that was
+    ///     disposed refuses a request for Copilot.
     /// </summary>
     [Fact]
     public async Task AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse()
     {
-        // Arrange
+        // Arrange: the real starter over a start function that counts its calls
         var token = TestContext.Current.CancellationToken;
         var source = new FakeCopilotAgentSource(new ScriptedChatClient());
-        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
-        var factory = new AgentProviderFactory(Locator(), starter);
+        var starts = 0;
+        var starter = new CopilotRuntimeStarter(
+            Path.Combine(Path.GetTempPath(), "canvaspilot-factory-data"),
+            async (_, cancellation) =>
+            {
+                Interlocked.Increment(ref starts);
+                await Task.Delay(50, cancellation);
+                return source;
+            });
+        var factory = new AgentProviderFactory(DevMachine.CreatePlatformLocator(), starter, ownsStarter: true);
+        var settings = new AiProviderSettings { CopilotCliPath = DevMachine.PlatformCli };
 
         // Act: eight requests at once, then dispose the factory and ask again
-        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => factory.CreateAsync(Request(new AiProviderSettings()), token)));
+        var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => factory.CreateAsync(Request(settings), token)));
         await factory.DisposeAsync();
-        await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(new AiProviderSettings()), token));
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(settings), token));
 
         // Assert
-        Assert.Single(starter.Requests);
+        Assert.Equal(1, starts);
         Assert.All(results, result => Assert.True(result.IsCreated));
         Assert.Equal(8, source.Requests.Count);
         Assert.Equal(1, source.DisposeCount);
@@ -517,7 +716,7 @@ public sealed class AgentProviderFactoryTests
         var start = Assert.Single(starter.Requests);
         Assert.Equal(@"C:\data\CanvasPilot\copilot", start.DataDirectory);
         Assert.Same(logger, start.Logger);
-        Assert.Null(new CopilotStartRequest("copilot.exe", new Version(1, 0, 114), false).DataDirectory);
+        Assert.Null(new CopilotStartRequest("copilot.exe", new Version(1, 0, 114)).DataDirectory);
     }
 
     /// <summary>

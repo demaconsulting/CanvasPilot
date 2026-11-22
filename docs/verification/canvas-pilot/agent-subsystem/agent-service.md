@@ -27,8 +27,8 @@ there and no sentinel may be. The adapter of the Copilot runtime is tested on a 
 the scope, the formatted message, and the exception.
 
 No Copilot runtime, Copilot CLI, Ollama server, language model, or network is used; the Copilot branch is the subject of
-the tests of the factory, and here the gated starter is used for the one scenario that shows its sentence at the
-service.
+the tests of the factory, and here the real starter over a start function that fails with the "not signed in" message is
+used for the one scenario that shows its sentence at the service.
 
 #### Test Environment
 
@@ -189,6 +189,7 @@ is tested by `RuntimeLogAdapter_Log_MessageStateAndScope_AreNeverWritten`.
 tested by `AgentService_Constructor_MissingArguments_AreRefused`.
 
 **AgentSubsystem_ConverseWithOllama_ServiceOnStandInServer_WritesTheDrawingAndKeepsTheProjectClean** and
-**AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence**: The subsystem scenarios
+**AgentSubsystem_ConverseWithCopilot_ServiceWithNotSignedInStarter_TurnFailsWithTheSignInSentence**: The subsystem
+scenarios
 that are described in the verification of the Agent subsystem. These scenarios are tested by the tests of the same
 names.

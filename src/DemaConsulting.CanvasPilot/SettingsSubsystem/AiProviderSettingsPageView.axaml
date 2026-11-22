@@ -19,10 +19,52 @@
                 ItemsSource="{Binding Providers}"
                 SelectedItem="{Binding SelectedProvider}" />
 
-      <TextBlock Text="Model name" Margin="0,8,0,0" />
+      <TextBlock Text="Model" Margin="0,8,0,0" />
+      <ComboBox x:Name="ModelList"
+                AutomationProperties.AutomationId="AiModelComboBox"
+                HorizontalAlignment="Stretch"
+                IsVisible="{Binding HasModelList}"
+                ItemsSource="{Binding Models}"
+                SelectedItem="{Binding SelectedModel}">
+        <ComboBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ModelChoice">
+            <TextBlock Text="{Binding Label}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+        <ComboBox.Styles>
+          <Style Selector="ComboBoxItem" x:DataType="vm:ModelChoice">
+            <Setter Property="IsEnabled" Value="{Binding IsSelectable}" />
+          </Style>
+        </ComboBox.Styles>
+      </ComboBox>
+      <TextBlock Text="Model name (type one that is not listed)" Margin="0,4,0,0" Opacity="0.7"
+                 IsVisible="{Binding HasModelList}" />
       <TextBox AutomationProperties.AutomationId="AiModelNameTextBox"
                PlaceholderText="Leave empty to use the provider's default model"
                Text="{Binding ModelName}" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button AutomationProperties.AutomationId="AiRefreshModelsButton"
+                Content="Refresh models"
+                IsVisible="{Binding HasModelSource}"
+                IsEnabled="{Binding !IsLoadingModels}"
+                Command="{Binding RefreshModelsCommand}" />
+        <TextBlock AutomationProperties.AutomationId="AiModelListMessage"
+                   VerticalAlignment="Center"
+                   TextWrapping="Wrap"
+                   Opacity="0.7"
+                   IsVisible="{Binding HasModelListMessage}"
+                   Text="{Binding ModelListMessage}" />
+      </StackPanel>
+      <TextBlock AutomationProperties.AutomationId="AiModelDetails"
+                 Opacity="0.85"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ModelDetails, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding ModelDetails}" />
+      <TextBlock AutomationProperties.AutomationId="AiModelWarning"
+                 Foreground="DarkOrange"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ModelWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding ModelWarning}" />
 
       <TextBlock Text="Context window (tokens, Ollama only)" Margin="0,8,0,0" />
       <TextBox AutomationProperties.AutomationId="AiContextWindowTextBox"
@@ -44,15 +86,16 @@
                  Text="{Binding ContextWindowNote}" />
 
       <TextBlock Text="Reasoning level" Margin="0,8,0,0" />
-      <ComboBox AutomationProperties.AutomationId="AiReasoningLevelComboBox"
+      <ComboBox AutomationProperties.AutomationId="AiReasoningEffortComboBox"
                 HorizontalAlignment="Stretch"
-                IsEnabled="False"
-                ItemsSource="{Binding ReasoningLevels}"
-                SelectedItem="{Binding SelectedReasoningLevel}" />
-      <TextBlock AutomationProperties.AutomationId="AiReasoningLevelNote"
+                IsEnabled="{Binding IsReasoningEffortEnabled}"
+                ItemsSource="{Binding ReasoningEfforts}"
+                SelectedItem="{Binding SelectedReasoningEffort}" />
+      <TextBlock AutomationProperties.AutomationId="AiReasoningEffortNote"
                  Opacity="0.7"
                  TextWrapping="Wrap"
-                 Text="{x:Static vm:AiProviderSettingsPageViewModel.ReasoningLevelNoteText}" />
+                 IsVisible="{Binding HasReasoningNote}"
+                 Text="{Binding ReasoningNote}" />
 
       <TextBlock Text="Ollama endpoint" Margin="0,8,0,0" />
       <TextBox AutomationProperties.AutomationId="AiOllamaEndpointTextBox"

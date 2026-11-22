@@ -42,8 +42,10 @@ a requirement):
 5. *Looks.* The transcript and the panel are readable in the light and the dark theme, long messages wrap, chips in a
    sent message show their pictures, the newest message is in view after sending, and the inspector's text is selectable
    and its pictures are in proportion.
-6. *The copilot panel.* With Copilot chosen in the settings, the banner above the transcript says that Copilot support
-   needs an AgentKit update; "Open Settings" opens the settings and "Check again" repeats the check. With Ollama chosen
+6. *The copilot panel.* With Copilot chosen in the settings on a machine that is not signed in for CanvasPilot, the
+   banner above the transcript says how to sign in (`gh auth login` or a token variable); "Open Settings" opens the
+   settings and "Check again" repeats the check, and on a signed-in machine the banner is hidden and the answer streams
+   (the live Copilot runs are in check 10 of *Manual Verification* in the system verification). With Ollama chosen
    and the server stopped, the banner says what to do and a sent message ends with an error row that offers "Open
    Settings"; with Ollama running (when it is installed), the answer streams, "Stop" ends it and keeps the text marked
    as stopped, and the finished answer is shown with its formatting.
@@ -73,8 +75,8 @@ a requirement):
 - Stopping a turn keeps the text written so far, marked as stopped, and frees the composer; a failure ends with an error
   notice with the message, a remedy, and the offer of the settings when they can help, which raises a request to open
   them.
-- The banner shows the sentence of the readiness of the provider (the gated GitHub Copilot included), a warning does not
-  block sending, and the banner is empty when the provider is ready.
+- The banner shows the sentence of the readiness of the provider (the sign-in sentence of GitHub Copilot included), a
+  warning does not block sending, and the banner is empty when the provider is ready.
 - After a full scripted turn in a project made by the real project service, the words of the conversation are saved
   below the history root of the user's computer in the folder of the key of the project file, with the sidecar, and the
   project folder holds exactly the project file, its empty data folder, and the file that the copilot created; a second
@@ -98,12 +100,12 @@ is an error notice with the message, a remedy, and the offer of the settings, th
 offer raises the request to open the settings. This scenario is tested by
 `ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy`.
 
-**ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested**: The scripted copilot
-reports that GitHub Copilot cannot be used in this build. After the panel checks, the banner has the sentence "Copilot
-support needs an AgentKit update; use Ollama meanwhile." and choosing the settings raises the request. A warning about a
-small context window is shown and does not block sending, and when the copilot reports that it is ready the banner is
-empty. This scenario is tested by
-`ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested`.
+**ChatSubsystem_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysWhatToDoAndSettingsAreRequested**: The scripted
+copilot reports that GitHub Copilot is not signed in. After the panel checks, the banner has the sign-in sentence of
+`CopilotRuntimeStarter` ("Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` ...") and choosing the
+settings raises the request. A warning about a small context window is shown and does not block sending, and when the
+copilot reports that it is ready the banner is empty. This scenario is tested by
+`ChatSubsystem_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysWhatToDoAndSettingsAreRequested`.
 
 **ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject**: A project is made by the
 real project service, and a panel with the real history store over a folder outside the project sends "Draw a box"; the

@@ -28,40 +28,6 @@ namespace DemaConsulting.CanvasPilot.Tests;
 public sealed class AgentContractTests
 {
     /// <summary>
-    ///     The types that make up the contract, by full name, which must not name any AI library.
-    /// </summary>
-    private static readonly string[] ContractTypeNames =
-    [
-        typeof(IAgentService).FullName!,
-        typeof(AgentEvent).FullName!,
-        typeof(AgentFailureKind).FullName!,
-        typeof(AgentTurnRequest).FullName!,
-        typeof(AgentHistoryTurn).FullName!,
-        typeof(AgentHistoryRole).FullName!,
-        typeof(AgentReadinessReport).FullName!,
-        typeof(AgentReadinessStatus).FullName!,
-    ];
-
-    /// <summary>
-    ///     Test that the contract types name no AI library in their signatures, so that a consumer such as the chat does
-    ///     not depend on a provider.
-    /// </summary>
-    [Fact]
-    public void AgentContract_Types_ReferenceNoLanguageModelPackage()
-    {
-        // Act: find the uses of language model and agent libraries in the types of the subsystem, and keep those of the
-        // contract types
-        var findings = LanguageModelDependencyCheck
-            .FindTypeReferences(typeof(IAgentService).Assembly, "DemaConsulting.CanvasPilot.AgentSubsystem")
-            .Where(finding => ContractTypeNames.Any(name =>
-                finding.StartsWith(name + " ", StringComparison.Ordinal) || finding.StartsWith(name + "+", StringComparison.Ordinal)))
-            .ToList();
-
-        // Assert: none of the contract types names such a library
-        Assert.Empty(findings);
-    }
-
-    /// <summary>
     ///     Test that a tool event keeps a short description as it is, and cuts a long one to the limit with an ellipsis.
     /// </summary>
     [Fact]

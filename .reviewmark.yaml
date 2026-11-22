@@ -163,13 +163,44 @@ reviews:
       - "docs/design/canvas-pilot/agent-subsystem/agent-readiness.md"
       - "docs/verification/canvas-pilot/agent-subsystem/agent-readiness.md"
       - "src/**/AgentSubsystem/AgentReadiness.cs"
-      - "src/**/AgentSubsystem/GatedCopilotRuntimeStarter.cs"
-      - "src/**/AgentSubsystem/ICopilotRuntimeStarter.cs"
       - "src/**/AgentSubsystem/IOllamaProbe.cs"
       - "src/**/AgentSubsystem/OllamaProbe.cs"
       - "test/**/AgentSubsystem/AgentReadinessTests.cs"
       - "test/**/AgentSubsystem/OllamaProbeTests.cs"
       - "test/**/AgentSubsystem/ReadinessTestDoubles.cs"
+
+  - id: CanvasPilot-Agent-CopilotRuntimeStarter
+    title: Review of CanvasPilot CopilotRuntimeStarter unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/copilot-runtime-starter.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/copilot-runtime-starter.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/copilot-runtime-starter.md"
+      - "src/**/AgentSubsystem/CopilotAgentSource.cs"
+      - "src/**/AgentSubsystem/CopilotRuntimeStarter.cs"
+      - "src/**/AgentSubsystem/ICopilotRuntimeStarter.cs"
+      - "test/**/AgentSubsystem/CopilotRuntimeStarterTests.cs"
+      - "test/**/AgentSubsystem/LiveCopilotTurnTests.cs"
+
+  - id: CanvasPilot-Agent-ProviderModelCatalog
+    title: Review of CanvasPilot ProviderModelCatalog unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/provider-model-catalog.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/provider-model-catalog.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/provider-model-catalog.md"
+      - "src/**/AgentSubsystem/ModelRequirements.cs"
+      - "src/**/AgentSubsystem/OllamaModelCatalogs.cs"
+      - "src/**/AgentSubsystem/ProviderModelCatalog.cs"
+      - "test/**/AgentSubsystem/ProviderModelCatalogTests.cs"
 
   - id: CanvasPilot-Agent-AgentToolRegistry
     title: Review of CanvasPilot AgentToolRegistry unit implementation
@@ -272,7 +303,6 @@ reviews:
       - "docs/design/canvas-pilot/agent-subsystem/agent-provider-factory.md"
       - "docs/verification/canvas-pilot/agent-subsystem/agent-provider-factory.md"
       - "src/**/AgentSubsystem/AgentProviderFactory.cs"
-      - "src/**/AgentSubsystem/CopilotAgentSource.cs"
       - "src/**/AgentSubsystem/IAgentFactory.cs"
       - "test/**/AgentSubsystem/AgentProviderFactoryTests.cs"
       - "test/**/AgentSubsystem/AgentProviderTestDoubles.cs"
@@ -673,7 +703,6 @@ reviews:
       - "docs/design/canvas-pilot/knowledge-subsystem.md"
       - "docs/verification/canvas-pilot/knowledge-subsystem.md"
       - "test/**/KnowledgeSubsystem/KnowledgeSubsystemTests.cs"
-      - "test/**/LanguageModelDependencyCheck.cs"
 
   - id: CanvasPilot-Knowledge-KnowledgeCatalog
     title: Review of CanvasPilot KnowledgeCatalog unit implementation and cards
@@ -1154,6 +1183,8 @@ reviews:
       - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml"
       - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml.cs"
       - "src/**/SettingsSubsystem/IProviderCheck.cs"
+      - "src/**/SettingsSubsystem/IProviderModelSource.cs"
+      - "src/**/SettingsSubsystem/ModelChoice.cs"
       - "test/**/SettingsSubsystem/AiProviderSettingsPageTests.cs"
       - "test/**/AiProviderSettingsPageViewTests.cs"
 
@@ -1295,7 +1326,6 @@ reviews:
       - "docs/design/canvas-pilot/style-subsystem.md"
       - "docs/verification/canvas-pilot/style-subsystem.md"
       - "test/**/StyleSubsystem/StyleSubsystemTests.cs"
-      - "test/**/LanguageModelDependencyCheck.cs"
 
   - id: CanvasPilot-Style-StyleKitDocument
     title: Review of CanvasPilot StyleKitDocument unit implementation

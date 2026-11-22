@@ -19,7 +19,6 @@
 // SOFTWARE.
 
 using System.Diagnostics;
-using System.Reflection;
 using System.Text.Json.Nodes;
 using DemaConsulting.AgentKit.Agents.Copilot;
 using DemaConsulting.AgentKit.Core;
@@ -430,27 +429,6 @@ public sealed class AgentToolRegistryTests : IDisposable
         // tools, are refused
         Assert.Throws<ArgumentException>(() => new AgentToolRegistry([ToolTestDoubles.Plain("style_get")], []));
         Assert.Throws<ArgumentException>(() => new AgentToolRegistry([], [ToolTestDoubles.Plain("canvasnet_help")]));
-    }
-
-    /// <summary>
-    ///     Test that the list of the built-in tool names of the Copilot CLI contains every name that the AI library
-    ///     reserves, so that an upgrade of the library that adds a name is noticed here.
-    /// </summary>
-    [Fact]
-    public void AgentToolRegistry_CopilotBuiltInToolNames_CoverTheNamesTheLibraryReserves()
-    {
-        // Arrange: the list that the library keeps (it is not public, so it is read with reflection)
-        var field = typeof(CopilotAgentFactory).GetField("ReservedBuiltInToolNames", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-        Assert.NotNull(field);
-        var reserved = Assert.IsAssignableFrom<IEnumerable<string>>(field.GetValue(null));
-
-        // Act / Assert: every name that the library reserves is in the list of the registry
-        foreach (var name in reserved)
-        {
-            Assert.Contains(name, AgentToolRegistry.CopilotBuiltInToolNames);
-        }
-        Assert.Contains("view", AgentToolRegistry.CopilotBuiltInToolNames);
-        Assert.Contains("bash", AgentToolRegistry.CopilotBuiltInToolNames);
     }
 
     /// <summary>

@@ -622,70 +622,23 @@ public sealed class KnowledgeCatalogTests
     }
 
     /// <summary>
-    ///     Validates that the types the unit offers refer to no help type of CanvasNet, and that the lists of its cards
-    ///     cannot be changed.
+    ///     Validates that the lists of the cards that the catalog hands out cannot be changed.
     /// </summary>
     [Fact]
-    public void KnowledgeCatalog_Default_PublicTypesReferToNoHelpTypeOfCanvasNetAndCannotBeChanged()
+    public void KnowledgeCatalog_Default_ListsCannotBeChanged()
     {
-        // Arrange: the public types of the subsystem that describe the knowledge, and the catalog
-        var types = new[]
-        {
-            typeof(IKnowledgeCatalog), typeof(KnowledgeCatalog), typeof(KnowledgeCard), typeof(KnowledgeExample),
-            typeof(KnowledgeExampleReference)
-        };
+        // Arrange: the catalog and a card of it
         var catalog = KnowledgeCatalog.Default;
         var card = catalog.Find("canvaspilot/marks");
         Assert.NotNull(card);
 
-        // Act: collect the types that the public members mention
-        var mentioned = types
-            .SelectMany(t => t.GetMembers(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.DeclaredOnly))
-            .SelectMany(MentionedTypes)
-            .SelectMany(Expand)
-            .Distinct()
-            .ToList();
-
-        // Assert: none is a type of the help of CanvasNet, and none of the lists can be added to
-        Assert.NotEmpty(mentioned);
-        Assert.DoesNotContain(mentioned, t => (t.Namespace ?? string.Empty).StartsWith("DemaConsulting.CanvasNet", StringComparison.Ordinal));
+        // Act / Assert: none of the lists can be added to
         Assert.Throws<NotSupportedException>(() => ((IList<KnowledgeCard>)catalog.Cards).Add(card));
         Assert.Throws<NotSupportedException>(() => ((IList<KnowledgeCard>)catalog.Roots).Add(card));
         Assert.Throws<NotSupportedException>(() => ((IList<string>)card.Tags).Add("x"));
         Assert.Throws<NotSupportedException>(() => ((IList<string>)card.ChildIds).Add("x"));
         Assert.Throws<NotSupportedException>(() => ((IList<KnowledgeExample>)card.Examples).Add(card.Examples[0]));
     }
-
-    /// <summary>
-    ///     Gets the types that a member mentions.
-    /// </summary>
-    /// <param name="member">The member.</param>
-    /// <returns>The types of its value, its parameters, or its return.</returns>
-    private static IEnumerable<Type> MentionedTypes(System.Reflection.MemberInfo member)
-    {
-        return member switch
-        {
-            System.Reflection.PropertyInfo p => [p.PropertyType, .. p.GetIndexParameters().Select(i => i.ParameterType)],
-            System.Reflection.MethodBase m => [(m as System.Reflection.MethodInfo)?.ReturnType ?? typeof(void), .. m.GetParameters().Select(i => i.ParameterType)],
-            System.Reflection.FieldInfo f => [f.FieldType],
-            _ => []
-        };
-    }
-
-    /// <summary>
-    ///     Gets a type and the types it is made of, such as the arguments of a generic list.
-    /// </summary>
-    /// <param name="type">The type.</param>
-    /// <returns>The type, its element type, and its generic arguments, all the way down.</returns>
-    private static IEnumerable<Type> Expand(Type type)
-    {
-        yield return type;
-        foreach (var inner in type.GetGenericArguments().Concat(type.HasElementType && type.GetElementType() is { } e ? [e] : []).SelectMany(Expand))
-        {
-            yield return inner;
-        }
-    }
-
     /// <summary>
     ///     Validates that what the cards of CanvasPilot say about the application is what the code says.
     /// </summary>

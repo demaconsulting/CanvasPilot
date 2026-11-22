@@ -34,16 +34,17 @@ the descriptions. It needs no capability.
 
 #### The Rules
 
-**Path policy.** `CreatePolicy(projectFolder, limits)` makes `new PathPolicy(folder, [PathRule.ReadWrite(folder, deny)],
-limits)` where `folder` is the full path without a trailing separator and `deny` is `.canvaspilot` (the data folder,
-`ProjectDocument.DataFolderName`) and `*.canvaspilot` (every project file, `ProjectDocument.FileExtension`). The library
-matches a deny pattern against the file name and against every folder name on the way, so the data folder and a project
-file are out of reach for reading and for writing at the top of the project and in any folder below it. A folder that is
-empty, white space, or not a full path is refused, because a relative folder would anchor the tools to the current
-directory. The API of the library (verified in the restored package, version 0.1.0-beta.3) is `PathPolicy(string
-workingDirectory, IEnumerable<PathRule> grants, ToolLimits limits)` and `PathRule.ReadWrite(string root,
-IEnumerable<string> denyPatterns)`; `TryResolveRead` and `TryResolveWrite` give a refusal as a message and not an
-exception.
+**Path policy.** `CreatePolicy(projectFolder, limits)` makes
+`new PathPolicy(folder, [PathRule.ReadWrite(folder, deny)], limits)` where `folder` is the full path without a trailing
+separator and `deny` is `.canvaspilot` (the data folder, `ProjectDocument.DataFolderName`) and `*.canvaspilot` (every
+project file, `ProjectDocument.FileExtension`). The library matches a deny pattern against the file name and against
+every folder name on the way, so the data folder and a project file are out of reach for reading and for writing at the
+top of the project and in any folder below it. A folder that is empty, white space, or not a full path is refused,
+because a relative folder would anchor the tools to the current directory. The API of the library (verified in the
+restored package, version 0.1.0-beta.4, where `PathPolicy`, `PathRule`, and `ToolLimits` are unchanged since
+0.1.0-beta.3) is `PathPolicy(string workingDirectory, IEnumerable<PathRule> grants, ToolLimits limits)` and
+`PathRule.ReadWrite(string root, IEnumerable<string> denyPatterns)`; `TryResolveRead` and `TryResolveWrite` give a
+refusal as a message and not an exception.
 
 **Links are not followed (the finding of the AI library item).** The policy judges a path by its normalized spelling. A
 folder link (a junction or a symbolic link) inside the project that leads outside it is therefore *permitted* by the
@@ -68,8 +69,8 @@ library, is one catalog entry and one identifier; nothing else is restructured.
 **The set check.** After the library has built the tools, `CreateTools` refuses the set with an
 `InvalidOperationException` whose message names every problem found: it has no tool; two tools have the same name; a
 name is one of the built-in tools of the Copilot CLI. `CopilotBuiltInToolNames` is the list of the library
-(`CopilotAgentFactory.ReservedBuiltInToolNames`, which is not public, so a test reads it with reflection and fails when
-an upgrade adds a name that ours lacks).
+(`CopilotAgentFactory.ReservedBuiltInToolNames`, which is not public, so no test reads it). When the AI library is
+upgraded, the step of the upgrade compares that list with ours and adds any name that ours lacks.
 
 **The function of a description.** `DescriptorFunction` keeps the name and the words of the description; its
 `JsonSchema` is the schema text of the description parsed once (an `ArgumentException` when it is not a JSON object); a

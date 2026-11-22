@@ -10,7 +10,8 @@ specifics of each individual OTS item. The OTS items are:
   (text editing control of the message composer), CommunityToolkit.Mvvm (view model source generators), CanvasNet (draws
   image source files), and Speech (audio devices, speech models, and speech recognition); and the libraries of the AI
   copilot: AgentKit (confined tools and agent factories), Microsoft.Copilot.SDK (client of the Copilot CLI, which
-  AgentKit drives; no Copilot runtime is bundled or used), the Microsoft Agent Framework (agents, sessions, and streamed
+  AgentKit drives on the Copilot CLI that the user installed; no Copilot runtime is bundled), the Microsoft Agent
+  Framework (agents, sessions, and streamed
   turns), Microsoft.Extensions.AI (tools, messages, pictures, and chat clients), and OllamaSharp (client of the Ollama
   server).
 - **Packaging tool**: WiX Toolset, which builds the Windows installer package.
@@ -88,8 +89,7 @@ The following OTS items have integration design documentation:
 - BuildMark (*buildmark.md*) — build-notes documentation tool
 - CanvasNet (*canvasnet.md*) — runtime library that draws image source files
 - CommunityToolkit.Mvvm (*communitytoolkit-mvvm.md*) — runtime view model source generators
-- Copilot SDK (*copilot-sdk.md*) — runtime client of the GitHub Copilot CLI, driven by AgentKit and not started in this
-  version
+- Copilot SDK (*copilot-sdk.md*) — runtime client of the GitHub Copilot CLI, driven by AgentKit on the installed CLI
 - Extensions AI (*extensions-ai.md*) — runtime tools, messages, pictures, and chat clients of the AI copilot
 - FileAssert (*fileassert.md*) — document assertion tool
 - OllamaSharp (*ollamasharp.md*) — runtime client of the Ollama server

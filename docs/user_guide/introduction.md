@@ -16,9 +16,9 @@ library. You manage projects, browse and preview their image files, and export p
 messages: you type or dictate text, attach files, folders, and pictures, and mark places on the picture that you are
 talking about. When you send a message, the AI copilot answers it: it looks up how to draw, writes or changes the files
 of the project, draws them, looks at the result, and fixes what it finds. The copilot works with a local Ollama server
-in this release. GitHub Copilot can be chosen and is checked, but it cannot be used yet (see *Setting Up an AI
-Provider*). The copilot can only use CanvasPilot's own tools, which are confined to the project folder, and it
-overwrites files directly, with no backup, so keep your projects under source control. The Help menu opens the drawing
+or with your installed GitHub Copilot CLI (see *Setting Up an AI Provider*). The copilot can only use CanvasPilot's own
+tools, which are confined to the project folder, and it overwrites files directly, with no backup, so keep your
+projects under source control. The Help menu opens the drawing
 knowledge, a guide to the image formats and to CanvasPilot that you can read card by card and that the copilot uses as
 well. Style kits let you keep a look (colors, fonts, sizes, and example images) for a project or a team, export
 pictures at sizes that fit slides, email, and paper, and check a picture against the colors of the style.
@@ -34,7 +34,8 @@ This user guide covers:
   the clipboard, and dragging it into another program
 - Chatting: writing and dictating a message, attaching files, folders, and pictures, marking the picture, and sending
   the message and viewing its payload
-- Setting up an AI provider: Ollama and GitHub Copilot, the readiness messages, and the connection check
+- Setting up an AI provider: Ollama and GitHub Copilot, the readiness messages, the connection check, and choosing a
+  model and its reasoning level
 - Working with the copilot: asking, marks and attachments, what the copilot can do in the project, Stop, the chat
   history, the files that the copilot writes, and what to do about errors
 - Reading the drawing knowledge: opening the browser, the tree of cards, searching, following related cards, and
@@ -337,10 +338,10 @@ program it was.
 # Setting Up an AI Provider
 
 The copilot needs an AI provider. CanvasPilot supports two: a local **Ollama** server, which is covered by automated
-tests (live checks against a running server are pending), and **GitHub Copilot**, which CanvasPilot checks but cannot
-use yet. Choose one in **Tools > Settings... > AI Provider** (see *Settings*), then choose **Check connection**. The
-same check runs in the background when the chat panel is shown, and the chat panel shows its result in the banner, so
-you see a problem before you send a message.
+tests (live checks against a running server are pending), and **GitHub Copilot**, which runs through the GitHub Copilot
+CLI that you installed. Choose one in **Tools > Settings... > AI Provider** (see *Settings*), then choose **Check
+connection**. The same check runs in the background when the chat panel is shown, and the chat panel shows its result in
+the banner, so you see a problem before you send a message.
 
 ## Setting Up Ollama
 
@@ -350,55 +351,141 @@ Ollama runs language models on your own computer or on a server that you run. No
 2. Pull a model that can call tools. For the copilot to see the marks and pictures of your messages, choose a
    **vision-capable** model; with a model that cannot see pictures the copilot works only from your words and the files
    (for example `ollama pull gemma3`).
-3. In the AI Provider page choose **Ollama**, type the exact **Model name** (as `ollama list` shows it), and keep the
-   **Ollama endpoint** (default `http://localhost:11434`) or enter the address of your server. The model name is
-   required for Ollama.
+3. In the AI Provider page choose **Ollama** and keep the **Ollama endpoint** (default `http://localhost:11434`) or
+   enter the address of your server. The page then lists the models that the server has; choose yours (see *Choosing a
+   Model*). If the list cannot be had, type the exact **Model name** (as `ollama list` shows it). A model is required
+   for Ollama.
 4. Keep the **Context window** at 32,768 tokens or more. The default for new settings is 32,768. Drawings with pictures
    and tools use a lot of context, and CanvasPilot warns when the window is below 16,384 tokens, or when the model
-   itself supports fewer. A value that an earlier version stored is kept as it is, so check it.
+   itself supports fewer. A window that is larger than the model was trained for is refused (see below). A value that
+   an earlier version stored is kept as it is, so check it.
 5. Choose **Check connection**.
 
 The check says what it found, in this order:
 
 - **The address is not valid**: "The Ollama address in Settings is not a valid http or https address". Fix the address.
-- **No model name**: "Enter the name of an Ollama model in Settings". Type it.
+- **No model name**: "Enter the name of an Ollama model in Settings". Choose or type one.
 - **Ollama does not answer**: "Ollama did not answer at {address}; start Ollama or fix the address in Settings". Start
   the server or correct the address, then check again.
 - **The model is missing**: "Ollama does not have the model {name}; run `ollama pull {name}`". Run that command.
+- **The model cannot be used**: the explanation of the AI library, for example "Model 'x' does not support tool
+  calling, which this application requires." (the copilot draws by calling tools, so choose another model), or "Model
+  'x' supports at most 8,192 tokens; a 32,768-token window is not supported." (lower the **Context window** or choose a
+  model with a longer one), or that the model does not offer the reasoning level that you chose.
 - **The context window is small**: a warning, not an error, that names the size and recommends 32,768. The copilot
   still works, but long or picture-heavy requests may fail.
-- **Ready**: "Ollama is running with the model {name}; pictures work only with a vision-capable model."
+- **The model cannot see pictures**: a warning, not an error: "The model {name} does not accept pictures, so it cannot
+  see the drawings and marks; choose a model with vision for the best results." The copilot works from your words and
+  the files.
+- **Ready**: "Ollama is running with the model {name}." When the server could not describe its models, the sentence adds
+  that pictures work only with a vision-capable model.
 
 *Not yet checked:* the automated tests of CanvasPilot use a stand-in for the Ollama server. A run with a real server and
 real models has to be done by a person before a release (see the verification of the system).
 
 ## Setting Up GitHub Copilot
 
-**GitHub Copilot cannot be used in this release.** The AI library that CanvasPilot is built on can start the GitHub
-Copilot command-line tool only as a copy that is shipped with the application, and it cannot use the tool that you
-installed. CanvasPilot never ships or downloads that tool, so the Copilot provider waits for a newer version of the AI
-library. Meanwhile CanvasPilot checks everything that is in your hands, so that the day it works you only have to
-switch. Use Ollama until then.
+**GitHub Copilot runs through the GitHub Copilot command-line tool (the Copilot CLI) that you installed.** CanvasPilot
+never ships or downloads that tool. It needs version 1.0.113 or later, which CanvasPilot finds automatically (for
+example a `winget install GitHub.Copilot` installation) or which you choose in Settings. CanvasPilot starts one Copilot
+runtime when it is first needed, and the **Check connection** button and the chat share it.
 
-When you choose **GitHub Copilot** and **Check connection**, CanvasPilot checks four things in order and shows the first
+**Signing in.** CanvasPilot has no token field and no sign-in screen. The Copilot runtime does not use the session that
+you made inside the Copilot CLI with `/login`. It uses one of these, which must exist before you start CanvasPilot:
+
+- the GitHub CLI signed in with `gh auth login` (`gh` on the `PATH` or in `C:\Program Files\GitHub CLI`), or
+- a token in the environment that CanvasPilot is started in: `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`.
+
+When you choose **GitHub Copilot** and **Check connection**, CanvasPilot checks five things in order and shows the first
 that fails:
 
 1. **The Copilot CLI is found.** CanvasPilot looks for the real `copilot.exe` (see *Which Copilot CLI Is Used*). If it
    cannot find one: "The GitHub Copilot CLI was not found. Install it with `winget install GitHub.Copilot` or set its
    path in Settings." When only the launcher of an editor was found, the message says so.
-2. **Its version is 1.0.113 or later.** Otherwise: "Copilot CLI {version} is older than 1.0.113. Run `winget upgrade
-   GitHub.Copilot`."
+2. **Its version is 1.0.113 or later.** CanvasPilot reads the version with `copilot --no-auto-update --version`, which
+   is the version that is built into the installed program. Otherwise: "Copilot CLI {version} is older than 1.0.113.
+   Run `winget upgrade GitHub.Copilot`."
 3. **Credentials exist.** CanvasPilot needs a signed-in GitHub CLI or a token in the environment. Sign in with `gh auth
    login`, or set the environment variable `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` and `GITHUB_TOKEN` also work), then check
    again. Otherwise: "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the
-   COPILOT_GITHUB_TOKEN environment variable), then choose Check connection. The Copilot CLI's own /login session is not
-   shared with CanvasPilot's AI library yet." Signing in inside the Copilot CLI with `/login` is not enough.
-4. **The runtime can be started.** This is the step that cannot pass yet: "Copilot support needs an AgentKit update; use
-   Ollama meanwhile."
+   COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to
+   the Copilot CLI with /login does not apply to CanvasPilot."
+4. **The runtime starts on that CLI and signs in.** Then the check says "GitHub Copilot CLI 1.0.114 is ready." (with the
+   version that was found). Otherwise it shows one of these:
+   - The CLI is too old: the message says to upgrade the Copilot CLI itself and lists the commands. Running `copilot
+     update` alone may not change the version that runs, so check the version again afterward.
+   - Not signed in: the sentence of step 3.
+   - The runtime could not be started: "The Copilot runtime could not be started. Choose Check connection to try
+     again." or the explanation of the AI library.
+   - The path in Settings cannot be used: "The Copilot CLI path in Settings cannot be used: ..." followed by the reason,
+     for example a relative path or a `.cmd` or `.bat` file.
+5. **The model and the reasoning level are valid.** When you chose a model, the runtime says whether your account has it
+   and what it can do. A model that is not offered to you, that is switched off for your account, that cannot call
+   tools, or that does not offer the reasoning level that you chose is refused with the explanation of the AI library,
+   for example "Model 'x' does not support reasoning effort 'bogus'. Supported: low, medium, high." (see *Choosing a
+   Model*). A model that cannot see pictures is a warning and the copilot still works. With no model chosen the check
+   ends with "GitHub Copilot CLI {version} is ready."; with one it ends with "... is ready with the model {id}."
 
+For GitHub Enterprise with data residency, the AI library also honors the `COPILOT_GH_HOST` environment variable.
 CanvasPilot never stores, shows, or logs a token. To find out whether the GitHub CLI is signed in it only asks whether
 `gh auth token` prints something, and it forgets the answer's text at once. There is no field for a token in the
 settings.
+
+The model of the AI Provider page is chosen from the list of the models of your account (see *Choosing a Model*). Leave
+it empty to use the default model of the Copilot runtime. The runtime keeps its own data, such as its sessions, in
+`%LOCALAPPDATA%\CanvasPilot\copilot`, outside every project.
+
+## Choosing a Model
+
+On the AI Provider page, the **Model** list shows the models that the provider offers: for GitHub Copilot the models of
+your account, which come from the running Copilot runtime, and for Ollama the models that your server has pulled, which
+come from the server at the **Ollama endpoint**. The list loads when you open the page, when you choose another
+provider, when you change the endpoint or the Copilot path (after you stop typing), and when you choose **Refresh
+models**, which asks the provider again (for example after you pulled a model or were given access to one). It is always
+the list of the provider you chose; if you choose the other provider, the model and the reasoning level start empty
+again.
+
+Do not change the Copilot CLI path in the settings while the copilot is answering. Listing the models, **Refresh
+models**, and **Check connection** with another path restart the Copilot runtime, which ends the answer that is
+running; send the message again. If you cancel the dialog, the next message uses the saved path.
+
+- **Every model is listed, with what it lacks.** An entry says in a few words when a model has no tool calling, no
+  picture input, or is unavailable (for example "gpt-x - no pictures"). A model that the provider says cannot be used
+  (switched off for your account, or an embedding model) is shown dimmed and cannot be chosen; the warning under the
+  list says why.
+- **What the chosen model can do.** Under the list you see, for the chosen model: **Tool calling**, **Pictures**,
+  **Reasoning levels**, and the largest **Context window**. The copilot needs tool calling for every drawing, so a model
+  without it is warned about, and the check refuses it. Pictures are wanted but not required: without them the copilot
+  cannot see your marks or its own drawings, and works from your words and the files.
+- **The default model.** The first entry, "Provider default model", leaves the choice to the provider (GitHub Copilot
+  uses the default model of its runtime). Ollama needs a model.
+- **Typing a model.** The **Model name** box below the list always works. Type the id of a model that is not in the list
+  (for example one that you pulled a moment ago), or any model while no list is shown. A name that is not listed is
+  tried as you typed it, and the first message shows whether it works. Choosing an entry of the list fills the box, and
+  typing a name that is in the list chooses it (a name without a tag, such as `gemma3`, matches `gemma3:latest`).
+- **When the list cannot be had.** The page says why next to **Refresh models**, for example that Ollama did not answer
+  or that Copilot is not signed in, and the box still takes your typed name. What you saved earlier (the model and the
+  reasoning level) is kept, so a server that is down for a minute does not erase a setting.
+
+### The Reasoning Level
+
+**Reasoning level** is a choice among the levels that the chosen model offers: the names are the provider's own, for
+example `none`, `low`, `medium`, `high`, `xhigh`, or `max`, and they differ from model to model. The box is enabled only
+while the chosen model offers levels; otherwise it stays on "Provider default" and a note says why (no model chosen, the
+model has no levels, or the levels of the model are not known because no list could be had). "Provider default" leaves
+the level to the provider. A higher level lets the model think longer before it answers, which may help with a
+complicated drawing and costs time.
+
+If you choose another model and the level that you had is not offered by it, the level goes back to "Provider default"
+and the page says so. The level you choose is saved with the other settings and takes effect with the next message,
+which starts the conversation again, as a change of the model does.
+
+### Models That Cannot Work
+
+The banner of the chat panel, and **Check connection**, tell you before the first message when the choice cannot work: a
+model that cannot call tools, that is not offered to your account, or that does not offer the chosen level is refused
+with the explanation of the AI library, which names what is supported, and the copilot does not start. A model that
+cannot see pictures only warns. Choose another model or level in Settings, then **Check connection**.
 
 ### Which Copilot CLI Is Used
 
@@ -412,14 +499,14 @@ CanvasPilot does not take any of them. It searches, in this order:
 
 and it takes the first `copilot.exe` that is not a launcher: a file that is not an `.exe`, that lies in the folder of an
 editor's shim (for example `copilot-shim`, `.vscode`, or `Microsoft VS Code`), or that is far smaller than the real tool
-is skipped. Then it runs the file with `--version` and checks the version.
+is skipped. Then it runs the file with `--no-auto-update --version` and checks the version.
 
 If you keep the tool somewhere else, enter its full path in **GitHub Copilot command-line tool path**. A path that you
 enter wins over the search and is the only candidate: it must be an existing `.exe`, CanvasPilot checks its version, and
 if it fails the message says why and CanvasPilot does not fall back to the search. Leave the field empty to search.
 
-*Not yet checked:* the check with a real Copilot CLI and a real sign-in on a person's machine is a manual check before a
-release; the automated tests use stand-ins.
+*Verified:* a short real turn with Copilot CLI 1.0.114 and a signed-in GitHub CLI listed the project files and rendered
+a picture. Other setups, such as other sign-in methods and other versions, have not been checked on a real machine.
 
 ## Check Connection and the Banner
 
@@ -431,8 +518,7 @@ and **Check again**. After you change the provider settings, the banner checks a
 
 # Working with the Copilot
 
-This chapter describes what happens when you send a message and the AI provider works. It is written for Ollama, the
-provider that works in this release.
+This chapter describes what happens when you send a message and the AI provider works. It applies to both providers.
 
 ## Asking
 
@@ -516,8 +602,8 @@ it to change, but a model can be wrong.
 
 Only drawing sources and small data files are written (at most 256 KiB each), only inside the project folder, and only
 files that the copilot is asked to create or change. CanvasPilot adds nothing else to your project because of the
-copilot: no history file, no backup, no copy of its own data. The data of the Copilot runtime (its sessions, which are
-unused while Copilot is gated) would be kept in `%LOCALAPPDATA%\CanvasPilot\copilot`, outside every project, and is
+copilot: no history file, no backup, no copy of its own data. The data of the Copilot runtime (its sessions) is kept in
+`%LOCALAPPDATA%\CanvasPilot\copilot`, outside every project, and is
 deleted when a conversation ends. A project folder that contains one of those folders is refused. Pictures that you
 pasted into a message that is not sent yet are in `.canvaspilot\attachments` of the project, as before; consider listing
 `.canvaspilot/` in the `.gitignore` of the project.
@@ -532,6 +618,9 @@ fix it, a button **Open Settings**. Your message stays in the transcript, and yo
 - **The connection was lost or could not be made**: for Ollama, "Check that Ollama is running and that the address in
   Settings is right, then send the message again."
 - **The model was not found**: "Run `ollama pull {model}` or choose another model in Settings."
+- **The model settings cannot work**: the notice is the explanation of the provider (for example that the model cannot
+  call tools, is not available to your account, or does not offer the reasoning level), and no run starts. Choose
+  another model or level in Settings (see *Choosing a Model*).
 - **The server refused the request**: check the address and any proxy in front of the server.
 - **The copilot is still working**: "Press Stop to cancel it, then send again."
 - **Open a project first**: the copilot works on the files of a project.
@@ -778,15 +867,21 @@ what to install and the messages of the check). Changes take effect when you cho
 that is running is started again with the new choices when you send the next message.
 
 - **Provider**: GitHub Copilot or Ollama. Ollama is supported and covered by automated tests (live checks are pending);
-  GitHub Copilot is checked but cannot be used yet.
-- **Model name**: The model to use. For Ollama it is required and must be the name that `ollama list` shows. For GitHub
-  Copilot, leave it empty to use the provider's default model. It is typed text, because no list of models is offered.
+  GitHub Copilot runs through the Copilot CLI that you installed.
+- **Model**: The list of the models that the provider offers, with a note for what each lacks, and below it the
+  capabilities of the chosen model and any warning (see *Choosing a Model*). **Provider default model** leaves the
+  choice to the provider. **Refresh models** asks the provider again and shows why when there is no list.
+- **Model name**: The id of the model, filled by your choice in the list and also typed. For Ollama a model is required
+  and the name is the one that `ollama list` shows. For GitHub Copilot, leave it empty to use the provider's default
+  model. A name that is not in the list is tried as you typed it.
 - **Context window (tokens, Ollama only)**: The size of the context window that is requested for every Ollama request,
   from 512 to 2,000,000 tokens (default 32,768). A value that you or an earlier version stored is kept as it is. Below
-  16,384 tokens the page shows a warning, not an error, that says that drawings with pictures and tools may fail. The
+  16,384 tokens the page shows a warning, not an error, that says that drawings with pictures and tools may fail. A
+  window that is larger than the model was trained for is refused when the conversation starts. The
   setting does not apply to GitHub Copilot, which sets its own; the page says so when Copilot is chosen.
-- **Reasoning level**: Shown, but unavailable, with the note "Not available yet: the AI library does not expose it".
-  A value that is stored is kept as it is.
+- **Reasoning level**: The levels that the chosen model offers, or "Provider default". It is enabled only while the
+  model offers levels (see *The Reasoning Level*). A level that an earlier version stored under the old setting is read
+  as it was (low, medium, or high), and is kept until you choose another.
 - **Ollama endpoint**: The address of the Ollama server (default `http://localhost:11434`). It is used when the
   provider is Ollama.
 - **GitHub Copilot command-line tool path**: The full path of the installed `copilot.exe`. Leave it empty to locate the
@@ -844,7 +939,7 @@ third-party libraries that CanvasPilot uses. Include the version when you report
 | Settings and recent projects | `%APPDATA%\CanvasPilot\settings.json` |
 | Log files | `%LOCALAPPDATA%\CanvasPilot\logs` |
 | Chat history of each project (text only) | `%LOCALAPPDATA%\CanvasPilot\history\{key}` |
-| Copilot runtime data (unused while Copilot is gated) | `%LOCALAPPDATA%\CanvasPilot\copilot` |
+| Copilot runtime data (its sessions) | `%LOCALAPPDATA%\CanvasPilot\copilot` |
 | Pictures prepared for dragging out (temporary) | `%LOCALAPPDATA%\CanvasPilot\drag` |
 | Pictures that you pasted into a message that is not sent yet | `.canvaspilot\attachments` in the project |
 | Files and folders that you sent with a message | `attachments` in the project |
@@ -906,11 +1001,6 @@ open. Open or create a project. Without one the message box says "Open a project
 the previous message is not still being sent, and the copilot is not still working on the previous message. Let go of
 the Hold to talk button, write something, or choose **Stop** while the copilot works.
 
-**The banner says "Copilot support needs an AgentKit update; use Ollama meanwhile."** GitHub Copilot cannot be used in
-this release, because the AI library that CanvasPilot uses cannot start the Copilot command-line tool that you
-installed. Nothing is wrong with your installation. Choose **Ollama** in **Tools > Settings... > AI Provider** (see
-*Setting Up Ollama*).
-
 **The banner says the GitHub Copilot CLI was not found.** Install it with `winget install GitHub.Copilot`, or enter the
 full path of the installed `copilot.exe` in the settings. If the message says that only the launcher of an editor was
 found, the real tool is missing: the launcher that Visual Studio Code puts on the `PATH` is not accepted (see *Which
@@ -920,21 +1010,51 @@ Copilot CLI Is Used*).
 connection**.
 
 **The banner says Copilot is not signed in for CanvasPilot.** Sign in with `gh auth login`, or set the environment
-variable `COPILOT_GITHUB_TOKEN`, then close and start CanvasPilot again if you set a variable, and choose **Check
-connection**. The sign-in that you made inside the Copilot CLI with `/login` is not shared with CanvasPilot.
+variable `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` or `GITHUB_TOKEN` also work), then close and start CanvasPilot again if you
+set a variable, and choose **Check connection**. The sign-in that you made inside the Copilot CLI with `/login` does not
+apply to CanvasPilot.
+
+**The banner says the Copilot CLI is too old.** The Copilot runtime needs version 1.0.113 or later. Upgrade the Copilot
+CLI itself with the commands that the banner lists (for example `winget upgrade GitHub.Copilot`), then choose **Check
+connection**. `copilot update` alone may not change the version that runs.
+
+**The banner says the Copilot runtime could not be started.** Choose **Check connection** to try again. If it keeps
+failing, check that the Copilot CLI starts on its own, that the path in Settings (if you entered one) is the full path
+of the installed `copilot.exe`, and read the explanation that the banner gives.
+
+**The answer stops with a message that the Copilot runtime was stopped.** The Copilot CLI path in the settings was
+changed while the copilot was answering, which restarts the runtime. Send the message again, and change the path only
+while the copilot is idle.
+
+**The banner says the Copilot CLI path in Settings cannot be used.** A relative path or a `.cmd` or `.bat` file cannot
+be used. Enter the full path of the installed `copilot.exe`, or leave the field empty to search.
 
 **The banner says Ollama did not answer.** Start Ollama, or fix the **Ollama endpoint** in the settings, and choose
 **Check again**. Check that a firewall or a proxy is not in the way when the server is on another computer.
 
 **The banner says Ollama does not have the model.** Run `ollama pull` with the name that the banner shows, or choose a
-model that `ollama list` shows, and choose **Check again**.
+model from the list of the AI Provider page, and choose **Check again**.
+
+**The banner says a model does not support tool calling, is not available, or does not support a reasoning level.** The
+model settings cannot work, and the copilot does not start until you change them. The sentence is the explanation of the
+provider and names what is supported (for example the levels that the model offers). Open the settings, choose another
+model or level from the lists (see *Choosing a Model*), and choose **Check connection**. For GitHub Copilot, the list
+shows the models of your account; a model that is not in it is not available to you.
+
+**The banner says a model does not accept pictures.** That is a warning, not an error. The copilot works, but it cannot
+see your marks, your pictures, or its own drawings. Choose a model with pictures if you need that.
+
+**The model list says that Ollama did not answer, or that Copilot is not signed in.** The list cannot be had, so the
+page shows the reason next to **Refresh models** and keeps the **Model name** box for typing. Fix the cause (start
+Ollama, sign in with `gh auth login`, correct the endpoint or the path), then choose **Refresh models**.
 
 **The banner warns about the context window.** The window that you set (or that the model supports) is below 16,384
 tokens, so drawings with pictures and tools may fail. Raise **Context window** to 32,768 on the AI Provider page, or
 choose a model with a larger window.
 
-**The copilot does not see my marks or pictures.** The model must be vision-capable. Choose such a model in the settings
-(see *Setting Up Ollama*). With another model the copilot works from your words and from the files.
+**The copilot does not see my marks or pictures.** The model must accept pictures. Choose such a model in the settings
+(see *Choosing a Model*); the list says "no pictures" for the ones that do not. With another model the copilot works
+from your words and from the files.
 
 **The copilot answered with an error.** The notice says what happened and what to do (see *Errors and What to Do*).
 Your message is still in the transcript; fix the cause, and send it again.

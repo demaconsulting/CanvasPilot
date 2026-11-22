@@ -94,7 +94,7 @@ sections:
             children:
               - CanvasPilot-ChatPanel-ReportProviderReadiness
             tests:
-              - ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested
+              - ChatSubsystem_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysWhatToDoAndSettingsAreRequested
 
           - id: CanvasPilot-Chat-SendComposedMessage
             title: >-

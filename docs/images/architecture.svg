@@ -135,9 +135,9 @@
   <rect x="40" y="498" width="880" height="92" rx="10" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
   <text x="480" y="519" font-size="14" font-weight="700" fill="#4c1d95" text-anchor="middle">Agent</text>
   <g font-size="11" fill="#5b21b6" text-anchor="middle">
-    <text x="480" y="536">AgentContract (IAgentService), AgentService, AgentReadiness, CopilotCliLocator, AgentProviderFactory</text>
+    <text x="480" y="536">AgentContract (IAgentService), AgentService, AgentReadiness, CopilotCliLocator, CopilotRuntimeStarter, AgentProviderFactory</text>
     <text x="480" y="550">AgentToolRegistry, ProjectTools (confined to the project), AgentInstructions, PayloadMessageMapper, AgentEventMapper</text>
-    <text x="480" y="566">Ollama works end to end; GitHub Copilot is checked but gated in this release</text>
+    <text x="480" y="566">Ollama and GitHub Copilot (on the installed Copilot CLI) work end to end</text>
     <text x="480" y="580">no tool outside the project; no Copilot runtime in the installer</text>
   </g>
 

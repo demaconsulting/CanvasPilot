@@ -11,8 +11,8 @@ versioned JSON file in the per-user application data folder. It contains three u
 hosts settings pages; and `AiProviderSettingsPage`, the page for the AI provider choices. Settings pages
 for other subsystems, such as speech, are supplied to the dialog by the application, so the `Settings`
 subsystem does not depend on them. The Agent subsystem reads the AI provider choices through `ISettingsService`, and
-checks them through the `IProviderCheck` interface that this subsystem owns and that the Agent subsystem implements;
-this subsystem depends on neither.
+checks them and lists the models of the provider through the `IProviderCheck` and `IProviderModelSource` interfaces that
+this subsystem owns and that the Agent subsystem implements; this subsystem depends on neither.
 
 ### Interfaces
 

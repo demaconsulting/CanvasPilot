@@ -61,7 +61,7 @@ package OtsDependencies {
     }
 
     part def AgentKit {
-        doc /* DemaConsulting.AgentKit NuGet dependency (the Core, Agents.Copilot, Agents.ChatClient, and Agents.Ollama packages) that confines the AI copilot's tools to the project with a path policy, composes tool packs, bounds tool results, builds agents on a chat client, and sizes the Ollama context window; its Copilot runtime is never bundled and not started. */
+        doc /* DemaConsulting.AgentKit NuGet dependency (the Core, Agents.Copilot, Agents.ChatClient, and Agents.Ollama packages) that confines the AI copilot's tools to the project with a path policy, composes tool packs, bounds tool results, builds agents on a chat client, sizes the Ollama context window, lists and validates the models and the reasoning effort of a provider with its model catalogs, and runs the Copilot runtime on the Copilot CLI that the user installed (version 0.1.0-beta.4); its Copilot runtime is never bundled. */
 
         metadata info : SoftwareInfo {
             sourceFiles = ("Directory.Build.props");
@@ -76,7 +76,7 @@ package OtsDependencies {
     }
 
     part def CopilotSdk {
-        doc /* Microsoft.Copilot.SDK NuGet dependency, the client library for the GitHub Copilot CLI that AgentKit drives; it is not started in this version and its runtime is neither bundled nor downloaded. */
+        doc /* Microsoft.Copilot.SDK NuGet dependency, the client library for the GitHub Copilot CLI that AgentKit drives; its runtime is neither bundled nor downloaded, and the CLI that the user installed is the one that runs. */
 
         metadata info : SoftwareInfo {
             testFiles = ("test/OtsSoftwareTests/CopilotSdkTests.cs");

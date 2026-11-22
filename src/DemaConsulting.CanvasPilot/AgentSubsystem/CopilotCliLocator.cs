@@ -40,7 +40,7 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///     <para>
 ///         The reason for the three independent filters (extension, location, size) is that the VS Code shim is also called
 ///         <c>copilot.exe</c>, is on the <c>PATH</c> of every machine that has VS Code, and runs, but is a launcher and
-///         not the CLI that a later release of the AI library must be pointed to.
+///         not the CLI that the AI library is pointed to.
 ///     </para>
 ///     <para>
 ///         The rule is written for Windows paths and works on them whatever platform runs the code, so that it can be tested
@@ -87,8 +87,11 @@ public sealed partial class CopilotCliLocator
     /// <summary>The pattern of the folder names of the WinGet packages of the Copilot CLI.</summary>
     private const string PackageFolderPattern = "GitHub.Copilot_*";
 
-    /// <summary>The arguments that make the CLI print its version.</summary>
-    private static readonly string[] VersionArguments = ["--version"];
+    /// <summary>
+    ///     The arguments that make the CLI print the version of the executable itself: with <c>--no-auto-update</c> the
+    ///     CLI does not switch to a newer version that it cached, which is the version that the AI library runs it with.
+    /// </summary>
+    private static readonly string[] VersionArguments = ["--no-auto-update", "--version"];
 
     /// <summary>The seam that runs <c>--version</c>.</summary>
     private readonly IProcessRunner _processRunner;

@@ -2,8 +2,8 @@
 # Microsoft.Copilot.SDK OTS Software Requirements
 #
 # Requirements for the Microsoft.Copilot.SDK package, the client library for the GitHub Copilot CLI that AgentKit's
-# Copilot package drives, as used by CanvasPilot at run time. CanvasPilot uses no part of it directly in this version;
-# the requirements record the facts on which the gating of the Copilot provider rests. The library is a runtime
+# Copilot package drives, as used by CanvasPilot at run time. CanvasPilot uses no part of it directly; the requirements
+# record the facts on which the use of an installed Copilot CLI rests. The library is a runtime
 # dependency, so each requirement is a child of the requirement of the item that uses the feature (the system
 # requirement about using only an installed Copilot CLI) and is not a root requirement.
 
@@ -18,8 +18,8 @@ sections:
               path that does not exist by naming it.
             justification: |
               Using the Copilot CLI that the user installed needs a way to name its path. The SDK offers it on its
-              connection, which is the upstream change that AgentKit has not made yet, so the test shows that the change
-              is possible and what the error looks like.
+              connection, and AgentKit passes the path that CanvasPilot gives it on to that connection, so the test shows
+              what the error of a path that does not exist looks like.
             tags: [ots]
             tests:
               - CopilotSdk_Client_StartAsync_ExplicitMissingCliPath_FailsNamingThePath
@@ -38,11 +38,13 @@ sections:
 
           - id: CanvasPilot-OTS-CopilotSdk-DeclareSupportedCliVersion
             title: >-
-              The Copilot SDK package shall declare the version of the Copilot CLI it is built for, and that version
-              shall not be older than the minimum CLI version that CanvasPilot documents.
+              The AgentKit Copilot package, built on the Copilot SDK, shall declare the oldest Copilot CLI version that it
+              runs, and that version shall not be newer than the minimum CLI version that CanvasPilot documents and
+              checks.
             justification: |
-              CanvasPilot tells its users which Copilot CLI to install. The minimum it names must never be below what
-              the SDK needs, or the check would pass a CLI that the SDK then refuses.
+              CanvasPilot tells its users which Copilot CLI to install and checks the version itself. The minimum it
+              names must never be below what the library needs, or the check would pass a CLI that the library then
+              refuses; a new version of the library that raises its minimum fails this requirement and is noticed.
             tags: [ots]
             tests:
-              - CopilotSdk_BuiltForCliVersion_IsNotBelowCanvasPilotMinimum
+              - CopilotSdk_AgentKitMinimumCliVersion_IsNotAboveCanvasPilotMinimum
