@@ -53,7 +53,8 @@ public sealed class AgentContractTests
         // contract types
         var findings = LanguageModelDependencyCheck
             .FindTypeReferences(typeof(IAgentService).Assembly, "DemaConsulting.CanvasPilot.AgentSubsystem")
-            .Where(finding => ContractTypeNames.Any(name => finding.StartsWith(name, StringComparison.Ordinal)))
+            .Where(finding => ContractTypeNames.Any(name =>
+                finding.StartsWith(name + " ", StringComparison.Ordinal) || finding.StartsWith(name + "+", StringComparison.Ordinal)))
             .ToList();
 
         // Assert: none of the contract types names such a library
