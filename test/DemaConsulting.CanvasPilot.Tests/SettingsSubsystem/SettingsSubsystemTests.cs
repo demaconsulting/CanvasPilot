@@ -43,6 +43,42 @@ public sealed class SettingsSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the layout of the window, the look of the application, and the times of opening of projects are
+    ///     stored with the other settings, survive a restart, and are kept when the dialog stores its own choices.
+    /// </summary>
+    [Fact]
+    public void SettingsSubsystem_RememberLayoutAndAppearance_SavedWithOthers_SurviveRestartAndDialogChanges()
+    {
+        // Arrange: a stored layout, a pinned theme, a listed project with its time, and a dialog over the AI provider page
+        var opened = new DateTimeOffset(2026, 11, 20, 9, 15, 0, TimeSpan.Zero);
+        var service = new SettingsService(_tempRoot);
+        service.Save(new AppSettings
+        {
+            RecentProjects = ["C:\\a"],
+            RecentProjectOpened = new Dictionary<string, DateTimeOffset> { ["C:\\a"] = opened },
+            Appearance = new AppearanceSettings { Theme = ThemeChoice.Light, ComfortableRows = true },
+            Window = new WindowSettings { Width = 1200, Height = 760, ExplorerWidth = 280, ChatWidth = 480 }
+        });
+        var page = new AiProviderSettingsPageViewModel();
+        var dialog = new SettingsDialogViewModel(service, [page]);
+        page.ModelName = "llama3";
+
+        // Act: choose OK, then start a fresh service as after a restart
+        dialog.OkCommand.Execute(null);
+        var restarted = new SettingsService(_tempRoot).Load();
+
+        // Assert: the dialog's choice was stored, and the layout, the look, and the time are as they were
+        Assert.Equal("llama3", restarted.AiProvider.ModelName);
+        Assert.Equal(ThemeChoice.Light, restarted.Appearance.Theme);
+        Assert.True(restarted.Appearance.ComfortableRows);
+        Assert.Equal(1200, restarted.Window.Width);
+        Assert.Equal(760, restarted.Window.Height);
+        Assert.Equal(280, restarted.Window.ExplorerWidth);
+        Assert.Equal(480, restarted.Window.ChatWidth);
+        Assert.Equal(opened, restarted.RecentProjectOpened["C:\\a"]);
+    }
+
+    /// <summary>
     ///     Test that choices made in the dialog survive an application restart.
     /// </summary>
     [Fact]

@@ -153,3 +153,53 @@ sections:
                   - SettingsService_Load_DefaultKitId_IsValidOrEmpty
                   - SettingsService_Update_StyleSettings_KeepsOtherSettingsAndPersists
                   - SettingsService_StyleSettings_IsValidKitId_FollowsTheRule
+
+              - id: CanvasPilot-SettingsService-KeepWindowLayout
+                title: >-
+                  The SettingsService shall keep the size, the place, and the state (normal or maximized) of the main window
+                  and the widths of the explorer column and the chat column, store them in the settings file, read them
+                  back, give a window of 1440 by 900 with columns of 264 and 400 to a file that has none, bring a size
+                  or a column width outside its bounds (at least 960 by 600 for the window, 180 to 420 for the explorer,
+                  and 320 to 640 for the chat) to the nearest bound, forget a place that no screen can have, and treat an
+                  unknown state as a normal window.
+                justification: |
+                  A window that opens as the user left it saves the work of arranging it every time. The values are
+                  clamped, and not replaced by the defaults, because a column dragged too far or a size edited by hand
+                  still shows what the user meant, while a window that is too small to use or a place beyond any screen
+                  would leave the user without a window to work in. A settings file from before the layout was kept must
+                  still load.
+                tests:
+                  - SettingsService_SaveLoad_WindowAppearanceAndOpenedTimes_RoundTrips
+                  - SettingsService_Load_FileOfEarlierBuild_GivesDefaultWindowAndAppearance
+                  - SettingsService_Load_OutOfRangeWindowLayout_IsClampedAndUnknownChoicesFallBack
+                  - SettingsService_Save_WindowAndAppearance_WritesCamelCaseNames
+
+              - id: CanvasPilot-SettingsService-KeepAppearance
+                title: >-
+                  The SettingsService shall keep the theme choice (follow the system, dark, or light), whether the explorer
+                  shows thumbnails, and whether its rows are taller, store them in the settings file, read them back, give
+                  the choice to follow the system with thumbnails and compact rows to a file that has none, replace an
+                  unknown theme choice by following the system, and keep the other settings when only the appearance is
+                  changed.
+                justification: |
+                  Some people want a dark or a light window whatever the system says, and some want a calmer or a more
+                  compact list. These choices belong to the user and must survive a restart, while a file from an earlier
+                  build or with a choice that this build does not know must not stop the application.
+                tests:
+                  - SettingsService_SaveLoad_WindowAppearanceAndOpenedTimes_RoundTrips
+                  - SettingsService_Load_FileOfEarlierBuild_GivesDefaultWindowAndAppearance
+                  - SettingsService_Load_OutOfRangeWindowLayout_IsClampedAndUnknownChoicesFallBack
+                  - SettingsService_Update_Appearance_KeepsOtherSettingsAndPersists
+
+              - id: CanvasPilot-SettingsService-KeepRecentProjectOpenTimes
+                title: >-
+                  The SettingsService shall keep the time at which each project in the list of recent projects was last
+                  opened, store the times in the settings file, read them back, keep a time only for a project that is in
+                  the list, and list a project that has no time without one.
+                justification: |
+                  The welcome screen shows when a project was last opened, which helps the user find the one they want.
+                  A time for a project that is no longer listed would only grow the file, and a project that was opened by
+                  an earlier build has no time and must still be listed.
+                tests:
+                  - SettingsService_SaveLoad_WindowAppearanceAndOpenedTimes_RoundTrips
+                  - SettingsService_Load_RecentProjectOpened_KeepsOnlyListedProjects

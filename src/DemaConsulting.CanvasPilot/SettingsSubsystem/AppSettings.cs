@@ -202,6 +202,137 @@ public sealed record StyleSettings
 }
 
 /// <summary>
+///     Which theme variant the application is shown in.
+/// </summary>
+public enum ThemeChoice
+{
+    /// <summary>The application follows the dark or light theme of the operating system.</summary>
+    FollowSystem,
+
+    /// <summary>The application is always dark.</summary>
+    Dark,
+
+    /// <summary>The application is always light.</summary>
+    Light,
+}
+
+/// <summary>
+///     Persisted choices about the look of the application: the theme variant and the density of lists.
+/// </summary>
+public sealed record AppearanceSettings
+{
+    /// <summary>
+    ///     Gets the theme variant. The default follows the operating system.
+    /// </summary>
+    public ThemeChoice Theme { get; init; } = ThemeChoice.FollowSystem;
+
+    /// <summary>
+    ///     Gets a value indicating whether the project explorer shows a small picture beside each file. On by default.
+    /// </summary>
+    public bool ShowThumbnails { get; init; } = true;
+
+    /// <summary>
+    ///     Gets a value indicating whether the rows of the project explorer are taller. Off by default (compact rows).
+    /// </summary>
+    public bool ComfortableRows { get; init; }
+}
+
+/// <summary>
+///     The state in which the main window was last closed.
+/// </summary>
+public enum SavedWindowState
+{
+    /// <summary>The window has the size and place that are stored.</summary>
+    Normal,
+
+    /// <summary>The window was maximized; the stored size and place are those it returns to.</summary>
+    Maximized,
+}
+
+/// <summary>
+///     Persisted layout of the main window: its size, place, and state, and the widths of the explorer and the chat
+///     column, so the window opens as the user left it.
+/// </summary>
+/// <remarks>
+///     The values are kept within the documented bounds by the settings service. The place is only a remembered
+///     position: the window clamps it to the screens that are visible when it restores the window, because a monitor
+///     may have been removed since.
+/// </remarks>
+public sealed record WindowSettings
+{
+    /// <summary>The width of a window that has no stored width, in device-independent pixels.</summary>
+    public const int DefaultWidth = 1440;
+
+    /// <summary>The height of a window that has no stored height, in device-independent pixels.</summary>
+    public const int DefaultHeight = 900;
+
+    /// <summary>The smallest accepted width of the window.</summary>
+    public const int MinimumWidth = 960;
+
+    /// <summary>The smallest accepted height of the window.</summary>
+    public const int MinimumHeight = 600;
+
+    /// <summary>The largest accepted width or height of the window, which no screen is expected to exceed.</summary>
+    public const int MaximumSize = 16384;
+
+    /// <summary>The largest accepted distance of the place of the window from the origin, in either direction.</summary>
+    public const int MaximumCoordinate = 32767;
+
+    /// <summary>The width of the explorer column when none is stored.</summary>
+    public const int DefaultExplorerWidth = 264;
+
+    /// <summary>The smallest accepted width of the explorer column.</summary>
+    public const int MinimumExplorerWidth = 180;
+
+    /// <summary>The largest accepted width of the explorer column.</summary>
+    public const int MaximumExplorerWidth = 420;
+
+    /// <summary>The width of the chat column when none is stored.</summary>
+    public const int DefaultChatWidth = 400;
+
+    /// <summary>The smallest accepted width of the chat column.</summary>
+    public const int MinimumChatWidth = 320;
+
+    /// <summary>The largest accepted width of the chat column.</summary>
+    public const int MaximumChatWidth = 640;
+
+    /// <summary>
+    ///     Gets the width of the window in its normal state.
+    /// </summary>
+    public int Width { get; init; } = DefaultWidth;
+
+    /// <summary>
+    ///     Gets the height of the window in its normal state.
+    /// </summary>
+    public int Height { get; init; } = DefaultHeight;
+
+    /// <summary>
+    ///     Gets the horizontal place of the left edge of the window, or <see langword="null" /> to let the system place it.
+    /// </summary>
+    public int? Left { get; init; }
+
+    /// <summary>
+    ///     Gets the vertical place of the top edge of the window, or <see langword="null" /> to let the system place it.
+    /// </summary>
+    public int? Top { get; init; }
+
+    /// <summary>
+    ///     Gets the state the window was in when it was closed.
+    /// </summary>
+    public SavedWindowState State { get; init; } = SavedWindowState.Normal;
+
+    /// <summary>
+    ///     Gets the width of the explorer column.
+    /// </summary>
+    public int ExplorerWidth { get; init; } = DefaultExplorerWidth;
+
+    /// <summary>
+    ///     Gets the width of the chat column.
+    /// </summary>
+    public int ChatWidth { get; init; } = DefaultChatWidth;
+}
+
+/// <summary>
 ///     The complete persisted application settings document (<c>settings.json</c>).
 /// </summary>
 public sealed record AppSettings
@@ -235,4 +366,26 @@ public sealed record AppSettings
     ///     Gets the style kit choices.
     /// </summary>
     public StyleSettings Styles { get; init; } = new();
+
+    /// <summary>
+    ///     Gets the look of the application: the theme variant and the density of lists.
+    /// </summary>
+    public AppearanceSettings Appearance { get; init; } = new();
+
+    /// <summary>
+    ///     Gets the layout of the main window.
+    /// </summary>
+    public WindowSettings Window { get; init; } = new();
+
+    /// <summary>
+    ///     Gets the time at which each recently opened project was last opened, by the same path as in
+    ///     <see cref="RecentProjects" />. A project that has no time (for example one that was opened by an earlier
+    ///     build) is shown without one.
+    /// </summary>
+    /// <remarks>
+    ///     This is an additive part of the document: an earlier build ignores it and a file of an earlier build has none,
+    ///     so the schema version does not change.
+    /// </remarks>
+    public IReadOnlyDictionary<string, DateTimeOffset> RecentProjectOpened { get; init; } =
+        new Dictionary<string, DateTimeOffset>();
 }

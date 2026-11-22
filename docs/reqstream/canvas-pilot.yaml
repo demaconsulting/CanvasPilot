@@ -48,8 +48,8 @@ sections:
 
       - id: CanvasPilot-System-PersistUserSettings
         title: >-
-          The application shall remember the user's settings between runs and shall keep working when
-          the stored settings are damaged.
+          The application shall remember the user's settings between runs, including the layout of its window and its
+          theme, and shall keep working when the stored settings are damaged.
         tags: [system]
         justification: |
           Users expect to configure the application once. A settings file that is damaged, edited by
@@ -59,6 +59,7 @@ sections:
           - CanvasPilot-Settings-PersistUserSettings
           - CanvasPilot-Settings-ToleratePoorSettingsFiles
           - CanvasPilot-Settings-EditSettingsInDialog
+          - CanvasPilot-Settings-RememberLayoutAndAppearance
         tests:
           - CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage
 

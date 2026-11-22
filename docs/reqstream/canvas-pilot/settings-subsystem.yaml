@@ -61,6 +61,22 @@ sections:
             tests:
               - SettingsSubsystem_EditSettings_DialogCancel_LeavesStoredSettingsUnchanged
 
+          - id: CanvasPilot-Settings-RememberLayoutAndAppearance
+            title: >-
+              The Settings subsystem shall remember the layout of the main window, the theme choice, the options of the
+              project explorer, and when each recent project was opened, together with the other settings, and keep them when
+              the user changes other settings in the dialog.
+            justification: |
+              A window that opens as it was left, in the theme the user chose, is part of remembering the user's settings.
+              The values share the one settings file with the choices of the other subsystems, so storing the choices of one
+              part must never lose the others.
+            children:
+              - CanvasPilot-SettingsService-KeepWindowLayout
+              - CanvasPilot-SettingsService-KeepAppearance
+              - CanvasPilot-SettingsService-KeepRecentProjectOpenTimes
+            tests:
+              - SettingsSubsystem_RememberLayoutAndAppearance_SavedWithOthers_SurviveRestartAndDialogChanges
+
           - id: CanvasPilot-Settings-ConfigureAiProvider
             title: >-
               The Settings subsystem shall let the user choose and store the AI provider, the model from the list that the
