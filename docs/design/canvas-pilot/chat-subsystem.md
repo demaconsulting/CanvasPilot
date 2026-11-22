@@ -4,21 +4,24 @@
 
 ### Overview
 
-The `Chat` subsystem is the panel in which the user composes the messages for the assistant that is added later: above,
-the transcript of the messages that were sent in the open project; below, the composer's editing control; and under it
-the button that sends and the button that listens while it is held. It also joins the layer on which the user marks the
-picture to the message, so that every mark becomes a chip in it, and it opens the window that shows exactly what the
-assistant would receive for a message. It holds no rule of editing, sending, dictation, marking, or payload building;
-those belong to the `Composer`, `Speech`, `Annotation`, and `Payload` subsystems, and the `Chat` subsystem connects what
-they do to what the user sees.
+The `Chat` subsystem is the panel in which the user composes the messages for the AI copilot and follows its answers:
+above, the transcript of the messages that were sent in the open project; below, the composer's editing control; and
+under it the button that sends and the button that listens while it is held. It also joins the layer on which the user
+marks the picture to the message, so that every mark becomes a chip in it, and it opens the window that shows exactly
+what the assistant would receive for a message. It holds no rule of editing, sending, dictation, marking, payload
+building, or of the AI provider; those belong to the `Composer`, `Speech`, `Annotation`, `Payload`, and `Agent`
+subsystems, and the `Chat` subsystem connects what they do to what the user sees.
 
-The subsystem contains two units: `ChatPanel`, the panel with the transcript, the buttons, and the joining of marks, and
-`PayloadInspector`, the window that shows a payload. It depends on `Composer` (the view model of the message, the
-editing view, and the chips), `Annotation` (the registry and the layer of marks), `Payload` (the payload, its describer,
-and the composer of mark pictures), `Speech` (dictation, only to prepare it), and `Logging`, and on nothing else of the
-application; in particular it does not depend on `AppShell`. `AppShell` depends on `Chat`: the composition root builds
-the panel, and the main window shows the inspector and places the panel in the chat column of the workspace. The Edit
-menu and the talk key of the main window reach the composer and the panel through the seams that `Composer` owns.
+The subsystem contains three units: `ChatPanel`, the panel with the transcript, its rows, the buttons, and the joining
+of marks, `ChatTurnRunner`, the logic of one turn of the conversation with the copilot, and `PayloadInspector`, the
+window that shows a payload. It depends on `Composer` (the view model of the message, the editing view, and the chips),
+`Annotation` (the registry and the layer of marks), `Payload` (the payload, its describer, and the composer of mark
+pictures), `Speech` (dictation, only to prepare it), `Agent` (only `IAgentService` and the events of a turn, which
+`ChatTurnRunner` uses; never a provider, a tool, or a library), and `Logging`, and on nothing else of the application;
+in particular it does not depend on `AppShell`, and the `Agent` subsystem does not depend on it. `AppShell` depends on
+`Chat`: the composition root builds the panel, and the main window shows the inspector and places the panel in the chat
+column of the workspace. The Edit menu and the talk key of the main window reach the composer and the panel through the
+seams that `Composer` owns.
 
 ### Interfaces
 
@@ -39,6 +42,19 @@ menu and the talk key of the main window reach the composer and the panel throug
 - *Constraints*: Owned by the user interface thread; not safe for concurrent use. It does not own the composer, the
   registry, or the layer, which the composition root disposes.
 
+**ChatTurnRunner**: The logic of one turn of the conversation with the AI copilot.
+
+- *Type*: In-process .NET class (`ChatTurnRunner`) with the rows it keeps (`AssistantReplyViewModel`,
+  `ToolActivityRowViewModel`, and `NoticeRowViewModel`, which belong to the `ChatPanel` unit like
+  `TranscriptEntryViewModel` and share the base `TranscriptRowViewModel`) and the result type `ChatTurnOutcome`.
+- *Role*: Consumer of `IAgentService` of the `Agent` subsystem and provider to the chat panel.
+- *Contract*: The constructor takes the `IAgentService`, the transcript collection that rows are added to, optionally a
+  `TimeProvider` and a logger. `RunTurnAsync` gives a sent message (or an `AgentTurnRequest`) to the copilot and
+  completes with the outcome when the turn has ended; `Stop` cancels the turn; `IsBusy` and `BusyChanged` tell when a
+  turn runs, so that the panel can block the composer; `Dispose` stops it. It never throws for what the copilot does.
+- *Constraints*: Owned by the user interface thread; one turn at a time; the answer text is added to the reply at most
+  once every 50 milliseconds.
+
 **PayloadInspector**: The window that shows a payload.
 
 - *Type*: In-process .NET view model (`PayloadInspectorViewModel`, `PayloadPictureViewModel`) and an Avalonia window
@@ -57,9 +73,21 @@ immutable `SentMessage`, and for nothing else, so a draft is never shown as a me
 change. The entries are in memory only; they are dropped when the composer's project changes or closes, because a
 message belongs to the project it was sent in, and when the panel is disposed. Nothing is written anywhere.
 
+**The copilot's turn is its own unit.** `ChatTurnRunner` reads the events that `IAgentService` streams for a turn and
+keeps the rows that show them, in the order in which things happened: the text of the copilot in a reply that grows (a
+reply ends when the copilot calls a tool, and the text after the tool is a new reply), one line for each tool call that
+says what was done (for example that a file was created or replaced), and notices and errors. It adds the text of a
+reply at most once every 50 milliseconds, so many small pieces do not keep the interface thread busy. `Stop` keeps what
+was written and marks the reply as stopped; a failure keeps it and adds an error with what to do, and the offer to open
+the settings when they can help. The runner never throws for what the copilot does, and the panel only follows `IsBusy`:
+while a turn runs it blocks the composer (`ComposerViewModel.BlockSending`) so that the next message waits, and the
+composer stays editable. The chat knows the copilot only through the contract of the `Agent` subsystem, so no provider,
+tool, or library reaches the user interface and the logic is verified with a scripted copilot and a manual clock.
+
 **Sending is the composer's decision.** `SendCommand` is the composer's own command. Whether a message can be sent is
 decided where the draft is, in one place, and the button and the panel only follow it; when sending fails, the composer
-keeps the draft and says why in its status text, which the composer's editing control shows inside the panel.
+keeps the draft and says why in its status text, which the composer's editing control shows inside the panel. The reason
+that a turn is running is given to the composer and not decided by the panel.
 
 **Hold to talk.** The talk button listens as long as it is held and never longer: the view starts it on the press and
 captures the pointer so that a release anywhere is seen, and ends it on the release, on the loss of the capture (a
@@ -103,3 +131,8 @@ views. The hub suppliers `RollingFileLogger` and `PathHelpers`, which many units
 `PayloadInspector` depends on `MessagePayload` and `PayloadDescriber` (`Payload`).
 
 ![Payload inspector dependencies](ChatSubsystemInspectorView.svg)
+
+`ChatTurnRunner` depends on the rows of `ChatPanel`, on `AgentContract` (`IAgentService`, the request, and the events of
+the `Agent` subsystem), on `ComposerViewModel` (the sent message), and on `MessagePayload`.
+
+![Chat turn dependencies](ChatSubsystemTurnView.svg)

@@ -3,7 +3,8 @@
 #### Verification Approach
 
 `ChatPanel` is verified with unit tests in `test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatPanelTests.cs` for
-the view models and the picture provider, and with headless Avalonia UI tests in
+the view models and the picture provider, in `TranscriptRowTests.cs` of the same folder for the rows that the
+copilot's turn adds (reply, tool, and notice), and with headless Avalonia UI tests in
 `test/DemaConsulting.CanvasPilot.UiTests/ChatPanelViewTests.cs` (with `ChatUiTestSupport.cs` for the harness) for the
 views. Both use the real `ChatPanelViewModel`, `ComposerViewModel`, `ComposerDocument`, `ComposerHistory`,
 `AttachmentIntake`, `AttachmentStore`, `MarkRegistry`, and `AnnotationOverlayViewModel` over a temporary project folder,
@@ -53,8 +54,44 @@ the looks); they are not evidence for a requirement.
   from its copy in the project.
 - "View payload" gives the launcher an inspector for exactly that message's payload; it does nothing without a launcher
   and cannot run for a message without a payload.
+- The rows of the copilot form one family with the sent message: each row tells its kind; a reply grows while it
+  streams, is final only when completed, keeps its text and is marked when stopped or failed, and never changes after it
+  has ended; a tool row says what is under way and then what was done, whether it worked, and whether it carried a
+  picture, and keeps the report of a written file when the tool succeeded and shows the refusal when it did not; a
+  notice holds its message, remedy, and whether the settings can help; the sent message keeps its payload and summary as
+  a row.
 
 #### Test Scenarios
+
+**AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted**: A new reply is streaming and
+empty; two pieces of text grow it and are announced (an empty piece changes nothing); completing it makes the text
+final, and further text, stops, and failures change nothing. This scenario is tested by
+`AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted`.
+
+**AssistantReplyViewModel_StopOrFail_KeepsTextAndNamesWhatBecameOfIt**: A reply that is stopped, or that fails, keeps
+its text, is not final, says `Stopped` or `Failed`, and is not changed by a later completion. This scenario is tested by
+`AssistantReplyViewModel_StopOrFail_KeepsTextAndNamesWhatBecameOfIt`.
+
+**AssistantReplyViewModel_Restored_IsInTheGivenStateAndRefusesNoText**: A reply made from restored text is in the given
+state, does not grow, and refuses a missing text. This scenario is tested by
+`AssistantReplyViewModel_Restored_IsInTheGivenStateAndRefusesNoText`.
+
+**ToolActivityRowViewModel_StartFileReportAndFinish_KeepTheReportOnlyWhenTheToolWorked**: A running tool row reports a
+file, finishes with success, and keeps the report; a later result that says it failed replaces the report; an ended row
+is not abandoned. This scenario is tested by
+`ToolActivityRowViewModel_StartFileReportAndFinish_KeepTheReportOnlyWhenTheToolWorked`.
+
+**ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked**: A restored row has ended; a running
+row that is abandoned has failed; the arguments are checked. This scenario is tested by
+`ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked`.
+
+**NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven**: An error with a remedy and an information
+notice hold what they were given, and an empty message is refused. This scenario is tested by
+`NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven`.
+
+**TranscriptRows_Kinds_TheEntryOfAMessageIsTheUserRow**: The entry of a sent message, a reply, a tool row, and a notice
+tell the kinds user, assistant, tool, and notice, and the entry still has its payload and summary. This scenario is
+tested by `TranscriptRows_Kinds_TheEntryOfAMessageIsTheUserRow`.
 
 **ChatPanelViewModel_New_NullArguments_Throw**: A missing composer, registry, layer, or mark picture composer is
 refused. This scenario is tested by `ChatPanelViewModel_New_NullArguments_Throw`.

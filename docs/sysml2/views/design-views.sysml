@@ -258,6 +258,16 @@ package CanvasPilotDesignViews {
         filter not (@SysML::Documentation);
     }
 
+    view ChatSubsystemTurnView : GeneralView {
+        doc /* Dependencies of the chat turn runner on the rows of the chat panel that it makes and changes, the contract of the Agent subsystem through which it reaches the AI copilot, the composer view model whose sent message it takes, and the message payload that it gives to the copilot. Hub supplier omitted: RollingFileLogger (the runner logs the kind of a failure). */
+        expose CanvasPilot_ChatTurnRunner::ChatTurnRunner;
+        expose CanvasPilot_ChatPanel::ChatPanel;
+        expose CanvasPilot_AgentContract::AgentContract;
+        expose CanvasPilot_ComposerViewModel::ComposerViewModel;
+        expose CanvasPilot_MessagePayload::MessagePayload;
+        filter not (@SysML::Documentation);
+    }
+
     view ChatSubsystemInspectorView : GeneralView {
         doc /* Dependencies of the payload inspector on the payload types that it shows. No hub supplier is used by these units. */
         expose CanvasPilot_PayloadInspector::PayloadInspector;

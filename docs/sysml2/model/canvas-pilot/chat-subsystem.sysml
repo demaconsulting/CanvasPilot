@@ -1,10 +1,11 @@
 package CanvasPilot_ChatSubsystem {
     private import SoftwareItemMetadata::*;
     private import CanvasPilot_ChatPanel::*;
+    private import CanvasPilot_ChatTurnRunner::*;
     private import CanvasPilot_PayloadInspector::*;
 
     part def ChatSubsystem {
-        doc /* The panel in which the user converses with the assistant that is added later: the transcript of the messages that were sent, the composer below it with the buttons that send and that listen while held, the joining of the marks on the picture to the message, and the window that shows exactly what the assistant would receive for a message. It holds none of the rules of the composer, dictation, marking, or payload building, and does not depend on the application shell. */
+        doc /* The panel in which the user converses with the AI copilot: the transcript of the messages that were sent, with the rows of the copilot's answer (its text, the tools it called, and notices), the composer below it with the buttons that send and that listen while held, the joining of the marks on the picture to the message, the logic of one turn of the conversation, and the window that shows exactly what the assistant would receive for a message. It holds none of the rules of the composer, dictation, marking, payload building, or the AI provider, reaches the copilot only through the contract of the Agent subsystem, and does not depend on the application shell. */
 
         metadata info : SoftwareInfo {
             testFiles = ("test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatSubsystemTests.cs");
@@ -14,6 +15,7 @@ package CanvasPilot_ChatSubsystem {
         }
 
         part chatPanel : ChatPanel;
+        part chatTurnRunner : ChatTurnRunner;
         part payloadInspector : PayloadInspector;
     }
 }

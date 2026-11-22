@@ -300,6 +300,7 @@ sections:
           own a part of this and link to this requirement.
         children:
           - CanvasPilot-Composer-HoldSendWhileCopilotWorks
+          - CanvasPilot-Chat-StopTheCopilotTurn
 
       - id: CanvasPilot-System-UndoRedoMessage
         title: >-
@@ -480,6 +481,7 @@ sections:
           - CanvasPilot-Agent-ReportTurnAsEvents
           - CanvasPilot-Agent-MakeTheAgentOfTheProvider
           - CanvasPilot-Agent-ConverseInProjectConversations
+          - CanvasPilot-Chat-ShowCopilotConversation
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
           - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces

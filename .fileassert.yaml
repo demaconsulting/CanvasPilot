@@ -363,6 +363,12 @@ tests:
         xml:
           - query: "//*[local-name()='svg']"
             count: 1
+      - pattern: "docs/design/generated/ChatSubsystemTurnView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
       - pattern: "docs/design/generated/ChatSubsystemInspectorView.svg"
         count: 1
         min-size: 100

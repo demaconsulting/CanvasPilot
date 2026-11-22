@@ -12,22 +12,27 @@ package CanvasPilot_ChatPanel {
     private import CanvasPilot_RollingFileLogger::*;
 
     part def ChatPanel {
-        doc /* The panel in which the user converses: the transcript of the messages that were sent in the open project, oldest first, each with its words in the order they were written, its chips with their pictures, and a button that shows its payload; the composer's editing control; a button that sends the message exactly when the composer can; and a button that listens exactly while it is held, however the hold ends, and shows why when dictation cannot work. It joins the layer on which the user marks the picture to the message, so that every mark becomes a chip as one undo step and the layer shows the marks whose chips the message holds, prepares dictation when it is shown, gives chips their pictures, and keeps the transcript only in memory, dropping it when the project changes. */
+        doc /* The panel in which the user converses: the transcript of the messages that were sent in the open project, oldest first, each with its words in the order they were written, its chips with their pictures, and a button that shows its payload; the composer's editing control; a button that sends the message exactly when the composer can; and a button that listens exactly while it is held, however the hold ends, and shows why when dictation cannot work. It joins the layer on which the user marks the picture to the message, so that every mark becomes a chip as one undo step and the layer shows the marks whose chips the message holds, prepares dictation when it is shown, gives chips their pictures, and keeps the transcript only in memory, dropping it when the project changes. The rows of the transcript are one family: the sent message, the reply of the AI copilot (which grows while it streams, is final only when completed, and keeps its text and a mark when it is stopped or failed), the line of a tool call, and the notice with what to do and whether the settings can help; the turn runner makes and changes the rows of the copilot. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
+                "src/DemaConsulting.CanvasPilot/ChatSubsystem/AssistantReplyViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/ChatSubsystem/ChatPanelView.axaml",
                 "src/DemaConsulting.CanvasPilot/ChatSubsystem/ChatPanelView.axaml.cs",
                 "src/DemaConsulting.CanvasPilot/ChatSubsystem/ChatPanelViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/ChatSubsystem/ChipThumbnailProvider.cs",
+                "src/DemaConsulting.CanvasPilot/ChatSubsystem/NoticeRowViewModel.cs",
+                "src/DemaConsulting.CanvasPilot/ChatSubsystem/ToolActivityRowViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/ChatSubsystem/TranscriptEntryView.axaml",
                 "src/DemaConsulting.CanvasPilot/ChatSubsystem/TranscriptEntryView.axaml.cs",
                 "src/DemaConsulting.CanvasPilot/ChatSubsystem/TranscriptEntryViewModel.cs",
-                "src/DemaConsulting.CanvasPilot/ChatSubsystem/TranscriptItem.cs"
+                "src/DemaConsulting.CanvasPilot/ChatSubsystem/TranscriptItem.cs",
+                "src/DemaConsulting.CanvasPilot/ChatSubsystem/TranscriptRowViewModel.cs"
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatPanelTests.cs",
                 "test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatSubsystemFakes.cs",
+                "test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/TranscriptRowTests.cs",
                 "test/DemaConsulting.CanvasPilot.UiTests/ChatPanelViewTests.cs",
                 "test/DemaConsulting.CanvasPilot.UiTests/ChatUiTestSupport.cs"
             );

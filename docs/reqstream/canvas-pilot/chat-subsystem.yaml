@@ -30,6 +30,43 @@ sections:
             tests:
               - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
 
+          - id: CanvasPilot-Chat-ShowCopilotConversation
+            title: >-
+              The Chat subsystem shall run one turn of the conversation with the AI copilot for each message that was
+              sent, through the contract of the Agent subsystem only, and shall show the answer as it is written, in
+              rows after the message of the user: the text of the copilot, one line for each tool it called that says
+              what it did, such as that a file was created or replaced, and the notices, in the order in which they
+              happened, with the text of the answer changed at most once for every 50 milliseconds.
+            justification: |
+              The user draws by talking, and the answer is only useful when it can be followed while it is written and
+              when what the copilot did to the files of the project is plain. The chat holds the logic of a turn in one
+              unit that is tested without a window and that knows the copilot only through its contract, so the panel
+              stays small and no provider reaches the user interface.
+            children:
+              - CanvasPilot-ChatPanel-HoldTranscriptRows
+              - CanvasPilot-ChatTurnRunner-RunOneTurnAtATime
+              - CanvasPilot-ChatTurnRunner-StreamAnswerIntoReplies
+              - CanvasPilot-ChatTurnRunner-CoalesceTextUpdates
+              - CanvasPilot-ChatTurnRunner-ShowToolCalls
+            tests:
+              - ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile
+
+          - id: CanvasPilot-Chat-StopTheCopilotTurn
+            title: >-
+              The Chat subsystem shall stop the turn of the AI copilot on request and keep the text that was written,
+              marked as stopped, shall report a turn that failed in the transcript with a message, what to do about it,
+              and the offer to open the settings when they can help, without ever failing the application, and shall
+              tell when a turn runs so that the next message cannot be sent before the turn has ended or was stopped.
+            justification: |
+              A model that is slow or on a wrong path must be stopped without losing what it said, a provider that is
+              not running is an everyday event, and only one turn runs at a time. The user can keep writing the next
+              message meanwhile, and it can be sent as soon as the turn is over.
+            children:
+              - CanvasPilot-ChatTurnRunner-StopTurnAndKeepText
+              - CanvasPilot-ChatTurnRunner-ReportFailureInTranscript
+            tests:
+              - ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy
+
           - id: CanvasPilot-Chat-SendComposedMessage
             title: >-
               The Chat subsystem shall let the user send the composed message with one button that can be used exactly

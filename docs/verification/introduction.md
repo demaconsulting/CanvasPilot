@@ -53,6 +53,8 @@ This document covers the verification design for the following software items:
   - **Chat** subsystem
     - **ChatPanel** — the transcript of the sent messages, the composer with its send and hold-to-talk buttons, and the
       joining of marks to the message
+    - **ChatTurnRunner** — one turn of the conversation: the events of the AI copilot as rows of the transcript, stop,
+      and failure
     - **PayloadInspector** — the window that shows exactly what the assistant would receive for a sent message
   - **Composer** subsystem
     - **ComposerDocument** — the message being composed as ordered segments of text and chips

@@ -33,6 +33,24 @@ The unit is made of these parts, all in the user interface layer:
   to the PNG bytes of the area around the mark, and the composer's `ImageChipThumbnailProvider` (by default) for picture
   files.
 - `IPayloadInspectorLauncher`: the seam by which the panel asks for the inspector window.
+- `TranscriptRowViewModel`: the base of every row of the transcript (an `ObservableObject` and `IDisposable` that tells
+  its `Kind`: `User`, `Assistant`, `Tool`, or `Notice`). `TranscriptEntryViewModel` is the user row; the other three are
+  added by the copilot's turn (see `ChatTurnRunner`) and are made, kept, and changed on the user interface thread:
+  - `AssistantReplyViewModel`: a reply of the copilot with `Text`, `HasText`, and `State` (`Streaming`, `Completed`,
+    `Stopped`, `Failed`) with `IsStreaming`, `IsComplete`, and `StatusLabel` (`Stopped` or `Failed`, otherwise empty).
+    `AppendText` adds a piece while it streams; `Complete`, `Stop`, and `Fail` end it once, and after that it never
+    changes. A reply made from restored text starts in a given state. `IsComplete` tells the view that the text is final
+    and may be shown as Markdown; the view shows streaming, stopped, and failed text as plain text, because it may end
+    in the middle of a construct.
+  - `ToolActivityRowViewModel`: one tool call with `CallId`, `ToolName`, `ArgumentSummary`, `Summary` (one sentence),
+    `IsRunning`, `Succeeded`, `HasImage`, and `HasFileReport`. `Finish` ends it with the result, `ReportFile` says that
+    a file was created or replaced (the report stays when the tool then finishes with success and is replaced by a
+    refusal when it does not), and `Abandon` ends a call that has no result.
+  - `NoticeRowViewModel`: an immutable notice with `Severity` (`Information` or `Error`), `Message`, `Remedy`, and
+    `CanOpenSettings`.
+
+The transcript of the panel still holds only `TranscriptEntryViewModel` rows in this step; the later step that puts the
+turn into the panel changes it to the family of rows and adds the views of the three new kinds.
 
 **State of the panel.** The view model holds the folder of the project the transcript belongs to, so that it can tell
 that the project changed. The view holds one flag, whether the talk button is held, and the view model it follows.
@@ -90,7 +108,7 @@ without a payload, does nothing. A failed or cancelled task of the talk button i
 - **RollingFileLogger**: failures of preparing dictation.
 - **PathHelpers**: the path of an attached picture in the project.
 - **Avalonia** and **CommunityToolkit.Mvvm** (OTS): controls, pointer and key events, bitmaps, observable properties,
-  and commands.
+  and commands. The rows of the copilot use CommunityToolkit.Mvvm only.
 
 #### Callers
 
@@ -98,3 +116,4 @@ without a payload, does nothing. A failed or cancelled task of the talk button i
   picture composer, and the dictation service, holds it as `Chat`, and disposes it.
 - The main window places the view in the chat column of its workspace and sets `InspectorLauncher` to itself; the talk
   key of the window calls `BeginPushToTalkAsync` and `EndPushToTalkAsync` on the panel.
+- `ChatTurnRunner` makes and changes the rows of the copilot.

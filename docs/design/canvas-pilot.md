@@ -10,6 +10,9 @@ software items documented are thirteen subsystems, `Annotation`, `AppShell`, `Ch
 
 ```{.mermaid scale=0.9}
 flowchart TD
+    subgraph Agent
+        AgentContract
+    end
     subgraph Annotation
         MarkRegistry
         MarkSourceResolver
@@ -22,6 +25,7 @@ flowchart TD
     end
     subgraph Chat
         ChatPanel
+        ChatTurnRunner
         PayloadInspector
     end
     subgraph Composer
@@ -120,6 +124,11 @@ flowchart TD
     ChatPanel --> PayloadInspector
     ChatPanel --> RollingFileLogger
     ChatPanel --> PathHelpers
+    ChatTurnRunner --> ChatPanel
+    ChatTurnRunner --> AgentContract
+    ChatTurnRunner --> ComposerViewModel
+    ChatTurnRunner --> MessagePayload
+    ChatTurnRunner --> RollingFileLogger
     PayloadInspector --> PayloadDescriber
     PayloadInspector --> MessagePayload
     MainWindowShell --> PayloadInspector
@@ -397,10 +406,15 @@ file. `PayloadInspector` is the window that "View payload" opens: it shows the t
 the payload of the message, which is exactly what the assistant would receive, and, next to it, the pictures of the
 payload: the annotated picture of every marked file and the area around every mark, each with a caption. The window
 cannot change anything. The panel does not know what shows the inspector; it asks an `IPayloadInspectorLauncher`, which
-`IDialogService` extends, so the main window shows it as a dialog. The `Chat` subsystem depends on `Composer`,
-`Annotation`, `Payload`, `Speech`, and `Logging`, and not on `AppShell`. The main window places the panel in the chat
-column of the workspace, which is shown while a project is open, and the shell makes the panel the target of the Edit
-menu (through the composer) and of the talk key.
+`IDialogService` extends, so the main window shows it as a dialog. `ChatTurnRunner` holds the logic of one turn of the
+conversation without a window: it gives the message that was sent to the AI copilot through `IAgentService`, shows the
+events of the turn as rows of the transcript (the streamed answer, one line for each tool that the copilot calls, and
+notices and errors), stops on request and keeps what was written, never throws into the interface, and tells the panel
+when it is busy, so that the panel can block sending while the copilot works. The `Chat` subsystem depends on
+`Composer`, `Annotation`, `Payload`, `Speech`, `Logging`, and, through `IAgentService` and the events of a turn only,
+`Agent`, and not on `AppShell`. The `Agent` subsystem does not depend on `Chat`. The main window places the panel in the
+chat column of the workspace, which is shown while a project is open, and the shell makes the panel the target of the
+Edit menu (through the composer) and of the talk key.
 
 `KnowledgeCatalog` holds the knowledge of how to draw and how to work in a project as a tree of cards: the help of
 CanvasNet, without the few cards that are only about the host program, extended with cards of CanvasPilot that are
@@ -450,7 +464,8 @@ the render service, the preview pane, and the exporter, which is its job for eve
 
 Because the direction is fixed, a subsystem added later depends on the subsystems below it and never on `AppShell`; only
 the composition root and the window refer to every subsystem. The `Chat` subsystem is the first of them: it uses
-`Composer`, `Annotation`, `Payload`, and `Speech`, and the seam by which it asks for the inspector window,
+`Composer`, `Annotation`, `Payload`, `Speech`, and, for the turn of the AI copilot, `Agent` (only `IAgentService` and
+the events of a turn, never a provider), and the seam by which it asks for the inspector window,
 `IPayloadInspectorLauncher`, belongs to `Chat`, so `IDialogService` extends it just as it extends the seams of `Project`
 and `Preview`. The `Knowledge` subsystem follows the same rule: the seam by which the shell asks for the browser,
 `IKnowledgeBrowserLauncher`, belongs to `Knowledge`, and `IDialogService` extends it too. The `Style` subsystem sits
@@ -959,6 +974,10 @@ an example to the clipboard that the window supplies and says in the status line
 - The `Chat` subsystem shall keep the transcript only in memory, shall list only messages that were sent, and shall show
   in the payload inspector exactly the text that `PayloadDescriber` writes and the picture bytes that the payload holds;
   it shall not depend on `AppShell`, and it shall not write anything anywhere.
+- The `Chat` subsystem shall reach the AI copilot only through `IAgentService` and the `AgentEvent` records, shall never
+  refer to a provider, a tool, or a library of the `Agent` subsystem, and shall never let a failure of the copilot throw
+  into the interface; the `Agent` subsystem shall not depend on `Chat`. The composer decides whether a message can be
+  sent: the chat only gives it the reason that blocks sending while a turn runs.
 - The talk button shall listen only while it is held: a release of the pointer anywhere, a lost capture, a lost focus,
   and the removal of the panel shall each end it.
 - A payload shall be built only from values that cannot change and shall itself never change, and the units of the

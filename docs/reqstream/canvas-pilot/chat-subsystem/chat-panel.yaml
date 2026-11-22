@@ -149,3 +149,27 @@ sections:
                   - TranscriptEntryViewModel_ViewPayloadCommand_ShowsInspectorForThePayloadOfTheMessage
                   - TranscriptEntryViewModel_ViewPayloadCommand_NoLauncherOrNoPayload_DoesNothing
                   - ChatPanelView_ViewPayloadButton_ShowsInspectorOfThatMessage
+
+              - id: CanvasPilot-ChatPanel-HoldTranscriptRows
+                title: >-
+                  The ChatPanel shall hold the transcript as one family of rows of four kinds, the sent message of the
+                  user, the reply of the AI copilot, the line of a tool call, and the notice, each telling its kind so that
+                  the view can show it in its own way; shall keep the sent message with its payload and its summary as
+                  one of them; shall make a reply grow while it streams, make its text final only when it is completed,
+                  and keep the text and mark the reply when it is stopped or failed, never changing a reply that has
+                  ended; shall make a tool row that says what is under way and then what was done, whether it worked, and
+                  whether it carried a picture; and shall make a notice that is immutable and holds its message, what to
+                  do about it, and whether the settings can help.
+                justification: |
+                  A conversation with a copilot is more than the messages of the user: the answer arrives piece by piece,
+                  the copilot works with tools, and things go wrong. One family of rows lets the panel show them in the
+                  order they happened. A reply must not look final while it is still written, because the view shows
+                  final text with its formatting, and a reply that was cut short must not be shown as whole.
+                tests:
+                  - AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted
+                  - AssistantReplyViewModel_StopOrFail_KeepsTextAndNamesWhatBecameOfIt
+                  - AssistantReplyViewModel_Restored_IsInTheGivenStateAndRefusesNoText
+                  - ToolActivityRowViewModel_StartFileReportAndFinish_KeepTheReportOnlyWhenTheToolWorked
+                  - ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked
+                  - NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven
+                  - TranscriptRows_Kinds_TheEntryOfAMessageIsTheUserRow

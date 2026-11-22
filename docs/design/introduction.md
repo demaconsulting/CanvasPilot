@@ -42,7 +42,7 @@ Local items:
     implement the contract are added as they are built.
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
-  - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.
+  - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, and **PayloadInspector** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
   - **Knowledge** subsystem: **KnowledgeCatalog**, **KnowledgeSearch**, **KnowledgePromptBuilder**,

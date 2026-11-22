@@ -30,6 +30,7 @@ includes:
   - docs/reqstream/canvas-pilot/app-shell-subsystem/about-dialog.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml
+  - docs/reqstream/canvas-pilot/chat-subsystem/chat-turn-runner.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/payload-inspector.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-document.yaml

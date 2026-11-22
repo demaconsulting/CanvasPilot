@@ -6,12 +6,15 @@ The `Chat` subsystem is verified by integration tests defined in `ChatSubsystemT
 around the panel: the real `ImageRenderService` draws a Mermaid diagram in a temporary project, the real
 `AnnotationOverlayViewModel` and `MarkRegistry` make a mark around one of its nodes, the real `ComposerViewModel` takes
 typed text, a dropped file, and the mark, the real `PayloadBuilder` and `MarkImageComposer` build the payload, and the
-real `ChatPanelViewModel` and `PayloadInspectorViewModel` show the result. The only substitute is the dictation service,
-because speech needs a model and a microphone; it is the hand-written fake that the composer tests use, with a session
-that says words and ends with a text. The tests check the observable result: what the transcript holds, which files are
-in the project, what the payload and the inspector hold, and that the draft is empty or kept. The views are verified by
-the headless UI tests described in the unit verification documents, and the system test that composes the whole
-application is described in the system verification.
+real `ChatPanelViewModel` and `PayloadInspectorViewModel` show the result. The substitutes are the dictation service,
+because speech needs a model and a microphone (the hand-written fake that the composer tests use, with a session that
+says words and ends with a text), and, for the tests of the copilot's turn, the copilot itself (a scripted
+implementation of `IAgentService` that streams the events that the test gives it, when it gives them) and the clock of
+the turn runner (a manual one), because a real model is not deterministic; the real `ChatTurnRunner` and the real
+composer are used. The tests check the observable result: what the transcript holds, which files are in the project,
+what the payload and the inspector hold, and that the draft is empty or kept. The views are verified by the headless UI
+tests described in the unit verification documents, and the system test that composes the whole application is described
+in the system verification.
 
 ### Test Environment
 
@@ -52,8 +55,27 @@ a requirement):
   the transcript, and says which file is the problem.
 - Words held to talk are shown while they are recognized, are added as one block at the caret on release, and are kept
   as dictated words, apart from the typed words, in the payload of the sent message.
+- A message that is sent is given to the copilot with its payload; while the turn runs the composer cannot send but can
+  be written to; the answer streams into rows after the message (text, a line for the tool that created a file, text),
+  and the composer can send again when the turn has ended.
+- Stopping a turn keeps the text written so far, marked as stopped, and frees the composer; a failure ends with an error
+  notice with the message, a remedy, and the offer of the settings when they can help.
 
 ### Test Scenarios
+
+**ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile**: The real composer
+(over the real payload builder) sends "Draw a box" with the wiring that the panel will have: the runner blocks the
+composer while it is busy. The copilot, a scripted one, gets the payload of the entry. While the turn runs the composer
+cannot send, and text that is typed meanwhile is kept. The copilot streams "I will draw it.", calls `project_write`, the
+file `box.svg` is reported as created, and it streams "Done." and completes. The rows are a reply, a tool row whose
+sentence is "Created" and the path in code format, and a complete reply, and the composer can send. This scenario is
+tested by `ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile`.
+
+**ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy**: The copilot streams a part of a sentence
+and the turn is stopped: the reply keeps the text and is stopped, the outcome is stopped, and the composer, with the
+text typed meanwhile, can send. The next message is sent and the provider fails with a missing model: the last row is an
+error notice with the message, a remedy, and the offer of the settings, and the composer is free. This scenario is
+tested by `ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy`.
 
 **ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft**: A diagram is drawn. The user types
 "Make this ", draws a rectangle around the node `Start`, types " like ", drops a file from outside the project, and

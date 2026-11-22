@@ -457,18 +457,41 @@ reviews:
       - "docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml"
       - "docs/design/canvas-pilot/chat-subsystem/chat-panel.md"
       - "docs/verification/canvas-pilot/chat-subsystem/chat-panel.md"
+      - "src/**/ChatSubsystem/AssistantReplyViewModel.cs"
       - "src/**/ChatSubsystem/ChatPanelView.axaml"
       - "src/**/ChatSubsystem/ChatPanelView.axaml.cs"
       - "src/**/ChatSubsystem/ChatPanelViewModel.cs"
       - "src/**/ChatSubsystem/ChipThumbnailProvider.cs"
+      - "src/**/ChatSubsystem/NoticeRowViewModel.cs"
+      - "src/**/ChatSubsystem/ToolActivityRowViewModel.cs"
       - "src/**/ChatSubsystem/TranscriptEntryView.axaml"
       - "src/**/ChatSubsystem/TranscriptEntryView.axaml.cs"
       - "src/**/ChatSubsystem/TranscriptEntryViewModel.cs"
       - "src/**/ChatSubsystem/TranscriptItem.cs"
+      - "src/**/ChatSubsystem/TranscriptRowViewModel.cs"
       - "test/**/ChatSubsystem/ChatPanelTests.cs"
       - "test/**/ChatSubsystem/ChatSubsystemFakes.cs"
+      - "test/**/ChatSubsystem/TranscriptRowTests.cs"
       - "test/**/ChatPanelViewTests.cs"
       - "test/**/ChatUiTestSupport.cs"
+
+  - id: CanvasPilot-Chat-ChatTurnRunner
+    title: Review of CanvasPilot ChatTurnRunner unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/chat-turn-runner.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/chat-turn-runner.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/chat-turn-runner.md"
+      - "src/**/ChatSubsystem/ChatTurnOutcome.cs"
+      - "src/**/ChatSubsystem/ChatTurnRunner.cs"
+      - "src/**/ChatSubsystem/ToolActivityText.cs"
+      - "test/**/ChatSubsystem/ChatTurnRunnerTests.cs"
+      - "test/**/ChatSubsystem/ChatTurnTestSupport.cs"
+      - "test/**/ChatSubsystem/ToolActivityTextTests.cs"
 
   - id: CanvasPilot-Chat-PayloadInspector
     title: Review of CanvasPilot PayloadInspector unit implementation
