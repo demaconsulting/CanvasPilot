@@ -11,15 +11,18 @@ chosen provider can be used. It has no user interface. Its parts are the readine
 that the copilot may call and the instructions that it is given, the agent of the chosen provider, and the service that
 keeps one conversation for the open project and runs one turn at a time.
 
-The subsystem is built contract first. It contains three units so far. `AgentContract` is `IAgentService`, the request
+The subsystem is built contract first. It contains four units so far. `AgentContract` is `IAgentService`, the request
 and history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds
 the GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks
 its version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader).
 `AgentReadiness` checks whether the chosen provider can be used and implements the `IProviderCheck` of the `Settings`
 subsystem; it comes with the starter of the Copilot runtime (the one this build ships is gated) and the probe of the
-Ollama server. The units that implement the contract are added to this design, and to the model, the requirements, and
-the verification design, together with their code; until then no implementation of `IAgentService` exists in the
-application.
+Ollama server. `AgentToolRegistry` builds the tools that the copilot may use for one project: it confines them to the
+project folder with a path policy, offers the drawing knowledge and the style tools as functions of the AI library, adds
+the packs that the application supplies for the project and the optional packs that the user chose (the catalog is empty
+in this version), and refuses a set that a provider could not be given. The units that implement the contract are added
+to this design, and to the model, the requirements, and the verification design, together with their code; until then no
+implementation of `IAgentService` exists in the application.
 
 The subsystem will depend on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
 message), `Knowledge`, `Style`, and `Preview` (the content and the rendering that its tools give the copilot),
@@ -75,6 +78,20 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   the AI library is needed, and the Copilot runtime is neither bundled nor downloaded); a token is never stored, shown,
   or logged; every problem is a report and only cancellation is thrown.
 
+**AgentToolRegistry**: The tools that the copilot may use for one project.
+
+- *Type*: In-process .NET class, with `DescriptorToolPack` (an `IToolPack` of the AI library), `AgentToolContext`, and
+  `OptionalPackEntry`, documented in the design of the `AgentToolRegistry` unit.
+- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the plain tool descriptions
+  (`KnowledgeTool`) of the `Knowledge` and `Style` subsystems.
+- *Contract*: `CreateTools(AgentToolContext, optionalPackIds)` returns the `AIFunction`s of the project in a fixed order
+  (`canvasnet_help`, `style_get`, `style_check`, the project packs, the chosen optional packs); the static
+  `CreatePolicy(projectFolder, limits)` makes the path policy that every pack is given.
+- *Constraints*: Every tool is confined to the project folder, with the data folder (`.canvaspilot`) and the project
+  files (`*.canvaspilot`) denied; the path policy of the AI library does not follow links, so tools that touch files
+  must refuse links themselves; a call never throws except for the cancellation of the turn; a set with no tool, a
+  repeated name or prefix, or the name of a built-in tool of the Copilot CLI is refused when it is built.
+
 **IProviderCheck**: The connection check that the settings dialog can ask for.
 
 - *Type*: In-process .NET interface owned by the `Settings` subsystem, with the `ProviderCheckResult(IsUsable, Message)`
@@ -100,15 +117,24 @@ usable before any provider is written against it. The Copilot CLI is found by a 
 Code shim, and checks that the CLI is found, that a machine with only the shim is told so, and that a path chosen in the
 settings is used. The readiness checks are tested through `IProviderCheck`, as the settings dialog uses them: GitHub
 Copilot on a machine with a signed-in GitHub CLI is not usable because this build cannot start the runtime, and Ollama
-with a small window is usable with a warning.
+with a small window is usable with a warning. The tools are tested the same way: the registry is built over the real
+drawing knowledge and a pack that keeps the policy it receives, and the test shows that only the application's own tools
+are offered and that the policy permits a picture file of the project and refuses the data folder, a project file, and
+every place outside the project.
 
-The sections of the units are added to this design as the units are built: the tool registry and
-the project tools, the instructions and the mapper of the payload to a provider message, the mapper of provider updates
+The sections of the units are added to this design as the units are built: the project tools,
+the instructions and the mapper of the payload to a provider message, the mapper of provider updates
 to events and the provider factory, and the service that implements `IAgentService`.
 
 ### Dependencies
 
 - **CopilotCliLocator** unit: the Copilot CLI and its version, used by the readiness checks.
+- **Knowledge** subsystem: the plain tool description (`KnowledgeTool`) that the tool registry offers; the style tools
+  are given to the registry in the same form.
+- **Project** subsystem: the names of the data folder and of the project file that the tool registry denies to every
+  tool.
+- **AgentKit** and **Microsoft.Extensions.AI** (OTS): the path policy, the tool packs, the limits for answers, and the
+  function type that carry the tools.
 - **Settings** subsystem: the AI provider choices (`SettingsService`) and the `IProviderCheck` interface that
   `AgentReadiness` implements (documented with `AiProviderSettingsPage`); `Settings` does not depend on this subsystem.
 - **OllamaSharp** (OTS): the client that lists the models of an Ollama server and shows the context length of a model,
@@ -118,3 +144,5 @@ The view below shows these dependencies from the SysML2 model; more are added as
 `Payload`, `Knowledge`, `Style`, `Preview`, and the AI libraries are built.
 
 ![Agent runtime dependencies](AgentSubsystemRuntimeView.svg)
+
+![Agent tools dependencies](AgentToolsView.svg)

@@ -1,0 +1,158 @@
+---
+# Software Unit Requirements for the AgentToolRegistry Unit
+#
+# The AgentToolRegistry unit builds the tools that the AI copilot may use for one project: it confines them to the project
+# folder with a path policy (the data folder and the project files are out of reach), offers the drawing knowledge and the
+# style tools, which are plain tool descriptions that know nothing of the AI library, as functions of the library, adds the
+# packs that the application supplies per project and the optional packs that the user chose from a catalog that is empty
+# in this version, and refuses a set of tools that a model or its provider could not be given. Its supporting types (the
+# descriptor tool pack and the function that carries a description, the context of the project, and the entry of the
+# optional pack catalog) are part of the unit.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: AgentToolRegistry Requirements
+            requirements:
+              - id: CanvasPilot-AgentToolRegistry-ConfineToolsToProject
+                title: >-
+                  The AgentToolRegistry shall give every tool pack one path policy whose working directory is the project
+                  folder and whose only grant is for reading and writing inside that folder, shall refuse a project
+                  folder that is empty or is not a full path, and shall carry the limits for the size of answers to
+                  every tool.
+                justification: |
+                  A language model that writes files is only as safe as the paths its tools allow. One policy, built in
+                  one place from the project folder, gives every pack the same decision about which paths are allowed, so
+                  no pack needs a rule of its own about where a path may lead. A relative folder would anchor the tools to
+                  whatever the current directory happens to be, so it is refused. The path policy of the AI library judges
+                  a path by its spelling and does not follow folder links; a test pins that finding so that the tools
+                  that read or write files, which must refuse links themselves, are not forgotten.
+                tests:
+                  - AgentToolRegistry_CreatePolicy_ProjectFolder_HasOneReadWriteGrantThatDeniesTheDataFolderAndProjectFiles
+                  - AgentToolRegistry_CreatePolicy_PathsInsideTheProject_ArePermittedForReadAndWrite
+                  - AgentToolRegistry_CreatePolicy_PathsOutsideTheProject_AreRefusedForReadAndWrite
+                  - AgentToolRegistry_CreatePolicy_FolderLinkInsideTheProject_IsPermittedAndMustBeRefusedByTheTools
+                  - AgentToolRegistry_CreatePolicy_EmptyOrRelativeFolder_IsRefused
+                  - AgentToolRegistry_ArgumentsAreChecked_NullsAndRelativeFolder_AreRefused
+
+              - id: CanvasPilot-AgentToolRegistry-ProtectApplicationFiles
+                title: >-
+                  The AgentToolRegistry shall deny to every tool, for reading and for writing, the data folder of the
+                  application (.canvaspilot) and every project file (*.canvaspilot), at the top of the project and in
+                  every folder below it.
+                justification: |
+                  The data folder and the project file belong to the application and not to the drawing. A model that
+                  could read or replace them could corrupt the project or learn what the user keeps outside the chat.
+                  The names are taken from the project document, so the rule follows the names that the project service
+                  really writes.
+                tests:
+                  - AgentToolRegistry_CreatePolicy_DataFolderAndProjectFiles_AreRefusedForReadAndWrite
+
+              - id: CanvasPilot-AgentToolRegistry-OfferDescribedTools
+                title: >-
+                  The AgentToolRegistry shall offer each plain tool description (name, words, JSON Schema of the
+                  arguments, and function) of the drawing knowledge and of the style tools as one function of the AI
+                  library in a pack of its own, with the same name, the same words, and the same schema, shall check the
+                  names of a pack when it is made, and shall refuse a description that has no name, words, function, or
+                  schema that is a JSON object.
+                justification: |
+                  The drawing knowledge and the style tools are written without any AI library, so that they can be
+                  tested without one and handed to any provider. The registry is the one place that turns them into what
+                  the library and the model need, and a model reads exactly the name, the words, and the schema that the
+                  description has, so none may change on the way. Checking a pack when it is made shows a mistake at the
+                  start of a conversation and not in the middle of a turn.
+                tests:
+                  - DescriptorToolPack_CreateTools_SchemaAndWordsOfTheDescription_ComeOutAsTheFunction
+                  - DescriptorToolPack_CreateTools_RealKnowledgeDescriptor_RoundTripsSchemaAndAnswer
+                  - DescriptorToolPack_Constructor_BadPrefixOrNullArguments_AreRefused
+                  - DescriptorToolPack_Constructor_BadNames_AreRefusedWithTheName
+                  - DescriptorToolPack_Constructor_UnusableDescriptions_AreRefused
+                  - DescriptorToolPack_CreateTools_NullPolicy_IsRefused
+                  - AgentToolRegistry_Constructor_BuiltInDescriptionWithTheWrongPrefix_IsRefused
+
+              - id: CanvasPilot-AgentToolRegistry-AnswerCallsWithoutThrowing
+                title: >-
+                  The AgentToolRegistry shall, when a function made of a tool description is called, give the description
+                  the arguments of the call as one JSON text (an empty object when there are none) whether they arrive
+                  as JSON elements or as plain values, shall return the answer of the description as text, and shall
+                  answer a failure with a sentence that names the tool and the type of the exception and does not repeat
+                  the text of the exception, while letting the cancellation of a stopped turn through and not calling the
+                  description once the turn is canceled.
+                justification: |
+                  A model corrects itself from an answer and cannot from an exception, so a failure of a description, or
+                  arguments that cannot be written, must be a sentence. The text of an exception can hold a path of the
+                  user's computer, so only its type is named. A stopped turn must stop, so a cancellation is not turned
+                  into an answer. Writing every kind of argument with one serializer means the descriptions always read
+                  JSON, whichever provider sent the call.
+                tests:
+                  - DescriptorToolPack_Invoke_JsonElementArguments_ReachTheDescriptionAsJsonAndTheAnswerComesBack
+                  - DescriptorToolPack_Invoke_PlainValueArguments_AreWrittenAsJson
+                  - DescriptorToolPack_Invoke_NoArguments_GivesAnEmptyJsonObject
+                  - DescriptorToolPack_Invoke_DescriptionThrows_IsAnAnswerThatNamesToolAndTypeOnly
+                  - DescriptorToolPack_Invoke_UnwritableArguments_IsAnAnswerAndTheDescriptionIsNotCalled
+                  - DescriptorToolPack_Invoke_DescriptionAnswersNull_IsAnEmptyAnswer
+                  - DescriptorToolPack_Invoke_CanceledToken_ThrowsCancellationAndDoesNotCall
+
+              - id: CanvasPilot-AgentToolRegistry-LimitToolAnswers
+                title: >-
+                  The AgentToolRegistry shall wrap every function that a descriptor tool pack makes with the limits of the
+                  path policy, so that an answer longer than the ceiling is refused with a message that names the reason
+                  and is not sent to the model.
+                justification: |
+                  A tool answer that is too long fills the context window of the model and makes the next turn fail. The
+                  library already knows how to refuse such an answer; wrapping every function with it, with the ceilings
+                  that the policy carries, keeps one limit in one place.
+                tests:
+                  - DescriptorToolPack_Invoke_AnswerOverTheCeiling_IsRefusedByTheLimits
+
+              - id: CanvasPilot-AgentToolRegistry-ComposeToolPacks
+                title: >-
+                  The AgentToolRegistry shall build the tools of a project from the pack of the drawing knowledge
+                  (canvasnet), the pack of the style tools (style), the packs that the application supplies for the
+                  project, and the optional packs that were chosen, in that order, and shall give the supplier of the
+                  project packs the context of the project.
+                justification: |
+                  The model sees one list of tools, and its order is the order in which they are offered, so the order is
+                  fixed and tested. The project tools need the project and more than the folder of the project (a
+                  renderer, the project file), which only the code that builds them has, so they come from a supplier
+                  that is given the context and not from the registry.
+                tests:
+                  - AgentToolRegistry_CreateTools_BuiltInPacks_OfferKnowledgeThenStyleToolsWithTheirSchemas
+                  - AgentToolRegistry_CreateTools_ProjectPacks_AreGivenTheContextAndTheConfinedPolicyAndComeLast
+
+              - id: CanvasPilot-AgentToolRegistry-OfferOptionalPacks
+                title: >-
+                  The AgentToolRegistry shall keep a catalog of optional packs, empty in this version, shall add the
+                  packs whose identifiers the caller gives, in the order of the identifiers, shall not make a pack that
+                  was not chosen, shall refuse an identifier that is not in the catalog and name it, and shall not offer a
+                  pack whose required abilities the model or provider lacks.
+                justification: |
+                  Which of the packs of the AI library the user may switch on is expected to grow. Holding the packs in a
+                  catalog with a stable identifier means that a later pack is one entry and one stored identifier, and the
+                  settings page can list the packs without making them. A stored identifier that no longer exists is a
+                  mistake that must be named, and a pack that needs vision is useless to a model that cannot see.
+                tests:
+                  - AgentToolRegistry_CreateTools_EmptyOptionalCatalog_AcceptsNoChoiceAndRefusesAnyId
+                  - AgentToolRegistry_CreateTools_OptionalCatalog_AddsOnlyTheChosenPacksInOrderOfTheirIds
+                  - AgentToolRegistry_CreateTools_OptionalPackNeedingVision_FollowsTheHostCapabilities
+
+              - id: CanvasPilot-AgentToolRegistry-ValidateToolSet
+                title: >-
+                  The AgentToolRegistry shall refuse a set of tools that has no tool, that has two tools with the same
+                  name, that has two packs with the same prefix, or that has a tool named like one of the built-in tools
+                  of the Copilot CLI, with a message that names every problem, and shall keep its list of the built-in
+                  names at least as complete as the list of the AI library.
+                justification: |
+                  The Copilot CLI answers its own tools of the names it has built in instead of ours, so a tool of the
+                  application with one of those names would never be called, and an empty set or a repeated name cannot be
+                  given to a provider. Refusing the set when it is built, with the names in the message, is cheaper than
+                  finding out from a conversation that does nothing. The list of the library is not public, so a test
+                  reads it and fails when an upgrade adds a name that ours lacks.
+                tests:
+                  - AgentToolRegistry_CreateTools_RepeatedToolName_IsRefusedWithTheName
+                  - AgentToolRegistry_CreateTools_CopilotBuiltInName_IsRefusedWithTheName
+                  - AgentToolRegistry_CreateTools_RepeatedPackPrefix_IsRefusedWithThePrefix
+                  - AgentToolRegistry_CreateTools_NoTool_IsRefused
+                  - AgentToolRegistry_CopilotBuiltInToolNames_CoverTheNamesTheLibraryReserves

@@ -479,6 +479,14 @@ service; against a scripted server that has the model, the result is the warning
 sentence that tells the user to raise the window in Settings to the recommended 32,768. This scenario is tested by
 `CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach`.
 
+**CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach**: A project
+is created by the project service, and the tools of the copilot are built for its folder over the real drawing knowledge
+with a supplied pack that keeps its policy. Only the knowledge tool and the supplied pack's tool are offered, the
+knowledge tool answers with the index of the real cards, and the policy permits writing a picture file but refuses the
+project file and the data folder that the project service made, and a path that climbs out of the project. This scenario
+is tested by
+`CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach`.
+
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the
 image and the title names the project. The user changes the AI model name in the settings dialog and the

@@ -74,6 +74,30 @@ sections:
             tests:
               - AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface
 
+          - id: CanvasPilot-Agent-ConfineToolsToProject
+            title: >-
+              The Agent subsystem shall build the tools that the copilot may use for one project so that they are
+              confined to the project folder (with the data folder and the project files out of reach), so that the
+              drawing knowledge and the style tools of the application are offered as tools of the AI library with their
+              own names, words, and schemas and answer every call as text, and so that a set of tools that a provider
+              could not be given is refused when it is built.
+            justification: |
+              The copilot may act only through the application's tools, so the building of those tools is where the
+              confinement is decided. One policy built from the project folder serves every pack, the existing tool
+              descriptions are reused unchanged for any provider, and a wrong set (no tool, a repeated name, a name that
+              the Copilot CLI would take over) is found when it is built and not in the middle of a conversation.
+            children:
+              - CanvasPilot-AgentToolRegistry-ConfineToolsToProject
+              - CanvasPilot-AgentToolRegistry-ProtectApplicationFiles
+              - CanvasPilot-AgentToolRegistry-OfferDescribedTools
+              - CanvasPilot-AgentToolRegistry-AnswerCallsWithoutThrowing
+              - CanvasPilot-AgentToolRegistry-LimitToolAnswers
+              - CanvasPilot-AgentToolRegistry-ComposeToolPacks
+              - CanvasPilot-AgentToolRegistry-OfferOptionalPacks
+              - CanvasPilot-AgentToolRegistry-ValidateToolSet
+            tests:
+              - AgentSubsystem_ConfineTools_ProjectFolder_OffersOnlyApplicationToolsUnderTheConfiningPolicy
+
           - id: CanvasPilot-Agent-LocateCopilotCli
             title: >-
               The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the

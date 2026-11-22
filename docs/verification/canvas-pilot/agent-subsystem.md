@@ -32,6 +32,9 @@ N/A - standard test environment. The tests use no files, network, display, or ex
   only the shim is told that only the shim was found; a path chosen in the settings is used.
 - Through `IProviderCheck`, GitHub Copilot on a machine with a signed-in GitHub CLI is not usable and says that an
   update of the AI library is needed, and Ollama with a window of 8,192 tokens is usable and warns about it.
+- The tools built for a project are only the application's own tools, in a fixed order, the knowledge tool answers from
+  the real cards, and the policy that every pack receives permits a picture file of the project and refuses the data
+  folder, a project file, and every place outside the project.
 
 ### Test Scenarios
 
@@ -58,6 +61,13 @@ package folder and not the shim. On a machine whose `PATH` holds only the shim, 
 says that only the VS Code copilot shim was found; with the path of the real CLI chosen in the settings on that machine,
 the CLI is found. This scenario is tested by
 `AgentSubsystem_LocateCopilotCli_MachinesWithShim_FindsRealCliAndExplainsShimOnly`.
+
+**AgentSubsystem_ConfineTools_ProjectFolder_OffersOnlyApplicationToolsUnderTheConfiningPolicy**: A registry is built
+over the real drawing knowledge, a stand-in style tool, and a supplied pack that keeps the policy it is given. For a
+project folder the tools are `canvasnet_help`, `style_get`, and the pack's tool, in that order; calling the knowledge
+tool answers with the index of the real cards; and the policy that the pack received permits writing a picture file in
+the project and refuses the data folder, a project file, and a path that climbs out of the project. This scenario is
+tested by `AgentSubsystem_ConfineTools_ProjectFolder_OffersOnlyApplicationToolsUnderTheConfiningPolicy`.
 
 **AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
 good Copilot CLI and a GitHub CLI under the program files that prints a token, and a scripted Ollama server has one

@@ -171,6 +171,26 @@ reviews:
       - "test/**/AgentSubsystem/OllamaProbeTests.cs"
       - "test/**/AgentSubsystem/ReadinessTestDoubles.cs"
 
+  - id: CanvasPilot-Agent-AgentToolRegistry
+    title: Review of CanvasPilot AgentToolRegistry unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-tool-registry.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-tool-registry.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-tool-registry.md"
+      - "src/**/AgentSubsystem/AgentToolContext.cs"
+      - "src/**/AgentSubsystem/AgentToolRegistry.cs"
+      - "src/**/AgentSubsystem/DescriptorFunction.cs"
+      - "src/**/AgentSubsystem/DescriptorToolPack.cs"
+      - "src/**/AgentSubsystem/OptionalPackEntry.cs"
+      - "test/**/AgentSubsystem/AgentToolRegistryTests.cs"
+      - "test/**/AgentSubsystem/DescriptorToolPackTests.cs"
+      - "test/**/AgentSubsystem/ToolTestDoubles.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces

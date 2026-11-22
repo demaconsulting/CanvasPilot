@@ -435,9 +435,12 @@ sections:
           are allowed, keeps the user's other files out of its reach. The units of the Agent subsystem add the tools
           and their own limits to this requirement; the confining library it rests on is verified as an OTS item.
         children:
+          - CanvasPilot-Agent-ConfineToolsToProject
           - CanvasPilot-OTS-AgentKit-ConfineToolPaths
           - CanvasPilot-OTS-AgentKit-ComposeToolPacks
           - CanvasPilot-OTS-AgentKit-BoundToolResults
+        tests:
+          - CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach
 
       - id: CanvasPilot-System-ConverseWithCopilot
         title: >-

@@ -172,6 +172,15 @@ package CanvasPilotDesignViews {
         filter not (@SysML::Documentation);
     }
 
+    view AgentToolsView : GeneralView {
+        doc /* Dependencies of the tool registry of the AI copilot on the drawing knowledge tool descriptions it offers and on the AI libraries that confine and carry the tools. The project tools, the instructions, and the payload mapper add their edges to this view as they are built. Hub supplier omitted: ProjectService (the registry reads the data folder name and project file extension from the project document). */
+        expose CanvasPilot_AgentToolRegistry::AgentToolRegistry;
+        expose CanvasPilot_KnowledgeTools::KnowledgeTools;
+        expose OtsDependencies::AgentKit;
+        expose OtsDependencies::ExtensionsAi;
+        filter not (@SysML::Documentation);
+    }
+
     view AppShellSubsystemWorkspaceView : GeneralView {
         doc /* Dependencies of the main window shell and the project workspace on the workspace panels they host. Hub supplier omitted: ProjectService. */
         expose CanvasPilot_MainWindowShell::MainWindowShell;
