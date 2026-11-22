@@ -905,6 +905,7 @@ reviews:
       - "src/**/SettingsSubsystem/AiProviderSettingsPageViewModel.cs"
       - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml"
       - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml.cs"
+      - "src/**/SettingsSubsystem/IProviderCheck.cs"
       - "test/**/SettingsSubsystem/AiProviderSettingsPageTests.cs"
       - "test/**/AiProviderSettingsPageViewTests.cs"
 

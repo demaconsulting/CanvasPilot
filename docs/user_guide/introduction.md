@@ -558,7 +558,8 @@ would use them is not available yet, so the chat does not use them, and nothing 
 
 - **Provider**: GitHub Copilot or Ollama.
 - **Model name**: The model to use. Leave it empty for the provider's default model.
-- **Context window (tokens)**: The size of the context window, from 512 to 2,000,000 tokens (default 8192).
+- **Context window (tokens)**: The size of the context window, from 512 to 2,000,000 tokens (default 32768). A value
+  that you or an earlier version stored is kept as it is.
 - **Reasoning level**: Auto, Low, Medium, or High.
 - **Ollama endpoint**: The address of the Ollama server (default `http://localhost:11434`). It is used when the
   provider is Ollama.

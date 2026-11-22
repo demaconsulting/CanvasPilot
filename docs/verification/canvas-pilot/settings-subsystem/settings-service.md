@@ -54,12 +54,24 @@ camel-case properties with the expected values, including the opt-in and the inv
 scenario is tested by `SettingsService_Save_Settings_WritesVersionedCamelCaseJson`.
 
 **SettingsService_Load_MissingFile_ReturnsDefaults**: A folder has no settings file; load returns default
-settings in which unrestricted agent tools are off and the context window is 8192, and the result is the
+settings in which unrestricted agent tools are off and the context window is 32768, and the result is the
 settings in effect. This scenario is tested by `SettingsService_Load_MissingFile_ReturnsDefaults`.
 
 **SettingsService_Load_MissingProperties_UsesDefaults**: A file sets only a model name; load returns that name
 and the default context window, endpoint, and speech values. This scenario is tested by
 `SettingsService_Load_MissingProperties_UsesDefaults`.
+
+**SettingsService_DefaultContextWindow_Constants_AreThe32768DefaultAndThe16384Minimum**: The default context window
+constant is 32768 and the recommended minimum constant is 16384; the default is not below the minimum and the minimum is
+a value that settings accept. This scenario is tested by
+`SettingsService_DefaultContextWindow_Constants_AreThe32768DefaultAndThe16384Minimum`.
+
+**SettingsService_Load_NoContextWindowInFile_Uses32768**: A file has an AI provider section without a context window;
+load returns 32768 tokens. This scenario is tested by `SettingsService_Load_NoContextWindowInFile_Uses32768`.
+
+**SettingsService_Load_StoredContextWindow8192_IsKept**: A file stores a context window of 8192, the default of an
+earlier build; load returns 8192, and the value is still 8192 after the settings are saved and loaded again by a fresh
+service. This scenario is tested by `SettingsService_Load_StoredContextWindow8192_IsKept`.
 
 **SettingsService_Load_UnknownProperties_AreIgnored**: A file has extra properties at several levels; load
 returns the known values. This scenario is tested by `SettingsService_Load_UnknownProperties_AreIgnored`.

@@ -66,9 +66,16 @@ public sealed record AiProviderSettings
     public const int MaxContextWindowTokens = 2_000_000;
 
     /// <summary>
-    ///     The default context window, in tokens.
+    ///     The context window, in tokens, of settings that do not state one. A value that is already stored is kept even
+    ///     when it is smaller.
     /// </summary>
-    public const int DefaultContextWindowTokens = 8192;
+    public const int DefaultContextWindowTokens = 32768;
+
+    /// <summary>
+    ///     The smallest context window, in tokens, that drawings with pictures and tools can be expected to fit in; a
+    ///     smaller value is accepted but gets a warning.
+    /// </summary>
+    public const int RecommendedMinimumContextTokens = 16384;
 
     /// <summary>
     ///     The default Ollama server endpoint.

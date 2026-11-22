@@ -65,16 +65,21 @@ sections:
       - id: CanvasPilot-System-ConfigureAiProvider
         title: >-
           The application shall let the user choose and store which AI provider and model it uses,
-          with unrestricted agent tools off unless the user opts in.
+          with unrestricted agent tools off unless the user opts in, a context window of 32768 tokens for settings that
+          do not state one, and the context window that the user stored kept as it is.
         tags: [system]
         justification: |
           The application's AI assistance can use different providers, and the choice, with its
           model and limits, belongs to the user. Storing the choices lets them be configured before
           the assistant is used, and the safe default for unrestricted tools protects the user's files.
+          Drawings with pictures and tools need a large context window, so a new installation starts with 32768 tokens;
+          a smaller value that the user chose, or that an earlier build stored, is a deliberate choice and is not
+          replaced.
         children:
           - CanvasPilot-Settings-ConfigureAiProvider
         tests:
           - CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn
+          - CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue
 
       - id: CanvasPilot-System-ConfigureSpeech
         title: >-

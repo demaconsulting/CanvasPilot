@@ -15,11 +15,13 @@ unit.
 (`IReadOnlyList<string>`, most recent first), `AiProvider` (`AiProviderSettings`), `Speech`
 (`SpeechSettings`), and `Styles` (`StyleSettings`). Immutable; changed with `with` expressions.
 
-**AiProviderSettings**: `record` — `Provider` (`AiProviderKind`: `GitHubCopilot` or `Ollama`), `ModelName`
-(`string`, empty for the provider default), `ContextWindowTokens` (`int`, 512 to 2,000,000, default 8192),
-`ReasoningLevel` (`Auto`, `Low`, `Medium`, `High`), `OllamaEndpoint` (`string`, default
-`http://localhost:11434`), `UnrestrictedAgentTools` (`bool`, default `false`), and `CopilotCliPath`
-(`string`, empty for automatic discovery).
+**AiProviderSettings**: `record` — `Provider` (`AiProviderKind`: `GitHubCopilot` or `Ollama`), `ModelName` (`string`,
+empty for the provider default), `ContextWindowTokens` (`int`, 512 to 2,000,000, default 32768 through
+`AiProviderSettings.DefaultContextWindowTokens`; a stored value within bounds, such as the 8192 that an earlier build
+used as its default, is kept; `AiProviderSettings.RecommendedMinimumContextTokens`, 16384, is the smallest value that is
+recommended and is not enforced here), `ReasoningLevel` (`Auto`, `Low`, `Medium`, `High`), `OllamaEndpoint` (`string`,
+default `http://localhost:11434`), `UnrestrictedAgentTools` (`bool`, default `false`), and `CopilotCliPath` (`string`,
+empty for automatic discovery).
 
 **SpeechSettings**: `record` — `CaptureDevice`, `PlaybackDevice`, `SttModelId`, and `TtsModelId` (`string`,
 empty for the default), and `ModelParameters` (model identifier, then parameter identifier, then the value

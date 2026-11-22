@@ -76,6 +76,8 @@ sections:
               - CanvasPilot-AiProviderSettingsPage-ValidateOllamaEndpoint
               - CanvasPilot-AiProviderSettingsPage-CopilotCliPathOverride
               - CanvasPilot-AiProviderSettingsPage-UnrestrictedToolsOptIn
+              - CanvasPilot-SettingsService-DefaultContextWindow32768
+              - CanvasPilot-SettingsService-KeepStoredContextWindow
             tests:
               - SettingsSubsystem_PersistSettings_DialogOk_SurvivesRestart
 

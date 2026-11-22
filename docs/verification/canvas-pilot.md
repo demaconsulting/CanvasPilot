@@ -182,6 +182,12 @@ over the AI provider page; Ollama, a model name, a context window, and an endpoi
 selected; a new service loads those choices and unrestricted agent tools are still off. This scenario is
 tested by `CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn`.
 
+**CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue**: A settings folder
+without a file is loaded and holds a context window of 32768 tokens. In a second folder, settings with a context window
+of 8192 are saved, another setting (the recent projects) is changed with an update, and the file is loaded by a new
+service; the context window is still 8192. This scenario is tested by
+`CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue`.
+
 **CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun**: The application is composed with
 substitute audio and model services that list two microphones, two speakers, a speech-to-text model, and a
 text-to-speech model with a voice choice. The user opens Settings, chooses the second microphone and speaker, both

@@ -159,6 +159,31 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a fresh installation gets a context window of 32768 tokens, and that a smaller context window that
+    ///     the user stored earlier is kept across a restart and a change of another setting.
+    /// </summary>
+    [Fact]
+    public void CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue()
+    {
+        // Arrange: a fresh installation with no settings file, and an earlier installation with a stored 8192
+        var freshFolder = PathHelpers.SafePathCombine(_tempRoot, "Fresh");
+        var storedFolder = PathHelpers.SafePathCombine(_tempRoot, "Stored");
+        var stored = new SettingsService(storedFolder);
+        stored.Save(new AppSettings { AiProvider = new AiProviderSettings { ContextWindowTokens = 8192 } });
+
+        // Act: load both, then change another setting of the earlier installation and load it again
+        var fresh = new SettingsService(freshFolder).Load().AiProvider;
+        var changing = new SettingsService(storedFolder);
+        changing.Load();
+        changing.Update(settings => settings with { RecentProjects = ["C:\\Work\\a.canvaspilot"] });
+        var afterChange = new SettingsService(storedFolder).Load().AiProvider;
+
+        // Assert: the fresh installation has the new default, and the stored value was not replaced by it
+        Assert.Equal(32768, fresh.ContextWindowTokens);
+        Assert.Equal(8192, afterChange.ContextWindowTokens);
+    }
+
+    /// <summary>
     ///     Test that a user can create a project, close it, and open it again from the recent projects list, and
     ///     that an unusable project file is refused with a message.
     /// </summary>

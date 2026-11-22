@@ -9,7 +9,8 @@ package CanvasPilot_AiProviderSettingsPage {
             sourceFiles = (
                 "src/DemaConsulting.CanvasPilot/SettingsSubsystem/AiProviderSettingsPageViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/SettingsSubsystem/AiProviderSettingsPageView.axaml",
-                "src/DemaConsulting.CanvasPilot/SettingsSubsystem/AiProviderSettingsPageView.axaml.cs"
+                "src/DemaConsulting.CanvasPilot/SettingsSubsystem/AiProviderSettingsPageView.axaml.cs",
+                "src/DemaConsulting.CanvasPilot/SettingsSubsystem/IProviderCheck.cs"
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/SettingsSubsystem/AiProviderSettingsPageTests.cs",

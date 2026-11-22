@@ -33,7 +33,7 @@ network, or external services are required.
 #### Test Scenarios
 
 **AiProviderSettingsPageViewModel_Load_DefaultSettings_ShowsDefaults**: Default settings are loaded; GitHub
-Copilot, an empty model name, 8192 tokens, Auto, the default endpoint, an empty path, and the opt-in off are
+Copilot, an empty model name, 32768 tokens, Auto, the default endpoint, an empty path, and the opt-in off are
 shown and the page is valid. This scenario is tested by
 `AiProviderSettingsPageViewModel_Load_DefaultSettings_ShowsDefaults`.
 
@@ -107,3 +107,8 @@ unchecked; checking it sets the view model's opt-in. This scenario is tested by
 **AiProviderSettingsPageView_LoadedSettings_AreShownInControls**: A view model loaded with a model name and a
 context window is shown; the text boxes display those values. This scenario is tested by
 `AiProviderSettingsPageView_LoadedSettings_AreShownInControls`.
+
+**ProviderCheck_CheckAsync_Implementation_ReturnsResultForTheSettingsGiven**: A provider check that is written against
+`IProviderCheck`, and that names no type of the `Agent` subsystem, checks settings with a context window of 8192 and
+settings with the default; the results are a not-usable result and a usable result that compare equal to the expected
+values. This scenario is tested by `ProviderCheck_CheckAsync_Implementation_ReturnsResultForTheSettingsGiven`.

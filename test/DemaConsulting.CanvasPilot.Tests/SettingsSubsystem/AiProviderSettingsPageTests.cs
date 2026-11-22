@@ -43,7 +43,7 @@ public sealed class AiProviderSettingsPageTests
         Assert.Equal("AI Provider", page.Title);
         Assert.Equal(AiProviderKind.GitHubCopilot, page.SelectedProvider.Value);
         Assert.Equal(string.Empty, page.ModelName);
-        Assert.Equal("8192", page.ContextWindowText);
+        Assert.Equal("32768", page.ContextWindowText);
         Assert.Equal(ReasoningLevel.Auto, page.SelectedReasoningLevel.Value);
         Assert.Equal("http://localhost:11434", page.OllamaEndpoint);
         Assert.False(page.UnrestrictedAgentTools);
@@ -344,5 +344,40 @@ public sealed class AiProviderSettingsPageTests
         // Assert: the opt-in remains off
         Assert.False(page.UnrestrictedAgentTools);
         Assert.False(applied.AiProvider.UnrestrictedAgentTools);
+    }
+
+    /// <summary>
+    ///     Test that a provider check that the Settings subsystem owns can be implemented without any type of the Agent
+    ///     subsystem, and that its result compares by value.
+    /// </summary>
+    [Fact]
+    public async Task ProviderCheck_CheckAsync_Implementation_ReturnsResultForTheSettingsGiven()
+    {
+        // Arrange: a check that looks only at the settings it is given
+        var token = TestContext.Current.CancellationToken;
+        IProviderCheck check = new ContextWindowCheck();
+
+        // Act: check settings with a small and with the default context window
+        var small = await check.CheckAsync(new AiProviderSettings { ContextWindowTokens = 8192 }, token);
+        var normal = await check.CheckAsync(new AiProviderSettings(), token);
+
+        // Assert: the results follow the settings and compare by value
+        Assert.Equal(new ProviderCheckResult(false, "Too small."), small);
+        Assert.Equal(new ProviderCheckResult(true, "Fine."), normal);
+    }
+
+    /// <summary>
+    ///     A provider check that depends only on the settings.
+    /// </summary>
+    private sealed class ContextWindowCheck : IProviderCheck
+    {
+        /// <inheritdoc />
+        public Task<ProviderCheckResult> CheckAsync(AiProviderSettings settings, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(
+                settings.ContextWindowTokens < AiProviderSettings.RecommendedMinimumContextTokens
+                    ? new ProviderCheckResult(false, "Too small.")
+                    : new ProviderCheckResult(true, "Fine."));
+        }
     }
 }

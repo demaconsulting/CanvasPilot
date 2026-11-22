@@ -34,6 +34,12 @@ message shown under the entry. The context window message states the bounds.
 
 **IsValid**: `bool` — true when all three errors are empty.
 
+**IProviderCheck / ProviderCheckResult** (supporting types, in `IProviderCheck.cs`): the seam through which a connection
+check can be added to the page without the `Settings` subsystem depending on the subsystem that implements it.
+`IProviderCheck.CheckAsync(AiProviderSettings, CancellationToken)` takes provider settings that may not have been
+saved yet and returns a `ProviderCheckResult(IsUsable, Message)`: whether the provider can be used and one sentence for
+the user. A provider that cannot be used is a result, not an exception. The page does not call the interface yet.
+
 **View**: `AiProviderSettingsPageView` is an Avalonia user control with a combo box for the provider, text
 boxes, a reasoning level combo box, a check box, and error lines that are visible only when their message is
 not empty. Controls carry automation identifiers (`AiProviderComboBox`, `AiModelNameTextBox`,
