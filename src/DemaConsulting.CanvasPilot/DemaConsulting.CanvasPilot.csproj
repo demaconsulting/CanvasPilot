@@ -59,6 +59,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The notices of the third-party material that is vendored in the source, such as the icons, from the repository
+         root. They are copied beside the executable (build output and publish output), so the MSI, which takes the
+         published folder whole, ships them. -->
+    <Content Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Expose internal members (e.g. PathHelpers) to the test projects that exercise them
          directly, so tests can reuse the same reviewed helpers as production code. -->
     <InternalsVisibleTo Include="DemaConsulting.CanvasPilot.Tests" />

@@ -480,6 +480,7 @@ reviews:
       - "docs/design/canvas-pilot/app-shell-subsystem/theme-resources.md"
       - "docs/verification/canvas-pilot/app-shell-subsystem/theme-resources.md"
       - "src/**/AppShellSubsystem/Styles/Tokens.axaml"
+      - "src/**/AppShellSubsystem/Styles/Icons.axaml"
       - "test/**/ThemeResourcesViewTests.cs"
 
   # CanvasPilot - Chat

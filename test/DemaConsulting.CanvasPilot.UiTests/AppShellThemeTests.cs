@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
@@ -61,5 +62,30 @@ public sealed class AppShellThemeTests
         Assert.NotEqual(
             ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Dark),
             ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Light));
+    }
+
+    /// <summary>
+    ///     Test that an icon in a button takes the primary text color of the theme variant that is asked for, in
+    ///     both variants, so the icon is as readable as the text of the button.
+    /// </summary>
+    [AvaloniaFact]
+    public void AppShellSubsystem_Icons_IconInButtonTakesThePrimaryTextColorOfTheVariant()
+    {
+        foreach (var variant in ThemeUiHelpers.Variants)
+        {
+            // Arrange: a stock button with an icon of the application, in a window of the variant
+            var icon = new PathIcon { Data = (Geometry)ThemeUiHelpers.Resolve("CpIconSettings", variant)! };
+            icon.Classes.Add("icon");
+            var window = new Window { Content = new Button { Content = icon }, RequestedThemeVariant = variant };
+
+            // Act: show the window so the theme styles are applied and read the color of the icon
+            window.Show();
+            var color = Assert.IsAssignableFrom<ISolidColorBrush>(icon.Foreground).Color;
+            window.Close();
+
+            // Assert: the icon has the primary text color of the variant, and is 16 by 16
+            Assert.Equal(ThemeUiHelpers.ColorOf("CpTextPrimary", variant), color);
+            Assert.Equal(new Size(16, 16), icon.Bounds.Size);
+        }
     }
 }

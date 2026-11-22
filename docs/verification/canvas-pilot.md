@@ -711,6 +711,11 @@ headless in the dark and in the light theme variant (a headless UI test in `Canv
 the dark window is dark on average and the picture of the light window is light. This scenario is tested by
 `CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight`.
 
+**ThirdPartyNotices_Published**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the published folder, which the installer takes whole, holds exactly one
+`THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License, so the notice of the vendored icons is in
+the package. This scenario is tested by `ThirdPartyNotices_Published`, which is run in CI only.
+
 **WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64, builds the
 installer project with the numeric build version, and copies the package, FileAssert asserts that exactly one
 `package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by `WiX_MsiPackage`, which

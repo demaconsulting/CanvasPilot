@@ -20,9 +20,12 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
@@ -153,6 +156,22 @@ public sealed class ThemeResourcesViewTests
         "CpFontCaption", "CpFontSmall", "CpFontBody", "CpFontBodyLarge", "CpFontSubtitle", "CpFontTitle",
         "CpFontDisplay", "CpLineCaption", "CpLineSmall", "CpLineBody", "CpLineBodyLarge", "CpLineSubtitle",
         "CpLineTitle", "CpLineDisplay"
+    ];
+
+    /// <summary>
+    ///     The vendored icons: every glyph that the views are allowed to use.
+    /// </summary>
+    private static readonly string[] IconKeys =
+    [
+        "CpIconAdd", "CpIconArrowClockwise", "CpIconArrowUp", "CpIconArrowUpRight", "CpIconArrowUpload",
+        "CpIconAttach", "CpIconBraces", "CpIconCheckmark", "CpIconCheckmarkCircle", "CpIconChevronDown",
+        "CpIconChevronLeft", "CpIconChevronRight", "CpIconChevronUp", "CpIconCircle", "CpIconCode", "CpIconCopy",
+        "CpIconCursor", "CpIconDataBarVertical", "CpIconDelete", "CpIconDismiss", "CpIconDocument",
+        "CpIconDocumentAdd", "CpIconDocumentPdf", "CpIconEdit", "CpIconErrorCircle", "CpIconFlow", "CpIconFolder",
+        "CpIconFolderAdd", "CpIconFolderOpen", "CpIconFullScreenMaximize", "CpIconHistory", "CpIconImage",
+        "CpIconInfo", "CpIconMic", "CpIconMoreHorizontal", "CpIconPanelRight", "CpIconPen",
+        "CpIconRectangleLandscape", "CpIconSettings", "CpIconSparkle", "CpIconStop", "CpIconSubtract",
+        "CpIconWarning"
     ];
 
     /// <summary>
@@ -298,6 +317,94 @@ public sealed class ThemeResourcesViewTests
                 }
             }
         }
+    }
+
+    /// <summary>
+    ///     Test that every vendored icon resolves to a geometry that has a shape and lies on its 20 by 20 grid.
+    /// </summary>
+    [AvaloniaFact]
+    public void ThemeResources_Icons_EveryIconResolvesToGeometryOnItsGrid()
+    {
+        foreach (var key in IconKeys)
+        {
+            // Act: look the icon up in the application resources
+            var geometry = Assert.IsType<StreamGeometry>(ThemeUiHelpers.Resolve(key, ThemeVariant.Light));
+            var bounds = geometry.Bounds;
+
+            // Assert: it has a shape, and the shape lies on the 20 by 20 grid of the glyphs
+            Assert.True(bounds.Width >= 1 && bounds.Height >= 1, $"{key} has no visible shape.");
+            Assert.True(
+                bounds.X >= -0.1 && bounds.Y >= -0.1 && bounds.Right <= 20.1 && bounds.Bottom <= 20.1,
+                $"{key} lies outside the 20 by 20 grid: {bounds}.");
+        }
+    }
+
+    /// <summary>
+    ///     Test that an icon in a button is drawn 16 by 16 in the foreground color of the button, so an icon follows
+    ///     the color of the control that holds it.
+    /// </summary>
+    [AvaloniaFact]
+    public void ThemeResources_Icons_PathIconIsDrawnInTheForegroundOfItsButton()
+    {
+        // Arrange: a button with a red foreground that holds an icon of class icon, in a window of 100 by 100
+        var icon = new PathIcon { Data = (Geometry)ThemeUiHelpers.Resolve("CpIconAdd", ThemeVariant.Light)! };
+        icon.Classes.Add("icon");
+        var button = new Button
+        {
+            Content = icon,
+            Foreground = Brushes.Red,
+            Background = Brushes.White,
+            BorderThickness = new Thickness(0),
+            Padding = new Thickness(0),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        var window = new Window
+        {
+            Width = 100,
+            Height = 100,
+            Background = Brushes.White,
+            RequestedThemeVariant = ThemeVariant.Light,
+            Content = button
+        };
+
+        // Act: show the window, draw it, and read the pixels
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var frame = window.CaptureRenderedFrame();
+        Assert.NotNull(frame);
+        var (pixels, stride) = ScreenshotSupport.ReadPixels(frame);
+        window.Close();
+
+        // Assert: the icon is 16 by 16, and red pixels are drawn inside its box and nowhere else
+        Assert.Equal(new Size(16, 16), icon.Bounds.Size);
+        var inside = 0;
+        var outside = 0;
+        for (var y = 0; y < frame.PixelSize.Height; y++)
+        {
+            for (var x = 0; x < frame.PixelSize.Width; x++)
+            {
+                var offset = (y * stride) + (x * 4);
+                // A red pixel, also an anti-aliased one that is mixed with the white behind it, has much more red than green
+                var isRed = pixels[offset] - pixels[offset + 1] > 60;
+                if (!isRed)
+                {
+                    continue;
+                }
+
+                if (x < 16 && y < 16)
+                {
+                    inside++;
+                }
+                else
+                {
+                    outside++;
+                }
+            }
+        }
+
+        Assert.True(inside > 10, $"Only {inside} red pixels were drawn by the icon.");
+        Assert.Equal(0, outside);
     }
 
     /// <summary>

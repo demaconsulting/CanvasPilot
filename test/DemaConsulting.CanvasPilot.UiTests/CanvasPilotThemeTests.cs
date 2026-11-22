@@ -99,7 +99,7 @@ public sealed class CanvasPilotThemeTests : IDisposable
             for (var x = 0; x < picture.PixelSize.Width; x += 8)
             {
                 var offset = (y * stride) + (x * 4);
-                sum += ((0.114 * pixels[offset]) + (0.587 * pixels[offset + 1]) + (0.299 * pixels[offset + 2])) / 255.0;
+                sum += ((0.299 * pixels[offset]) + (0.587 * pixels[offset + 1]) + (0.114 * pixels[offset + 2])) / 255.0;
                 count++;
             }
         }

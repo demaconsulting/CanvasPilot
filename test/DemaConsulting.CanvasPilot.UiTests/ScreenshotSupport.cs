@@ -23,6 +23,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 
@@ -114,10 +115,10 @@ internal static class ScreenshotSupport
     ///     Reads the pixels of a picture so a test can look at what was drawn.
     /// </summary>
     /// <param name="picture">The picture to read.</param>
-    /// <returns>The pixels as bytes in blue, green, red, alpha order, row by row, and the width of a row in bytes.</returns>
+    /// <returns>The pixels as bytes in red, green, blue, alpha order, row by row, and the width of a row in bytes.</returns>
     public static (byte[] Pixels, int Stride) ReadPixels(Bitmap picture)
     {
-        // Copy the pixels (BGRA, 4 bytes each) out of the bitmap into a pinned buffer
+        // Copy the pixels (4 bytes each) out of the bitmap into a pinned buffer
         var size = picture.PixelSize;
         var stride = size.Width * 4;
         var buffer = new byte[stride * size.Height];
@@ -129,6 +130,15 @@ internal static class ScreenshotSupport
         finally
         {
             handle.Free();
+        }
+
+        // The headless platform draws red first, but other platforms draw blue first, so put the channels in one order
+        if (picture.Format == PixelFormat.Bgra8888)
+        {
+            for (var i = 0; i + 3 < buffer.Length; i += 4)
+            {
+                (buffer[i], buffer[i + 2]) = (buffer[i + 2], buffer[i]);
+            }
         }
 
         return (buffer, stride);

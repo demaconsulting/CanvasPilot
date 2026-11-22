@@ -22,6 +22,8 @@ parallelization disabled; no display is required.
 - Primary and secondary text, accent text, and white on the accent are at least 4.5 to 1 on each surface they are
   documented for; the tertiary and state colors are at least 4.5 to 1 on the window, pane, and raised surfaces.
 - The focus ring, the input outline, and the mark color are at least 3 to 1 on the pane and raised surfaces.
+- Every vendored icon resolves to a geometry with a shape that lies on the 20 by 20 grid.
+- An icon of class `icon` in a button is 16 by 16 and is drawn in the foreground color of the button, inside its box.
 - A border that takes its background from a token shows the color of the requested variant, and the color of the other
   variant after the window switches, without being created again.
 
@@ -42,3 +44,16 @@ color on the pane and raised surfaces is at least 3 to 1 in both variants. This 
 **ThemeResources_DynamicResource_FollowsVariantSwitch**: A border bound to the pane token inside a window that asks for
 dark shows the dark pane color; after the window asks for light it shows the light pane color. This scenario is tested
 by `ThemeResources_DynamicResource_FollowsVariantSwitch`.
+
+**ThemeResources_Icons_EveryIconResolvesToGeometryOnItsGrid**: Each of the 43 icon keys is looked up and is a geometry
+whose bounds are at least one unit wide and high and lie on the 20 by 20 grid of the glyphs. This scenario is tested by
+`ThemeResources_Icons_EveryIconResolvesToGeometryOnItsGrid`.
+
+**ThemeResources_Icons_PathIconIsDrawnInTheForegroundOfItsButton**: A button with a red foreground holds an icon of
+class `icon` in a window of 100 by 100 that is drawn headless; the icon is 16 by 16, red pixels are found inside its box
+and none outside it. This scenario is tested by `ThemeResources_Icons_PathIconIsDrawnInTheForegroundOfItsButton`.
+
+**ThirdPartyNotices_Published**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the published folder, which the installer takes whole, holds exactly one
+`THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License. This scenario is tested by
+`ThirdPartyNotices_Published`, which is run in CI only.

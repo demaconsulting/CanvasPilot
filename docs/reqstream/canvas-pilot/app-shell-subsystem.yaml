@@ -149,6 +149,30 @@ sections:
               - CanvasPilot-ThemeResources-FollowVariantSwitch
             tests:
               - AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants
+          - id: CanvasPilot-AppShell-ProvideIcons
+            title: >-
+              The AppShell subsystem shall give its views line icons that take the text color of the theme variant of the
+              control that holds them.
+            justification: |
+              Icon buttons let the window show many commands in little room. Icons that follow the text color of the
+              theme stay readable in both variants without a second set of pictures.
+            children:
+              - CanvasPilot-ThemeResources-ProvideIcons
+            tests:
+              - AppShellSubsystem_Icons_IconInButtonTakesThePrimaryTextColorOfTheVariant
+
+          - id: CanvasPilot-AppShell-ShipThirdPartyNotices
+            title: >-
+              The AppShell subsystem shall ship the license notices of the third-party material that its views contain
+              with the installed application.
+            justification: |
+              The icons of the views are the work of another party who allows their use on condition that their license
+              notice goes with every copy, so the notice must be delivered with the application.
+            children:
+              - CanvasPilot-ThemeResources-ShipIconLicense
+            tests:
+              - windows@ThirdPartyNotices_Published
+
           - id: CanvasPilot-AppShell-DrawingKnowledgeMenu
             title: >-
               The AppShell subsystem shall let the user open the browser of the drawing knowledge from the Help menu of the

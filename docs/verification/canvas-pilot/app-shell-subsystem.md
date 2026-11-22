@@ -55,6 +55,8 @@ services, or display are required.
 - Disposing the composition disposes the copilot and its factory once, and the settings are no longer looked at.
 - A stock window and the text on it take the pane surface and the primary text color of the theme variant that is
   asked for, and the system accent is the brand accent, in the dark and in the light variant.
+- An icon in a stock button is 16 by 16 and has the primary text color of the theme variant that is asked for.
+- The published folder holds the notice of the third-party icons (checked in the build of the installer).
 
 ### Test Scenarios
 
@@ -161,6 +163,15 @@ the server was not asked again. This scenario is tested by
 dark and in the light variant (a headless UI test in `AppShellThemeTests.cs`); its background is the pane surface of the
 variant, the text is the primary text color, the system accent is the brand accent, and the two variants differ. This
 scenario is tested by `AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants`.
+
+**AppShellSubsystem_Icons_IconInButtonTakesThePrimaryTextColorOfTheVariant**: A stock button holds an icon of class
+`icon` in a window in the dark and in the light variant (a headless UI test in `AppShellThemeTests.cs`); the icon is 16
+by 16 and its foreground is the primary text color of the variant. This scenario is tested by
+`AppShellSubsystem_Icons_IconInButtonTakesThePrimaryTextColorOfTheVariant`.
+
+**ThirdPartyNotices_Published**: The notice of the third-party icons is in the published folder, which the installer
+takes whole; it is checked by FileAssert in the build of the installer and is described in the system verification
+document. This scenario is tested by `ThirdPartyNotices_Published`, which is run in CI only.
 
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler
 is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_Throw`.

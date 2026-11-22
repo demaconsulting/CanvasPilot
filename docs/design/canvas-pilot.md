@@ -353,9 +353,9 @@ settings: it runs the File, Edit, Image, Tools, and Help commands and shows its 
 the window implements. The Edit commands, Undo and Redo, act on the part of the window that has the focus (the message
 editor), and the shell starts and stops the chat panel's dictation while the talk key (F8) is held. `ProjectWorkspace`
 holds the project explorer, the preview pane, and, while a project is open, the chat column, and `AboutDialog`
-identifies the application, and `ThemeResources` holds the design tokens of the dark and the light theme from which
-every view takes its colors, spacing, and type. At startup the application builds all units in one place,
-`ApplicationComposition`, which system tests also use without a window.
+identifies the application, and `ThemeResources` holds the design tokens of the dark and the light theme and its line
+icons from which every view takes its colors, spacing, type, and icons. At startup the application builds all units in
+one place, `ApplicationComposition`, which system tests also use without a window.
 
 `AudioDeviceService` is the only item that uses the audio system and `SpeechModelService` the only item that uses
 the speech model catalog and its model store, both through the DemaConsulting.Speech library; each returns a machine

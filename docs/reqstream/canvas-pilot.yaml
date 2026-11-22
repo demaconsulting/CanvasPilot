@@ -430,8 +430,8 @@ sections:
 
       - id: CanvasPilot-System-ThemedInterface
         title: >-
-          The application shall present its windows in a dark and a light theme, with one accent color and text that
-          is easy to read in both.
+          The application shall present its windows in a dark and a light theme, with one accent color, line icons that
+          follow the text color, and text that is easy to read in both.
         tags: [system]
         justification: |
           People use the application for long stretches in rooms of every brightness. A dark and a light look that
@@ -439,8 +439,23 @@ sections:
           accessible to people with low vision.
         children:
           - CanvasPilot-AppShell-ProvideThemes
+          - CanvasPilot-AppShell-ProvideIcons
         tests:
           - CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight
+      - id: CanvasPilot-System-ShipThirdPartyNotices
+        title: >-
+          The installed application shall carry the license notices of the third-party material that is part of it but
+          is not a library that the build restores.
+        tags: [system]
+        justification: |
+          Material of other parties, such as the icons of the windows, is used under licenses that require the notice to
+          go with every copy. Delivering the notice in the folder of the program meets that and lets the user see what
+          the application contains.
+        children:
+          - CanvasPilot-AppShell-ShipThirdPartyNotices
+        tests:
+          - windows@ThirdPartyNotices_Published
+
       - id: CanvasPilot-System-WindowsInstaller
         title: >-
           The application shall be delivered for 64-bit Windows as one self-contained Windows Installer (MSI)

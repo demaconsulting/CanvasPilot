@@ -46,3 +46,27 @@ sections:
                   application is open, and expects what is on the screen to follow at once.
                 tests:
                   - ThemeResources_DynamicResource_FollowsVariantSwitch
+
+              - id: CanvasPilot-ThemeResources-ProvideIcons
+                title: >-
+                  The ThemeResources shall provide the line icons that the views need, drawn 16 by 16 in the foreground
+                  color of the control that holds them, so that an icon follows the color and the theme of its button
+                  without a picture for each color.
+                justification: |
+                  Icons let a command take little room and be found at a glance. An icon that takes the color of its
+                  button stays readable in the dark and the light theme, on hover, and when the button is disabled,
+                  which a fixed picture cannot do.
+                tests:
+                  - ThemeResources_Icons_EveryIconResolvesToGeometryOnItsGrid
+                  - ThemeResources_Icons_PathIconIsDrawnInTheForegroundOfItsButton
+
+              - id: CanvasPilot-ThemeResources-ShipIconLicense
+                title: >-
+                  The ThemeResources shall ship the license notice of the third-party icons it contains with the
+                  installed application.
+                justification: |
+                  The icons are the work of another party who allows their use on condition that the copyright and
+                  license notice goes with every copy. The installed application is such a copy, so the notice must be
+                  in the folder of the program, which a test of the published folder and of the installer checks.
+                tests:
+                  - windows@ThirdPartyNotices_Published
