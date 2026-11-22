@@ -2,13 +2,15 @@
 
 ### Verification Approach
 
-The `AppShell` subsystem is verified by integration tests defined in `AppShellSubsystemTests.cs`. The tests build
-the application with the real `ApplicationComposition` over a real `ProjectService`, `RecentProjects`,
-`SettingsService`, `RollingFileLogger`, and `ProjectExplorerViewModel` on temporary folders, and drive the real
-`MainWindowShell` and `ProjectWorkspaceViewModel` commands. The only substitutes are a hand-written
-`FakeDialogService`, which plays the user at each dialog because a real window and platform pickers are not part
-of these tests, and `FakeRefreshScheduler`, so no test waits for a delay. The views themselves are verified by the
-headless UI tests described in the unit verification documents.
+The `AppShell` subsystem is verified by integration tests defined in `AppShellSubsystemTests.cs`. The tests build the
+application with the real `ApplicationComposition` over a real `ProjectService`, `RecentProjects`, `SettingsService`,
+`RollingFileLogger`, and `ProjectExplorerViewModel` on temporary folders, and drive the real `MainWindowShell` and
+`ProjectWorkspaceViewModel` commands. The only substitutes are a hand-written `FakeDialogService`, which plays the user
+at each dialog because a real window and platform pickers are not part of these tests, and `FakeRefreshScheduler`, so no
+test waits for a delay. The tests of the AI copilot also use a scripted chat model, a stand-in Ollama probe, and the
+processes, files, and environment of a fake machine, so that nothing of the computer of the person who runs them is
+started or read. The views themselves are verified by the headless UI tests described in the unit verification
+documents.
 
 ### Test Environment
 
@@ -44,6 +46,13 @@ services, or display are required.
 - Check Against Style on the composed shell checks the picture that is shown against the kit of the project, shows the
   result among the notes of the preview with the list open, tells the user when the project has no style, and the notes
   are gone when another picture is drawn.
+- A composition given the folder for the local data builds the AI copilot and gives the AI Provider page a Check
+  connection that asks the copilot's readiness check (over a stand-in Ollama server and a fake machine); a composition
+  without the folder has no copilot and no check.
+- The chat panel's request for the settings opens the settings dialog of the shell; a change of the AI provider settings
+  makes the panel check the provider again (the banner follows), and a change of other settings does not.
+- A file that the copilot writes while it answers is listed and selected in the explorer, and the preview draws it.
+- Disposing the composition disposes the copilot and its factory once, and the settings are no longer looked at.
 
 ### Test Scenarios
 
@@ -121,6 +130,30 @@ Kits command of a composed shell is usable, gives the dialog service one window 
 the program, and a kit that is made in that window is in the folder of the user of the composition and was offered to
 the editor. This scenario is tested by
 AppShellSubsystem_StyleKits_ComposedShell_ShowsTheWindowOnTheCatalogOfTheApplication.
+
+**AppShellSubsystem_ComposeApplication_CopilotIsBuiltFromItsFoldersAndFeedsTheSettingsPage**: A composition without the
+folder for the local data has no copilot and an AI Provider page without a connection check. A composition with the
+folder, over a stand-in Ollama server that has the model, has an `AgentService`, and on its page, after Ollama and the
+model are chosen, Check connection finds the provider usable by asking the server once at the address of the page;
+no agent was made. This scenario is tested by
+`AppShellSubsystem_ComposeApplication_CopilotIsBuiltFromItsFoldersAndFeedsTheSettingsPage`.
+
+**AppShellSubsystem_ComposeApplication_CopilotAsksForSettingsAndIsCheckedAgainWhenTheyChange**: The settings choose
+GitHub Copilot on a machine without a sign-in and the panel shows the sign-in sentence; the panel asks for the
+settings and the settings dialog is opened once; a change of the recent projects asks nothing of the server; a change
+to Ollama with a model of the server makes the panel check again and the banner goes away. This scenario is tested by
+`AppShellSubsystem_ComposeApplication_CopilotAsksForSettingsAndIsCheckedAgainWhenTheyChange`.
+
+**AppShellSubsystem_ComposeApplication_CopilotWritesFile_ExplorerSelectsItAndPreviewDrawsIt**: A scripted model says a
+word, writes `box.svg` with the project tool, and says that it is drawn. After the message is sent the file has the
+drawing, the explorer selects it, the preview shows a picture of 40 by 20, and the transcript holds the message, the
+words, the tool row, and the last words. This scenario is tested by
+`AppShellSubsystem_ComposeApplication_CopilotWritesFile_ExplorerSelectsItAndPreviewDrawsIt`.
+
+**AppShellSubsystem_ComposeApplication_DisposeStopsTheCopilotAndTheWiring**: After the panel checked the provider the
+composition is disposed twice and the AI provider settings are changed; the factory of the agents was disposed once and
+the server was not asked again. This scenario is tested by
+`AppShellSubsystem_ComposeApplication_DisposeStopsTheCopilotAndTheWiring`.
 
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler
 is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_Throw`.

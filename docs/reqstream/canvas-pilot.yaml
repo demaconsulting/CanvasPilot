@@ -64,22 +64,25 @@ sections:
 
       - id: CanvasPilot-System-ConfigureAiProvider
         title: >-
-          The application shall let the user choose and store which AI provider and model it uses,
-          with unrestricted agent tools off unless the user opts in, a context window of 32768 tokens for settings that
-          do not state one, and the context window that the user stored kept as it is.
+          The application shall let the user choose and store which AI provider and model it uses, with a context window
+          of 32768 tokens for settings that do not state one and the context window that the user stored kept as it is,
+          warn about a small context window, show the settings that the AI library cannot act on yet (the reasoning level)
+          as not available and not offer the unrestricted agent tools, and let the user check the connection to the
+          provider before saving.
         tags: [system]
         justification: |
           The application's AI assistance can use different providers, and the choice, with its
           model and limits, belongs to the user. Storing the choices lets them be configured before
-          the assistant is used, and the safe default for unrestricted tools protects the user's files.
-          Drawings with pictures and tools need a large context window, so a new installation starts with 32768 tokens;
-          a smaller value that the user chose, or that an earlier build stored, is a deliberate choice and is not
-          replaced.
+          the assistant is used, and a connection check shows at the dialog whether the choice works. Drawings with
+          pictures and tools need a large context window, so a new installation starts with 32768 tokens; a smaller
+          value that the user chose, or that an earlier build stored, is a deliberate choice and is not replaced. A
+          choice that nothing acts on must not look like one that does, so it is shown as unavailable or not at all.
         children:
           - CanvasPilot-Settings-ConfigureAiProvider
         tests:
           - CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn
           - CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue
+          - CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach
 
       - id: CanvasPilot-System-ConfigureSpeech
         title: >-
@@ -482,6 +485,7 @@ sections:
           - CanvasPilot-Agent-MakeTheAgentOfTheProvider
           - CanvasPilot-Agent-ConverseInProjectConversations
           - CanvasPilot-Chat-ShowCopilotConversation
+          - CanvasPilot-AppShell-ComposeAiCopilot
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
           - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces
@@ -495,7 +499,8 @@ sections:
           - CanvasPilot-OTS-OllamaSharp-ReportMissingModel
           - CanvasPilot-OTS-OllamaSharp-StreamTextAndToolCalls
           - CanvasPilot-OTS-OllamaSharp-SendContextLength
-
+        tests:
+          - CanvasPilot_ConverseWithCopilot_ScriptedModel_StreamsAnswerWritesDrawingAndExplorerShowsIt
       - id: CanvasPilot-System-KeepAgentDataOutsideProject
         title: >-
           The application shall never write the data of the AI copilot into the project folder: the Copilot runtime keeps
@@ -518,6 +523,7 @@ sections:
           - CanvasPilot-Chat-KeepHistoryOutsideProject
         tests:
           - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+          - CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt
 
       - id: CanvasPilot-System-KeepChatHistoryOnThisComputer
         title: >-
@@ -538,6 +544,7 @@ sections:
           - CanvasPilot-Chat-ClearChatHistory
         tests:
           - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+          - CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt
 
       - id: CanvasPilot-System-ReportProviderReadiness
         title: >-
@@ -560,6 +567,8 @@ sections:
           - CanvasPilot-Chat-ShowCopilotReadiness
         tests:
           - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
+          - CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt
+          - CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach
 
       - id: CanvasPilot-System-StartApplication
         title: >-

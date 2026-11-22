@@ -843,14 +843,17 @@ source (which deletes the files of earlier drags), the preview pane, the workspa
 services with the dictation service, the shell, the mark registry, the mark image composer and payload builder, the
 composer (with its attachment store and intake), the annotation overlay, and the chat panel, which it places in the
 workspace and makes the target of the talk key. It also builds the style units: the catalog of style kits, the selection
-of the project, the list for the status bar, the command of the Image menu, the two tools of an assistant (nothing
-calls them yet), and the source of export sizes that it gives the exporter; the kits are read on a worker, so the start
-never waits for them. It also gives the shell a function that gives the catalog of the drawing
-knowledge, which reads the cards the first time Help > Drawing Knowledge is used and not at startup. The
-`MainWindowView` is created over the shell and gives itself to the shell as the dialog service. From then on the user's
-menu choices become shell commands, which call the `Project` and `Settings` subsystems, show dialogs through the dialog
-service, and, when the open project changes, update the window title and open or close the project in the workspace. On
-exit `App` disposes the composition.
+of the project, the list for the status bar, the command of the Image menu, the two tools of an assistant (which it
+gives to the registry of the tools of the copilot), and the source of export sizes that it gives the exporter; the kits
+are read on a worker, so the start never waits for them. When it is given the folder for the local data of the
+application (the running application gives the local application data folder) it builds the AI copilot and the chat
+history over it, gives them to the chat panel, and joins the copilot to the explorer, the settings, and the shell as the
+`AppShell` design describes. It also gives the shell a function that gives the catalog of the drawing knowledge, which
+reads the cards the first time Help > Drawing Knowledge is used and not at startup. The `MainWindowView` is created over
+the shell and gives itself to the shell as the dialog service. From then on the user's menu choices become shell
+commands, which call the `Project` and `Settings` subsystems, show dialogs through the dialog service, and, when the
+open project changes, update the window title and open or close the project in the workspace. On exit `App` disposes the
+composition.
 
 When the user selects a file in `ProjectExplorer`, `PreviewPane` cancels any render that is running and asks
 `ImageRenderService` to draw the file in the background; the result, a picture with notes or an error with its code and

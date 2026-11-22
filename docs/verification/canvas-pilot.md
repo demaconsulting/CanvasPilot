@@ -39,8 +39,18 @@ services, or display is required.
   name inside the folder is accepted.
 - Settings saved by one run are restored by the next run, and a damaged settings file yields default
   settings, a kept-aside copy of the file, and a log entry rather than a failure.
-- AI provider choices made in the settings dialog are stored and restored, and unrestricted agent tools
-  remain off unless the user opts in.
+- AI provider choices made in the settings dialog are stored and restored; the unrestricted agent tools are not offered,
+  the context window of a new installation is 32768 and a stored one is kept, and Check connection on the page shows one
+  sentence from the readiness check of the copilot, for Ollama (over a stand-in server) and for GitHub Copilot (over a
+  fake machine), without saving anything.
+- A message sent in the composed application gets a streamed answer from the configured provider (a scripted Ollama
+  model) with the tool row, the drawing that the copilot wrote exists in the project, the explorer selects it and the
+  preview draws it, and the copilot was given only the tools of the drawing knowledge, the style, and the project.
+- The words of the conversation are kept below the history folder that the composition was given and never in the
+  project, are shown again as text when the application starts in the same project, and are deleted by Clear chat
+  history.
+- With GitHub Copilot configured the banner of the chat panel and the conversation say that this build cannot start it,
+  and no answer is made.
 - Speech devices, models, and a model setting chosen in the Speech page of the settings dialog are stored by device
   name and model identifier and restored by the next run, using substitute audio and model services.
 - A project created in a folder is reopened from the recent projects list, and a damaged project file is
@@ -478,6 +488,38 @@ AgentKit update. A settings file that holds an Ollama choice with a window of 8,
 service; against a scripted server that has the model, the result is the warning status, which can run a turn, with the
 sentence that tells the user to raise the window in Settings to the recommended 32,768. This scenario is tested by
 `CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach`.
+
+**CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt**: The application is
+composed over the real factory of the providers on the fake development machine, which has the installed CLI and a token
+variable, with the default settings (GitHub Copilot). The panel checks the provider and the banner says that Copilot
+support needs an AgentKit update. A message is sent; the conversation ends with a notice that holds that sentence, has
+no answer of the copilot, and the only processes that were run are the version checks of the installed CLI. This
+scenario is tested by `CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt`.
+
+**CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach**: The
+settings dialog of the composed application is opened and the AI Provider page chooses Ollama and a model that the
+stand-in server has: Check connection says that Ollama is running with the model; with the server not answering it says
+that Ollama did not answer. With GitHub Copilot chosen on the fake machine it names `gh auth login`; with a token
+variable it says that Copilot support needs an AgentKit update; with a path of a file that does not exist it names the
+path. The stored settings are the same afterwards. This scenario is tested by
+`CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach`.
+
+**CanvasPilot_ConverseWithCopilot_ScriptedModel_StreamsAnswerWritesDrawingAndExplorerShowsIt**: The application is
+composed with the copilot over a scripted model that says a word, writes `box.svg` with the project tool, and says that
+it is drawn; Ollama is chosen and a project is created. A message is sent; the conversation holds the message, the
+words, a tool row that says the file was created, and the last words; the file exists, the explorer selects it, and the
+preview shows its picture of 40 by 20. The agent was made with the tools `canvasnet_help`, `style_get`, `style_check`,
+`project_write`, and `render_image`, and with no tool of another family. This scenario is tested by
+`CanvasPilot_ConverseWithCopilot_ScriptedModel_StreamsAnswerWritesDrawingAndExplorerShowsIt`.
+
+**CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt**: After the
+turn of the scenario above the history folder of the project (its key from the project file) is below
+`CanvasPilot\history` of the local data root that the composition was given and holds `history.json` and `project.json`;
+the project holds only its project file, its empty data folder, and the drawing, and no file with "history" in its name.
+The composition is disposed and made again over the same folders and the project is opened: the conversation is shown as
+restored text rows and none is a message of this session. Clear chat history removes the folder and the restored rows.
+This scenario is tested by
+`CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt`.
 
 **CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach**: A project
 is created by the project service, and the tools of the copilot are built for its folder over the real drawing knowledge
