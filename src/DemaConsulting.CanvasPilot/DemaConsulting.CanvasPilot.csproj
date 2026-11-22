@@ -43,6 +43,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The role prompt of the AI copilot, the fixed part of its instructions. -->
+    <EmbeddedResource Include="AgentSubsystem\Instructions\RolePrompt.md" WithCulture="false"
+                      LogicalName="DemaConsulting.CanvasPilot.Agent.RolePrompt.md" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The style kits that come with the program, as loose files so that an assistant can be given real paths of the
          example pictures. They are copied beside the executable in the folder StyleKits (build output and publish
          output), which a single-file publish leaves as loose files. -->

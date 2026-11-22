@@ -134,9 +134,13 @@ public static class StyleGuidance
     /// </summary>
     /// <param name="entry">The kit with the place it was found in; the place is named in the header and the kit folder
     ///     resolves the paths of the examples.</param>
+    /// <param name="includeExamples">
+    ///     <see langword="true" /> to end the block with the example images of the kit; <see langword="false" /> to leave
+    ///     them out, for a reader with little room, which can still ask for them with the section <c>examples</c>.
+    /// </param>
     /// <returns>The block, in Markdown, ending with a line that says so when parts were left out.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="entry" /> is <see langword="null" />.</exception>
-    public static string Build(StyleKitEntry entry)
+    public static string Build(StyleKitEntry entry, bool includeExamples = true)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
@@ -144,7 +148,8 @@ public static class StyleGuidance
         var text = string.Empty;
         for (var step = 0; step < Steps.Length; step++)
         {
-            text = Compose(entry, Steps[step], step > 0);
+            var limits = includeExamples ? Steps[step] : Steps[step] with { Examples = 0 };
+            text = Compose(entry, limits, step > 0);
             if (text.Length <= BudgetCharacters)
             {
                 return text;
@@ -410,12 +415,12 @@ public static class StyleGuidance
     ///     Writes the example images as absolute paths of real files, with their captions.
     /// </summary>
     /// <param name="entry">The kit and its folder.</param>
-    /// <param name="limits">How many examples to write.</param>
-    /// <returns>The lines, or <see langword="null" /> when the kit has no examples.</returns>
+    /// <param name="limits">How many examples to write; none when it is zero.</param>
+    /// <returns>The lines, or <see langword="null" /> when the kit has no examples or none are asked for.</returns>
     private static string? ExamplesText(StyleKitEntry entry, Limits limits)
     {
         var examples = entry.Kit.Examples;
-        if (examples.Count == 0)
+        if (examples.Count == 0 || limits.Examples == 0)
         {
             return null;
         }
