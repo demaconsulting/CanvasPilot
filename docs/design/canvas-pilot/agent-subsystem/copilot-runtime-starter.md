@@ -74,6 +74,13 @@ the key (CLI path, data folder):
   remembered.
 - `DisposeAsync` stops the running runtime once (a second call does nothing), and a start after it throws
   `ObjectDisposedException`.
+- **Known limit.** A request with another key stops the runtime that a running chat turn may still use, and that turn
+  then ends with the error for a stopped runtime (`ObjectDisposedException`, shown as the sentence for a stopped
+  runtime). The trigger is another Copilot CLI path typed on the AI Provider page (the listing, **Refresh models**, or
+  **Check connection**, which use the entries as typed) while a turn runs. After Cancel, the runtime stays on the path
+  that was typed until the next agent request asks for the saved path and restarts it. There is no reference counting,
+  by decision: one data folder allows one runtime, the trigger needs a deliberate action in a modal dialog during a
+  turn, and the failure is clear and recovers by sending the message again.
 
 The sources that the starter hands out belong to it. A receiver (the factory, the readiness check) never disposes one,
 and a source that was stopped because the runtime was replaced or stopped throws `ObjectDisposedException` when it is
@@ -106,7 +113,11 @@ the AI library (see the design of the AgentKit item): to be able to use the sess
    `NotSupportedException`, return the result of the next section. Anything else, including the cancellation, goes on
    to the caller. The semaphore is always released.
 
-**DisposeAsync()**: Waits for the semaphore, marks the starter disposed once, and stops the running runtime.
+**DisposeAsync()**: Waits for the semaphore, marks the starter disposed once, and stops the running runtime. A start
+that hangs holds the semaphore, so the wait lasts as long as the start. The application composition owns the starter
+and, when the application closes, waits at most ten seconds for `DisposeAsync` (a bounded wait, accepted by decision:
+the start gate is released only by the start itself, and a token would change the contract of the starter); after that
+the application closes anyway.
 
 #### Error Handling
 

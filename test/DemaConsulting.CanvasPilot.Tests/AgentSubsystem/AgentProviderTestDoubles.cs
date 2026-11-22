@@ -195,6 +195,18 @@ internal sealed class ScriptedAgentFactory : IAgentFactory
     /// <summary>The chat client that every agent talks to.</summary>
     private readonly IChatClient _client;
 
+    /// <summary>The lock that guards the records, because requests may arrive from several threads.</summary>
+    private readonly Lock _lock = new();
+
+    /// <summary>The requests that were made.</summary>
+    private readonly List<AgentCreationRequest> _requests = [];
+
+    /// <summary>The sessions that were deleted.</summary>
+    private readonly List<AgentSession> _deletedSessions = [];
+
+    /// <summary>The number of times that the factory was disposed.</summary>
+    private int _disposeCount;
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="ScriptedAgentFactory" /> class.
     /// </summary>
@@ -205,19 +217,37 @@ internal sealed class ScriptedAgentFactory : IAgentFactory
     }
 
     /// <summary>
-    ///     Gets the requests that were made, in order.
+    ///     Gets a snapshot of the requests that were made, in order.
     /// </summary>
-    internal List<AgentCreationRequest> Requests { get; } = [];
+    internal List<AgentCreationRequest> Requests
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _requests];
+            }
+        }
+    }
 
     /// <summary>
-    ///     Gets the sessions that were deleted, in order.
+    ///     Gets a snapshot of the sessions that were deleted, in order.
     /// </summary>
-    internal List<AgentSession> DeletedSessions { get; } = [];
+    internal List<AgentSession> DeletedSessions
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _deletedSessions];
+            }
+        }
+    }
 
     /// <summary>
     ///     Gets the number of times that the factory was disposed.
     /// </summary>
-    internal int DisposeCount { get; private set; }
+    internal int DisposeCount => Volatile.Read(ref _disposeCount);
 
     /// <summary>
     ///     Gets or sets the failure that every request gets instead of an agent, or <see langword="null" /> for agents.
@@ -227,7 +257,11 @@ internal sealed class ScriptedAgentFactory : IAgentFactory
     /// <inheritdoc />
     public Task<AgentCreationResult> CreateAsync(AgentCreationRequest request, CancellationToken cancellationToken = default)
     {
-        Requests.Add(request);
+        lock (_lock)
+        {
+            _requests.Add(request);
+        }
+
         if (Failure is not null)
         {
             return Task.FromResult(AgentCreationResult.Unavailable(Failure));
@@ -240,14 +274,18 @@ internal sealed class ScriptedAgentFactory : IAgentFactory
     /// <inheritdoc />
     public Task DeleteSessionAsync(AgentSession session, CancellationToken cancellationToken = default)
     {
-        DeletedSessions.Add(session);
+        lock (_lock)
+        {
+            _deletedSessions.Add(session);
+        }
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
-        DisposeCount++;
+        Interlocked.Increment(ref _disposeCount);
         return ValueTask.CompletedTask;
     }
 }
@@ -260,6 +298,18 @@ internal sealed class FakeCopilotAgentSource : ICopilotAgentSource
 {
     /// <summary>The chat client that the agents talk to.</summary>
     private readonly IChatClient _client;
+
+    /// <summary>The lock that guards the records, because requests may arrive from several threads.</summary>
+    private readonly Lock _lock = new();
+
+    /// <summary>The requests for agents.</summary>
+    private readonly List<CopilotAgentRequest> _requests = [];
+
+    /// <summary>The sessions that were deleted.</summary>
+    private readonly List<string> _deletedSessions = [];
+
+    /// <summary>The number of times that the source was disposed.</summary>
+    private int _disposeCount;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="FakeCopilotAgentSource" /> class.
@@ -281,38 +331,64 @@ internal sealed class FakeCopilotAgentSource : ICopilotAgentSource
     public IModelCatalog Models => Catalog;
 
     /// <summary>
-    ///     Gets the requests for agents, in order.
+    ///     Gets a snapshot of the requests for agents, in order.
     /// </summary>
-    internal List<CopilotAgentRequest> Requests { get; } = [];
+    internal List<CopilotAgentRequest> Requests
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _requests];
+            }
+        }
+    }
 
     /// <summary>
-    ///     Gets the sessions that were deleted, in order.
+    ///     Gets a snapshot of the sessions that were deleted, in order.
     /// </summary>
-    internal List<string> DeletedSessions { get; } = [];
+    internal List<string> DeletedSessions
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _deletedSessions];
+            }
+        }
+    }
 
     /// <summary>
     ///     Gets the number of times that the source was disposed.
     /// </summary>
-    internal int DisposeCount { get; private set; }
+    internal int DisposeCount => Volatile.Read(ref _disposeCount);
 
     /// <inheritdoc />
     public AIAgent CreateAgent(CopilotAgentRequest request)
     {
-        Requests.Add(request);
+        lock (_lock)
+        {
+            _requests.Add(request);
+        }
+
         return ChatClientAgentFactory.Create(_client, [.. request.Tools], request.Instructions, request.Name);
     }
 
     /// <inheritdoc />
     public Task DeleteSessionAsync(string sessionId, CancellationToken cancellationToken = default)
     {
-        DeletedSessions.Add(sessionId);
+        lock (_lock)
+        {
+            _deletedSessions.Add(sessionId);
+        }
+
         return Task.CompletedTask;
     }
 
     /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
-        DisposeCount++;
+        Interlocked.Increment(ref _disposeCount);
         return ValueTask.CompletedTask;
     }
 }

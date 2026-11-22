@@ -32,6 +32,12 @@ internal sealed class FakeCopilotRuntimeStarter : ICopilotRuntimeStarter
     /// <summary>The answer to give.</summary>
     private readonly CopilotStartResult _result;
 
+    /// <summary>The lock that guards the records, because requests may arrive from several threads.</summary>
+    private readonly Lock _lock = new();
+
+    /// <summary>The requests that were made.</summary>
+    private readonly List<CopilotStartRequest> _requests = [];
+
     /// <summary>
     ///     Initializes a new instance of the <see cref="FakeCopilotRuntimeStarter" /> class.
     /// </summary>
@@ -42,15 +48,28 @@ internal sealed class FakeCopilotRuntimeStarter : ICopilotRuntimeStarter
     }
 
     /// <summary>
-    ///     Gets the requests that were made, in order.
+    ///     Gets a snapshot of the requests that were made, in order.
     /// </summary>
-    internal List<CopilotStartRequest> Requests { get; } = [];
+    internal List<CopilotStartRequest> Requests
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return [.. _requests];
+            }
+        }
+    }
 
     /// <inheritdoc />
     public Task<CopilotStartResult> StartAsync(CopilotStartRequest request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        Requests.Add(request);
+        lock (_lock)
+        {
+            _requests.Add(request);
+        }
+
         return Task.FromResult(_result);
     }
 }

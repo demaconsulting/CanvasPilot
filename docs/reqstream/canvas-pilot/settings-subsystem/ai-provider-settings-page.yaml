@@ -119,7 +119,8 @@ sections:
                   would leave the user wondering where it went, and refusing it would stop a user who knows better, so all
                   models are listed and the page warns. The typed name stays so that a model that is not listed (just
                   pulled, or an account that the list does not show) can still be used. An answer for another provider or
-                  address must never replace the list of the provider that is selected now.
+                  address must never replace the list of the provider that is selected now. Entries that are not valid
+                  end a listing that runs and take away its loading text, while the list that is shown stays.
                 tests:
                   - AiProviderSettingsPageViewModel_Load_WithModelSource_ListsTheModelsAndChoosesTheStoredOne
                   - AiProviderSettingsPageViewModel_ModelWithoutCapabilities_IsListedWithNoteAndWarning
@@ -128,6 +129,7 @@ sections:
                   - AiProviderSettingsPageViewModel_StaleAnswer_IsDroppedWhenTheProviderChanged
                   - AiProviderSettingsPageViewModel_ProviderChange_ClearsTheModelAndAsksTheNewProvider
                   - AiProviderSettingsPageViewModel_EditedAddressOrPath_ListsAgainOnlyForTheSelectedProvider
+                  - AiProviderSettingsPageViewModel_InvalidEntriesDuringListing_ClearTheLoadingText
                   - AiProviderSettingsPageViewModel_NoSourceOrClosed_ShowsNoList
                   - AiProviderSettingsPageView_ModelList_ShowsCapabilitiesWarningsAndReasoningLevels
 

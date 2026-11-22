@@ -618,10 +618,16 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
         _modelCancellation?.Cancel();
         var version = ++_modelVersion;
 
-        // Entries that are not valid cannot be asked about; the list that is shown stays
+        // Entries that are not valid cannot be asked about; the list that is shown stays, and so does an answer that
+        // belongs to it, but the loading text of the listing that was just ended must not stay
         if (!IsValid)
         {
             IsLoadingModels = false;
+            if (ModelListMessage == LoadingModelsText)
+            {
+                ModelListMessage = string.Empty;
+            }
+
             return _modelLoad = Task.CompletedTask;
         }
 

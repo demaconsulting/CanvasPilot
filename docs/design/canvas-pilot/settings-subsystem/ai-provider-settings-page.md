@@ -45,7 +45,10 @@ loaded, when the user chooses another provider, when the Ollama address is edite
 Copilot path is edited while GitHub Copilot is selected (these two after a pause of 600 ms, and not at all while an
 entry is invalid), and when the user chooses Refresh models (which asks the provider again and does not use what it said
 a short while ago). Each listing ends the one that runs; the answer of a listing that the entries overtook, or that the
-closing of the page ended, is dropped. `ModelListMessage` says that the models are loading, or why there is no list (the
+closing of the page ended, is dropped. An entry that is not valid ends the listing that runs and clears its loading
+text; the list that is shown and any other message stay. The page lists with the entries as typed, not as saved, so a
+different Copilot path makes the shared starter stop the runtime that runs and start another (see the known limit in the
+design of `CopilotRuntimeStarter`). `ModelListMessage` says that the models are loading, or why there is no list (the
 sentence of the source) and is empty otherwise. `ModelListLoaded` is the task of the listing that was started last,
 which lets a caller or a test wait for the list. A source that throws becomes the sentence "The models could not be
 listed: ...".

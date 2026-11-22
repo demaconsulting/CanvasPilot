@@ -114,7 +114,9 @@ sign-in that the runtime uses and its limits are described in the design of the 
   calls when a conversation ends. The factory deletes only a Copilot session that has an id (the library gives it one
   when a run begins), through the last source that it got; a session of Ollama, a session without an id, and a session
   when no runtime was used are left alone, so the call is always safe. When the runtime was replaced or stopped, the
-  source throws `ObjectDisposedException`, which is tolerated, because the runtime took its sessions with it.
+  source throws `ObjectDisposedException`, which is tolerated, because the runtime took its sessions with it. A chat
+  turn that runs on a runtime that was replaced fails with the error for a stopped runtime (the known limit in the
+  design of `CopilotRuntimeStarter`).
 
 #### Logging
 

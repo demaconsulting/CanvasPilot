@@ -445,6 +445,10 @@ models**, which asks the provider again (for example after you pulled a model or
 the list of the provider you chose; if you choose the other provider, the model and the reasoning level start empty
 again.
 
+Do not change the Copilot CLI path in the settings while the copilot is answering. Listing the models, **Refresh
+models**, and **Check connection** with another path restart the Copilot runtime, which ends the answer that is
+running; send the message again. If you cancel the dialog, the next message uses the saved path.
+
 - **Every model is listed, with what it lacks.** An entry says in a few words when a model has no tool calling, no
   picture input, or is unavailable (for example "gpt-x - no pictures"). A model that the provider says cannot be used
   (switched off for your account, or an embedding model) is shown dimmed and cannot be chosen; the warning under the
@@ -1017,6 +1021,10 @@ connection**. `copilot update` alone may not change the version that runs.
 **The banner says the Copilot runtime could not be started.** Choose **Check connection** to try again. If it keeps
 failing, check that the Copilot CLI starts on its own, that the path in Settings (if you entered one) is the full path
 of the installed `copilot.exe`, and read the explanation that the banner gives.
+
+**The answer stops with a message that the Copilot runtime was stopped.** The Copilot CLI path in the settings was
+changed while the copilot was answering, which restarts the runtime. Send the message again, and change the path only
+while the copilot is idle.
 
 **The banner says the Copilot CLI path in Settings cannot be used.** A relative path or a `.cmd` or `.bat` file cannot
 be used. Enter the full path of the installed `copilot.exe`, or leave the field empty to search.

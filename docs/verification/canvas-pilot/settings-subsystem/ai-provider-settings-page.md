@@ -194,6 +194,11 @@ while GitHub Copilot is selected asks nothing; editing the Copilot path asks onc
 asks nothing; with Ollama selected, editing the address asks with the new address. This scenario is tested by
 `AiProviderSettingsPageViewModel_EditedAddressOrPath_ListsAgainOnlyForTheSelectedProvider`.
 
+**AiProviderSettingsPageViewModel_InvalidEntriesDuringListing_ClearTheLoadingText**: The answer for a valid Copilot path
+is held back and then the path becomes invalid; the loading state and the loading text are gone, the list stays, and
+letting the held answer go changes nothing. A failure sentence that was shown before an invalid entry stays. This
+scenario is tested by `AiProviderSettingsPageViewModel_InvalidEntriesDuringListing_ClearTheLoadingText`.
+
 **AiProviderSettingsPageViewModel_NoSourceOrClosed_ShowsNoList**: A page without a source has no list, no Refresh models
 command that can run, and no source; a page that is closed while its source holds the answer back shows no list and is
 not loading, and the token of the question was cancelled. This scenario is tested by

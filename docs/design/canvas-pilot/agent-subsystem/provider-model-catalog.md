@@ -55,7 +55,8 @@ its request with its own token. A test supplies a fake, or a handler for the rea
    `RefreshAsync` when `refresh` is set. A catalog that cannot be read (`InvalidOperationException`: the runtime is not
    connected or not signed in) gives the message of the library, and a runtime that was replaced meanwhile
    (`ObjectDisposedException`) gives "The Copilot runtime was stopped while the models were listed; choose Refresh
-   models."
+   models." Another path than the saved one replaces the shared runtime, which ends a chat turn that runs on it (the
+   known limit in the design of `CopilotRuntimeStarter`).
 2. *Ollama.* An address that is not a valid `http` or `https` address gives `InvalidEndpointMessage`. Otherwise the
    catalog of the server (`IOllamaModelCatalogs.For`) is listed with `IncludeUnusable` (after `RefreshAsync` when
    `refresh` is set) with a limit of 15 seconds linked to the token of the caller. A connection that is refused, a time

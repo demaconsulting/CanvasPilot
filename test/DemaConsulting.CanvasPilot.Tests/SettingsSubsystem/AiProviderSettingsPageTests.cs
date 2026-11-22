@@ -1044,6 +1044,54 @@ public sealed class AiProviderSettingsPageTests
     }
 
     /// <summary>
+    ///     Test that entries that stop being valid while the models are being listed end that listing and take away its
+    ///     loading text, and that an answer or a failure that was already shown stays with the list that stays.
+    /// </summary>
+    [Fact]
+    public async Task AiProviderSettingsPageViewModel_InvalidEntriesDuringListing_ClearTheLoadingText()
+    {
+        // Arrange: a loaded page on GitHub Copilot, and a source that holds the next answer back
+        var token = TestContext.Current.CancellationToken;
+        var source = new FakeModelSource { Models = [Model("alpha")] };
+        var page = await LoadedPage(source);
+        source.Gate = new TaskCompletionSource();
+
+        // Act: a valid path starts a listing, and then the path stops being valid
+        page.CopilotCliPath = @"C:\Tools\copilot.exe";
+        var loadingText = page.ModelListMessage;
+        var loading = page.IsLoadingModels;
+        page.CopilotCliPath = "bad|path\0";
+        var textAfterInvalid = page.ModelListMessage;
+        var loadingAfterInvalid = page.IsLoadingModels;
+        var hasMessageAfterInvalid = page.HasModelListMessage;
+
+        // The held-back listing was ended; letting it go changes nothing
+        source.Gate.SetResult();
+        await page.ModelListLoaded.WaitAsync(token);
+
+        // Assert
+        Assert.Equal(AiProviderSettingsPageViewModel.LoadingModelsText, loadingText);
+        Assert.True(loading);
+        Assert.Equal(string.Empty, textAfterInvalid);
+        Assert.False(loadingAfterInvalid);
+        Assert.False(hasMessageAfterInvalid);
+        Assert.Equal(string.Empty, page.ModelListMessage);
+        Assert.False(page.IsLoadingModels);
+        Assert.Equal(["", "alpha"], page.Models.Select(choice => choice.Id).ToArray());
+
+        // Act: a failure is shown for a valid path, and then the path stops being valid
+        var failing = new FakeModelSource { Failure = new InvalidOperationException("Offline.") };
+        var failed = await LoadedPage(failing);
+        var failure = failed.ModelListMessage;
+        failed.CopilotCliPath = "bad|path\0";
+
+        // Assert: the failure that belongs to the list that is shown stays
+        Assert.Contains("Offline.", failure);
+        Assert.Equal(failure, failed.ModelListMessage);
+        Assert.True(failed.HasModelListMessage);
+    }
+
+    /// <summary>
     ///     Test that a page without a model source offers no list and no Refresh models button, and that closing the page
     ///     ends a listing that still runs, so that its answer is not shown.
     /// </summary>
