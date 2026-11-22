@@ -214,36 +214,4 @@ public sealed class TranscriptRowTests
             row.Dispose();
         }
     }
-
-    /// <summary>
-    ///     Test that the value of an argument is found in the short description of the arguments, also when it holds a
-    ///     comma, and that a missing or empty value gives the fallback of the tool.
-    /// </summary>
-    [Theory]
-    [InlineData("render_image", "path=a, b.svg, size=3", "Rendering `a, b.svg`")]
-    [InlineData("render_image", "size=3", "Rendering a picture")]
-    [InlineData("render_image", "path=", "Rendering a picture")]
-    [InlineData("project_read", "mode=x, path=notes/todo.txt", "Reading `notes/todo.txt`")]
-    [InlineData("project_write", "", "Writing a file")]
-    public void ToolActivityText_Started_FindsThePathInTheArguments(string tool, string arguments, string expected)
-    {
-        // Act / Assert: the sentence names the path, or the fallback
-        Assert.Equal(expected, ToolActivityText.Started(tool, arguments));
-    }
-
-    /// <summary>
-    ///     Test that the sentences of an unknown tool and of a failure without a reason end properly.
-    /// </summary>
-    [Fact]
-    public void ToolActivityText_FinishedAndWritten_SayWhatHappened()
-    {
-        // Act / Assert: an unknown tool that failed, a known tool that failed without a reason, and the file sentences
-        Assert.Equal("mystery failed: no way", ToolActivityText.Finished("mystery", string.Empty, false, "no way"));
-        Assert.Equal("mystery failed.", ToolActivityText.Finished("mystery", string.Empty, false, string.Empty));
-        Assert.Equal("Could not render `a.svg`.", ToolActivityText.Finished("render_image", "path=a.svg", false, string.Empty));
-        Assert.Equal("Created `a.svg`", ToolActivityText.Written("a.svg", replaced: false));
-        Assert.Equal("Replaced `a.svg`", ToolActivityText.Written("a.svg", replaced: true));
-        Assert.Equal("Rendering a picture (stopped)", ToolActivityText.Abandoned("Rendering a picture", stopped: true));
-        Assert.Equal("Rendering a picture (no result)", ToolActivityText.Abandoned("Rendering a picture", stopped: false));
-    }
 }

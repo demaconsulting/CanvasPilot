@@ -22,6 +22,7 @@ using System.ComponentModel;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
@@ -628,6 +629,43 @@ public sealed class ChatTurnRunnerTests : IDisposable
         Assert.Equal(ChatTurnOutcome.Stopped, outcome);
         Assert.Equal(ChatTurnOutcome.Refused, after);
         Assert.Single(_agent.Requests);
+    }
+
+    /// <summary>
+    ///     Test that a failure that the copilot reports and an exception of the stream are logged as facts, the kind of the
+    ///     failure and the type of the exception, and that no text of the message, the answer, or the exception is logged.
+    /// </summary>
+    [Fact]
+    public async Task ChatTurnRunner_RunTurn_FailureAndException_LogFactsOnly()
+    {
+        // Arrange: a runner with a log in a folder of its own
+        var folder = Directory.CreateTempSubdirectory("canvaspilot-chat-log-").FullName;
+        try
+        {
+            var logger = new RollingFileLogger(folder);
+            using var runner = new ChatTurnRunner(_agent, _transcript, _clock, logger);
+
+            // Act: a turn that fails with a message and an answer in it, and a turn whose stream throws
+            var first = runner.RunTurnAsync(ChatTestMessages.SentText("secret question"));
+            _agent.Emit(
+                new AgentEvent.TextDelta("secret answer"),
+                new AgentEvent.Failed(AgentFailureKind.ConnectionLost, "secret failure text"));
+            await first.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            var second = runner.RunTurnAsync(ChatTestMessages.SentText("secret question"));
+            _agent.Fault(new InvalidOperationException("secret exception text"));
+            await second.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+            RollingFileLogger.Flush();
+            var log = await File.ReadAllTextAsync(logger.ActiveFilePath, TestContext.Current.CancellationToken);
+
+            // Assert: the log has the kind and the type, and none of the words
+            Assert.Contains("ConnectionLost", log, StringComparison.Ordinal);
+            Assert.Contains("InvalidOperationException", log, StringComparison.Ordinal);
+            Assert.DoesNotContain("secret", log, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(folder, true);
+        }
     }
 
     /// <summary>

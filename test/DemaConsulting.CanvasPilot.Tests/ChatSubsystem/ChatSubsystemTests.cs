@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
@@ -193,6 +194,129 @@ public sealed class ChatSubsystemTests : IDisposable
         Assert.Empty(panel.Transcript);
         Assert.Equal("see \uFFFC", composer.Document.FlatText);
         Assert.Contains("vanishing.txt", composer.StatusText);
+    }
+
+    /// <summary>
+    ///     Test that a message sent through the real composer is given to the copilot with its real payload, that the
+    ///     answer streams into rows after the entry of the message with a tool row that says the file was created, and that
+    ///     the composer cannot send while the turn runs, but can be written to, and sends again afterwards.
+    /// </summary>
+    [Fact]
+    public async Task ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile()
+    {
+        // Arrange: the real units, a copilot that answers when the test says so, and the wiring that the panel will have
+        var token = TestContext.Current.CancellationToken;
+        var marks = new MarkRegistry();
+        var markImages = new MarkImageComposer(_renderer);
+        using var composer = new ComposerViewModel(new PayloadBuilder(markImages), marks, new FakeDictationService());
+        using var annotation = new AnnotationOverlayViewModel(marks, new FakeRenderedImageSource(), _ => { });
+        using var panel = new ChatPanelViewModel(composer, marks, annotation, markImages);
+        using var agent = new ControlledAgentService();
+        var copilotRows = new List<TranscriptRowViewModel>();
+        using var runner = new ChatTurnRunner(agent, copilotRows, new ManualTimeProvider());
+        runner.BusyChanged += (_, _) =>
+        {
+            if (runner.IsBusy)
+            {
+                composer.BlockSending(ComposerViewModel.CopilotWorkingText);
+            }
+            else
+            {
+                composer.UnblockSending();
+            }
+        };
+        Task<ChatTurnOutcome>? turn = null;
+        composer.MessageSent += (_, e) => turn = runner.RunTurnAsync(e.Message);
+        composer.SetProject(_project);
+        composer.InsertTyped("Draw a box");
+
+        // Act: send, and let the copilot write a file and answer
+        await panel.SendCommand.ExecuteAsync(null);
+        var duringTurn = (composer.CanSend, runner.IsBusy);
+        composer.InsertTyped("And a circle");
+        var canSendWhileBusy = composer.CanSend;
+        agent.Emit(
+            new AgentEvent.TextDelta("I will draw it."),
+            new AgentEvent.ToolStarted("c1", "project_write", "path=box.svg, content=(80 characters)"),
+            new AgentEvent.FileWritten("box.svg", false),
+            new AgentEvent.ToolFinished("c1", "project_write", true, "File 'box.svg' created.", false),
+            new AgentEvent.TextDelta("Done."),
+            new AgentEvent.Completed());
+        var outcome = await turn!.WaitAsync(TimeSpan.FromSeconds(10), token);
+
+        // Assert: the copilot got the payload of the message, and the rows follow the entry in the order of events
+        var payload = Assert.IsType<MessagePayload>(Assert.Single(panel.Transcript).Message.Payload);
+        Assert.Same(payload, Assert.Single(agent.Requests).Payload);
+        Assert.Equal(ChatTurnOutcome.Completed, outcome);
+        Assert.Equal([TranscriptRowKind.Assistant, TranscriptRowKind.Tool, TranscriptRowKind.Assistant], copilotRows.Select(row => row.Kind));
+        Assert.Equal("I will draw it.", Assert.IsType<AssistantReplyViewModel>(copilotRows[0]).Text);
+        Assert.Equal("Created `box.svg`", Assert.IsType<ToolActivityRowViewModel>(copilotRows[1]).Summary);
+        Assert.True(Assert.IsType<AssistantReplyViewModel>(copilotRows[2]).IsComplete);
+
+        // Assert: the composer could not send while the copilot worked, kept what was written meanwhile, and sends now
+        Assert.Equal((false, true), duringTurn);
+        Assert.False(canSendWhileBusy);
+        Assert.Equal("And a circle", composer.Document.FlatText);
+        Assert.True(composer.CanSend);
+    }
+
+    /// <summary>
+    ///     Test that stopping a turn keeps the text that was written and marks the reply stopped, that the composer can send
+    ///     again at once, and that a turn that fails ends with an error notice that offers the settings when they can help.
+    /// </summary>
+    [Fact]
+    public async Task ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy()
+    {
+        // Arrange: a copilot that streams, and the wiring that the panel will have
+        var token = TestContext.Current.CancellationToken;
+        var marks = new MarkRegistry();
+        var markImages = new MarkImageComposer(_renderer);
+        using var composer = new ComposerViewModel(new PayloadBuilder(markImages), marks, new FakeDictationService());
+        using var agent = new ControlledAgentService();
+        var copilotRows = new List<TranscriptRowViewModel>();
+        using var runner = new ChatTurnRunner(agent, copilotRows, new ManualTimeProvider());
+        runner.BusyChanged += (_, _) =>
+        {
+            if (runner.IsBusy)
+            {
+                composer.BlockSending(ComposerViewModel.CopilotWorkingText);
+            }
+            else
+            {
+                composer.UnblockSending();
+            }
+        };
+        Task<ChatTurnOutcome>? turn = null;
+        composer.MessageSent += (_, e) => turn = runner.RunTurnAsync(e.Message);
+        composer.SetProject(_project);
+        composer.InsertTyped("Draw a box");
+        await composer.SendCommand.ExecuteAsync(null);
+        agent.Emit(new AgentEvent.TextDelta("Let me think about the"));
+
+        // Act: stop
+        composer.InsertTyped("Never mind");
+        var blockedBeforeStop = composer.IsSendBlocked;
+        runner.Stop();
+        var stopped = await turn!.WaitAsync(TimeSpan.FromSeconds(10), token);
+
+        // Assert: the partial text is kept in a stopped reply and the composer can send what was written meanwhile
+        var reply = Assert.IsType<AssistantReplyViewModel>(Assert.Single(copilotRows));
+        Assert.Equal(("Let me think about the", AssistantReplyState.Stopped), (reply.Text, reply.State));
+        Assert.Equal(ChatTurnOutcome.Stopped, stopped);
+        Assert.True(blockedBeforeStop);
+        Assert.False(composer.IsSendBlocked);
+        Assert.True(composer.CanSend);
+
+        // Act: send the next message and let the provider fail
+        await composer.SendCommand.ExecuteAsync(null);
+        agent.Emit(new AgentEvent.Failed(AgentFailureKind.ModelNotFound, "The model 'missing-model' was not found."));
+        var failed = await turn.WaitAsync(TimeSpan.FromSeconds(10), token);
+
+        // Assert: an error notice with the message, the remedy, and the offer of the settings, and the composer is free
+        Assert.Equal(ChatTurnOutcome.Failed, failed);
+        var notice = Assert.IsType<NoticeRowViewModel>(copilotRows[^1]);
+        Assert.Equal(("The model 'missing-model' was not found.", true, true), (notice.Message, notice.HasRemedy, notice.CanOpenSettings));
+        Assert.False(composer.IsSendBlocked);
     }
 
     /// <summary>
