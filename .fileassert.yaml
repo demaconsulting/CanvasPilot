@@ -237,6 +237,18 @@ tests:
         xml:
           - query: "//*[local-name()='svg']"
             count: 1
+      - pattern: "docs/design/generated/AgentServiceProjectView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
+      - pattern: "docs/design/generated/AgentServiceTurnView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
       - pattern: "docs/design/generated/AgentSubsystemRuntimeView.svg"
         count: 1
         min-size: 100

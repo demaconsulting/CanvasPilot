@@ -25,6 +25,7 @@ package CanvasPilot_AgentContract {
         enum modelNotFound;
         enum connectionLost;
         enum busy;
+        enum dataInsideProject;
         enum unexpected;
     }
 
@@ -36,7 +37,7 @@ package CanvasPilot_AgentContract {
     }
 
     part def AgentContract {
-        doc /* The contract through which the chat runs the AI copilot, in plain records and one interface that name no AI library: IAgentService (readiness check, one turn at a time as a stream of events, reset of the conversation), the turn request with the text of earlier turns for a restored conversation, the family of events (answer text, tool calls, files written, usage, completion, and failure with a named kind) whose summaries are cut to a fixed length, and the readiness report whose status says whether a turn can be run. The Settings subsystem owns the separate IProviderCheck interface, so the contract does not depend on it. */
+        doc /* The contract through which the chat runs the AI copilot, in plain records and one interface that name no AI library: IAgentService (readiness check, one turn at a time as a stream of events, reset of the conversation, and the event that tells the shell which file the copilot wrote), the turn request with the text of earlier turns for a restored conversation, the family of events (answer text, tool calls, files written, usage, completion, and failure with a named kind) whose summaries are cut to a fixed length, and the readiness report whose status says whether a turn can be run. The Settings subsystem owns the separate IProviderCheck interface, so the contract does not depend on it. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

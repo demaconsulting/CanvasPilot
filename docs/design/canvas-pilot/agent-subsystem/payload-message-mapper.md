@@ -105,5 +105,5 @@ expose the value types `MarkKind`, `SourceElementReference` (Annotation subsyste
 
 #### Callers
 
-The agent service (a later step) maps the payload of each `AgentTurnRequest` with the folder of the open project and
+The `AgentService` unit maps the payload of each `AgentTurnRequest` with the folder of the open project and
 gives the message to the agent of the provider.

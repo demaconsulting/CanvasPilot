@@ -40,6 +40,8 @@ This document covers the verification design for the following software items:
       turn as sentences that say what to do
     - **AgentProviderFactory** — the agent of a conversation for Ollama or for GitHub Copilot, with the gated starter of
       the Copilot runtime, and what it owns and disposes
+    - **AgentService** — the conversation of the open project: made when the first message is sent, one turn at a time,
+      the data of the Copilot runtime kept outside the project, and a log of metadata only
   - **Annotation** subsystem
     - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
     - **MarkSourceResolver** — the parts of the source file under a mark

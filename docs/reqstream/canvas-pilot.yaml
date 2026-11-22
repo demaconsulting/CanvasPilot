@@ -464,6 +464,7 @@ sections:
           - CanvasPilot-Agent-GiveTheModelTheMessage
           - CanvasPilot-Agent-ReportTurnAsEvents
           - CanvasPilot-Agent-MakeTheAgentOfTheProvider
+          - CanvasPilot-Agent-ConverseInProjectConversations
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
           - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces
@@ -477,6 +478,23 @@ sections:
           - CanvasPilot-OTS-OllamaSharp-ReportMissingModel
           - CanvasPilot-OTS-OllamaSharp-StreamTextAndToolCalls
           - CanvasPilot-OTS-OllamaSharp-SendContextLength
+
+      - id: CanvasPilot-System-KeepAgentDataOutsideProject
+        title: >-
+          The application shall never write the data of the AI copilot into the project folder: the Copilot runtime keeps
+          its files in a folder below the local data of the user that the application chooses, the log holds only facts
+          about what happened and never the words of messages or the contents of files, and the project folder receives
+          only the files that the user or the copilot is asked to create.
+        tags: [system]
+        justification: |
+          A project folder is copied, shared, and put under source control, so anything of the application's own that
+          landed in it would travel with it, and the words of a conversation are the user's to keep. The data of the
+          Copilot runtime, the log, and the text that restores a conversation therefore live on the user's computer
+          outside every project, and a configuration that would put them inside a project is refused. The units that
+          keep such data link to this requirement.
+        children:
+          - CanvasPilot-Agent-KeepRuntimeDataOutsideProject
+          - CanvasPilot-Agent-LogMetadataOnly
 
       - id: CanvasPilot-System-ReportProviderReadiness
         title: >-

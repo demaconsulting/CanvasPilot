@@ -6,18 +6,22 @@
 
 `AgentProviderFactory` makes the agent of a conversation (`AIAgent` of the Microsoft Agent Framework) for the AI
 provider that the settings choose, from the settings, the tools of the project, and the instructions. Everything above
-it is the same for every provider, so the choice of the provider is made here and nowhere else. The agent service (a
-later step) asks it for an agent when a conversation starts and when the project or the relevant settings change.
+it is the same for every provider, so the choice of the provider is made here and nowhere else. The `AgentService` unit
+asks it for an agent when a conversation starts and when the project or the relevant settings change.
 
 #### Interfaces
 
 **IAgentFactory** is the seam of the unit: `CreateAsync(AgentCreationRequest, cancellationToken)` returns an
-`AgentCreationResult`, and the factory is `IAsyncDisposable`. Tests of the service and of the chat use a factory that
+`AgentCreationResult`, `DeleteSessionAsync(AgentSession, cancellationToken)` deletes what the provider kept for a
+conversation that ends, and the factory is `IAsyncDisposable`. Tests of the service and of the chat use a factory that
 puts an agent on a scripted chat client in place of a real provider.
 
 **AgentCreationRequest(Settings, Tools, Instructions, ProjectFolder)** carries the `AiProviderSettings`, the tools that
 the agent may call and nothing else (the registry has confined them to the project), the instructions, and the full path
-of the project folder.
+of the project folder. Two optional members, `CopilotDataDirectory` and `CopilotLogger`, name the folder where the
+Copilot runtime keeps its data and the logger that it writes to; the factory hands both to the starter of the runtime
+when it starts the runtime and uses neither for Ollama. The agent service chooses them, and the factory never decides
+where the runtime keeps its files.
 
 **AgentCreationResult** is either an agent (`IsCreated`, `Agent`) or the reason that none could be made (`Failure`, an
 `AgentReadinessReport`, the same status and sentence that the readiness check uses for the same cause). It is
@@ -87,7 +91,10 @@ branch is written and reviewed now, the tests of the OTS items prove that no run
 - The **factory** owns the Copilot runtime that its starter gave it, and disposes it once when the factory is disposed.
   Disposing a result never disposes the runtime. A request for Copilot after the factory was disposed throws
   `ObjectDisposedException`.
-- Sessions that the runtime keeps are deleted through `ICopilotAgentSource.DeleteSessionAsync`, which the service calls.
+- Sessions that the runtime keeps are deleted through `IAgentFactory.DeleteSessionAsync(session)`, which the service
+  calls when a conversation ends. The factory deletes only a Copilot session that has an id (the library gives it one
+  when a run begins), through the runtime that it started; a session of Ollama, a session without an id, and a session
+  of a runtime that was never started are left alone, so the call is always safe.
 
 #### Logging
 
@@ -132,5 +139,5 @@ and Microsoft.Extensions.AI (`AIFunction`, `IChatClient`).
 
 #### Callers
 
-The agent service (a later step) holds one factory for the application, asks it for the agent of each conversation,
-disposes each result when the conversation ends, and disposes the factory when the application ends.
+The `AgentService` unit holds one factory for the application, asks it for the agent of each conversation, deletes the
+session and disposes each result when the conversation ends, and disposes the factory when the application ends.

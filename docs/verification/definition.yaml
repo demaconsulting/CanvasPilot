@@ -29,6 +29,7 @@ input-files:
   - docs/verification/canvas-pilot/agent-subsystem/agent-instructions.md
   - docs/verification/canvas-pilot/agent-subsystem/agent-provider-factory.md
   - docs/verification/canvas-pilot/agent-subsystem/agent-readiness.md
+  - docs/verification/canvas-pilot/agent-subsystem/agent-service.md
   - docs/verification/canvas-pilot/agent-subsystem/agent-tool-registry.md
   - docs/verification/canvas-pilot/agent-subsystem/copilot-cli-locator.md
   - docs/verification/canvas-pilot/agent-subsystem/payload-message-mapper.md

@@ -14,8 +14,10 @@ verified at this level through `IProviderCheck`, the interface that the settings
 machine, a scripted starter, and a scripted Ollama server. The rules of the records, of the locator, and of the
 readiness checks themselves are verified in the unit verification documents.
 
-The units that implement the contract add their own verification documents and tests as they are built; their scenarios
-are not part of this document until then.
+The service that implements the contract (`AgentService`) is also verified here as the application will use it: one test
+runs it over the real factory and a stand-in Ollama server with the real tools of a project, and one runs it for GitHub
+Copilot with the gated starter. Its lifecycle, its turn, its data folders, and its log are verified in the unit
+verification document of `AgentService`.
 
 ### Test Environment
 
@@ -59,6 +61,12 @@ temporary project folder and delete it.
   status that Copilot support needs an update of the AI library, and a starter that can start a runtime gives an agent
   that is made on it with exactly the names of the tools of the project, the project folder as its working directory,
   and no model for the default.
+- Through the agent service over the real factory and a stand-in Ollama server, a message gets the streamed answer, the
+  call of `project_write`, a file event for the new drawing, and `Completed`; the shell is told of the file; the server
+  gets the model and the window of the settings; and the project folder holds only its earlier files and the drawing.
+- Through the agent service with the shipped starter, a turn for GitHub Copilot is one failed event of kind not ready
+  with the sentence "Copilot support needs an AgentKit update; use Ollama meanwhile.", and the log holds no word of the
+  message.
 
 ### Test Scenarios
 
@@ -150,3 +158,17 @@ model with a large window. Asked through `IProviderCheck`, GitHub Copilot is not
 Copilot support needs an AgentKit update; Ollama with a configured window of 8,192 tokens is usable and the sentence
 names the window. This scenario is tested by
 `AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface`.
+
+**AgentSubsystem_ConverseWithOllama_ServiceOnStandInServer_WritesTheDrawingAndKeepsTheProjectClean**: An agent service
+on the real factory and a stand-in Ollama server that asks for `project_write` and then answers, a project folder with
+only its project file, settings for a model with a window of 32,768 tokens, and a handler for the event of the service.
+A turn is run through the service. The events are the two pieces of the answer, one call that succeeded, one file event
+for `box.svg`, and the completed event; the shell was told of `box.svg`; the drawing is in the project and is the only
+file added; and both requests to the server carry the model and the window. This scenario is tested by
+`AgentSubsystem_ConverseWithOllama_ServiceOnStandInServer_WritesTheDrawingAndKeepsTheProjectClean`.
+
+**AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence**: The development machine
+with a good Copilot CLI, the real factory with the shipped starter, and settings that choose GitHub Copilot. A turn is
+run through the service. The stream is one failed event of kind not ready with the sentence of the gate, and the log
+holds no word of the message. This scenario is tested by
+`AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence`.

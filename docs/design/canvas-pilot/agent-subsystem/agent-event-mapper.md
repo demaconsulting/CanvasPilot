@@ -131,5 +131,5 @@ types of Microsoft.Extensions.AI (`TextContent`, `FunctionCallContent`, `Functio
 
 #### Callers
 
-The agent service (a later step) makes one mapper for each turn and maps the updates of the agent; the tests do the
+The `AgentService` unit makes one mapper for each turn and maps the updates of the agent; the tests do the
 same.

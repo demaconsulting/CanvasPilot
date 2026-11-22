@@ -11,7 +11,7 @@ chosen provider can be used. It has no user interface. Its parts are the readine
 that the copilot may call and the instructions that it is given, the agent of the chosen provider, and the service that
 keeps one conversation for the open project and runs one turn at a time.
 
-The subsystem is built contract first. It contains nine units so far. `AgentContract` is `IAgentService`, the request
+The subsystem is built contract first. It contains ten units. `AgentContract` is `IAgentService`, the request
 and history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds
 the GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks
 its version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader).
@@ -34,9 +34,11 @@ providers, and turns the exception of a failed turn into a failure with a senten
 `AgentProviderFactory` makes the agent of a conversation for the chosen provider: for Ollama an agent on an Ollama
 client that is told the context window on every request, and for GitHub Copilot an agent on the runtime that the starter
 of the runtime gives, with only the supplied tools and the default-deny permission handler of the AI library. The
-starter that this build ships is gated, so for Copilot the factory answers with a typed result and no agent. The units
-that implement the contract are added to this design, and to the model, the requirements, and the verification design,
-together with their code; until then no implementation of `IAgentService` exists in the application.
+starter that this build ships is gated, so for Copilot the factory answers with a typed result and no agent.
+`AgentService` implements `IAgentService`: it makes nothing until the first message is sent, then builds the tools, the
+instructions, the agent, and one provider session for the open project, runs one turn at a time on them, rebuilds them
+when the project or a setting that decides the agent changes, deletes what the provider kept when a conversation ends,
+gives the Copilot runtime a data folder that is never inside a project, and writes metadata only to the log.
 
 The subsystem will depend on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
 message), `Knowledge`, `Style`, and `Preview` (the content and the rendering that its tools give the copilot),
@@ -54,10 +56,12 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 - *Contract*: `GetReadinessAsync` returns an `AgentReadinessReport` for the settings in effect. `RunTurnAsync` takes an
   `AgentTurnRequest` and a cancellation token and returns the events of the turn in order as an
   `IAsyncEnumerable<AgentEvent>`. `ResetConversation` forgets the conversation so that the next turn starts a new
-  provider session.
+  provider session. The event `FileWritten` tells the shell, on the thread of the tool, which file the copilot created
+  or replaced.
 - *Constraints*: Only one turn runs at a time; a request made while a turn runs gets a single `Failed` event of kind
   `Busy`. A turn ends with exactly one `Completed` or `Failed` event, or simply ends when the caller cancels; no event
-  follows either. A provider that cannot be used is reported, not thrown.
+  follows either. A provider that cannot be used is reported, not thrown. A project that contains a data folder of the
+  application is refused with a `Failed` event of kind `DataInsideProject`.
 
 **Turn records**: What one turn is asked and what it answers.
 
@@ -172,6 +176,20 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   and gets exactly the supplied tools and the project folder with the default-deny permission handler; settings that
   cannot be used are a result, not an exception.
 
+**AgentService**: The conversation of the open project, which implements `IAgentService`.
+
+- *Type*: In-process .NET class that implements `IAgentService`, with the digest of the restored history and the
+  adapter that lets the Copilot runtime log, documented in the design of the `AgentService` unit.
+- *Role*: Provider (the chat and the application shell are consumers); it consumes the project, the settings, the tool
+  registry, the instructions, the message and event mappers, the readiness checks, and the factory.
+- *Contract*: The constructor takes the services above, optionally the project tools (whose `FileWritten` event it
+  passes on), the active style, the logger, and the local data root. `RunTurnAsync` runs a turn on the conversation of
+  the open project, made now if it does not exist; `ResetConversation` drops it; `Dispose` ends the turn, releases the
+  conversation, and disposes the factory.
+- *Constraints*: Nothing is made before the first turn; one turn at a time; the Copilot data folder is below the local
+  data root and never inside a project; the restored history is one block of at most 6,000 characters, once, in memory
+  only; the log has metadata only.
+
 **IProviderCheck**: The connection check that the settings dialog can ask for.
 
 - *Type*: In-process .NET interface owned by the `Settings` subsystem, with the `ProviderCheckResult(IsUsable, Message)`
@@ -213,21 +231,47 @@ it, and tries to write outside the project with the real project tools, which sh
 The factory is tested against a stand-in Ollama server with the real tools of a project, which shows a conversation from
 the settings to the drawing in the project, and for Copilot with the gated starter and with a fake starter, which shows
 the typed answer without an agent and an agent that is made with exactly the tools and the folder of the project.
+The service is tested with a scripted model on the real tools, instructions, and mappers, a stand-in for the open
+project and for the settings that raise the events of the real services, and a log file: the tests run whole turns,
+change the project and the settings, stop, reset, and dispose, and show that nothing is written into the project and
+that no word of a message, an answer, a tool, or a file reaches the log. Two subsystem tests run it as the application
+will, once over the stand-in Ollama server with the real factory and once for Copilot with the gated starter.
 
-The sections of the units are added to this design as the units are built: the service that implements `IAgentService`.
+**Where the data of the copilot lives.** The copilot's own data never goes into the project folder. The folder of a
+project receives only files that the user or the copilot is asked to create.
+
+- *Files the copilot creates or replaces* (`project_write`): the project folder; intentional content, with no backup and
+  no side files.
+- *Pictures of an unsent message, attachments of a sent one, and the style kits of the project*: `.canvaspilot/`,
+  `attachments/`, and `styles/` of the project; existing behavior of the Composer and Style subsystems, and intentional
+  content.
+- *Data of the Copilot runtime* (its home and its sessions): `{local data root}\CanvasPilot\copilot`; chosen by
+  `AgentService`, never the default of the AI library, and its sessions are deleted when a conversation ends.
+- *Chat history*: `{local data root}\CanvasPilot\history\{key}`; kept by the Chat subsystem outside the project, and
+  this subsystem refuses a project that contains it.
+- *Restored history sent to a new provider session*: memory only, as one block that is never written.
+- *Log*: `{local data root}\CanvasPilot\logs`; metadata only.
+- *Rendered pictures for the copilot*: memory only; nothing is saved.
+
+The local data root is the local application data of the user unless the application composition injects another, as
+the tests do. A project that contains the folder of the Copilot data or of the chat history (a project in the profile
+folder of the user, for example) is refused with a typed failure, because a configuration mistake must never write into
+the project.
 
 ### Dependencies
 
 - **CopilotCliLocator** unit: the Copilot CLI and its version, used by the readiness checks.
 - **Knowledge** subsystem: the plain tool description (`KnowledgeTool`) that the tool registry offers (the style tools
   are given to the registry in the same form), and the index of the drawing knowledge that the instructions carry.
-- **Project** subsystem: the names of the data folder and of the project file that the tool registry and the project
-  tools deny, and the filter that tells which files are image sources.
+- **Project** subsystem: the open project (`IProjectService`: its folder, its file, its name, and the event that tells
+  when it changes or closes), the names of the data folder and of the project file that the tool registry and the
+  project tools deny, and the filter that tells which files are image sources.
 - **Preview** subsystem: the render service through which `render_image` draws pictures in memory.
 - **Style** subsystem: the active style kit, whose example images `render_image` may draw and whose style the
   instructions carry (`StyleGuidance`), and the name of the styles
   folder of a project, which the project tools never write.
-- **Logging** subsystem: the logger that gets the metadata of each tool call.
+- **Logging** subsystem: the logger that gets the metadata of each tool call, of each turn, and of the life of each
+  conversation.
 - **Payload** subsystem: the message of the user (`MessagePayload` with its attachments, pictures, and marks) that the
   mapper turns into the message of the model; the mapper reads the value types of the Annotation, Composer, and Preview
   subsystems that the payload exposes, and names none of their services.
@@ -248,3 +292,7 @@ The view below shows these dependencies from the SysML2 model; more are added as
 ![Agent runtime dependencies](AgentSubsystemRuntimeView.svg)
 
 ![Agent tools dependencies](AgentToolsView.svg)
+
+![Agent service turn dependencies](AgentServiceTurnView.svg)
+
+![Agent service project dependencies](AgentServiceProjectView.svg)

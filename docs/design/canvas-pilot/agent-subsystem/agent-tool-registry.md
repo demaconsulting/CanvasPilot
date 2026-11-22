@@ -84,8 +84,8 @@ of the description on a pool thread, and returns the answer as `ToolResult.Text`
 
 **CreateTools(context, optionalPackIds)**: Makes the policy, the packs, and the tools of one project and checks the set.
 Throws `ArgumentNullException`, `ArgumentException` (folder not a full path, identifier not in the catalog), or
-`InvalidOperationException` (the set check, or two packs with one prefix). The agent service of a later step catches
-these and reports them.
+`InvalidOperationException` (the set check, or two packs with one prefix). The `AgentService` unit catches
+these and reports them as a failure of the turn.
 
 **OptionalPackIds / OptionalPacks**: The catalog, for a settings page.
 
@@ -118,5 +118,5 @@ given by the caller.
 
 #### Callers
 
-The agent service (a later step) builds the tools of the open project with it, and the application composition passes
-the descriptions. The project tools (a later step) are supplied through the project pack supplier.
+The `AgentService` unit builds the tools of the open project with it, and the application composition passes
+the descriptions. The project tools are supplied through the project pack supplier.

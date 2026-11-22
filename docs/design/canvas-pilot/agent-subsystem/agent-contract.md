@@ -12,7 +12,8 @@ type of an AI library, so the chat can be written and tested without any provide
 
 **IAgentService**: `interface`, `IDisposable` — `GetReadinessAsync(CancellationToken)` returns
 `Task<AgentReadinessReport>`; `RunTurnAsync(AgentTurnRequest, CancellationToken)` returns
-`IAsyncEnumerable<AgentEvent>`; `ResetConversation()` returns nothing.
+`IAsyncEnumerable<AgentEvent>`; `ResetConversation()` returns nothing; the event `FileWritten`
+(`EventHandler<FileWrittenEventArgs>`) tells the shell which project file the copilot created or replaced.
 
 **AgentTurnRequest**: `record` — `Payload` (`MessagePayload`, never `null`) and `RestoredHistory`
 (`IReadOnlyList<AgentHistoryTurn>`, oldest first, empty by default). The history is the text of earlier turns for a
@@ -34,7 +35,8 @@ library can derive from it and the family is closed. `MaxSummaryLength` is 200. 
 - `Failed(Kind, Message)` — the turn failed; `Message` is never empty and is meant for the user.
 
 **AgentFailureKind**: `enum` — `NotReady`, `Authentication`, `ProtocolMismatch`, `ModelNotFound`, `ConnectionLost`,
-`Busy`, and `Unexpected`.
+`Busy`, `DataInsideProject` (a folder where the application keeps its own data lies inside the project, so the turn is
+refused), and `Unexpected`.
 
 **AgentReadinessReport / AgentReadinessStatus**: `record` — `Status` and `Message`. The statuses are `Ready`,
 `NotConfigured`, `CopilotCliMissing`, `CopilotCliTooOld`, `CopilotNotSignedIn`, `CopilotRuntimeUnavailable`,

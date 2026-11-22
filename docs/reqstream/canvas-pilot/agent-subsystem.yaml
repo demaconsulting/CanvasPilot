@@ -244,6 +244,54 @@ sections:
               - CanvasPilot-AgentProviderFactory-ReportUnavailableCopilot
             tests:
               - AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+              - AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence
+
+          - id: CanvasPilot-Agent-ConverseInProjectConversations
+            title: >-
+              The Agent subsystem shall hold one conversation with the AI provider for the open project, made when the first
+              message is sent and made again when the project or a setting that decides the agent changes, run one turn at a
+              time on it and stream the events, stop a turn on request without calling it a failure, give the text of a
+              restored conversation to a new provider session once, and delete what the provider kept when a conversation
+              ends.
+            justification: |
+              The chat is a conversation about one project, and the user expects the copilot to remember what was said, to
+              stop when told, and not to leave anything behind. The service that holds the conversation is the one place
+              that knows when a conversation starts and ends, so the rules of the lifetime of the conversation are its
+              requirements, and the chat stays free of them.
+            children:
+              - CanvasPilot-AgentService-KeepConversationPerProject
+              - CanvasPilot-AgentService-RunOneTurnAtATime
+              - CanvasPilot-AgentService-RestoreHistoryOnce
+              - CanvasPilot-AgentService-ReleaseConversations
+            tests:
+              - AgentSubsystem_ConverseWithOllama_ServiceOnStandInServer_WritesTheDrawingAndKeepsTheProjectClean
+
+          - id: CanvasPilot-Agent-KeepRuntimeDataOutsideProject
+            title: >-
+              The Agent subsystem shall keep the data of the Copilot runtime in a folder below the local data of the user
+              that it chooses itself and shall refuse to work for a project that contains that folder or the folder of the
+              chat history, so that nothing that the runtime keeps is ever written into a project.
+            justification: |
+              A project folder is shared and put under source control, and the Copilot runtime keeps its sessions in a
+              folder of its own. Leaving the choice to the library would leave the place to chance, and a project that
+              contained the folder would receive the sessions.
+            children:
+              - CanvasPilot-AgentService-KeepRuntimeDataOutsideProject
+            tests:
+              - AgentService_DataResidency_CopilotDataDirectory_IsBelowTheLocalDataRootAndOutsideTheProject
+
+          - id: CanvasPilot-Agent-LogMetadataOnly
+            title: >-
+              The Agent subsystem shall write only facts about its work to the log (which provider, how many, what outcome,
+              how long, and the type of an exception) and never the words of a message, the answer of the model, a tool's
+              arguments, or the content of a file.
+            justification: |
+              The log is a file on the user's computer that people attach to bug reports, and the copilot handles the
+              user's drawings and words. The log may say what happened and never what was in it.
+            children:
+              - CanvasPilot-AgentService-LogMetadataOnly
+            tests:
+              - AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly
 
           - id: CanvasPilot-Agent-LocateCopilotCli
             title: >-

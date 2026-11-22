@@ -116,6 +116,6 @@ subsystem (the recommended minimum window and the provider). The unit uses no AI
 
 #### Callers
 
-The agent service (a later step) writes the instructions when it starts a provider session for a project: it chooses the
+The `AgentService` unit writes the instructions when it starts a provider session for a project: it chooses the
 tier from the provider and the context window of the settings, takes the facts from the open project and the active
 style, and gives the text to the agent of the provider.

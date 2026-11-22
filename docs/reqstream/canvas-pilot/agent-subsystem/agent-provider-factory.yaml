@@ -53,16 +53,19 @@ sections:
                   requests there are, and make each agent with exactly the supplied tools, the instructions, the name
                   CanvasPilot, the model of the settings (none when it is blank), and the project folder as the working
                   directory, and shall make the agents in one place that gives no permission handler, so that the default
-                  handler of the AI library, which approves exactly the supplied tools and refuses everything else, applies.
+                  handler of the AI library, which approves exactly the supplied tools and refuses everything else, applies,
+                  and shall pass the data folder and the logger of the request on to the starter of the runtime.
                 justification: |
                   The runtime is one process for the whole application, and the agents of several projects share it. The
                   tools that the application builds are the only ones that the copilot may call, and the library derives its
                   permissions from the list of those tools. A handler of the application's own could widen that, so the one
-                  place that makes agents passes none.
+                  place that makes agents passes none. The place where the runtime keeps its files is chosen by the agent
+                  service, so the factory only carries it to the starter.
                 tests:
                   - AgentProviderFactory_Create_Copilot_FakeStarter_StartsOnceAndMakesAgentsOnTheRuntime
                   - AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse
                   - AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary
+                  - AgentProviderFactory_Create_Copilot_DataDirectoryAndLogger_ReachTheStarter
 
               - id: CanvasPilot-AgentProviderFactory-ReportUnavailableCopilot
                 title: >-
@@ -85,12 +88,16 @@ sections:
                   The AgentProviderFactory shall have each result own the clients of its Ollama agent and dispose them once
                   when the result is disposed, without disposing the handler it was given or another agent, and shall have
                   the factory own the Copilot runtime that it started, shared by all agents, dispose it once when the
-                  factory is disposed (and not when a result is), and refuse a request for Copilot after that.
+                  factory is disposed (and not when a result is), refuse a request for Copilot after that, and delete the
+                  Copilot session of a conversation through that runtime when the conversation ends, while leaving sessions
+                  of other providers and sessions without an id alone.
                 justification: |
                   The connection to Ollama belongs to one agent and the runtime to the whole application, so each is
                   released by its owner at the right time. A runtime that is stopped while an agent still uses it fails that
-                  agent, and one that is never stopped leaves a process behind.
+                  agent, and one that is never stopped leaves a process behind. The runtime keeps each conversation on disk
+                  until it is told to delete it, and only the factory knows the runtime.
                 tests:
                   - AgentProviderFactory_Create_Ollama_DisposingAResult_LeavesOtherAgentsWorking
                   - AgentProviderFactory_Create_Copilot_FakeStarter_StartsOnceAndMakesAgentsOnTheRuntime
                   - AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse
+                  - AgentProviderFactory_DeleteSession_CopilotSessionOnly_DeletesThroughTheRuntime

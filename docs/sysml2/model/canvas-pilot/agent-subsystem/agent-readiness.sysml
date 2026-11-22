@@ -16,12 +16,13 @@ package CanvasPilot_AgentReadiness {
         enum failed;
     }
 
-    // What the application asks of the starter: the CLI that the locator found, its version, and whether the caller only
-    // wants to know that the runtime could be started.
+    // What the application asks of the starter: the CLI that the locator found, its version, whether the caller only
+    // wants to know that the runtime could be started, and, for a real start, the folder where the runtime keeps its data.
     attribute def CopilotStartRequest {
         attribute cliPath : String;
         attribute cliVersion : String;
         attribute checkOnly : Boolean;
+        attribute dataDirectory : String;
     }
 
     // The answer of the starter: a status and one sentence for the user.

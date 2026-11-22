@@ -21,7 +21,10 @@ text, no settings, and no logger. Constants: `TokenVariableNames` (`COPILOT_GITH
 
 **ICopilotRuntimeStarter**: `StartAsync(CopilotStartRequest, cancellationToken)` returns a `CopilotStartResult`.
 `CopilotStartRequest(CliPath, CliVersion, CheckOnly)` says which CLI the locator found and whether the caller only wants
-to know that the runtime could be started (the readiness check) or wants it started.
+to know that the runtime could be started (the readiness check) or wants it started. A request that starts the runtime
+also carries `DataDirectory`, the folder where the runtime must keep its own data (chosen by the `AgentService` unit,
+below the local data of the user and never inside a project, so a starter passes it on and never uses the default of
+the AI library), and `Logger`, the logger that records metadata only.
 `CopilotStartResult(Status, Message, Agents)` has the status `Started`, `NeedsAgentKitUpdate`, or `Failed`; `Agents` is
 the started runtime as an `ICopilotAgentSource` when the request was not a check only (it is documented in the design of
 the `AgentProviderFactory` unit, which keeps and disposes it) and is always `null` for a check only.
@@ -131,5 +134,5 @@ does not use AgentKit or the Copilot SDK: the Copilot runtime is behind the star
 
 #### Callers
 
-The `AgentService` (readiness before a turn and for the chat banner), added with the service, and the settings dialog
+The `AgentService` unit (readiness before a turn and for the chat banner) and the settings dialog
 through `IProviderCheck`. The `AppShell` subsystem builds the unit.

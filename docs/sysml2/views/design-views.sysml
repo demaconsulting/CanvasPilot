@@ -21,8 +21,8 @@
 // dependency views: each exposes the units of one theme plus the suppliers that their
 // 'dependency' statements name, so the dependency edges render. A subsystem whose edges
 // would pass about 15 in one diagram is split into themed views. Four hub suppliers that
-// many units depend on are omitted from every one of them - RollingFileLogger (17 units),
-// ImageRenderService (11), PathHelpers (11), and ProjectService (10) - and each view's
+// many units depend on are omitted from every one of them - RollingFileLogger (18 units),
+// ImageRenderService (11), PathHelpers (11), and ProjectService (11) - and each view's
 // 'doc' names the hubs that its units use. The small LoggingSubsystem, UtilitiesSubsystem,
 // AnnotationSubsystem, ProjectSubsystem, SettingsSubsystem, and PreviewSubsystem have few
 // edges that are not hub edges, so they have no dependency view; use
@@ -173,6 +173,28 @@ package CanvasPilotDesignViews {
         expose CanvasPilot_AiProviderSettingsPage::AiProviderSettingsPage;
         expose OtsDependencies::AgentKit;
         expose OtsDependencies::OllamaSharp;
+        filter not (@SysML::Documentation);
+    }
+
+    view AgentServiceTurnView : GeneralView {
+        doc /* Dependencies of the agent service on what runs a turn: the contract that it implements (the events, the failure kinds, and the readiness report), the event mapper that turns the updates of the agent into events, the provider factory that makes the agent and deletes its session, the readiness checks, and the settings whose change rebuilds the conversation; and, among the same units, what the mapper and the factory use of the contract, the readiness sentences, and the settings. Hub suppliers omitted: ProjectService (the open project and its change event), RollingFileLogger (the service logs the metadata of each turn and conversation), and the Microsoft Agent Framework (the agent and the provider session). */
+        expose CanvasPilot_AgentService::AgentService;
+        expose CanvasPilot_AgentContract::AgentContract;
+        expose CanvasPilot_AgentEventMapper::AgentEventMapper;
+        expose CanvasPilot_AgentProviderFactory::AgentProviderFactory;
+        expose CanvasPilot_AgentReadiness::AgentReadiness;
+        expose CanvasPilot_SettingsService::SettingsService;
+        filter not (@SysML::Documentation);
+    }
+
+    view AgentServiceProjectView : GeneralView {
+        doc /* Dependencies of the agent service on what it builds for the open project: the tool registry that confines the tools to the project folder, the project tools whose written files it passes on, the instructions writer, the mapper of the message of the user, and the style kit of the project that the instructions describe; and, among the same units, what the project tools use of the registry and of the active style. Hub suppliers omitted: ProjectService (the open project), RollingFileLogger (the metadata of each turn), and the Microsoft Agent Framework. */
+        expose CanvasPilot_AgentService::AgentService;
+        expose CanvasPilot_AgentToolRegistry::AgentToolRegistry;
+        expose CanvasPilot_ProjectTools::ProjectTools;
+        expose CanvasPilot_AgentInstructions::AgentInstructions;
+        expose CanvasPilot_PayloadMessageMapper::PayloadMessageMapper;
+        expose CanvasPilot_StyleSelection::StyleSelection;
         filter not (@SysML::Documentation);
     }
 

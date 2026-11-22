@@ -1,0 +1,83 @@
+package CanvasPilot_AgentService {
+    private import SoftwareItemMetadata::*;
+    private import ScalarValues::Integer;
+    private import ScalarValues::String;
+    private import CanvasPilot_AgentContract::*;
+    private import CanvasPilot_AgentToolRegistry::*;
+    private import CanvasPilot_AgentInstructions::*;
+    private import CanvasPilot_PayloadMessageMapper::*;
+    private import CanvasPilot_AgentEventMapper::*;
+    private import CanvasPilot_AgentReadiness::*;
+    private import CanvasPilot_AgentProviderFactory::*;
+    private import CanvasPilot_ProjectTools::*;
+    private import CanvasPilot_SettingsService::*;
+    private import CanvasPilot_ProjectService::*;
+    private import CanvasPilot_StyleSelection::*;
+    private import CanvasPilot_RollingFileLogger::*;
+    private import OtsDependencies::*;
+
+    part def AgentService {
+        doc /* The AI copilot as the chat uses it: the implementation of IAgentService. It makes nothing until the first turn, then builds for the open project the tools (through the registry), the instructions (with the facts of the project and its style), the agent (through the factory, which starts the Copilot runtime once for the application when the provider needs it), and one provider session, and keeps them for the next turns. It makes them again when the open project changes or closes or when the provider, the model, the Ollama address, the context window, or the path of the Copilot CLI changes, and on a reset; it then deletes the session that the provider kept through the factory and releases the agent in the background after its turn is over. It runs one turn at a time (a request made while one runs gets a failure of the kind busy), links the token of the turn to the caller, a reset, a change of the project, and the end of the service, streams the events of the mapper with the files that the project tools wrote placed before the answer of the call that wrote them, and raises its own FileWritten event for the shell. The text of a restored conversation is given once to the first message of a new provider session as one block of at most 6,000 characters kept in memory only. The Copilot runtime gets an explicit data folder below an injected local data root (the local application data of the user by default) and never one inside a project, and a turn is refused with the failure kind data inside project when that folder or the folder of the chat history lies inside the project. The log gets metadata only: the Copilot runtime logs through an adapter that drops the message. Dispose ends the turn, releases the conversation, and disposes the factory once. The digest of the restored history and the adapter of the logger are supporting types, which have no part definition of their own. */
+
+        metadata info : SoftwareInfo {
+            sourceFiles = (
+                "src/DemaConsulting.CanvasPilot/AgentSubsystem/AgentService.cs",
+                "src/DemaConsulting.CanvasPilot/AgentSubsystem/RestoredHistoryDigest.cs",
+                "src/DemaConsulting.CanvasPilot/AgentSubsystem/RuntimeLogAdapter.cs"
+            );
+            testFiles = (
+                "test/DemaConsulting.CanvasPilot.Tests/AgentSubsystem/AgentServiceTestRig.cs",
+                "test/DemaConsulting.CanvasPilot.Tests/AgentSubsystem/AgentServiceTests.cs",
+                "test/DemaConsulting.CanvasPilot.Tests/AgentSubsystem/RestoredHistoryDigestTests.cs"
+            );
+            designFiles = ("docs/design/canvas-pilot/agent-subsystem/agent-service.md");
+            verificationFiles = ("docs/verification/canvas-pilot/agent-subsystem/agent-service.md");
+            requirementFiles = ("docs/reqstream/canvas-pilot/agent-subsystem/agent-service.yaml");
+        }
+
+        // Implements the contract: the events of a turn, the failure kinds, and the readiness report.
+        dependency AgentService to AgentContract;
+
+        // Builds the tools of the open project, confined to its folder.
+        dependency AgentService to AgentToolRegistry;
+
+        // Writes the instructions for the project and chooses the tier from the context window.
+        dependency AgentService to AgentInstructions;
+
+        // Turns the message that the user sent into the message of the model.
+        dependency AgentService to PayloadMessageMapper;
+
+        // Turns the updates of the agent into the events of the turn, one mapper for each turn.
+        dependency AgentService to AgentEventMapper;
+
+        // Asks whether the chosen provider can be used.
+        dependency AgentService to AgentReadiness;
+
+        // Asks the factory for the agent of a conversation and for the deletion of a session that ends.
+        dependency AgentService to AgentProviderFactory;
+
+        // Passes on the event that a file of the project was created or replaced.
+        dependency AgentService to ProjectTools;
+
+        // Reads the AI provider choices and rebuilds the conversation when they change.
+        dependency AgentService to SettingsService;
+
+        // Reads the open project and rebuilds the conversation when it changes or closes (hub supplier, omitted from the service view).
+        dependency AgentService to ProjectService;
+
+        // Reads the style kit of the open project for the instructions.
+        dependency AgentService to StyleSelection;
+
+        // Writes the metadata of each turn and conversation to the log (hub supplier, omitted from the service view).
+        dependency AgentService to RollingFileLogger;
+
+        // Reads and writes the agent and the provider session of the Microsoft Agent Framework, and builds the message with its content types.
+        dependency AgentService to AgentFramework;
+
+        // The longest block, in characters, that stands for the restored history of a conversation.
+        attribute maxDigestCharacters : Integer;
+
+        // The name of the folder below the local data root that holds the Copilot runtime data.
+        attribute copilotFolderName : String;
+    }
+}

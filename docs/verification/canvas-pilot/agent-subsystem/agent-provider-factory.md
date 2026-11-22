@@ -58,6 +58,11 @@ it. No Ollama server, language model, or Copilot CLI is used.
   request for Copilot throws `ObjectDisposedException`.
 - The source of the application has one call of `CopilotAgentFactory.Create`, which passes `onPermissionRequest: null`
   and names no permission type.
+- The data folder and the logger of a request reach the starter of the runtime unchanged, and a start request has none
+  by default.
+- Deleting a session reaches the started runtime only for a Copilot session that has an id (`session-42` here); an
+  Ollama session, a Copilot session without an id, a Copilot session on a factory whose runtime was never started, and
+  the call with a missing session each delete nothing, and the missing session is refused.
 
 #### Test Scenarios
 
@@ -111,6 +116,15 @@ once, the disposal of the factory, and a request after it. This scenario is test
 **AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary**: The source of the subsystem is
 read for the calls of `CopilotAgentFactory.Create` and for the permission handler. This scenario is tested by
 `AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary`.
+
+**AgentProviderFactory_Create_Copilot_DataDirectoryAndLogger_ReachTheStarter**: A request that names a data folder and a
+logger, and a fake starter that records its request. This scenario is tested by
+`AgentProviderFactory_Create_Copilot_DataDirectoryAndLogger_ReachTheStarter`.
+
+**AgentProviderFactory_DeleteSession_CopilotSessionOnly_DeletesThroughTheRuntime**: Sessions of both providers, one
+without an id, and a factory that never started a runtime; the Copilot session is made by reflection, because the AI
+library makes it only while a conversation runs. This scenario is tested by
+`AgentProviderFactory_DeleteSession_CopilotSessionOnly_DeletesThroughTheRuntime`.
 
 **AgentSubsystem_ConverseWithOllama_ScriptedServerAndProjectTools_WritesTheDrawingAndStreamsEvents**: The subsystem
 scenario that is described in the verification of the Agent subsystem. This scenario is tested by
