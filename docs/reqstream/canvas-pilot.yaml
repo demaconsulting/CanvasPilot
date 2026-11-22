@@ -439,6 +439,7 @@ sections:
         children:
           - CanvasPilot-Agent-ConfineToolsToProject
           - CanvasPilot-Agent-ConfineProjectFileTools
+          - CanvasPilot-Agent-GiveTheAgentOnlyTheTools
           - CanvasPilot-OTS-AgentKit-ConfineToolPaths
           - CanvasPilot-OTS-AgentKit-ComposeToolPacks
           - CanvasPilot-OTS-AgentKit-BoundToolResults
@@ -462,6 +463,7 @@ sections:
           - CanvasPilot-Agent-InstructTheCopilot
           - CanvasPilot-Agent-GiveTheModelTheMessage
           - CanvasPilot-Agent-ReportTurnAsEvents
+          - CanvasPilot-Agent-MakeTheAgentOfTheProvider
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
           - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces
@@ -493,6 +495,7 @@ sections:
         children:
           - CanvasPilot-Agent-DescribeReadiness
           - CanvasPilot-Agent-CheckProviderReadiness
+          - CanvasPilot-Agent-ExplainUnavailableCopilot
         tests:
           - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
 

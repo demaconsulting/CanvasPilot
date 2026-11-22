@@ -11,7 +11,7 @@ chosen provider can be used. It has no user interface. Its parts are the readine
 that the copilot may call and the instructions that it is given, the agent of the chosen provider, and the service that
 keeps one conversation for the open project and runs one turn at a time.
 
-The subsystem is built contract first. It contains eight units so far. `AgentContract` is `IAgentService`, the request
+The subsystem is built contract first. It contains nine units so far. `AgentContract` is `IAgentService`, the request
 and history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds
 the GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks
 its version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader).
@@ -30,8 +30,12 @@ its tests measure. `PayloadMessageMapper` turns the message that the user sent (
 message that a model is given: the words, a compact description of the attachments, pictures, and marks, and the
 pictures as PNG images, annotated pictures first and then the close-ups of the marks, at most ten. `AgentEventMapper`
 turns the stream of updates that an agent produces for a turn into the events of the contract, the same for both
-providers, and turns the exception of a failed turn into a failure with a sentence that says what to do. The units that
-implement the contract are added to this design, and to the model, the requirements, and the verification design,
+providers, and turns the exception of a failed turn into a failure with a sentence that says what to do.
+`AgentProviderFactory` makes the agent of a conversation for the chosen provider: for Ollama an agent on an Ollama
+client that is told the context window on every request, and for GitHub Copilot an agent on the runtime that the starter
+of the runtime gives, with only the supplied tools and the default-deny permission handler of the AI library. The
+starter that this build ships is gated, so for Copilot the factory answers with a typed result and no agent. The units
+that implement the contract are added to this design, and to the model, the requirements, and the verification design,
 together with their code; until then no implementation of `IAgentService` exists in the application.
 
 The subsystem will depend on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
@@ -154,6 +158,20 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   characters, a long text argument being shown by its length; every failure has a kind and a sentence that names the
   remedy; the log gets metadata only.
 
+**AgentProviderFactory**: The agent of a conversation for the chosen provider.
+
+- *Type*: In-process .NET class behind the interface `IAgentFactory` (the test seam), with `AgentCreationRequest`,
+  `AgentCreationResult`, and `ICopilotAgentSource`, documented in the design of the `AgentProviderFactory` unit.
+- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the `AiProviderSettings` of the
+  `Settings` subsystem, the tools of the registry, and the instructions.
+- *Contract*: `CreateAsync(request)` returns an `AgentCreationResult`, which holds an `AIAgent` of the Microsoft Agent
+  Framework or the readiness status and sentence that say why none could be made; disposing the result releases what the
+  agent owns, and disposing the factory stops the Copilot runtime that it started.
+- *Constraints*: Ollama gets the address, the model, and the context window of the settings on every request; GitHub
+  Copilot is reached only through the starter of the runtime (gated in this build, so there is no agent), starts once,
+  and gets exactly the supplied tools and the project folder with the default-deny permission handler; settings that
+  cannot be used are a result, not an exception.
+
 **IProviderCheck**: The connection check that the settings dialog can ask for.
 
 - *Type*: In-process .NET interface owned by the `Settings` subsystem, with the `ProviderCheckResult(IsUsable, Message)`
@@ -192,9 +210,11 @@ real payload that the real builder made from a real picture and real marks, whic
 model would receive. The mapper of the updates is tested with scripted streams for every kind of content, every cause of
 failure, and the rules for a canceled turn, and with a real agent, on a scripted model, that writes a drawing, looks at
 it, and tries to write outside the project with the real project tools, which shows the events that the chat will get.
+The factory is tested against a stand-in Ollama server with the real tools of a project, which shows a conversation from
+the settings to the drawing in the project, and for Copilot with the gated starter and with a fake starter, which shows
+the typed answer without an agent and an agent that is made with exactly the tools and the folder of the project.
 
-The sections of the units are added to this design as the units are built: the provider factory, and the service that
-implements `IAgentService`.
+The sections of the units are added to this design as the units are built: the service that implements `IAgentService`.
 
 ### Dependencies
 
@@ -212,14 +232,15 @@ implements `IAgentService`.
   mapper turns into the message of the model; the mapper reads the value types of the Annotation, Composer, and Preview
   subsystems that the payload exposes, and names none of their services.
 - **AgentKit** and **Microsoft.Extensions.AI** (OTS): the path policy, the tool packs, the limits for answers, and the
-  function type that carry the tools.
+  function type that carry the tools, and the agent factories (for a chat client and for the Copilot runtime) and the
+  context sizing of the Ollama client that the provider factory uses.
 - **Microsoft Agent Framework** (OTS): the stream of updates (`AgentResponseUpdate`) of an agent that the event mapper
   reads; **Microsoft.Extensions.AI** also gives it the content types (text, call, result, usage, error, picture).
 - **Settings** subsystem: the AI provider choices (`SettingsService`), the recommended minimum context window that
   chooses the tier of the instructions, and the `IProviderCheck` interface that
   `AgentReadiness` implements (documented with `AiProviderSettingsPage`); `Settings` does not depend on this subsystem.
 - **OllamaSharp** (OTS): the client that lists the models of an Ollama server and shows the context length of a model,
-  used by the probe of the readiness checks.
+  used by the probe of the readiness checks, and the chat client that the provider factory runs the Ollama agent on.
 
 The view below shows these dependencies from the SysML2 model; more are added as the units that use `Project`,
 `Payload`, `Knowledge`, `Style`, `Preview`, and the AI libraries are built.

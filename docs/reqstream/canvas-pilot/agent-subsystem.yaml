@@ -200,6 +200,51 @@ sections:
             tests:
               - AgentSubsystem_RunTurn_ScriptedModelWritesAndLooksAtADrawing_EventsShowTheCreatedFileThePictureAndTheRefusal
 
+          - id: CanvasPilot-Agent-MakeTheAgentOfTheProvider
+            title: >-
+              The Agent subsystem shall make the agent of a conversation for the AI provider that the settings choose, from
+              the settings, the tools of the project, and the instructions, so that for Ollama a whole turn runs on the
+              address, the model, and the context window of the settings, so that settings that cannot be used are
+              answered with what to enter and not with a failed request, and so that what the agent owns is disposed by its
+              owner.
+            justification: |
+              Everything above the factory is the same for every provider, so the provider is chosen in one place from
+              the settings. The user's drawing work then does not depend on whether Ollama or GitHub Copilot answers, and a
+              wrong setting is explained before a turn is spent on it.
+            children:
+              - CanvasPilot-AgentProviderFactory-MakeOllamaAgent
+              - CanvasPilot-AgentProviderFactory-RefuseUnusableSettings
+              - CanvasPilot-AgentProviderFactory-OwnWhatItStarts
+            tests:
+              - AgentSubsystem_ConverseWithOllama_ScriptedServerAndProjectTools_WritesTheDrawingAndStreamsEvents
+
+          - id: CanvasPilot-Agent-GiveTheAgentOnlyTheTools
+            title: >-
+              The Agent subsystem shall make the agent of GitHub Copilot with exactly the tools of the project and the
+              project folder as its working directory, with the default-deny permission handler of the AI library, so that
+              the runtime of Copilot can call nothing else.
+            justification: |
+              The Copilot runtime has tools of its own (a shell, file access, a web fetch). The copilot may act only through
+              the tools that the application builds and confines, so the agent is made with that list and with no
+              permission handler of the application's own that could approve more.
+            children:
+              - CanvasPilot-AgentProviderFactory-MakeCopilotAgentThroughStarter
+            tests:
+              - AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+
+          - id: CanvasPilot-Agent-ExplainUnavailableCopilot
+            title: >-
+              The Agent subsystem shall answer a request for an agent of GitHub Copilot that cannot be served with a typed
+              result and no agent, with the status and sentence of the readiness check for the same cause, so that in this
+              build, whose starter of the runtime is gated, Copilot is reported as needing an update of the AI library.
+            justification: |
+              The user who chose Copilot must be told, in the words of the readiness check and not by a failed turn, that
+              this build cannot use it yet and that Ollama can be used meanwhile.
+            children:
+              - CanvasPilot-AgentProviderFactory-ReportUnavailableCopilot
+            tests:
+              - AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+
           - id: CanvasPilot-Agent-LocateCopilotCli
             title: >-
               The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the

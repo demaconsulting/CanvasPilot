@@ -163,13 +163,15 @@ package CanvasPilotDesignViews {
     // their 'dependency' statements name; the hub suppliers are omitted (see the header).
 
     view AgentSubsystemRuntimeView : GeneralView {
-        doc /* Dependencies of the readiness checks of the AI provider on the Copilot CLI locator, the settings, and the OllamaSharp client, and of the event mapper on the contract, the readiness sentences, and the settings. The provider factory adds its edges to this view as it is built. Hub suppliers omitted: RollingFileLogger (the event mapper logs each turn), and the Microsoft Agent Framework and Microsoft.Extensions.AI (the event mapper reads their content types). */
+        doc /* Dependencies of the readiness checks of the AI provider on the Copilot CLI locator, the settings, and the OllamaSharp client, of the event mapper on the contract, the readiness sentences, and the settings, and of the provider factory on the contract, the readiness checks (the starter of the Copilot runtime), the locator, the settings, DemaConsulting.AgentKit, and the OllamaSharp client. Hub suppliers omitted: RollingFileLogger (the event mapper and the provider factory log metadata), and the Microsoft Agent Framework and Microsoft.Extensions.AI (the event mapper and the provider factory use their agent, content, and function types). */
         expose CanvasPilot_AgentReadiness::AgentReadiness;
         expose CanvasPilot_CopilotCliLocator::CopilotCliLocator;
         expose CanvasPilot_AgentEventMapper::AgentEventMapper;
+        expose CanvasPilot_AgentProviderFactory::AgentProviderFactory;
         expose CanvasPilot_AgentContract::AgentContract;
         expose CanvasPilot_SettingsService::SettingsService;
         expose CanvasPilot_AiProviderSettingsPage::AiProviderSettingsPage;
+        expose OtsDependencies::AgentKit;
         expose OtsDependencies::OllamaSharp;
         filter not (@SysML::Documentation);
     }

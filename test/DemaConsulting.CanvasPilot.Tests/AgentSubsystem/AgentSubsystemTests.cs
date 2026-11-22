@@ -479,6 +479,113 @@ public sealed class AgentSubsystemTests
     }
 
     /// <summary>
+    ///     Test that a conversation with Ollama works end to end as the application will run it: the settings choose the
+    ///     provider, the factory makes the agent on a stand-in server, the agent is given the real tools of a project, the
+    ///     model on the server asks for a drawing to be written, and the events show the created file; the drawing is in the
+    ///     project, the server got the model and the window of the settings, and nothing else is in the project.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_ConverseWithOllama_ScriptedServerAndProjectTools_WritesTheDrawingAndStreamsEvents()
+    {
+        // Arrange: a project, the real tools, and a stand-in server that asks for the tool and then answers
+        var token = TestContext.Current.CancellationToken;
+        var root = Directory.CreateTempSubdirectory("canvaspilot-agent-ollama-").FullName;
+        try
+        {
+            var projectTools = new ProjectTools(new ImageRenderService());
+            var registry = new AgentToolRegistry(KnowledgeTools.CreateAll(KnowledgeCatalog.Default), [], projectTools.CreatePacks);
+            var tools = registry.CreateTools(new AgentToolContext(root), new HashSet<string>());
+            var handler = new QueuedOllamaHandler(
+                string.Join(
+                    "\n",
+                    """{"model":"m","created_at":"2026-11-21T00:00:00Z","message":{"role":"assistant","content":"Drawing it. "},"done":false}""",
+                    """{"model":"m","created_at":"2026-11-21T00:00:00Z","message":{"role":"assistant","content":"","tool_calls":[{"function":{"name":"project_write","arguments":{"path":"box.svg","content":"<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'/>"}}}]},"done":false}""",
+                    """{"model":"m","created_at":"2026-11-21T00:00:00Z","message":{"role":"assistant","content":""},"done":true,"done_reason":"stop"}"""),
+                """{"model":"m","created_at":"2026-11-21T00:00:00Z","message":{"role":"assistant","content":"Done."},"done":true,"done_reason":"stop"}""");
+            var settings = new AiProviderSettings
+            {
+                Provider = AiProviderKind.Ollama,
+                OllamaEndpoint = "http://localhost:11434",
+                ModelName = "gemma3:12b",
+                ContextWindowTokens = 32768,
+            };
+            await using var factory = new AgentProviderFactory(handler: handler);
+
+            // Act: make the agent from the settings and run a turn through the mapper
+            await using var made = await factory.CreateAsync(new AgentCreationRequest(settings, tools, "You draw.", root), token);
+            var session = await made.Agent!.CreateSessionAsync(token);
+            var mapper = new AgentEventMapper(settings.Provider, settings.ModelName, cancellationToken: token);
+            var events = new List<AgentEvent>();
+            await foreach (var mapped in mapper.MapAsync(made.Agent.RunStreamingAsync("Draw a box.", session, cancellationToken: token)))
+            {
+                events.Add(mapped);
+            }
+
+            // Assert: the events show the created file, the drawing is in the project, and the server got the settings
+            Assert.Equal("Drawing it. Done.", string.Concat(events.OfType<AgentEvent.TextDelta>().Select(delta => delta.Text)));
+            var finished = Assert.Single(events.OfType<AgentEvent.ToolFinished>());
+            Assert.Equal(("project_write", true), (finished.Name, finished.Succeeded));
+            Assert.StartsWith("File 'box.svg' created", finished.Summary, StringComparison.Ordinal);
+            Assert.IsType<AgentEvent.Completed>(events[^1]);
+            Assert.Contains("width='40'", await File.ReadAllTextAsync(Path.Combine(root, "box.svg"), token), StringComparison.Ordinal);
+            Assert.Equal(["box.svg"], Directory.EnumerateFileSystemEntries(root).Select(entry => Path.GetFileName(entry)).ToArray());
+            Assert.All(handler.Requests, request =>
+            {
+                Assert.Contains("\"model\":\"gemma3:12b\"", request.Body, StringComparison.Ordinal);
+                Assert.Contains("\"num_ctx\":32768", request.Body, StringComparison.Ordinal);
+            });
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that GitHub Copilot is gated in this build as the application will meet it: the factory with the starter that
+    ///     is shipped gives the typed answer and no agent, while a starter that could start a runtime gives an agent that is
+    ///     made on it with exactly the tools of the project and the project folder as its working directory.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools()
+    {
+        // Arrange: the development machine with the real CLI, the tools of a project, and two factories
+        var token = TestContext.Current.CancellationToken;
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        var locator = new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), DevMachine.CreateEnvironment());
+        var root = Directory.CreateTempSubdirectory("canvaspilot-agent-copilot-").FullName;
+        try
+        {
+            var projectTools = new ProjectTools(new ImageRenderService());
+            var registry = new AgentToolRegistry(KnowledgeTools.CreateAll(KnowledgeCatalog.Default), [], projectTools.CreatePacks);
+            var tools = registry.CreateTools(new AgentToolContext(root), new HashSet<string>());
+            var request = new AgentCreationRequest(new AiProviderSettings(), tools, "You draw.", root);
+            var source = new FakeCopilotAgentSource(new ScriptedChatClient());
+            var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
+            await using var gated = new AgentProviderFactory(locator, new GatedCopilotRuntimeStarter());
+            await using var started = new AgentProviderFactory(locator, starter);
+
+            // Act
+            var withoutRuntime = await gated.CreateAsync(request, token);
+            await using var withRuntime = await started.CreateAsync(request, token);
+
+            // Assert: the gate gives the typed answer, and the runtime gets exactly the tools and the folder of the project
+            Assert.Null(withoutRuntime.Agent);
+            Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, withoutRuntime.Failure!.Status);
+            Assert.NotNull(withRuntime.Agent);
+            var made = Assert.Single(source.Requests);
+            Assert.Equal(tools.Select(tool => tool.Name).ToArray(), made.Tools.Select(tool => tool.Name).ToArray());
+            Assert.Equal(root, made.WorkingDirectory);
+            Assert.Null(made.Model);
+        }
+        finally
+        {
+            Directory.Delete(root, true);
+        }
+    }
+
+    /// <summary>
     ///     Creates a payload that holds only text.
     /// </summary>
     /// <param name="text">The text of the message.</param>

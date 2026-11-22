@@ -51,6 +51,14 @@ temporary project folder and delete it.
   by its length, the answer that the file was created), the picture flag of the look at the drawing, the refused write
   outside the project as a call that did not succeed, and `Completed` last; the drawing is in the project and nothing is
   outside it.
+- A conversation with a stand-in Ollama server, from the settings to the project, works: the factory makes the agent on
+  the address, the model, and the context window of the settings (each request carries them), the server asks for a
+  drawing to be written with the real tools, the events show the created file, the drawing is in the project, and
+  nothing else is.
+- The Copilot agent is gated in this build and made only through the starter: the shipped starter gives no agent and the
+  status that Copilot support needs an update of the AI library, and a starter that can start a runtime gives an agent
+  that is made on it with exactly the names of the tools of the project, the project folder as its working directory,
+  and no model for the default.
 
 ### Test Scenarios
 
@@ -120,6 +128,21 @@ with the summary `path=art/box.svg, content=(n characters)` for the first, the a
 the first finish, a finish with a picture for the look, a finish that did not succeed for the write outside the project,
 and `Completed` last. The drawing is in the project and the file outside it was not written. This scenario is tested by
 `AgentSubsystem_RunTurn_ScriptedModelWritesAndLooksAtADrawing_EventsShowTheCreatedFileThePictureAndTheRefusal`.
+
+**AgentSubsystem_ConverseWithOllama_ScriptedServerAndProjectTools_WritesTheDrawingAndStreamsEvents**: Settings of Ollama
+(address, model `gemma3:12b`, window 32,768), the real tools of an empty project, and a stand-in server that streams a
+sentence and a call of `project_write` for `box.svg` and then a second sentence. The factory makes the agent, a turn
+runs through the mapper, and the events have the two sentences, one finish of `project_write` that succeeded and says
+`File 'box.svg' created`, and `Completed`. The drawing is in the project, it is the only entry in the project folder,
+and every request that the server got names the model and the window. This scenario is tested by
+`AgentSubsystem_ConverseWithOllama_ScriptedServerAndProjectTools_WritesTheDrawingAndStreamsEvents`.
+
+**AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools**:
+The development machine with the real CLI and the tools of an empty project. The factory with the starter that the build
+ships gives no agent and the status that the runtime is unavailable. The factory with a fake starter that hands over a
+fake runtime gives an agent, and the runtime was asked for one agent with the same tool names as the registry, the
+project folder as the working directory, and no model. This scenario is tested by
+`AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools`.
 
 **AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
 good Copilot CLI and a GitHub CLI under the program files that prints a token, and a scripted Ollama server has one

@@ -38,6 +38,8 @@ This document covers the verification design for the following software items:
       pictures, and marks, and the pictures and close-ups as images in a stated order
     - **AgentEventMapper** — the updates of an agent as the provider-independent events of a turn, and the failures of a
       turn as sentences that say what to do
+    - **AgentProviderFactory** — the agent of a conversation for Ollama or for GitHub Copilot, with the gated starter of
+      the Copilot runtime, and what it owns and disposes
   - **Annotation** subsystem
     - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
     - **MarkSourceResolver** — the parts of the source file under a mark

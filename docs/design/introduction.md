@@ -33,10 +33,12 @@ Local items:
     starter of the Copilot runtime and the probe of the Ollama server), **AgentToolRegistry** unit (the tools of the
     copilot for one project, confined to the project folder), **ProjectTools** unit (the tools that list, read, write,
     and draw the files of the project, with links refused and files replaced directly), **AgentInstructions** unit (the
-    role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier), and
+    role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier),
     **PayloadMessageMapper** unit (the message of the user as a model message with the marks described and the pictures
-    as images), and **AgentEventMapper** unit (the updates of an agent as the events of a turn, and the failures of a
-    turn as sentences that say what to do); the units that implement the contract are added as they are built.
+    as images), **AgentEventMapper** unit (the updates of an agent as the events of a turn, and the failures of a turn
+    as sentences that say what to do), and **AgentProviderFactory** unit (the agent of a conversation for Ollama or for
+    GitHub Copilot, with the gated starter of the Copilot runtime); the units that implement the contract are added as
+    they are built.
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.

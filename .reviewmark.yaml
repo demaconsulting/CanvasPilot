@@ -260,6 +260,23 @@ reviews:
       - "test/**/AgentSubsystem/AgentEventMapperTests.cs"
       - "test/**/AgentSubsystem/ScriptedChatClient.cs"
 
+  - id: CanvasPilot-Agent-AgentProviderFactory
+    title: Review of CanvasPilot AgentProviderFactory unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-provider-factory.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-provider-factory.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-provider-factory.md"
+      - "src/**/AgentSubsystem/AgentProviderFactory.cs"
+      - "src/**/AgentSubsystem/CopilotAgentSource.cs"
+      - "src/**/AgentSubsystem/IAgentFactory.cs"
+      - "test/**/AgentSubsystem/AgentProviderFactoryTests.cs"
+      - "test/**/AgentSubsystem/AgentProviderTestDoubles.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces
