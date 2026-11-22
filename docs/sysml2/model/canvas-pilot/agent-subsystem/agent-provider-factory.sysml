@@ -4,17 +4,17 @@ package CanvasPilot_AgentProviderFactory {
     private import CanvasPilot_AgentContract::*;
     private import CanvasPilot_AgentReadiness::*;
     private import CanvasPilot_CopilotCliLocator::*;
+    private import CanvasPilot_CopilotRuntimeStarter::*;
     private import CanvasPilot_SettingsService::*;
     private import CanvasPilot_RollingFileLogger::*;
     private import OtsDependencies::*;
 
     part def AgentProviderFactory {
-        doc /* Makes the agent of a conversation for the AI provider that the settings choose, from the settings, the tools of the project, and the instructions. For Ollama it checks the settings first (an absolute http or https address, a model name, and a context window in range, otherwise the typed status NotConfigured with a sentence that says what to enter and no request), then builds an HTTP client on the address without a time limit, an Ollama client for the model, and a context sizing client around it so that the context window of the settings is sent as num_ctx on every request, and makes the agent with the chat client agent factory of the AI library; the result owns the clients and disposes them once. For GitHub Copilot it finds the CLI with the locator (a missing or too old CLI gets the sentence of the readiness check and the starter is not asked), asks the starter of the Copilot runtime to start the runtime once under a gate, keeps the runtime it gets, and makes agents on it with exactly the supplied tools, the instructions, the name CanvasPilot, the model of the settings (none when blank), and the project folder as the working directory, in one place that supplies no permission handler so that the default-deny handler of the AI library applies. The starter that this build ships is gated, so Copilot gets the typed status CopilotRuntimeUnavailable and no agent; a starter that fails, or that starts a runtime without a way to make agents, gets the same status and is asked again by the next request. The factory disposes the runtime it started once; a result never does. Its seam is IAgentFactory, with which tests put an agent on a scripted chat client, and the stand-in for the sealed runtime of the AI library is ICopilotAgentSource. The log gets metadata only. It holds the request and result types, the stand-in interface, and the class on the real runtime as supporting types, which have no part definition of their own. */
+        doc /* Makes the agent of a conversation for the AI provider that the settings choose, from the settings, the tools of the project, and the instructions. For Ollama it checks the settings first (an absolute http or https address, a model name, and a context window in range, otherwise the typed status NotConfigured with a sentence that says what to enter and no request), then builds an HTTP client on the address without a time limit, an Ollama client for the model, and a context sizing client around it so that the context window of the settings is sent as num_ctx on every request, and makes the agent with the chat client agent factory of the AI library; the result owns the clients and disposes them once. For GitHub Copilot it finds the CLI with the locator (a missing or too old CLI gets the sentence of the readiness check and the starter is not asked), asks the starter of the Copilot runtime for the runtime on that CLI (shared with the readiness check and started once), and makes agents on it with exactly the supplied tools, the instructions, the name CanvasPilot, the model of the settings (none when blank), and the project folder as the working directory, with the default-deny permission handler of the AI library. A starter that says that the CLI is too old, that the runtime is not signed in, or that it could not be started, or that starts a runtime without a way to make agents, gives the matching typed status and no agent, and is asked again by the next request. The runtime belongs to the starter; the factory stops the starter, and so the runtime, once when it is disposed only if it owns the starter, and a result never does. Its seam is IAgentFactory, with which tests put an agent on a scripted chat client. The log gets metadata only. It holds the request and result types as supporting types, which have no part definition of their own. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
                 "src/DemaConsulting.CanvasPilot/AgentSubsystem/AgentProviderFactory.cs",
-                "src/DemaConsulting.CanvasPilot/AgentSubsystem/CopilotAgentSource.cs",
                 "src/DemaConsulting.CanvasPilot/AgentSubsystem/IAgentFactory.cs"
             );
             testFiles = (
@@ -29,8 +29,11 @@ package CanvasPilot_AgentProviderFactory {
         // Answers a request that cannot be served with the readiness report of the contract (a status and one sentence).
         dependency AgentProviderFactory to AgentContract;
 
-        // Uses the starter of the Copilot runtime and its gated implementation, and the statuses and sentences of the readiness check.
+        // Uses the statuses and sentences of the readiness check for a Copilot that cannot be served.
         dependency AgentProviderFactory to AgentReadiness;
+
+        // Asks the shared starter of the Copilot runtime for the runtime on the CLI that was found, and stops the starter that it owns.
+        dependency AgentProviderFactory to CopilotRuntimeStarter;
 
         // Finds the installed Copilot CLI and its version, which the starter needs to start the runtime.
         dependency AgentProviderFactory to CopilotCliLocator;

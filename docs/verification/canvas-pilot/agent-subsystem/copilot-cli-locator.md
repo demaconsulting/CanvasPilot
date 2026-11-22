@@ -66,7 +66,7 @@ prefix, the size limit, and the time limit are exactly those of the rule. This s
 **CopilotCliLocator_Locate_DevelopmentMachine_FindsTheRealCliAndNotTheShim**: On the layout and `PATH` of the
 development machine, with a version answer for both the real CLI and the shim, the real CLI is found with version
 1.0.114, the shim is the single rejected candidate with the reason shim, and exactly one program is run: the real CLI,
-with the argument `--version` and a limit of 10 seconds. This scenario is tested by
+with the arguments `--no-auto-update --version` and a limit of 10 seconds. This scenario is tested by
 `CopilotCliLocator_Locate_DevelopmentMachine_FindsTheRealCliAndNotTheShim`.
 
 **CopilotCliLocator_Locate_ShimFirstOnPath_StillRejectsTheShim**: A `PATH` that names the shim folder before the package

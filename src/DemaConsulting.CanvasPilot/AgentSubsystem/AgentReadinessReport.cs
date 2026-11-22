@@ -40,7 +40,7 @@ public enum AgentReadinessStatus
     /// <summary>No credentials that the AI library can use were found for GitHub Copilot.</summary>
     CopilotNotSignedIn,
 
-    /// <summary>The GitHub Copilot runtime cannot be started by this build of the application.</summary>
+    /// <summary>The GitHub Copilot runtime could not be started.</summary>
     CopilotRuntimeUnavailable,
 
     /// <summary>The Ollama server did not answer.</summary>

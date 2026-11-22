@@ -22,9 +22,11 @@
     <!-- The Microsoft.Copilot.SDK package, which the AgentKit Copilot package brings, downloads and bundles its own
          GitHub Copilot runtime (a native copilot-runtime wrapper, runtime.node, and a CLI of about 180 MB) into the
          output of every project that references it, directly or transitively. CanvasPilot must not ship or download
-         that runtime: it uses only the Copilot CLI that the user installed. Setting the property here, and not in one
-         project, makes every project of the solution (application, executable, and the test projects) skip the
-         download. The packaging guard in .fileassert.yaml and the OTS tests fail when a Copilot runtime appears. -->
+         that runtime: it runs only the Copilot CLI that the user installed, which AgentKit uses by default (the
+         installed-CLI source, at the full path that CanvasPilot names) and CanvasPilot never asks for the bundled
+         source. Setting the property here, and not in one project, makes every project of the solution (application,
+         executable, and the test projects) skip the download. The packaging guard in .fileassert.yaml and the OTS tests
+         fail when a Copilot runtime appears. -->
     <CopilotSkipCliDownload>true</CopilotSkipCliDownload>
   </PropertyGroup>
 

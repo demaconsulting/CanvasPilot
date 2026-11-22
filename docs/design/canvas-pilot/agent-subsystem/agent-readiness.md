@@ -7,29 +7,23 @@
 `AgentReadiness` checks whether the AI provider that the settings choose can be used and says, in one sentence, what it
 found and what to do about it. The chat shows the sentence before the first message, and the settings dialog shows it
 when the user chooses Check connection. The unit implements `IProviderCheck`, which the Settings subsystem owns, so the
-dialog never depends on the Agent subsystem. The unit also holds its supporting types: `ICopilotRuntimeStarter` with the
-`GatedCopilotRuntimeStarter` that this build ships, and `IOllamaProbe` with its real `OllamaProbe`.
+dialog never depends on the Agent subsystem. The unit also holds its supporting types: `IOllamaProbe` with its real
+`OllamaProbe`. The starter of the Copilot runtime, which the check asks last, is the `CopilotRuntimeStarter` unit.
 
 #### Data Model
 
 **AgentReadiness**: `sealed class`, implements `IProviderCheck`. The constructor takes `CopilotCliLocator`,
 `ICopilotRuntimeStarter`, `IProcessRunner`, `IEnvironmentReader`, `ICliFileSystem`, and `IOllamaProbe`, each defaulting
-to the real implementation (the starter defaults to the gated one). Its fields are these collaborators only: it holds no
+to the real implementation (the starter defaults to a `CopilotRuntimeStarter`; the application passes the one that it
+shares with the factory of the agents). Its fields are these collaborators only: it holds no
 text, no settings, and no logger. Constants: `TokenVariableNames` (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`),
-`CredentialProbeTimeout` (5 seconds), `OllamaProbeTimeout` (5 seconds), `NotSignedInMessage`, and
-`RuntimeUnavailableMessage`. The result is the `AgentReadinessReport` of the contract (a status and one sentence).
+`CredentialProbeTimeout` (5 seconds), `OllamaProbeTimeout` (5 seconds), and `NotSignedInMessage`, which equals
+`CopilotRuntimeStarter.NotSignedInMessage`. The result is the `AgentReadinessReport` of the contract (a status and one
+sentence).
 
-**ICopilotRuntimeStarter**: `StartAsync(CopilotStartRequest, cancellationToken)` returns a `CopilotStartResult`.
-`CopilotStartRequest(CliPath, CliVersion, CheckOnly)` says which CLI the locator found and whether the caller only wants
-to know that the runtime could be started (the readiness check) or wants it started. A request that starts the runtime
-also carries `DataDirectory`, the folder where the runtime must keep its own data (chosen by the `AgentService` unit,
-below the local data of the user and never inside a project, so a starter passes it on and never uses the default of
-the AI library), and `Logger`, the logger that records metadata only.
-`CopilotStartResult(Status, Message, Agents)` has the status `Started`, `NeedsAgentKitUpdate`, or `Failed`; `Agents` is
-the started runtime as an `ICopilotAgentSource` when the request was not a check only (it is documented in the design of
-the `AgentProviderFactory` unit, which keeps and disposes it) and is always `null` for a check only.
-**GatedCopilotRuntimeStarter** is the starter that this build ships; it always answers `NeedsAgentKitUpdate` and never
-touches the AI library.
+**ICopilotRuntimeStarter**, with `CopilotStartRequest`, `CopilotStartResult`, and `CopilotStartStatus`, is described in
+the design of the `CopilotRuntimeStarter` unit. The check passes the path and the version that the locator found and no
+data folder, so the shared starter uses the folder that it was made with.
 
 **IOllamaProbe**: `ListModelsAsync(endpoint, timeout, cancellationToken)` returns `OllamaModelList(Reachable, Models)`,
 and `GetContextLengthAsync(endpoint, model, timeout, cancellationToken)` returns the largest context window of a model
@@ -49,30 +43,35 @@ can stand in for the server.
    `gh.exe` in the folders of the `PATH` and then in `%ProgramFiles%\GitHub CLI`, and runs `gh auth token` with a limit
    of 5 seconds. The result counts only when the program started, did not time out, ended with exit code 0, and printed
    at least one character other than white space. Only the length of the output is examined; the text is a local value
-   that is not kept, shown, or logged. No other credential is looked for.
-4. *Runtime.* The starter is asked, with `CheckOnly` set, whether the runtime can be started. `Started` is `Ready` with
-   the sentence "GitHub Copilot CLI {version} is ready."; any other answer is `CopilotRuntimeUnavailable`, with the
-   sentence of the starter. The starter that this build ships answers `NeedsAgentKitUpdate`, so Copilot is **never**
-   reported ready in this build.
+   that is not kept, shown, or logged. No other credential is looked for. This check is a quick answer that spares a
+   start of the runtime for a user who has no credentials at all; it does not prove that they work.
+4. *Runtime.* The shared starter is asked to start the runtime on the CLI that the locator found. This is the real,
+   authoritative check: the runtime is started, the library checks the version of the CLI again, and it refuses a
+   runtime that is not signed in. `Started` is `Ready` with the sentence "GitHub Copilot CLI {version} is ready.";
+   `CliTooOld`, `NotSignedIn`, and `Failed` are `CopilotCliTooOld`, `CopilotNotSignedIn`, and
+   `CopilotRuntimeUnavailable`, each with the sentence of the starter. The check starts no second runtime: the runtime
+   that it starts is the one that the conversations then use, so a ready check means that the first message finds a
+   running runtime.
 
 The sentences (exact text; the design and the tests are the same words):
 
 - `CopilotCliMissing`: "The GitHub Copilot CLI was not found. Install it with `winget install GitHub.Copilot` or set its
   path in Settings." followed, when the only copilot.exe found was the editor shim, by " Only the VS Code copilot shim
   was found at {path}."; a path in the settings that fails gives the sentence of the locator about that path.
-- `CopilotCliTooOld`: "Copilot CLI {version} is older than 1.0.113. Run `winget upgrade GitHub.Copilot`."
+- `CopilotCliTooOld`: "Copilot CLI {version} is older than 1.0.113. Run `winget upgrade GitHub.Copilot`." (the
+  locator's sentence), or the message of the AI library when the starter found the CLI too old.
 - `CopilotNotSignedIn`: "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the
-  COPILOT_GITHUB_TOKEN environment variable), then choose Check connection. The Copilot CLI's own /login session is not
-  shared with CanvasPilot's AI library yet."
-- `CopilotRuntimeUnavailable`: "Copilot support needs an AgentKit update; use Ollama meanwhile." (the sentence of the
-  starter when a starter other than the gated one fails).
-- `Ready` (Copilot): "GitHub Copilot CLI {version} is ready." (only a starter that can start gives it).
+  COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to the
+  Copilot CLI with /login does not apply to CanvasPilot." (the sentence of the starter).
+- `CopilotRuntimeUnavailable`: the sentence of the starter for a start that failed for another reason (the message of
+  the AI library, or "The Copilot runtime could not be started. Choose Check connection to try again.").
+- `Ready` (Copilot): "GitHub Copilot CLI {version} is ready."
 
-**Why the sign-in sentence says what it says.** The AI library starts its own Copilot runtime and signs in with a GitHub
-token, from the variables above or from a signed-in GitHub CLI. The sign-in that the Copilot CLI keeps for itself (its
-`/login`) is not used by that runtime, so a user who is signed in to the CLI is still not signed in for CanvasPilot.
-This is one of the two requests recorded for the AI library (see the design of the AgentKit item): a way to name the CLI
-to run, and a way to use the CLI's own session.
+**Why the sign-in sentence says what it says.** The AI library starts its own Copilot runtime with a home of its own and
+signs in with a GitHub token, from the variables above or from a signed-in GitHub CLI. The sign-in that the Copilot CLI
+keeps for itself (its `/login`) is not used by that runtime, so a user who is signed in to the CLI is still not signed
+in for CanvasPilot. This is a documented limitation and a request for the AI library (see the design of the AgentKit
+item): a way to use the CLI's own session.
 
 **Ollama**, in order.
 
@@ -130,7 +129,8 @@ fixed text with the CLI version, a path, an address, or a model name as the only
 `CopilotCliLocator` (the CLI and its version, and the process runner, file system reader, and environment reader that
 the locator and the credential check share), `AiProviderSettings` and `IProviderCheck` of the Settings subsystem, the
 `AgentReadinessReport` of the contract, and the OllamaSharp library (`OllamaApiClient`) in `OllamaProbe` only. The unit
-does not use AgentKit or the Copilot SDK: the Copilot runtime is behind the starter.
+does not use AgentKit or the Copilot SDK: the Copilot runtime is behind the starter, which the `CopilotRuntimeStarter`
+unit implements.
 
 #### Callers
 

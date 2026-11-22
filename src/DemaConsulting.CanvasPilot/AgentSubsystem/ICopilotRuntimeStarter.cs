@@ -31,10 +31,16 @@ public enum CopilotStartStatus
     Started,
 
     /// <summary>
-    ///     This build of the application cannot start the runtime because the AI library does not yet let the application
-    ///     choose the Copilot CLI to run.
+    ///     The Copilot CLI is older than the oldest version that works with the AI library, or speaks another protocol than
+    ///     the library does.
     /// </summary>
-    NeedsAgentKitUpdate,
+    CliTooOld,
+
+    /// <summary>
+    ///     The runtime started but has no credentials that it can use: the Copilot CLI's own <c>/login</c> session is not
+    ///     used by the AI library.
+    /// </summary>
+    NotSignedIn,
 
     /// <summary>The runtime could not be started for a reason that the result names.</summary>
     Failed,
@@ -45,16 +51,12 @@ public enum CopilotStartStatus
 /// </summary>
 /// <param name="CliPath">The full path of the Copilot CLI that the locator found.</param>
 /// <param name="CliVersion">The version that the CLI reported.</param>
-/// <param name="CheckOnly">
-///     <see langword="true" /> to learn whether the runtime could be started without starting it, which is what a
-///     readiness check asks.
-/// </param>
-public sealed record CopilotStartRequest(string CliPath, Version CliVersion, bool CheckOnly)
+public sealed record CopilotStartRequest(string CliPath, Version CliVersion)
 {
     /// <summary>
     ///     Gets the full path of the folder where the runtime keeps its own data (its home and its sessions), or
-    ///     <see langword="null" /> for none. The agent service always names a folder below the local data of the user and
-    ///     never one inside a project, and a starter must pass it on instead of using the default of the library.
+    ///     <see langword="null" /> for the folder that the starter was made with. The folder is always one below the local
+    ///     data of the user and never one inside a project.
     /// </summary>
     public string? DataDirectory { get; init; }
 
@@ -70,23 +72,35 @@ public sealed record CopilotStartRequest(string CliPath, Version CliVersion, boo
 /// <param name="Status">What came of the request.</param>
 /// <param name="Message">One sentence for the user that says what happened and, when the runtime cannot be used, what to do.</param>
 /// <param name="Agents">
-///     The started runtime as a source of agents when <paramref name="Status" /> is <see cref="CopilotStartStatus.Started" />
-///     and the request was not a check only; otherwise <see langword="null" />. Whoever receives it disposes it, which stops
-///     the runtime.
+///     The running runtime as a source of agents when <paramref name="Status" /> is <see cref="CopilotStartStatus.Started" />;
+///     otherwise <see langword="null" />. The runtime is shared by everyone who asks and belongs to the starter, so whoever
+///     receives the source must not dispose it.
 /// </param>
-public sealed record CopilotStartResult(CopilotStartStatus Status, string Message, ICopilotAgentSource? Agents = null);
+public sealed record CopilotStartResult(CopilotStartStatus Status, string Message, ICopilotAgentSource? Agents = null)
+{
+    /// <summary>
+    ///     Gets the status of the readiness check that stands for the same cause as <see cref="Status" />.
+    /// </summary>
+    public AgentReadinessStatus ReadinessStatus => Status switch
+    {
+        CopilotStartStatus.Started => AgentReadinessStatus.Ready,
+        CopilotStartStatus.CliTooOld => AgentReadinessStatus.CopilotCliTooOld,
+        CopilotStartStatus.NotSignedIn => AgentReadinessStatus.CopilotNotSignedIn,
+        _ => AgentReadinessStatus.CopilotRuntimeUnavailable,
+    };
+}
 
 /// <summary>
-///     Starts the GitHub Copilot runtime of the AI library on the Copilot CLI that the user installed. The interface is
-///     the one place where the application depends on a feature that the AI library does not have yet (a way to name the
-///     CLI to run), so that the rest of the Copilot support is built and tested against it now.
+///     Starts, and shares, the GitHub Copilot runtime of the AI library on the Copilot CLI that the user installed. One
+///     runtime serves the agents of the conversations and the readiness check, because the runtime keeps its data in one
+///     folder that two runtimes must not share.
 /// </summary>
 public interface ICopilotRuntimeStarter
 {
     /// <summary>
-    ///     Starts the runtime on a CLI, or says whether it could be started.
+    ///     Gives the running runtime on a CLI, starting it when none runs on that CLI yet.
     /// </summary>
-    /// <param name="request">Which CLI to use and whether to only check.</param>
+    /// <param name="request">Which CLI to use.</param>
     /// <param name="cancellationToken">A token that cancels the start.</param>
     /// <returns>The answer; a runtime that cannot be started is a result, not an exception.</returns>
     Task<CopilotStartResult> StartAsync(CopilotStartRequest request, CancellationToken cancellationToken = default);

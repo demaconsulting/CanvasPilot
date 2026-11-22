@@ -2,6 +2,7 @@ package CanvasPilot_AgentSubsystem {
     private import SoftwareItemMetadata::*;
     private import CanvasPilot_AgentContract::*;
     private import CanvasPilot_CopilotCliLocator::*;
+    private import CanvasPilot_CopilotRuntimeStarter::*;
     private import CanvasPilot_AgentReadiness::*;
     private import CanvasPilot_AgentToolRegistry::*;
     private import CanvasPilot_ProjectTools::*;
@@ -12,7 +13,7 @@ package CanvasPilot_AgentSubsystem {
     private import CanvasPilot_AgentService::*;
 
     part def AgentSubsystem {
-        doc /* The AI copilot behind the chat: the provider-independent contract (IAgentService, the turn request with its restored history, the stream of events, and the readiness report) through which the chat runs a turn, stops it, and learns whether the chosen AI provider can be used, the locator of the GitHub Copilot CLI that the user installed, the readiness checks of both AI providers (Copilot in this build is gated and never ready), and the registry that builds the tools the copilot may use for one project, confined to the project folder, and the project tools with which the copilot lists, reads, writes, and draws the files of the project (links refused, files replaced directly, pictures kept in memory), and the instructions that the copilot is given (the role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier with measured sizes), and the mapper that turns the message that the user sent into the message of the model (the words, the described attachments, pictures, and marks, and the annotated pictures and close-ups as images), and the mapper that turns the updates of an agent into the events of a turn and the failures of a turn into sentences that say what to do, and the factory that makes the agent of a conversation for Ollama or for GitHub Copilot (gated in this build, so Copilot gets a typed status and no agent), and the service that implements the contract (the conversation of the open project, made when the first message is sent and made again when the project or a relevant setting changes, one turn at a time, the data of the Copilot runtime kept below the local data of the user and never inside a project, and a log of metadata only). It has no user interface and none of its contract types names an AI library. */
+        doc /* The AI copilot behind the chat: the provider-independent contract (IAgentService, the turn request with its restored history, the stream of events, and the readiness report) through which the chat runs a turn, stops it, and learns whether the chosen AI provider can be used, the locator of the GitHub Copilot CLI that the user installed, the starter of the Copilot runtime that runs the installed CLI as one shared runtime, the readiness checks of both AI providers (Copilot is ready when the runtime starts and is signed in), and the registry that builds the tools the copilot may use for one project, confined to the project folder, and the project tools with which the copilot lists, reads, writes, and draws the files of the project (links refused, files replaced directly, pictures kept in memory), and the instructions that the copilot is given (the role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier with measured sizes), and the mapper that turns the message that the user sent into the message of the model (the words, the described attachments, pictures, and marks, and the annotated pictures and close-ups as images), and the mapper that turns the updates of an agent into the events of a turn and the failures of a turn into sentences that say what to do, and the factory that makes the agent of a conversation for Ollama or for GitHub Copilot (on the shared Copilot runtime, with a typed status and no agent when Copilot cannot be served), and the service that implements the contract (the conversation of the open project, made when the first message is sent and made again when the project or a relevant setting changes, one turn at a time, the data of the Copilot runtime kept below the local data of the user and never inside a project, and a log of metadata only). It has no user interface and none of its contract types names an AI library. */
 
         metadata info : SoftwareInfo {
             testFiles = ("test/DemaConsulting.CanvasPilot.Tests/AgentSubsystem/AgentSubsystemTests.cs");
@@ -23,6 +24,7 @@ package CanvasPilot_AgentSubsystem {
 
         part agentContract : AgentContract;
         part copilotCliLocator : CopilotCliLocator;
+        part copilotRuntimeStarter : CopilotRuntimeStarter;
         part agentReadiness : AgentReadiness;
         part agentToolRegistry : AgentToolRegistry;
         part projectTools : ProjectTools;

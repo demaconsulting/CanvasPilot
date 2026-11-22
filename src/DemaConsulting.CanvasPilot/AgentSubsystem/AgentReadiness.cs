@@ -31,11 +31,11 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///     <para>
 ///         For GitHub Copilot the checks run in order and the first one that fails gives the answer: the Copilot CLI is
 ///         found (by <see cref="CopilotCliLocator" />) and is new enough, credentials exist, and the starter of the runtime
-///         says that the runtime can be started. The credentials exist when one of the variables
+///         starts the runtime, or reuses the one that runs, on that CLI; the way that start fails is the answer. The credentials exist when one of the variables
 ///         <c>COPILOT_GITHUB_TOKEN</c>, <c>GH_TOKEN</c>, or <c>GITHUB_TOKEN</c> is not empty, or when <c>gh auth token</c>
 ///         of the GitHub CLI succeeds with some output. Only whether the variable or the output is empty is looked at; the
-///         token itself is never kept, shown, or logged. The starter that this build ships is gated, so Copilot is never
-///         reported as ready here.
+///         token itself is never kept, shown, or logged. The runtime is the one that the factory of the agents uses, so the
+///         check starts no second runtime.
 ///     </para>
 ///     <para>
 ///         For Ollama the checks are: the address and the model name are set, the server answers, the server has the model,
@@ -61,11 +61,7 @@ public sealed class AgentReadiness : IProviderCheck
     public static readonly TimeSpan OllamaProbeTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>The sentence for a Copilot that has no credentials.</summary>
-    public const string NotSignedInMessage =
-        "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN environment variable), then choose Check connection. The Copilot CLI's own /login session is not shared with CanvasPilot's AI library yet.";
-
-    /// <summary>The sentence for a Copilot whose runtime this build cannot start.</summary>
-    public const string RuntimeUnavailableMessage = GatedCopilotRuntimeStarter.NeedsUpdateMessage;
+    public const string NotSignedInMessage = CopilotRuntimeStarter.NotSignedInMessage;
 
     /// <summary>The file name of the GitHub CLI on Windows.</summary>
     private const string GitHubCliName = "gh.exe";
@@ -79,7 +75,7 @@ public sealed class AgentReadiness : IProviderCheck
     /// <summary>Finds and checks the Copilot CLI.</summary>
     private readonly CopilotCliLocator _locator;
 
-    /// <summary>Starts, or says whether it can start, the Copilot runtime.</summary>
+    /// <summary>Starts, or reuses, the Copilot runtime.</summary>
     private readonly ICopilotRuntimeStarter _starter;
 
     /// <summary>Runs the GitHub CLI.</summary>
@@ -98,7 +94,7 @@ public sealed class AgentReadiness : IProviderCheck
     ///     Initializes a new instance of the <see cref="AgentReadiness" /> class.
     /// </summary>
     /// <param name="locator">Finds the Copilot CLI; a locator on the real system when <see langword="null" />.</param>
-    /// <param name="starter">The starter of the Copilot runtime; the gated starter when <see langword="null" />.</param>
+    /// <param name="starter">The starter of the Copilot runtime; a starter of the real runtime when <see langword="null" />.</param>
     /// <param name="processRunner">Runs the GitHub CLI; the real runner when <see langword="null" />.</param>
     /// <param name="environment">Reads the environment; the real one when <see langword="null" />.</param>
     /// <param name="fileSystem">Asks the file system; the real one when <see langword="null" />.</param>
@@ -115,7 +111,7 @@ public sealed class AgentReadiness : IProviderCheck
         _environment = environment ?? new SystemEnvironmentReader();
         _fileSystem = fileSystem ?? new CliFileSystem();
         _locator = locator ?? new CopilotCliLocator(_processRunner, _fileSystem, _environment);
-        _starter = starter ?? new GatedCopilotRuntimeStarter();
+        _starter = starter ?? new CopilotRuntimeStarter();
         _ollama = ollama ?? new OllamaProbe();
     }
 
@@ -209,13 +205,13 @@ public sealed class AgentReadiness : IProviderCheck
             return new AgentReadinessReport(AgentReadinessStatus.CopilotNotSignedIn, NotSignedInMessage);
         }
 
-        // 4: the runtime; this build cannot start it, which the starter says and which is never reported as ready
+        // 4: the runtime, which the starter starts or reuses; it is the real check that the CLI runs and is signed in
         var started = await _starter
-            .StartAsync(new CopilotStartRequest(info.Path, info.Version, CheckOnly: true), cancellationToken)
+            .StartAsync(new CopilotStartRequest(info.Path, info.Version), cancellationToken)
             .ConfigureAwait(false);
         return started.Status == CopilotStartStatus.Started
             ? new AgentReadinessReport(AgentReadinessStatus.Ready, $"GitHub Copilot CLI {info.Version} is ready.")
-            : new AgentReadinessReport(AgentReadinessStatus.CopilotRuntimeUnavailable, started.Message);
+            : new AgentReadinessReport(started.ReadinessStatus, started.Message);
     }
 
     /// <summary>

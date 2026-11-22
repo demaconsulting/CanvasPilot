@@ -89,15 +89,16 @@ sections:
             title: >-
               With the Copilot SDK download of its runtime switched off, the AgentKit Copilot libraries shall add no
               Copilot runtime file to the output of a project that references them, shall fail to start a Copilot
-              runtime with an error that names the missing runtime wrapper, shall start no runtime process when they
-              fail, and shall ignore the COPILOT_CLI_PATH variable of the host process.
+              runtime on an explicit Copilot CLI path that does not exist with an error that names that path, shall start
+              no Copilot process when they fail, and shall ignore the COPILOT_CLI_PATH variable of the host process.
             justification: |
-              CanvasPilot must not ship or download the GitHub Copilot runtime. AgentKit can start only a runtime that
-              is bundled beside the application, so in this version it fails cleanly, and the failure, the empty
-              output, and the ignored variable are the facts on which the gating of Copilot in CanvasPilot rests. The
-              published output and the installer are asserted separately.
+              CanvasPilot must not ship or download the GitHub Copilot runtime; it runs the Copilot CLI that the user
+              installed, whose full path it names. AgentKit runs the CLI that is named and no other, so a path that does
+              not exist fails cleanly with that path in the message, and the empty output and the ignored variable show
+              that nothing else can be run or shipped by accident. The test names a path that does not exist so that it
+              never runs the installed CLI of the machine. The published output and the installer are asserted separately.
             tags: [ots]
             tests:
               - AgentKit_BuildOutput_HasNoBundledCopilotRuntime
-              - AgentKit_CopilotRuntime_StartAsync_WithoutBundledRuntime_FailsAndStartsNothing
+              - AgentKit_CopilotRuntime_StartAsync_MissingExplicitCliPath_FailsNamingThePathAndStartsNothing
               - AgentKit_CopilotRuntime_StartAsync_CliPathVariable_IsIgnored

@@ -11,13 +11,16 @@ chosen provider can be used. It has no user interface. Its parts are the readine
 that the copilot may call and the instructions that it is given, the agent of the chosen provider, and the service that
 keeps one conversation for the open project and runs one turn at a time.
 
-The subsystem is built contract first. It contains ten units. `AgentContract` is `IAgentService`, the request
+The subsystem is built contract first. It contains eleven units. `AgentContract` is `IAgentService`, the request
 and history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds
 the GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks
 its version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader).
 `AgentReadiness` checks whether the chosen provider can be used and implements the `IProviderCheck` of the `Settings`
-subsystem; it comes with the starter of the Copilot runtime (the one this build ships is gated) and the probe of the
-Ollama server. `AgentToolRegistry` builds the tools that the copilot may use for one project: it confines them to the
+subsystem; it comes with the probe of the Ollama server, and for Copilot it asks the shared runtime to start.
+`CopilotRuntimeStarter` starts the GitHub Copilot runtime of the AI library on the CLI that the user installed, shares
+that one runtime among the readiness check and every conversation, and words every way that the start can fail; it holds
+the supporting types of the starter and of the source of Copilot agents. `AgentToolRegistry` builds the tools that the
+copilot may use for one project: it confines them to the
 project folder with a path policy, offers the drawing knowledge and the style tools as functions of the AI library, adds
 the packs that the application supplies for the project and the optional packs that the user chose (the catalog is empty
 in this version), and refuses a set that a provider could not be given. `ProjectTools` is the copilot's hands on the
@@ -32,9 +35,8 @@ pictures as PNG images, annotated pictures first and then the close-ups of the m
 turns the stream of updates that an agent produces for a turn into the events of the contract, the same for both
 providers, and turns the exception of a failed turn into a failure with a sentence that says what to do.
 `AgentProviderFactory` makes the agent of a conversation for the chosen provider: for Ollama an agent on an Ollama
-client that is told the context window on every request, and for GitHub Copilot an agent on the runtime that the starter
-of the runtime gives, with only the supplied tools and the default-deny permission handler of the AI library. The
-starter that this build ships is gated, so for Copilot the factory answers with a typed result and no agent.
+client that is told the context window on every request, and for GitHub Copilot an agent on the shared runtime that the
+starter of the runtime gives, with only the supplied tools and the default-deny permission handler of the AI library.
 `AgentService` implements `IAgentService`: it makes nothing until the first message is sent, then builds the tools, the
 instructions, the agent, and one provider session for the open project, runs one turn at a time on them, rebuilds them
 when the project or a setting that decides the agent changes, deletes what the provider kept when a conversation ends,
@@ -85,16 +87,30 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 
 **AgentReadiness**: The check of whether the chosen AI provider can be used.
 
-- *Type*: In-process .NET class that implements `IProviderCheck`, with `ICopilotRuntimeStarter` (and the gated starter),
-  `IOllamaProbe` (and the real probe), documented in the design of the `AgentReadiness` unit.
+- *Type*: In-process .NET class that implements `IProviderCheck`, with `IOllamaProbe` (and the real probe), documented
+  in the design of the `AgentReadiness` unit.
 - *Role*: Provider (the service, the chat banner, and the connection check of the settings dialog are consumers).
 - *Contract*: `GetReportAsync(settings, refresh, cancellationToken)` returns an `AgentReadinessReport`; `CheckAsync` is
   the settings dialog's connection check, which always searches again. For Copilot the checks run in order (CLI,
-  version, credentials, runtime) and the first failure gives the sentence; for Ollama they are the settings, the server,
-  the model, and the window.
-- *Constraints*: Copilot is never reported ready by this build (the starter that is shipped answers that an update of
-  the AI library is needed, and the Copilot runtime is neither bundled nor downloaded); a token is never stored, shown,
-  or logged; every problem is a report and only cancellation is thrown.
+  version, credentials, the shared runtime) and the first failure gives the sentence; for Ollama they are the settings,
+  the server, the model, and the window.
+- *Constraints*: Copilot is reported ready only when the shared runtime was started on the installed CLI and signed in
+  (the Copilot runtime is neither bundled nor downloaded); a token is never stored, shown, or logged; every problem is a
+  report and only cancellation is thrown.
+
+**CopilotRuntimeStarter**: The one Copilot runtime, on the CLI that the user installed.
+
+- *Type*: In-process .NET class that implements `ICopilotRuntimeStarter` and `IAsyncDisposable`, with
+  `CopilotStartRequest`, `CopilotStartResult`, `CopilotStartStatus`, `ICopilotAgentSource`, `CopilotAgentRequest`, and
+  `CopilotRuntimeAgentSource`, documented in the design of the `CopilotRuntimeStarter` unit.
+- *Role*: Provider (the readiness check and the agent factory are consumers); it consumes the runtime of the AI library.
+- *Contract*: `StartAsync(request, cancellationToken)` returns a `CopilotStartResult` with the status `Started`,
+  `CliTooOld`, `NotSignedIn`, or `Failed`, one sentence, and, when started, the running runtime as an
+  `ICopilotAgentSource`; every caller gets the same running runtime for the same CLI and data folder. Disposing the
+  starter stops the runtime once.
+- *Constraints*: The CLI is the installed one at the path that the locator found and nothing is bundled or downloaded;
+  only one runtime uses the data folder, which is below the local data of the user and never in a project; no token is
+  read, stored, logged, or passed; a failed start is a result and is not remembered; a cancelled start is thrown.
 
 **AgentToolRegistry**: The tools that the copilot may use for one project.
 
@@ -165,16 +181,15 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 **AgentProviderFactory**: The agent of a conversation for the chosen provider.
 
 - *Type*: In-process .NET class behind the interface `IAgentFactory` (the test seam), with `AgentCreationRequest`,
-  `AgentCreationResult`, and `ICopilotAgentSource`, documented in the design of the `AgentProviderFactory` unit.
+  `AgentCreationResult`, and `IAgentFactory`, documented in the design of the `AgentProviderFactory` unit.
 - *Role*: Provider (the agent service is the consumer); it consumes the `AiProviderSettings` of the
   `Settings` subsystem, the tools of the registry, and the instructions.
 - *Contract*: `CreateAsync(request)` returns an `AgentCreationResult`, which holds an `AIAgent` of the Microsoft Agent
   Framework or the readiness status and sentence that say why none could be made; disposing the result releases what the
-  agent owns, and disposing the factory stops the Copilot runtime that it started.
+  agent owns, and disposing a factory that owns its starter stops the Copilot runtime.
 - *Constraints*: Ollama gets the address, the model, and the context window of the settings on every request; GitHub
-  Copilot is reached only through the starter of the runtime (gated in this build, so there is no agent), starts once,
-  and gets exactly the supplied tools and the project folder with the default-deny permission handler; settings that
-  cannot be used are a result, not an exception.
+  Copilot is reached only through the shared runtime of the starter, and gets exactly the supplied tools and the project
+  folder with the default-deny permission handler; settings that cannot be used are a result, not an exception.
 
 **AgentService**: The conversation of the open project, which implements `IAgentService`.
 
@@ -214,8 +229,9 @@ usable before any provider is written against it. The Copilot CLI is found by a 
 `CopilotCliLocator` unit; the subsystem test reproduces the layout of a real machine that has both the CLI and the VS
 Code shim, and checks that the CLI is found, that a machine with only the shim is told so, and that a path chosen in the
 settings is used. The readiness checks are tested through `IProviderCheck`, as the settings dialog uses them: GitHub
-Copilot on a machine with a signed-in GitHub CLI is not usable because this build cannot start the runtime, and Ollama
-with a small window is usable with a warning. The tools are tested the same way: the registry is built over the real
+Copilot on a machine with a signed-in GitHub CLI is ready when a stand-in starter starts, and is not usable with the
+sentence of the starter when the starter says that it is not signed in, and Ollama with a small window is usable with a
+warning. The tools are tested the same way: the registry is built over the real
 drawing knowledge and a pack that keeps the policy it receives, and the test shows that only the application's own tools
 are offered and that the policy permits a picture file of the project and refuses the data folder, a project file, and
 every place outside the project. The project tools are tested on a real project folder: a drawing is written, listed,
@@ -229,13 +245,15 @@ model would receive. The mapper of the updates is tested with scripted streams f
 failure, and the rules for a canceled turn, and with a real agent, on a scripted model, that writes a drawing, looks at
 it, and tries to write outside the project with the real project tools, which shows the events that the chat will get.
 The factory is tested against a stand-in Ollama server with the real tools of a project, which shows a conversation from
-the settings to the drawing in the project, and for Copilot with the gated starter and with a fake starter, which shows
-the typed answer without an agent and an agent that is made with exactly the tools and the folder of the project.
+the settings to the drawing in the project, and for Copilot with stand-in starters, which shows the typed answer without
+an agent for each way that a start fails and an agent that is made with exactly the tools and the folder of the project.
 The service is tested with a scripted model on the real tools, instructions, and mappers, a stand-in for the open
 project and for the settings that raise the events of the real services, and a log file: the tests run whole turns,
 change the project and the settings, stop, reset, and dispose, and show that nothing is written into the project and
 that no word of a message, an answer, a tool, or a file reaches the log. Two subsystem tests run it as the application
-will, once over the stand-in Ollama server with the real factory and once for Copilot with the gated starter.
+will, once over the stand-in Ollama server with the real factory and once for Copilot with a stand-in starter. The
+starter itself is tested over a stand-in function that starts the runtime, because the runtime is a sealed class that
+needs a real CLI: sharing, replacement, failure mapping, and disposal are shown there.
 
 **Where the data of the copilot lives.** The copilot's own data never goes into the project folder. The folder of a
 project receives only files that the user or the copilot is asked to create.
@@ -246,7 +264,8 @@ project receives only files that the user or the copilot is asked to create.
   `attachments/`, and `styles/` of the project; existing behavior of the Composer and Style subsystems, and intentional
   content.
 - *Data of the Copilot runtime* (its home and its sessions): `{local data root}\CanvasPilot\copilot`; chosen by
-  `AgentService`, never the default of the AI library, and its sessions are deleted when a conversation ends.
+  `AgentService` (and passed to the one `CopilotRuntimeStarter` by the composition), never the default of the AI
+  library, and its sessions are deleted when a conversation ends.
 - *Chat history*: `{local data root}\CanvasPilot\history\{key}`; kept by the Chat subsystem outside the project, and
   this subsystem refuses a project that contains it.
 - *Restored history sent to a new provider session*: memory only, as one block that is never written.
@@ -260,7 +279,8 @@ the project.
 
 ### Dependencies
 
-- **CopilotCliLocator** unit: the Copilot CLI and its version, used by the readiness checks.
+- **CopilotCliLocator** unit: the Copilot CLI and its version, used by the readiness checks and the factory.
+- **CopilotRuntimeStarter** unit: the one shared Copilot runtime, used by the readiness check and the factory.
 - **Knowledge** subsystem: the plain tool description (`KnowledgeTool`) that the tool registry offers (the style tools
   are given to the registry in the same form), and the index of the drawing knowledge that the instructions carry.
 - **Project** subsystem: the open project (`IProjectService`: its folder, its file, its name, and the event that tells

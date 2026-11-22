@@ -204,18 +204,18 @@ public sealed class ChatPanelCopilotViewTests
     }
 
     /// <summary>
-    ///     Test that the banner shows the sentence of a provider that cannot be used, including the sentence of the gated
-    ///     GitHub Copilot, offers the settings and a new check, and goes away when the provider is ready.
+    ///     Test that the banner shows the sentence of a provider that cannot be used, including the sentence of GitHub
+    ///     Copilot that is not signed in, offers the settings and a new check, and goes away when the provider is ready.
     /// </summary>
     [AvaloniaFact]
     public void ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady()
     {
-        // Arrange: the gated Copilot is configured
+        // Arrange: the Copilot that is not signed in is configured
         var agent = new ScriptedAgentService
         {
             Readiness = new AgentReadinessReport(
-                AgentReadinessStatus.CopilotRuntimeUnavailable,
-                "Copilot support needs an AgentKit update; use Ollama meanwhile."),
+                AgentReadinessStatus.CopilotNotSignedIn,
+                CopilotRuntimeStarter.NotSignedInMessage),
         };
         using var harness = new ChatHarness(agent: agent);
         var requests = 0;
@@ -223,7 +223,7 @@ public sealed class ChatPanelCopilotViewTests
 
         // Assert: the check was made when the panel was shown, and the banner says what to do
         Assert.True(harness.WaitFor(() => harness.Banner.IsEffectivelyVisible));
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", harness.Find<SelectableTextBlock>("ChatReadinessMessage").Text);
+        Assert.Equal(CopilotRuntimeStarter.NotSignedInMessage, harness.Find<SelectableTextBlock>("ChatReadinessMessage").Text);
 
         // Act: choose "Open Settings" in the banner
         SettingsUiHelpers.Click(harness.Window, harness.Find<Button>("ChatReadinessOpenSettingsButton"));

@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Reflection;
+using DemaConsulting.AgentKit.Agents.Copilot;
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using Microsoft.Copilot;
 
 namespace OtsSoftwareTests;
@@ -26,37 +27,28 @@ namespace OtsSoftwareTests;
 /// <summary>
 ///     Self-validation tests for the Microsoft.Copilot.SDK off-the-shelf software item: the client library that
 ///     AgentKit's Copilot package drives the GitHub Copilot CLI with. No Copilot CLI is started and no language model
-///     is used; the tests check the facts that the gating of Copilot in CanvasPilot rests on.
+///     is used; the tests check the facts that the use of an installed Copilot CLI in CanvasPilot rests on: the path
+///     of a CLI that a connection names is the one that the SDK runs, and the oldest CLI that the library runs is not
+///     newer than the one that CanvasPilot asks the user to install.
 /// </summary>
 public class CopilotSdkTests
 {
     /// <summary>
-    ///     The oldest Copilot CLI that CanvasPilot documents as usable: the first version whose protocol is the one
-    ///     that the SDK speaks.
-    /// </summary>
-    private static readonly Version CanvasPilotMinimumCliVersion = new(1, 0, 113);
-
-    /// <summary>
-    ///     Test that the Copilot CLI version that the SDK is built for is not older than the minimum that CanvasPilot
-    ///     documents, so that the version check that CanvasPilot shows its users never asks for less than the SDK needs.
+    ///     Test that the oldest Copilot CLI version that the AgentKit Copilot library runs (the one that matches the
+    ///     protocol of the SDK it is built on) is not newer than the minimum that CanvasPilot documents and checks, so
+    ///     that the version check that CanvasPilot shows its users never passes a CLI that the library then refuses.
     /// </summary>
     [Fact]
-    public void CopilotSdk_BuiltForCliVersion_IsNotBelowCanvasPilotMinimum()
+    public void CopilotSdk_AgentKitMinimumCliVersion_IsNotAboveCanvasPilotMinimum()
     {
-        // Arrange: the version of the CLI that the SDK package says it is built for, recorded in the test assembly
-        var recorded = typeof(CopilotSdkTests).Assembly
-            .GetCustomAttributes<AssemblyMetadataAttribute>()
-            .Single(attribute => attribute.Key == "CopilotCliVersion")
-            .Value;
+        // Act: read the minimum of the library and the minimum that CanvasPilot checks
+        var library = CopilotCli.MinimumVersion;
+        var canvasPilot = CopilotCliLocator.MinimumCliVersion;
 
-        // Act: read it as a version
-        var parsed = Version.TryParse(recorded, out var builtFor);
-
-        // Assert: it is a version, and CanvasPilot's minimum is not above it
-        Assert.True(parsed, $"The recorded CLI version '{recorded}' is not a version.");
+        // Assert: CanvasPilot never asks for less than the library needs
         Assert.True(
-            CanvasPilotMinimumCliVersion <= builtFor,
-            $"CanvasPilot's minimum CLI {CanvasPilotMinimumCliVersion} is above the CLI {builtFor} that the SDK is built for.");
+            library <= canvasPilot,
+            $"The Copilot CLI {library} that the library needs is newer than the CLI {canvasPilot} that CanvasPilot asks for.");
     }
 
     /// <summary>

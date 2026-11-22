@@ -59,7 +59,7 @@ public sealed class AgentReadinessTests
     /// <param name="runner">The process runner; the real CLI answers 1.0.114 when not given.</param>
     /// <param name="environment">The environment; the development machine without tokens when not given.</param>
     /// <param name="fileSystem">The file system; the development machine when not given.</param>
-    /// <param name="starter">The starter; the gated starter when <see langword="null" />.</param>
+    /// <param name="starter">The starter; one that starts the runtime when <see langword="null" />.</param>
     /// <param name="probe">The Ollama probe; one that finds no server when <see langword="null" />.</param>
     /// <returns>The readiness check.</returns>
     private static AgentReadiness Create(
@@ -79,7 +79,7 @@ public sealed class AgentReadinessTests
         fileSystem ??= DevMachine.CreateFileSystem();
         return new AgentReadiness(
             new CopilotCliLocator(runner, fileSystem, environment),
-            starter,
+            starter ?? new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started")),
             runner,
             environment,
             fileSystem,
@@ -92,11 +92,10 @@ public sealed class AgentReadinessTests
     [Fact]
     public void AgentReadiness_Constants_Rule_AreTheDocumentedValues()
     {
-        // Assert: the three token variables in order, the two time limits, and the gated sentence
+        // Assert: the three token variables in order, and the two time limits
         Assert.Equal(["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"], AgentReadiness.TokenVariableNames);
         Assert.Equal(TimeSpan.FromSeconds(5), AgentReadiness.CredentialProbeTimeout);
         Assert.Equal(TimeSpan.FromSeconds(5), AgentReadiness.OllamaProbeTimeout);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", AgentReadiness.RuntimeUnavailableMessage);
     }
 
     /// <summary>
@@ -235,10 +234,10 @@ public sealed class AgentReadinessTests
         // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert: the exact sentence names gh auth login, the variable, and the limit of the CLI's own login
+        // Assert: the exact sentence names gh auth login, the variables, and that the CLI's own login does not apply
         Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, report.Status);
         Assert.Equal(
-            "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN environment variable), then choose Check connection. The Copilot CLI's own /login session is not shared with CanvasPilot's AI library yet.",
+            "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to the Copilot CLI with /login does not apply to CanvasPilot.",
             report.Message);
         Assert.False(report.IsUsable);
         Assert.Empty(starter.Requests);
@@ -246,14 +245,14 @@ public sealed class AgentReadinessTests
 
     /// <summary>
     ///     Test that each of the three token variables counts as credentials, that the GitHub CLI is not asked then, and that
-    ///     the check ends at the gated runtime with its exact sentence.
+    ///     the check goes on to the runtime and reports Copilot as ready.
     /// </summary>
     /// <param name="variable">The name of the variable that is set.</param>
     [Theory]
     [InlineData("COPILOT_GITHUB_TOKEN")]
     [InlineData("GH_TOKEN")]
     [InlineData("GITHUB_TOKEN")]
-    public async Task AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndStopsAtTheGatedRuntime(string variable)
+    public async Task AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndReportsReady(string variable)
     {
         // Arrange: one token variable, and a GitHub CLI that would fail if it were asked
         var runner = new FakeProcessRunner();
@@ -265,13 +264,13 @@ public sealed class AgentReadinessTests
         fileSystem.AddFile(ProgramFilesGh, 1_000);
         var readiness = Create(runner, environment, fileSystem);
 
-        // Act: with the gated starter that the application ships
+        // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert: the runtime is reported as unavailable, never ready, and the GitHub CLI was not run
-        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, report.Status);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", report.Message);
-        Assert.False(report.IsUsable);
+        // Assert: Copilot is ready and usable, and the GitHub CLI was not run
+        Assert.Equal(AgentReadinessStatus.Ready, report.Status);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", report.Message);
+        Assert.True(report.IsUsable);
         Assert.DoesNotContain(runner.Runs, run => run.Path == ProgramFilesGh);
     }
 
@@ -315,7 +314,7 @@ public sealed class AgentReadinessTests
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert: past the credentials, run as `gh auth token` with 5 seconds, and the token is nowhere in the report
-        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, report.Status);
+        Assert.Equal(AgentReadinessStatus.Ready, report.Status);
         var run = Assert.Single(runner.Runs, item => item.Path == ProgramFilesGh);
         Assert.Equal(["auth", "token"], run.Arguments);
         Assert.Equal(TimeSpan.FromSeconds(5), run.Timeout);
@@ -345,7 +344,7 @@ public sealed class AgentReadinessTests
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert: the one on the PATH was run, and the other was not
-        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, report.Status);
+        Assert.Equal(AgentReadinessStatus.Ready, report.Status);
         Assert.Contains(runner.Runs, run => run.Path == PathGh);
         Assert.DoesNotContain(runner.Runs, run => run.Path == ProgramFilesGh);
     }
@@ -388,32 +387,40 @@ public sealed class AgentReadinessTests
     }
 
     /// <summary>
-    ///     Test that the check never reports Copilot as ready while the shipped (gated) starter is used, and that the
-    ///     starter is asked only to check.
+    ///     Test that a starter that reports each way of not being usable makes the report carry the matching status and the
+    ///     starter's own sentence, and that the report is not usable.
     /// </summary>
-    [Fact]
-    public async Task AgentReadiness_Copilot_GatedStarter_NeverReportsReady()
+    /// <param name="start">The status that the starter answers.</param>
+    /// <param name="expected">The status that the report must have.</param>
+    [Theory]
+    [InlineData(CopilotStartStatus.CliTooOld, AgentReadinessStatus.CopilotCliTooOld)]
+    [InlineData(CopilotStartStatus.NotSignedIn, AgentReadinessStatus.CopilotNotSignedIn)]
+    [InlineData(CopilotStartStatus.Failed, AgentReadinessStatus.CopilotRuntimeUnavailable)]
+    public async Task AgentReadiness_Copilot_StarterRefuses_ReportsTheMatchingStatusAndSentence(
+        CopilotStartStatus start,
+        AgentReadinessStatus expected)
     {
-        // Arrange: everything is in order, and the starter is the one that the application ships
+        // Arrange: everything is in order up to the runtime, which the starter refuses
         var environment = DevMachine.CreateEnvironment();
         environment.Set("COPILOT_GITHUB_TOKEN", SecretToken);
-        var readiness = Create(environment: environment, starter: new GatedCopilotRuntimeStarter());
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(start, "The sentence of the starter."));
+        var readiness = Create(environment: environment, starter: starter);
 
         // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.NotEqual(AgentReadinessStatus.Ready, report.Status);
-        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, report.Status);
+        Assert.Equal(expected, report.Status);
+        Assert.Equal("The sentence of the starter.", report.Message);
         Assert.False(report.IsUsable);
     }
 
     /// <summary>
     ///     Test that a starter that can start the runtime makes the report ready, and that it is asked with the path and
-    ///     version of the CLI and to only check.
+    ///     version of the CLI that the locator found.
     /// </summary>
     [Fact]
-    public async Task AgentReadiness_Copilot_StarterStarted_ReportsReadyAndAsksOnlyToCheck()
+    public async Task AgentReadiness_Copilot_StarterStarted_ReportsReadyAndAsksWithTheCliThatWasFound()
     {
         // Arrange: a token and a starter that can start
         var environment = DevMachine.CreateEnvironment();
@@ -431,50 +438,6 @@ public sealed class AgentReadinessTests
         var request = Assert.Single(starter.Requests);
         Assert.Equal(DevMachine.RealCli, request.CliPath);
         Assert.Equal(new Version(1, 0, 114), request.CliVersion);
-        Assert.True(request.CheckOnly);
-    }
-
-    /// <summary>
-    ///     Test that a starter that fails makes the report say why in the starter's sentence.
-    /// </summary>
-    [Fact]
-    public async Task AgentReadiness_Copilot_StarterFailed_ReportsUnavailableWithTheStartersSentence()
-    {
-        // Arrange: a token and a starter that fails
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("GH_TOKEN", SecretToken);
-        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Failed, "The runtime stopped at once."));
-        var readiness = Create(environment: environment, starter: starter);
-
-        // Act
-        var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert
-        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, report.Status);
-        Assert.Equal("The runtime stopped at once.", report.Message);
-    }
-
-    /// <summary>
-    ///     Test that the gated starter answers that an update is needed, with the documented sentence, and that it
-    ///     honors cancellation.
-    /// </summary>
-    [Fact]
-    public async Task GatedCopilotRuntimeStarter_Start_AnswersNeedsAgentKitUpdate()
-    {
-        // Arrange
-        var starter = new GatedCopilotRuntimeStarter();
-        var request = new CopilotStartRequest(DevMachine.RealCli, new Version(1, 0, 114), CheckOnly: false);
-
-        // Act
-        var result = await starter.StartAsync(request, TestContext.Current.CancellationToken);
-
-        // Assert: the status and the sentence, and a cancelled token is an exception
-        Assert.Equal(CopilotStartStatus.NeedsAgentKitUpdate, result.Status);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", result.Message);
-        using var cancelled = new CancellationTokenSource();
-        await cancelled.CancelAsync();
-        await Assert.ThrowsAsync<OperationCanceledException>(() => starter.StartAsync(request, cancelled.Token));
-        await Assert.ThrowsAsync<ArgumentNullException>(() => starter.StartAsync(null!, TestContext.Current.CancellationToken));
     }
 
     /// <summary>

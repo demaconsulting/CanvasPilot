@@ -306,14 +306,14 @@ public sealed class ChatSubsystemTests : IDisposable
 
     /// <summary>
     ///     Test that the real panel over the real composer asks the copilot whether the provider can be used and shows the
-    ///     sentence that says what to do, including the sentence of the gated GitHub Copilot, that a warning does not block
+    ///     sentence that says what to do, including the sentence of GitHub Copilot that is not signed in, that a warning does not block
     ///     sending, that the sentence goes away when the provider is ready, and that the settings are requested from the
     ///     banner.
     /// </summary>
     [Fact]
-    public async Task ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested()
+    public async Task ChatSubsystem_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysWhatToDoAndSettingsAreRequested()
     {
-        // Arrange: the gated Copilot is configured, and the real panel over the real composer
+        // Arrange: the Copilot that is not signed in is configured, and the real panel over the real composer
         var marks = new MarkRegistry();
         var markImages = new MarkImageComposer(_renderer);
         using var composer = new ComposerViewModel(new PayloadBuilder(markImages), marks, new FakeDictationService());
@@ -321,8 +321,8 @@ public sealed class ChatSubsystemTests : IDisposable
         using var agent = new ControlledAgentService
         {
             Readiness = new AgentReadinessReport(
-                AgentReadinessStatus.CopilotRuntimeUnavailable,
-                "Copilot support needs an AgentKit update; use Ollama meanwhile."),
+                AgentReadinessStatus.CopilotNotSignedIn,
+                CopilotRuntimeStarter.NotSignedInMessage),
         };
         using var panel = new ChatPanelViewModel(composer, marks, annotation, markImages, agent: agent, clock: new ManualTimeProvider());
         var settingsRequests = 0;
@@ -335,7 +335,7 @@ public sealed class ChatSubsystemTests : IDisposable
 
         // Assert: the banner says what to do, and the shell was asked to open the settings
         Assert.True(panel.HasReadinessIssue);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", panel.ReadinessMessage);
+        Assert.Equal(CopilotRuntimeStarter.NotSignedInMessage, panel.ReadinessMessage);
         Assert.Equal(1, settingsRequests);
 
         // Act: the settings choose a provider with a small context window, which only warns

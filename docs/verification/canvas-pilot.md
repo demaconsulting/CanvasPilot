@@ -13,9 +13,10 @@ design). Verification follows that direction: the `Preview` units are verified w
 `IExportDialogs` interface that `Preview` owns, the shell is verified with a substitute image exporter and with the
 disabled default exporter, and only the system tests and the user interface tests compose the real shell with the real
 preview, which is also what proves that the two work together. The AI copilot is verified in the `Agent` subsystem
-with a scripted model, a stand-in Ollama server, and a fake and the gated starter of the Copilot runtime, and the system
-tests compose the copilot, the history, and the settings check as the application does; live Ollama and live GitHub
-Copilot are not part of the automated evidence (see *Manual Verification* below).
+with a scripted model, a stand-in Ollama server, and fake starters and a stand-in start function for the Copilot
+runtime, and the system tests compose the copilot, the history, and the settings check as the application does; live
+Ollama and live GitHub Copilot are not part of the automated evidence, except for two opt-in tests of GitHub Copilot
+that are skipped unless `CANVASPILOT_LIVE_COPILOT` is `1` (see *Manual Verification* below).
 
 Dictation is verified at this level over the speech library's own recognition pipeline with a recognition backend
 written in managed code and a recorded sound file for the microphone, so no native speech runtime, model, or microphone
@@ -51,8 +52,10 @@ services, or display is required.
 - The words of the conversation are kept below the history folder that the composition was given and never in the
   project, are shown again as text when the application starts in the same project, and are deleted by Clear chat
   history.
-- With GitHub Copilot configured the banner of the chat panel and the conversation say that this build cannot start it,
-  and no answer is made.
+- With GitHub Copilot configured on a machine without a sign-in the banner of the chat panel and the conversation say
+  how to sign in (`gh auth login` or a token variable, and that the sign-in of the Copilot CLI does not apply), and no
+  answer is made and no runtime is started; with the installed CLI and a sign-in a message gets a streamed answer from
+  the runtime that the starter runs on the installed CLI, with the tool row, and the drawing is written in the project.
 - Speech devices, models, and a model setting chosen in the Speech page of the settings dialog are stored by device
   name and model identifier and restored by the next run, using substitute audio and model services.
 - A project created in a folder is reopened from the recent projects list, and a damaged project file is
@@ -128,7 +131,8 @@ services, or display is required.
 
 These checks need a person, a physical machine, and programs or hardware that the automated tests cannot stand in for.
 They are performed on an installed package before each release and are not evidence for a requirement. **None of them
-has been performed on the machine on which this version was built and tested**: the automated tests prove the
+has been performed on the machine on which this version was built and tested, except the live GitHub Copilot runs that
+check 10 records**: the automated tests prove the
 application's own behavior with substitutes (a managed recognition backend and a recorded sound file instead of a
 microphone, headless pointer and keyboard events instead of an operating system drag, and Avalonia's own clipboard
 and data objects instead of the Windows ones), so what follows is unverified until someone ticks it off. The detailed
@@ -194,15 +198,17 @@ steps are in the verification of the unit or subsystem named at each check.
    8. *Marks and pictures.* With marks and an attached picture on a drawing, the answer shows that the model saw the
       marked picture and the close-ups (compare with **View payload**); with a model that cannot see pictures the
       answer works from the words only.
-10. *GitHub Copilot is gated (readiness and messages only; no live Copilot turn is possible in this release).* Choose
-    GitHub Copilot and use **Check connection** and the banner. (Verification of the `Agent` subsystem and of the
-    `CopilotCliLocator` and `AgentReadiness` units.)
-    1. With the winget CLI at version 1.0.113 or later and `gh auth login` done: the check ends with "Copilot support
-       needs an AgentKit update; use Ollama meanwhile.", the banner of the chat panel shows the same sentence and offers
-       **Open Settings**, and a sent message gets an error notice with that sentence and starts no run.
-    2. Without a signed-in GitHub CLI and with no `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` variable: the
-       "not signed in" sentence, which names `gh auth login` and says that the `/login` session of the CLI is not
-       shared.
+10. *Live GitHub Copilot (the live runs of step 6 were performed on 2026-11-22 on the development machine; the other
+    steps are open).* Choose GitHub Copilot and use **Check connection**, the banner, and a conversation. (Verification
+    of the `Agent` subsystem and of the `CopilotCliLocator`, `CopilotRuntimeStarter`, `AgentReadiness`, and
+    `AgentProviderFactory` units.)
+    1. With the winget CLI at version 1.0.113 or later and `gh auth login` done (or one of `COPILOT_GITHUB_TOKEN`,
+       `GH_TOKEN`, `GITHUB_TOKEN` set): the check ends with "GitHub Copilot CLI {version} is ready.", the banner of the
+       chat panel is hidden, and a sent message gets an answer.
+    2. Without a signed-in GitHub CLI and with no `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` variable, even
+       when the Copilot CLI itself is signed in with `/login`: the "not signed in" sentence, which names `gh auth login`
+       and the variables and says that the `/login` session of the CLI does not apply, the banner offers **Open
+       Settings**, and a sent message gets an error notice with that sentence and starts no run.
     3. With only the VS Code `copilot-shim` on the `PATH` (take the winget entry out of the `PATH` and clear the path in
        the settings): the "not found" sentence ends with "Only the VS Code copilot shim was found at ...". With the path
        of the real `copilot.exe` in the settings the CLI is found. With the path of the shim in the settings the choice
@@ -210,13 +216,39 @@ steps are in the verification of the unit or subsystem named at each check.
     4. With a CLI at version 1.0.112 or older: the "older than 1.0.113" sentence with `winget upgrade GitHub.Copilot`.
     5. The installed MSI holds no file whose name starts with `copilot` and no `runtime.node` anywhere in the install
        folder, the size of `CanvasPilot.exe` is within the range that `Copilot_RuntimeNotPublished` asserts (about 125
-       MB), and the banner is visible. (This repeats part of check 6.)
-    6. After the AI library can use an installed CLI (the follow-up change, not this release): a live turn with a
+       MB), and the banner is clear on a machine that is signed in. (This repeats part of check 6.)
+    6. *Live runs on the installed CLI.* On 2026-11-22, on the development machine (Windows, Copilot CLI 1.0.114 in the
+       winget package folder, the GitHub CLI signed in to github.com, no token variable), the opt-in tests
+       `LiveCopilotTurn_AgentService_ListsProjectFilesAndRendersAPicture` and
+       `LiveCopilotTurn_ComposedApplication_ChatWritesADrawingOnTheSharedRuntime`
+       (`LiveCopilotTurnTests.cs`; skipped unless `CANVASPILOT_LIVE_COPILOT` is `1`; the model is taken from
+       `CANVASPILOT_LIVE_COPILOT_MODEL`, and empty means the default of the runtime) passed:
+       1. *Run 1 (the agent service with the real factory and starter, model `claude-haiku-5.5`).* The tools
+          `project_list` and then `render_image` were called, the final text was "I found one file, `box.svg` (114
+          bytes), and the picture is 80 x 40 pixels: a plain blue rectangle.", and the turn was `Completed` in about 21
+          seconds.
+       2. *Run 2 (the same test with the default model of the runtime).* The same two tools were called, the final text
+          was "I found one file, `box.svg` (114 bytes), and its picture is 80 x 40 pixels.", and the turn was
+          `Completed`.
+       3. *Run 3 (the composed application, which is the product wiring: the real locator, readiness, and factory over
+          one shared starter, the default settings that choose GitHub Copilot, model `claude-haiku-5.5`).* The banner
+          was clear (no readiness issue); the message produced the transcript rows User, Tool, Tool, and Assistant;
+          `box.svg` was written in the project; and the starter was asked 3 times and handed out exactly 1 runtime, so
+          the readiness check and the conversation share one runtime.
+       A run of the packaged application with a window, and the list and the choice of the model, are later steps and
+       are not covered by these runs.
+    7. *Packaging with beta.4.* On 2026-11-22 the win-x64 single-file publish of this change was inspected: no file
+       whose name starts with `copilot` or `libcopilot`, no `runtime.node`, and no `.copilot-explicit-cli` anywhere in
+       the published folder; `CanvasPilot.exe` is 125.4 MB (131.3 MB with AgentKit 0.1.0-beta.3); the MSI built from it
+       is 55.6 MB (55.5 MB with beta.3) and its file table lists 19 files and none of those names;
+       `dotnet fileassert installer` passed, including `Copilot_RuntimeNotPublished`. The build output of the test
+       projects holds no Copilot runtime file either.
+    8. *To be run with the final build; not yet run in this change.* A live turn in the packaged application with a
        picture, a tool that returns a picture, and Stop, and a look that the project folder holds only intentional files
        afterwards. In the same turn, ask the copilot to run a shell command: it is refused and the transcript shows no
        tool line for a tool that is not one of the tools of the application (the default-deny permission handling of the
-       AI library approves exactly the supplied tools; no automated test can show it, because the Copilot runtime cannot
-       be started in a test). Until then this check stays open.
+       AI library approves exactly the supplied tools; no automated test can show it). Until it is run this step stays
+       open.
 
 ## Test Scenarios
 
@@ -532,26 +564,39 @@ not found, names the path, and no program is run, so the installed CLI is not us
 **CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach**: The settings of a new
 installation (GitHub Copilot) are loaded by a settings service and checked on the development machine, whose Copilot CLI
 is good but which has no token variable and no GitHub CLI: the status is not signed in and the sentence names
-`gh auth login` and `COPILOT_GITHUB_TOKEN`. With a token variable set, the same check says that Copilot support needs an
-AgentKit update. A settings file that holds an Ollama choice with a window of 8,192 tokens is saved and loaded by a new
-service; against a scripted server that has the model, the result is the warning status, which can run a turn, with the
-sentence that tells the user to raise the window in Settings to the recommended 32,768. This scenario is tested by
+`gh auth login` and `COPILOT_GITHUB_TOKEN`. With a token variable set, the same check reports Copilot ready with
+"GitHub Copilot CLI 1.0.114 is ready." (the starter is a stand-in that starts). A settings file that holds an Ollama
+choice with a window of 8,192 tokens is saved and loaded by a new service; against a scripted server that has the model,
+the result is the warning status, which can run a turn, with the sentence that tells the user to raise the window in
+Settings to the recommended 32,768. This scenario is tested by
 `CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach`.
 
-**CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt**: The application is
-composed over the real factory of the providers on the fake development machine, which has the installed CLI and a token
-variable, with the default settings (GitHub Copilot). The panel checks the provider and the banner says that Copilot
-support needs an AgentKit update. A message is sent; the conversation ends with a notice that holds that sentence, has
-no answer of the copilot, and the only processes that were run are the version checks of the installed CLI. This
-scenario is tested by `CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt`.
+**CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt**: The application is
+composed over the real factory of the providers on the fake development machine, which has the installed CLI and no
+token variable, with the default settings (GitHub Copilot) and a starter that answers that the runtime is not signed
+in. The panel checks the provider and the banner shows the sign-in sentence of `CopilotRuntimeStarter`; the check stops
+at the credentials, so the starter is not asked. A message is sent; the starter is asked and the conversation ends with
+a notice that holds the same sentence, has no answer of the copilot, and the only processes that were run
+are the version checks of the installed CLI. This scenario is tested by
+`CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt`.
 
 **CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach**: The
 settings dialog of the composed application is opened and the AI Provider page chooses Ollama and a model that the
 stand-in server has: Check connection says that Ollama is running with the model; with the server not answering it says
 that Ollama did not answer. With GitHub Copilot chosen on the fake machine it names `gh auth login`; with a token
-variable it says that Copilot support needs an AgentKit update; with a path of a file that does not exist it names the
+variable it says "GitHub Copilot CLI 1.0.114 is ready."; with a path of a file that does not exist it names the
 path. The stored settings are the same afterwards. This scenario is tested by
 `CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach`.
+
+**CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing**: The application is
+composed over the real factory of the providers on a fake machine that has the installed CLI and a token variable, with
+the default settings (GitHub Copilot), and a start of the runtime that hands over a fake runtime whose agents run a
+scripted model that writes `box.svg` with the project tool and then says that the box is drawn. The banner is clear. A
+message is sent; the conversation holds the user message, an answer, a tool row, and the last words ("The box is
+drawn."), and `box.svg` is in the project. The runtime was asked for on the installed CLI that the locator found with a
+data folder below the local data root, and the agent that was made on it got the project folder as its working
+directory and the tool `project_write`. This scenario is tested by
+`CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing`.
 
 **CanvasPilot_ConverseWithCopilot_ScriptedModel_StreamsAnswerWritesDrawingAndExplorerShowsIt**: The application is
 composed with the copilot over a scripted model that says a word, writes `box.svg` with the project tool, and says that

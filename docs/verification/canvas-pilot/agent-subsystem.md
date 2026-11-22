@@ -12,12 +12,17 @@ at this level with the file system, environment, and process runner replaced by 
 and sizes of the development machine, which has both the installed CLI and the VS Code shim). The readiness checks are
 verified at this level through `IProviderCheck`, the interface that the settings dialog uses, with the same replaced
 machine, a scripted starter, and a scripted Ollama server. The rules of the records, of the locator, and of the
-readiness checks themselves are verified in the unit verification documents.
+readiness checks themselves are verified in the unit verification documents. The starter of the Copilot runtime
+(`CopilotRuntimeStarter`) is verified in its own unit verification document over a start function that stands in for the
+runtime, so no Copilot CLI is run; the tests at this level use it or scripted starters.
 
 The service that implements the contract (`AgentService`) is also verified here as the application will use it: one test
 runs it over the real factory and a stand-in Ollama server with the real tools of a project, and one runs it for GitHub
-Copilot with the gated starter. Its lifecycle, its turn, its data folders, and its log are verified in the unit
-verification document of `AgentService`.
+Copilot with the real starter over a start function that says the runtime is not signed in. Its lifecycle, its turn, its
+data folders, and its log are verified in the unit verification document of `AgentService`. A turn of a real Copilot
+runtime cannot be part of the tests that run everywhere, because it needs the installed CLI and a sign-in; it is
+verified by two opt-in tests (`LiveCopilotTurnTests.cs`, skipped unless the variable `CANVASPILOT_LIVE_COPILOT` is `1`)
+whose runs are recorded in the manual verification of the system.
 
 ### Test Environment
 
@@ -33,8 +38,9 @@ temporary project folder and delete it.
 - Readiness reports pass through the interface unchanged, and a reset of the conversation reaches the service.
 - On a machine with the installed Copilot CLI and the VS Code shim the CLI is found and the shim is not; a machine with
   only the shim is told that only the shim was found; a path chosen in the settings is used.
-- Through `IProviderCheck`, GitHub Copilot on a machine with a signed-in GitHub CLI is not usable and says that an
-  update of the AI library is needed, and Ollama with a window of 8,192 tokens is usable and warns about it.
+- Through `IProviderCheck`, GitHub Copilot on a machine with a signed-in GitHub CLI and a runtime that starts is usable
+  and says "GitHub Copilot CLI 1.0.114 is ready.", and Ollama with a window of 8,192 tokens is usable and warns about
+  it.
 - The tools built for a project are only the application's own tools, in a fixed order, the knowledge tool answers from
   the real cards, and the policy that every pack receives permits a picture file of the project and refuses the data
   folder, a project file, and every place outside the project.
@@ -57,16 +63,15 @@ temporary project folder and delete it.
   the address, the model, and the context window of the settings (each request carries them), the server asks for a
   drawing to be written with the real tools, the events show the created file, the drawing is in the project, and
   nothing else is.
-- The Copilot agent is gated in this build and made only through the starter: the shipped starter gives no agent and the
-  status that Copilot support needs an update of the AI library, and a starter that can start a runtime gives an agent
-  that is made on it with exactly the names of the tools of the project, the project folder as its working directory,
-  and no model for the default.
+- The Copilot agent is made only on the runtime that the starter hands over: a starter that refuses the runtime gives no
+  agent and the matching status, and a starter that runs a runtime gives an agent that is made on it with exactly the
+  names of the tools of the project, the project folder as its working directory, and no model for the default.
 - Through the agent service over the real factory and a stand-in Ollama server, a message gets the streamed answer, the
   call of `project_write`, a file event for the new drawing, and `Completed`; the shell is told of the file; the server
   gets the model and the window of the settings; and the project folder holds only its earlier files and the drawing.
-- Through the agent service with the shipped starter, a turn for GitHub Copilot is one failed event of kind not ready
-  with the sentence "Copilot support needs an AgentKit update; use Ollama meanwhile.", and the log holds no word of the
-  message.
+- Through the agent service with the real starter over a start function that says the runtime is not signed in, a turn
+  for GitHub Copilot is one failed event of kind not ready with the sign-in sentence of the starter, and the log holds
+  no word of the message.
 
 ### Test Scenarios
 
@@ -145,19 +150,19 @@ runs through the mapper, and the events have the two sentences, one finish of `p
 and every request that the server got names the model and the window. This scenario is tested by
 `AgentSubsystem_ConverseWithOllama_ScriptedServerAndProjectTools_WritesTheDrawingAndStreamsEvents`.
 
-**AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools**:
-The development machine with the real CLI and the tools of an empty project. The factory with the starter that the build
-ships gives no agent and the status that the runtime is unavailable. The factory with a fake starter that hands over a
+**AgentSubsystem_ConverseWithCopilot_RefusingAndRunningStarter_RefusalGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools**:
+The development machine with the real CLI and the tools of an empty project. The factory with a starter that says the
+runtime is not signed in gives no agent and the status not signed in. The factory with a fake starter that hands over a
 fake runtime gives an agent, and the runtime was asked for one agent with the same tool names as the registry, the
 project folder as the working directory, and no model. This scenario is tested by
-`AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools`.
+`AgentSubsystem_ConverseWithCopilot_RefusingAndRunningStarter_RefusalGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools`.
 
 **AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
-good Copilot CLI and a GitHub CLI under the program files that prints a token, and a scripted Ollama server has one
-model with a large window. Asked through `IProviderCheck`, GitHub Copilot is not usable and the sentence says that
-Copilot support needs an AgentKit update; Ollama with a configured window of 8,192 tokens is usable and the sentence
-names the window. This scenario is tested by
-`AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface`.
+good Copilot CLI and a GitHub CLI under the program files that prints a token, a starter that starts the runtime, and a
+scripted Ollama server has one model with a large window. Asked through `IProviderCheck`, GitHub Copilot is usable with
+the sentence "GitHub Copilot CLI 1.0.114 is ready." and the starter was asked once with the path of the CLI that the
+locator found; Ollama with a configured window of 8,192 tokens is usable and the sentence names the window. This
+scenario is tested by `AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface`.
 
 **AgentSubsystem_ConverseWithOllama_ServiceOnStandInServer_WritesTheDrawingAndKeepsTheProjectClean**: An agent service
 on the real factory and a stand-in Ollama server that asks for `project_write` and then answers, a project folder with
@@ -167,8 +172,9 @@ for `box.svg`, and the completed event; the shell was told of `box.svg`; the dra
 file added; and both requests to the server carry the model and the window. This scenario is tested by
 `AgentSubsystem_ConverseWithOllama_ServiceOnStandInServer_WritesTheDrawingAndKeepsTheProjectClean`.
 
-**AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence**: The development machine
-with a good Copilot CLI, the real factory with the shipped starter, and settings that choose GitHub Copilot. A turn is
-run through the service. The stream is one failed event of kind not ready with the sentence of the gate, and the log
-holds no word of the message. This scenario is tested by
-`AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence`.
+**AgentSubsystem_ConverseWithCopilot_ServiceWithNotSignedInStarter_TurnFailsWithTheSignInSentence**: The development
+machine with a good Copilot CLI, the real factory with the real `CopilotRuntimeStarter` over a start function that fails
+with the library's "not signed in" message, and settings that choose GitHub Copilot. A turn is run through the service.
+The stream is one failed event of kind not ready with the sign-in sentence of the starter, and the log holds no word of
+the message. This scenario is tested by
+`AgentSubsystem_ConverseWithCopilot_ServiceWithNotSignedInStarter_TurnFailsWithTheSignInSentence`.

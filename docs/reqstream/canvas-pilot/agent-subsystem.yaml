@@ -53,19 +53,19 @@ sections:
             title: >-
               The Agent subsystem shall check the AI provider that the settings choose and report it as one status with
               one sentence that says what to do: for GitHub Copilot the Copilot CLI, its version, the credentials, and
-              the runtime (which this build cannot start, so Copilot is never reported as ready), and for Ollama the
+              the runtime (which is started on the installed CLI, or reused, and must be signed in), and for Ollama the
               settings, the server, the model, and the size of the context window.
             justification: |
               Both providers depend on things outside the application, and the user should learn what is missing before
               the first message. The subsystem owns the checks because it owns the knowledge of how each provider is
-              reached, and it offers them to the settings dialog through the interface that the dialog owns. Saying
-              plainly that GitHub Copilot cannot be started yet, instead of reporting it ready, keeps the user from a
-              chat that cannot answer and points to the provider that can.
+              reached, and it offers them to the settings dialog through the interface that the dialog owns. Starting the
+              runtime is the one check that proves that the CLI runs and that the sign-in works, so a Copilot that is
+              reported ready can answer.
             children:
               - CanvasPilot-AgentReadiness-CheckCopilotInOrder
               - CanvasPilot-AgentReadiness-DetectCopilotCredentials
               - CanvasPilot-AgentReadiness-ExplainCopilotAuthentication
-              - CanvasPilot-AgentReadiness-ReportGatedCopilotRuntime
+              - CanvasPilot-AgentReadiness-ReportCopilotRuntimeStart
               - CanvasPilot-AgentReadiness-NeverRetainCredentials
               - CanvasPilot-AgentReadiness-CheckOllamaServerAndModel
               - CanvasPilot-AgentReadiness-WarnSmallOllamaContext
@@ -220,9 +220,10 @@ sections:
 
           - id: CanvasPilot-Agent-GiveTheAgentOnlyTheTools
             title: >-
-              The Agent subsystem shall make the agent of GitHub Copilot with exactly the tools of the project and the
-              project folder as its working directory, with the default-deny permission handler of the AI library, so that
-              the runtime of Copilot can call nothing else.
+              The Agent subsystem shall make the agent of GitHub Copilot, on the shared Copilot runtime, with exactly the
+              tools of the project, the instructions, the model of the settings (the default model of the runtime when it
+              is blank), and the project folder as its working directory, with the default-deny permission handler of the
+              AI library, so that the runtime of Copilot can call nothing else.
             justification: |
               The Copilot runtime has tools of its own (a shell, file access, a web fetch). The copilot may act only through
               the tools that the application builds and confines, so the agent is made with that list and with no
@@ -230,21 +231,42 @@ sections:
             children:
               - CanvasPilot-AgentProviderFactory-MakeCopilotAgentThroughStarter
             tests:
-              - AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+              - AgentSubsystem_ConverseWithCopilot_RefusingAndRunningStarter_RefusalGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+
+          - id: CanvasPilot-Agent-RunCopilotOnInstalledCli
+            title: >-
+              The Agent subsystem shall run GitHub Copilot on the Copilot CLI that the user installed, at the path that the
+              locator found, as one runtime that is started on demand, shared by the readiness check and by every
+              conversation, and stopped when the application ends, without a token or a sign-in screen of its own, and
+              shall explain a runtime that cannot be started in a sentence that says what to do.
+            justification: |
+              The user installs, updates, and signs in to the Copilot CLI, and the application must use that CLI and never
+              a copy of its own. The runtime keeps its data in one folder that two runtimes must not share, so a single
+              starter owns the one runtime that the check and the conversations use, and a different CLI or folder replaces
+              it. The AI library cannot use the sign-in of the Copilot CLI itself, only the GitHub CLI or a token variable,
+              so the failures that the user can fix (too old, not signed in, a path that cannot be used) each get their own
+              status and sentence.
+            children:
+              - CanvasPilot-CopilotRuntimeStarter-RunInstalledCli
+              - CanvasPilot-CopilotRuntimeStarter-ShareOneRuntime
+              - CanvasPilot-CopilotRuntimeStarter-ExplainFailures
+            tests:
+              - CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing
 
           - id: CanvasPilot-Agent-ExplainUnavailableCopilot
             title: >-
-              The Agent subsystem shall answer a request for an agent of GitHub Copilot that cannot be served with a typed
-              result and no agent, with the status and sentence of the readiness check for the same cause, so that in this
-              build, whose starter of the runtime is gated, Copilot is reported as needing an update of the AI library.
+              The Agent subsystem shall answer a request for an agent of GitHub Copilot that cannot be served (the CLI is
+              missing or too old, the runtime is not signed in, or it could not be started) with a typed result and no
+              agent, with the status and sentence of the readiness check for the same cause.
             justification: |
-              The user who chose Copilot must be told, in the words of the readiness check and not by a failed turn, that
-              this build cannot use it yet and that Ollama can be used meanwhile.
+              The user who chose Copilot must be told, in the words of the readiness check and not by a failed turn, what
+              is wrong and what to do about it: install or upgrade the CLI, sign in with the GitHub CLI or a token
+              variable, or check the connection again.
             children:
               - CanvasPilot-AgentProviderFactory-ReportUnavailableCopilot
             tests:
-              - AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
-              - AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence
+              - AgentSubsystem_ConverseWithCopilot_RefusingAndRunningStarter_RefusalGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+              - AgentSubsystem_ConverseWithCopilot_ServiceWithNotSignedInStarter_TurnFailsWithTheSignInSentence
 
           - id: CanvasPilot-Agent-ConverseInProjectConversations
             title: >-

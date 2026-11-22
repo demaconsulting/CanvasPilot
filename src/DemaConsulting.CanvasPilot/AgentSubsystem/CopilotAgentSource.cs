@@ -40,9 +40,10 @@ public sealed record CopilotAgentRequest(
     string WorkingDirectory);
 
 /// <summary>
-///     A started Copilot runtime, as the factory uses it: it makes agents that run on the runtime, deletes the sessions
-///     that the runtime keeps, and stops the runtime when disposed. The interface exists because the runtime of the AI
-///     library is a sealed class that only starts when a Copilot CLI can be run, so tests stand in for it.
+///     A running Copilot runtime, as the factory uses it: it makes agents that run on the runtime, deletes the sessions
+///     that the runtime keeps, and stops the runtime when disposed. The runtime is shared and belongs to the starter, which
+///     is the one that disposes it. The interface exists because the runtime of the AI library is a sealed class that only
+///     starts when a Copilot CLI can be run, so tests stand in for it.
 /// </summary>
 public interface ICopilotAgentSource : IAsyncDisposable
 {
@@ -65,11 +66,11 @@ public interface ICopilotAgentSource : IAsyncDisposable
 
 /// <summary>
 ///     The <see cref="ICopilotAgentSource" /> on a real <see cref="CopilotRuntime" /> of the AI library. The class is the
-///     one place that calls <see cref="CopilotAgentFactory" />; a starter of the runtime that works returns one of these.
+///     one place that calls <see cref="CopilotAgentFactory" />; the starter of the runtime returns one of these.
 /// </summary>
 /// <remarks>
-///     The runtime is started by the starter and disposed here, because the source is what the factory keeps and disposes.
-///     No permission handler is passed, so the library installs its default-deny handler. The class holds no state besides
+///     The runtime is started by the starter, which disposes the source, and so the runtime, when it replaces the runtime or
+///     is disposed itself. No permission handler is passed, so the library installs its default-deny handler. The class holds no state besides
 ///     the runtime and is safe for concurrent use as far as the runtime is.
 /// </remarks>
 public sealed class CopilotRuntimeAgentSource : ICopilotAgentSource

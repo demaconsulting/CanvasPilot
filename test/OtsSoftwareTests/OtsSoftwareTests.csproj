@@ -17,18 +17,13 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.6" />
     <PackageReference Include="Avalonia.Skia" Version="12.1.6" />
-    <!-- Referenced directly only so that the Copilot SDK build props flow into this project: they carry the version
-         of the Copilot CLI that the SDK is built for, which the OTS tests compare with CanvasPilot's minimum. -->
+    <!-- Referenced directly so that the OTS tests of the Copilot SDK can use its client types (the same version that the
+         AgentKit Copilot package brings). -->
     <PackageReference Include="Microsoft.Copilot.SDK" Version="2.0.1" />
     <PackageReference Include="coverlet.collector" Version="10.1.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- The Copilot CLI version that the Copilot SDK is built for, read by the OTS tests of the SDK from the assembly. -->
-    <AssemblyMetadata Include="CopilotCliVersion" Value="$(CopilotCliVersion)" />
   </ItemGroup>
 
   <ItemGroup>

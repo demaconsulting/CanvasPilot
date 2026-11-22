@@ -163,13 +163,28 @@ reviews:
       - "docs/design/canvas-pilot/agent-subsystem/agent-readiness.md"
       - "docs/verification/canvas-pilot/agent-subsystem/agent-readiness.md"
       - "src/**/AgentSubsystem/AgentReadiness.cs"
-      - "src/**/AgentSubsystem/GatedCopilotRuntimeStarter.cs"
-      - "src/**/AgentSubsystem/ICopilotRuntimeStarter.cs"
       - "src/**/AgentSubsystem/IOllamaProbe.cs"
       - "src/**/AgentSubsystem/OllamaProbe.cs"
       - "test/**/AgentSubsystem/AgentReadinessTests.cs"
       - "test/**/AgentSubsystem/OllamaProbeTests.cs"
       - "test/**/AgentSubsystem/ReadinessTestDoubles.cs"
+
+  - id: CanvasPilot-Agent-CopilotRuntimeStarter
+    title: Review of CanvasPilot CopilotRuntimeStarter unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/copilot-runtime-starter.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/copilot-runtime-starter.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/copilot-runtime-starter.md"
+      - "src/**/AgentSubsystem/CopilotAgentSource.cs"
+      - "src/**/AgentSubsystem/CopilotRuntimeStarter.cs"
+      - "src/**/AgentSubsystem/ICopilotRuntimeStarter.cs"
+      - "test/**/AgentSubsystem/CopilotRuntimeStarterTests.cs"
+      - "test/**/AgentSubsystem/LiveCopilotTurnTests.cs"
 
   - id: CanvasPilot-Agent-AgentToolRegistry
     title: Review of CanvasPilot AgentToolRegistry unit implementation
@@ -272,7 +287,6 @@ reviews:
       - "docs/design/canvas-pilot/agent-subsystem/agent-provider-factory.md"
       - "docs/verification/canvas-pilot/agent-subsystem/agent-provider-factory.md"
       - "src/**/AgentSubsystem/AgentProviderFactory.cs"
-      - "src/**/AgentSubsystem/CopilotAgentSource.cs"
       - "src/**/AgentSubsystem/IAgentFactory.cs"
       - "test/**/AgentSubsystem/AgentProviderFactoryTests.cs"
       - "test/**/AgentSubsystem/AgentProviderTestDoubles.cs"

@@ -307,35 +307,37 @@ public class AgentKitTests
     }
 
     /// <summary>
-    ///     Test that starting the Copilot runtime in this build, which carries no Copilot runtime, fails with an
-    ///     error that says why, starts no runtime process, and leaves only the ownership marker of AgentKit in the
-    ///     data directory.
+    ///     Test that starting the Copilot runtime on a Copilot CLI whose explicit path does not exist fails with an error
+    ///     that names that path, starts no Copilot process, and leaves nothing but the ownership marker of AgentKit in
+    ///     the data directory. The path is explicit and missing, so no installed Copilot CLI of the machine is ever run.
     /// </summary>
     [Fact]
-    public async Task AgentKit_CopilotRuntime_StartAsync_WithoutBundledRuntime_FailsAndStartsNothing()
+    public async Task AgentKit_CopilotRuntime_StartAsync_MissingExplicitCliPath_FailsNamingThePathAndStartsNothing()
     {
-        // Arrange: a data directory that does not exist yet, and the runtime processes that run before the attempt
+        // Arrange: a data directory that does not exist yet, a CLI path that does not exist, and the Copilot processes that
+        // run before the attempt
         using var folder = new TestFolder();
         var dataDirectory = Path.Combine(folder.Path, "copilot");
+        var missing = Path.Combine(folder.Path, OperatingSystem.IsWindows() ? "no-such-copilot.exe" : "no-such-copilot");
         var before = RuntimeProcessIds();
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(60));
 
-        // Act: try to start the runtime
+        // Act: try to start the runtime on the missing CLI
         var failure = await Assert.ThrowsAsync<InvalidOperationException>(
-            () => CopilotRuntime.StartAsync(new CopilotRuntimeOptions(dataDirectory), timeout.Token));
+            () => CopilotRuntime.StartAsync(new CopilotRuntimeOptions(dataDirectory, cliPath: missing), timeout.Token));
 
-        // Assert: the error names the missing runtime wrapper, no new runtime process exists, and the data directory
-        // holds nothing but the marker
-        Assert.Contains("copilot-runtime", failure.ToString(), StringComparison.OrdinalIgnoreCase);
+        // Assert: the error names the path, no new Copilot process exists, and the data directory holds nothing but the
+        // marker, if it was made at all
+        Assert.Contains(missing, failure.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(RuntimeProcessIds().Except(before));
-        Assert.True(Directory.GetFiles(dataDirectory, "*", SearchOption.AllDirectories).Length <= 1);
+        Assert.True(!Directory.Exists(dataDirectory) || Directory.GetFiles(dataDirectory, "*", SearchOption.AllDirectories).Length <= 1);
     }
 
     /// <summary>
     ///     Test that the Copilot runtime of AgentKit ignores the <c>COPILOT_CLI_PATH</c> variable of the host process,
-    ///     so that an installed Copilot CLI cannot be named that way: the start still fails for the missing runtime
-    ///     wrapper, and the file that the variable names is never run.
+    ///     so that a Copilot CLI cannot be named that way: the start still fails for the explicit missing path, and the
+    ///     file that the variable names is never run.
     /// </summary>
     [Fact]
     public async Task AgentKit_CopilotRuntime_StartAsync_CliPathVariable_IsIgnored()
@@ -344,6 +346,7 @@ public class AgentKitTests
         using var folder = new TestFolder();
         var marker = Path.Combine(folder.Path, "was-run.txt");
         var fakeCli = Path.Combine(folder.Path, OperatingSystem.IsWindows() ? "copilot.cmd" : "copilot");
+        var missing = Path.Combine(folder.Path, OperatingSystem.IsWindows() ? "no-such-copilot.exe" : "no-such-copilot");
         await File.WriteAllTextAsync(
             fakeCli,
             OperatingSystem.IsWindows() ? $"@echo ran> \"{marker}\"" : $"#!/bin/sh\necho ran > \"{marker}\"",
@@ -355,12 +358,14 @@ public class AgentKitTests
 
         try
         {
-            // Act: try to start the runtime
+            // Act: try to start the runtime on the explicit missing CLI
             var failure = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => CopilotRuntime.StartAsync(new CopilotRuntimeOptions(Path.Combine(folder.Path, "copilot-data")), timeout.Token));
+                () => CopilotRuntime.StartAsync(
+                    new CopilotRuntimeOptions(Path.Combine(folder.Path, "copilot-data"), cliPath: missing),
+                    timeout.Token));
 
-            // Assert: the error is still the missing wrapper, and the named file was not run
-            Assert.Contains("copilot-runtime", failure.ToString(), StringComparison.OrdinalIgnoreCase);
+            // Assert: the error is still the explicit missing path, and the named file was not run
+            Assert.Contains(missing, failure.Message, StringComparison.OrdinalIgnoreCase);
             Assert.False(File.Exists(marker));
         }
         finally
@@ -405,23 +410,29 @@ public class AgentKitTests
     }
 
     /// <summary>
-    ///     Gets the ids of the processes that are the Copilot runtime wrapper.
+    ///     Gets the ids of the processes that are the Copilot runtime wrapper or a Copilot CLI.
     /// </summary>
     /// <returns>The process ids.</returns>
     private static int[] RuntimeProcessIds()
     {
-        var processes = Process.GetProcessesByName("copilot-runtime");
-        try
+        var ids = new List<int>();
+        foreach (var name in new[] { "copilot-runtime", "copilot" })
         {
-            return [.. processes.Select(process => process.Id)];
-        }
-        finally
-        {
-            foreach (var process in processes)
+            var processes = Process.GetProcessesByName(name);
+            try
             {
-                process.Dispose();
+                ids.AddRange(processes.Select(process => process.Id));
+            }
+            finally
+            {
+                foreach (var process in processes)
+                {
+                    process.Dispose();
+                }
             }
         }
+
+        return [.. ids];
     }
 
     /// <summary>

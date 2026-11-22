@@ -18,6 +18,7 @@ includes:
   - docs/reqstream/canvas-pilot/agent-subsystem/agent-service.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem/agent-tool-registry.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem/copilot-cli-locator.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/copilot-runtime-starter.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem/payload-message-mapper.yaml
   - docs/reqstream/canvas-pilot/agent-subsystem/project-tools.yaml
   - docs/reqstream/canvas-pilot/annotation-subsystem.yaml

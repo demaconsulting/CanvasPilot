@@ -34,8 +34,8 @@ definition of its own.
   The first turn finds the open project, builds the tools (`AgentToolRegistry.CreateTools`) and the instructions
   (`AgentInstructions.Build`, with the facts of the project: its name, its folder, the first 200 files below it without
   the data folder, the project files, and links, and the active style), asks the factory for the agent, and creates one
-  provider session. The factory starts the Copilot runtime, once for the whole application, only for the provider that
-  needs it.
+  provider session. The factory asks the starter for the Copilot runtime only for the provider that needs it, and the
+  runtime is shared by the whole application and not owned by the conversation.
 - **One conversation per open project.** The conversation is kept for the next turns. It is dropped, and made again by
   the next turn, when the open project changes or closes (the event of the project service), when a setting that the
   agent was made from changes (the *signature*: the provider, the model, the Ollama address, the context window, and the
@@ -47,8 +47,8 @@ definition of its own.
   folder), and disposes what the agent owns. A reset or a change of the project also cancels the turn that runs on the
   conversation; a change of a setting does not, because the old agent can finish its turn.
 - **End of the service.** `Dispose` cancels every turn, releases the conversation, waits (at most ten seconds) for the
-  releases, and disposes the factory once, which stops the Copilot runtime. Later turns fail with a sentence and later
-  events of the other services are ignored.
+  releases, and disposes the factory once, which stops the Copilot runtime when the factory owns its starter. Later
+  turns fail with a sentence and later events of the other services are ignored.
 
 #### One Turn
 
@@ -59,8 +59,8 @@ definition of its own.
 2. **Preparation** (`PrepareAsync`). No project open gives `Failed(NotReady)`. A data folder inside the project gives
    `Failed(DataInsideProject)` (see below). Otherwise the conversation is kept, dropped, or made as above; a factory
    that cannot make an agent gives `Failed(NotReady)` with the sentence of the readiness check for the same cause (for
-   the gated Copilot starter, "Copilot support needs an AgentKit update; use Ollama meanwhile."), and is asked again by
-   the next turn so that a fix is noticed. An exception becomes `Failed(Unexpected)` whose sentence holds the message of
+   Copilot without credentials, the sign-in sentence of the starter), and is asked again by the next turn so that a fix
+   is noticed. An exception becomes `Failed(Unexpected)` whose sentence holds the message of
    the exception (the user sees it; the log does not).
 3. **The message.** `PayloadMessageMapper.Map(payload, projectFolder)` builds the user message. If the conversation has
    not yet given the restored history to the provider and the request carries history, the digest is inserted as the

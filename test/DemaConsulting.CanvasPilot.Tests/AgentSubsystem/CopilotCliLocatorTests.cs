@@ -156,7 +156,7 @@ public sealed class CopilotCliLocatorTests
         Assert.Equal(CopilotCliRejection.Shim, rejected.Reason);
         var run = Assert.Single(runner.Runs);
         Assert.Equal(DevMachine.RealCli, run.Path);
-        Assert.Equal(["--version"], run.Arguments);
+        Assert.Equal(["--no-auto-update", "--version"], run.Arguments);
         Assert.Equal(TimeSpan.FromSeconds(10), run.Timeout);
     }
 

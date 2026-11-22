@@ -9,7 +9,7 @@ editors put on the `PATH`, checks that it reports a version that works, and says
 to do when it cannot be used. CanvasPilot never ships or downloads the CLI, so this is the only way the application
 learns which CLI exists. The unit also holds the supporting types that make it testable without a machine that has the
 CLI: `IProcessRunner` with its real `ProcessRunner`, `ICliFileSystem` with `CliFileSystem`, and `IEnvironmentReader`
-with `SystemEnvironmentReader`. The readiness checks that the subsystem adds next reuse the same process runner and
+with `SystemEnvironmentReader`. The readiness checks of the subsystem reuse the same process runner and
 environment reader for their own checks (the credential check runs a program and reads token variables).
 
 #### Data Model
@@ -56,9 +56,12 @@ itself when it is not a link), and `EnumerateDirectories(parent, pattern)`. **IE
    file does not exist (`Missing`); its extension is not `.exe` (`NotExe`); a folder above it is named like a shim, that
    is, equals `copilot-shim`, `.vscode`, `.vscode-insiders`, or `github.copilot-chat`, or starts with
    `Microsoft VS Code`, ignoring case (`Shim`); or it is smaller than 20 MiB (`TooSmall`).
-4. **Validate** the survivors in order: run `--version` (10 seconds, hidden window, output and error joined), read
-   `GitHub Copilot CLI (\d+)\.(\d+)\.(\d+)` (the trailing period, the line that suggests an update, and a pre-release
-   suffix do not matter). A candidate that cannot be started, times out, or has no version is recorded as `Unreadable`
+4. **Validate** the survivors in order: run `--no-auto-update --version` (10 seconds, hidden window, output and error
+   joined), read `GitHub Copilot CLI (\d+)\.(\d+)\.(\d+)` (the trailing period, the line that suggests an update, and a
+   pre-release suffix do not matter). The option `--no-auto-update` makes the CLI report the version built into the
+   executable and not a newer one that it cached; that is the probe that the AI library runs, so the locator cannot
+   accept a CLI that the library then refuses. A candidate that cannot be started, times out, or has no version is
+   recorded as `Unreadable`
    and the next one is tried; a candidate whose version is below 1.0.113 is recorded as `TooOld` and the next one is
    tried. The first candidate with a new enough version is `Found`. When none is, the result is `TooOld` (the first old
    candidate) if any was old, else `Unreadable` (the first unreadable candidate), else `NotFound`.
@@ -75,7 +78,7 @@ itself when it is not a link), and `EnumerateDirectories(parent, pattern)`. **IE
 - **Unreadable**: "The Copilot CLI at {path} did not report its version ({reason})." with the way to reinstall it or to
   choose another file.
 
-The readiness checks that are added next map these results to their own statuses and messages.
+The readiness checks map these results to their own statuses and messages.
 
 #### Evidence
 
@@ -85,10 +88,12 @@ The readiness checks that are added next map these results to their own statuses
 | VS Code shim size | 791,904 bytes (development machine) |
 | Size limit | 20 MiB = 20,971,520 bytes, between the two with a wide margin |
 | `--version` output | "GitHub Copilot CLI 1.0.114." and a line that suggests `copilot update` |
+| Version probe | Run with `--no-auto-update`, as the AI library does |
 | Library protocol | 4 to 4 (OTS item `CopilotSdk`, `DeclareSupportedCliVersion`) |
 | CLI 1.0.106 | reports protocol 3 and fails with the library (spike probe) |
 | CLI 1.0.114 | reports protocol 4 and works (spike probe) |
 | Minimum version | 1.0.113, the first with protocol 4, between the probed 1.0.106 and 1.0.114 |
+| Library minimum | The AI library refuses a CLI below 1.0.113 (`CopilotCli.MinimumVersion`), the same limit |
 
 Paths on the development machine, where the user name is left out:
 
@@ -142,6 +147,10 @@ subsystem and no third-party item. The path of the settings is passed in by the 
 
 #### Callers
 
-The readiness checks of the subsystem (readiness of the Copilot provider and the connection check, added next) and,
-later, the unit that starts the Copilot runtime and needs the path of the CLI. The `AppShell` subsystem builds the
-locator.
+The readiness checks of the subsystem (readiness of the Copilot provider and the connection check) and the factory of
+the agents, and, through the path that it finds, the `CopilotRuntimeStarter` unit, which runs that CLI. The `AppShell`
+subsystem builds the locator.
+
+The unit also guards that its minimum is never below what the AI library accepts: an OTS test of AgentKit asserts that
+`CopilotCli.MinimumVersion` of the library is not above `MinimumCliVersion`, so the locator cannot pass a CLI that the
+library then refuses.

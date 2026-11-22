@@ -317,8 +317,8 @@ public sealed class ChatPanelCopilotTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that the banner shows the sentence of a provider that cannot be used, including the sentence of the
-    ///     gated GitHub Copilot, shows a warning that does not block, and is hidden when everything is ready.
+    ///     Test that the banner shows the sentence of a provider that cannot be used, including the sentence of GitHub
+    ///     Copilot that is not signed in, shows a warning that does not block, and is hidden when everything is ready.
     /// </summary>
     [Fact]
     public async Task ChatPanelViewModel_RefreshReadiness_ShowsTheActionableSentenceAndHidesItWhenReady()
@@ -332,13 +332,13 @@ public sealed class ChatPanelCopilotTests : IDisposable
         Assert.False(_panel.HasReadinessIssue);
         Assert.Equal(string.Empty, _panel.ReadinessMessage);
 
-        // Act / Assert: the gated Copilot says what to do
+        // Act / Assert: the Copilot that is not signed in says what to do
         _agent.Readiness = new AgentReadinessReport(
-            AgentReadinessStatus.CopilotRuntimeUnavailable,
-            "Copilot support needs an AgentKit update; use Ollama meanwhile.");
+            AgentReadinessStatus.CopilotNotSignedIn,
+            CopilotRuntimeStarter.NotSignedInMessage);
         await _panel.RefreshReadinessAsync();
         Assert.True(_panel.HasReadinessIssue);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", _panel.ReadinessMessage);
+        Assert.Equal(CopilotRuntimeStarter.NotSignedInMessage, _panel.ReadinessMessage);
         Assert.Contains(nameof(ChatPanelViewModel.HasReadinessIssue), announced);
 
         // Act / Assert: a warning is shown, and sending is not blocked by it

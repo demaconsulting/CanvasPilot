@@ -127,7 +127,7 @@ sent message, is never busy, shows no banner, blocks nothing, and ignores Stop a
 tested by `ChatPanelViewModel_NoCopilot_OnlyAppendsTheEntryAndBlocksNothing`.
 
 **ChatPanelViewModel_RefreshReadiness_ShowsTheActionableSentenceAndHidesItWhenReady**: A ready provider shows no banner;
-the gated Copilot shows the sentence that says that Copilot support needs an AgentKit update and `HasReadinessIssue` is
+the Copilot that is not signed in shows the sign-in sentence of `CopilotRuntimeStarter` and `HasReadinessIssue` is
 announced; a warning is shown and sending stays possible; "Check again" repeats the check and a ready provider hides the
 banner. This scenario is tested by `ChatPanelViewModel_RefreshReadiness_ShowsTheActionableSentenceAndHidesItWhenReady`.
 
@@ -165,9 +165,9 @@ This scenario is tested by `ChatPanelView_ProviderFails_ShowsErrorRowWithRemedyA
 replies and two tool lines in order, the first saying that the file was created, and no line still shows the moving bar.
 This scenario is tested by `ChatPanelView_ToolCalls_ShowToolRowsInOrder`.
 
-**ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady**: A panel with the gated Copilot shows the
-banner with the sentence when it is shown; "Open Settings" raises the request; after the copilot is ready, "Check again"
-repeats the check and the banner is hidden. This scenario is tested by
+**ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady**: A panel with a Copilot that is not signed
+in shows the banner with the sign-in sentence when it is shown; "Open Settings" raises the request; after the copilot is
+ready, "Check again" repeats the check and the banner is hidden. This scenario is tested by
 `ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady`.
 
 **ChatPanelView_NoCopilot_ShowsNoBannerIndicatorOrStop**: A panel without a copilot shows no banner, no indicator, and

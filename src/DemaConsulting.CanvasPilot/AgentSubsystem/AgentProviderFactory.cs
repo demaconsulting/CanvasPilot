@@ -43,12 +43,13 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         the model see pictures that a tool returned. The result owns the clients and disposes them with the agent.
 ///     </para>
 ///     <para>
-///         For GitHub Copilot the factory finds the Copilot CLI with the locator, asks the starter of the runtime to start
-///         the runtime on it once, and makes agents on that runtime with the model of the settings (the default model of
+///         For GitHub Copilot the factory finds the Copilot CLI with the locator, asks the starter of the runtime for the
+///         runtime that runs on it, and makes agents on that runtime with the model of the settings (the default model of
 ///         the runtime when the name is empty), the project folder as the working directory, and the default-deny
-///         permission handler. The starter of this build is the gated one, which starts nothing, so the factory returns
-///         the typed answer <see cref="AgentReadinessStatus.CopilotRuntimeUnavailable" /> and no agent. The factory keeps
-///         the started runtime for later agents and disposes it when it is disposed.
+///         permission handler. A CLI that is missing or too old, a runtime that is not signed in, and a runtime that could
+///         not be started are each answered with a typed status and the sentence of the cause, and no agent. The runtime is
+///         shared with the readiness check and belongs to the starter; the factory stops it when it is disposed only when it
+///         was told that it owns the starter.
 ///     </para>
 ///     <para>
 ///         Settings that do not describe a usable provider (a missing model, an invalid address) are answered with
@@ -82,7 +83,7 @@ public sealed class AgentProviderFactory : IAgentFactory
     /// <summary>
     ///     The sentence for a runtime that started but gave no way to make agents.
     /// </summary>
-    public const string NoAgentSourceMessage = "The Copilot runtime started but cannot make an agent. Choose Check connection, or use Ollama meanwhile.";
+    public const string NoAgentSourceMessage = "The Copilot runtime started but cannot make an agent. Choose Check connection to try again.";
 
     /// <summary>
     ///     Finds the Copilot CLI.
@@ -105,38 +106,45 @@ public sealed class AgentProviderFactory : IAgentFactory
     private readonly RollingFileLogger? _logger;
 
     /// <summary>
-    ///     Serializes the start of the runtime.
+    ///     Whether the factory stops the starter when it is disposed.
     /// </summary>
-    private readonly SemaphoreSlim _startGate = new(1, 1);
+    private readonly bool _ownsStarter;
 
     /// <summary>
-    ///     The started Copilot runtime, or <see langword="null" /> when none was started.
+    ///     The Copilot runtime that made the last agent, or <see langword="null" /> when none was made. It belongs to the
+    ///     starter and is kept only to delete the sessions that it holds.
     /// </summary>
-    private ICopilotAgentSource? _copilot;
+    private volatile ICopilotAgentSource? _copilot;
 
     /// <summary>
     ///     Whether the factory was disposed.
     /// </summary>
-    private bool _disposed;
+    private volatile bool _disposed;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="AgentProviderFactory" /> class.
     /// </summary>
     /// <param name="locator">Finds the Copilot CLI; a locator on the real system when <see langword="null" />.</param>
-    /// <param name="starter">The starter of the Copilot runtime; the gated starter when <see langword="null" />.</param>
+    /// <param name="starter">The starter of the Copilot runtime; a starter of the real runtime when <see langword="null" />.</param>
     /// <param name="handler">
     ///     The handler that carries the requests to Ollama, which lets a test stand in for the server; the real network when
     ///     <see langword="null" />. The factory never disposes it.
     /// </param>
     /// <param name="logger">Receives the metadata lines; <see langword="null" /> for none.</param>
+    /// <param name="ownsStarter">
+    ///     <see langword="true" /> when the factory stops the starter, and with it the runtime, as it is disposed; a starter
+    ///     that the factory makes itself is always owned.
+    /// </param>
     public AgentProviderFactory(
         CopilotCliLocator? locator = null,
         ICopilotRuntimeStarter? starter = null,
         HttpMessageHandler? handler = null,
-        RollingFileLogger? logger = null)
+        RollingFileLogger? logger = null,
+        bool ownsStarter = false)
     {
         _locator = locator ?? new CopilotCliLocator();
-        _starter = starter ?? new GatedCopilotRuntimeStarter();
+        _starter = starter ?? new CopilotRuntimeStarter();
+        _ownsStarter = ownsStarter || starter is null;
         _handler = handler;
         _logger = logger;
     }
@@ -166,43 +174,33 @@ public sealed class AgentProviderFactory : IAgentFactory
             return;
         }
 
-        ICopilotAgentSource? source;
-        await _startGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        var source = _copilot;
+        if (source is null)
         {
-            source = _copilot;
-        }
-        finally
-        {
-            _startGate.Release();
+            return;
         }
 
-        if (source is not null)
+        try
         {
             await source.DeleteSessionAsync(copilot.SessionId, cancellationToken).ConfigureAwait(false);
             Write("Copilot session deleted");
+        }
+        catch (ObjectDisposedException)
+        {
+            // The runtime that kept the session was replaced or stopped, and took its sessions with it
+            Write("Copilot session not deleted: the runtime was stopped");
         }
     }
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
-        ICopilotAgentSource? source;
-        await _startGate.WaitAsync().ConfigureAwait(false);
-        try
-        {
-            _disposed = true;
-            source = _copilot;
-            _copilot = null;
-        }
-        finally
-        {
-            _startGate.Release();
-        }
+        _disposed = true;
+        _copilot = null;
 
-        if (source is not null)
+        if (_ownsStarter && _starter is IAsyncDisposable starter)
         {
-            await source.DisposeAsync().ConfigureAwait(false);
+            await starter.DisposeAsync().ConfigureAwait(false);
         }
     }
 
@@ -273,64 +271,33 @@ public sealed class AgentProviderFactory : IAgentFactory
             return Unavailable(status, cli.Message);
         }
 
-        var source = await GetCopilotSourceAsync(
-                new CopilotStartRequest(cli.Path, cli.Version, CheckOnly: false)
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        var started = await _starter
+            .StartAsync(
+                new CopilotStartRequest(cli.Path, cli.Version)
                 {
                     DataDirectory = request.CopilotDataDirectory,
                     Logger = request.CopilotLogger,
                 },
                 cancellationToken)
             .ConfigureAwait(false);
-        if (source.Agents is null)
+        if (started.Status != CopilotStartStatus.Started)
         {
-            return Unavailable(AgentReadinessStatus.CopilotRuntimeUnavailable, source.Message);
+            return Unavailable(started.ReadinessStatus, started.Message);
         }
 
+        if (started.Agents is null)
+        {
+            return Unavailable(AgentReadinessStatus.CopilotRuntimeUnavailable, NoAgentSourceMessage);
+        }
+
+        _copilot = started.Agents;
         var model = string.IsNullOrWhiteSpace(settings.ModelName) ? null : settings.ModelName.Trim();
-        var agent = source.Agents.CreateAgent(new CopilotAgentRequest(request.Tools, request.Instructions, AgentName, model, request.ProjectFolder));
+        var agent = started.Agents.CreateAgent(new CopilotAgentRequest(request.Tools, request.Instructions, AgentName, model, request.ProjectFolder));
         Write($"Agent created: provider=GitHubCopilot model={model ?? "(default)"} tools={request.Tools.Count}");
 
-        // The runtime belongs to the factory and is shared by the agents, so the result owns nothing
+        // The runtime belongs to the starter and is shared by the agents, so the result owns nothing
         return AgentCreationResult.Created(agent);
-    }
-
-    /// <summary>
-    ///     Gives the started Copilot runtime, starting it when it is not running yet.
-    /// </summary>
-    /// <param name="start">The request for the starter.</param>
-    /// <param name="cancellationToken">A token that cancels the start.</param>
-    /// <returns>The runtime as a source of agents, or the message of the starter when it could not be started.</returns>
-    private async Task<(ICopilotAgentSource? Agents, string Message)> GetCopilotSourceAsync(
-        CopilotStartRequest start,
-        CancellationToken cancellationToken)
-    {
-        await _startGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
-        {
-            ObjectDisposedException.ThrowIf(_disposed, this);
-            if (_copilot is not null)
-            {
-                return (_copilot, string.Empty);
-            }
-
-            var started = await _starter.StartAsync(start, cancellationToken).ConfigureAwait(false);
-            if (started.Status != CopilotStartStatus.Started)
-            {
-                return (null, started.Message);
-            }
-
-            if (started.Agents is null)
-            {
-                return (null, NoAgentSourceMessage);
-            }
-
-            _copilot = started.Agents;
-            return (_copilot, string.Empty);
-        }
-        finally
-        {
-            _startGate.Release();
-        }
     }
 
     /// <summary>

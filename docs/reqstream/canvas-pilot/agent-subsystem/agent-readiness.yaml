@@ -3,9 +3,9 @@
 #
 # The AgentReadiness unit checks whether the AI provider that the settings choose can be used, and says in one sentence
 # what it found and what to do. For GitHub Copilot it runs ordered checks (the Copilot CLI and its version, credentials,
-# and the start of the runtime, which this build cannot do); for Ollama it checks the settings, the server, the model,
-# and the context window. Its supporting types (the starter of the Copilot runtime with the gated starter that this
-# build ships, and the probe of the Ollama server) are part of the unit.
+# and the start of the shared Copilot runtime on that CLI); for Ollama it checks the settings, the server, the model,
+# and the context window. Its supporting type, the probe of the Ollama server, is part of the unit; the starter of the
+# Copilot runtime is a unit of its own (CopilotRuntimeStarter).
 
 sections:
   - title: CanvasPilot Requirements
@@ -18,14 +18,16 @@ sections:
                 title: >-
                   The AgentReadiness shall check GitHub Copilot in this order and report the first check that fails:
                   the Copilot CLI is found, the CLI is version 1.0.113 or later, credentials exist, and the starter of
-                  the Copilot runtime says that the runtime can be started; each failure shall be one sentence that
-                  names what to do, and a CLI that is not usable shall not lead to a check of credentials.
+                  the Copilot runtime starts the runtime, or reuses the one that runs, on that CLI; each failure shall be
+                  one sentence that names what to do, and a CLI that is not usable shall not lead to a check of
+                  credentials.
                 justification: |
                   Each later check needs the earlier one: credentials and the runtime mean nothing without a CLI that
                   works. Reporting only the first problem tells the user one thing to fix at a time, in the order in
                   which it can be fixed, and the exact sentences (install with winget, upgrade with winget) are the
                   commands that fix them. The CLI and its version are judged by the locator, so the sentences of the
-                  locator are the ones the user sees.
+                  locator are the ones the user sees. The runtime is the one that the conversations use, so the check
+                  proves what the chat will need and starts no second runtime.
                 tests:
                   - AgentReadiness_Copilot_NoCli_ReportsMissingWithTheInstallSentence
                   - AgentReadiness_Copilot_OnlyShim_ReportsMissingAndNamesTheShim
@@ -33,8 +35,7 @@ sections:
                   - AgentReadiness_Copilot_CliDoesNotAnswer_ReportsMissingWithReinstallAdvice
                   - AgentReadiness_Copilot_CliTooOld_ReportsTooOldWithTheUpgradeSentence
                   - AgentReadiness_Copilot_MinimumVersion_IsAcceptedAndGoesOnToCredentials
-                  - AgentReadiness_Copilot_StarterStarted_ReportsReadyAndAsksOnlyToCheck
-                  - AgentReadiness_Copilot_StarterFailed_ReportsUnavailableWithTheStartersSentence
+                  - AgentReadiness_Copilot_StarterStarted_ReportsReadyAndAsksWithTheCliThatWasFound
 
               - id: CanvasPilot-AgentReadiness-DetectCopilotCredentials
                 title: >-
@@ -48,7 +49,7 @@ sections:
                   the usual case on a developer machine. A time limit keeps a stuck program from freezing the check,
                   and an empty or failed answer is a clear no.
                 tests:
-                  - AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndStopsAtTheGatedRuntime
+                  - AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndReportsReady
                   - AgentReadiness_Copilot_EmptyTokenVariables_AreNotCredentials
                   - AgentReadiness_Copilot_GitHubCliSignedIn_CountsAsCredentialsAndNeverKeepsTheToken
                   - AgentReadiness_Copilot_GitHubCliOnPath_IsRunFromThePath
@@ -57,32 +58,31 @@ sections:
               - id: CanvasPilot-AgentReadiness-ExplainCopilotAuthentication
                 title: >-
                   The AgentReadiness shall, when no credentials exist, tell the user to sign in with gh auth login or
-                  to set the COPILOT_GITHUB_TOKEN environment variable and to choose Check connection, and shall say
-                  that the sign-in of the Copilot CLI itself (its /login) is not shared with the AI library of the
-                  application yet.
+                  to set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable and to choose Check
+                  connection, and shall say that signing in to the Copilot CLI with /login does not apply to the
+                  application.
                 justification: |
                   Users who signed in to the Copilot CLI will expect that to be enough. The AI library does not use that
-                  session, so without this sentence the user would be told to sign in when they believe they are. The
-                  sentence gives the two things that work and names the one that does not, so the user does not repeat
-                  the sign-in that fails.
+                  session (verified on a machine where the CLI is signed in with /login: with no GitHub CLI sign-in and no
+                  token variable the runtime reports that it is not authenticated), so without this sentence the user
+                  would be told to sign in when they believe they are. The sentence gives the two things that work and
+                  names the one that does not, so the user does not repeat the sign-in that fails.
                 tests:
                   - AgentReadiness_Copilot_NoCredentials_ReportsNotSignedInWithTheExactSentence
 
-              - id: CanvasPilot-AgentReadiness-ReportGatedCopilotRuntime
+              - id: CanvasPilot-AgentReadiness-ReportCopilotRuntimeStart
                 title: >-
-                  The AgentReadiness shall report GitHub Copilot as unavailable with the sentence "Copilot support needs
-                  an AgentKit update; use Ollama meanwhile." whenever the starter of the runtime answers that an update
-                  of the AI library is needed, shall never report Copilot as ready then, and shall ship a starter that
-                  always gives that answer without starting anything.
+                  The AgentReadiness shall report GitHub Copilot as ready, with the version of the CLI, when the starter
+                  starts the runtime, and otherwise with the status that matches what the starter answers (CLI too old,
+                  not signed in, or runtime not started) and the sentence of the starter.
                 justification: |
-                  The AI library of this build can run only a Copilot CLI that it bundles, and the application must not
-                  bundle or download the CLI. Saying that Copilot is ready would send the user into a chat that cannot
-                  answer. A starter behind an interface keeps the rest of the Copilot support built and tested, and
-                  makes the day the library allows a chosen CLI a replacement of one class.
+                  Only starting the runtime shows that the CLI runs and that the sign-in works, so the check asks the
+                  starter and passes its explanation on unchanged: the user sees one sentence from the one unit that knows
+                  why the start failed. A Copilot that is reported ready can answer a message.
                 tests:
-                  - AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndStopsAtTheGatedRuntime
-                  - AgentReadiness_Copilot_GatedStarter_NeverReportsReady
-                  - GatedCopilotRuntimeStarter_Start_AnswersNeedsAgentKitUpdate
+                  - AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndReportsReady
+                  - AgentReadiness_Copilot_StarterRefuses_ReportsTheMatchingStatusAndSentence
+                  - AgentReadiness_Copilot_StarterStarted_ReportsReadyAndAsksWithTheCliThatWasFound
 
               - id: CanvasPilot-AgentReadiness-NeverRetainCredentials
                 title: >-

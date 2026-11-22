@@ -217,7 +217,7 @@ public sealed class CanvasPilotTests : IDisposable
     /// <summary>
     ///     Test that the user is told, for each provider, one sentence that says what to do: the settings of a new
     ///     installation (GitHub Copilot) on a machine without a sign-in say how to sign in, the same machine with a token
-    ///     says that this build cannot start Copilot, and a stored Ollama choice with a small window warns about it.
+    ///     says that Copilot is ready, and a stored Ollama choice with a small window warns about it.
     /// </summary>
     [Fact]
     public async Task CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach()
@@ -232,7 +232,7 @@ public sealed class CanvasPilotTests : IDisposable
         var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]), ContextLength = null };
         var readiness = new AgentReadiness(
             new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), environment),
-            null,
+            new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.")),
             runner,
             environment,
             DevMachine.CreateFileSystem(),
@@ -249,8 +249,8 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, fresh.Status);
         Assert.Contains("gh auth login", fresh.Message, StringComparison.Ordinal);
         Assert.Contains("COPILOT_GITHUB_TOKEN", fresh.Message, StringComparison.Ordinal);
-        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, withToken.Status);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", withToken.Message);
+        Assert.Equal(AgentReadinessStatus.Ready, withToken.Status);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", withToken.Message);
         Assert.Equal(AgentReadinessStatus.OllamaContextTooSmall, ollama.Status);
         Assert.True(ollama.IsUsable);
         Assert.Contains("Raise it in Settings (32,768 recommended)", ollama.Message, StringComparison.Ordinal);
@@ -420,46 +420,95 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a user whose settings choose GitHub Copilot, which this build cannot start, is told so in the banner of
-    ///     the chat panel, and that a message gets that same sentence in the conversation without a Copilot process being
-    ///     started or the conversation getting an answer; the only process run is the version check of the installed CLI.
+    ///     Test that a user whose settings choose GitHub Copilot on a machine without a sign-in is told how to sign in in the
+    ///     banner of the chat panel without a Copilot runtime being asked for, and that a message gets the same sentence from
+    ///     the starter in the conversation, with no answer; the only process run is the version check of the installed CLI.
     /// </summary>
     [Fact]
-    public async Task CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt()
+    public async Task CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt()
     {
-        // Arrange: the application over the real factory of the providers, a machine with the installed CLI and a token, and
-        // the default settings, which choose GitHub Copilot
+        // Arrange: the application over the real factory of the providers, a machine with the installed CLI and no token, a
+        // starter that is not signed in, and the default settings, which choose GitHub Copilot
         var token = TestContext.Current.CancellationToken;
-        var app = await ComposeCopilotAsync(scripted: false, tokenVariable: true);
-        const string gated = "Copilot support needs an AgentKit update; use Ollama meanwhile.";
+        var app = await ComposeCopilotAsync(
+            scripted: false,
+            starterResult: new CopilotStartResult(CopilotStartStatus.NotSignedIn, CopilotRuntimeStarter.NotSignedInMessage));
 
-        // Act: the panel checks the provider, and the user sends a message
+        // Act: the panel checks the provider, and then the user sends a message
         await app.Composition.Chat.RefreshReadinessAsync();
         var banner = (app.Composition.Chat.HasReadinessIssue, app.Composition.Chat.ReadinessMessage);
+        var askedByTheCheck = app.Starter.Requests.Count;
         app.Composition.Composer.InsertTyped("Draw a box");
         await app.Composition.Chat.SendCommand.ExecuteAsync(null);
         await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
 
-        // Assert: the banner and the conversation say that Copilot cannot be started, no answer came, and the processes that
-        // were run are the version checks of the installed CLI
-        Assert.Equal((true, gated), banner);
+        // Assert: the banner and the conversation say how to sign in, the check stopped before the runtime, no answer came,
+        // and the processes that were run are the version checks of the installed CLI
+        Assert.Equal((true, CopilotRuntimeStarter.NotSignedInMessage), banner);
+        Assert.Equal(0, askedByTheCheck);
         var notice = Assert.IsType<NoticeRowViewModel>(app.Composition.Chat.Transcript[^1]);
-        Assert.Contains(gated, notice.Message, StringComparison.Ordinal);
+        Assert.Contains(CopilotRuntimeStarter.NotSignedInMessage, notice.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(app.Composition.Chat.Transcript, row => row is AssistantReplyViewModel);
         Assert.All(app.Runner.Runs, run => Assert.Equal(DevMachine.RealCli, run.Path));
         Assert.NotEmpty(app.Runner.Runs);
     }
 
     /// <summary>
+    ///     Test that a user whose settings choose GitHub Copilot on a machine with the installed CLI and a sign-in has a
+    ///     conversation through the real factory of the providers and a runtime that the starter runs: the banner is clear,
+    ///     the runtime is asked for with the CLI that was found, the words and the tool row appear, and the drawing is
+    ///     written in the project.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing()
+    {
+        // Arrange: the application over the real factory, a machine with a token, and a runtime whose agents are scripted
+        var token = TestContext.Current.CancellationToken;
+        var source = new FakeCopilotAgentSource(DrawingModel());
+        var app = await ComposeCopilotAsync(
+            scripted: false,
+            tokenVariable: true,
+            starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
+
+        // Act: the panel checks the provider, and the user sends a message
+        await app.Composition.Chat.RefreshReadinessAsync();
+        var issue = app.Composition.Chat.HasReadinessIssue;
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await app.Composition.Chat.SendCommand.ExecuteAsync(null);
+        await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+
+        // Assert: nothing was wrong, the words and the tool row are in the conversation, and the drawing is in the project
+        Assert.False(issue);
+        Assert.Equal(
+            [TranscriptRowKind.User, TranscriptRowKind.Assistant, TranscriptRowKind.Tool, TranscriptRowKind.Assistant],
+            app.Composition.Chat.Transcript.Select(row => row.Kind));
+        Assert.Equal("The box is drawn.", Assert.IsType<AssistantReplyViewModel>(app.Composition.Chat.Transcript[^1]).Text);
+        Assert.True(File.Exists(Path.Combine(app.Project.FolderPath, "box.svg")));
+
+        // Assert: the runtime was asked for on the installed CLI, with the data folder below the local data root, and the
+        // agent got the project folder and the tools of the application
+        Assert.All(app.Starter.Requests, request => Assert.Equal(DevMachine.RealCli, request.CliPath));
+        var folders = app.Starter.Requests.Select(request => request.DataDirectory).OfType<string>().ToArray();
+        Assert.NotEmpty(folders);
+        Assert.All(folders, folder => Assert.StartsWith(app.LocalDataRoot, folder, StringComparison.OrdinalIgnoreCase));
+        var made = Assert.Single(source.Requests);
+        Assert.Equal(app.Project.FolderPath, made.WorkingDirectory);
+        Assert.Contains("project_write", made.Tools.Select(tool => tool.Name));
+    }
+
+    /// <summary>
     ///     Test that Check connection on the AI Provider page of the composed application asks the real readiness check: for
     ///     Ollama it asks the stand-in server (reachable, then not), and for GitHub Copilot it asks the locator over the
-    ///     fake machine (not signed in, then a token, then a path that is wrong), each with one sentence and no saved settings.
+    ///     fake machine (not signed in, then a token with a runtime that starts, then a path that is wrong), each with one
+    ///     sentence and no saved settings.
     /// </summary>
     [Fact]
     public async Task CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach()
     {
         // Arrange: the application with the copilot, and the settings page of its settings dialog
-        var app = await ComposeCopilotAsync(scripted: false);
+        var app = await ComposeCopilotAsync(
+            scripted: false,
+            starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", new FakeCopilotAgentSource(new ScriptedChatClient())));
         AiProviderSettingsPageViewModel? page = null;
         app.Dialogs.OnSettings = dialog =>
         {
@@ -485,7 +534,7 @@ public sealed class CanvasPilotTests : IDisposable
         var notSignedIn = (page.IsCheckConnectionOk, page.CheckConnectionResult);
         app.Environment.Set("COPILOT_GITHUB_TOKEN", "some-token");
         await page.CheckConnectionCommand.ExecuteAsync(null);
-        var gated = (page.IsCheckConnectionOk, page.CheckConnectionResult);
+        var ready = (page.IsCheckConnectionOk, page.CheckConnectionResult);
         page.CopilotCliPath = @"C:\nowhere\copilot.exe";
         await page.CheckConnectionCommand.ExecuteAsync(null);
         var wrongPath = (page.IsCheckConnectionOk, page.CheckConnectionResult);
@@ -497,8 +546,8 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Contains("did not answer", ollamaDown.CheckConnectionResult, StringComparison.Ordinal);
         Assert.False(notSignedIn.IsCheckConnectionOk);
         Assert.Contains("gh auth login", notSignedIn.CheckConnectionResult, StringComparison.Ordinal);
-        Assert.False(gated.IsCheckConnectionOk);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", gated.CheckConnectionResult);
+        Assert.True(ready.IsCheckConnectionOk);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", ready.CheckConnectionResult);
         Assert.False(wrongPath.IsCheckConnectionOk);
         Assert.Contains(@"C:\nowhere\copilot.exe", wrongPath.CheckConnectionResult, StringComparison.Ordinal);
         Assert.Equal(settingsBefore, app.Composition.Settings.Current.AiProvider);
@@ -1825,6 +1874,7 @@ public sealed class CanvasPilotTests : IDisposable
     /// <param name="Project">The project that is open.</param>
     /// <param name="LocalDataRoot">The local data root that the composition was given.</param>
     /// <param name="HistoryRoot">The folder of the chat history, which the composition made from the local data root.</param>
+    /// <param name="Starter">The stand-in starter of the Copilot runtime, which records what it was asked.</param>
     private sealed record CopilotApp(
         ApplicationComposition Composition,
         FakeDialogService Dialogs,
@@ -1834,7 +1884,8 @@ public sealed class CanvasPilotTests : IDisposable
         FakeEnvironment Environment,
         ProjectInfo Project,
         string LocalDataRoot,
-        string HistoryRoot);
+        string HistoryRoot,
+        FakeCopilotRuntimeStarter Starter);
 
     /// <summary>
     ///     Makes a scripted model that says a word, writes a drawing of 40 by 20 with the project tool, and says that it is
@@ -1867,12 +1918,17 @@ public sealed class CanvasPilotTests : IDisposable
     /// </param>
     /// <param name="tokenVariable">Whether the environment has a GitHub token for the Copilot CLI.</param>
     /// <param name="openProject">The project file to open, or <see langword="null" /> to create the project Demo.</param>
+    /// <param name="starterResult">
+    ///     What the stand-in starter of the Copilot runtime answers, which is a refusal when <see langword="null" />, so that
+    ///     no test starts a Copilot runtime.
+    /// </param>
     /// <returns>The composition and what it is built over.</returns>
     private async Task<CopilotApp> ComposeCopilotAsync(
         Microsoft.Extensions.AI.IChatClient? model = null,
         bool scripted = true,
         bool tokenVariable = false,
-        string? openProject = null)
+        string? openProject = null,
+        CopilotStartResult? starterResult = null)
     {
         var token = TestContext.Current.CancellationToken;
         var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
@@ -1889,6 +1945,8 @@ public sealed class CanvasPilotTests : IDisposable
 
         var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]) };
         var factory = scripted ? new ScriptedAgentFactory(model ?? DrawingModel()) : null;
+        var starter = new FakeCopilotRuntimeStarter(
+            starterResult ?? new CopilotStartResult(CopilotStartStatus.Failed, "The Copilot runtime must not be started in this test."));
         var composition = ApplicationComposition.Create(
             logger,
             new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger),
@@ -1903,7 +1961,8 @@ public sealed class CanvasPilotTests : IDisposable
             processRunner: runner,
             ollamaProbe: probe,
             environment: environment,
-            cliFileSystem: DevMachine.CreateFileSystem());
+            cliFileSystem: DevMachine.CreateFileSystem(),
+            copilotStarter: starter);
         _disposables.Add(composition);
         composition.Shell.AttachDialogService(dialogs);
         if (scripted)
@@ -1926,7 +1985,8 @@ public sealed class CanvasPilotTests : IDisposable
             environment,
             opened.Project!,
             localData,
-            Path.Combine(localData, "CanvasPilot", "history"));
+            Path.Combine(localData, "CanvasPilot", "history"),
+            starter);
     }
 
     /// <summary>

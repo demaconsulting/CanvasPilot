@@ -421,9 +421,10 @@ sections:
 
       - id: CanvasPilot-System-UseInstalledCopilotCli
         title: >-
-          The application shall locate and check the GitHub Copilot CLI that the user installed, and shall not include
-          or download the GitHub Copilot runtime in its installed files or in its build output, so that the only
-          GitHub Copilot CLI that it can ever use is the one that the user installed.
+          The application shall locate and check the GitHub Copilot CLI that the user installed, shall run that CLI,
+          started once and shared, for the chat and the checks of GitHub Copilot, and shall not include or download the
+          GitHub Copilot runtime in its installed files or in its build output, so that the only GitHub Copilot CLI that
+          it can ever use is the one that the user installed.
         tags: [system]
         justification: |
           The GitHub Copilot CLI is a separate product that the user installs, updates, and signs in to. Shipping a
@@ -432,9 +433,12 @@ sections:
           bring such a runtime unless they are told not to, so the absence is checked on the published folder of every
           Windows build and, with the file table of the installer, in the package itself. The application finds the
           installed CLI by a documented rule that tells it from the launchers that editors put on the PATH, honors a
-          path that the user sets, and checks its version.
+          path that the user sets, checks its version, and then runs exactly that CLI. The user signs in with the GitHub
+          CLI or a token variable, because the sign-in of the Copilot CLI itself is not used by the AI library, and the
+          application has no token field and no login screen of its own.
         children:
           - CanvasPilot-Agent-LocateCopilotCli
+          - CanvasPilot-Agent-RunCopilotOnInstalledCli
           - CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
           - CanvasPilot-OTS-CopilotSdk-HonorExplicitCliPath
           - CanvasPilot-OTS-CopilotSdk-ReadCliPathFromConnectionEnvironment
@@ -442,6 +446,7 @@ sections:
         tests:
           - windows@Copilot_RuntimeNotPublished
           - CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath
+          - CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing
 
       - id: CanvasPilot-System-ConfineCopilotToProject
         title: >-
@@ -550,16 +555,16 @@ sections:
         title: >-
           The application shall tell the user, before the first message and when asked in the settings, whether the
           configured AI provider can be used: for GitHub Copilot whether the installed Copilot CLI was found (by a rule
-          that rejects editor shims) and is new enough, whether credentials exist, and whether this build can start the
-          runtime, and for Ollama whether the server answers, has the model, and has a context window of at least
-          16,384 tokens, each as one sentence that says what to do.
+          that rejects editor shims) and is new enough, whether credentials exist, and whether the runtime starts on
+          that CLI and is signed in, and for Ollama whether the server answers, has the model, and has a context window
+          of at least 16,384 tokens, each as one sentence that says what to do.
         tags: [system]
         justification: |
           A chat that fails on the first message with an error of a library is a poor first experience. Both providers
           depend on things outside the application (a CLI and a sign-in, or a server and a model), so the application
-          checks them itself and words the remedy, including the honest statement that GitHub Copilot cannot be used
-          in this build yet. A small context window is a warning and not a block, because it is a common but not
-          certain cause of failed drawings.
+          checks them itself and words the remedy, including the honest statement that the sign-in of the Copilot CLI
+          itself does not apply to the application. A small context window is a warning and not a block, because it is a
+          common but not certain cause of failed drawings.
         children:
           - CanvasPilot-Agent-DescribeReadiness
           - CanvasPilot-Agent-CheckProviderReadiness
@@ -567,7 +572,7 @@ sections:
           - CanvasPilot-Chat-ShowCopilotReadiness
         tests:
           - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
-          - CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt
+          - CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt
           - CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach
 
       - id: CanvasPilot-System-StartApplication

@@ -12,8 +12,10 @@ this use, with refusals as results and not as exceptions, and because it carries
 copilot needs. It is a library from another repository of the same organization that CanvasPilot consumes through
 NuGet, and it is treated as OTS because its internal design is out of scope here.
 
-The `DemaConsulting.AgentKit.Tools` package is deliberately not referenced. It pins an older `DemaConsulting.CanvasNet`
-than the one that CanvasPilot uses, and CanvasPilot builds its tools itself.
+The `DemaConsulting.AgentKit.Tools` package is deliberately not referenced in this change. Since version 0.1.0-beta.4 it
+pins the same `DemaConsulting.CanvasNet` (0.2.0-beta.13) as CanvasPilot's own CanvasNet tool and viewer, where the
+earlier version pinned 0.1.0, so the obstacle to a later increment with selectable tool packs is gone (see *Direction:
+selectable tool packs*); CanvasPilot still builds its tools itself.
 
 ### Features Used
 
@@ -25,9 +27,11 @@ than the one that CanvasPilot uses, and CanvasPilot builds its tools itself.
   image-promoting decorator installed, so that a picture returned by a tool reaches a model whose tool channel cannot
   carry one. The Ollama provider is built this way.
 - **Agents.Ollama**: `OllamaContextSizingChatClient`, which adds the Ollama option `num_ctx` to every request.
-- **Agents.Copilot**: `CopilotRuntime`, `CopilotRuntimeOptions`, and `CopilotAgentFactory`, which build a Copilot agent
-  on a Copilot runtime that AgentKit starts itself. CanvasPilot references the package so that the Copilot branch of its
-  provider factory is written and tested against a fake starter, but it does not start AgentKit's runtime (see below).
+- **Agents.Copilot**: `CopilotRuntime`, `CopilotRuntimeOptions`, `CopilotRuntimeSource`, and `CopilotAgentFactory`,
+  which start a Copilot runtime on the Copilot CLI that the user installed and build a Copilot agent on it. The
+  installed CLI is the default source (`CopilotRuntimeSource.InstalledCli`); `CopilotCli.MinimumVersion` is the oldest
+  CLI that the library accepts. The model catalog and the model settings that this version offers are not used yet; they
+  are a later step.
 
 ### Integration Pattern
 
@@ -38,43 +42,50 @@ scripted chat client and no language model. Refusals of the path policy are resu
 return them to the model; the policy judges a path by its normalized spelling and does not follow links, which is why
 the application's own file tools check for links themselves.
 
-### The Copilot runtime is not used
+### The Copilot runtime on the installed CLI
 
-AgentKit starts the Copilot CLI only as a runtime that is bundled beside the application
-(`runtimes/<rid>/native/copilot-runtime[.exe]` with its runtime library). The Copilot SDK package would download and
-copy that runtime, about 180 MB, into every project that references it. CanvasPilot must not ship or download the GitHub
-Copilot runtime, so `CopilotSkipCliDownload` is set to `true` in `Directory.Build.props`, which makes every project of
-the solution skip the download, and the runtime is therefore unused and absent. The OTS tests assert that the build
-output holds no Copilot runtime file and that starting AgentKit's runtime fails cleanly, naming the missing wrapper; the
-FileAssert test `Copilot_RuntimeNotPublished` asserts the published output, and the MSI file table is checked in the
-same build.
+AgentKit (version 0.1.0-beta.4; the Copilot SDK, the Microsoft Agent Framework, OllamaSharp, and
+Microsoft.Extensions.AI.Abstractions are pinned as before) runs the Copilot CLI that the user installed, at an explicit
+path. The `CopilotRuntimeStarter` unit builds
+`CopilotRuntimeOptions(dataDirectory, gitHubToken: null, logger, CopilotRuntimeSource.InstalledCli, cliPath)` and starts
+the runtime with `CopilotRuntime.StartAsync`. These are the rules of the library that the design relies on:
 
-The consequence is that the Copilot provider of CanvasPilot is gated: the user's installed Copilot CLI cannot be used
-with AgentKit 0.1.0-beta.3. Two findings explain it. The `COPILOT_CLI_PATH` variable is ignored, because AgentKit gives
-the SDK an environment of its own that withholds every `COPILOT_*` variable except a short allow-list, and AgentKit
-passes no `path` to `RuntimeConnection.ForSpawnedStdio`. And the sign-in of the CLI itself (`copilot`, then `/login`) is
-not shared with AgentKit's runtime, which starts with its own data directory; the credentials that do work are a
-signed-in GitHub CLI (`gh auth login`) or the environment variables `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and
-`GITHUB_TOKEN`.
+- `cliPath` must be an absolute path and must not be a `.cmd` or `.bat` file; the library refuses anything else with an
+  `ArgumentException` when the options are built. The variable `COPILOT_CLI_PATH` is ignored.
+- The library checks the version of the CLI by running it with `--no-auto-update --version` and refuses a CLI older than
+  `CopilotCli.MinimumVersion` (1.0.113). The locator of CanvasPilot uses the same probe and minimum, and an OTS test
+  asserts that the minimum of the library is never above the one of the locator.
+- The runtime signs in from a token option (unused: CanvasPilot passes `null` and keeps no token), from the variables
+  `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN`, or from a signed-in GitHub CLI (`gh auth login`, with `gh` on
+  the `PATH`). The sign-in that the Copilot CLI keeps for itself (`copilot`, then `/login`) is **not** used, because the
+  library gives the runtime its own home (the data folder) and switches the keychain off. This was verified on
+  2026-11-22 with a CLI that was signed in with `/login`: with `gh` removed from the `PATH` and no token variable the
+  runtime started but was not authenticated, and the library refused it.
+- The data directory must be empty, missing, or a directory that an earlier version of the library made; the runtime
+  keeps its home and its sessions there, so only one runtime may use it at a time.
+- A runtime that cannot be used fails with an `InvalidOperationException` whose text explains the cause and the remedy
+  (a CLI that is too old, a runtime that is not signed in, and so on). The library has no typed causes, so the starter
+  recognizes the words of the message (see the design of the `CopilotRuntimeStarter` unit).
 
-### Upstream asks
+CanvasPilot must not ship or download the GitHub Copilot runtime. The Copilot SDK package would download and copy a
+bundled runtime, about 180 MB, into every project that references it, so `CopilotSkipCliDownload` is set to `true` in
+`Directory.Build.props`, which makes every project of the solution skip the download. The `Bundled` source is never
+chosen, so the installed CLI is the only runtime that is started, and no Copilot runtime file is in the build output,
+the published output, or the MSI. The OTS test `AgentKit_BuildOutput_HasNoBundledCopilotRuntime` asserts the build
+output, the FileAssert test `Copilot_RuntimeNotPublished` asserts the published output, and the MSI file table is
+checked in the same build.
 
-Two changes to AgentKit would remove the gate, and neither is worked around in CanvasPilot:
+### Upstream request
 
-1. `CopilotRuntimeOptions.CliPath`, passed on as `RuntimeConnection.ForSpawnedStdio(path:)`. The SDK already gives an
-   explicit path the top precedence, which the OTS tests of the Copilot SDK show. CanvasPilot would then pass the path
-   of the installed CLI that its locator found.
-2. A way to use the signed-in session of the Copilot CLI that the user already has, for example by allowing the user's
-   `COPILOT_HOME` and keychain, or through an explicit option.
-
-When AgentKit ships the first change, the Copilot starter of CanvasPilot is replaced by one that uses it and the
-package versions are raised; the gated wording is then removed.
+The sign-in of the Copilot CLI itself (`/login`) cannot be reused by CanvasPilot, so a user who is signed in only to the
+CLI must also sign in with `gh auth login` or set a token variable. A way for the library to use the signed-in session
+of the Copilot CLI that the user already has (for example by allowing the user's `COPILOT_HOME` and keychain, or through
+an explicit option) is a request to AgentKit. It is a documented limitation of CanvasPilot and is not worked around.
 
 ### Direction: selectable tool packs
 
 A later increment may let the user choose further AgentKit tool packs in the settings (a list of packs, each on or off,
-in the AI Provider page). That depends on `DemaConsulting.AgentKit.Tools` moving to the CanvasNet 0.2 line, which is the
-prerequisite recorded for it: the `main` branch of AgentKit has already raised its CanvasNet reference to 0.2.0-beta.13
-(pull request 36), but no release carries that change yet, so the package is still not referenced. Until then the
+in the AI Provider page). The prerequisite recorded earlier is met: `DemaConsulting.AgentKit.Tools` now pins the same
+CanvasNet line (0.2.0-beta.13) as CanvasPilot, but the package is still not referenced in this change. Until then the
 copilot has only the fixed, locked-down tools of CanvasPilot, and the application's registry already offers an empty
 catalog of optional packs that the settings could fill.

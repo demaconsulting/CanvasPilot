@@ -13,6 +13,7 @@ flowchart TD
     subgraph Agent
         AgentContract
         CopilotCliLocator
+        CopilotRuntimeStarter
         AgentReadiness
         AgentToolRegistry
         ProjectTools
@@ -277,6 +278,8 @@ flowchart TD
     ProjectWorkspace --> ProjectExplorer
     ProjectWorkspace --> ChatPanel
     AgentReadiness --> CopilotCliLocator
+    AgentReadiness --> CopilotRuntimeStarter
+    CopilotRuntimeStarter --> AgentContract
     AgentReadiness --> SettingsService
     AgentReadiness --> AiProviderSettingsPage
     AgentToolRegistry --> KnowledgeTools
@@ -297,7 +300,7 @@ flowchart TD
     AgentEventMapper --> SettingsService
     AgentEventMapper --> RollingFileLogger
     AgentProviderFactory --> AgentContract
-    AgentProviderFactory --> AgentReadiness
+    AgentProviderFactory --> CopilotRuntimeStarter
     AgentProviderFactory --> CopilotCliLocator
     AgentProviderFactory --> SettingsService
     AgentProviderFactory --> RollingFileLogger
@@ -497,7 +500,8 @@ with no backup and no question, and says `created` or `replaced`. `AgentReadines
 can be used, for the chat banner and for the connection check of the settings dialog: for Ollama it checks the settings,
 the server, the model, and the context window (a warning below 16,384 tokens), and for GitHub Copilot it checks in order
 that the Copilot CLI is found (`CopilotCliLocator`, which finds the real `copilot.exe`, never an editor's shim), that
-its version is 1.0.113 or later, and that credentials exist. `AgentService` never writes into a project except through
+its version is 1.0.113 or later, that credentials exist, and that the one shared Copilot runtime
+(`CopilotRuntimeStarter`) starts on that CLI and is signed in. `AgentService` never writes into a project except through
 `project_write`, keeps the data of the Copilot runtime in a folder of its own and the restored history in memory, and
 logs metadata only. The `Agent` subsystem depends on `Settings`, `Project`, `Payload`, `Knowledge`, `Style`, `Preview`,
 `Logging`, and the AI libraries, and not on `Chat` or `AppShell`; `AppShell` builds it, and `Settings` does not depend
@@ -583,7 +587,8 @@ code that shows it interpret.
 
 The AI copilot answers the messages through one of two providers, chosen in the settings: a local Ollama server, which
 works end to end in this release (covered by automated tests; live checks against a running server are pending), and
-GitHub Copilot, which is gated. Everything provider-specific is behind the `Agent` subsystem; `Chat` sees only
+GitHub Copilot, which runs on the Copilot CLI that the user installed. Everything provider-specific is behind the
+`Agent` subsystem; `Chat` sees only
 `IAgentService` and the events of a turn, and `Settings` sees only the `IProviderCheck` interface that it owns.
 
 **The seam.** The input of a turn is the `MessagePayload` that is built for every sent message (and shown in the payload
@@ -597,21 +602,38 @@ warning that does not block sending. The reasoning level is stored and applied u
 because the AI library does not expose it, and the flag for unrestricted tools is not offered in the dialog: the copilot
 has only the locked-down tools of the `Agent` subsystem.
 
-**Why Copilot is gated.** AgentKit 0.1.0-beta.3 can start the GitHub Copilot CLI only as a runtime that is bundled
-beside the application; it cannot use the `copilot.exe` that the user installed (`COPILOT_CLI_PATH` is ignored), and the
-sign-in of the CLI itself (`/login`) is not shared with the AI library. CanvasPilot never bundles, copies, or downloads
-the Copilot runtime (`CopilotSkipCliDownload` is set for every project, and the build asserts that neither the published
-output nor the installer holds a Copilot file). What CanvasPilot does ship are the readiness checks for Copilot: the
-real CLI is located by a rule that rejects the launchers (shims) of editors, its version must be 1.0.113 or later, and
-credentials must exist (a signed-in GitHub CLI, or one of the variables `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and
-`GITHUB_TOKEN`; a token is never stored, shown, or logged). The last check, starting the runtime, goes through the
-single seam `ICopilotRuntimeStarter`, and the starter that is shipped, `GatedCopilotRuntimeStarter`, answers that an
-update of the AI library is needed, so the chat shows "Copilot support needs an AgentKit update; use Ollama meanwhile."
-and starts no run. The Copilot branch of the provider factory and of the service is real and is tested with a fake
-starter. Two changes of the AI library remove the gate (a `CliPath` option of the Copilot runtime, and a way to use the
-session of the installed CLI); they are recorded in the design of the AgentKit OTS item. When they are available the one
-starter is replaced and the gated wording removed. A later direction, user-selectable AgentKit tool packs, needs the
-tools package of the AI library to move to the CanvasNet 0.2 line first; spoken replies of the copilot are deferred.
+**Running the Installed Copilot CLI.** GitHub Copilot is reached through the Copilot CLI that the user installed, which
+the AI library runs at the explicit path that `CopilotCliLocator` found (the path in the settings first). CanvasPilot
+never bundles, copies, or downloads the Copilot runtime: `CopilotSkipCliDownload` is set for every project, the
+installed CLI is the only source that is ever chosen (the `Bundled` source is not), and the build asserts that neither
+the published output nor the installer holds a Copilot file. The readiness checks run in order: the real CLI is located
+by a rule that rejects the launchers (shims) of editors, its version must be 1.0.113 or later, credentials must exist
+(a signed-in GitHub CLI, or one of the variables `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN`; a token is
+never stored, shown, or logged), and the shared runtime must start. The last check is the authoritative one, and it goes
+through the single seam `ICopilotRuntimeStarter`.
+
+- *One shared runtime.* The `CopilotRuntimeStarter` starts one runtime, and the readiness check ("Check connection"),
+  the agent factory for every conversation, and later the list of models all get that same running runtime. A start is
+  single-flight and keyed by the CLI path and the data folder: the same key returns the running runtime, another key
+  stops the old runtime and starts a new one (only one runtime may use one data folder), and a failed start is not
+  remembered, so a fix is noticed by the next request. The application stops the runtime once when it ends.
+- *Sign-in.* The runtime signs in from a signed-in GitHub CLI (`gh auth login`, with `gh` on the `PATH`) or from the
+  variable `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`. CanvasPilot passes no token, has no token setting and
+  no sign-in page, and never reads, stores, or logs a credential. **Limitation:** the sign-in of the Copilot CLI itself
+  (`/login`) is not used, because the AI library gives the runtime a home of its own, so a user who is signed in only to
+  the CLI is "not signed in for CanvasPilot" and is told the working routes. This was verified with a CLI that was
+  signed in with `/login`: with the GitHub CLI off the `PATH` and no token variable the runtime started but was not
+  authenticated. It is a documented limitation and a request for the AI library (see the design of the AgentKit OTS
+  item), not something that the application works around.
+- *Data folder.* The runtime keeps its home and its sessions in `%LOCALAPPDATA%\CanvasPilot\copilot`, chosen by the
+  application and never inside a project; the factory deletes a session when its conversation is cleared.
+- *Failures are sentences.* A CLI that is too old, a runtime that is not signed in, a path in the settings that the
+  library refuses, and any other failed start are each a typed readiness status with one sentence that says what to do;
+  none is an exception.
+
+A later direction, user-selectable AgentKit tool packs, is possible now that the tools package of the AI library pins
+the same CanvasNet line as CanvasPilot, but the package is not referenced yet; spoken replies of the copilot are
+deferred.
 
 **Where data lives.** Nothing the copilot needs is ever kept in the project folder except what the user or the copilot
 is asked to create.
@@ -623,7 +645,8 @@ is asked to create.
 - *Chat history*: `%LOCALAPPDATA%\CanvasPilot\history\{key}`, where the key is a hash of the full path of the project
   file; the words of the conversation only, no pictures and no payload; a project that is moved or renamed starts with
   no history; the command "Clear chat history" deletes it.
-- *Copilot runtime data*: `%LOCALAPPDATA%\CanvasPilot\copilot`, chosen by `AgentService`; its sessions are deleted when
+- *Copilot runtime data*: `%LOCALAPPDATA%\CanvasPilot\copilot`, chosen by `AgentService` and handed to the one
+  `CopilotRuntimeStarter` by the composition; its sessions are deleted when
   a conversation ends.
 - *Log*: `%LOCALAPPDATA%\CanvasPilot\logs`; the copilot writes only metadata (provider, model, tool names, sizes,
   status, durations), never a message, an answer, a picture, a token, or the content of a file.
@@ -761,20 +784,23 @@ made in the project when the message is sent.
   counts the bytes it writes (at most 100 entries, 16 MiB for an entry, and 64 MiB in all). A shared folder that cannot
   be reached is reported and never blocks the window.
 
-**AI Providers**: The Ollama server that answers the messages, and the GitHub Copilot CLI that the readiness checks look
-for.
+**AI Providers**: The Ollama server that answers the messages, and the GitHub Copilot CLI that the application runs.
 
 - *Direction*: Input and output for Ollama (the messages and pictures of the conversation go out, the streamed answers
-  and tool calls come back); input only for the Copilot CLI (its path and version).
+  and tool calls come back); input and output for the Copilot CLI (the messages and tool calls go out through the AI
+  library, the streamed answers come back).
 - *Type*: HTTP to the Ollama endpoint of the settings (the local address by default), through OllamaSharp; a short
-  `--version` run of the installed `copilot.exe` and, for the credential check, of `gh auth token`, whose output is
-  never kept.
+  `--no-auto-update --version` run of the installed `copilot.exe` and, for the credential check, of `gh auth token`,
+  whose output is never kept; and the installed `copilot.exe` run as a child process of the AI library, which speaks to
+  it over standard input and output.
 - *Format*: One agent conversation per open project; the context window of the settings is sent with every Ollama
-  request. For Copilot, only the located path, the version, and the readiness sentence exist in this release.
+  request. For Copilot, the located path, the version, and the readiness sentence, and a conversation on the one shared
+  runtime.
 - *Constraints*: The server is asked only for its model list when the provider is checked, and receives a message only
-  when the user sends one; the endpoint is the one the user typed. GitHub Copilot is never started in this release (see
-  *AI Provider Seam*), and the application never includes or downloads its runtime. Every failure, an unreachable
-  server, a missing model, or a refused tool, is a sentence that names the remedy, never an unhandled failure.
+  when the user sends one; the endpoint is the one the user typed. The Copilot runtime is started only when the provider
+  is checked or a message is sent, on the CLI that the user installed, and the application never includes or downloads
+  it (see *AI Provider Seam*). Every failure, an unreachable server, a missing model, a runtime that is not signed
+  in, or a refused tool, is a sentence that names the remedy, never an unhandled failure.
 
 **Chat History and Copilot Data**: What the AI copilot keeps on the user's computer.
 
@@ -909,7 +935,8 @@ shown, or logged, and the settings file holds no credential.
 build asserts that the published output and the file table of the installer hold no Copilot file, so a change of a
 package or a build property cannot add one unseen.
 
-**Failures are results**: A provider that is missing, not signed in, out of reach, or gated is a readiness report, and a
+**Failures are results**: A provider that is missing, not signed in, too old, or out of reach is a readiness report, and
+a
 failed turn is a `Failed` event with a sentence that names the remedy; neither reaches the user as an unhandled failure.
 
 **Safe project handling**: A project is never created in a folder that already has content, and a failed or
@@ -1116,7 +1143,8 @@ an example to the clipboard that the window supplies and says in the status line
 When a message has been sent, `ChatPanelViewModel` hands the `SentMessage` to `ChatTurnRunner`, which asks
 `IAgentService.RunTurnAsync` for the turn with the payload and the saved words of the conversation. On the first turn
 `AgentService` asks `AgentReadiness` whether the provider can be used (when it cannot, the turn is one `Failed` event
-with the sentence of the report, which for GitHub Copilot in this build is the gated sentence), checks that the project
+with the sentence of the report, which for GitHub Copilot without credentials is the sign-in sentence), checks that the
+project
 does not contain the data folders of the application, and builds the tools of the project, the instructions, the agent,
 and one provider session. `PayloadMessageMapper` turns the payload into the message of the model, the agent streams its
 updates, and `AgentEventMapper` turns them into events that the runner shows as the streamed answer, one row for each
@@ -1187,8 +1215,8 @@ forget the conversation and delete the session of the provider.
 - The copilot shall keep its data, the history of the chat, and the data of the Copilot runtime outside the project
   folder, shall refuse a project that contains them, shall write only metadata to the log, and shall never store, show,
   or log a credential.
-- The application shall never bundle, copy, or download the GitHub Copilot runtime, and GitHub Copilot shall not be
-  reported ready until the AI library can use the Copilot CLI that the user installed.
+- The application shall never bundle, copy, or download the GitHub Copilot runtime, and GitHub Copilot shall be
+  reported ready only when the runtime started on the Copilot CLI that the user installed and is signed in.
 - The talk button shall listen only while it is held: a release of the pointer anywhere, a lost capture, a lost focus,
   and the removal of the panel shall each end it.
 - A payload shall be built only from values that cannot change and shall itself never change, and the units of the

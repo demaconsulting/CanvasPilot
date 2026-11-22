@@ -144,11 +144,11 @@ stops the turn, empties the transcript at once, and drops the rows that the old 
 the answer of one project never appears in another.
 
 **The banner of the readiness.** `RefreshReadinessAsync` asks the copilot whether the provider that the settings choose
-can be used and shows the one sentence of the answer, which already says what to do (including that Copilot support
-needs an AgentKit update), in a banner that is hidden when everything is ready; a warning that does not block (a small
-context window) is shown but does not block sending. The panel does not know the settings: the view asks when it is
-shown, the banner's "Check again" asks, and the composition root asks when the settings change. A check that fails is a
-sentence in the banner. Opening the settings is a request (`OpenSettingsRequested`) that the banner and the error rows
+can be used and shows the one sentence of the answer, which already says what to do (for example that Copilot is not
+signed in and how to sign in), in a banner that is hidden when everything is ready; a warning that does not block (a
+small context window) is shown but does not block sending. The panel does not know the settings: the view asks when it
+is shown, the banner's "Check again" asks, and the composition root asks when the settings change. A check that fails is
+a sentence in the banner. Opening the settings is a request (`OpenSettingsRequested`) that the banner and the error rows
 raise, and the shell, which owns the settings dialog, handles it, so `Chat` does not depend on `AppShell` or `Settings`.
 
 **Sending is the composer's decision.** `SendCommand` is the composer's own command. Whether a message can be sent is

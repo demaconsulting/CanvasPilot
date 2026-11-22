@@ -16,9 +16,9 @@ library. You manage projects, browse and preview their image files, and export p
 messages: you type or dictate text, attach files, folders, and pictures, and mark places on the picture that you are
 talking about. When you send a message, the AI copilot answers it: it looks up how to draw, writes or changes the files
 of the project, draws them, looks at the result, and fixes what it finds. The copilot works with a local Ollama server
-in this release. GitHub Copilot can be chosen and is checked, but it cannot be used yet (see *Setting Up an AI
-Provider*). The copilot can only use CanvasPilot's own tools, which are confined to the project folder, and it
-overwrites files directly, with no backup, so keep your projects under source control. The Help menu opens the drawing
+or with your installed GitHub Copilot CLI (see *Setting Up an AI Provider*). The copilot can only use CanvasPilot's own
+tools, which are confined to the project folder, and it overwrites files directly, with no backup, so keep your
+projects under source control. The Help menu opens the drawing
 knowledge, a guide to the image formats and to CanvasPilot that you can read card by card and that the copilot uses as
 well. Style kits let you keep a look (colors, fonts, sizes, and example images) for a project or a team, export
 pictures at sizes that fit slides, email, and paper, and check a picture against the colors of the style.
@@ -337,10 +337,10 @@ program it was.
 # Setting Up an AI Provider
 
 The copilot needs an AI provider. CanvasPilot supports two: a local **Ollama** server, which is covered by automated
-tests (live checks against a running server are pending), and **GitHub Copilot**, which CanvasPilot checks but cannot
-use yet. Choose one in **Tools > Settings... > AI Provider** (see *Settings*), then choose **Check connection**. The
-same check runs in the background when the chat panel is shown, and the chat panel shows its result in the banner, so
-you see a problem before you send a message.
+tests (live checks against a running server are pending), and **GitHub Copilot**, which runs through the GitHub Copilot
+CLI that you installed. Choose one in **Tools > Settings... > AI Provider** (see *Settings*), then choose **Check
+connection**. The same check runs in the background when the chat panel is shown, and the chat panel shows its result in
+the banner, so you see a problem before you send a message.
 
 ## Setting Up Ollama
 
@@ -374,11 +374,16 @@ real models has to be done by a person before a release (see the verification of
 
 ## Setting Up GitHub Copilot
 
-**GitHub Copilot cannot be used in this release.** The AI library that CanvasPilot is built on can start the GitHub
-Copilot command-line tool only as a copy that is shipped with the application, and it cannot use the tool that you
-installed. CanvasPilot never ships or downloads that tool, so the Copilot provider waits for a newer version of the AI
-library. Meanwhile CanvasPilot checks everything that is in your hands, so that the day it works you only have to
-switch. Use Ollama until then.
+**GitHub Copilot runs through the GitHub Copilot command-line tool (the Copilot CLI) that you installed.** CanvasPilot
+never ships or downloads that tool. It needs version 1.0.113 or later, which CanvasPilot finds automatically (for
+example a `winget install GitHub.Copilot` installation) or which you choose in Settings. CanvasPilot starts one Copilot
+runtime when it is first needed, and the **Check connection** button and the chat share it.
+
+**Signing in.** CanvasPilot has no token field and no sign-in screen. The Copilot runtime does not use the session that
+you made inside the Copilot CLI with `/login`. It uses one of these, which must exist before you start CanvasPilot:
+
+- the GitHub CLI signed in with `gh auth login` (`gh` on the `PATH` or in `C:\Program Files\GitHub CLI`), or
+- a token in the environment that CanvasPilot is started in: `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`.
 
 When you choose **GitHub Copilot** and **Check connection**, CanvasPilot checks four things in order and shows the first
 that fails:
@@ -386,19 +391,32 @@ that fails:
 1. **The Copilot CLI is found.** CanvasPilot looks for the real `copilot.exe` (see *Which Copilot CLI Is Used*). If it
    cannot find one: "The GitHub Copilot CLI was not found. Install it with `winget install GitHub.Copilot` or set its
    path in Settings." When only the launcher of an editor was found, the message says so.
-2. **Its version is 1.0.113 or later.** Otherwise: "Copilot CLI {version} is older than 1.0.113. Run `winget upgrade
-   GitHub.Copilot`."
+2. **Its version is 1.0.113 or later.** CanvasPilot reads the version with `copilot --no-auto-update --version`, which
+   is the version that is built into the installed program. Otherwise: "Copilot CLI {version} is older than 1.0.113.
+   Run `winget upgrade GitHub.Copilot`."
 3. **Credentials exist.** CanvasPilot needs a signed-in GitHub CLI or a token in the environment. Sign in with `gh auth
    login`, or set the environment variable `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` and `GITHUB_TOKEN` also work), then check
    again. Otherwise: "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the
-   COPILOT_GITHUB_TOKEN environment variable), then choose Check connection. The Copilot CLI's own /login session is not
-   shared with CanvasPilot's AI library yet." Signing in inside the Copilot CLI with `/login` is not enough.
-4. **The runtime can be started.** This is the step that cannot pass yet: "Copilot support needs an AgentKit update; use
-   Ollama meanwhile."
+   COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to
+   the Copilot CLI with /login does not apply to CanvasPilot."
+4. **The runtime starts on that CLI and signs in.** Then the check says "GitHub Copilot CLI 1.0.114 is ready." (with the
+   version that was found). Otherwise it shows one of these:
+   - The CLI is too old: the message says to upgrade the Copilot CLI itself and lists the commands. Running `copilot
+     update` alone may not change the version that runs, so check the version again afterward.
+   - Not signed in: the sentence of step 3.
+   - The runtime could not be started: "The Copilot runtime could not be started. Choose Check connection to try
+     again." or the explanation of the AI library.
+   - The path in Settings cannot be used: "The Copilot CLI path in Settings cannot be used: ..." followed by the reason,
+     for example a relative path or a `.cmd` or `.bat` file.
 
+For GitHub Enterprise with data residency, the AI library also honors the `COPILOT_GH_HOST` environment variable.
 CanvasPilot never stores, shows, or logs a token. To find out whether the GitHub CLI is signed in it only asks whether
 `gh auth token` prints something, and it forgets the answer's text at once. There is no field for a token in the
 settings.
+
+The **Model name** box of the AI Provider page takes a typed model name for Copilot as well. Leave it empty to use the
+default model of the Copilot runtime. The runtime keeps its own data, such as its sessions, in
+`%LOCALAPPDATA%\CanvasPilot\copilot`, outside every project.
 
 ### Which Copilot CLI Is Used
 
@@ -412,14 +430,14 @@ CanvasPilot does not take any of them. It searches, in this order:
 
 and it takes the first `copilot.exe` that is not a launcher: a file that is not an `.exe`, that lies in the folder of an
 editor's shim (for example `copilot-shim`, `.vscode`, or `Microsoft VS Code`), or that is far smaller than the real tool
-is skipped. Then it runs the file with `--version` and checks the version.
+is skipped. Then it runs the file with `--no-auto-update --version` and checks the version.
 
 If you keep the tool somewhere else, enter its full path in **GitHub Copilot command-line tool path**. A path that you
 enter wins over the search and is the only candidate: it must be an existing `.exe`, CanvasPilot checks its version, and
 if it fails the message says why and CanvasPilot does not fall back to the search. Leave the field empty to search.
 
-*Not yet checked:* the check with a real Copilot CLI and a real sign-in on a person's machine is a manual check before a
-release; the automated tests use stand-ins.
+*Verified:* a short real turn with Copilot CLI 1.0.114 and a signed-in GitHub CLI listed the project files and rendered
+a picture. Other setups, such as other sign-in methods and other versions, have not been checked on a real machine.
 
 ## Check Connection and the Banner
 
@@ -431,8 +449,7 @@ and **Check again**. After you change the provider settings, the banner checks a
 
 # Working with the Copilot
 
-This chapter describes what happens when you send a message and the AI provider works. It is written for Ollama, the
-provider that works in this release.
+This chapter describes what happens when you send a message and the AI provider works. It applies to both providers.
 
 ## Asking
 
@@ -516,8 +533,8 @@ it to change, but a model can be wrong.
 
 Only drawing sources and small data files are written (at most 256 KiB each), only inside the project folder, and only
 files that the copilot is asked to create or change. CanvasPilot adds nothing else to your project because of the
-copilot: no history file, no backup, no copy of its own data. The data of the Copilot runtime (its sessions, which are
-unused while Copilot is gated) would be kept in `%LOCALAPPDATA%\CanvasPilot\copilot`, outside every project, and is
+copilot: no history file, no backup, no copy of its own data. The data of the Copilot runtime (its sessions) is kept in
+`%LOCALAPPDATA%\CanvasPilot\copilot`, outside every project, and is
 deleted when a conversation ends. A project folder that contains one of those folders is refused. Pictures that you
 pasted into a message that is not sent yet are in `.canvaspilot\attachments` of the project, as before; consider listing
 `.canvaspilot/` in the `.gitignore` of the project.
@@ -778,7 +795,7 @@ what to install and the messages of the check). Changes take effect when you cho
 that is running is started again with the new choices when you send the next message.
 
 - **Provider**: GitHub Copilot or Ollama. Ollama is supported and covered by automated tests (live checks are pending);
-  GitHub Copilot is checked but cannot be used yet.
+  GitHub Copilot runs through the Copilot CLI that you installed.
 - **Model name**: The model to use. For Ollama it is required and must be the name that `ollama list` shows. For GitHub
   Copilot, leave it empty to use the provider's default model. It is typed text, because no list of models is offered.
 - **Context window (tokens, Ollama only)**: The size of the context window that is requested for every Ollama request,
@@ -844,7 +861,7 @@ third-party libraries that CanvasPilot uses. Include the version when you report
 | Settings and recent projects | `%APPDATA%\CanvasPilot\settings.json` |
 | Log files | `%LOCALAPPDATA%\CanvasPilot\logs` |
 | Chat history of each project (text only) | `%LOCALAPPDATA%\CanvasPilot\history\{key}` |
-| Copilot runtime data (unused while Copilot is gated) | `%LOCALAPPDATA%\CanvasPilot\copilot` |
+| Copilot runtime data (its sessions) | `%LOCALAPPDATA%\CanvasPilot\copilot` |
 | Pictures prepared for dragging out (temporary) | `%LOCALAPPDATA%\CanvasPilot\drag` |
 | Pictures that you pasted into a message that is not sent yet | `.canvaspilot\attachments` in the project |
 | Files and folders that you sent with a message | `attachments` in the project |
@@ -906,11 +923,6 @@ open. Open or create a project. Without one the message box says "Open a project
 the previous message is not still being sent, and the copilot is not still working on the previous message. Let go of
 the Hold to talk button, write something, or choose **Stop** while the copilot works.
 
-**The banner says "Copilot support needs an AgentKit update; use Ollama meanwhile."** GitHub Copilot cannot be used in
-this release, because the AI library that CanvasPilot uses cannot start the Copilot command-line tool that you
-installed. Nothing is wrong with your installation. Choose **Ollama** in **Tools > Settings... > AI Provider** (see
-*Setting Up Ollama*).
-
 **The banner says the GitHub Copilot CLI was not found.** Install it with `winget install GitHub.Copilot`, or enter the
 full path of the installed `copilot.exe` in the settings. If the message says that only the launcher of an editor was
 found, the real tool is missing: the launcher that Visual Studio Code puts on the `PATH` is not accepted (see *Which
@@ -920,8 +932,20 @@ Copilot CLI Is Used*).
 connection**.
 
 **The banner says Copilot is not signed in for CanvasPilot.** Sign in with `gh auth login`, or set the environment
-variable `COPILOT_GITHUB_TOKEN`, then close and start CanvasPilot again if you set a variable, and choose **Check
-connection**. The sign-in that you made inside the Copilot CLI with `/login` is not shared with CanvasPilot.
+variable `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` or `GITHUB_TOKEN` also work), then close and start CanvasPilot again if you
+set a variable, and choose **Check connection**. The sign-in that you made inside the Copilot CLI with `/login` does not
+apply to CanvasPilot.
+
+**The banner says the Copilot CLI is too old.** The Copilot runtime needs version 1.0.113 or later. Upgrade the Copilot
+CLI itself with the commands that the banner lists (for example `winget upgrade GitHub.Copilot`), then choose **Check
+connection**. `copilot update` alone may not change the version that runs.
+
+**The banner says the Copilot runtime could not be started.** Choose **Check connection** to try again. If it keeps
+failing, check that the Copilot CLI starts on its own, that the path in Settings (if you entered one) is the full path
+of the installed `copilot.exe`, and read the explanation that the banner gives.
+
+**The banner says the Copilot CLI path in Settings cannot be used.** A relative path or a `.cmd` or `.bat` file cannot
+be used. Enter the full path of the installed `copilot.exe`, or leave the field empty to search.
 
 **The banner says Ollama did not answer.** Start Ollama, or fix the **Ollama endpoint** in the settings, and choose
 **Check again**. Check that a firewall or a proxy is not in the way when the server is on another computer.

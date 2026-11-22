@@ -31,8 +31,7 @@ namespace DemaConsulting.CanvasPilot.Tests;
 /// <summary>
 ///     Unit tests for <see cref="AgentProviderFactory" />: the Ollama agent on a stand-in server (the address, the model,
 ///     the context window, the instructions, and the tools reach the wire, and a whole tool turn runs), the settings that
-///     cannot be used, the ownership of what the factory starts, and the Copilot branch with a fake starter of the runtime
-///     and with the gated starter that this build ships.
+///     cannot be used, the ownership of what the factory starts, and the Copilot branch with a fake starter of the runtime.
 /// </summary>
 public sealed class AgentProviderFactoryTests
 {
@@ -309,14 +308,22 @@ public sealed class AgentProviderFactoryTests
     }
 
     /// <summary>
-    ///     Test that the gated starter that this build ships gives the typed answer that Copilot support needs an update of
-    ///     the AI library and no agent, with the Copilot CLI of the development machine found.
+    ///     Test that a starter that refuses the runtime for each cause gives the typed answer with the starter's own
+    ///     sentence and no agent, with the Copilot CLI of the development machine found.
     /// </summary>
-    [Fact]
-    public async Task AgentProviderFactory_Create_Copilot_GatedStarter_ReturnsRuntimeUnavailableAndNoAgent()
+    /// <param name="start">The status that the starter answers.</param>
+    /// <param name="expected">The status that the answer must have.</param>
+    [Theory]
+    [InlineData(CopilotStartStatus.CliTooOld, AgentReadinessStatus.CopilotCliTooOld)]
+    [InlineData(CopilotStartStatus.NotSignedIn, AgentReadinessStatus.CopilotNotSignedIn)]
+    [InlineData(CopilotStartStatus.Failed, AgentReadinessStatus.CopilotRuntimeUnavailable)]
+    public async Task AgentProviderFactory_Create_Copilot_StarterRefuses_ReturnsTheMatchingStatusAndNoAgent(
+        CopilotStartStatus start,
+        AgentReadinessStatus expected)
     {
-        // Arrange: the development machine and the starter that this build ships
-        await using var factory = new AgentProviderFactory(Locator(), new GatedCopilotRuntimeStarter());
+        // Arrange: the development machine and a starter that refuses
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(start, "The sentence of the starter."));
+        await using var factory = new AgentProviderFactory(Locator(), starter);
 
         // Act
         await using var result = await factory.CreateAsync(Request(new AiProviderSettings()), TestContext.Current.CancellationToken);
@@ -324,8 +331,8 @@ public sealed class AgentProviderFactoryTests
         // Assert
         Assert.False(result.IsCreated);
         Assert.Null(result.Agent);
-        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, result.Failure!.Status);
-        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", result.Failure.Message);
+        Assert.Equal(expected, result.Failure!.Status);
+        Assert.Equal("The sentence of the starter.", result.Failure.Message);
     }
 
     /// <summary>
@@ -356,12 +363,13 @@ public sealed class AgentProviderFactoryTests
     }
 
     /// <summary>
-    ///     Test the Copilot branch with a fake starter: the runtime is started once on the CLI that was found, every agent
+    ///     Test the Copilot branch with a fake starter: the runtime is started on the CLI that was found, every agent
     ///     is made on it with the tools, the instructions, the name, the model of the settings (none when blank), and the
-    ///     project folder, a whole turn runs, and the factory, not the result, disposes the runtime.
+    ///     project folder, a whole turn runs, and neither the results nor a factory that does not own the starter dispose
+    ///     the runtime, which belongs to the starter.
     /// </summary>
     [Fact]
-    public async Task AgentProviderFactory_Create_Copilot_FakeStarter_StartsOnceAndMakesAgentsOnTheRuntime()
+    public async Task AgentProviderFactory_Create_Copilot_FakeStarter_MakesAgentsOnTheRuntimeThatBelongsToTheStarter()
     {
         // Arrange: a starter that gives a runtime whose agents talk to a scripted client
         var token = TestContext.Current.CancellationToken;
@@ -381,13 +389,11 @@ public sealed class AgentProviderFactoryTests
         await first.DisposeAsync();
         var second = await factory.CreateAsync(Request(withModel, [tool]), token);
         await second.DisposeAsync();
-        var disposedWithAgents = source.DisposeCount;
         await factory.DisposeAsync();
         await factory.DisposeAsync();
 
-        // Assert: one start on the CLI that was found, for real and not as a check
-        var start = Assert.Single(starter.Requests);
-        Assert.Equal((DevMachine.RealCli, new Version(1, 0, 114), false), (start.CliPath, start.CliVersion, start.CheckOnly));
+        // Assert: both asks reached the starter with the CLI that was found
+        Assert.All(starter.Requests, start => Assert.Equal((DevMachine.RealCli, new Version(1, 0, 114)), (start.CliPath, start.CliVersion)));
 
         // Two agents were made on the runtime with the tools, the instructions, the name, the model, and the folder
         Assert.Equal(2, source.Requests.Count);
@@ -406,9 +412,31 @@ public sealed class AgentProviderFactoryTests
         Assert.Equal("demo_ping", Assert.Single(events.OfType<AgentEvent.ToolStarted>()).Name);
         Assert.IsType<AgentEvent.Completed>(events[^1]);
 
-        // The results did not dispose the runtime; the factory did, once
-        Assert.Equal(0, disposedWithAgents);
+        // The runtime belongs to the starter, which this factory does not own
+        Assert.Equal(0, source.DisposeCount);
+    }
+
+    /// <summary>
+    ///     Test that a factory that owns its starter stops the runtime once when it is disposed, and that a factory made
+    ///     without a starter owns the one that it makes.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_DisposeAsync_OwnedStarter_StopsTheRuntimeOnce()
+    {
+        // Arrange: the real starter over a start function that gives a fake runtime, owned by the factory
+        var token = TestContext.Current.CancellationToken;
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient());
+        var starter = new CopilotRuntimeStarter(Path.Combine(Path.GetTempPath(), "canvaspilot-factory-data"), (_, _) => Task.FromResult<ICopilotAgentSource>(source));
+        var factory = new AgentProviderFactory(Locator(), starter, ownsStarter: true);
+        await using var made = await factory.CreateAsync(Request(new AiProviderSettings()), token);
+
+        // Act: dispose the factory twice
+        await factory.DisposeAsync();
+        await factory.DisposeAsync();
+
+        // Assert: the runtime was stopped once, and the factory refuses more requests
         Assert.Equal(1, source.DisposeCount);
+        await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(new AiProviderSettings()), token));
     }
 
     /// <summary>
@@ -441,17 +469,25 @@ public sealed class AgentProviderFactoryTests
     }
 
     /// <summary>
-    ///     Test that two requests at once start the runtime only once, and that a factory that was disposed refuses a
-    ///     request for Copilot.
+    ///     Test that eight requests at once start the runtime only once (the starter shares it), and that a factory that was
+    ///     disposed refuses a request for Copilot.
     /// </summary>
     [Fact]
     public async Task AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse()
     {
-        // Arrange
+        // Arrange: the real starter over a start function that counts its calls
         var token = TestContext.Current.CancellationToken;
         var source = new FakeCopilotAgentSource(new ScriptedChatClient());
-        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
-        var factory = new AgentProviderFactory(Locator(), starter);
+        var starts = 0;
+        var starter = new CopilotRuntimeStarter(
+            Path.Combine(Path.GetTempPath(), "canvaspilot-factory-data"),
+            async (_, cancellation) =>
+            {
+                Interlocked.Increment(ref starts);
+                await Task.Delay(50, cancellation);
+                return source;
+            });
+        var factory = new AgentProviderFactory(Locator(), starter, ownsStarter: true);
 
         // Act: eight requests at once, then dispose the factory and ask again
         var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => factory.CreateAsync(Request(new AiProviderSettings()), token)));
@@ -459,7 +495,7 @@ public sealed class AgentProviderFactoryTests
         await Assert.ThrowsAsync<ObjectDisposedException>(() => factory.CreateAsync(Request(new AiProviderSettings()), token));
 
         // Assert
-        Assert.Single(starter.Requests);
+        Assert.Equal(1, starts);
         Assert.All(results, result => Assert.True(result.IsCreated));
         Assert.Equal(8, source.Requests.Count);
         Assert.Equal(1, source.DisposeCount);
@@ -487,7 +523,7 @@ public sealed class AgentProviderFactoryTests
         var start = Assert.Single(starter.Requests);
         Assert.Equal(@"C:\data\CanvasPilot\copilot", start.DataDirectory);
         Assert.Same(logger, start.Logger);
-        Assert.Null(new CopilotStartRequest("copilot.exe", new Version(1, 0, 114), false).DataDirectory);
+        Assert.Null(new CopilotStartRequest("copilot.exe", new Version(1, 0, 114)).DataDirectory);
     }
 
     /// <summary>
