@@ -170,6 +170,50 @@ steps are in the verification of the unit or subsystem named at each check.
    status bar of a project shows the chosen kit, and that exporting at a size writes the file that the window said.
    (Verification of the `Style` subsystem and of the units `StyleKitManager`, `StyleKitEditor`, and
    `StyleSettingsPage`.)
+9. *Live Ollama (a reviewer with Ollama installed; Ollama is not installed on the machine on which this version was
+   built, so none of this has been run).* Install Ollama and pull a vision-capable model that can call tools (for
+   example `gemma3`). Each step has a pass criterion; record the date, machine, and versions with the
+   release. (Verification of the `Agent` and `Chat` subsystems and of the `AiProviderSettingsPage` unit.)
+   1. *Ready.* Choose Ollama, keep the endpoint, type the model name, and see the context window of a new installation,
+      32768: Check connection reports that Ollama is running with the model, and the banner of the chat panel is
+      hidden.
+   2. *Small context.* Set the window to 8192: the warning that the window is below 16,384 appears on the page and in
+      the banner, sending stays possible; set 32768 again: the warning goes away.
+   3. *A drawing.* Ask for a drawing: the answer streams, the transcript shows a line for each tool
+      (`canvasnet_help`, `style_get`, `project_write`, `render_image`), the new file is selected in the explorer and
+      drawn, and, after the copilot looked at its own picture, a second `project_write` can correct an error.
+   4. *Replacing a file.* Ask for a change of an existing file: the line says that the file was replaced, the old
+      content is gone (expected), and the project folder has no backup file and no `.canvaspilot\backups` folder.
+   5. *Stop.* Stop in the middle of a turn: the text so far is kept and marked Stopped, and Send works again.
+   6. *Errors.* Stop the Ollama server and send: an error notice with the remedy and **Open Settings**; ask for a
+      model that is not pulled: the notice names `ollama pull {model}`.
+   7. *History.* Close and open the project, and then restart CanvasPilot: the earlier messages come back as text only;
+      `%LOCALAPPDATA%\CanvasPilot\history\{key}\history.json` and `project.json` exist and the project folder has no
+      history file; **Clear chat history** empties the panel and removes the folder; after the project folder is
+      renamed, its history is empty.
+   8. *Marks and pictures.* With marks and an attached picture on a drawing, the answer shows that the model saw the
+      marked picture and the close-ups (compare with **View payload**); with a model that cannot see pictures the
+      answer works from the words only.
+10. *GitHub Copilot is gated (readiness and messages only; no live Copilot turn is possible in this release).* Choose
+    GitHub Copilot and use **Check connection** and the banner. (Verification of the `Agent` subsystem and of the
+    `CopilotCliLocator` and `AgentReadiness` units.)
+    1. With the winget CLI at version 1.0.113 or later and `gh auth login` done: the check ends with "Copilot support
+       needs an AgentKit update; use Ollama meanwhile.", the banner of the chat panel shows the same sentence and offers
+       **Open Settings**, and a sent message gets an error notice with that sentence and starts no run.
+    2. Without a signed-in GitHub CLI and with no `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` variable: the
+       "not signed in" sentence, which names `gh auth login` and says that the `/login` session of the CLI is not
+       shared.
+    3. With only the VS Code `copilot-shim` on the `PATH` (take the winget entry out of the `PATH` and clear the path in
+       the settings): the "not found" sentence ends with "Only the VS Code copilot shim was found at ...". With the path
+       of the real `copilot.exe` in the settings the CLI is found. With the path of the shim in the settings the choice
+       is accepted as the user's own and only its version is checked.
+    4. With a CLI at version 1.0.112 or older: the "older than 1.0.113" sentence with `winget upgrade GitHub.Copilot`.
+    5. The installed MSI holds no file whose name starts with `copilot` and no `runtime.node` anywhere in the install
+       folder, the size of `CanvasPilot.exe` is within the range that `Copilot_RuntimeNotPublished` asserts (about 125
+       MB), and the banner is visible. (This repeats part of check 6.)
+    6. After the AI library can use an installed CLI (the follow-up change, not this release): a live turn with a
+       picture, a tool that returns a picture, and Stop, and a look that the project folder holds only intentional files
+       afterwards. Until then this check stays open.
 
 ## Test Scenarios
 

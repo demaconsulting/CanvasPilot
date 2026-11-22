@@ -72,5 +72,9 @@ package versions are raised; the gated wording is then removed.
 
 ### Direction: selectable tool packs
 
-A later increment may let the user choose further AgentKit tool packs in the settings. That depends on
-`DemaConsulting.AgentKit.Tools` moving to the CanvasNet 0.2 line, which is the prerequisite recorded for it.
+A later increment may let the user choose further AgentKit tool packs in the settings (a list of packs, each on or off,
+in the AI Provider page). That depends on `DemaConsulting.AgentKit.Tools` moving to the CanvasNet 0.2 line, which is the
+prerequisite recorded for it: the `main` branch of AgentKit has already raised its CanvasNet reference to 0.2.0-beta.13
+(pull request 36), but no release carries that change yet, so the package is still not referenced. Until then the
+copilot has only the fixed, locked-down tools of CanvasPilot, and the application's registry already offers an empty
+catalog of optional packs that the settings could fill.

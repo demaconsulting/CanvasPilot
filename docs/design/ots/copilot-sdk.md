@@ -32,3 +32,8 @@ version the SDK is built for. The facts that they pin are those on which the gat
 the AgentKit design): an explicit path wins, the CLI path is read from the connection's own environment and not from the
 process, and no runtime is present. The SDK is not started in the application in this version, and no Copilot runtime
 is bundled or downloaded; this is guarded by `CopilotSkipCliDownload` in `Directory.Build.props`.
+
+The two changes that would let the application use the SDK with the CLI that the user installed are asks of AgentKit,
+not of this library: a `CliPath` option of AgentKit's runtime options that it passes as the `path` of
+`RuntimeConnection.ForSpawnedStdio`, and a way to use the session of the CLI that is already signed in. They are
+recorded in the AgentKit design, and the SDK already supports the first (an explicit path wins).
