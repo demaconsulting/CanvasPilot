@@ -34,6 +34,7 @@ golden file); no network or display is needed.
 - A value of a kit cannot end a code block, start a heading, or change the lines of the block.
 - Each section is written whole, with no cut; a section that the kit does not have is said so; an unknown section is
   refused with the list of the known ones.
+- A block asked for without the example images has every other part of the full block and none of the example images.
 
 #### Test Scenarios
 
@@ -74,6 +75,11 @@ back ticks replaced, the YAML value escaped, and the JSON back tick escaped. Thi
 case); for the smallest kit each section that it does not have is a sentence that says so; an unknown section is refused
 with the list of the names. This scenario is tested by
 `StyleGuidance_BuildSection_EachSection_IsTheWholeSectionOrSaysThereIsNone`.
+
+**StyleGuidance_Build_WithoutExamples_LeavesOnlyTheExampleImagesOut**: For the kit `clean`, the block built with
+`includeExamples: false` has the palette and every other part, is not cut, is shorter than the full block, and equals
+the full block with the part `## Example images` removed. This scenario is tested by
+`StyleGuidance_Build_WithoutExamples_LeavesOnlyTheExampleImagesOut`.
 
 **StyleGuidance_InvalidArguments_Throw**: A missing entry or section is refused. This scenario is tested by
 `StyleGuidance_InvalidArguments_Throw`.

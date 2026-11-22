@@ -62,3 +62,15 @@ sections:
                 tests:
                   - StyleGuidance_Build_BuiltInKits_FitTheBudgetAndHaveEveryPart
                   - StyleGuidance_BuildSection_EachSection_IsTheWholeSectionOrSaysThereIsNone
+
+              - id: CanvasPilot-StyleGuidance-LeaveOutExampleImagesOnRequest
+                title: >-
+                  The StyleGuidance shall, when asked to leave out the example images, write the block of the same kit
+                  without the part that lists them and with every other part, and shall not make the block smaller for that
+                  reason.
+                justification: |
+                  A model with little room needs the style but can do without the listing of the example paths, which it can
+                  still ask for as a section. Leaving out one named part is a smaller and more predictable change than
+                  cutting the block by steps.
+                tests:
+                  - StyleGuidance_Build_WithoutExamples_LeavesOnlyTheExampleImagesOut

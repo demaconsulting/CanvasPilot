@@ -40,6 +40,9 @@ temporary project folder and delete it.
   directly, and draw it with the real render service; the shell is told of both writes; nothing but the drawing is added
   to the project; and a path that climbs out of the project, the project file, and a secret beside the project are
   refused.
+- The instructions and the tools of a project written together agree: the large window gets the full tier and the small
+  window the compact tier, which is less than half the size and has no example images, both have the project facts, and
+  the tool names that the role prompt gives are exactly the names of the tools that the registry offers.
 
 ### Test Scenarios
 
@@ -83,6 +86,14 @@ are tried, and none of them has an effect. The shell was told of the two writes 
 the secret and the project file are as they were, and the project holds only the project file and the folder with the
 drawing. This scenario is tested by
 `AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject`.
+
+**AgentSubsystem_InstructTheCopilot_ProjectWithKit_InstructionsNameExactlyTheToolsThatAreOffered**: For a project with
+the kit `clean` and two files, the instructions are written for an Ollama window of 32,768 tokens (full tier) and of
+8,192 tokens (compact tier) over the real cards, and the registry builds the tools of the project with the real project
+tools. The compact text is less than half the full text, both have the name of the project and its files, only the full
+text has the example images of the kit, and the tool names in the role prompt are exactly the tools that the registry
+offers. This scenario is tested by
+`AgentSubsystem_InstructTheCopilot_ProjectWithKit_InstructionsNameExactlyTheToolsThatAreOffered`.
 
 **AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
 good Copilot CLI and a GitHub CLI under the program files that prints a token, and a scripted Ollama server has one

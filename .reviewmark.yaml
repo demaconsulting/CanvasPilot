@@ -215,6 +215,22 @@ reviews:
       - "test/**/AgentSubsystem/ProjectToolsTests.cs"
       - "test/**/AgentSubsystem/RenderImageToolTests.cs"
 
+  - id: CanvasPilot-Agent-AgentInstructions
+    title: Review of CanvasPilot AgentInstructions unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-instructions.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-instructions.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-instructions.md"
+      - "src/**/AgentSubsystem/AgentInstructions.cs"
+      - "src/**/AgentSubsystem/AgentProjectFacts.cs"
+      - "src/**/AgentSubsystem/Instructions/RolePrompt.md"
+      - "test/**/AgentSubsystem/AgentInstructionsTests.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces

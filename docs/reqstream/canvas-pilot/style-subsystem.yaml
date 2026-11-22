@@ -119,6 +119,7 @@ sections:
               - CanvasPilot-StyleGuidance-WriteGuidanceBlock
               - CanvasPilot-StyleGuidance-StayWithinBudget
               - CanvasPilot-StyleGuidance-ListExampleImagePaths
+              - CanvasPilot-StyleGuidance-LeaveOutExampleImagesOnRequest
               - CanvasPilot-StyleTools-DescribeStyleGet
               - CanvasPilot-StyleTools-DescribeStyleCheck
               - CanvasPilot-StyleTools-ConfineChecksToTheProject

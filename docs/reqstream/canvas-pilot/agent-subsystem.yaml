@@ -143,6 +143,25 @@ sections:
             tests:
               - AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject
 
+          - id: CanvasPilot-Agent-InstructTheCopilot
+            title: >-
+              The Agent subsystem shall give the copilot instructions that say how to draw with CanvasNet in the open
+              project, which tools it has, and what the project holds, with the drawing knowledge and the style of the
+              project, in a full form for a model with a large context window and a compact form for a small one, each of a
+              size that is measured, and naming only tools that the copilot really has.
+            justification: |
+              A model that is not told how the tools fit together draws blind, and instructions that are too large take the
+              room that the pictures and the answer need. One unit writes them from the parts of the application, so that
+              the text, the sizes, and the agreement with the tools can be tested together.
+            children:
+              - CanvasPilot-AgentInstructions-StateTheRole
+              - CanvasPilot-AgentInstructions-DescribeProject
+              - CanvasPilot-AgentInstructions-IncludeKnowledgeAndStyle
+              - CanvasPilot-AgentInstructions-ChooseTierByContext
+              - CanvasPilot-AgentInstructions-BoundTheSize
+            tests:
+              - AgentSubsystem_InstructTheCopilot_ProjectWithKit_InstructionsNameExactlyTheToolsThatAreOffered
+
           - id: CanvasPilot-Agent-LocateCopilotCli
             title: >-
               The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the

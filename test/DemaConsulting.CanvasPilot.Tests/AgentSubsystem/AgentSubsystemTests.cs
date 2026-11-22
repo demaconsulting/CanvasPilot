@@ -25,6 +25,7 @@ using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.StyleSubsystem;
 using Microsoft.Extensions.AI;
 
 namespace DemaConsulting.CanvasPilot.Tests;
@@ -246,6 +247,55 @@ public sealed class AgentSubsystemTests
             Assert.False(data);
             Assert.False(projectFile);
             Assert.False(outside);
+        }
+        finally
+        {
+            Directory.Delete(project, true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that the instructions and the tools agree as the copilot meets them: for a project with a kit and a few files
+    ///     the full tier is chosen for a large window and the compact tier for a small one, the compact text is much smaller,
+    ///     the instructions name only tools that the registry really offers, and the registry offers every tool they name.
+    /// </summary>
+    [Fact]
+    public void AgentSubsystem_InstructTheCopilot_ProjectWithKit_InstructionsNameExactlyTheToolsThatAreOffered()
+    {
+        // Arrange: the real cards, the tools of the registry over them with the real project tools, and a project with a kit
+        var project = Directory.CreateTempSubdirectory("canvaspilot-agent-instructions-").FullName;
+        try
+        {
+            var kitFolder = Path.Combine(AppContext.BaseDirectory, StyleKitCatalog.BuiltInFolderName, "clean");
+            var kit = StyleKitSerializer.ReadFolder(kitFolder).Kit!;
+            var entry = new StyleKitEntry(kit, StyleKitLocation.BuiltIn, kitFolder, null, true, false, null, []);
+            var facts = new AgentProjectFacts("Brochure", project, ["cover.svg", "flow/process.mmd"], entry, kit.Id);
+            var instructions = new AgentInstructions(new KnowledgePromptBuilder(KnowledgeCatalog.Default));
+            var projectTools = new ProjectTools(new ImageRenderService());
+            var registry = new AgentToolRegistry(
+                KnowledgeTools.CreateAll(KnowledgeCatalog.Default),
+                [ToolTestDoubles.Plain("style_get"), ToolTestDoubles.Plain("style_check")],
+                projectTools.CreatePacks);
+
+            // Act: choose the tiers the way the service will, write both texts, and build the tools
+            var large = AgentInstructions.ChooseTier(AiProviderKind.Ollama, AiProviderSettings.DefaultContextWindowTokens);
+            var small = AgentInstructions.ChooseTier(AiProviderKind.Ollama, 8192);
+            var full = instructions.Build(facts, large);
+            var compact = instructions.Build(facts, small);
+            var offered = registry.CreateTools(new AgentToolContext(project), new HashSet<string>()).Select(tool => tool.Name).ToHashSet();
+            var named = System.Text.RegularExpressions.Regex.Matches(instructions.RolePrompt, "\\b(?:canvasnet|style|project|render)_[a-z]+\\b")
+                .Select(match => match.Value)
+                .ToHashSet();
+
+            // Assert: the tiers, the sizes, the facts in both, and the agreement between the role prompt and the tools
+            Assert.Equal(InstructionTier.Full, large);
+            Assert.Equal(InstructionTier.Compact, small);
+            Assert.True(compact.Length < full.Length / 2, $"compact {compact.Length}, full {full.Length}");
+            Assert.All([full, compact], text => Assert.Contains("- Name: Brochure", text, StringComparison.Ordinal));
+            Assert.All([full, compact], text => Assert.Contains("flow/process.mmd", text, StringComparison.Ordinal));
+            Assert.Contains("## Example images", full, StringComparison.Ordinal);
+            Assert.DoesNotContain("## Example images", compact, StringComparison.Ordinal);
+            Assert.Equal(offered.Order().ToArray(), named.Order().ToArray());
         }
         finally
         {

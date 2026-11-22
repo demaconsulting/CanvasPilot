@@ -32,6 +32,8 @@ This document covers the verification design for the following software items:
       drawing knowledge and style tool descriptions, the project packs, and the optional pack catalog
     - **ProjectTools** — the tools with which the copilot lists, reads, writes, and draws the files of the project:
       confined to the project folder, links refused, files replaced directly, pictures kept in memory
+    - **AgentInstructions** — the instructions of the copilot: the role prompt, the knowledge index, the facts of the
+      project, and the style, in a full and a compact tier, with measured sizes
   - **Annotation** subsystem
     - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
     - **MarkSourceResolver** — the parts of the source file under a mark

@@ -11,7 +11,7 @@ chosen provider can be used. It has no user interface. Its parts are the readine
 that the copilot may call and the instructions that it is given, the agent of the chosen provider, and the service that
 keeps one conversation for the open project and runs one turn at a time.
 
-The subsystem is built contract first. It contains five units so far. `AgentContract` is `IAgentService`, the request
+The subsystem is built contract first. It contains six units so far. `AgentContract` is `IAgentService`, the request
 and history records, the event records, and the readiness report, all free of any AI library. `CopilotCliLocator` finds
 the GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks
 its version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader).
@@ -23,7 +23,10 @@ the packs that the application supplies for the project and the optional packs t
 in this version), and refuses a set that a provider could not be given. `ProjectTools` is the copilot's hands on the
 project: the tools that list, read, and write the files of the project and the tool that draws a picture, all confined
 to the project folder and refusing links themselves; a write replaces a file directly (the user decided that the
-application keeps no backup and asks nothing, so the change is made visible instead). The units that implement the
+application keeps no backup and asks nothing, so the change is made visible instead). `AgentInstructions` writes the
+instructions that the copilot is given: a role prompt, the index of the drawing knowledge, the facts of the project, and
+the style of the project, in a full form or a compact form depending on the context window of the model, with sizes that
+its tests measure. The units that implement the
 contract are added to this design, and to the model, the requirements, and the verification design, together with their
 code; until then no implementation of `IAgentService` exists in the application.
 
@@ -110,6 +113,19 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   with no copy and no question and says `created` or `replaced`; a picture is drawn in memory, scaled to at most 1,280
   pixels, and never saved; the log has metadata only; a call never throws except for the cancellation of the turn.
 
+**AgentInstructions**: The instructions that the copilot is given for one project.
+
+- *Type*: In-process .NET class with `AgentProjectFacts` and `InstructionTier`, and the role prompt as an embedded
+  Markdown resource, documented in the design of the `AgentInstructions` unit.
+- *Role*: Provider (the agent service, in a later step, is the consumer); it consumes the index of the drawing knowledge
+  of the `Knowledge` subsystem and the style block of the `Style` subsystem.
+- *Contract*: `ChooseTier(provider, contextWindowTokens)` gives the full tier for GitHub Copilot and for a window of at
+  least 16,384 tokens, otherwise the compact tier; `Build(facts, tier)` writes the role prompt, the index, the facts of
+  the project, and the style, in that order.
+- *Constraints*: The full text is at most 20,000 characters and the compact text at most 11,000 for every kit that comes
+  with the program, and the text of all tools is at most 7,000, each measured by a test; every value of the project is
+  written on one line; the text holds no setting, token, message, or file content.
+
 **IProviderCheck**: The connection check that the settings dialog can ask for.
 
 - *Type*: In-process .NET interface owned by the `Settings` subsystem, with the `ProviderCheckResult(IsUsable, Message)`
@@ -140,26 +156,31 @@ drawing knowledge and a pack that keeps the policy it receives, and the test sho
 are offered and that the policy permits a picture file of the project and refuses the data folder, a project file, and
 every place outside the project. The project tools are tested on a real project folder: a drawing is written, listed,
 read, replaced, and drawn by the real render service, and the test shows that nothing but the drawing is added to the
-project and that paths that leave the project or reach the project file are refused.
+project and that paths that leave the project or reach the project file are refused. The instructions are tested with
+the real cards and the real kits: their sizes are measured for the full and the compact tier and for the tools, and a
+test builds the instructions and the tools of one project together and shows that the tools that the role prompt names
+are exactly the tools that are offered.
 
-The sections of the units are added to this design as the units are built: the instructions and the mapper of the
+The sections of the units are added to this design as the units are built: the mapper of the
 payload to a provider message, the mapper of provider updates to events and the provider factory, and the service that
 implements `IAgentService`.
 
 ### Dependencies
 
 - **CopilotCliLocator** unit: the Copilot CLI and its version, used by the readiness checks.
-- **Knowledge** subsystem: the plain tool description (`KnowledgeTool`) that the tool registry offers; the style tools
-  are given to the registry in the same form.
+- **Knowledge** subsystem: the plain tool description (`KnowledgeTool`) that the tool registry offers (the style tools
+  are given to the registry in the same form), and the index of the drawing knowledge that the instructions carry.
 - **Project** subsystem: the names of the data folder and of the project file that the tool registry and the project
   tools deny, and the filter that tells which files are image sources.
 - **Preview** subsystem: the render service through which `render_image` draws pictures in memory.
-- **Style** subsystem: the active style kit, whose example images `render_image` may draw, and the name of the styles
+- **Style** subsystem: the active style kit, whose example images `render_image` may draw and whose style the
+  instructions carry (`StyleGuidance`), and the name of the styles
   folder of a project, which the project tools never write.
 - **Logging** subsystem: the logger that gets the metadata of each tool call.
 - **AgentKit** and **Microsoft.Extensions.AI** (OTS): the path policy, the tool packs, the limits for answers, and the
   function type that carry the tools.
-- **Settings** subsystem: the AI provider choices (`SettingsService`) and the `IProviderCheck` interface that
+- **Settings** subsystem: the AI provider choices (`SettingsService`), the recommended minimum context window that
+  chooses the tier of the instructions, and the `IProviderCheck` interface that
   `AgentReadiness` implements (documented with `AiProviderSettingsPage`); `Settings` does not depend on this subsystem.
 - **OllamaSharp** (OTS): the client that lists the models of an Ollama server and shows the context length of a model,
   used by the probe of the readiness checks.

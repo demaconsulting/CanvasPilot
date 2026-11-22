@@ -31,9 +31,10 @@ Local items:
     report), **CopilotCliLocator** unit (the installed Copilot CLI, with its process runner, file system, and
     environment seams), **AgentReadiness** unit (the check of whether the chosen AI provider can be used, with the gated
     starter of the Copilot runtime and the probe of the Ollama server), **AgentToolRegistry** unit (the tools of the
-    copilot for one project, confined to the project folder), and **ProjectTools** unit (the tools that list, read,
-    write, and draw the files of the project, with links refused and files replaced directly); the units that implement
-    the contract are added as they are built.
+    copilot for one project, confined to the project folder), **ProjectTools** unit (the tools that list, read, write,
+    and draw the files of the project, with links refused and files replaced directly), and **AgentInstructions** unit
+    (the role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier); the units
+    that implement the contract are added as they are built.
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
   - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.

@@ -459,6 +459,7 @@ sections:
         children:
           - CanvasPilot-Agent-RunTurnAsEvents
           - CanvasPilot-Agent-WorkOnProjectFiles
+          - CanvasPilot-Agent-InstructTheCopilot
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
           - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces

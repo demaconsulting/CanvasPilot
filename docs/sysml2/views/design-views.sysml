@@ -173,10 +173,14 @@ package CanvasPilotDesignViews {
     }
 
     view AgentToolsView : GeneralView {
-        doc /* Dependencies of the tool registry and the project tools of the AI copilot: the registry on the drawing knowledge tool descriptions it offers and on the AI libraries that confine and carry the tools, and the project tools on the registry that composes them, on the active style kit and the styles folder name, on the project explorer's filter of image sources, and on the AI libraries. The instructions and the payload mapper add their edges to this view as they are built. Hub suppliers omitted: ProjectService (both read the data folder name and project file extension from the project document), ImageRenderService (the picture tool draws through it), and RollingFileLogger (the project tools log each call). */
+        doc /* Dependencies of the tool registry and the project tools of the AI copilot: the registry on the drawing knowledge tool descriptions it offers and on the AI libraries that confine and carry the tools, and the project tools on the registry that composes them, on the active style kit and the styles folder name, on the project explorer's filter of image sources, and on the AI libraries, and the instructions on the knowledge prompt builder that writes the index, the style guidance that writes the style, and the settings that give the recommended context window. The payload mapper adds its edges to this view as it is built. Hub suppliers omitted: ProjectService (both read the data folder name and project file extension from the project document), ImageRenderService (the picture tool draws through it), and RollingFileLogger (the project tools log each call). */
         expose CanvasPilot_AgentToolRegistry::AgentToolRegistry;
         expose CanvasPilot_ProjectTools::ProjectTools;
+        expose CanvasPilot_AgentInstructions::AgentInstructions;
         expose CanvasPilot_KnowledgeTools::KnowledgeTools;
+        expose CanvasPilot_KnowledgePromptBuilder::KnowledgePromptBuilder;
+        expose CanvasPilot_StyleGuidance::StyleGuidance;
+        expose CanvasPilot_SettingsService::SettingsService;
         expose CanvasPilot_StyleSelection::StyleSelection;
         expose CanvasPilot_StyleKitCatalog::StyleKitCatalog;
         expose CanvasPilot_ProjectExplorer::ProjectExplorer;
