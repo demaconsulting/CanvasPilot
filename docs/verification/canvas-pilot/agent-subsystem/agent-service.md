@@ -77,9 +77,10 @@ with a limit of ten seconds.
   root each give one failed event of kind data inside project that names the folder, make no agent, and leave the
   project folder as it was. A turn that writes nothing, a reset, and the release of the conversation leave the project
   folder unchanged and create nothing in the local data root.
-- `IsInside` is true for the same folder, with or without a trailing separator, in another letter case, and for a folder
-  below it; false for a sibling whose name starts with the same letters, for a parent, for another drive, and for a path
-  that climbs out with `..`; and it refuses empty arguments.
+- `IsInside` is true for the same folder, with or without a trailing separator, and for a folder below it; true in
+  another letter case on Windows and macOS, and false there on Linux; false for a sibling whose name starts with the
+  same letters, for a parent, for another drive (on Windows), and for a path that climbs out with `..`; and it refuses
+  empty arguments.
 - The log of a whole turn holds `Conversation started`, `Turn started` with the count of restored turns and the digest
   flag, `Turn ended` with the outcome, `Conversation released` with the reason, and the path of the written file, and
   holds none of the sentinel texts. An exception while the agent is made is reported to the user with its message, is
@@ -170,8 +171,9 @@ data root. This scenario is tested by `AgentService_DataResidency_ProjectContain
 reset, and a release, with a snapshot of the project folder before and after. This scenario is tested by
 `AgentService_DataResidency_TurnThatWritesNothing_LeavesTheProjectFolderUnchanged`.
 
-**AgentService_IsInside_Paths_ComparesWholeNamesWithoutCase**: Eight pairs of folders. This scenario is tested by
-`AgentService_IsInside_Paths_ComparesWholeNamesWithoutCase`.
+**AgentService_IsInside_Paths_ComparesWholeNamesWithoutCase**: Pairs of folders written as full paths of the platform
+(eight on Windows, which adds a folder on another drive), where letter case counts only on Linux. This scenario is
+tested by `AgentService_IsInside_Paths_ComparesWholeNamesWithoutCase`.
 
 **AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly**: A whole turn, a reset, and the log read back. This
 scenario is tested by `AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly`.

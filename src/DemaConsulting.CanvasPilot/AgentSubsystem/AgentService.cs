@@ -333,8 +333,8 @@ public sealed class AgentService : IAgentService
     }
 
     /// <summary>
-    ///     Determines whether a folder lies inside another, or is the same folder, by the spelling of their full paths
-    ///     without regard to case.
+    ///     Determines whether a folder lies inside another, or is the same folder, by the spelling of their full paths,
+    ///     whole names at a time, and without regard to case on Windows and macOS, whose usual file systems ignore it.
     /// </summary>
     /// <param name="root">The folder that is tested.</param>
     /// <param name="container">The folder that may contain it.</param>
@@ -345,16 +345,9 @@ public sealed class AgentService : IAgentService
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         ArgumentException.ThrowIfNullOrWhiteSpace(container);
 
-        var inner = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
-        var outer = Path.TrimEndingDirectorySeparator(Path.GetFullPath(container));
-        if (string.Equals(inner, outer, StringComparison.OrdinalIgnoreCase))
-        {
-            return true;
-        }
-
-        // The separator makes 'proj2' not inside 'proj'
-        return inner.StartsWith(outer + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
-               || inner.StartsWith(outer + Path.AltDirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        // The same comparison as the path guard of the project tools: case is ignored on Windows and macOS only, and
+        // whole names are compared, so 'proj2' is not inside 'proj'
+        return ProjectPathGuard.IsInside(Path.GetFullPath(container), Path.GetFullPath(root));
     }
 
     /// <inheritdoc />

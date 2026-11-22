@@ -357,7 +357,7 @@ public class AgentKitTests
         {
             // Act: try to start the runtime
             var failure = await Assert.ThrowsAsync<InvalidOperationException>(
-                () => CopilotRuntime.StartAsync(new CopilotRuntimeOptions(Path.Combine(folder.Path, "copilot")), timeout.Token));
+                () => CopilotRuntime.StartAsync(new CopilotRuntimeOptions(Path.Combine(folder.Path, "copilot-data")), timeout.Token));
 
             // Assert: the error is still the missing wrapper, and the named file was not run
             Assert.Contains("copilot-runtime", failure.ToString(), StringComparison.OrdinalIgnoreCase);

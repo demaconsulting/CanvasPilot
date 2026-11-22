@@ -96,10 +96,11 @@ Copilot runtime, so the runtime never keeps its files in a place of its own choo
 `{local data root}\CanvasPilot\history` (the Chat subsystem keeps it; the service only knows it to check it).
 
 Before a conversation is made, `IsInside(folder, project folder)` compares the two folders by their full paths, whole
-names, and without regard to case. A turn is refused with `Failed(DataInsideProject)` and a sentence that names the
-folder when the Copilot data folder or the history folder lies inside the project folder, which is the case when the
-project is, for example, the profile folder of the user. The service itself writes nothing: tests show that a turn that
-writes nothing leaves the project folder as it was and that the local data root is not created by the service.
+names, and without regard to case on Windows and macOS (the comparison of the project path guard). A turn is refused
+with `Failed(DataInsideProject)` and a sentence that names the folder when the Copilot data folder or the history folder
+lies inside the project folder, which is the case when the project is, for example, the profile folder of the user. The
+service itself writes nothing: tests show that a turn that writes nothing leaves the project folder as it was and that
+the local data root is not created by the service.
 
 #### Logging
 

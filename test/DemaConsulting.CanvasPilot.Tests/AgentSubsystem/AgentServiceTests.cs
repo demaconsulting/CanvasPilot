@@ -648,26 +648,47 @@ public sealed class AgentServiceTests
     }
 
     /// <summary>
-    ///     Test that the folders are compared by whole names and without regard to case.
+    ///     Test that the folders are compared by whole names, and without regard to case on Windows and macOS only.
     /// </summary>
     /// <param name="root">The folder that is tested.</param>
     /// <param name="container">The folder that may contain it.</param>
     /// <param name="expected">Whether the first is inside the second.</param>
     [Theory]
-    [InlineData(@"C:\work\proj\data", @"C:\work\proj", true)]
-    [InlineData(@"C:\work\proj", @"C:\work\proj", true)]
-    [InlineData(@"C:\work\proj\", @"C:\work\proj", true)]
-    [InlineData(@"C:\WORK\Proj\Data", @"c:\work\proj", true)]
-    [InlineData(@"C:\work\proj2", @"C:\work\proj", false)]
-    [InlineData(@"C:\work", @"C:\work\proj", false)]
-    [InlineData(@"D:\work\proj", @"C:\work\proj", false)]
-    [InlineData(@"C:\work\proj\..\other", @"C:\work\proj", false)]
+    [MemberData(nameof(InsidePaths))]
     public void AgentService_IsInside_Paths_ComparesWholeNamesWithoutCase(string root, string container, bool expected)
     {
         // Act and assert
         Assert.Equal(expected, AgentService.IsInside(root, container));
         Assert.Throws<ArgumentException>(() => AgentService.IsInside(" ", container));
         Assert.Throws<ArgumentException>(() => AgentService.IsInside(root, string.Empty));
+    }
+
+    /// <summary>
+    ///     Gets the pairs of folders of the containment test, written as full paths of the platform that runs it.
+    /// </summary>
+    /// <returns>The folder that is tested, the folder that may contain it, and whether the first is inside the second.</returns>
+    public static TheoryData<string, string, bool> InsidePaths()
+    {
+        var project = TestPlatformPaths.FullPath("work", "proj");
+        var data = new TheoryData<string, string, bool>
+        {
+            { Path.Combine(project, "data"), project, true },
+            { project, project, true },
+            { project + Path.DirectorySeparatorChar, project, true },
+
+            // Letter case counts only where the usual file systems tell names apart
+            { TestPlatformPaths.FullPath("WORK", "Proj", "Data"), TestPlatformPaths.FullPath("work", "proj"), TestPlatformPaths.IgnoresCase },
+            { TestPlatformPaths.FullPath("work", "proj2"), project, false },
+            { TestPlatformPaths.FullPath("work"), project, false },
+            { Path.Combine(project, "..", "other"), project, false },
+        };
+        if (OperatingSystem.IsWindows())
+        {
+            // Only Windows has drives
+            data.Add(@"D:\work\proj", project, false);
+        }
+
+        return data;
     }
 
     /// <summary>

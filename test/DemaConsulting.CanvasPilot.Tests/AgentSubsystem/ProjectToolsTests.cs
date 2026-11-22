@@ -122,7 +122,9 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
         Put(Path.Combine(Project, "data", "deep", "flow.mmd"), "graph TD");
         Directory.CreateDirectory(Path.Combine(Project, ".git"));
         Put(Path.Combine(Project, ".git", "config"), "git");
-        var hidden = Path.Combine(Project, "desktop.ini");
+        // Windows hides a file by its attribute, while macOS and Linux hide a file by a leading dot in its name
+        var hiddenName = OperatingSystem.IsWindows() ? "desktop.ini" : ".hidden-notes.txt";
+        var hidden = Path.Combine(Project, hiddenName);
         Put(hidden, "hidden");
         File.SetAttributes(hidden, FileAttributes.Hidden);
 
@@ -138,7 +140,7 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
         Assert.DoesNotContain(".canvaspilot", answer, StringComparison.Ordinal);
         Assert.DoesNotContain("Brochure", answer, StringComparison.Ordinal);
         Assert.DoesNotContain(".git", answer, StringComparison.Ordinal);
-        Assert.DoesNotContain("desktop.ini", answer, StringComparison.Ordinal);
+        Assert.DoesNotContain(hiddenName, answer, StringComparison.Ordinal);
         Assert.DoesNotContain(Root, answer, StringComparison.Ordinal);
     }
 
