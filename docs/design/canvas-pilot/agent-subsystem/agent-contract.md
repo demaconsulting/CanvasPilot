@@ -65,7 +65,8 @@ of `IAgentService` in the design of the `Agent` subsystem.
 #### Dependencies
 
 `MessagePayload` of the `Payload` subsystem (the message in a request). No other subsystem or third-party item is used;
-in particular no AI library, which is checked by a test.
+in particular no AI library; this is a design rule that is kept by review and by the dependency view of the model, not
+by a test.
 
 #### Callers
 

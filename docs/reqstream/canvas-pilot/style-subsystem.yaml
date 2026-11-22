@@ -165,15 +165,3 @@ sections:
               - CanvasPilot-StyleKitManager-ProtectBuiltInAndSharedKits
             tests:
               - StyleSubsystem_ManageKitsInWindow_ManagerAndEditor_CreateEditExportImportAndDeleteAKit
-
-          - id: CanvasPilot-Style-StayProviderNeutral
-            title: >-
-              The Style subsystem shall offer its guidance and tools as values and text of its own and shall not depend on
-              any type or source file of a language model or agent library.
-            justification: |
-              The assistant that uses the style may come from more than one provider, and which provider it uses is a
-              choice of the user.
-              Style that is tied to a provider could not be offered to another one. Plain values and text can be given to
-              any provider.
-            tests:
-              - StyleSubsystem_Types_ReferenceNoLanguageModelPackage

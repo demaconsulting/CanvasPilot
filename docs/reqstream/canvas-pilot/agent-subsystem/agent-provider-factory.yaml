@@ -52,19 +52,16 @@ sections:
                   runtime gives for the Copilot CLI that the locator found, start the runtime once however many agents and
                   requests there are, and make each agent with exactly the supplied tools, the instructions, the name
                   CanvasPilot, the model of the settings (none when it is blank), and the project folder as the working
-                  directory, and shall make the agents in one place that gives no permission handler, so that the default
-                  handler of the AI library, which approves exactly the supplied tools and refuses everything else, applies,
-                  and shall pass the data folder and the logger of the request on to the starter of the runtime.
+                  directory, and shall pass the data folder and the logger of the request on to the starter of the runtime.
                 justification: |
                   The runtime is one process for the whole application, and the agents of several projects share it. The
-                  tools that the application builds are the only ones that the copilot may call, and the library derives its
-                  permissions from the list of those tools. A handler of the application's own could widen that, so the one
-                  place that makes agents passes none. The place where the runtime keeps its files is chosen by the agent
-                  service, so the factory only carries it to the starter.
+                  tools that the application builds are the only ones that the copilot may call, so each agent is made with
+                  exactly that list. The place where the runtime keeps its files is chosen by the agent service, so the
+                  factory only carries it to the starter.
                 tests:
                   - AgentProviderFactory_Create_Copilot_FakeStarter_StartsOnceAndMakesAgentsOnTheRuntime
                   - AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse
-                  - AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary
+
                   - AgentProviderFactory_Create_Copilot_DataDirectoryAndLogger_ReachTheStarter
 
               - id: CanvasPilot-AgentProviderFactory-ReportUnavailableCopilot

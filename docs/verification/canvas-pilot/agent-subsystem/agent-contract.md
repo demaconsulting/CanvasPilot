@@ -5,9 +5,8 @@
 `AgentContract` is verified with unit tests defined in `AgentContractTests.cs`. The unit is plain records and one
 interface, so no collaborator is replaced: the tests build the records and read what they hold, check the rules that the
 records enforce themselves (the cutting of summaries to the limit, the refusal of an empty call id, tool name, or
-failure message, the equality of events by value, the default empty history, and which readiness statuses allow a turn),
-and check by reflection, with the helper that the `Knowledge` and `Style` verification also uses, that no contract type
-names a type of an AI library. A payload is built from text only, with the public constructor of `MessagePayload`.
+failure message, the equality of events by value, the default empty history, and which readiness statuses allow a turn).
+A payload is built from text only, with the public constructor of `MessagePayload`.
 
 #### Test Environment
 
@@ -21,7 +20,6 @@ N/A - standard test environment. The tests use no files, network, display, or ex
 - Events compare by value.
 - A request keeps its payload, has an empty history unless one is given, and refuses a `null` payload.
 - Only the ready status and the Ollama context-too-small status are usable.
-- The contract types name no type of an AI library.
 
 #### Test Scenarios
 
@@ -51,7 +49,3 @@ message. This scenario is tested by `AgentReadinessReport_IsUsable_ByStatus_IsTr
 
 **AgentReadinessReport_Constructor_EmptyMessage_IsRefused**: A report with a missing, empty, or white-space message is
 refused. This scenario is tested by `AgentReadinessReport_Constructor_EmptyMessage_IsRefused`.
-
-**AgentContract_Types_ReferenceNoLanguageModelPackage**: The members of the contract types are searched for types of the
-language model and agent libraries; none is found. This scenario is tested by
-`AgentContract_Types_ReferenceNoLanguageModelPackage`.

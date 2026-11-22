@@ -213,7 +213,10 @@ steps are in the verification of the unit or subsystem named at each check.
        MB), and the banner is visible. (This repeats part of check 6.)
     6. After the AI library can use an installed CLI (the follow-up change, not this release): a live turn with a
        picture, a tool that returns a picture, and Stop, and a look that the project folder holds only intentional files
-       afterwards. Until then this check stays open.
+       afterwards. In the same turn, ask the copilot to run a shell command: it is refused and the transcript shows no
+       tool line for a tool that is not one of the tools of the application (the default-deny permission handling of the
+       AI library approves exactly the supplied tools; no automated test can show it, because the Copilot runtime cannot
+       be started in a test). Until then this check stays open.
 
 ## Test Scenarios
 

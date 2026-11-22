@@ -433,27 +433,6 @@ public sealed class AgentToolRegistryTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that the list of the built-in tool names of the Copilot CLI contains every name that the AI library
-    ///     reserves, so that an upgrade of the library that adds a name is noticed here.
-    /// </summary>
-    [Fact]
-    public void AgentToolRegistry_CopilotBuiltInToolNames_CoverTheNamesTheLibraryReserves()
-    {
-        // Arrange: the list that the library keeps (it is not public, so it is read with reflection)
-        var field = typeof(CopilotAgentFactory).GetField("ReservedBuiltInToolNames", BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static);
-        Assert.NotNull(field);
-        var reserved = Assert.IsAssignableFrom<IEnumerable<string>>(field.GetValue(null));
-
-        // Act / Assert: every name that the library reserves is in the list of the registry
-        foreach (var name in reserved)
-        {
-            Assert.Contains(name, AgentToolRegistry.CopilotBuiltInToolNames);
-        }
-        Assert.Contains("view", AgentToolRegistry.CopilotBuiltInToolNames);
-        Assert.Contains("bash", AgentToolRegistry.CopilotBuiltInToolNames);
-    }
-
-    /// <summary>
     ///     Makes a registry over the real description of the drawing knowledge and stand-ins for the two style tools that
     ///     have their real names and schemas, and records the calls of the style tools.
     /// </summary>

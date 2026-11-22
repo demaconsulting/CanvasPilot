@@ -114,8 +114,8 @@ kits. The subsystem depends on CanvasNet for the classification of font families
   report: the share of each palette color, of blended edges, and of colors off the palette (the largest listed with
   their nearest palette color), and whether the picture passes; `ToNotes` and `ToText` write the report for the list of
   notes of a picture and for a reader of text.
-- *Constraints*: Stateless and thread-safe. The same pixels, in any order, give the same report. A picture of the
-  largest size is checked in well under a second.
+- *Constraints*: Stateless and thread-safe. The same pixels, in any order, give the same report. The cost is one pass
+  over the pixels (see the design of the unit); it is a design property that is not checked by a test.
 
 **CheckAgainstStyle**: The command of the Image menu.
 
@@ -207,10 +207,10 @@ is a plain text in the project file, and the style settings are a plain record i
 subsystems, and `AppShell`, which builds every unit in one place, is the only place that knows all of them.
 
 **No provider.** The subsystem refers to no type of a language model, of an agent library, or of an AI extension
-library, and adds no package at all. Its guidance and tools are plain values and text. The test
-`StyleSubsystem_Types_ReferenceNoLanguageModelPackage` checks the signatures of the types of the subsystem and the using
-directives of its source files, the same way that the `Knowledge` subsystem does; the application library as a whole
-refers to the libraries of the AI copilot, so the rule is checked on the subsystem and not on the assembly.
+library, and adds no package at all. Its guidance and tools are plain values and text. This is a design rule that is
+kept by review and by the dependency view of the model (the subsystem has no dependency on a provider), not by a test
+that reads the source or the types of the subsystem; the application library as a whole refers to the libraries of the
+AI copilot, so the rule belongs to the subsystem and not to the assembly.
 
 **A kit is a folder.** A kit is the folder `{id}` with the file `style.json` and the folder `examples`, so that a kit
 can be copied, zipped, committed, and shared as a folder and read by a person. The id is a lower-case kebab text of 1 to

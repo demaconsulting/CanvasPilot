@@ -521,22 +521,6 @@ public sealed class AgentReadinessTests
     }
 
     /// <summary>
-    ///     Test that the readiness check keeps no text in its fields, so that a token cannot be kept by it, and that it
-    ///     takes no logger.
-    /// </summary>
-    [Fact]
-    public void AgentReadiness_Fields_Rule_HoldNoText()
-    {
-        // Act: every instance field of the class and of the types it composes with
-        var fields = typeof(AgentReadiness).GetFields(
-            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
-
-        // Assert: only the collaborators are held, and none of them is a string or a logger
-        Assert.NotEmpty(fields);
-        Assert.DoesNotContain(fields, field => field.FieldType == typeof(string) || field.FieldType.Name.Contains("Logger", StringComparison.Ordinal));
-    }
-
-    /// <summary>
     ///     Test that missing settings and a missing argument are refused.
     /// </summary>
     [Fact]

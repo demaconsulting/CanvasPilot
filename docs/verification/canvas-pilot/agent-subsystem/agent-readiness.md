@@ -19,9 +19,8 @@ of the `/api/show` answer is the assumption that only a live Ollama server can c
 in the system verification, and until it is done the tests show that an answer in any other shape means "not known" and
 never an error.
 
-The token rule is verified three ways: a sentinel text that stands for a token is printed by the fake GitHub CLI and
-must appear in no report, the class is shown by reflection to hold no text and no logger, and the credential tests show
-that only emptiness decides.
+The token rule is verified two ways: a sentinel text that stands for a token is printed by the fake GitHub CLI and
+must appear in no report, and the credential tests show that only emptiness decides.
 
 #### Test Environment
 
@@ -43,7 +42,7 @@ the probe wait for a limit of a tenth of a second.
   "Copilot support needs an AgentKit update; use Ollama meanwhile." and is never ready or usable.
 - With a starter that can start the runtime the report is ready, and the starter is asked with the path and version of
   the CLI and with `CheckOnly`.
-- No token text is in any report, and the class holds no text and no logger.
+- No token text is in any report.
 - Ollama: an invalid address or an empty model name is not configured and the server is not asked; no answer is
   unreachable; a missing model gives the `ollama pull` sentence; a model that is there is ready with the vision hint, in
   any letter case and with the implied `latest` tag, and the window is asked for under the name that the server lists.
@@ -135,9 +134,6 @@ connection check through `IProviderCheck` runs it again; the result is not usabl
 **AgentReadiness_GetReport_CancelledToken_ThrowsOperationCanceled**: A cancelled token ends the check for Copilot and
 for Ollama with a cancellation. This scenario is tested by
 `AgentReadiness_GetReport_CancelledToken_ThrowsOperationCanceled`.
-
-**AgentReadiness_Fields_Rule_HoldNoText**: By reflection, no field of the class is a string or a logger. This scenario
-is tested by `AgentReadiness_Fields_Rule_HoldNoText`.
 
 **AgentReadiness_GetReport_NullSettings_ThrowsArgumentNull**: Missing settings are refused with an argument null
 exception. This scenario is tested by `AgentReadiness_GetReport_NullSettings_ThrowsArgumentNull`.

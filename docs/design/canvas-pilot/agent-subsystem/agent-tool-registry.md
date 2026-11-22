@@ -68,8 +68,8 @@ library, is one catalog entry and one identifier; nothing else is restructured.
 **The set check.** After the library has built the tools, `CreateTools` refuses the set with an
 `InvalidOperationException` whose message names every problem found: it has no tool; two tools have the same name; a
 name is one of the built-in tools of the Copilot CLI. `CopilotBuiltInToolNames` is the list of the library
-(`CopilotAgentFactory.ReservedBuiltInToolNames`, which is not public, so a test reads it with reflection and fails when
-an upgrade adds a name that ours lacks).
+(`CopilotAgentFactory.ReservedBuiltInToolNames`, which is not public, so no test reads it). When the AI library is
+upgraded, the step of the upgrade compares that list with ours and adds any name that ours lacks.
 
 **The function of a description.** `DescriptorFunction` keeps the name and the words of the description; its
 `JsonSchema` is the schema text of the description parsed once (an `ArgumentException` when it is not a JSON object); a

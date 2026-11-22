@@ -35,8 +35,6 @@ the project file of the application library from the repository; no network, dis
   them.
 - The browser over the catalog of the application shows the tree of its roots, finds a card by search, shows a card with
   its text and related cards, and copies an example to the clipboard that it was given.
-- No type of the subsystem uses a type of a language model or agent library in its signatures, and no source file of
-  the subsystem has a using directive for such a library.
 
 ### Test Scenarios
 
@@ -84,10 +82,3 @@ of the application has a node for each root, finds the card of the marks of a me
 search, shows the card of the marks with its text and its related cards as the catalog gives them, and puts the text of
 its first example on a clipboard that records, with a status that names the example. This scenario is tested by
 `KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample`.
-
-**KnowledgeSubsystem_Types_ReferenceNoLanguageModelPackage**: The types of the subsystem, in their base types,
-interfaces, fields, properties, events, constructors, and methods, use no type of the SDKs of GitHub Copilot,
-OllamaSharp, the AI extensions of Microsoft, the Microsoft Agent Framework, AgentKit, or the other libraries of language
-models that are listed, and no source file in the folder of the subsystem has a using directive for them. The
-application library as a whole refers to the libraries of the AI copilot, so the rule is checked on the subsystem and
-not on the assembly. This scenario is tested by `KnowledgeSubsystem_Types_ReferenceNoLanguageModelPackage`.

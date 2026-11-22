@@ -11,9 +11,11 @@ request, the instructions, the tool schema, and the result of the tool in the se
 turn whose updates are mapped by the real `AgentEventMapper`. The Copilot runtime cannot be started in a test, so the
 Copilot branch is verified with a fake starter that hands over a fake `ICopilotAgentSource` whose agents talk to a
 scripted chat client, and with the gated starter that the build ships. The locator is the real one over the fake file
-system and the fake process runner of the locator tests. One test reads the source of the unit to show that the
-application calls `CopilotAgentFactory.Create` once and passes no permission handler, because the runtime that applies
-the permission handler cannot be started in a test; the library's own behavior is the subject of the OTS tests.
+system and the fake process runner of the locator tests. That the copilot may call only the supplied tools (the
+library's default-deny permission handling) is a behavior of the running Copilot runtime, which cannot be started in a
+test and which no test reads the source of the application to infer; it is verified by the manual check of the live
+Copilot runtime (check 10 of the manual verification in the verification of the system), and the library's own behavior
+is the subject of the OTS tests.
 
 The subsystem tests act as the application will. One runs a conversation with a stand-in Ollama server and the real
 tools of a project: the factory is given the settings, the server asks for a drawing to be written, and the events show
@@ -23,9 +25,9 @@ gets exactly the tools and the folder of the project.
 
 #### Test Environment
 
-The unit tests use no network and no process; the locator works on a fake file system and a fake process runner, and one
-test reads the source files of the application. The subsystem tests make one temporary project folder each and delete
-it. No Ollama server, language model, or Copilot CLI is used.
+The unit tests use no network and no process; the locator works on a fake file system and a fake process runner. The
+subsystem tests make one temporary project folder each and delete it. No Ollama server, language model, or Copilot CLI
+is used.
 
 #### Acceptance Criteria
 
@@ -56,8 +58,6 @@ it. No Ollama server, language model, or Copilot CLI is used.
   source gives `NoAgentSourceMessage`, and in both cases the starter is asked again by the next request.
 - Eight requests for Copilot at once ask the starter once and give eight agents; after the factory was disposed a
   request for Copilot throws `ObjectDisposedException`.
-- The source of the application has one call of `CopilotAgentFactory.Create`, which passes `onPermissionRequest: null`
-  and names no permission type.
 - The data folder and the logger of a request reach the starter of the runtime unchanged, and a start request has none
   by default.
 - Deleting a session reaches the started runtime only for a Copilot session that has an id (`session-42` here); an
@@ -112,10 +112,6 @@ starter that says started without a source, each asked twice. This scenario is t
 **AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse**: Eight requests at
 once, the disposal of the factory, and a request after it. This scenario is tested by
 `AgentProviderFactory_Create_Copilot_ConcurrentRequestsAndDisposedFactory_StartOnceAndRefuse`.
-
-**AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary**: The source of the subsystem is
-read for the calls of `CopilotAgentFactory.Create` and for the permission handler. This scenario is tested by
-`AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary`.
 
 **AgentProviderFactory_Create_Copilot_DataDirectoryAndLogger_ReachTheStarter**: A request that names a data folder and a
 logger, and a fake starter that records its request. This scenario is tested by

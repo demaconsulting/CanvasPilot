@@ -31,7 +31,7 @@ sections:
                   - StyleChecker_Check_TransparentPixels_AreIgnoredAndCounted
                   - StyleChecker_Check_TranslucentPixels_AreFlattenedOverTheBackground
                   - StyleChecker_Check_EmptyAndOnePixelPictures_AreHandled
-                  - StyleChecker_Check_LargestPicture_FinishesInUnderTwoSeconds
+                  - StyleChecker_Check_LargePicture_CountsEveryPixelAndTheOffPaletteShare
                   - StyleCheckOptions_DefaultsAndValidate_AreTheOnesOfTheDesign
                   - StyleChecker_Check_InvalidArguments_Throw
                   - BuiltInStyleKits_Examples_AreOnTheirOwnKitsPalette

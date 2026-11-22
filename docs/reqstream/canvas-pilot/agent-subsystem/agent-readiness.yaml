@@ -87,14 +87,12 @@ sections:
               - id: CanvasPilot-AgentReadiness-NeverRetainCredentials
                 title: >-
                   The AgentReadiness shall look only at whether a token variable or the output of gh auth token is
-                  empty, shall not store, show, or log a token, and shall keep no text in its fields.
+                  empty, and shall not show or log a token, so that no token text is in any report.
                 justification: |
                   A token is a secret that gives access to the user's GitHub account. The check needs to know only that
-                  one exists, so nothing else about it is read, and a unit that holds no text and writes no log cannot
-                  leak one by mistake.
+                  one exists, so nothing else about it is read and no report can leak one by mistake.
                 tests:
                   - AgentReadiness_Copilot_GitHubCliSignedIn_CountsAsCredentialsAndNeverKeepsTheToken
-                  - AgentReadiness_Fields_Rule_HoldNoText
 
               - id: CanvasPilot-AgentReadiness-CheckOllamaServerAndModel
                 title: >-

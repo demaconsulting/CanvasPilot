@@ -673,7 +673,6 @@ reviews:
       - "docs/design/canvas-pilot/knowledge-subsystem.md"
       - "docs/verification/canvas-pilot/knowledge-subsystem.md"
       - "test/**/KnowledgeSubsystem/KnowledgeSubsystemTests.cs"
-      - "test/**/LanguageModelDependencyCheck.cs"
 
   - id: CanvasPilot-Knowledge-KnowledgeCatalog
     title: Review of CanvasPilot KnowledgeCatalog unit implementation and cards
@@ -1295,7 +1294,6 @@ reviews:
       - "docs/design/canvas-pilot/style-subsystem.md"
       - "docs/verification/canvas-pilot/style-subsystem.md"
       - "test/**/StyleSubsystem/StyleSubsystemTests.cs"
-      - "test/**/LanguageModelDependencyCheck.cs"
 
   - id: CanvasPilot-Style-StyleKitDocument
     title: Review of CanvasPilot StyleKitDocument unit implementation

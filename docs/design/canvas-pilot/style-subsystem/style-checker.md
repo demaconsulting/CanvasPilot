@@ -51,6 +51,13 @@ a kit with no color in the form `#RRGGBB`. The steps:
 5. The picture passes when the share that is off the palette, listed or not, is within the limit. A picture with no
    counted pixel has no share and passes.
 
+**Cost.** The check reads each pixel once, keeps only the 32,768 buckets and the run of equal pixels in memory, and
+allocates nothing for each pixel, so its time grows with the number of pixels and not with the number of colors. A
+picture of the largest size that CanvasNet draws (8192 by 8000 pixels) is about 65 million pixels and is checked in well
+under a second on a development machine. This is a design property, not a requirement: no unit test measures time or
+memory, and the tests of the check run the same code on pictures of up to 4 million pixels. If the cost needs to be
+measured again, use an opt-in benchmark and not a test that is linked to a requirement.
+
 **ToNotes**: The report as notes for the list of notes of a picture: `style-summary` (information: the result sentence),
 `style-ok` (information: the palette colors used), `style-blend` (information: the blended edges, when there are any),
 and one `style-off-palette` warning for each listed color and one for the other colors, if any. Every code starts with

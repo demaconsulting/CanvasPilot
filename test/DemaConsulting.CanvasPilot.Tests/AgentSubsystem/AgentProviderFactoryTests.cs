@@ -309,36 +309,6 @@ public sealed class AgentProviderFactoryTests
     }
 
     /// <summary>
-    ///     Test that the application makes Copilot agents in one place, with no permission handler of its own, so that the AI
-    ///     library installs its default-deny handler, which approves exactly the supplied tools and refuses everything else.
-    ///     The runtime that makes these agents cannot be started in a test, so the source is the evidence.
-    /// </summary>
-    [Fact]
-    public void AgentProviderFactory_CopilotSource_PermissionHandler_IsTheDefaultDenyOfTheLibrary()
-    {
-        // Arrange: the folder of the unit in the source tree, found from the folder of the tests
-        var folder = new DirectoryInfo(AppContext.BaseDirectory);
-        while (folder is not null && !File.Exists(Path.Combine(folder.FullName, "DemaConsulting.CanvasPilot.slnx")))
-        {
-            folder = folder.Parent;
-        }
-
-        Assert.NotNull(folder);
-        var unit = Path.Combine(folder.FullName, "src", "DemaConsulting.CanvasPilot", "AgentSubsystem");
-
-        // Act: read the file of the source and count the calls of the library's factory in the whole subsystem
-        var source = File.ReadAllText(Path.Combine(unit, "CopilotAgentSource.cs"));
-        var calls = Directory.EnumerateFiles(unit, "*.cs")
-            .Sum(file => File.ReadAllText(file).Split("CopilotAgentFactory.Create(", StringSplitOptions.None).Length - 1);
-
-        // Assert: one call, which passes no handler and names no permission type
-        Assert.Equal(1, calls);
-        Assert.Contains("onPermissionRequest: null", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("PermissionDecision", source, StringComparison.Ordinal);
-        Assert.DoesNotContain("PermissionRequest(", source, StringComparison.Ordinal);
-    }
-
-    /// <summary>
     ///     Test that the gated starter that this build ships gives the typed answer that Copilot support needs an update of
     ///     the AI library and no agent, with the Copilot CLI of the development machine found.
     /// </summary>

@@ -70,7 +70,8 @@ the settings, trimmed, or `null` for the default model of the runtime when the n
 the working directory (it grants nothing; the tools decide what may be touched). The one call of
 `CopilotAgentFactory.Create` passes no permission handler, so the AI library installs its default-deny handler, which
 approves exactly the supplied tools, one call at a time, and refuses everything else, including the tools of the Copilot
-CLI itself. A test reads the source to show that there is one call and that it names no handler.
+CLI itself. This is a property of the running Copilot runtime, so no test reads the source to infer it; it is verified
+by the manual check of the live runtime (check 10 of the manual verification in the verification of the system).
 
 **This build is gated.** The starter that is shipped, `GatedCopilotRuntimeStarter`, answers `NeedsAgentKitUpdate` and
 never touches the runtime of the AI library, because the library cannot yet be pointed to the CLI that the user

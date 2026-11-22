@@ -31,7 +31,7 @@ N/A - standard test environment.
 - Examples are found by name, by scope, and by card prefix; the examples of the cards of CanvasNet are the library's,
   and those of the cards of CanvasPilot are the embedded files.
 - The statements of the cards of CanvasPilot agree with the constants of the application.
-- The types that the unit offers mention no type of CanvasNet, and its lists cannot be changed.
+- An add to the lists of cards, roots, tags, children, and examples that the catalog hands out is refused.
 
 #### Test Scenarios
 
@@ -127,7 +127,5 @@ style file and of the folder of examples, every section of the guidance, and the
 related to, as the constants and lists of the code have them. This scenario is tested by
 `KnowledgeCatalog_Default_StylesCardQuotesTheNamesThatTheCodeUses`.
 
-**KnowledgeCatalog_Default_PublicTypesReferToNoHelpTypeOfCanvasNetAndCannotBeChanged**: No public member of the
-interface, the catalog, the card, and the examples mentions a type of CanvasNet, and an add to the lists of cards,
-roots, tags, children, and examples is refused. This scenario is tested by
-`KnowledgeCatalog_Default_PublicTypesReferToNoHelpTypeOfCanvasNetAndCannotBeChanged`.
+**KnowledgeCatalog_Default_ListsCannotBeChanged**: An add to the lists of cards, roots, tags, children, and examples is
+refused. This scenario is tested by `KnowledgeCatalog_Default_ListsCannotBeChanged`.

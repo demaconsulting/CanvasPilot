@@ -139,11 +139,11 @@ sections:
 
               - id: CanvasPilot-KnowledgeCatalog-ExposeOwnValues
                 title: >-
-                  The KnowledgeCatalog shall offer its cards, examples, and results as values of its own that refer to no
-                  type of the help of CanvasNet, and shall not change after they are built.
+                  The KnowledgeCatalog shall offer its cards, examples, and results as values that do not change after they
+                  are built: the lists that it hands out refuse every change.
                 justification: |
-                  What searches the cards, writes them for a prompt, and shows them must not depend on the help library, so
-                  that it can be tested with small catalogs and used with any provider. Values that cannot change can be
-                  shared between threads without a lock.
+                  What searches the cards, writes them for a prompt, and shows them reads the same values from many threads
+                  and many consumers. Values that cannot change can be shared between threads without a lock, and no consumer
+                  can alter what the others see.
                 tests:
-                  - KnowledgeCatalog_Default_PublicTypesReferToNoHelpTypeOfCanvasNetAndCannotBeChanged
+                  - KnowledgeCatalog_Default_ListsCannotBeChanged

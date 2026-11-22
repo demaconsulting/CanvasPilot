@@ -15,9 +15,9 @@ project's (`project-evil`), and, on Windows, a folder junction that leads from t
 round-trip tests compare the schema of a description with the schema of the function as JSON trees (not as text), and
 call the real `canvasnet_help` description over a small catalog. The registry tests use the real description of the
 drawing knowledge and stand-ins for the two style tools that have their real names and schemas
-(`StyleTools.GetParametersSchema` and `CheckParametersSchema`), so no style service is needed. The list of built-in
-names of the Copilot CLI is compared with the library's own list, which a reflection test reads from the restored
-package, so an upgrade that adds a name is noticed.
+(`StyleTools.GetParametersSchema` and `CheckParametersSchema`), so no style service is needed. No test reads the
+library's own list of reserved built-in names, which is not public; the registry's list is kept complete by the step of
+upgrading the AI library that is described in the design of the unit.
 
 The subsystem test (`AgentSubsystemTests.cs`) and the system test (`CanvasPilotTests.cs`) show the confinement as the
 copilot meets it: the tools of a project are only the application's own tools, the knowledge tool answers from the real
@@ -61,7 +61,6 @@ service is used.
   are made, and a pack that needs vision is not offered to a host without it and is offered to a host with it.
 - A set with no tool, a tool name used twice, a name like a built-in tool of the Copilot CLI, or two packs with one
   prefix is refused with a message that names the problem.
-- Every name in the library's list of reserved built-in names is in the registry's list.
 
 #### Test Scenarios
 
@@ -133,10 +132,6 @@ choice, and a relative project folder are refused. This scenario is tested by
 **AgentToolRegistry_Constructor_BuiltInDescriptionWithTheWrongPrefix_IsRefused**: A style tool in the list of the
 knowledge tools, and the other way round, are refused when the registry is made. This scenario is tested by
 `AgentToolRegistry_Constructor_BuiltInDescriptionWithTheWrongPrefix_IsRefused`.
-
-**AgentToolRegistry_CopilotBuiltInToolNames_CoverTheNamesTheLibraryReserves**: Every name in the library's reserved list
-is in the registry's list. This scenario is tested by
-`AgentToolRegistry_CopilotBuiltInToolNames_CoverTheNamesTheLibraryReserves`.
 
 **DescriptorToolPack_CreateTools_SchemaAndWordsOfTheDescription_ComeOutAsTheFunction**: The schema, name, and words of a
 description are those of the bare and of the wrapped function; the prefix is the pack's and it needs no capability. This

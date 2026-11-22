@@ -603,7 +603,6 @@ sections:
           - CanvasPilot-Knowledge-BuildPromptParts
           - CanvasPilot-Knowledge-DescribeAgentTools
           - CanvasPilot-Knowledge-DescribeAgentSkills
-          - CanvasPilot-Knowledge-StayProviderNeutral
         tests:
           - CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork
 
@@ -710,7 +709,6 @@ sections:
           request. The copilot may come from more than one provider, so the parts are plain.
         children:
           - CanvasPilot-Style-GuideTheAssistant
-          - CanvasPilot-Style-StayProviderNeutral
         tests:
           - CanvasPilot_GuideAssistantStyle_ComposedParts_GuidanceCheckAndCardAgree
 

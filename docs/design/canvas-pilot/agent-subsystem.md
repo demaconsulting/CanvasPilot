@@ -203,10 +203,10 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
 
 The contract is deliberately made of plain records and one interface. The chat needs to run a turn, stop it, show its
 events as they arrive, and explain a failure; none of that needs to know whether GitHub Copilot or Ollama answers, so no
-contract type names a type of an AI library, which a test of the `AgentContract` unit checks. Failure is data, not
-control flow: a provider that is missing, not signed in, or out of reach is a readiness report, and a turn that fails is
-a `Failed` event with a kind that the chat can map to advice. Cancellation is not a failure: the consumer asked for it,
-so the stream just ends and the chat marks the reply as stopped.
+contract type names a type of an AI library; this design rule is kept by review and by the dependency view of the model,
+not by a test. Failure is data, not control flow: a provider that is missing, not signed in, or out of reach is a
+readiness report, and a turn that fails is a `Failed` event with a kind that the chat can map to advice. Cancellation is
+not a failure: the consumer asked for it, so the stream just ends and the chat marks the reply as stopped.
 
 The subsystem tests act as the chat will: a hand-written scripted implementation of `IAgentService` stands in for an AI
 provider, and the tests run a turn through the interface and read the readiness report, so that the contract is proven
