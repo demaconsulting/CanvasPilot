@@ -363,7 +363,7 @@ public sealed class ChatPanelViewTests
 
         // Assert: the launcher got an inspector for the payload of that message
         var shown = Assert.Single(launcher.Shown);
-        Assert.Same(harness.Chat.Transcript[0].Payload, shown.Payload);
+        Assert.Same(harness.Chat.SentEntries.First().Payload, shown.Payload);
         Assert.Contains("look at this", shown.Description);
     }
 

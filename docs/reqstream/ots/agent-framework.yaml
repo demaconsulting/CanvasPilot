@@ -1,0 +1,46 @@
+---
+# Microsoft Agent Framework OTS Software Requirements
+#
+# Requirements for the Microsoft Agent Framework (Microsoft.Agents.AI and Microsoft.Agents.AI.Abstractions), the agent,
+# session, and streaming types that CanvasPilot's chat runs a turn with, as used by CanvasPilot at run time. The
+# libraries are runtime dependencies, so each requirement is a child of the requirement of the item that uses the
+# feature (the system requirement about conversing with the copilot; the units of the Agent subsystem take over as
+# children when they are written) and is not a root requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: Agent Framework Requirements
+        requirements:
+          - id: CanvasPilot-OTS-AgentFramework-StreamAnswerPieces
+            title: >-
+              The Agent Framework agent shall stream the text of an answer as updates, one for each piece the model
+              sends, in the order the model sent them.
+            justification: |
+              The chat panel shows the answer while it is written, so the pieces must arrive one by one and in order
+              and not as one block at the end.
+            tags: [ots]
+            tests:
+              - AgentFramework_ChatClientAgent_RunStreaming_YieldsTextUpdatesInOrder
+
+          - id: CanvasPilot-OTS-AgentFramework-KeepConversationOnSession
+            title: >-
+              The Agent Framework agent shall send the earlier turns of a session to the model with a later turn of the
+              same session, and shall start a new session without them.
+            justification: |
+              The user's follow-up messages refer to earlier ones, and clearing the conversation must start from
+              nothing, so the session is the only holder of the conversation that the application relies on.
+            tags: [ots]
+            tests:
+              - AgentFramework_AgentSession_SecondTurn_SendsEarlierConversation
+
+          - id: CanvasPilot-OTS-AgentFramework-StopOnCancellation
+            title: >-
+              The Agent Framework agent shall stop a streamed turn with an operation-cancelled exception when the
+              cancellation token of the turn is cancelled.
+            justification: |
+              The Stop command of the chat cancels the token of the running turn, and the chat relies on the exception
+              to leave the turn with the text received so far.
+            tags: [ots]
+            tests:
+              - AgentFramework_ChatClientAgent_RunStreaming_CancelledMidStream_ThrowsOperationCanceled

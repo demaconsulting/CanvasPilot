@@ -9,6 +9,17 @@ root-tags: [system, quality]
 includes:
   - docs/reqstream/quality.yaml
   - docs/reqstream/canvas-pilot.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/agent-contract.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/agent-event-mapper.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/agent-instructions.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/agent-provider-factory.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/agent-readiness.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/agent-service.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/agent-tool-registry.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/copilot-cli-locator.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/payload-message-mapper.yaml
+  - docs/reqstream/canvas-pilot/agent-subsystem/project-tools.yaml
   - docs/reqstream/canvas-pilot/annotation-subsystem.yaml
   - docs/reqstream/canvas-pilot/annotation-subsystem/annotation-overlay.yaml
   - docs/reqstream/canvas-pilot/annotation-subsystem/mark-registry.yaml
@@ -19,6 +30,8 @@ includes:
   - docs/reqstream/canvas-pilot/app-shell-subsystem/about-dialog.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml
+  - docs/reqstream/canvas-pilot/chat-subsystem/chat-history-store.yaml
+  - docs/reqstream/canvas-pilot/chat-subsystem/chat-turn-runner.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/payload-inspector.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-document.yaml
@@ -86,6 +99,11 @@ includes:
   - docs/reqstream/ots/communitytoolkit-mvvm.yaml
   - docs/reqstream/ots/canvasnet.yaml
   - docs/reqstream/ots/speech.yaml
+  - docs/reqstream/ots/agentkit.yaml
+  - docs/reqstream/ots/copilot-sdk.yaml
+  - docs/reqstream/ots/agent-framework.yaml
+  - docs/reqstream/ots/extensions-ai.yaml
+  - docs/reqstream/ots/ollamasharp.yaml
   - docs/reqstream/ots/wix.yaml
   - docs/reqstream/ots/reqstream.yaml
   - docs/reqstream/ots/buildmark.yaml

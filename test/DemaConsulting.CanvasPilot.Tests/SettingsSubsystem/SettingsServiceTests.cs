@@ -175,8 +175,60 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(new AiProviderSettings(), loaded.AiProvider);
         Assert.Empty(loaded.RecentProjects);
         Assert.False(loaded.AiProvider.UnrestrictedAgentTools);
-        Assert.Equal(8192, loaded.AiProvider.ContextWindowTokens);
+        Assert.Equal(AiProviderSettings.DefaultContextWindowTokens, loaded.AiProvider.ContextWindowTokens);
+        Assert.Equal(32768, loaded.AiProvider.ContextWindowTokens);
         Assert.Same(loaded, service.Current);
+    }
+
+    /// <summary>
+    ///     Test that the default context window is 32768 tokens, is above the recommended minimum, and that the
+    ///     recommended minimum is itself a value that settings accept.
+    /// </summary>
+    [Fact]
+    public void SettingsService_DefaultContextWindow_Constants_AreThe32768DefaultAndThe16384Minimum()
+    {
+        // Act and assert: the constants have the documented values and relate as the warning logic needs
+        Assert.Equal(32768, AiProviderSettings.DefaultContextWindowTokens);
+        Assert.Equal(16384, AiProviderSettings.RecommendedMinimumContextTokens);
+        Assert.True(AiProviderSettings.DefaultContextWindowTokens >= AiProviderSettings.RecommendedMinimumContextTokens);
+        Assert.True(AiProviderSettings.IsValidContextWindow(AiProviderSettings.RecommendedMinimumContextTokens));
+    }
+
+    /// <summary>
+    ///     Test that a settings file that does not state a context window gets the new default of 32768 tokens.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_NoContextWindowInFile_Uses32768()
+    {
+        // Arrange: a file with an AI provider section that has no context window
+        WriteSettingsFile("""{ "version": 1, "aiProvider": { "modelName": "gpt" } }""");
+
+        // Act: load
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: the default of 32768 is in effect
+        Assert.Equal(32768, loaded.AiProvider.ContextWindowTokens);
+    }
+
+    /// <summary>
+    ///     Test that a context window of 8192 that an earlier build stored is a valid value and is kept, not replaced
+    ///     by the new default.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_StoredContextWindow8192_IsKept()
+    {
+        // Arrange: a file that an earlier build wrote with its old default
+        WriteSettingsFile("""{ "version": 1, "aiProvider": { "contextWindowTokens": 8192 } }""");
+
+        // Act: load, then save and load again
+        var service = new SettingsService(SettingsFolder);
+        var loaded = service.Load();
+        service.Save(loaded);
+        var reloaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: the stored value survives loading and a save
+        Assert.Equal(8192, loaded.AiProvider.ContextWindowTokens);
+        Assert.Equal(8192, reloaded.AiProvider.ContextWindowTokens);
     }
 
     /// <summary>

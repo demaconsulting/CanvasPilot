@@ -1,0 +1,59 @@
+---
+# OllamaSharp OTS Software Requirements
+#
+# Requirements for the OllamaSharp library, the client of the Ollama server that CanvasPilot's readiness check and
+# Ollama provider are built on, as used by CanvasPilot at run time. The library is a runtime dependency, so each
+# requirement is a child of the requirement of the item that uses the feature (the system requirement about conversing
+# with the copilot; the units of the Agent subsystem take over as children when they are written) and is not a root
+# requirement. The tests run against a stand-in for the server and need no Ollama installation.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: OllamaSharp Requirements
+        requirements:
+          - id: CanvasPilot-OTS-OllamaSharp-ListLocalModels
+            title: >-
+              OllamaSharp shall list the models of the Ollama server by asking for its tags and returning their names,
+              and shall report a server that cannot be reached with an HTTP request exception.
+            justification: |
+              The readiness check tells the user whether the server runs and whether the chosen model is installed. It
+              needs the names of the installed models and a way to tell a stopped server from a missing model.
+            tags: [ots]
+            tests:
+              - OllamaSharp_ListLocalModels_AsksForTagsAndReturnsModelNames
+              - OllamaSharp_ListLocalModels_ServerNotReachable_ThrowsHttpRequestException
+
+          - id: CanvasPilot-OTS-OllamaSharp-ReportMissingModel
+            title: >-
+              OllamaSharp shall fail a chat with a model that the server does not have with an HTTP request exception
+              whose status code is "not found".
+            justification: |
+              A model that is not installed needs a different remedy than a server that is not running. The status code
+              is what tells them apart; the server's message is not part of the exception, so the application names the
+              model itself.
+            tags: [ots]
+            tests:
+              - OllamaSharp_ChatClient_UnknownModel_FailsWithNotFoundStatus
+
+          - id: CanvasPilot-OTS-OllamaSharp-StreamTextAndToolCalls
+            title: >-
+              The OllamaSharp chat client shall offer the tools of a request to the server, stream the text pieces of the
+              answer, and return the tool call that the server streams with its name and its arguments by name.
+            justification: |
+              The copilot works by calling tools, and the chat shows the answer while it is written, so a streamed
+              answer with a tool call is the central behavior of the Ollama provider.
+            tags: [ots]
+            tests:
+              - OllamaSharp_ChatClient_StreamingResponse_ReturnsTextAndToolCall
+
+          - id: CanvasPilot-OTS-OllamaSharp-SendContextLength
+            title: >-
+              The OllamaSharp chat client shall send the context length that AgentKit's sizing client names as the
+              Ollama option num_ctx of every chat request.
+            justification: |
+              The server loads a model with a small window unless the request names a length, so the setting of the user
+              has an effect only when it reaches the wire in this form.
+            tags: [ots]
+            tests:
+              - OllamaSharp_ChatClient_WithContextSizing_SendsNumCtxOption

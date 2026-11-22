@@ -3,6 +3,7 @@ resource-path:
   - docs/design
   - docs/design/generated
   - docs/design/canvas-pilot
+  - docs/design/canvas-pilot/agent-subsystem
   - docs/design/canvas-pilot/annotation-subsystem
   - docs/design/canvas-pilot/app-shell-subsystem
   - docs/design/canvas-pilot/chat-subsystem
@@ -25,6 +26,17 @@ input-files:
   - docs/design/title.txt
   - docs/design/introduction.md
   - docs/design/canvas-pilot.md
+  - docs/design/canvas-pilot/agent-subsystem.md
+  - docs/design/canvas-pilot/agent-subsystem/agent-contract.md
+  - docs/design/canvas-pilot/agent-subsystem/agent-event-mapper.md
+  - docs/design/canvas-pilot/agent-subsystem/agent-instructions.md
+  - docs/design/canvas-pilot/agent-subsystem/agent-provider-factory.md
+  - docs/design/canvas-pilot/agent-subsystem/agent-readiness.md
+  - docs/design/canvas-pilot/agent-subsystem/agent-service.md
+  - docs/design/canvas-pilot/agent-subsystem/agent-tool-registry.md
+  - docs/design/canvas-pilot/agent-subsystem/copilot-cli-locator.md
+  - docs/design/canvas-pilot/agent-subsystem/payload-message-mapper.md
+  - docs/design/canvas-pilot/agent-subsystem/project-tools.md
   - docs/design/canvas-pilot/annotation-subsystem.md
   - docs/design/canvas-pilot/annotation-subsystem/annotation-overlay.md
   - docs/design/canvas-pilot/annotation-subsystem/mark-registry.md
@@ -35,6 +47,8 @@ input-files:
   - docs/design/canvas-pilot/app-shell-subsystem/about-dialog.md
   - docs/design/canvas-pilot/chat-subsystem.md
   - docs/design/canvas-pilot/chat-subsystem/chat-panel.md
+  - docs/design/canvas-pilot/chat-subsystem/chat-turn-runner.md
+  - docs/design/canvas-pilot/chat-subsystem/chat-history-store.md
   - docs/design/canvas-pilot/chat-subsystem/payload-inspector.md
   - docs/design/canvas-pilot/composer-subsystem.md
   - docs/design/canvas-pilot/composer-subsystem/composer-document.md
@@ -96,12 +110,17 @@ input-files:
   - docs/design/canvas-pilot/utilities-subsystem.md
   - docs/design/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/design/ots.md
+  - docs/design/ots/agent-framework.md
+  - docs/design/ots/agentkit.md
   - docs/design/ots/avalonia.md
   - docs/design/ots/avalonia-edit.md
   - docs/design/ots/buildmark.md
   - docs/design/ots/canvasnet.md
   - docs/design/ots/communitytoolkit-mvvm.md
+  - docs/design/ots/copilot-sdk.md
+  - docs/design/ots/extensions-ai.md
   - docs/design/ots/fileassert.md
+  - docs/design/ots/ollamasharp.md
   - docs/design/ots/pandoc.md
   - docs/design/ots/reqstream.md
   - docs/design/ots/reviewmark.md

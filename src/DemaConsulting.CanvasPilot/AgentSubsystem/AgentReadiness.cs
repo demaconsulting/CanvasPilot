@@ -1,0 +1,356 @@
+// Copyright (c) DEMA Consulting
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System.Globalization;
+using DemaConsulting.CanvasPilot.SettingsSubsystem;
+
+namespace DemaConsulting.CanvasPilot.AgentSubsystem;
+
+/// <summary>
+///     Checks whether the AI provider that the settings choose can be used, and says in one sentence what was found and
+///     what to do about it.
+/// </summary>
+/// <remarks>
+///     <para>
+///         For GitHub Copilot the checks run in order and the first one that fails gives the answer: the Copilot CLI is
+///         found (by <see cref="CopilotCliLocator" />) and is new enough, credentials exist, and the starter of the runtime
+///         says that the runtime can be started. The credentials exist when one of the variables
+///         <c>COPILOT_GITHUB_TOKEN</c>, <c>GH_TOKEN</c>, or <c>GITHUB_TOKEN</c> is not empty, or when <c>gh auth token</c>
+///         of the GitHub CLI succeeds with some output. Only whether the variable or the output is empty is looked at; the
+///         token itself is never kept, shown, or logged. The starter that this build ships is gated, so Copilot is never
+///         reported as ready here.
+///     </para>
+///     <para>
+///         For Ollama the checks are: the address and the model name are set, the server answers, the server has the model,
+///         and the context window is large enough. A window below
+///         <see cref="AiProviderSettings.RecommendedMinimumContextTokens" /> (the smaller of the configured window and the
+///         one that the model supports, when the server says) is a warning that does not stop the provider.
+///     </para>
+///     <para>
+///         The class implements <see cref="IProviderCheck" /> of the Settings subsystem, so the settings dialog can offer
+///         Check connection without depending on this subsystem. It writes no log. It holds no state besides the cache of
+///         the locator and is safe for concurrent use.
+///     </para>
+/// </remarks>
+public sealed class AgentReadiness : IProviderCheck
+{
+    /// <summary>The environment variables that hold a GitHub token that the AI library accepts, in the order they are read.</summary>
+    public static readonly IReadOnlyList<string> TokenVariableNames = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
+
+    /// <summary>The longest time that <c>gh auth token</c> may take.</summary>
+    public static readonly TimeSpan CredentialProbeTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>The longest time that a question to the Ollama server may take.</summary>
+    public static readonly TimeSpan OllamaProbeTimeout = TimeSpan.FromSeconds(5);
+
+    /// <summary>The sentence for a Copilot that has no credentials.</summary>
+    public const string NotSignedInMessage =
+        "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN environment variable), then choose Check connection. The Copilot CLI's own /login session is not shared with CanvasPilot's AI library yet.";
+
+    /// <summary>The sentence for a Copilot whose runtime this build cannot start.</summary>
+    public const string RuntimeUnavailableMessage = GatedCopilotRuntimeStarter.NeedsUpdateMessage;
+
+    /// <summary>The file name of the GitHub CLI on Windows.</summary>
+    private const string GitHubCliName = "gh.exe";
+
+    /// <summary>The folder of the installation of the GitHub CLI under the program files folder.</summary>
+    private const string GitHubCliFolder = "GitHub CLI";
+
+    /// <summary>The arguments that make the GitHub CLI print its token.</summary>
+    private static readonly string[] TokenArguments = ["auth", "token"];
+
+    /// <summary>Finds and checks the Copilot CLI.</summary>
+    private readonly CopilotCliLocator _locator;
+
+    /// <summary>Starts, or says whether it can start, the Copilot runtime.</summary>
+    private readonly ICopilotRuntimeStarter _starter;
+
+    /// <summary>Runs the GitHub CLI.</summary>
+    private readonly IProcessRunner _processRunner;
+
+    /// <summary>Reads the token variables and the folders to look in.</summary>
+    private readonly IEnvironmentReader _environment;
+
+    /// <summary>Asks whether the GitHub CLI is there.</summary>
+    private readonly ICliFileSystem _fileSystem;
+
+    /// <summary>Asks the Ollama server.</summary>
+    private readonly IOllamaProbe _ollama;
+
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="AgentReadiness" /> class.
+    /// </summary>
+    /// <param name="locator">Finds the Copilot CLI; a locator on the real system when <see langword="null" />.</param>
+    /// <param name="starter">The starter of the Copilot runtime; the gated starter when <see langword="null" />.</param>
+    /// <param name="processRunner">Runs the GitHub CLI; the real runner when <see langword="null" />.</param>
+    /// <param name="environment">Reads the environment; the real one when <see langword="null" />.</param>
+    /// <param name="fileSystem">Asks the file system; the real one when <see langword="null" />.</param>
+    /// <param name="ollama">Asks the Ollama server; the real probe when <see langword="null" />.</param>
+    public AgentReadiness(
+        CopilotCliLocator? locator = null,
+        ICopilotRuntimeStarter? starter = null,
+        IProcessRunner? processRunner = null,
+        IEnvironmentReader? environment = null,
+        ICliFileSystem? fileSystem = null,
+        IOllamaProbe? ollama = null)
+    {
+        _processRunner = processRunner ?? new ProcessRunner();
+        _environment = environment ?? new SystemEnvironmentReader();
+        _fileSystem = fileSystem ?? new CliFileSystem();
+        _locator = locator ?? new CopilotCliLocator(_processRunner, _fileSystem, _environment);
+        _starter = starter ?? new GatedCopilotRuntimeStarter();
+        _ollama = ollama ?? new OllamaProbe();
+    }
+
+    /// <summary>
+    ///     Checks the provider that the settings choose.
+    /// </summary>
+    /// <param name="settings">The provider choices to check, which may not have been saved yet.</param>
+    /// <param name="refresh">
+    ///     <see langword="true" /> to search for the Copilot CLI again even when the answer is cached (the connection
+    ///     check).
+    /// </param>
+    /// <param name="cancellationToken">A token that cancels the check.</param>
+    /// <returns>The report; a provider that cannot be used is a report, not an exception.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when the token is cancelled.</exception>
+    public Task<AgentReadinessReport> GetReportAsync(
+        AiProviderSettings settings,
+        bool refresh = false,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+
+        return settings.Provider == AiProviderKind.Ollama
+            ? CheckOllamaAsync(settings, cancellationToken)
+            : CheckCopilotAsync(settings, refresh, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<ProviderCheckResult> CheckAsync(AiProviderSettings settings, CancellationToken cancellationToken = default)
+    {
+        // Check connection always looks again, so a fix that the user just made is seen
+        var report = await GetReportAsync(settings, refresh: true, cancellationToken).ConfigureAwait(false);
+        return new ProviderCheckResult(report.IsUsable, report.Message);
+    }
+
+    /// <summary>
+    ///     Builds the message of a context window that is too small.
+    /// </summary>
+    /// <param name="configured">The context window of the settings, in tokens.</param>
+    /// <param name="detected">The largest window that the model supports; <see langword="null" /> when not known.</param>
+    /// <returns>
+    ///     The sentence, or <see langword="null" /> when the smaller of the two is at least
+    ///     <see cref="AiProviderSettings.RecommendedMinimumContextTokens" />.
+    /// </returns>
+    public static string? DescribeSmallContext(int configured, int? detected)
+    {
+        var minimum = AiProviderSettings.RecommendedMinimumContextTokens;
+        var minimumText = minimum.ToString("N0", CultureInfo.InvariantCulture);
+
+        // The model's own limit wins when it is the smaller one, because raising the setting cannot help then
+        if (detected is { } supported && supported < configured)
+        {
+            return supported < minimum
+                ? string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"The model supports only {supported:N0} tokens, below {minimumText}; drawings with images and tools may fail, so choose a model with a larger context window.")
+                : null;
+        }
+
+        return configured < minimum
+            ? string.Create(
+                CultureInfo.InvariantCulture,
+                $"The context window ({configured:N0} tokens) is below {minimumText}; drawings with images and tools may fail. Raise it in Settings ({AiProviderSettings.DefaultContextWindowTokens:N0} recommended).")
+            : null;
+    }
+
+    /// <summary>
+    ///     Runs the ordered checks of GitHub Copilot.
+    /// </summary>
+    /// <param name="settings">The provider choices.</param>
+    /// <param name="refresh">Whether to search for the CLI again.</param>
+    /// <param name="cancellationToken">A token that cancels the checks.</param>
+    /// <returns>The report of the first check that fails, or of the starter.</returns>
+    private async Task<AgentReadinessReport> CheckCopilotAsync(
+        AiProviderSettings settings,
+        bool refresh,
+        CancellationToken cancellationToken)
+    {
+        // 1 and 2: the CLI is there and is new enough; the locator checks both and words what it found
+        var info = await _locator.LocateAsync(settings.CopilotCliPath, refresh, cancellationToken).ConfigureAwait(false);
+        if (!info.IsFound || info.Path is null || info.Version is null)
+        {
+            var status = info.Status == CopilotCliStatus.TooOld
+                ? AgentReadinessStatus.CopilotCliTooOld
+                : AgentReadinessStatus.CopilotCliMissing;
+            return new AgentReadinessReport(status, info.Message);
+        }
+
+        // 3: credentials that the AI library can use
+        if (!await HasCredentialsAsync(cancellationToken).ConfigureAwait(false))
+        {
+            return new AgentReadinessReport(AgentReadinessStatus.CopilotNotSignedIn, NotSignedInMessage);
+        }
+
+        // 4: the runtime; this build cannot start it, which the starter says and which is never reported as ready
+        var started = await _starter
+            .StartAsync(new CopilotStartRequest(info.Path, info.Version, CheckOnly: true), cancellationToken)
+            .ConfigureAwait(false);
+        return started.Status == CopilotStartStatus.Started
+            ? new AgentReadinessReport(AgentReadinessStatus.Ready, $"GitHub Copilot CLI {info.Version} is ready.")
+            : new AgentReadinessReport(AgentReadinessStatus.CopilotRuntimeUnavailable, started.Message);
+    }
+
+    /// <summary>
+    ///     Tells whether credentials for GitHub Copilot exist: a token variable that is not empty, or a GitHub CLI that
+    ///     prints a token.
+    /// </summary>
+    /// <param name="cancellationToken">A token that cancels the check.</param>
+    /// <returns><see langword="true" /> when credentials exist.</returns>
+    private async Task<bool> HasCredentialsAsync(CancellationToken cancellationToken)
+    {
+        // A token in the environment is enough; only whether it is empty is looked at
+        if (TokenVariableNames.Any(name => !string.IsNullOrWhiteSpace(_environment.GetVariable(name))))
+        {
+            return true;
+        }
+
+        // Otherwise the GitHub CLI may be signed in
+        var gh = FindGitHubCli();
+        if (gh is null)
+        {
+            return false;
+        }
+
+        // Only the length of the output matters; the text is not kept past this line
+        var result = await _processRunner.RunAsync(gh, TokenArguments, CredentialProbeTimeout, cancellationToken).ConfigureAwait(false);
+        return result is { Started: true, TimedOut: false, ExitCode: 0 } && result.Output.Trim().Length > 0;
+    }
+
+    /// <summary>
+    ///     Finds the GitHub CLI on the <c>PATH</c> or in its folder under the program files.
+    /// </summary>
+    /// <returns>The full path, or <see langword="null" /> when it is not installed.</returns>
+    private string? FindGitHubCli()
+    {
+        var path = _environment.GetVariable("PATH");
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            foreach (var entry in path.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                var candidate = Combine(entry.Trim('"'), GitHubCliName);
+                if (_fileSystem.FileExists(candidate))
+                {
+                    return candidate;
+                }
+            }
+        }
+
+        var programFiles = _environment.GetVariable("ProgramFiles");
+        if (!string.IsNullOrWhiteSpace(programFiles))
+        {
+            var candidate = Combine(Combine(programFiles, GitHubCliFolder), GitHubCliName);
+            if (_fileSystem.FileExists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    ///     Runs the ordered checks of Ollama.
+    /// </summary>
+    /// <param name="settings">The provider choices.</param>
+    /// <param name="cancellationToken">A token that cancels the checks.</param>
+    /// <returns>The report of the first check that fails, the warning for a small context window, or ready.</returns>
+    private async Task<AgentReadinessReport> CheckOllamaAsync(AiProviderSettings settings, CancellationToken cancellationToken)
+    {
+        // The settings must say where the server is and which model to use
+        if (!AiProviderSettings.IsValidOllamaEndpoint(settings.OllamaEndpoint))
+        {
+            return new AgentReadinessReport(
+                AgentReadinessStatus.NotConfigured,
+                "The Ollama address in Settings is not a valid http or https address; fix it, then choose Check connection.");
+        }
+
+        var model = settings.ModelName.Trim();
+        if (model.Length == 0)
+        {
+            return new AgentReadinessReport(
+                AgentReadinessStatus.NotConfigured,
+                "Enter the name of an Ollama model in Settings, then choose Check connection.");
+        }
+
+        // The server must answer and have the model
+        var address = settings.OllamaEndpoint.Trim();
+        var endpoint = new Uri(address);
+        var list = await _ollama.ListModelsAsync(endpoint, OllamaProbeTimeout, cancellationToken).ConfigureAwait(false);
+        if (!list.Reachable)
+        {
+            return new AgentReadinessReport(
+                AgentReadinessStatus.OllamaUnreachable,
+                $"Ollama did not answer at {address}; start Ollama or fix the address in Settings, then choose Check connection.");
+        }
+
+        var listed = FindModel(list.Models, model);
+        if (listed is null)
+        {
+            return new AgentReadinessReport(
+                AgentReadinessStatus.OllamaModelMissing,
+                $"Ollama does not have the model {model}; run `ollama pull {model}`, then choose Check connection.");
+        }
+
+        // The context window is a warning, not an obstacle; the model's own limit is asked for but is optional
+        var detected = await _ollama.GetContextLengthAsync(endpoint, listed, OllamaProbeTimeout, cancellationToken).ConfigureAwait(false);
+        var warning = DescribeSmallContext(settings.ContextWindowTokens, detected);
+        return warning is null
+            ? new AgentReadinessReport(
+                AgentReadinessStatus.Ready,
+                $"Ollama is running with the model {model}; pictures work only with a vision-capable model.")
+            : new AgentReadinessReport(AgentReadinessStatus.OllamaContextTooSmall, warning);
+    }
+
+    /// <summary>
+    ///     Finds a model among the names that the server lists. A name without a tag stands for the <c>latest</c> tag, as
+    ///     it does for <c>ollama pull</c>.
+    /// </summary>
+    /// <param name="listed">The names that the server lists.</param>
+    /// <param name="wanted">The name that the settings choose.</param>
+    /// <returns>The name as the server lists it, or <see langword="null" /> when the server does not have the model.</returns>
+    private static string? FindModel(IReadOnlyList<string> listed, string wanted)
+    {
+        var withTag = wanted.Contains(':', StringComparison.Ordinal) ? wanted : wanted + ":latest";
+        return listed.FirstOrDefault(name => string.Equals(name, withTag, StringComparison.OrdinalIgnoreCase))
+            ?? listed.FirstOrDefault(name => string.Equals(name, wanted, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    ///     Joins a folder and a name with a backslash, as the locator does, so that paths behave the same on every platform.
+    /// </summary>
+    /// <param name="folder">The folder.</param>
+    /// <param name="name">The name.</param>
+    /// <returns>The joined path.</returns>
+    private static string Combine(string folder, string name)
+    {
+        return folder.TrimEnd('\\', '/') + '\\' + name;
+    }
+}

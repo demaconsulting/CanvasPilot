@@ -81,5 +81,5 @@ The factory methods throw `ArgumentNullException` for a missing collaborator. Th
 
 #### Callers
 
-- The adapter that gives the tools to an assistant (a later increment), and the composition of the application, which
-  gives the functions for the folder of the project and the picture that is shown (a later step).
+- The `AgentToolRegistry` of the `Agent` subsystem, which gives the tools to the copilot, and the composition of the
+  application, which gives the functions for the folder of the project and the picture that is shown.

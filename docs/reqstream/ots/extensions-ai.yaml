@@ -1,0 +1,57 @@
+---
+# Microsoft.Extensions.AI OTS Software Requirements
+#
+# Requirements for the Microsoft.Extensions.AI libraries (the abstractions and the function-invocation pipeline), the
+# types that carry CanvasPilot's tools, messages, pictures, and chat clients, as used by CanvasPilot at run time. The
+# libraries are runtime dependencies, so each requirement is a child of the requirement of the item that uses the
+# feature (the system requirement about conversing with the copilot; the units of the Agent subsystem take over as
+# children when they are written) and is not a root requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: Extensions AI Requirements
+        requirements:
+          - id: CanvasPilot-OTS-ExtensionsAi-BindFunctionArguments
+            title: >-
+              A Microsoft.Extensions.AI function made from a delegate shall bind its arguments by name from JSON
+              values and shall describe its parameters in a schema that lists the required ones.
+            justification: |
+              A model calls a tool with JSON arguments and chooses it from its schema. The application's tools must
+              receive the values by name, and the schema is what tells the model what to pass.
+            tags: [ots]
+            tests:
+              - ExtensionsAi_AIFunction_Invoke_BindsNamedArgumentsFromJsonValues
+
+          - id: CanvasPilot-OTS-ExtensionsAi-RunFunctionsInInvocationLoop
+            title: >-
+              The Microsoft.Extensions.AI function-invocation client shall run a function that is a class of its own with
+              the arguments of the model's call and shall give the result to the model in its next request.
+            justification: |
+              CanvasPilot's existing tool descriptors are carried by a function class of their own, and the model sees
+              a tool's result only through this loop.
+            tags: [ots]
+            tests:
+              - ExtensionsAi_FunctionInvokingChatClient_RunsSubclassedFunctionAndReturnsItsResult
+
+          - id: CanvasPilot-OTS-ExtensionsAi-CarryPictureContent
+            title: >-
+              Microsoft.Extensions.AI data content shall keep its bytes and media type, report its top-level media
+              type, and read back from a data address.
+            justification: |
+              The pictures of the user's message and of the copilot's drawings travel as data content, and the media
+              type tells the provider how to read them.
+            tags: [ots]
+            tests:
+              - ExtensionsAi_DataContent_KeepsBytesAndMediaType
+
+          - id: CanvasPilot-OTS-ExtensionsAi-JoinStreamedUpdates
+            title: >-
+              Microsoft.Extensions.AI shall join streamed updates into one response whose text is the pieces in order and
+              whose messages keep the function calls that came between them.
+            justification: |
+              The chat keeps the whole answer of a turn after its pieces have been shown, and its tool rows come from
+              the calls that the stream carried.
+            tags: [ots]
+            tests:
+              - ExtensionsAi_ChatResponseUpdates_ToChatResponse_JoinsTextAndKeepsFunctionCalls

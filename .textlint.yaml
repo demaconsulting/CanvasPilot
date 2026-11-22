@@ -58,6 +58,7 @@ words:
   - Argb
   - Avalonia
   - axaml
+  - agentkit
   - bgra
   - canvaspilot
   - Dema
@@ -93,6 +94,8 @@ words:
   - sonarscanner
   - startuml
   - Ollama
+  - ollamasharp
+  - libcopilot
   - thirdparty
   - unidirectionality
   - venv

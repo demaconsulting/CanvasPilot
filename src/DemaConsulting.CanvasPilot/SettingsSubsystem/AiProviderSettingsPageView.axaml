@@ -4,6 +4,12 @@
              x:Class="DemaConsulting.CanvasPilot.SettingsSubsystem.AiProviderSettingsPageView"
              x:DataType="vm:AiProviderSettingsPageViewModel">
 
+  <UserControl.Styles>
+    <Style Selector="TextBlock.failed">
+      <Setter Property="Foreground" Value="Firebrick" />
+    </Style>
+  </UserControl.Styles>
+
   <ScrollViewer>
     <StackPanel Spacing="6" Margin="0,0,12,0">
 
@@ -18,7 +24,7 @@
                PlaceholderText="Leave empty to use the provider's default model"
                Text="{Binding ModelName}" />
 
-      <TextBlock Text="Context window (tokens)" Margin="0,8,0,0" />
+      <TextBlock Text="Context window (tokens, Ollama only)" Margin="0,8,0,0" />
       <TextBox AutomationProperties.AutomationId="AiContextWindowTextBox"
                Text="{Binding ContextWindowText}" />
       <TextBlock AutomationProperties.AutomationId="AiContextWindowError"
@@ -26,12 +32,27 @@
                  TextWrapping="Wrap"
                  IsVisible="{Binding ContextWindowError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                  Text="{Binding ContextWindowError}" />
+      <TextBlock AutomationProperties.AutomationId="AiContextWindowWarning"
+                 Foreground="DarkOrange"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ContextWindowWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding ContextWindowWarning}" />
+      <TextBlock AutomationProperties.AutomationId="AiContextWindowNote"
+                 Opacity="0.7"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding ContextWindowNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding ContextWindowNote}" />
 
       <TextBlock Text="Reasoning level" Margin="0,8,0,0" />
       <ComboBox AutomationProperties.AutomationId="AiReasoningLevelComboBox"
                 HorizontalAlignment="Stretch"
+                IsEnabled="False"
                 ItemsSource="{Binding ReasoningLevels}"
                 SelectedItem="{Binding SelectedReasoningLevel}" />
+      <TextBlock AutomationProperties.AutomationId="AiReasoningLevelNote"
+                 Opacity="0.7"
+                 TextWrapping="Wrap"
+                 Text="{x:Static vm:AiProviderSettingsPageViewModel.ReasoningLevelNoteText}" />
 
       <TextBlock Text="Ollama endpoint" Margin="0,8,0,0" />
       <TextBox AutomationProperties.AutomationId="AiOllamaEndpointTextBox"
@@ -54,13 +75,22 @@
                  IsVisible="{Binding CopilotCliPathError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                  Text="{Binding CopilotCliPathError}" />
 
-      <CheckBox AutomationProperties.AutomationId="AiUnrestrictedAgentToolsCheckBox"
-                Margin="0,12,0,0"
-                Content="Allow unrestricted agent tools"
-                IsChecked="{Binding UnrestrictedAgentTools}" />
-      <TextBlock TextWrapping="Wrap"
+      <TextBlock AutomationProperties.AutomationId="AiCopilotCliPathNote"
                  Opacity="0.7"
-                 Text="When enabled, the AI agent may use tools that are not limited to the project folder. Leave this off unless you trust the agent's instructions." />
+                 TextWrapping="Wrap"
+                 Text="{x:Static vm:AiProviderSettingsPageViewModel.CopilotCliPathNoteText}" />
+
+      <Button AutomationProperties.AutomationId="AiCheckConnectionButton"
+              Margin="0,12,0,0"
+              HorizontalAlignment="Left"
+              Content="Check connection"
+              IsVisible="{Binding HasConnectionCheck}"
+              Command="{Binding CheckConnectionCommand}" />
+      <TextBlock AutomationProperties.AutomationId="AiCheckConnectionResult"
+                 Classes.failed="{Binding IsCheckConnectionFailed}"
+                 TextWrapping="Wrap"
+                 IsVisible="{Binding HasCheckConnectionResult}"
+                 Text="{Binding CheckConnectionResult}" />
 
     </StackPanel>
   </ScrollViewer>

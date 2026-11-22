@@ -12,8 +12,10 @@ The `AppShell` subsystem depends on the `Preview` subsystem and not the reverse 
 design). Verification follows that direction: the `Preview` units are verified with a substitute for the
 `IExportDialogs` interface that `Preview` owns, the shell is verified with a substitute image exporter and with the
 disabled default exporter, and only the system tests and the user interface tests compose the real shell with the real
-preview, which is also what proves that the two work together. The stored AI provider choices are verified through the
-settings service and the settings dialog; the agent that will use them does not exist yet and has no verification.
+preview, which is also what proves that the two work together. The AI copilot is verified in the `Agent` subsystem
+with a scripted model, a stand-in Ollama server, and a fake and the gated starter of the Copilot runtime, and the system
+tests compose the copilot, the history, and the settings check as the application does; live Ollama and live GitHub
+Copilot are not part of the automated evidence (see *Manual Verification* below).
 
 Dictation is verified at this level over the speech library's own recognition pipeline with a recognition backend
 written in managed code and a recorded sound file for the microphone, so no native speech runtime, model, or microphone
@@ -39,8 +41,18 @@ services, or display is required.
   name inside the folder is accepted.
 - Settings saved by one run are restored by the next run, and a damaged settings file yields default
   settings, a kept-aside copy of the file, and a log entry rather than a failure.
-- AI provider choices made in the settings dialog are stored and restored, and unrestricted agent tools
-  remain off unless the user opts in.
+- AI provider choices made in the settings dialog are stored and restored; the unrestricted agent tools are not offered,
+  the context window of a new installation is 32768 and a stored one is kept, and Check connection on the page shows one
+  sentence from the readiness check of the copilot, for Ollama (over a stand-in server) and for GitHub Copilot (over a
+  fake machine), without saving anything.
+- A message sent in the composed application gets a streamed answer from the configured provider (a scripted Ollama
+  model) with the tool row, the drawing that the copilot wrote exists in the project, the explorer selects it and the
+  preview draws it, and the copilot was given only the tools of the drawing knowledge, the style, and the project.
+- The words of the conversation are kept below the history folder that the composition was given and never in the
+  project, are shown again as text when the application starts in the same project, and are deleted by Clear chat
+  history.
+- With GitHub Copilot configured the banner of the chat panel and the conversation say that this build cannot start it,
+  and no answer is made.
 - Speech devices, models, and a model setting chosen in the Speech page of the settings dialog are stored by device
   name and model identifier and restored by the next run, using substitute audio and model services.
 - A project created in a folder is reopened from the recent projects list, and a damaged project file is
@@ -103,6 +115,8 @@ services, or display is required.
   when the picture is drawn again, and a project with no style is told to choose one.
 - The published win-x64 application contains the native speech and audio runtime libraries and so does the installer
   package, so that the installed application needs nothing but the model download to run a chosen speech model.
+- The published win-x64 application and the installer package contain no GitHub Copilot runtime, and the executable
+  stays within its size budget: the application never ships or downloads a Copilot runtime.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
@@ -143,8 +157,10 @@ steps are in the verification of the unit or subsystem named at each check.
    instance by installing; and look at the installed folder, or the MSI file table (`Orca` or the Windows Installer
    `File` table), for `sherpa-onnx-c-api.dll`, `onnxruntime.dll`, and `portaudio.dll` next to `CanvasPilot.exe`. The
    build already fails when any of the three is missing from the published folder or the file table
-   (`Speech_NativeRuntimePublished`); this check confirms what a user gets. (Verification of the `Speech` subsystem and
-   of the WiX Toolset.)
+   (`Speech_NativeRuntimePublished`); this check confirms what a user gets. Also check that no file whose name starts
+   with `copilot` and no `runtime.node` is in the installed folder (the build asserts the same in
+   `Copilot_RuntimeNotPublished` and in the file table). (Verification of the `Speech` subsystem and of the WiX
+   Toolset.)
 7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
    the keyboard, and check the tool bar and the chips with a screen reader. (Verification of `AnnotationOverlay`.)
 8. *Style kits with the real pickers.* On the installed package, open Tools > Style Kits, choose Import and Export with
@@ -154,6 +170,50 @@ steps are in the verification of the unit or subsystem named at each check.
    status bar of a project shows the chosen kit, and that exporting at a size writes the file that the window said.
    (Verification of the `Style` subsystem and of the units `StyleKitManager`, `StyleKitEditor`, and
    `StyleSettingsPage`.)
+9. *Live Ollama (a reviewer with Ollama installed; Ollama is not installed on the machine on which this version was
+   built, so none of this has been run).* Install Ollama and pull a vision-capable model that can call tools (for
+   example `gemma3`). Each step has a pass criterion; record the date, machine, and versions with the
+   release. (Verification of the `Agent` and `Chat` subsystems and of the `AiProviderSettingsPage` unit.)
+   1. *Ready.* Choose Ollama, keep the endpoint, type the model name, and see the context window of a new installation,
+      32768: Check connection reports that Ollama is running with the model, and the banner of the chat panel is
+      hidden.
+   2. *Small context.* Set the window to 8192: the warning that the window is below 16,384 appears on the page and in
+      the banner, sending stays possible; set 32768 again: the warning goes away.
+   3. *A drawing.* Ask for a drawing: the answer streams, the transcript shows a line for each tool
+      (`canvasnet_help`, `style_get`, `project_write`, `render_image`), the new file is selected in the explorer and
+      drawn, and, after the copilot looked at its own picture, a second `project_write` can correct an error.
+   4. *Replacing a file.* Ask for a change of an existing file: the line says that the file was replaced, the old
+      content is gone (expected), and the project folder has no backup file and no `.canvaspilot\backups` folder.
+   5. *Stop.* Stop in the middle of a turn: the text so far is kept and marked Stopped, and Send works again.
+   6. *Errors.* Stop the Ollama server and send: an error notice with the remedy and **Open Settings**; ask for a
+      model that is not pulled: the notice names `ollama pull {model}`.
+   7. *History.* Close and open the project, and then restart CanvasPilot: the earlier messages come back as text only;
+      `%LOCALAPPDATA%\CanvasPilot\history\{key}\history.json` and `project.json` exist and the project folder has no
+      history file; **Clear chat history** empties the panel and removes the folder; after the project folder is
+      renamed, its history is empty.
+   8. *Marks and pictures.* With marks and an attached picture on a drawing, the answer shows that the model saw the
+      marked picture and the close-ups (compare with **View payload**); with a model that cannot see pictures the
+      answer works from the words only.
+10. *GitHub Copilot is gated (readiness and messages only; no live Copilot turn is possible in this release).* Choose
+    GitHub Copilot and use **Check connection** and the banner. (Verification of the `Agent` subsystem and of the
+    `CopilotCliLocator` and `AgentReadiness` units.)
+    1. With the winget CLI at version 1.0.113 or later and `gh auth login` done: the check ends with "Copilot support
+       needs an AgentKit update; use Ollama meanwhile.", the banner of the chat panel shows the same sentence and offers
+       **Open Settings**, and a sent message gets an error notice with that sentence and starts no run.
+    2. Without a signed-in GitHub CLI and with no `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` variable: the
+       "not signed in" sentence, which names `gh auth login` and says that the `/login` session of the CLI is not
+       shared.
+    3. With only the VS Code `copilot-shim` on the `PATH` (take the winget entry out of the `PATH` and clear the path in
+       the settings): the "not found" sentence ends with "Only the VS Code copilot shim was found at ...". With the path
+       of the real `copilot.exe` in the settings the CLI is found. With the path of the shim in the settings the choice
+       is accepted as the user's own and only its version is checked.
+    4. With a CLI at version 1.0.112 or older: the "older than 1.0.113" sentence with `winget upgrade GitHub.Copilot`.
+    5. The installed MSI holds no file whose name starts with `copilot` and no `runtime.node` anywhere in the install
+       folder, the size of `CanvasPilot.exe` is within the range that `Copilot_RuntimeNotPublished` asserts (about 125
+       MB), and the banner is visible. (This repeats part of check 6.)
+    6. After the AI library can use an installed CLI (the follow-up change, not this release): a live turn with a
+       picture, a tool that returns a picture, and Stop, and a look that the project folder holds only intentional files
+       afterwards. Until then this check stays open.
 
 ## Test Scenarios
 
@@ -177,6 +237,12 @@ and logs the corruption. This scenario is tested by
 over the AI provider page; Ollama, a model name, a context window, and an endpoint are chosen and OK is
 selected; a new service loads those choices and unrestricted agent tools are still off. This scenario is
 tested by `CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn`.
+
+**CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue**: A settings folder
+without a file is loaded and holds a context window of 32768 tokens. In a second folder, settings with a context window
+of 8192 are saved, another setting (the recent projects) is changed with an update, and the file is loaded by a new
+service; the context window is still 8192. This scenario is tested by
+`CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue`.
 
 **CanvasPilot_ConfigureSpeech_DialogOk_StoresChoicesAndRestoresThemNextRun**: The application is composed with
 substitute audio and model services that list two microphones, two speakers, a speech-to-text model, and a
@@ -444,6 +510,78 @@ FileAssert asserts that the published folder, which the installer takes whole, h
 the installer package's file table and fails when any of the three is missing. This scenario is tested by
 `Speech_NativeRuntimePublished`, which is run in CI only on Windows and is described in the verification of the Speech
 subsystem and of the Speech OTS item.
+
+**Copilot_RuntimeNotPublished**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the published folder, which the installer takes whole, holds no file whose name starts with
+`copilot` or `libcopilot`, nothing under `runtimes\*\native\copilot*`, no `runtime.node`, and no
+`.copilot-explicit-cli`, and that `CanvasPilot.exe` exists once and is below 160 MB; and the step that reads the
+installer package's file table fails when it lists such a file. This scenario is tested by
+`Copilot_RuntimeNotPublished`, which is run in CI only on Windows and is described in the verification of the AgentKit
+OTS item.
+
+**CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath**: The file system,
+environment, and programs are replaced by the layout of the development machine, which has the winget Copilot CLI and
+the VS Code shim on the `PATH`. With the default settings the locator finds the winget CLI and runs only it. A settings
+file that holds a path to a file that does not exist is saved and loaded by a new service; the result for that path is
+not found, names the path, and no program is run, so the installed CLI is not used instead. This scenario is tested by
+`CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath`.
+
+**CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach**: The settings of a new
+installation (GitHub Copilot) are loaded by a settings service and checked on the development machine, whose Copilot CLI
+is good but which has no token variable and no GitHub CLI: the status is not signed in and the sentence names
+`gh auth login` and `COPILOT_GITHUB_TOKEN`. With a token variable set, the same check says that Copilot support needs an
+AgentKit update. A settings file that holds an Ollama choice with a window of 8,192 tokens is saved and loaded by a new
+service; against a scripted server that has the model, the result is the warning status, which can run a turn, with the
+sentence that tells the user to raise the window in Settings to the recommended 32,768. This scenario is tested by
+`CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach`.
+
+**CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt**: The application is
+composed over the real factory of the providers on the fake development machine, which has the installed CLI and a token
+variable, with the default settings (GitHub Copilot). The panel checks the provider and the banner says that Copilot
+support needs an AgentKit update. A message is sent; the conversation ends with a notice that holds that sentence, has
+no answer of the copilot, and the only processes that were run are the version checks of the installed CLI. This
+scenario is tested by `CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt`.
+
+**CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach**: The
+settings dialog of the composed application is opened and the AI Provider page chooses Ollama and a model that the
+stand-in server has: Check connection says that Ollama is running with the model; with the server not answering it says
+that Ollama did not answer. With GitHub Copilot chosen on the fake machine it names `gh auth login`; with a token
+variable it says that Copilot support needs an AgentKit update; with a path of a file that does not exist it names the
+path. The stored settings are the same afterwards. This scenario is tested by
+`CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach`.
+
+**CanvasPilot_ConverseWithCopilot_ScriptedModel_StreamsAnswerWritesDrawingAndExplorerShowsIt**: The application is
+composed with the copilot over a scripted model that says a word, writes `box.svg` with the project tool, and says that
+it is drawn; Ollama is chosen and a project is created. A message is sent; the conversation holds the message, the
+words, a tool row that says the file was created, and the last words; the file exists, the explorer selects it, and the
+preview shows its picture of 40 by 20. The agent was made with the tools `canvasnet_help`, `style_get`, `style_check`,
+`project_write`, and `render_image`, and with no tool of another family. This scenario is tested by
+`CanvasPilot_ConverseWithCopilot_ScriptedModel_StreamsAnswerWritesDrawingAndExplorerShowsIt`.
+
+**CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt**: After the
+turn of the scenario above the history folder of the project (its key from the project file) is below
+`CanvasPilot\history` of the local data root that the composition was given and holds `history.json` and `project.json`;
+the project holds only its project file, its empty data folder, and the drawing, and no file with "history" in its name.
+The composition is disposed and made again over the same folders and the project is opened: the conversation is shown as
+restored text rows and none is a message of this session. Clear chat history removes the folder and the restored rows.
+This scenario is tested by
+`CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt`.
+
+**CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach**: A project
+is created by the project service, and the tools of the copilot are built for its folder over the real drawing knowledge
+with a supplied pack that keeps its policy. Only the knowledge tool and the supplied pack's tool are offered, the
+knowledge tool answers with the index of the real cards, and the policy permits writing a picture file but refuses the
+project file and the data folder that the project service made, and a path that climbs out of the project. This scenario
+is tested by
+`CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach`.
+
+**CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse**: On a project
+that the project service created, with a secret picture beside the project folder, the copilot's project tools create a
+drawing, replace it directly, and draw it at the new size. The project file, a file in the data folder (also under a
+`backups` name), and a path that climbs out to the secret are written without effect, each answer being a refusal.
+Afterwards the project file and the secret are unchanged, the data folder is still empty, and the project folder holds
+only the data folder, the project file, and the drawing. This scenario is tested by
+`CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse`.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

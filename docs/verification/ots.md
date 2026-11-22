@@ -1,10 +1,11 @@
 # OTS Verification
 
 This section provides verification evidence for all Off-The-Shelf (OTS) software items used by CanvasPilot: the runtime
-libraries Avalonia, AvaloniaEdit, CommunityToolkit.Mvvm, CanvasNet, and Speech; the WiX Toolset that builds the
-installer package; the xUnit test framework; and the build, documentation, and analysis tools BuildMark, FileAssert,
-Pandoc, ReqStream, ReviewMark, SarifMark, SonarMark, SysML2Tools, VersionMark, and WeasyPrint. The per-item files under
-`docs/verification/ots/` cover the verification evidence for each individual OTS item.
+libraries Avalonia, AvaloniaEdit, CommunityToolkit.Mvvm, CanvasNet, and Speech; the AI copilot libraries AgentKit,
+Microsoft.Copilot.SDK, the Microsoft Agent Framework, Microsoft.Extensions.AI, and OllamaSharp; the WiX Toolset that
+builds the installer package; the xUnit test framework; and the build, documentation, and analysis tools BuildMark,
+FileAssert, Pandoc, ReqStream, ReviewMark, SarifMark, SonarMark, SysML2Tools, VersionMark, and WeasyPrint. The per-item
+files under `docs/verification/ots/` cover the verification evidence for each individual OTS item.
 
 ## Verification Strategy
 
@@ -42,12 +43,18 @@ Internal OTS design is out of scope; only integration and usage evidence is docu
 
 The following OTS items have verification evidence in this section:
 
+- Agent Framework (*agent-framework.md*) — runtime agents, sessions, and streamed turns of the AI copilot
+- AgentKit (*agentkit.md*) — runtime confined tool framework and agent factories of the AI copilot
 - Avalonia (*avalonia.md*) — runtime user interface framework
 - AvaloniaEdit (*avalonia-edit.md*) — runtime text editing control of the message composer
 - BuildMark (*buildmark.md*) — build-notes documentation tool
 - CanvasNet (*canvasnet.md*) — runtime library that draws image source files
 - CommunityToolkit.Mvvm (*communitytoolkit-mvvm.md*) — runtime view model source generators
+- Copilot SDK (*copilot-sdk.md*) — runtime client of the GitHub Copilot CLI, driven by AgentKit and not started in this
+  version
+- Extensions AI (*extensions-ai.md*) — runtime tools, messages, pictures, and chat clients of the AI copilot
 - FileAssert (*fileassert.md*) — document assertion tool
+- OllamaSharp (*ollamasharp.md*) — runtime client of the Ollama server
 - Pandoc (*pandoc.md*) — Markdown-to-HTML conversion tool
 - ReqStream (*reqstream.md*) — requirements traceability tool
 - ReviewMark (*reviewmark.md*) — file review enforcement tool

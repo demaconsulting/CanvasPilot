@@ -1,0 +1,118 @@
+---
+# Software Unit Requirements for the ChatTurnRunner Unit
+#
+# The ChatTurnRunner unit is the logic of one turn of the conversation, without a window: it gives the message that was
+# sent to the AI copilot through IAgentService, reads the events of the turn, keeps the rows of the transcript that show
+# them (the streamed answer, the line of each tool call, and the notices), stops on request, and never lets a failure
+# reach the interface. It tells the panel when it is busy, so that the panel can block the composer. It depends on the
+# contract of the Agent subsystem and on nothing of a provider.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Chat Subsystem Requirements
+        sections:
+          - title: ChatTurnRunner Requirements
+            requirements:
+              - id: CanvasPilot-ChatTurnRunner-RunOneTurnAtATime
+                title: >-
+                  The ChatTurnRunner shall give the AI copilot the payload of the message that was sent together with the
+                  restored history it is given, shall report that it is busy from the moment the turn is asked for until
+                  it has ended and raise one event for each change, shall refuse a turn that is asked for meanwhile
+                  without asking the copilot and without changing the transcript, shall refuse a message that has no
+                  payload with an error notice, and shall be ready for the next turn when one has ended.
+                justification: |
+                  The copilot answers one message at a time, and the panel must know at once, before the first answer
+                  arrives, that the composer has to wait. A second turn that reached the copilot would fail late with an
+                  error of the service, and a message without a payload would start a turn that has nothing to say.
+                tests:
+                  - ChatTurnRunner_RunTurn_GivesTheCopilotThePayloadAndTheRestoredHistory
+                  - ChatTurnRunner_RunTurn_IsBusyWhileRunningAndRefusesASecondTurn
+                  - ChatTurnRunner_RunTurn_MessageWithoutPayload_IsRefusedWithANotice
+                  - ChatTurnRunner_Dispose_StopsTheRunningTurnAndRefusesNewOnes
+
+              - id: CanvasPilot-ChatTurnRunner-StreamAnswerIntoReplies
+                title: >-
+                  The ChatTurnRunner shall show the text of the copilot in a reply that grows while the text arrives, shall
+                  end the reply when the copilot calls a tool and start a new reply for the text after it, so that the
+                  rows are in the order in which things happened, and shall make the reply complete when the turn
+                  completes.
+                justification: |
+                  The user reads the answer while it is written, and a model that talks, draws, and talks again is
+                  understood only when the rows follow that order. A reply that is marked complete only when the turn ends
+                  normally tells the view when the text is final and can be shown with its formatting.
+                tests:
+                  - ChatTurnRunner_RunTurn_StreamedText_GrowsOneReplyAndCompletesIt
+                  - ChatTurnRunner_RunTurn_TextToolText_AreThreeRowsInOrder
+
+              - id: CanvasPilot-ChatTurnRunner-CoalesceTextUpdates
+                title: >-
+                  The ChatTurnRunner shall change the text of a reply at most once for every 50 milliseconds, by adding
+                  the first piece at once and the pieces that arrive within the interval together when it has passed, even
+                  when the stream pauses; shall add the text that waits before it shows any other event and when the turn
+                  ends; shall leave no timer behind; and shall add the waiting text on the synchronization context that
+                  the turn started on.
+                justification: |
+                  A model streams many small pieces, and a change of the view for each of them would keep the interface
+                  thread busy and make the window stutter. A timer is needed because the last pieces before a pause would
+                  otherwise stay out of sight, and the text must be added before a tool row so that the order holds. The
+                  clock is injected so that the rule can be tested exactly.
+                tests:
+                  - ChatTurnRunner_RunTurn_ManySmallPieces_UpdateTheReplyAtMostOncePerInterval
+                  - ChatTurnRunner_RunTurn_CompletedWhileTextWaits_AddsTheTextAndLeavesNoTimer
+                  - ChatTurnRunner_RunTurn_TimerFlush_RunsOnTheContextOfTheTurn
+
+              - id: CanvasPilot-ChatTurnRunner-ShowToolCalls
+                title: >-
+                  The ChatTurnRunner shall show each tool call of the copilot as one row that says what is under way when
+                  the call starts and what it did when the result arrives, such as that a file was created or replaced
+                  or that a picture was rendered, shall say what could not be done and why when a tool did not work, shall
+                  mark a result that carries a picture, shall make a row for a result whose start was not seen, and shall
+                  end a call that has no result when the turn ends, saying whether it was stopped.
+                justification: |
+                  The copilot changes the files of the project, and the user must see what it did without reading
+                  technical output: that a file was created or replaced is the one fact that matters most, because
+                  CanvasPilot keeps no backup. The sentence is made from the name of the tool and the short description of
+                  its arguments, so it never holds the contents of a file.
+                tests:
+                  - ChatTurnRunner_RunTurn_ToolCall_RowSaysWhatIsUnderWayAndThenWhatWasDone
+                  - ChatTurnRunner_RunTurn_ToolFailureAndPicture_AreShownOnTheRow
+                  - ChatTurnRunner_RunTurn_FileWritten_RowSaysCreatedOrReplaced
+                  - ChatTurnRunner_RunTurn_FileWrittenWithoutCallAndFailedWrite_AreHandled
+                  - ChatTurnRunner_RunTurn_CompletedWithRunningTool_EndsTheToolRowWithoutResult
+                  - ToolActivityText_Started_FindsThePathInTheArguments
+                  - ToolActivityText_FinishedWrittenAndAbandoned_SayWhatHappened
+
+              - id: CanvasPilot-ChatTurnRunner-StopTurnAndKeepText
+                title: >-
+                  The ChatTurnRunner shall stop the turn that runs when asked, whether the stream of events ends or throws
+                  the cancellation, shall keep all the text that was written until then, including text that waited for
+                  the interval, in a reply that is marked as stopped, shall end the calls that have no result as stopped,
+                  shall say in a notice that the copilot was stopped when there is no reply to mark, shall report the
+                  outcome as stopped, and shall do nothing when no turn runs or the turn has completed.
+                justification: |
+                  A model that is on a wrong path costs the user time, so the user must be able to end the turn at once and
+                  still keep what was said. The service ends the stream of a canceled turn without an event, so the runner
+                  itself decides what was stopped and what is shown.
+                tests:
+                  - ChatTurnRunner_Stop_KeepsPartialTextAndMarksTheReplyStopped
+                  - ChatTurnRunner_Stop_WithoutTextAndWithRunningTool_AddsNoticeAndEndsTheToolRow
+                  - ChatTurnRunner_Stop_WhenIdle_DoesNothingAndCompletedTurnStaysCompleted
+
+              - id: CanvasPilot-ChatTurnRunner-ReportFailureInTranscript
+                title: >-
+                  The ChatTurnRunner shall, when the copilot reports a failure, when its stream throws, or when it ends
+                  without saying how the turn ended, keep the text that was written in a reply that is marked as failed,
+                  add an error notice with the message, a sentence about what to do for the kind of failure, and the offer
+                  to open the settings exactly when the cause is in the settings of the AI provider, report the outcome as
+                  failed, and never throw to its caller; and shall log facts only, never the words of a message or an
+                  answer.
+                justification: |
+                  A provider that is not running, a model that is missing, or a sign-in that expired are everyday events,
+                  and the user must be told what to do in the conversation and not by a crashed window. The text that
+                  was already written is still useful. Exceptions of the stream are a safeguard, because the words of a
+                  message or an answer belong to the user and must not reach the log.
+                tests:
+                  - ChatTurnRunner_RunTurn_Failure_KeepsPartialTextAndAddsErrorNoticeWithRemedy
+                  - ChatTurnRunner_RunTurn_StreamThrowsOrEndsEarly_IsAFailureRowAndNeverThrows
+                  - ChatTurnRunner_RunTurn_FailureAndException_LogFactsOnly

@@ -3,19 +3,27 @@
 #### Verification Approach
 
 `ChatPanel` is verified with unit tests in `test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatPanelTests.cs` for
-the view models and the picture provider, and with headless Avalonia UI tests in
-`test/DemaConsulting.CanvasPilot.UiTests/ChatPanelViewTests.cs` (with `ChatUiTestSupport.cs` for the harness) for the
-views. Both use the real `ChatPanelViewModel`, `ComposerViewModel`, `ComposerDocument`, `ComposerHistory`,
-`AttachmentIntake`, `AttachmentStore`, `MarkRegistry`, and `AnnotationOverlayViewModel` over a temporary project folder,
-because the unit exists to connect them and the rule under test is how they agree. The UI tests also use the real
-`ChatPanelView`, `ComposerEditorView` with the AvaloniaEdit surface, and `TranscriptEntryView`. Only what has no place
-in a panel test is replaced: the dictation service (a controllable fake in the unit tests, a scripted one in the UI
-tests, both with a session that says words and ends with a chosen text), the builder of sent messages (one that gives a
-text, or a ready-made payload), the source of the shown picture, the composer of mark pictures (a substitute, or a stub
-that gives a one-pixel PNG), and the launcher of the payload inspector (a recording one). Input reaches the views as the
-platform delivers it: pointer presses and releases on the talk button, move events away from it, the loss of the pointer
-capture, space key presses and releases on the focused button, text input and Ctrl+Z in the editing control, and clicks
-on the Send and "View payload" buttons.
+the view models and the picture provider, in `ChatPanelCopilotTests.cs` for the part that joins the AI copilot (the
+turn, the busy state, Stop, the notices, the change of project, and the readiness banner), in `ChatPanelHistoryTests.cs`
+for the part that keeps the conversation on this computer (saving, restoring, the digest for the copilot, and Clear,
+over the real `ChatHistoryStore` in a temporary folder), in `TranscriptRowTests.cs` of the same folder for the rows that
+the copilot's turn adds (reply, tool, and notice), and with headless Avalonia UI tests in
+`test/DemaConsulting.CanvasPilot.UiTests/ChatPanelViewTests.cs`, `ChatPanelCopilotViewTests.cs`, and
+`ChatPanelHistoryViewTests.cs` (with `ChatUiTestSupport.cs` for the harness and the scripted copilot) for the views.
+Both use the real `ChatPanelViewModel`, `ComposerViewModel`, `ComposerDocument`, `ComposerHistory`, `AttachmentIntake`,
+`AttachmentStore`, `MarkRegistry`, and `AnnotationOverlayViewModel` over a temporary project folder, because the unit
+exists to connect them and the rule under test is how they agree. The UI tests also use the real `ChatPanelView`,
+`ComposerEditorView` with the AvaloniaEdit surface, `TranscriptEntryView`, and the views of the rows of the copilot
+(`AssistantReplyView` with the `MarkdownBlocksPanel`, `ToolActivityRowView`, and `NoticeRowView`). Only what has no
+place in a panel test is replaced: the dictation service (a controllable fake in the unit tests, a scripted one in the
+UI tests, both with a session that says words and ends with a chosen text), the builder of sent messages (one that gives
+a text, or a ready-made payload), the source of the shown picture, the composer of mark pictures (a substitute, or a
+stub that gives a one-pixel PNG), the launcher of the payload inspector (a recording one), and the AI copilot (a
+controlled or scripted `IAgentService` that streams the events the test gives it when it gives them and reports the
+readiness the test chooses, with a manual clock in the unit tests). Input reaches the views as the platform delivers it:
+pointer presses and releases on the talk button, move events away from it, the loss of the pointer capture, space key
+presses and releases on the focused button, text input and Ctrl+Z in the editing control, and clicks on the Send, Stop,
+"Open Settings", "Check again", and "View payload" buttons.
 
 #### Test Environment
 
@@ -53,8 +61,147 @@ the looks); they are not evidence for a requirement.
   from its copy in the project.
 - "View payload" gives the launcher an inspector for exactly that message's payload; it does nothing without a launcher
   and cannot run for a message without a payload.
+- The rows of the copilot form one family with the sent message: each row tells its kind; a reply grows while it
+  streams, is final only when completed, keeps its text and is marked when stopped or failed, and never changes after it
+  has ended; a tool row says what is under way and then what was done, whether it worked, and whether it carried a
+  picture, and keeps the report of a written file when the tool succeeded and shows the refusal when it did not; a
+  notice holds its message, remedy, and whether the settings can help; the sent message keeps its payload and summary as
+  a row.
+- With a copilot, a sent message starts a turn with its payload and the rows of the answer follow the entry in order;
+  the text of a reply is plain while it streams and Markdown only when it is complete (never for a stopped or failed
+  one); the composer cannot send but can be written to while the turn runs, with an indicator and a Stop button shown
+  only then; a change of project or disposing the panel stops the turn and nothing of it is shown afterwards; without a
+  copilot only the entry is added and nothing is shown or blocked.
+- Stop cancels the turn, keeps the text marked as stopped, and frees the composer; a failed turn is an error row with
+  the message and the remedy, whose "Open Settings" raises the request that the host handles.
+- The banner shows the sentence of the readiness report when the provider cannot be used or can be used with a warning
+  (the warning does not block sending), is hidden when it is ready, shows a check that throws as a sentence, offers
+  "Open Settings" and "Check again", and shows the latest check only.
+- With a history store and a project service, the words of a message and of what followed it are saved when its turn has
+  ended, stopped, or failed (never a notice, and not when the project changed or the history was cleared meanwhile);
+  a project that is opened shows its saved conversation as text rows (a restored message has words, labels, and lines
+  for notes and paths, but no picture, no payload, and no "View payload"); the saved words go to the copilot with the
+  next message; each project has its own conversation; a failure to save is a notice and does not stop the
+  conversation; and without a store or a project service nothing is saved or restored.
+- "Clear chat history" deletes the saved history of the open project, empties the transcript but for a notice that is
+  not saved, resets the copilot, stops a turn that runs and drops its rows, says in an error notice when the history
+  could not be deleted, and works without a store or a copilot.
 
 #### Test Scenarios
+
+**ChatPanelViewModel_Send_WithCopilot_StartsTurnStreamsReplyAndMakesMarkdownWhenComplete**: A message is sent in a panel
+with a controlled copilot; the copilot gets its payload, streams "Here is **the box**", which is the plain text of a
+streaming reply with no Markdown blocks, and completes; the reply is complete and has one paragraph block, and the rows
+are the entry and the reply. This scenario is tested by
+`ChatPanelViewModel_Send_WithCopilot_StartsTurnStreamsReplyAndMakesMarkdownWhenComplete`.
+
+**ChatPanelViewModel_TurnRuns_ComposerCannotSendAndBusyIsAnnouncedUntilTheTurnEnds**: While a turn runs the panel is
+busy and announces it, `CanSend` is false with the composer's reason, the Stop command can run, and text typed meanwhile
+is kept; when the turn completes all of it is reversed. This scenario is tested by
+`ChatPanelViewModel_TurnRuns_ComposerCannotSendAndBusyIsAnnouncedUntilTheTurnEnds`.
+
+**ChatPanelViewModel_Stop_KeepsPartialTextMarksItStoppedAndFreesTheComposer**: The Stop command ends a turn that has
+written "Let me think": the reply keeps the text, is stopped with the label `Stopped`, has no Markdown, the token of the
+turn was canceled, and the composer can send. This scenario is tested by
+`ChatPanelViewModel_Stop_KeepsPartialTextMarksItStoppedAndFreesTheComposer`.
+
+**ChatPanelViewModel_ToolCalled_AddsToolRowInOrderWithItsResult**: The copilot talks, writes a file that it replaces,
+and completes; the rows are the entry, the reply, and a tool row that says "Replaced" and the path in code format, ended
+and successful. This scenario is tested by `ChatPanelViewModel_ToolCalled_AddsToolRowInOrderWithItsResult`.
+
+**ChatPanelViewModel_TurnFails_ShowsNoticeWithRemedyAndOpenSettingsRaisesTheRequest**: The provider reports a missing
+model; the last row is an error notice with the message, a remedy, and the offer of the settings; choosing "Open
+Settings" on the notice and on the panel raises the request each time. This scenario is tested by
+`ChatPanelViewModel_TurnFails_ShowsNoticeWithRemedyAndOpenSettingsRaisesTheRequest`.
+
+**ChatPanelViewModel_ProjectChangesWhileTurnRuns_StopsItAndDropsWhatItStillSays**: A project is opened while a turn
+that has written text runs; the transcript is empty, the turn was canceled, the composer is free, and what the old turn
+adds while it ends is dropped. This scenario is tested by
+`ChatPanelViewModel_ProjectChangesWhileTurnRuns_StopsItAndDropsWhatItStillSays`.
+
+**ChatPanelViewModel_Dispose_WhileTurnRuns_StopsTheTurn**: Disposing the panel cancels a running turn and leaves the
+transcript empty. This scenario is tested by `ChatPanelViewModel_Dispose_WhileTurnRuns_StopsTheTurn`.
+
+**ChatPanelViewModel_NoCopilot_OnlyAppendsTheEntryAndBlocksNothing**: A panel without a copilot adds one user row for a
+sent message, is never busy, shows no banner, blocks nothing, and ignores Stop and the readiness check. This scenario is
+tested by `ChatPanelViewModel_NoCopilot_OnlyAppendsTheEntryAndBlocksNothing`.
+
+**ChatPanelViewModel_RefreshReadiness_ShowsTheActionableSentenceAndHidesItWhenReady**: A ready provider shows no banner;
+the gated Copilot shows the sentence that says that Copilot support needs an AgentKit update and `HasReadinessIssue` is
+announced; a warning is shown and sending stays possible; "Check again" repeats the check and a ready provider hides the
+banner. This scenario is tested by `ChatPanelViewModel_RefreshReadiness_ShowsTheActionableSentenceAndHidesItWhenReady`.
+
+**ChatPanelViewModel_RefreshReadiness_CheckThrows_ShowsTheProblemInTheBanner**: A check that throws is shown as a
+sentence that says that the copilot could not be checked, with the reason, and nothing is thrown. This scenario is
+tested by `ChatPanelViewModel_RefreshReadiness_CheckThrows_ShowsTheProblemInTheBanner`.
+
+**AssistantReplyViewModel_Blocks_AreMarkdownOnlyOnceCompleted**: A reply that streams a heading and a paragraph has no
+blocks; completing it gives two blocks, the same list each time, and announces the change; a stopped and a failed reply
+have none. This scenario is tested by `AssistantReplyViewModel_Blocks_AreMarkdownOnlyOnceCompleted`.
+
+**NoticeRowViewModel_OpenSettingsCommand_CallsWhatItWasGivenOrNothing**: The command of a notice calls the action that
+it was given once, and a notice without an action does nothing. This scenario is tested by
+`NoticeRowViewModel_OpenSettingsCommand_CallsWhatItWasGivenOrNothing`.
+
+**ChatPanelView_CopilotAnswer_StreamsPlainTextThenMarkdownWhenComplete**: A message is sent; as the copilot streams
+"Here is **the box**" the reply shows it as plain selectable text and not as Markdown; when the turn completes the
+Markdown panel is shown with "Here is the box" and the plain text is hidden. This scenario is tested by
+`ChatPanelView_CopilotAnswer_StreamsPlainTextThenMarkdownWhenComplete`.
+
+**ChatPanelView_CopilotWorking_ShowsIndicatorAndStopAndBlocksSend**: The indicator and the Stop button are hidden before
+the message is sent, shown while the turn runs with Send disabled and the typed text kept, and hidden again when the
+turn ends, when Send can be used. This scenario is tested by
+`ChatPanelView_CopilotWorking_ShowsIndicatorAndStopAndBlocksSend`.
+
+**ChatPanelView_Stop_CancelsTurnKeepsPartialTextAndEnablesSend**: Pressing Stop cancels the turn, keeps the partial text
+with the `Stopped` label, hides the indicator, and enables Send. This scenario is tested by
+`ChatPanelView_Stop_CancelsTurnKeepsPartialTextAndEnablesSend`.
+
+**ChatPanelView_ProviderFails_ShowsErrorRowWithRemedyAndOpenSettings**: A failure of the provider shows an error row
+with the message, the remedy, and the "Open Settings" button; pressing it raises the request and the composer is free.
+This scenario is tested by `ChatPanelView_ProviderFails_ShowsErrorRowWithRemedyAndOpenSettings`.
+
+**ChatPanelView_ToolCalls_ShowToolRowsInOrder**: Text, a written file, a rendered picture, and text again show two
+replies and two tool lines in order, the first saying that the file was created, and no line still shows the moving bar.
+This scenario is tested by `ChatPanelView_ToolCalls_ShowToolRowsInOrder`.
+
+**ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady**: A panel with the gated Copilot shows the
+banner with the sentence when it is shown; "Open Settings" raises the request; after the copilot is ready, "Check again"
+repeats the check and the banner is hidden. This scenario is tested by
+`ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady`.
+
+**ChatPanelView_NoCopilot_ShowsNoBannerIndicatorOrStop**: A panel without a copilot shows no banner, no indicator, and
+no Stop button. This scenario is tested by `ChatPanelView_NoCopilot_ShowsNoBannerIndicatorOrStop`.
+
+**AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted**: A new reply is streaming and
+empty; two pieces of text grow it and are announced (an empty piece changes nothing); completing it makes the text
+final, and further text, stops, and failures change nothing. This scenario is tested by
+`AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted`.
+
+**AssistantReplyViewModel_StopOrFail_KeepsTextAndNamesWhatBecameOfIt**: A reply that is stopped, or that fails, keeps
+its text, is not final, says `Stopped` or `Failed`, and is not changed by a later completion. This scenario is tested by
+`AssistantReplyViewModel_StopOrFail_KeepsTextAndNamesWhatBecameOfIt`.
+
+**AssistantReplyViewModel_Restored_IsInTheGivenStateAndRefusesNoText**: A reply made from restored text is in the given
+state, does not grow, and refuses a missing text. This scenario is tested by
+`AssistantReplyViewModel_Restored_IsInTheGivenStateAndRefusesNoText`.
+
+**ToolActivityRowViewModel_StartFileReportAndFinish_KeepTheReportOnlyWhenTheToolWorked**: A running tool row reports a
+file, finishes with success, and keeps the report; a later result that says it failed replaces the report; an ended row
+is not abandoned. This scenario is tested by
+`ToolActivityRowViewModel_StartFileReportAndFinish_KeepTheReportOnlyWhenTheToolWorked`.
+
+**ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked**: A restored row has ended; a running
+row that is abandoned has failed; the arguments are checked. This scenario is tested by
+`ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked`.
+
+**NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven**: An error with a remedy and an information
+notice hold what they were given, and an empty message is refused. This scenario is tested by
+`NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven`.
+
+**TranscriptRows_Kinds_TheEntryOfAMessageIsTheUserRow**: The entry of a sent message, a reply, a tool row, and a notice
+tell the kinds user, assistant, tool, and notice, and the entry still has its payload and summary. This scenario is
+tested by `TranscriptRows_Kinds_TheEntryOfAMessageIsTheUserRow`.
 
 **ChatPanelViewModel_New_NullArguments_Throw**: A missing composer, registry, layer, or mark picture composer is
 refused. This scenario is tested by `ChatPanelViewModel_New_NullArguments_Throw`.
@@ -214,3 +361,107 @@ the typed text in the editing control and shows the mark; Ctrl+Z removes both. T
 **ChatPanelView_ViewPayloadButton_ShowsInspectorOfThatMessage**: Pressing "View payload" on a sent message gives the
 launcher an inspector for the payload of that message. This scenario is tested by
 `ChatPanelView_ViewPayloadButton_ShowsInspectorOfThatMessage`.
+
+**ChatPanelViewModel_TurnCompleted_SavesTextRowsOutsideTheProject**: A message is answered with a reply and a tool call
+that creates `box.svg`; the history store, whose root is outside the project, then holds a user row, a completed
+assistant row, and a tool row for `project_write` that names the file, and the project folder is empty. This scenario is
+tested by `ChatPanelViewModel_TurnCompleted_SavesTextRowsOutsideTheProject`.
+
+**ChatPanelViewModel_TurnStopped_SavesTheStoppedReply**: A turn that has written "Let me think about" is stopped; the
+saved rows are the message and an assistant row with that text whose reply state is stopped. This scenario is tested by
+`ChatPanelViewModel_TurnStopped_SavesTheStoppedReply`.
+
+**ChatPanelViewModel_TurnFailed_SavesTheMessageButNotTheNotice**: A turn fails at once; the transcript has the error
+notice, and the saved history has the message only. This scenario is tested by
+`ChatPanelViewModel_TurnFailed_SavesTheMessageButNotTheNotice`.
+
+**ChatPanelViewModel_OpenProjectWithHistory_ShowsSavedConversationAsTextRows**: A project that has a saved conversation
+is opened in a panel that has no project; the transcript has four rows in order: a restored message with its words,
+the summary `1 mark, 1 attachment`, and the lines of the mark note and the attachment path, a completed reply, a tool
+row that failed, and a stopped reply; the panel lists no sent message. This scenario is tested by
+`ChatPanelViewModel_OpenProjectWithHistory_ShowsSavedConversationAsTextRows`.
+
+**ChatPanelViewModel_New_ProjectAlreadyOpen_RestoresTheConversation**: A panel that is made while the project is open
+shows its saved conversation at once. This scenario is tested by
+`ChatPanelViewModel_New_ProjectAlreadyOpen_RestoresTheConversation`.
+
+**ChatPanelViewModel_SendAfterRestore_GivesTheCopilotTheSavedTextAsRestoredHistory**: After a restore, the first request
+that reaches the copilot carries four turns: the user's words with the mark note and the attachment, the reply, the
+tool call as a line of the assistant that says it failed, and the stopped reply with a remark; the next request carries
+those and the new message and reply. This scenario is tested by
+`ChatPanelViewModel_SendAfterRestore_GivesTheCopilotTheSavedTextAsRestoredHistory`.
+
+**ChatPanelViewModel_ProjectChanges_EachProjectHasItsOwnConversation**: A conversation in a first project; a second
+project is opened with an empty transcript and gets no restored history and its own saved words; closing shows nothing;
+opening the first project again shows its message as a restored row. This scenario is tested by
+`ChatPanelViewModel_ProjectChanges_EachProjectHasItsOwnConversation`.
+
+**ChatPanelViewModel_ProjectChangesWhileTurnRuns_SavesNothingIntoTheNewProject**: A turn that runs in the first project
+is overtaken by opening a second one; the transcript is empty and the second project has no history file. This scenario
+is tested by `ChatPanelViewModel_ProjectChangesWhileTurnRuns_SavesNothingIntoTheNewProject`.
+
+**ChatPanelViewModel_SaveFails_ShowsAnErrorNoticeAndTheConversationGoesOn**: With a store that cannot save, each of two
+turns leaves an error notice with the sentence of the store, and the second turn is run. This scenario is tested by
+`ChatPanelViewModel_SaveFails_ShowsAnErrorNoticeAndTheConversationGoesOn`.
+
+**ChatPanelViewModel_HistoryRootInsideTheProject_SaysSoAndWritesNothingIntoTheProject**: With a store whose root is
+inside the project, a turn leaves one notice that the history lies inside the project folder, and the project folder is
+empty. This scenario is tested by `ChatPanelViewModel_HistoryRootInsideTheProject_SaysSoAndWritesNothingIntoTheProject`.
+
+**ChatPanelViewModel_NoCopilot_SavesTheMessageWhenItIsSent**: A panel without a copilot saves the message when it is
+sent. This scenario is tested by `ChatPanelViewModel_NoCopilot_SavesTheMessageWhenItIsSent`.
+
+**ChatPanelViewModel_NoStoreOrNoProjectService_SavesAndRestoresNothing**: A panel without a store, and one without a
+project service, restore nothing from a saved conversation; a message in the second gives the copilot no restored
+history and leaves the saved conversation as it was. This scenario is tested by
+`ChatPanelViewModel_NoStoreOrNoProjectService_SavesAndRestoresNothing`.
+
+**ChatHistoryMapper_ToHistoryRows_SentMessageAndRows_KeepsWordsLabelsNotesAndPathsOnly**: A message of words, a mark
+with a note, dictated words, and an attached picture becomes a user row with the labels `[Mark 1]` and
+`[Attachment: logo.png]` in their places, the mark's number and note, and the project-relative path, dated with the time
+the message was sent; a running tool, a reply without text, and a notice are left out; a finished tool and a failed
+reply become rows; the words of the payload are not in any row. This scenario is tested by
+`ChatHistoryMapper_ToHistoryRows_SentMessageAndRows_KeepsWordsLabelsNotesAndPathsOnly`.
+
+**ChatHistoryMapper_ToTranscriptRowAndToAgentTurns_CoverEveryKind**: Every kind of saved row becomes the row of the
+transcript that shows it (a restored message, a reply in its state, a tool row with its outcome), and becomes the turn
+for a new provider session, with the remark for a failed reply and the line `[Used the tool ...]` for a tool call. This
+scenario is tested by `ChatHistoryMapper_ToTranscriptRowAndToAgentTurns_CoverEveryKind`.
+
+**RestoredEntryViewModel_New_OnlyUserRows_AndSummaryCountsMarksAndAttachments**: The row of a restored message counts
+marks and attachments in the plural, lists the marks in the order of their numbers with their notes, then the
+attachments, has the kind of the user row, refuses a row of another kind and a missing row. This scenario is tested by
+`RestoredEntryViewModel_New_OnlyUserRows_AndSummaryCountsMarksAndAttachments`.
+
+**ChatPanelViewModel_ClearHistory_DeletesTheStoredHistoryEmptiesTheTranscriptAndResetsTheCopilot**: After a restore and
+one more turn, Clear deletes the folder of the history, leaves only the notice "Chat history cleared." in the
+transcript, resets the copilot once, and the next message gets no restored history and is the only saved row. This
+scenario is tested by `ChatPanelViewModel_ClearHistory_DeletesTheStoredHistoryEmptiesTheTranscriptAndResetsTheCopilot`.
+
+**ChatPanelViewModel_ClearHistory_WhileTurnRuns_StopsItDropsItsRowsAndSavesNothing**: Clear while a turn writes text
+cancels the turn, shows only the notice, frees the composer, and leaves no history on the disk. This scenario is tested
+by `ChatPanelViewModel_ClearHistory_WhileTurnRuns_StopsItDropsItsRowsAndSavesNothing`.
+
+**ChatPanelViewModel_ClearHistory_WithoutStoreAndCopilot_EmptiesTheTranscript**: Clear in a panel with neither a store
+nor a copilot empties the transcript and shows the notice. This scenario is tested by
+`ChatPanelViewModel_ClearHistory_WithoutStoreAndCopilot_EmptiesTheTranscript`.
+
+**ChatPanelViewModel_ClearHistory_StoreCannotDelete_ShowsAnErrorNotice**: With a store that cannot delete, Clear shows
+an error notice with its sentence, empties the transcript, and resets the copilot. This scenario is tested by
+`ChatPanelViewModel_ClearHistory_StoreCannotDelete_ShowsAnErrorNotice`.
+
+**ChatPanelView_ClearChatHistoryButton_ClearsTranscriptDeletesHistoryAndSendStaysEnabled**: In a window, after an
+answered message that was saved, the "Clear chat history" button is shown; pressing it removes the message and the reply
+from the view, shows one notice with the cleared text, deletes the folder of the history, resets the copilot, keeps the
+text typed meanwhile, and leaves Send enabled. This scenario is tested by
+`ChatPanelView_ClearChatHistoryButton_ClearsTranscriptDeletesHistoryAndSendStaysEnabled`.
+
+**ChatPanelView_ClearChatHistoryButton_NothingSaid_ShowsOnlyTheNotice**: In a panel with no store and no copilot,
+pressing the button shows only the notice. This scenario is tested by
+`ChatPanelView_ClearChatHistoryButton_NothingSaid_ShowsOnlyTheNotice`.
+
+**ChatPanelView_RestoredHistory_ShowsTextRowsWithoutPayloadButtonOrPictures**: A project with a saved conversation is
+opened in a window: the restored message shows its words, the lines of the mark note and the attachment, and the note
+that pictures are not kept, and has no "View payload" button and no chip; the reply and the tool line are shown as
+usual; the hint of the empty transcript is hidden. This scenario is tested by
+`ChatPanelView_RestoredHistory_ShowsTextRowsWithoutPayloadButtonOrPictures`.

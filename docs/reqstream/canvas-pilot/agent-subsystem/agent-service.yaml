@@ -1,0 +1,132 @@
+---
+# Software Unit Requirements for the AgentService Unit
+#
+# The AgentService unit is the AI copilot as the chat uses it (IAgentService). It makes nothing until the first turn,
+# then keeps one conversation with the AI provider for the open project (the tools, the instructions, the agent made by
+# the factory, and one provider session) and runs one turn at a time on it, streaming the events of the turn. It
+# rebuilds the conversation when the project or a setting that decides the agent changes, deletes what the provider
+# kept when a conversation ends, gives the Copilot runtime an explicit data folder outside every project, and writes
+# metadata only to the log. Its supporting types are the digest of the restored history and the adapter that lets the
+# Copilot runtime log through the application's log file.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: AgentService Requirements
+            requirements:
+              - id: CanvasPilot-AgentService-KeepConversationPerProject
+                title: >-
+                  The AgentService shall make nothing before the first turn, then make for the open project one agent
+                  (with the tools of the project, the instructions that describe it, and its folder) and one provider
+                  session through the factory, keep them for the next turns, and make them again when the open project
+                  changes or closes or when the provider, the model, the Ollama address, the context window, or the
+                  path of the Copilot CLI changes, and not when any other setting changes.
+                justification: |
+                  Starting a provider is slow and may start a process, so it waits until the user asks for something, and
+                  a conversation that is kept remembers what was said. The agent is built for one project folder, so
+                  another project needs another agent and a new conversation, and a setting that the agent was made from
+                  must be applied by making it again. Settings that the agent does not depend on must not throw the
+                  conversation away.
+                tests:
+                  - AgentService_RunTurn_FirstTurn_StartsLazilyWithTheToolsAndInstructionsOfTheProject
+                  - AgentService_RunTurn_SameProjectTwice_KeepsOneAgentAndTheSession
+                  - AgentService_RunTurn_ProjectChanges_MakesAgentPerProjectAndDeletesTheOldSession
+                  - AgentService_ProjectClosed_DropsTheConversationAndTheNextTurnNeedsAProject
+                  - AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent
+                  - AgentService_RunTurn_FactoryHasNoAgent_FailsNotReadyWithTheSentenceAndAsksAgain
+                  - AgentService_RunTurn_NoProjectOpen_FailsNotReady
+                  - AgentService_GetReadiness_OllamaSettings_ReportsWhatTheProbeSees
+                  - AgentService_Constructor_MissingArguments_AreRefused
+
+              - id: CanvasPilot-AgentService-RunOneTurnAtATime
+                title: >-
+                  The AgentService shall run one turn at a time and stream its events (the answer, the tool calls, the
+                  files that the tools wrote placed before the answer of the call that wrote them, the usage, and the
+                  end), answer a request made while a turn runs with one failure of the kind busy and nothing else, end a
+                  turn that the caller, a reset, a change of the project, or the end of the service cancels without a
+                  failure and without a completion, and tell the shell which file the copilot wrote.
+                justification: |
+                  A conversation with a model is a sequence, and two turns at once would interleave their answers and
+                  their changes to the project. The user must be able to stop a turn at any time and then go on, and a
+                  stopped turn is not an error. The explorer of the shell shows what the copilot changed, so the shell
+                  learns of each written file at the moment it is written.
+                tests:
+                  - AgentService_RunTurn_ScriptedModelWritesAFile_StreamsTextCallFileAndCompletion
+                  - AgentService_RunTurn_RequestsWhileATurnRuns_FailBusyAndTheRunningTurnCompletes
+                  - AgentService_RunTurn_TokenCancelled_EndsWithoutFailureOrCompletionAndAllowsTheNextTurn
+
+              - id: CanvasPilot-AgentService-RestoreHistoryOnce
+                title: >-
+                  The AgentService shall give the text of the restored earlier turns to the provider once, as one block of
+                  at most 6,000 characters (the newest turns that fit, with a note that counts the older ones that were
+                  left out) at the start of the first message of a new provider session, keep the block in memory only,
+                  and give it again to the next turn when the first turn failed before the provider answered.
+                justification: |
+                  A conversation that was restored after the application restarted has no provider session, so the model
+                  is told what was said before. One bounded block keeps the cost of that fixed however long the history
+                  is, and the newest turns matter most. Repeating it every turn would waste the context window, and
+                  losing it to a failed first attempt would leave the model without it.
+                tests:
+                  - AgentService_RunTurn_RestoredHistory_IsPrefixedOnceAsOneBoundedBlock
+                  - AgentService_RunTurn_FirstTurnFailsBeforeAnswer_RestoredHistoryIsStillPending
+                  - RestoredHistoryDigest_Build_NoWords_ReturnsNull
+                  - RestoredHistoryDigest_Build_ShortHistory_KeepsEveryTurnInOrder
+                  - RestoredHistoryDigest_Build_LongHistory_StaysWithinTheLimitAndKeepsTheNewestTurns
+                  - RestoredHistoryDigest_Build_VeryLongTurn_IsCutWithAnEllipsis
+
+              - id: CanvasPilot-AgentService-ReleaseConversations
+                title: >-
+                  The AgentService shall, when a conversation ends because of a reset, a change of the project, a change
+                  of a setting that decides the agent, or the end of the service, delete the session that the provider
+                  kept through the factory and release the agent in the background after its turn is over, stop a turn
+                  that runs on a conversation that is reset, closed, or disposed, and at its end dispose the factory once,
+                  which stops the runtime that the application started.
+                justification: |
+                  The Copilot runtime keeps every conversation in its data folder until it is deleted, so conversations
+                  that ended must be deleted or they pile up on the user's disk. The caller must never wait for a
+                  provider, so the release runs in the background, but never while a turn still uses the conversation.
+                  A runtime that is not stopped at exit would stay behind as a process.
+                tests:
+                  - AgentService_ResetConversation_AfterATurn_DeletesTheSessionAndStartsAFreshAgent
+                  - AgentService_ResetConversation_WhileATurnRuns_StopsItAndDeletesTheSession
+                  - AgentService_Dispose_WithARunningTurn_StopsItReleasesTheConversationAndDisposesTheFactoryOnce
+
+              - id: CanvasPilot-AgentService-KeepRuntimeDataOutsideProject
+                title: >-
+                  The AgentService shall give the Copilot runtime an explicit data folder below an injected local data root
+                  (the local application data of the user by default, in the folders CanvasPilot and copilot) and never the
+                  default of the AI library or a place in the project, shall refuse a turn with the failure of the kind
+                  data inside project and a sentence that names the folder when the data folder of the runtime or the
+                  folder of the chat history lies inside the open project, and shall write nothing into the project
+                  itself.
+                justification: |
+                  The runtime keeps its home and its sessions in a data folder, and its default is not under the control
+                  of the application. A project is shared, copied, and put under source control, so anything of the
+                  copilot's that landed in it would travel with it. The folder is chosen by the application, under the
+                  user's local data, and a configuration that would put it inside the project is refused before anything
+                  is written. A project that is the user's profile folder contains that data folder, so it is refused for
+                  the same reason.
+                tests:
+                  - AgentService_DataResidency_CopilotDataDirectory_IsBelowTheLocalDataRootAndOutsideTheProject
+                  - AgentService_DataResidency_DataRootInsideProject_RefusesTheTurnAndWritesNothing
+                  - AgentService_DataResidency_ProjectContainsTheLocalDataRoot_RefusesTheTurn
+                  - AgentService_DataResidency_TurnThatWritesNothing_LeavesTheProjectFolderUnchanged
+                  - AgentService_IsInside_Paths_ComparesWholeNamesWithoutCase
+
+              - id: CanvasPilot-AgentService-LogMetadataOnly
+                title: >-
+                  The AgentService shall write to the log only the metadata of the lifecycle (the provider, the counts, the
+                  outcome, the duration, and the type of an exception) and never the words of a message, the answer of the
+                  model, the restored history, the arguments or results of a tool, the content of a file, or the text of
+                  an exception, and shall give the Copilot runtime a logger that records the level, the category, the
+                  event number, and the type of an exception without the message.
+                justification: |
+                  People attach the log to bug reports, and the copilot works on the user's drawings and words. A log that
+                  says what happened is useful, and one that says what was in it is a leak. The text of an exception may
+                  hold a path or words, so only its type is logged; the user still gets the message in the chat.
+                tests:
+                  - AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly
+                  - AgentService_Logging_ExceptionWhileMakingTheAgent_LogsTheTypeAndNotTheMessage
+                  - RuntimeLogAdapter_Log_MessageStateAndScope_AreNeverWritten

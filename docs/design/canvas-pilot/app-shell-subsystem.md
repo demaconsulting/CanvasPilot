@@ -124,6 +124,27 @@ and are described here because they only join the units together.
    service. The workspace gets the same dialog service for the confirmed delete and the rename prompt.
 5. The view locator maps a view model `XxxViewModel` to the view `XxxView` of the same namespace, so the workspace
    shows the explorer and the preview without referencing their views.
+6. The composition builds the AI copilot only when it is given the folder for the local data of the application
+   (`localDataRoot`; `CreateDefault` passes the local application data folder of the user, and a test that does not
+   give it gets no copilot and touches nothing of the computer). It makes the folder of the chat history from it
+   (`CanvasPilot\history`, or the `historyRoot` it is given), so that neither the Copilot runtime data nor the history
+   is ever a place in a project. From there it builds, in this order, the process runner, the file system and the
+   environment reader that the locator and the readiness check use (each replaceable by a test), one
+   `CopilotCliLocator` shared by the readiness check and the factory, `AgentReadiness`, `ProjectTools` (over the render
+   service and the active style), `AgentToolRegistry` (over `KnowledgeTools.CreateAll` of the catalog of the drawing
+   knowledge, the two style tool descriptors that the composition already holds, and the packs of the project tools),
+   `AgentInstructions` (over the prompt builder of the same catalog and the role prompt that comes with the program),
+   the factory of the agents (`AgentProviderFactory` over the locator and the gated starter, or the `IAgentFactory`
+   that a test passes), and `AgentService`. It gives `AgentReadiness` to the AI Provider page as its `IProviderCheck`
+   (the Check connection button), and the service, the `ChatHistoryStore`, and the project service to the chat panel.
+   A small inner class, `CopilotWiring`, joins the rest: a file that the service reports as written is shown by
+   refreshing the project explorer and selecting the file, which makes the preview draw it; the chat panel's request for
+   the settings runs the settings command of the shell; and a change of the AI provider settings (and only of those)
+   makes the chat panel check the provider again. The three run on the thread of the user interface that created the
+   composition, or on the calling thread when there was none, and a failure is logged and never reaches the copilot.
+   The wiring is disposed first, then the copilot (which stops its turn, releases its conversation, and disposes the
+   factory), and then the style units, so the copilot stops listening to the project service and the settings service
+   before they go.
 
 The composition is deliberately plain construction code with no container, so the dependencies of every unit are
 visible in one place. System tests call the same composition with temporary folders and no window.
@@ -131,7 +152,11 @@ visible in one place. System tests call the same composition with temporary fold
 ### Dependencies
 
 The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`) and are split into two
-views. The hub supplier `ProjectService` is left out of both; it is described with the `Project` subsystem.
+views. The hub supplier `ProjectService` is left out of both; it is described with the `Project` subsystem. The
+composition root is not a unit of the model, so what it creates and joins (the units of the `Agent` subsystem, the
+chat history store, and the readiness check that the AI Provider page asks) is described in the design above and not
+as dependency edges of the model; the units themselves state what they depend on, for example `ChatPanel` on the
+contract of the `Agent` subsystem.
 
 The first view shows what the main window and the workspace host. `MainWindowShell` depends on `ProjectWorkspace`,
 `AboutDialog`, `PayloadInspector` (`Chat`), `KnowledgeBrowser` (`Knowledge`), and `ComposerViewModel` (`Composer`);

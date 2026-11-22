@@ -10,7 +10,8 @@ the project's image source files, PNG export, copy, and drag-out of the picture,
 speech choices, a chat panel in which messages are composed (typed and dictated text, attached files, folders, and
 pictures, and marks drawn on the picture) and sent into a payload that can be inspected, style kits (palettes, fonts,
 export sizes, and example images, with a window to manage them, a choice per project, and a check of a picture against
-the palette), and a Windows installer. The AI agent that will answer the messages is not part of this version.
+the palette), an AI copilot that answers the messages (Ollama works; GitHub Copilot is checked but gated in this
+release), and a Windows installer.
 
 ## Scope
 

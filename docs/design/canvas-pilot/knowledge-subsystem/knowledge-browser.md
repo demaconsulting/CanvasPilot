@@ -6,11 +6,11 @@
 
 `KnowledgeBrowser` is the window in which the user reads the drawing knowledge: a search box, the cards as a tree or the
 hits of the search, and the card that is chosen with its text, the cards below it, its related cards, and its examples.
-The cards are written for the assistant that a later increment adds, but they also explain how each format works, and a
-user who can read them can tell the assistant exactly what is wanted. The unit exists as its own item because it is the
-only part of the Knowledge subsystem that has a window, and so the only one that depends on the user interface; every
-other unit of the subsystem can be used without it. The main window shows it through a seam, as a window of its own that
-does not block the application.
+The cards are written for the AI copilot, which is given their index and fetches a card with a tool, but they also
+explain how each format works, and a user who can read them can tell the assistant exactly what is wanted. The unit
+exists as its own item because it is the only part of the Knowledge subsystem that has a window, and so the only one
+that depends on the user interface; every other unit of the subsystem can be used without it. The main window shows it
+through a seam, as a window of its own that does not block the application.
 
 #### Data Model
 

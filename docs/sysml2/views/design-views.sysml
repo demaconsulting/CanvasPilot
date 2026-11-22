@@ -21,9 +21,10 @@
 // dependency views: each exposes the units of one theme plus the suppliers that their
 // 'dependency' statements name, so the dependency edges render. A subsystem whose edges
 // would pass about 15 in one diagram is split into themed views. Four hub suppliers that
-// many units depend on are omitted from every one of them - RollingFileLogger (17 units),
-// ImageRenderService (11), PathHelpers (11), and ProjectService (10) - and each view's
-// 'doc' names the hubs that its units use. The small LoggingSubsystem, UtilitiesSubsystem,
+// many units depend on are omitted from every one of them - RollingFileLogger (23 units),
+// ImageRenderService (12), PathHelpers (12), and ProjectService (15) - and each view's
+// 'doc' names the hubs that its units use; ChatSubsystemHistoryView is the one exception, which
+// shows ProjectService because the key of the chat history comes from the project. The small LoggingSubsystem, UtilitiesSubsystem,
 // AnnotationSubsystem, ProjectSubsystem, SettingsSubsystem, and PreviewSubsystem have few
 // edges that are not hub edges, so they have no dependency view; use
 // 'sysml2tools query dependencies' for them.
@@ -32,6 +33,7 @@ package CanvasPilotDesignViews {
     private import Views::*;
     private import OtsDependencies::*;
     private import CanvasPilot::*;
+    private import CanvasPilot_AgentSubsystem::*;
     private import CanvasPilot_AnnotationSubsystem::*;
     private import CanvasPilot_AppShellSubsystem::*;
     private import CanvasPilot_ChatSubsystem::*;
@@ -59,6 +61,11 @@ package CanvasPilotDesignViews {
         expose OtsDependencies::CommunityToolkitMvvm;
         expose OtsDependencies::CanvasNet;
         expose OtsDependencies::Speech;
+        expose OtsDependencies::AgentKit;
+        expose OtsDependencies::CopilotSdk;
+        expose OtsDependencies::AgentFramework;
+        expose OtsDependencies::ExtensionsAi;
+        expose OtsDependencies::OllamaSharp;
         expose OtsDependencies::WiX;
         filter not (@SysML::Documentation);
     }
@@ -66,6 +73,12 @@ package CanvasPilotDesignViews {
     view CanvasPilotView {
         expose CanvasPilotSystem;
         expose CanvasPilotSystem::*;
+        render asInterconnectionDiagram;
+    }
+
+    view AgentSubsystemView {
+        expose AgentSubsystem;
+        expose AgentSubsystem::*;
         render asInterconnectionDiagram;
     }
 
@@ -150,6 +163,61 @@ package CanvasPilotDesignViews {
     // Focused dependency views. Each exposes the units of one theme plus the suppliers that
     // their 'dependency' statements name; the hub suppliers are omitted (see the header).
 
+    view AgentSubsystemRuntimeView : GeneralView {
+        doc /* Dependencies of the readiness checks of the AI provider on the Copilot CLI locator, the settings, and the OllamaSharp client, of the event mapper on the contract, the readiness sentences, and the settings, and of the provider factory on the contract, the readiness checks (the starter of the Copilot runtime), the locator, the settings, DemaConsulting.AgentKit, and the OllamaSharp client. Hub suppliers omitted: RollingFileLogger (the event mapper and the provider factory log metadata), and the Microsoft Agent Framework and Microsoft.Extensions.AI (the event mapper and the provider factory use their agent, content, and function types). */
+        expose CanvasPilot_AgentReadiness::AgentReadiness;
+        expose CanvasPilot_CopilotCliLocator::CopilotCliLocator;
+        expose CanvasPilot_AgentEventMapper::AgentEventMapper;
+        expose CanvasPilot_AgentProviderFactory::AgentProviderFactory;
+        expose CanvasPilot_AgentContract::AgentContract;
+        expose CanvasPilot_SettingsService::SettingsService;
+        expose CanvasPilot_AiProviderSettingsPage::AiProviderSettingsPage;
+        expose OtsDependencies::AgentKit;
+        expose OtsDependencies::OllamaSharp;
+        filter not (@SysML::Documentation);
+    }
+
+    view AgentServiceTurnView : GeneralView {
+        doc /* Dependencies of the agent service on what runs a turn: the contract that it implements (the events, the failure kinds, and the readiness report), the event mapper that turns the updates of the agent into events, the provider factory that makes the agent and deletes its session, the readiness checks, and the settings whose change rebuilds the conversation; and, among the same units, what the mapper and the factory use of the contract, the readiness sentences, and the settings. Hub suppliers omitted: ProjectService (the open project and its change event), RollingFileLogger (the service logs the metadata of each turn and conversation), and the Microsoft Agent Framework (the agent and the provider session). */
+        expose CanvasPilot_AgentService::AgentService;
+        expose CanvasPilot_AgentContract::AgentContract;
+        expose CanvasPilot_AgentEventMapper::AgentEventMapper;
+        expose CanvasPilot_AgentProviderFactory::AgentProviderFactory;
+        expose CanvasPilot_AgentReadiness::AgentReadiness;
+        expose CanvasPilot_SettingsService::SettingsService;
+        filter not (@SysML::Documentation);
+    }
+
+    view AgentServiceProjectView : GeneralView {
+        doc /* Dependencies of the agent service on what it builds for the open project: the tool registry that confines the tools to the project folder, the project tools whose written files it passes on, the instructions writer, the mapper of the message of the user, and the style kit of the project that the instructions describe; and, among the same units, what the project tools use of the registry and of the active style. Hub suppliers omitted: ProjectService (the open project), RollingFileLogger (the metadata of each turn), and the Microsoft Agent Framework. */
+        expose CanvasPilot_AgentService::AgentService;
+        expose CanvasPilot_AgentToolRegistry::AgentToolRegistry;
+        expose CanvasPilot_ProjectTools::ProjectTools;
+        expose CanvasPilot_AgentInstructions::AgentInstructions;
+        expose CanvasPilot_PayloadMessageMapper::PayloadMessageMapper;
+        expose CanvasPilot_StyleSelection::StyleSelection;
+        filter not (@SysML::Documentation);
+    }
+
+    view AgentToolsView : GeneralView {
+        doc /* Dependencies of the tool registry and the project tools of the AI copilot: the registry on the drawing knowledge tool descriptions it offers and on the AI libraries that confine and carry the tools, and the project tools on the registry that composes them, on the active style kit and the styles folder name, on the project explorer's filter of image sources, and on the AI libraries, and the instructions on the knowledge prompt builder that writes the index, the style guidance that writes the style, and the settings that give the recommended context window, and the payload mapper on the message payload that it maps and on the AI library that carries the message. Hub suppliers omitted: ProjectService (both read the data folder name and project file extension from the project document), ImageRenderService (the picture tool draws through it), and RollingFileLogger (the project tools log each call). */
+        expose CanvasPilot_AgentToolRegistry::AgentToolRegistry;
+        expose CanvasPilot_ProjectTools::ProjectTools;
+        expose CanvasPilot_AgentInstructions::AgentInstructions;
+        expose CanvasPilot_PayloadMessageMapper::PayloadMessageMapper;
+        expose CanvasPilot_MessagePayload::MessagePayload;
+        expose CanvasPilot_KnowledgeTools::KnowledgeTools;
+        expose CanvasPilot_KnowledgePromptBuilder::KnowledgePromptBuilder;
+        expose CanvasPilot_StyleGuidance::StyleGuidance;
+        expose CanvasPilot_SettingsService::SettingsService;
+        expose CanvasPilot_StyleSelection::StyleSelection;
+        expose CanvasPilot_StyleKitCatalog::StyleKitCatalog;
+        expose CanvasPilot_ProjectExplorer::ProjectExplorer;
+        expose OtsDependencies::AgentKit;
+        expose OtsDependencies::ExtensionsAi;
+        filter not (@SysML::Documentation);
+    }
+
     view AppShellSubsystemWorkspaceView : GeneralView {
         doc /* Dependencies of the main window shell and the project workspace on the workspace panels they host. Hub supplier omitted: ProjectService. */
         expose CanvasPilot_MainWindowShell::MainWindowShell;
@@ -178,8 +246,11 @@ package CanvasPilotDesignViews {
     }
 
     view ChatSubsystemPanelView : GeneralView {
-        doc /* Dependencies of the chat panel on the units that compose a message. Hub suppliers omitted: RollingFileLogger and PathHelpers. */
+        doc /* Dependencies of the chat panel on the units that compose a message, on the turn runner that runs the turn of the AI copilot, on the contract of the Agent subsystem through which it asks whether the provider can be used, and on the Markdown reader of the Knowledge subsystem that draws the final text of a reply. Hub suppliers omitted: RollingFileLogger, PathHelpers, and ProjectService; the dependencies on the chat history store and the project service are in ChatSubsystemHistoryView. */
         expose CanvasPilot_ChatPanel::ChatPanel;
+        expose CanvasPilot_ChatTurnRunner::ChatTurnRunner;
+        expose CanvasPilot_AgentContract::AgentContract;
+        expose CanvasPilot_KnowledgeMarkdown::KnowledgeMarkdown;
         expose CanvasPilot_ComposerViewModel::ComposerViewModel;
         expose CanvasPilot_ComposerEditor::ComposerEditor;
         expose CanvasPilot_MarkRegistry::MarkRegistry;
@@ -188,6 +259,24 @@ package CanvasPilotDesignViews {
         expose CanvasPilot_MessagePayload::MessagePayload;
         expose CanvasPilot_DictationService::DictationService;
         expose CanvasPilot_PayloadInspector::PayloadInspector;
+        filter not (@SysML::Documentation);
+    }
+
+    view ChatSubsystemTurnView : GeneralView {
+        doc /* Dependencies of the chat turn runner on the rows of the chat panel that it makes and changes, the contract of the Agent subsystem through which it reaches the AI copilot, the composer view model whose sent message it takes, and the message payload that it gives to the copilot. Hub supplier omitted: RollingFileLogger (the runner logs the kind of a failure). */
+        expose CanvasPilot_ChatTurnRunner::ChatTurnRunner;
+        expose CanvasPilot_ChatPanel::ChatPanel;
+        expose CanvasPilot_AgentContract::AgentContract;
+        expose CanvasPilot_ComposerViewModel::ComposerViewModel;
+        expose CanvasPilot_MessagePayload::MessagePayload;
+        filter not (@SysML::Documentation);
+    }
+
+    view ChatSubsystemHistoryView : GeneralView {
+        doc /* Dependencies of the chat history store and of the chat panel on it: the store takes the project information types of the project service, whose project file names the history, and the panel takes the open project from the same service. The project service is a hub supplier that the other views omit; it is shown here on purpose, because the key of the history comes from the project. Hub suppliers omitted: RollingFileLogger and PathHelpers. */
+        expose CanvasPilot_ChatHistoryStore::ChatHistoryStore;
+        expose CanvasPilot_ChatPanel::ChatPanel;
+        expose CanvasPilot_ProjectService::ProjectService;
         filter not (@SysML::Documentation);
     }
 

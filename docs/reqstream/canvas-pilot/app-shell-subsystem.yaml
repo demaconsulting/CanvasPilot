@@ -191,6 +191,25 @@ sections:
             tests:
               - AppShellSubsystem_CheckAgainstStyle_ComposedShell_ShowsNotesInThePreview
 
+          - id: CanvasPilot-AppShell-ComposeAiCopilot
+            title: >-
+              The AppShell subsystem shall, when it is given the folder for the local data of the application, build the AI
+              copilot with the tools of the drawing knowledge, the style, and the project, give it and the chat history to the
+              chat panel, give the readiness check of the copilot to the AI Provider page as its Check connection, show and
+              select in the project explorer a file that the copilot writes, open the settings when the chat panel asks for
+              them, make the chat panel check the provider again when the AI provider settings change, and dispose the copilot
+              before the services it listens to; and shall build no copilot when it is not given the folder.
+            justification: |
+              The copilot, the chat, the explorer, the settings, and the shell do not know each other, so the one place that
+              builds the application joins them. The copilot keeps its data in the folders that it is given, which makes the
+              data of the user stay out of every project and lets a test compose the application without touching the
+              computer of the person who runs it. Showing the files that the copilot writes is what makes the drawing appear.
+            tests:
+              - AppShellSubsystem_ComposeApplication_CopilotIsBuiltFromItsFoldersAndFeedsTheSettingsPage
+              - AppShellSubsystem_ComposeApplication_CopilotAsksForSettingsAndIsCheckedAgainWhenTheyChange
+              - AppShellSubsystem_ComposeApplication_CopilotWritesFile_ExplorerSelectsItAndPreviewDrawsIt
+              - AppShellSubsystem_ComposeApplication_DisposeStopsTheCopilotAndTheWiring
+
           - id: CanvasPilot-AppShell-ComposeApplication
             title: >-
               The AppShell subsystem shall build the application's units at startup in dependency order, load

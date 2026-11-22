@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -156,6 +157,351 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(32768, restored.ContextWindowTokens);
         Assert.Equal("http://ollama.example.test:11434", restored.OllamaEndpoint);
         Assert.False(restored.UnrestrictedAgentTools);
+    }
+
+    /// <summary>
+    ///     Test that a fresh installation gets a context window of 32768 tokens, and that a smaller context window that
+    ///     the user stored earlier is kept across a restart and a change of another setting.
+    /// </summary>
+    [Fact]
+    public void CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue()
+    {
+        // Arrange: a fresh installation with no settings file, and an earlier installation with a stored 8192
+        var freshFolder = PathHelpers.SafePathCombine(_tempRoot, "Fresh");
+        var storedFolder = PathHelpers.SafePathCombine(_tempRoot, "Stored");
+        var stored = new SettingsService(storedFolder);
+        stored.Save(new AppSettings { AiProvider = new AiProviderSettings { ContextWindowTokens = 8192 } });
+
+        // Act: load both, then change another setting of the earlier installation and load it again
+        var fresh = new SettingsService(freshFolder).Load().AiProvider;
+        var changing = new SettingsService(storedFolder);
+        changing.Load();
+        changing.Update(settings => settings with { RecentProjects = ["C:\\Work\\a.canvaspilot"] });
+        var afterChange = new SettingsService(storedFolder).Load().AiProvider;
+
+        // Assert: the fresh installation has the new default, and the stored value was not replaced by it
+        Assert.Equal(32768, fresh.ContextWindowTokens);
+        Assert.Equal(8192, afterChange.ContextWindowTokens);
+    }
+
+    /// <summary>
+    ///     Test that the application uses only the Copilot CLI that the user installed: on a machine with the winget CLI and
+    ///     the VS Code shim it finds the winget CLI, never the shim, and a path stored in the settings is the one that is
+    ///     checked, with no fallback to the installed CLI when that path is wrong.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath()
+    {
+        // Arrange: the settings of the user, stored and loaded again, and the layout of the development machine
+        var token = TestContext.Current.CancellationToken;
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "CliSettings");
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        runner.AnswerVersion(DevMachine.ShimCli, "1.0.114");
+        var locator = new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), DevMachine.CreateEnvironment());
+        var service = new SettingsService(settingsFolder);
+
+        // Act: locate with the default settings, then with a path to a missing file stored and loaded again
+        var automatic = await locator.LocateAsync(service.Load().AiProvider.CopilotCliPath, cancellationToken: token);
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { CopilotCliPath = @"C:\nowhere\copilot.exe" } });
+        var stored = await locator.LocateAsync(new SettingsService(settingsFolder).Load().AiProvider.CopilotCliPath, cancellationToken: token);
+
+        // Assert: the installed CLI was found by default; the wrong stored path fails visibly and the CLI is not used
+        Assert.Equal(CopilotCliStatus.Found, automatic.Status);
+        Assert.Equal(DevMachine.RealCli, automatic.Path);
+        Assert.Equal(CopilotCliStatus.NotFound, stored.Status);
+        Assert.Contains(@"C:\nowhere\copilot.exe", stored.Message, StringComparison.Ordinal);
+        Assert.Equal([DevMachine.RealCli], runner.Runs.Select(run => run.Path));
+    }
+
+    /// <summary>
+    ///     Test that the user is told, for each provider, one sentence that says what to do: the settings of a new
+    ///     installation (GitHub Copilot) on a machine without a sign-in say how to sign in, the same machine with a token
+    ///     says that this build cannot start Copilot, and a stored Ollama choice with a small window warns about it.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach()
+    {
+        // Arrange: the settings of the user, stored and loaded again, and the development machine
+        var token = TestContext.Current.CancellationToken;
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "ReadinessSettings");
+        var service = new SettingsService(settingsFolder);
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        var environment = DevMachine.CreateEnvironment();
+        var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]), ContextLength = null };
+        var readiness = new AgentReadiness(
+            new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), environment),
+            null,
+            runner,
+            environment,
+            DevMachine.CreateFileSystem(),
+            probe);
+
+        // Act: a new installation without a sign-in, then with a token, then a stored Ollama choice with a small window
+        var fresh = await readiness.GetReportAsync(service.Load().AiProvider, cancellationToken: token);
+        environment.Set("COPILOT_GITHUB_TOKEN", "some-token");
+        var withToken = await readiness.GetReportAsync(service.Load().AiProvider, cancellationToken: token);
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3", ContextWindowTokens = 8192 } });
+        var ollama = await readiness.GetReportAsync(new SettingsService(settingsFolder).Load().AiProvider, cancellationToken: token);
+
+        // Assert: each answer is one sentence with its remedy
+        Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, fresh.Status);
+        Assert.Contains("gh auth login", fresh.Message, StringComparison.Ordinal);
+        Assert.Contains("COPILOT_GITHUB_TOKEN", fresh.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, withToken.Status);
+        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", withToken.Message);
+        Assert.Equal(AgentReadinessStatus.OllamaContextTooSmall, ollama.Status);
+        Assert.True(ollama.IsUsable);
+        Assert.Contains("Raise it in Settings (32,768 recommended)", ollama.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that the copilot of a created project gets only the application's tools and that they are confined to the
+    ///     project: the knowledge answers from the real cards, a picture file of the project can be written, and the
+    ///     project file and data folder that the project service made, and everything outside the project, are refused.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach()
+    {
+        // Arrange: a project that the project service created, and a registry over the real drawing knowledge with a
+        // supplied pack that keeps the policy it is given
+        var token = TestContext.Current.CancellationToken;
+        var parent = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "ConfineDocuments")).FullName;
+        var project = (await new ProjectService().CreateAsync(parent, "Brochure", token)).Project!;
+        var pack = new ToolTestDoubles.FakePack("probe", [new ToolTestDoubles.RawFunction("probe_none")]);
+        var registry = new AgentToolRegistry(KnowledgeTools.CreateAll(KnowledgeCatalog.Default), [], _ => [pack]);
+
+        // Act: build the tools of the project, call the knowledge tool, and ask the policy about the project's places
+        var tools = registry.CreateTools(new AgentToolContext(project.FolderPath), new HashSet<string>());
+        var index = await tools[0].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments(), token);
+        var policy = pack.LastPolicy!;
+
+        // Assert: only the knowledge tool and the supplied pack are offered, the knowledge comes from the real cards, and
+        // the policy allows a picture file but not the project file, the data folder, or a place outside the project
+        Assert.Equal(["canvasnet_help", "probe_none"], tools.Select(tool => tool.Name).ToArray());
+        Assert.Contains(KnowledgeCatalog.Default.Roots[0].Id, index?.ToString(), StringComparison.Ordinal);
+        Assert.True(policy.TryResolveWrite("cover.svg", out _, out _));
+        Assert.True(File.Exists(project.FilePath));
+        Assert.False(policy.TryResolveRead(Path.GetFileName(project.FilePath), out _, out _));
+        Assert.True(Directory.Exists(Path.Combine(project.FolderPath, ProjectDocument.DataFolderName)));
+        Assert.False(policy.TryResolveRead(ProjectDocument.DataFolderName, out _, out _));
+        Assert.False(policy.TryResolveWrite(Path.Combine("..", "other.svg"), out _, out _));
+    }
+
+    /// <summary>
+    ///     Test that the copilot's project tools, on a project that the project service created, write a drawing, replace it
+    ///     directly, and draw it, while the project file, the data folder, and every place outside the project stay as they
+    ///     were, the data folder stays empty (nothing is kept in it), and nothing but the drawing is added to the project.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse()
+    {
+        // Arrange: a project that the project service created, a secret beside it, and the project tools over the real renderer
+        var token = TestContext.Current.CancellationToken;
+        var parent = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "ProjectToolsDocuments")).FullName;
+        var project = (await new ProjectService().CreateAsync(parent, "Brochure", token)).Project!;
+        var projectFileText = await File.ReadAllTextAsync(project.FilePath, token);
+        await File.WriteAllTextAsync(Path.Combine(parent, "secret.svg"), "<svg/>", token);
+        var projectTools = new ProjectTools(new ImageRenderService());
+        var registry = new AgentToolRegistry(KnowledgeTools.CreateAll(KnowledgeCatalog.Default), [], projectTools.CreatePacks);
+        var tools = registry.CreateTools(new AgentToolContext(project.FolderPath), new HashSet<string>()).ToDictionary(tool => tool.Name);
+
+        // Act: create and replace a drawing, draw it, and try the project file, the data folder, and the way out
+        var first = await tools["project_write"].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["path"] = "cover.svg", ["content"] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"/>" }, token);
+        var second = await tools["project_write"].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["path"] = "cover.svg", ["content"] = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"10\"/>" }, token);
+        var picture = await tools["render_image"].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["path"] = "cover.svg" }, token);
+        var refused = new List<string>();
+        foreach (var path in new[] { Path.GetFileName(project.FilePath), ".canvaspilot/backups/cover.svg", ".canvaspilot/notes.txt", "../secret.svg" })
+        {
+            refused.Add(ToolAnswers.Text(await tools["project_write"].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments { ["path"] = path, ["content"] = "x" }, token)));
+        }
+
+        // Assert: created, then replaced, then drawn at the new size; every attempt on the application's files was refused;
+        // and the project holds only the drawing, its project file, and the empty data folder
+        Assert.Contains("created", ToolAnswers.Text(first), StringComparison.Ordinal);
+        Assert.Contains("replaced", ToolAnswers.Text(second), StringComparison.Ordinal);
+        Assert.Contains("20 x 10", ToolAnswers.Text(picture), StringComparison.Ordinal);
+        Assert.All(refused, answer => Assert.DoesNotContain("created", answer, StringComparison.Ordinal));
+        Assert.Equal(projectFileText, await File.ReadAllTextAsync(project.FilePath, token));
+        Assert.Equal("<svg/>", await File.ReadAllTextAsync(Path.Combine(parent, "secret.svg"), token));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(Path.Combine(project.FolderPath, ProjectDocument.DataFolderName)));
+        Assert.Equal(
+            [ProjectDocument.DataFolderName, Path.GetFileName(project.FilePath), "cover.svg"],
+            Directory.EnumerateFileSystemEntries(project.FolderPath).Select(entry => new FileInfo(entry).Name).Order(StringComparer.Ordinal).ToArray());
+    }
+
+    /// <summary>
+    ///     Test that a message sent in the composed application gets a streamed answer from the configured provider (a scripted
+    ///     Ollama model): the words and the tool row appear in the conversation, the drawing that the copilot wrote with
+    ///     the project tool exists in the project, the explorer selects it, and the preview draws it; and that the copilot
+    ///     was given the tools of the drawing knowledge, the style, and the project.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ConverseWithCopilot_ScriptedModel_StreamsAnswerWritesDrawingAndExplorerShowsIt()
+    {
+        // Arrange: the application with the copilot over a scripted model that says a word, writes a drawing, and answers
+        var token = TestContext.Current.CancellationToken;
+        var app = await ComposeCopilotAsync(DrawingModel());
+
+        // Act: the user sends a message and waits for the answer
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await app.Composition.Chat.SendCommand.ExecuteAsync(null);
+        await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        await app.Composition.Preview.RenderCompletion;
+
+        // Assert: the conversation holds the message, the first words, the tool row, and the final words
+        var rows = app.Composition.Chat.Transcript;
+        Assert.Equal(
+            [TranscriptRowKind.User, TranscriptRowKind.Assistant, TranscriptRowKind.Tool, TranscriptRowKind.Assistant],
+            rows.Select(row => row.Kind));
+        Assert.Equal("I will draw a box. ", Assert.IsType<AssistantReplyViewModel>(rows[1]).Text);
+        Assert.Equal("Created `box.svg`", Assert.IsType<ToolActivityRowViewModel>(rows[2]).Summary);
+        Assert.Equal("The box is drawn.", Assert.IsType<AssistantReplyViewModel>(rows[3]).Text);
+
+        // Assert: the drawing is in the project, the explorer selected it, and the preview shows its picture
+        var path = Path.Combine(app.Project.FolderPath, "box.svg");
+        Assert.True(File.Exists(path));
+        Assert.Equal(path, app.Composition.Shell.Workspace.Explorer.SelectedFile, ignoreCase: true);
+        Assert.Equal((40, 20), (app.Composition.Preview.Image!.Width, app.Composition.Preview.Image.Height));
+
+        // Assert: the copilot had the drawing knowledge, the style tools, and the project tools, and nothing else
+        var tools = Assert.Single(app.Factory!.Requests).Tools.Select(tool => tool.Name).ToArray();
+        Assert.Contains("canvasnet_help", tools);
+        Assert.Contains("style_get", tools);
+        Assert.Contains("style_check", tools);
+        Assert.Contains("project_write", tools);
+        Assert.Contains("render_image", tools);
+        Assert.All(tools, name => Assert.Matches("^(canvasnet|style|project|render)_", name));
+    }
+
+    /// <summary>
+    ///     Test that the words of the conversation are kept in the history folder that the composition was given and never in
+    ///     the project, are shown again as text when the application is started again in the same project, and are
+    ///     deleted, with the conversation of the copilot, by Clear chat history.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt()
+    {
+        // Arrange: the application with the copilot, and a turn in which the copilot writes a drawing
+        var token = TestContext.Current.CancellationToken;
+        var app = await ComposeCopilotAsync(DrawingModel());
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await app.Composition.Chat.SendCommand.ExecuteAsync(null);
+        await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        var folder = Path.Combine(app.HistoryRoot, ProjectHistoryKey.Compute(app.Project.FilePath));
+
+        // Assert: the history is below the given root, which is below the local data root, and the project holds only the
+        // project file, its empty data folder, and the drawing
+        Assert.Equal(Path.Combine(app.LocalDataRoot, "CanvasPilot", "history"), app.HistoryRoot);
+        Assert.Equal(["history.json", "project.json"], Directory.GetFiles(folder).Select(Path.GetFileName).Order(StringComparer.Ordinal));
+        Assert.Equal(
+            [ProjectDocument.DataFolderName, "Demo.canvaspilot", "box.svg"],
+            Directory.GetFileSystemEntries(app.Project.FolderPath).Select(entry => Path.GetFileName(entry)).Order(StringComparer.Ordinal));
+        Assert.Empty(Directory.EnumerateFiles(app.Project.FolderPath, "*history*", SearchOption.AllDirectories));
+        Assert.Empty(Directory.EnumerateFileSystemEntries(Path.Combine(app.Project.FolderPath, ProjectDocument.DataFolderName)));
+
+        // Act: the application is started again over the same folders and the project is opened
+        app.Composition.Dispose();
+        var second = await ComposeCopilotAsync(DrawingModel(), openProject: app.Project.FilePath);
+
+        // Assert: the earlier conversation is shown as text, and is not a message of this session
+        Assert.Equal(
+            [typeof(RestoredEntryViewModel), typeof(AssistantReplyViewModel), typeof(ToolActivityRowViewModel), typeof(AssistantReplyViewModel)],
+            second.Composition.Chat.Transcript.Select(row => row.GetType()));
+        Assert.Empty(second.Composition.Chat.SentEntries);
+
+        // Act: the user clears the chat history
+        second.Composition.Chat.ClearHistoryCommand.Execute(null);
+
+        // Assert: the history is gone from the computer and the restored rows are gone from the conversation
+        Assert.False(Directory.Exists(folder));
+        Assert.DoesNotContain(second.Composition.Chat.Transcript, row => row is RestoredEntryViewModel);
+    }
+
+    /// <summary>
+    ///     Test that a user whose settings choose GitHub Copilot, which this build cannot start, is told so in the banner of
+    ///     the chat panel, and that a message gets that same sentence in the conversation without a Copilot process being
+    ///     started or the conversation getting an answer; the only process run is the version check of the installed CLI.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt()
+    {
+        // Arrange: the application over the real factory of the providers, a machine with the installed CLI and a token, and
+        // the default settings, which choose GitHub Copilot
+        var token = TestContext.Current.CancellationToken;
+        var app = await ComposeCopilotAsync(scripted: false, tokenVariable: true);
+        const string gated = "Copilot support needs an AgentKit update; use Ollama meanwhile.";
+
+        // Act: the panel checks the provider, and the user sends a message
+        await app.Composition.Chat.RefreshReadinessAsync();
+        var banner = (app.Composition.Chat.HasReadinessIssue, app.Composition.Chat.ReadinessMessage);
+        app.Composition.Composer.InsertTyped("Draw a box");
+        await app.Composition.Chat.SendCommand.ExecuteAsync(null);
+        await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+
+        // Assert: the banner and the conversation say that Copilot cannot be started, no answer came, and the processes that
+        // were run are the version checks of the installed CLI
+        Assert.Equal((true, gated), banner);
+        var notice = Assert.IsType<NoticeRowViewModel>(app.Composition.Chat.Transcript[^1]);
+        Assert.Contains(gated, notice.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(app.Composition.Chat.Transcript, row => row is AssistantReplyViewModel);
+        Assert.All(app.Runner.Runs, run => Assert.Equal(DevMachine.RealCli, run.Path));
+        Assert.NotEmpty(app.Runner.Runs);
+    }
+
+    /// <summary>
+    ///     Test that Check connection on the AI Provider page of the composed application asks the real readiness check: for
+    ///     Ollama it asks the stand-in server (reachable, then not), and for GitHub Copilot it asks the locator over the
+    ///     fake machine (not signed in, then a token, then a path that is wrong), each with one sentence and no saved settings.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach()
+    {
+        // Arrange: the application with the copilot, and the settings page of its settings dialog
+        var app = await ComposeCopilotAsync(scripted: false);
+        AiProviderSettingsPageViewModel? page = null;
+        app.Dialogs.OnSettings = dialog =>
+        {
+            page = Assert.IsType<AiProviderSettingsPageViewModel>(dialog.Pages[0]);
+            dialog.CancelCommand.Execute(null);
+        };
+        await app.Composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        var settingsBefore = app.Composition.Settings.Current.AiProvider;
+
+        // Act: Ollama with a model the server has, then a server that does not answer
+        page!.SelectedProvider = page.Providers[1];
+        page.ModelName = "gemma3";
+        app.Probe.Models = new OllamaModelList(true, ["gemma3:latest"]);
+        await page.CheckConnectionCommand.ExecuteAsync(null);
+        var ollamaReady = (page.IsCheckConnectionOk, page.CheckConnectionResult);
+        app.Probe.Models = OllamaModelList.Unreachable;
+        await page.CheckConnectionCommand.ExecuteAsync(null);
+        var ollamaDown = (page.IsCheckConnectionOk, page.CheckConnectionResult);
+
+        // Act: GitHub Copilot on the machine without a sign-in, then with a token, then with a path that is wrong
+        page.SelectedProvider = page.Providers[0];
+        await page.CheckConnectionCommand.ExecuteAsync(null);
+        var notSignedIn = (page.IsCheckConnectionOk, page.CheckConnectionResult);
+        app.Environment.Set("COPILOT_GITHUB_TOKEN", "some-token");
+        await page.CheckConnectionCommand.ExecuteAsync(null);
+        var gated = (page.IsCheckConnectionOk, page.CheckConnectionResult);
+        page.CopilotCliPath = @"C:\nowhere\copilot.exe";
+        await page.CheckConnectionCommand.ExecuteAsync(null);
+        var wrongPath = (page.IsCheckConnectionOk, page.CheckConnectionResult);
+
+        // Assert: each answer is one sentence with its remedy, and the stored settings were not changed by checking
+        Assert.True(ollamaReady.IsCheckConnectionOk);
+        Assert.Contains("gemma3", ollamaReady.CheckConnectionResult, StringComparison.Ordinal);
+        Assert.False(ollamaDown.IsCheckConnectionOk);
+        Assert.Contains("did not answer", ollamaDown.CheckConnectionResult, StringComparison.Ordinal);
+        Assert.False(notSignedIn.IsCheckConnectionOk);
+        Assert.Contains("gh auth login", notSignedIn.CheckConnectionResult, StringComparison.Ordinal);
+        Assert.False(gated.IsCheckConnectionOk);
+        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", gated.CheckConnectionResult);
+        Assert.False(wrongPath.IsCheckConnectionOk);
+        Assert.Contains(@"C:\nowhere\copilot.exe", wrongPath.CheckConnectionResult, StringComparison.Ordinal);
+        Assert.Equal(settingsBefore, app.Composition.Settings.Current.AiProvider);
     }
 
     /// <summary>
@@ -734,7 +1080,7 @@ public sealed class CanvasPilotTests : IDisposable
         composition.Composer.InsertTyped(" green");
         var canSend = composition.Chat.CanSend;
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var entry = Assert.Single(composition.Chat.Transcript);
+        var entry = Assert.Single(composition.Chat.SentEntries);
         await entry.ViewPayloadCommand.ExecuteAsync(null);
         var shown = Assert.Single(launcher.Shown);
         var description = shown.Description;
@@ -1007,7 +1353,7 @@ public sealed class CanvasPilotTests : IDisposable
         var canSend = composition.Chat.CanSend;
         var attachmentsWhileDrafting = Directory.Exists(Path.Combine(folder, "attachments"));
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var entry = Assert.Single(composition.Chat.Transcript);
+        var entry = Assert.Single(composition.Chat.SentEntries);
         var items = entry.Items.Select(item => item.Text ?? "#").ToList();
         var chips = entry.Items.Select(item => item.Chip).ToList();
         var summary = entry.Summary;
@@ -1144,7 +1490,7 @@ public sealed class CanvasPilotTests : IDisposable
         Directory.CreateDirectory(store.AttachmentsFolder);
         await File.WriteAllTextAsync(Path.Combine(store.AttachmentsFolder, "brief.txt"), "mine", token);
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        var payload = Assert.Single(composition.Chat.SentEntries).Payload!;
         var paths = payload.Attachments.Select(attachment => attachment.ProjectRelativePath).ToList();
         var briefCopy = await File.ReadAllTextAsync(Path.Combine(folder, paths[0]), token);
         var folderCopy = (
@@ -1229,7 +1575,7 @@ public sealed class CanvasPilotTests : IDisposable
         var statusAfterDrop = composition.Composer.StatusText;
         var stillShown = composition.Preview.Image;
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        var payload = Assert.Single(composition.Chat.SentEntries).Payload!;
         var copies = new Dictionary<string, string>();
         foreach (var attachment in payload.Attachments)
         {
@@ -1326,7 +1672,7 @@ public sealed class CanvasPilotTests : IDisposable
         var afterSecond = (composition.Composer.Document.FlatText, composition.Composer.DictationState, composition.Chat.IsTalking);
         var canSend = composition.Chat.CanSend;
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var sent = Assert.Single(composition.Chat.Transcript).Payload!.Text;
+        var sent = Assert.Single(composition.Chat.SentEntries).Payload!.Text;
         composition.Dispose();
 
         // Assert: each answer says what to do and is not a failure, nothing was added or lost, no talk state is left over,
@@ -1420,7 +1766,7 @@ public sealed class CanvasPilotTests : IDisposable
         var onNewPicture = (composition.Annotation.VisibleMarks.Count, composition.Annotation.HiddenMarkCount, composition.Composer.MarkChipIds.Count);
         var afterEdit = (mark.Snapshot, mark.Geometry.Points.ToList());
         await composition.Chat.SendCommand.ExecuteAsync(null);
-        var payload = Assert.Single(composition.Chat.Transcript).Payload!;
+        var payload = Assert.Single(composition.Chat.SentEntries).Payload!;
         composition.Dispose();
 
         // Assert: the unchanged picture shows the mark where it was; the edited one has other pixels and does not show it
@@ -1465,6 +1811,122 @@ public sealed class CanvasPilotTests : IDisposable
         composition.Shell.AttachDialogService(dialogs);
         await composition.Shell.NewProjectCommand.ExecuteAsync(null);
         return (composition, dialogs);
+    }
+
+    /// <summary>
+    ///     What a composition with the AI copilot is built over, and what a test looks at.
+    /// </summary>
+    /// <param name="Composition">The composed application, whose project is open and whose shell has the dialog service.</param>
+    /// <param name="Dialogs">The dialog service of the shell.</param>
+    /// <param name="Factory">The factory that makes the agents on the scripted model, or <see langword="null" /> for the real one.</param>
+    /// <param name="Probe">The stand-in for the Ollama server.</param>
+    /// <param name="Runner">The stand-in for the processes: the Copilot CLI and the GitHub CLI.</param>
+    /// <param name="Environment">The environment of the development machine, in which a test may set a token.</param>
+    /// <param name="Project">The project that is open.</param>
+    /// <param name="LocalDataRoot">The local data root that the composition was given.</param>
+    /// <param name="HistoryRoot">The folder of the chat history, which the composition made from the local data root.</param>
+    private sealed record CopilotApp(
+        ApplicationComposition Composition,
+        FakeDialogService Dialogs,
+        ScriptedAgentFactory? Factory,
+        FakeOllamaProbe Probe,
+        FakeProcessRunner Runner,
+        FakeEnvironment Environment,
+        ProjectInfo Project,
+        string LocalDataRoot,
+        string HistoryRoot);
+
+    /// <summary>
+    ///     Makes a scripted model that says a word, writes a drawing of 40 by 20 with the project tool, and says that it is
+    ///     drawn.
+    /// </summary>
+    /// <returns>The model.</returns>
+    private static ScriptedChatClient DrawingModel()
+    {
+        const string drawing = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"20\"><rect width=\"40\" height=\"20\" fill=\"#0000ff\"/></svg>";
+        return new ScriptedChatClient(
+            [
+                new Microsoft.Extensions.AI.ChatResponseUpdate(Microsoft.Extensions.AI.ChatRole.Assistant, "I will draw a box. "),
+                new Microsoft.Extensions.AI.ChatResponseUpdate(
+                    Microsoft.Extensions.AI.ChatRole.Assistant,
+                    [new Microsoft.Extensions.AI.FunctionCallContent("w1", "project_write", new Dictionary<string, object?> { ["path"] = "box.svg", ["content"] = drawing })]),
+            ],
+            [new Microsoft.Extensions.AI.ChatResponseUpdate(Microsoft.Extensions.AI.ChatRole.Assistant, "The box is drawn.")]);
+    }
+
+    /// <summary>
+    ///     Composes the application with the AI copilot on the temporary folders, over the machine of the development
+    ///     (the installed Copilot CLI, no sign-in) with stand-ins for the processes and the Ollama server, and has the user
+    ///     create or open a project. Nothing is started and nothing of the user's computer is read or written.
+    /// </summary>
+    /// <param name="model">The scripted model of the agents, used when <paramref name="scripted" /> is true.</param>
+    /// <param name="scripted">
+    ///     <see langword="true" /> to make the agents on the scripted model, with the settings choosing Ollama and a model that
+    ///     the stand-in server has; <see langword="false" /> for the real factory of the providers and the default settings,
+    ///     which choose GitHub Copilot.
+    /// </param>
+    /// <param name="tokenVariable">Whether the environment has a GitHub token for the Copilot CLI.</param>
+    /// <param name="openProject">The project file to open, or <see langword="null" /> to create the project Demo.</param>
+    /// <returns>The composition and what it is built over.</returns>
+    private async Task<CopilotApp> ComposeCopilotAsync(
+        Microsoft.Extensions.AI.IChatClient? model = null,
+        bool scripted = true,
+        bool tokenVariable = false,
+        string? openProject = null)
+    {
+        var token = TestContext.Current.CancellationToken;
+        var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var dialogs = new FakeDialogService();
+        var localData = PathHelpers.SafePathCombine(_tempRoot, "local");
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        var environment = DevMachine.CreateEnvironment();
+        if (tokenVariable)
+        {
+            environment.Set("COPILOT_GITHUB_TOKEN", "some-token");
+        }
+
+        var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]) };
+        var factory = scripted ? new ScriptedAgentFactory(model ?? DrawingModel()) : null;
+        var composition = ApplicationComposition.Create(
+            logger,
+            new SettingsService(PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot"), logger),
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: documents,
+            audioDevices: SpeechTestData.AudioDevices([], []),
+            speechModels: SpeechTestData.Models(),
+            dragFolder: PathHelpers.SafePathCombine(_tempRoot, "drag"),
+            styleUserFolder: PathHelpers.SafePathCombine(_tempRoot, "styles"),
+            localDataRoot: localData,
+            agentFactory: factory,
+            processRunner: runner,
+            ollamaProbe: probe,
+            environment: environment,
+            cliFileSystem: DevMachine.CreateFileSystem());
+        _disposables.Add(composition);
+        composition.Shell.AttachDialogService(dialogs);
+        if (scripted)
+        {
+            composition.Settings.Update(settings => settings with
+            {
+                AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3" },
+            });
+        }
+
+        var opened = openProject is null
+            ? await composition.Projects.CreateAsync(documents, "Demo", token)
+            : await composition.Projects.OpenAsync(openProject, token);
+        return new CopilotApp(
+            composition,
+            dialogs,
+            factory,
+            probe,
+            runner,
+            environment,
+            opened.Project!,
+            localData,
+            Path.Combine(localData, "CanvasPilot", "history"));
     }
 
     /// <summary>

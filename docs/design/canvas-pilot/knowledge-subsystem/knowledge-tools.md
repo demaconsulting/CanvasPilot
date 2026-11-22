@@ -62,5 +62,6 @@ kind of the exception. Only the call that makes the tool refuses a missing colla
 
 #### Callers
 
-- The assistant of a later step hands the tool to its provider and calls `Invoke` with the arguments that the model
+- The AI copilot (through `AgentToolRegistry`, as the tool `canvasnet_help`) hands the tool to its provider and calls
+  `Invoke` with the arguments that the model
   sends.

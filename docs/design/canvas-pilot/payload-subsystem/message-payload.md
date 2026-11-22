@@ -4,8 +4,8 @@
 
 #### Purpose
 
-`MessagePayload` and its parts are the contract between the chat and the assistant that is added later: the message that
-was sent, in plain immutable values, with a version. They hold what the assistant receives and nothing that belongs to
+`MessagePayload` and its parts are the contract between the chat and the AI copilot: the message that
+was sent, in plain immutable values, with a version. They hold what the copilot receives and nothing that belongs to
 the user interface, the composer, or the registry of marks.
 
 #### Data Model

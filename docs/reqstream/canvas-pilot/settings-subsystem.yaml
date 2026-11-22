@@ -63,19 +63,27 @@ sections:
 
           - id: CanvasPilot-Settings-ConfigureAiProvider
             title: >-
-              The Settings subsystem shall let the user choose and store the AI provider, model,
-              context window, reasoning level, endpoint, tool path, and agent-tool opt-in.
+              The Settings subsystem shall let the user choose and store the AI provider, model, context window of
+              Ollama, endpoint, and Copilot tool path, show the reasoning level as not available yet, not offer the
+              unrestricted agent tools but keep the stored value, warn about a small context window, and check the
+              connection to the provider that the entries describe.
             justification: |
-              The AI provider choices must be stored before anything consumes them, so the user can
-              configure the application once. The choices are validated when entered so a bad value is
-              caught at the dialog rather than when the AI agent is later started, and the
-              agent-tool opt-in is stored as off unless the user deliberately turns it on.
+              The AI provider choices must be stored so the user can configure the application once. The choices are
+              validated when entered so a bad value is caught at the dialog rather than when the copilot is later
+              started, a connection check shows at once whether the provider can be used, and the settings that the AI
+              library cannot act on yet are shown honestly or not at all, so the user is not offered a choice that does
+              nothing.
             children:
               - CanvasPilot-AiProviderSettingsPage-EditProviderChoices
               - CanvasPilot-AiProviderSettingsPage-ValidateContextWindow
               - CanvasPilot-AiProviderSettingsPage-ValidateOllamaEndpoint
               - CanvasPilot-AiProviderSettingsPage-CopilotCliPathOverride
-              - CanvasPilot-AiProviderSettingsPage-UnrestrictedToolsOptIn
+              - CanvasPilot-AiProviderSettingsPage-HideUnrestrictedTools
+              - CanvasPilot-AiProviderSettingsPage-ExplainDisabledReasoning
+              - CanvasPilot-AiProviderSettingsPage-WarnBelowRecommendedContext
+              - CanvasPilot-AiProviderSettingsPage-CheckConnection
+              - CanvasPilot-SettingsService-DefaultContextWindow32768
+              - CanvasPilot-SettingsService-KeepStoredContextWindow
             tests:
               - SettingsSubsystem_PersistSettings_DialogOk_SurvivesRestart
 

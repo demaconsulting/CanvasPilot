@@ -64,17 +64,25 @@ sections:
 
       - id: CanvasPilot-System-ConfigureAiProvider
         title: >-
-          The application shall let the user choose and store which AI provider and model it uses,
-          with unrestricted agent tools off unless the user opts in.
+          The application shall let the user choose and store which AI provider and model it uses, with a context window
+          of 32768 tokens for settings that do not state one and the context window that the user stored kept as it is,
+          warn about a small context window, show the settings that the AI library cannot act on yet (the reasoning level)
+          as not available and not offer the unrestricted agent tools, and let the user check the connection to the
+          provider before saving.
         tags: [system]
         justification: |
           The application's AI assistance can use different providers, and the choice, with its
           model and limits, belongs to the user. Storing the choices lets them be configured before
-          the assistant is used, and the safe default for unrestricted tools protects the user's files.
+          the assistant is used, and a connection check shows at the dialog whether the choice works. Drawings with
+          pictures and tools need a large context window, so a new installation starts with 32768 tokens; a smaller
+          value that the user chose, or that an earlier build stored, is a deliberate choice and is not replaced. A
+          choice that nothing acts on must not look like one that does, so it is shown as unavailable or not at all.
         children:
           - CanvasPilot-Settings-ConfigureAiProvider
         tests:
           - CanvasPilot_ConfigureAiProvider_DialogOk_StoresChoicesAndKeepsToolsOptIn
+          - CanvasPilot_ConfigureAiProvider_FreshAndStoredContextWindow_UsesNewDefaultAndKeepsStoredValue
+          - CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach
 
       - id: CanvasPilot-System-ConfigureSpeech
         title: >-
@@ -281,6 +289,22 @@ sections:
           - CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript
           - CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload
 
+      - id: CanvasPilot-System-StopCopilotTurn
+        title: >-
+          The application shall let the user stop the AI copilot while it works on a message, keep the answer that was
+          written until then and mark it as stopped, allow the next message to be written while the copilot works but not
+          sent until the turn has ended or was stopped, and report a failed turn in the conversation with what to do
+          about it, without ever failing the application.
+        tags: [system]
+        justification: |
+          A model that is on a wrong path, or slow, costs the user time, so the user must be able to end the turn at once
+          and still keep what was written. Only one turn runs at a time, so a second message must wait rather than fail
+          late, and a provider that fails must leave the chat usable. The composer, the chat, and the turn logic each
+          own a part of this and link to this requirement.
+        children:
+          - CanvasPilot-Composer-HoldSendWhileCopilotWorks
+          - CanvasPilot-Chat-StopTheCopilotTurn
+
       - id: CanvasPilot-System-UndoRedoMessage
         title: >-
           The application shall let the user undo and redo changes to the message being composed one action at a time,
@@ -395,6 +419,157 @@ sections:
         tests:
           - WiX_MsiPackage
 
+      - id: CanvasPilot-System-UseInstalledCopilotCli
+        title: >-
+          The application shall locate and check the GitHub Copilot CLI that the user installed, and shall not include
+          or download the GitHub Copilot runtime in its installed files or in its build output, so that the only
+          GitHub Copilot CLI that it can ever use is the one that the user installed.
+        tags: [system]
+        justification: |
+          The GitHub Copilot CLI is a separate product that the user installs, updates, and signs in to. Shipping a
+          copy of it, or downloading one when the application is built, would put about 180 MB of third-party code with
+          its own updates and licensing into every installation. The libraries that the AI copilot is built on would
+          bring such a runtime unless they are told not to, so the absence is checked on the published folder of every
+          Windows build and, with the file table of the installer, in the package itself. The application finds the
+          installed CLI by a documented rule that tells it from the launchers that editors put on the PATH, honors a
+          path that the user sets, and checks its version.
+        children:
+          - CanvasPilot-Agent-LocateCopilotCli
+          - CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
+          - CanvasPilot-OTS-CopilotSdk-HonorExplicitCliPath
+          - CanvasPilot-OTS-CopilotSdk-ReadCliPathFromConnectionEnvironment
+          - CanvasPilot-OTS-CopilotSdk-DeclareSupportedCliVersion
+        tests:
+          - windows@Copilot_RuntimeNotPublished
+          - CanvasPilot_UseInstalledCopilotCli_MachineWithShim_UsesInstalledCliAndHonorsStoredPath
+
+      - id: CanvasPilot-System-ConfineCopilotToProject
+        title: >-
+          The AI copilot shall act only through CanvasPilot's own tools, which are confined to the project folder, so
+          that it can read and change only the files of the project, with the limits that the tools set: it writes only
+          text image sources and small data files, and never the data folder of the application, the project file, or
+          the style kits of the project.
+        tags: [system]
+        justification: |
+          A language model that writes files is only as safe as the paths and sizes its tools allow. Offering the model
+          nothing but tools that the application builds, and building them on one reliable decision about which paths
+          are allowed, keeps the user's other files out of its reach. The units of the Agent subsystem add the tools
+          and their own limits to this requirement; the confining library it rests on is verified as an OTS item.
+        children:
+          - CanvasPilot-Agent-ConfineToolsToProject
+          - CanvasPilot-Agent-ConfineProjectFileTools
+          - CanvasPilot-Agent-GiveTheAgentOnlyTheTools
+          - CanvasPilot-OTS-AgentKit-ConfineToolPaths
+          - CanvasPilot-OTS-AgentKit-ComposeToolPacks
+          - CanvasPilot-OTS-AgentKit-BoundToolResults
+        tests:
+          - CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach
+          - CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse
+
+      - id: CanvasPilot-System-ConverseWithCopilot
+        title: >-
+          The application shall let the user converse with the AI provider that is configured, so that a message
+          gets an answer that is shown while it is written, with the tool calls the answer needed, and the conversation
+          can be stopped and continued.
+        tags: [system]
+        justification: |
+          The reason for the application is to draw by talking. The libraries that stream the answer, run the tools,
+          carry the pictures, and talk to the Ollama server are verified as OTS items; the units of the Agent and Chat
+          subsystems add the behavior of the application on top of them and link to this requirement.
+        children:
+          - CanvasPilot-Agent-RunTurnAsEvents
+          - CanvasPilot-Agent-WorkOnProjectFiles
+          - CanvasPilot-Agent-InstructTheCopilot
+          - CanvasPilot-Agent-GiveTheModelTheMessage
+          - CanvasPilot-Agent-ReportTurnAsEvents
+          - CanvasPilot-Agent-MakeTheAgentOfTheProvider
+          - CanvasPilot-Agent-ConverseInProjectConversations
+          - CanvasPilot-Chat-ShowCopilotConversation
+          - CanvasPilot-AppShell-ComposeAiCopilot
+          - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
+          - CanvasPilot-OTS-AgentKit-SizeOllamaContext
+          - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces
+          - CanvasPilot-OTS-AgentFramework-KeepConversationOnSession
+          - CanvasPilot-OTS-AgentFramework-StopOnCancellation
+          - CanvasPilot-OTS-ExtensionsAi-BindFunctionArguments
+          - CanvasPilot-OTS-ExtensionsAi-RunFunctionsInInvocationLoop
+          - CanvasPilot-OTS-ExtensionsAi-CarryPictureContent
+          - CanvasPilot-OTS-ExtensionsAi-JoinStreamedUpdates
+          - CanvasPilot-OTS-OllamaSharp-ListLocalModels
+          - CanvasPilot-OTS-OllamaSharp-ReportMissingModel
+          - CanvasPilot-OTS-OllamaSharp-StreamTextAndToolCalls
+          - CanvasPilot-OTS-OllamaSharp-SendContextLength
+        tests:
+          - CanvasPilot_ConverseWithCopilot_ScriptedModel_StreamsAnswerWritesDrawingAndExplorerShowsIt
+      - id: CanvasPilot-System-KeepAgentDataOutsideProject
+        title: >-
+          The application shall never write the data of the AI copilot into the project folder: the Copilot runtime keeps
+          its files in a folder below the local data of the user that the application chooses, the chat history is kept
+          on the user's computer and a history folder inside the project is refused, the log holds only facts
+          about what happened and never the words of messages or the contents of files, and the project folder receives
+          only the files that the user or the copilot is asked to create.
+        tags: [system]
+        justification: |
+          A project folder is copied, shared, and put under source control, so anything of the application's own that
+          landed in it would travel with it, and the words of a conversation are the user's to keep. The data of the
+          Copilot runtime, the log, and the text that restores a conversation therefore live on the user's computer
+          outside every project, and a configuration that would put them inside a project is refused. The one thing of
+          the chat that the project folder does hold is the transient staging of a picture that was pasted and not sent
+          yet, which belongs to the message being written and is removed when it is sent or discarded. The units that
+          keep such data link to this requirement.
+        children:
+          - CanvasPilot-Agent-KeepRuntimeDataOutsideProject
+          - CanvasPilot-Agent-LogMetadataOnly
+          - CanvasPilot-Chat-KeepHistoryOutsideProject
+        tests:
+          - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+          - CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt
+
+      - id: CanvasPilot-System-KeepChatHistoryOnThisComputer
+        title: >-
+          The application shall keep the words of the conversation of each project, and only the words, on the user's
+          computer outside the project folder, shall show them again as text when the project is opened and give them to
+          the AI copilot so that the conversation can go on, and shall let the user clear them with one button, which
+          also makes the copilot forget the conversation.
+        tags: [system]
+        justification: |
+          A conversation that is gone when the project is closed makes the copilot start over every day, but the words
+          of a conversation are the user's own and a project folder is copied, shared, and put under source control.
+          The history therefore lives on the user's computer, keyed by the place of the project file, holds no pictures
+          or payloads, is bounded, and can be deleted by the user at any time. A project that is moved or renamed starts
+          a fresh history, which the user guide says. The units that keep, show, and clear the history link to this
+          requirement.
+        children:
+          - CanvasPilot-Chat-KeepChatHistoryOnThisComputer
+          - CanvasPilot-Chat-ClearChatHistory
+        tests:
+          - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+          - CanvasPilot_KeepChatHistoryOnThisComputer_ComposedApplication_HistoryIsUnderTheGivenRootAndClearRemovesIt
+
+      - id: CanvasPilot-System-ReportProviderReadiness
+        title: >-
+          The application shall tell the user, before the first message and when asked in the settings, whether the
+          configured AI provider can be used: for GitHub Copilot whether the installed Copilot CLI was found (by a rule
+          that rejects editor shims) and is new enough, whether credentials exist, and whether this build can start the
+          runtime, and for Ollama whether the server answers, has the model, and has a context window of at least
+          16,384 tokens, each as one sentence that says what to do.
+        tags: [system]
+        justification: |
+          A chat that fails on the first message with an error of a library is a poor first experience. Both providers
+          depend on things outside the application (a CLI and a sign-in, or a server and a model), so the application
+          checks them itself and words the remedy, including the honest statement that GitHub Copilot cannot be used
+          in this build yet. A small context window is a warning and not a block, because it is a common but not
+          certain cause of failed drawings.
+        children:
+          - CanvasPilot-Agent-DescribeReadiness
+          - CanvasPilot-Agent-CheckProviderReadiness
+          - CanvasPilot-Agent-ExplainUnavailableCopilot
+          - CanvasPilot-Chat-ShowCopilotReadiness
+        tests:
+          - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
+          - CanvasPilot_ReportProviderReadiness_CopilotConfigured_BannerSaysItIsGatedAndSendDoesNotRunIt
+          - CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach
+
       - id: CanvasPilot-System-StartApplication
         title: >-
           The application shall start on every supported platform by building its parts in dependency
@@ -419,8 +594,8 @@ sections:
         justification: |
           A language model writes good drawing files only when it knows how the drawing library reads them, and the
           people who use the application want to read the same advice. Taking the cards from the drawing library keeps
-          the advice as current as the library, and adding the application's own cards tells the assistant where files go
-          and how to read the marks the user makes. The assistant is added later and may come from more than one
+          the advice as current as the library, and adding the application's own cards tells the copilot where files go
+          and how to read the marks the user makes. The copilot may come from more than one
           provider, so the knowledge is kept apart from every provider and offered as plain values and text.
         children:
           - CanvasPilot-Knowledge-OfferDrawingCards
@@ -532,7 +707,7 @@ sections:
           An assistant that writes drawing files should use the colors and fonts of the project without being told every
           time, and should be able to check what it drew. The text of a kit may come from a shared folder or a zip file,
           so it must not be taken for an instruction, and its size must be bounded because it is paid for in every
-          request. The assistant is added later and may come from more than one provider, so the parts are plain.
+          request. The copilot may come from more than one provider, so the parts are plain.
         children:
           - CanvasPilot-Style-GuideTheAssistant
           - CanvasPilot-Style-StayProviderNeutral

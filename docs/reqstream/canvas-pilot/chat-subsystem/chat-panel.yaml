@@ -1,11 +1,14 @@
 ---
 # Software Unit Requirements for the ChatPanel Unit
 #
-# The ChatPanel unit is the panel in which the user converses: the transcript of the messages that were sent in the
-# open project, the composer's editing control below it, the button that sends and the button that listens while it is
-# held, and the joining of the marks drawn on the picture to the message. It follows the composer and the annotation
-# layer and decides nothing that they decide: whether a message can be sent, what dictation says, and which marks are in
-# the message stay with the units that own them. The panel keeps nothing on disk.
+# The ChatPanel unit is the panel in which the user converses: the conversation of the open project (the messages that
+# were sent, the answers of the AI copilot with the tools it called, and the notices), the composer's editing control
+# below it, the button that sends, the button that listens while it is held, and the button that stops the copilot, the
+# banner that says whether the copilot can be used, and the joining of the marks drawn on the picture to the message. It
+# follows the composer, the annotation layer, and the turn runner and decides nothing that they decide: whether a message
+# can be sent, what dictation says, which marks are in the message, and what a turn does stay with the units that own
+# them. The panel keeps nothing in the project and writes nothing itself: the words of a conversation are kept on the
+# user's computer by the ChatHistoryStore unit, which the panel is given.
 
 sections:
   - title: CanvasPilot Requirements
@@ -16,18 +19,20 @@ sections:
             requirements:
               - id: CanvasPilot-ChatPanel-ListSentMessagesOnly
                 title: >-
-                  The ChatPanel shall list in its transcript exactly the messages that were sent in the open project,
-                  once each and oldest first, each with its words in the order they were written, dictated words
-                  marked as such, the chips of its attachments and marks in their places with their pictures and no
-                  button to delete them, and a statement of how many marks and attachments it carried; shall keep the
-                  transcript only in memory; and shall drop it when the project changes or closes.
+                  The ChatPanel shall list in its transcript, as the rows of the user, exactly the messages that were sent in
+                  the open project, once each and oldest first, each with its words in the order they were written,
+                  dictated words marked as such, the chips of its attachments and marks in their places with their
+                  pictures and no button to delete them, and a statement of how many marks and attachments it carried;
+                  and shall drop what it shows when the project changes or closes, so that the answer of one project is
+                  never shown in another.
                 justification: |
                   The transcript is the user's record of what was said to the assistant, so it must show what was
                   sent and not what is still being written, in the order it was sent, and it must show it the way it
                   was composed, with the marks and files where the user put them, so that the user recognizes the
                   message. A sent message cannot be changed, so its chips have no delete button. The messages belong
-                  to the project they were sent in and may hold the user's words and file names, so they are not kept
-                  anywhere but in memory and are dropped with the project.
+                  to the project they were sent in and may hold the user's words and file names, so the transcript goes
+                  with the project; what is kept of it for the next time is a separate requirement and is kept outside
+                  the project.
                 tests:
                   - ChatPanelViewModel_New_HasEmptyTranscriptAndCannotSend
                   - ChatPanelViewModel_Send_TypedText_AddsOneEntryAndEmptiesTheDraft
@@ -149,3 +154,146 @@ sections:
                   - TranscriptEntryViewModel_ViewPayloadCommand_ShowsInspectorForThePayloadOfTheMessage
                   - TranscriptEntryViewModel_ViewPayloadCommand_NoLauncherOrNoPayload_DoesNothing
                   - ChatPanelView_ViewPayloadButton_ShowsInspectorOfThatMessage
+
+              - id: CanvasPilot-ChatPanel-HoldTranscriptRows
+                title: >-
+                  The ChatPanel shall hold the transcript as one family of rows of four kinds, the sent message of the
+                  user, the reply of the AI copilot, the line of a tool call, and the notice, each telling its kind so that
+                  the view can show it in its own way; shall keep the sent message with its payload and its summary as
+                  one of them; shall make a reply grow while it streams, make its text final only when it is completed,
+                  and keep the text and mark the reply when it is stopped or failed, never changing a reply that has
+                  ended; shall make a tool row that says what is under way and then what was done, whether it worked, and
+                  whether it carried a picture; and shall make a notice that is immutable and holds its message, what to
+                  do about it, and whether the settings can help.
+                justification: |
+                  A conversation with a copilot is more than the messages of the user: the answer arrives piece by piece,
+                  the copilot works with tools, and things go wrong. One family of rows lets the panel show them in the
+                  order they happened. A reply must not look final while it is still written, because the view shows
+                  final text with its formatting, and a reply that was cut short must not be shown as whole.
+                tests:
+                  - AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted
+                  - AssistantReplyViewModel_StopOrFail_KeepsTextAndNamesWhatBecameOfIt
+                  - AssistantReplyViewModel_Restored_IsInTheGivenStateAndRefusesNoText
+                  - ToolActivityRowViewModel_StartFileReportAndFinish_KeepTheReportOnlyWhenTheToolWorked
+                  - ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked
+                  - NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven
+                  - TranscriptRows_Kinds_TheEntryOfAMessageIsTheUserRow
+
+              - id: CanvasPilot-ChatPanel-ConverseWithCopilot
+                title: >-
+                  The ChatPanel, when it has an AI copilot, shall start a turn for every message that was sent and show
+                  the answer in rows after the message in the order in which things happen: the text as plain selectable
+                  text while it streams and drawn as Markdown once the reply is complete, a line for each tool call, and
+                  the notices; shall block the composer from sending while the turn runs, while the message can still be
+                  written, and show an indicator that the copilot is working; shall stop the turn and drop its rows when
+                  the project changes, and stop it when the panel is disposed; and, when it has no copilot, shall only add
+                  the entry of the message and show and block nothing of the copilot.
+                justification: |
+                  The user draws by talking, so a message must get an answer in the same place, as it is written, and the
+                  answer must be readable: plain text is cheap to grow, and the formatting that the model meant (lists,
+                  headings, code) is shown when the text is final and cannot change under the reader. Only one turn runs
+                  at a time, so the panel makes the composer wait and says why instead of letting a message fail late.
+                  A turn belongs to its project, so a change of project must not let the answer of one project appear in
+                  another. A panel without a copilot is how the panel was tested before and must keep working.
+                tests:
+                  - ChatPanelViewModel_Send_WithCopilot_StartsTurnStreamsReplyAndMakesMarkdownWhenComplete
+                  - ChatPanelViewModel_TurnRuns_ComposerCannotSendAndBusyIsAnnouncedUntilTheTurnEnds
+                  - ChatPanelViewModel_ToolCalled_AddsToolRowInOrderWithItsResult
+                  - ChatPanelViewModel_ProjectChangesWhileTurnRuns_StopsItAndDropsWhatItStillSays
+                  - ChatPanelViewModel_Dispose_WhileTurnRuns_StopsTheTurn
+                  - ChatPanelViewModel_NoCopilot_OnlyAppendsTheEntryAndBlocksNothing
+                  - AssistantReplyViewModel_Blocks_AreMarkdownOnlyOnceCompleted
+                  - ChatPanelView_CopilotAnswer_StreamsPlainTextThenMarkdownWhenComplete
+                  - ChatPanelView_CopilotWorking_ShowsIndicatorAndStopAndBlocksSend
+                  - ChatPanelView_ToolCalls_ShowToolRowsInOrder
+                  - ChatPanelView_NoCopilot_ShowsNoBannerIndicatorOrStop
+
+              - id: CanvasPilot-ChatPanel-StopCopilotTurn
+                title: >-
+                  The ChatPanel shall offer a Stop button that is shown and can be used exactly while a turn of the AI
+                  copilot runs, shall stop the turn when it is pressed, keep the text written so far in a reply marked as
+                  stopped, and let the composer send again, and shall show a failed turn as an error row with what
+                  happened and what to do and, when the settings can help, an "Open Settings" action that raises a
+                  request that the host handles.
+                justification: |
+                  A model that is slow or on a wrong path must be stopped at once without losing what it said, and a
+                  provider that is not running or a model that is missing is an everyday event that the user can fix in
+                  the settings. The panel does not know what shows the settings, so it raises a request, which keeps the
+                  panel free of the application shell.
+                tests:
+                  - ChatPanelViewModel_Stop_KeepsPartialTextMarksItStoppedAndFreesTheComposer
+                  - ChatPanelViewModel_TurnFails_ShowsNoticeWithRemedyAndOpenSettingsRaisesTheRequest
+                  - NoticeRowViewModel_OpenSettingsCommand_CallsWhatItWasGivenOrNothing
+                  - ChatPanelView_Stop_CancelsTurnKeepsPartialTextAndEnablesSend
+                  - ChatPanelView_ProviderFails_ShowsErrorRowWithRemedyAndOpenSettings
+
+              - id: CanvasPilot-ChatPanel-ReportProviderReadiness
+                title: >-
+                  The ChatPanel shall ask the AI copilot whether the configured provider can be used when it is shown, on
+                  request, and whenever the host asks again, shall show the sentence of the answer, which says what to do,
+                  in a banner with buttons that open the settings and check again, shall show a warning that does not
+                  block sending in the same way, shall hide the banner when everything is ready, and shall show a check
+                  that fails as a sentence in the banner without throwing.
+                justification: |
+                  A chat that fails on the first message with the error of a library is a poor first experience, and the
+                  copilot already words the one sentence that says what is missing and what to do, including that GitHub
+                  Copilot cannot be used in this build yet. The panel shows it where the user is about to type, without
+                  knowing the settings: whoever does knows when they change and asks again.
+                tests:
+                  - ChatPanelViewModel_RefreshReadiness_ShowsTheActionableSentenceAndHidesItWhenReady
+                  - ChatPanelViewModel_RefreshReadiness_CheckThrows_ShowsTheProblemInTheBanner
+                  - ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady
+
+              - id: CanvasPilot-ChatPanel-RestoreChatHistory
+                title: >-
+                  The ChatPanel, when it is given a chat history store and the project service, shall save the words of
+                  every message and of what followed it, as soon as its turn has ended or was stopped, shall show the saved
+                  conversation of a project as rows of text when the project is opened (a restored message with its
+                  words, the labels of its marks and attachments, and a line for each mark note and attachment, but no
+                  picture and no payload), shall give the saved words to the AI copilot with the next message so that the
+                  conversation can go on, shall keep the conversation of each project apart, shall say in a notice, which
+                  is not saved, when the history cannot be saved, and, without a store or a project service, shall keep
+                  the transcript in memory only.
+                justification: |
+                  A conversation that is gone when the project is closed makes the copilot start over each day, and the
+                  user must be able to read what was said. Only words are kept, so that nothing large or private beyond
+                  the user's own words is stored, and the restored rows say that pictures are not kept. The words are given
+                  to a new provider session as text, which works with every provider. A conversation belongs to its
+                  project, and a failure to save is a fact the user may need to know but must not stop the conversation.
+                tests:
+                  - ChatPanelViewModel_TurnCompleted_SavesTextRowsOutsideTheProject
+                  - ChatPanelViewModel_TurnStopped_SavesTheStoppedReply
+                  - ChatPanelViewModel_TurnFailed_SavesTheMessageButNotTheNotice
+                  - ChatPanelViewModel_OpenProjectWithHistory_ShowsSavedConversationAsTextRows
+                  - ChatPanelViewModel_New_ProjectAlreadyOpen_RestoresTheConversation
+                  - ChatPanelViewModel_SendAfterRestore_GivesTheCopilotTheSavedTextAsRestoredHistory
+                  - ChatPanelViewModel_ProjectChanges_EachProjectHasItsOwnConversation
+                  - ChatPanelViewModel_ProjectChangesWhileTurnRuns_SavesNothingIntoTheNewProject
+                  - ChatPanelViewModel_SaveFails_ShowsAnErrorNoticeAndTheConversationGoesOn
+                  - ChatPanelViewModel_HistoryRootInsideTheProject_SaysSoAndWritesNothingIntoTheProject
+                  - ChatPanelViewModel_NoCopilot_SavesTheMessageWhenItIsSent
+                  - ChatPanelViewModel_NoStoreOrNoProjectService_SavesAndRestoresNothing
+                  - ChatHistoryMapper_ToHistoryRows_SentMessageAndRows_KeepsWordsLabelsNotesAndPathsOnly
+                  - ChatHistoryMapper_ToTranscriptRowAndToAgentTurns_CoverEveryKind
+                  - RestoredEntryViewModel_New_OnlyUserRows_AndSummaryCountsMarksAndAttachments
+                  - ChatPanelView_RestoredHistory_ShowsTextRowsWithoutPayloadButtonOrPictures
+
+              - id: CanvasPilot-ChatPanel-ClearChatHistory
+                title: >-
+                  The ChatPanel shall offer a Clear chat history button that, without asking first, deletes the saved
+                  history of the open project, empties the transcript except for a notice that says so (which is not
+                  saved), and makes the AI copilot forget the conversation, stopping a turn that runs and dropping what it
+                  still says, and shall say in an error notice when the saved history could not be deleted.
+                justification: |
+                  The words of a conversation are the user's own, and the user must be able to get rid of them from the
+                  screen, from the computer, and from the provider's session in one step. The application has no
+                  confirmation dialog, and a button that is named for what it does and that sits in the header of the
+                  conversation is not pressed by accident; the notice tells what happened. A turn that runs belongs to
+                  the conversation that is cleared, so it must not write into the next one.
+                tests:
+                  - ChatPanelViewModel_ClearHistory_DeletesTheStoredHistoryEmptiesTheTranscriptAndResetsTheCopilot
+                  - ChatPanelViewModel_ClearHistory_WhileTurnRuns_StopsItDropsItsRowsAndSavesNothing
+                  - ChatPanelViewModel_ClearHistory_WithoutStoreAndCopilot_EmptiesTheTranscript
+                  - ChatPanelViewModel_ClearHistory_StoreCannotDelete_ShowsAnErrorNotice
+                  - ChatPanelView_ClearChatHistoryButton_ClearsTranscriptDeletesHistoryAndSendStaysEnabled
+                  - ChatPanelView_ClearChatHistoryButton_NothingSaid_ShowsOnlyTheNotice

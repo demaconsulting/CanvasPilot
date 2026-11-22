@@ -85,6 +85,34 @@ sections:
                   - SettingsService_Update_Transform_SavesAndReturnsTransformedSettings
                   - SettingsService_Load_ExistingFile_RaisesChanged
 
+              - id: CanvasPilot-SettingsService-DefaultContextWindow32768
+                title: >-
+                  The SettingsService shall give an AI context window of 32768 tokens to settings that do not state one,
+                  and shall provide 16384 tokens as the smallest context window that is recommended.
+                justification: |
+                  Drawings with pictures and tools need a large context window, and a model that runs with a small one
+                  fails in ways that are hard to explain. A new installation, and a settings file written before the
+                  context window existed, therefore start with 32768 tokens. The recommended minimum is one value that
+                  the readiness check and the settings page both use to warn about a smaller window.
+                tests:
+                  - SettingsService_DefaultContextWindow_Constants_AreThe32768DefaultAndThe16384Minimum
+                  - SettingsService_Load_MissingFile_ReturnsDefaults
+                  - SettingsService_Load_NoContextWindowInFile_Uses32768
+                  - SettingsService_Load_MissingProperties_UsesDefaults
+
+              - id: CanvasPilot-SettingsService-KeepStoredContextWindow
+                title: >-
+                  The SettingsService shall keep a stored AI context window that is within bounds, including 8192 tokens
+                  that an earlier build stored as its default, and shall replace only a value outside the bounds by the
+                  default.
+                justification: |
+                  A value that the user chose, or that an earlier build stored, is a valid choice. Replacing it when the
+                  default changes would change a setting that the user did not touch. Only a value that no model can use
+                  is replaced, so that the application always starts.
+                tests:
+                  - SettingsService_Load_StoredContextWindow8192_IsKept
+                  - SettingsService_Load_OutOfRangeValues_ReplacedWithDefaults
+
               - id: CanvasPilot-SettingsService-KeepStyleSettings
                 title: >-
                   The SettingsService shall keep the folders in which a team shares style kits, in their order, and the id of the

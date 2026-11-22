@@ -101,6 +101,200 @@ reviews:
     paths:
       - "docs/reqstream/canvas-pilot/**/*.yaml"
 
+  # CanvasPilot - Agent
+  - id: CanvasPilot-Agent
+    title: Review of CanvasPilot Agent subsystem architecture and interfaces
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem.md"
+      - "docs/verification/canvas-pilot/agent-subsystem.md"
+      - "test/**/AgentSubsystem/AgentSubsystemTests.cs"
+
+  - id: CanvasPilot-Agent-AgentContract
+    title: Review of CanvasPilot AgentContract unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-contract.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-contract.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-contract.md"
+      - "src/**/AgentSubsystem/AgentEvent.cs"
+      - "src/**/AgentSubsystem/AgentReadinessReport.cs"
+      - "src/**/AgentSubsystem/AgentTurnRequest.cs"
+      - "src/**/AgentSubsystem/IAgentService.cs"
+      - "test/**/AgentSubsystem/AgentContractTests.cs"
+
+  - id: CanvasPilot-Agent-CopilotCliLocator
+    title: Review of CanvasPilot CopilotCliLocator unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/copilot-cli-locator.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/copilot-cli-locator.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/copilot-cli-locator.md"
+      - "src/**/AgentSubsystem/CopilotCliInfo.cs"
+      - "src/**/AgentSubsystem/CopilotCliLocator.cs"
+      - "src/**/AgentSubsystem/ICliFileSystem.cs"
+      - "src/**/AgentSubsystem/IEnvironmentReader.cs"
+      - "src/**/AgentSubsystem/IProcessRunner.cs"
+      - "src/**/AgentSubsystem/ProcessRunner.cs"
+      - "test/**/AgentSubsystem/CopilotCliLocatorTests.cs"
+      - "test/**/AgentSubsystem/CopilotCliTestDoubles.cs"
+      - "test/**/AgentSubsystem/ProcessRunnerTests.cs"
+
+  - id: CanvasPilot-Agent-AgentReadiness
+    title: Review of CanvasPilot AgentReadiness unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-readiness.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-readiness.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-readiness.md"
+      - "src/**/AgentSubsystem/AgentReadiness.cs"
+      - "src/**/AgentSubsystem/GatedCopilotRuntimeStarter.cs"
+      - "src/**/AgentSubsystem/ICopilotRuntimeStarter.cs"
+      - "src/**/AgentSubsystem/IOllamaProbe.cs"
+      - "src/**/AgentSubsystem/OllamaProbe.cs"
+      - "test/**/AgentSubsystem/AgentReadinessTests.cs"
+      - "test/**/AgentSubsystem/OllamaProbeTests.cs"
+      - "test/**/AgentSubsystem/ReadinessTestDoubles.cs"
+
+  - id: CanvasPilot-Agent-AgentToolRegistry
+    title: Review of CanvasPilot AgentToolRegistry unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-tool-registry.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-tool-registry.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-tool-registry.md"
+      - "src/**/AgentSubsystem/AgentToolContext.cs"
+      - "src/**/AgentSubsystem/AgentToolRegistry.cs"
+      - "src/**/AgentSubsystem/DescriptorFunction.cs"
+      - "src/**/AgentSubsystem/DescriptorToolPack.cs"
+      - "src/**/AgentSubsystem/OptionalPackEntry.cs"
+      - "test/**/AgentSubsystem/AgentToolRegistryTests.cs"
+      - "test/**/AgentSubsystem/DescriptorToolPackTests.cs"
+      - "test/**/AgentSubsystem/ToolTestDoubles.cs"
+
+  - id: CanvasPilot-Agent-ProjectTools
+    title: Review of CanvasPilot ProjectTools unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/project-tools.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/project-tools.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/project-tools.md"
+      - "src/**/AgentSubsystem/FileWrittenEventArgs.cs"
+      - "src/**/AgentSubsystem/ImageScaler.cs"
+      - "src/**/AgentSubsystem/ProjectFileKinds.cs"
+      - "src/**/AgentSubsystem/ProjectFilesToolPack.cs"
+      - "src/**/AgentSubsystem/ProjectPathGuard.cs"
+      - "src/**/AgentSubsystem/ProjectTools.cs"
+      - "src/**/AgentSubsystem/RenderImageToolPack.cs"
+      - "src/**/AgentSubsystem/ToolCallLog.cs"
+      - "test/**/AgentSubsystem/ProjectToolsSupportTests.cs"
+      - "test/**/AgentSubsystem/ProjectToolsTestDoubles.cs"
+      - "test/**/AgentSubsystem/ProjectToolsTests.cs"
+      - "test/**/AgentSubsystem/RenderImageToolTests.cs"
+
+  - id: CanvasPilot-Agent-AgentInstructions
+    title: Review of CanvasPilot AgentInstructions unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-instructions.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-instructions.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-instructions.md"
+      - "src/**/AgentSubsystem/AgentInstructions.cs"
+      - "src/**/AgentSubsystem/AgentProjectFacts.cs"
+      - "src/**/AgentSubsystem/Instructions/RolePrompt.md"
+      - "test/**/AgentSubsystem/AgentInstructionsTests.cs"
+
+  - id: CanvasPilot-Agent-PayloadMessageMapper
+    title: Review of CanvasPilot PayloadMessageMapper unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/payload-message-mapper.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/payload-message-mapper.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/payload-message-mapper.md"
+      - "src/**/AgentSubsystem/PayloadMessageMapper.cs"
+      - "test/**/AgentSubsystem/PayloadMessageMapperTests.cs"
+
+  - id: CanvasPilot-Agent-AgentEventMapper
+    title: Review of CanvasPilot AgentEventMapper unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-event-mapper.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-event-mapper.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-event-mapper.md"
+      - "src/**/AgentSubsystem/AgentEventMapper.cs"
+      - "test/**/AgentSubsystem/AgentEventMapperTests.cs"
+      - "test/**/AgentSubsystem/ScriptedChatClient.cs"
+
+  - id: CanvasPilot-Agent-AgentProviderFactory
+    title: Review of CanvasPilot AgentProviderFactory unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-provider-factory.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-provider-factory.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-provider-factory.md"
+      - "src/**/AgentSubsystem/AgentProviderFactory.cs"
+      - "src/**/AgentSubsystem/CopilotAgentSource.cs"
+      - "src/**/AgentSubsystem/IAgentFactory.cs"
+      - "test/**/AgentSubsystem/AgentProviderFactoryTests.cs"
+      - "test/**/AgentSubsystem/AgentProviderTestDoubles.cs"
+
+  - id: CanvasPilot-Agent-AgentService
+    title: Review of CanvasPilot AgentService unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/agent-service.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/agent-service.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/agent-service.md"
+      - "src/**/AgentSubsystem/AgentService.cs"
+      - "src/**/AgentSubsystem/RestoredHistoryDigest.cs"
+      - "src/**/AgentSubsystem/RuntimeLogAdapter.cs"
+      - "test/**/AgentSubsystem/AgentServiceTestRig.cs"
+      - "test/**/AgentSubsystem/AgentServiceTests.cs"
+      - "test/**/AgentSubsystem/RestoredHistoryDigestTests.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces
@@ -263,18 +457,72 @@ reviews:
       - "docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml"
       - "docs/design/canvas-pilot/chat-subsystem/chat-panel.md"
       - "docs/verification/canvas-pilot/chat-subsystem/chat-panel.md"
+      - "src/**/ChatSubsystem/AssistantReplyView.axaml"
+      - "src/**/ChatSubsystem/AssistantReplyView.axaml.cs"
+      - "src/**/ChatSubsystem/AssistantReplyViewModel.cs"
+      - "src/**/ChatSubsystem/ChatHistoryMapper.cs"
       - "src/**/ChatSubsystem/ChatPanelView.axaml"
       - "src/**/ChatSubsystem/ChatPanelView.axaml.cs"
       - "src/**/ChatSubsystem/ChatPanelViewModel.cs"
       - "src/**/ChatSubsystem/ChipThumbnailProvider.cs"
+      - "src/**/ChatSubsystem/NoticeRowView.axaml"
+      - "src/**/ChatSubsystem/NoticeRowView.axaml.cs"
+      - "src/**/ChatSubsystem/NoticeRowViewModel.cs"
+      - "src/**/ChatSubsystem/RestoredEntryView.axaml"
+      - "src/**/ChatSubsystem/RestoredEntryView.axaml.cs"
+      - "src/**/ChatSubsystem/RestoredEntryViewModel.cs"
+      - "src/**/ChatSubsystem/ToolActivityRowView.axaml"
+      - "src/**/ChatSubsystem/ToolActivityRowView.axaml.cs"
+      - "src/**/ChatSubsystem/ToolActivityRowViewModel.cs"
       - "src/**/ChatSubsystem/TranscriptEntryView.axaml"
       - "src/**/ChatSubsystem/TranscriptEntryView.axaml.cs"
       - "src/**/ChatSubsystem/TranscriptEntryViewModel.cs"
       - "src/**/ChatSubsystem/TranscriptItem.cs"
+      - "src/**/ChatSubsystem/TranscriptRowViewModel.cs"
+      - "test/**/ChatSubsystem/ChatPanelCopilotTests.cs"
+      - "test/**/ChatSubsystem/ChatPanelHistoryTests.cs"
       - "test/**/ChatSubsystem/ChatPanelTests.cs"
       - "test/**/ChatSubsystem/ChatSubsystemFakes.cs"
+      - "test/**/ChatSubsystem/TranscriptRowTests.cs"
+      - "test/**/ChatPanelCopilotViewTests.cs"
+      - "test/**/ChatPanelHistoryViewTests.cs"
       - "test/**/ChatPanelViewTests.cs"
       - "test/**/ChatUiTestSupport.cs"
+
+  - id: CanvasPilot-Chat-ChatHistoryStore
+    title: Review of CanvasPilot ChatHistoryStore unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/chat-history-store.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/chat-history-store.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/chat-history-store.md"
+      - "src/**/ChatSubsystem/ChatHistoryRow.cs"
+      - "src/**/ChatSubsystem/ChatHistoryStore.cs"
+      - "src/**/ChatSubsystem/IChatHistoryStore.cs"
+      - "src/**/ChatSubsystem/ProjectHistoryKey.cs"
+      - "test/**/ChatSubsystem/ChatHistoryStoreTests.cs"
+
+  - id: CanvasPilot-Chat-ChatTurnRunner
+    title: Review of CanvasPilot ChatTurnRunner unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/chat-turn-runner.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/chat-turn-runner.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/chat-turn-runner.md"
+      - "src/**/ChatSubsystem/ChatTurnOutcome.cs"
+      - "src/**/ChatSubsystem/ChatTurnRunner.cs"
+      - "src/**/ChatSubsystem/ToolActivityText.cs"
+      - "test/**/ChatSubsystem/ChatTurnRunnerTests.cs"
+      - "test/**/ChatSubsystem/ChatTurnTestSupport.cs"
+      - "test/**/ChatSubsystem/ToolActivityTextTests.cs"
 
   - id: CanvasPilot-Chat-PayloadInspector
     title: Review of CanvasPilot PayloadInspector unit implementation
@@ -425,6 +673,7 @@ reviews:
       - "docs/design/canvas-pilot/knowledge-subsystem.md"
       - "docs/verification/canvas-pilot/knowledge-subsystem.md"
       - "test/**/KnowledgeSubsystem/KnowledgeSubsystemTests.cs"
+      - "test/**/LanguageModelDependencyCheck.cs"
 
   - id: CanvasPilot-Knowledge-KnowledgeCatalog
     title: Review of CanvasPilot KnowledgeCatalog unit implementation and cards
@@ -904,6 +1153,7 @@ reviews:
       - "src/**/SettingsSubsystem/AiProviderSettingsPageViewModel.cs"
       - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml"
       - "src/**/SettingsSubsystem/AiProviderSettingsPageView.axaml.cs"
+      - "src/**/SettingsSubsystem/IProviderCheck.cs"
       - "test/**/SettingsSubsystem/AiProviderSettingsPageTests.cs"
       - "test/**/AiProviderSettingsPageViewTests.cs"
 
@@ -1045,6 +1295,7 @@ reviews:
       - "docs/design/canvas-pilot/style-subsystem.md"
       - "docs/verification/canvas-pilot/style-subsystem.md"
       - "test/**/StyleSubsystem/StyleSubsystemTests.cs"
+      - "test/**/LanguageModelDependencyCheck.cs"
 
   - id: CanvasPilot-Style-StyleKitDocument
     title: Review of CanvasPilot StyleKitDocument unit implementation
@@ -1353,6 +1604,48 @@ reviews:
       - "docs/design/ots/communitytoolkit-mvvm.md"
       - "docs/verification/ots/communitytoolkit-mvvm.md"
       - "test/OtsSoftwareTests/CommunityToolkitMvvmTests.cs"
+
+  - id: OTS-AgentKit
+    title: Review of AgentKit OTS verification evidence and the Copilot runtime exclusion
+    paths:
+      - "docs/reqstream/ots/agentkit.yaml"
+      - "docs/design/ots/agentkit.md"
+      - "docs/verification/ots/agentkit.md"
+      - "test/OtsSoftwareTests/AgentKitTests.cs"
+      - "test/OtsSoftwareTests/AgentTestSupport.cs"
+      - "Directory.Build.props"
+
+  - id: OTS-CopilotSdk
+    title: Review of Microsoft.Copilot.SDK OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/copilot-sdk.yaml"
+      - "docs/design/ots/copilot-sdk.md"
+      - "docs/verification/ots/copilot-sdk.md"
+      - "test/OtsSoftwareTests/CopilotSdkTests.cs"
+
+  - id: OTS-AgentFramework
+    title: Review of Microsoft Agent Framework OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/agent-framework.yaml"
+      - "docs/design/ots/agent-framework.md"
+      - "docs/verification/ots/agent-framework.md"
+      - "test/OtsSoftwareTests/AgentFrameworkTests.cs"
+
+  - id: OTS-ExtensionsAi
+    title: Review of Microsoft.Extensions.AI OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/extensions-ai.yaml"
+      - "docs/design/ots/extensions-ai.md"
+      - "docs/verification/ots/extensions-ai.md"
+      - "test/OtsSoftwareTests/ExtensionsAiTests.cs"
+
+  - id: OTS-OllamaSharp
+    title: Review of OllamaSharp OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/ollamasharp.yaml"
+      - "docs/design/ots/ollamasharp.md"
+      - "docs/verification/ots/ollamasharp.md"
+      - "test/OtsSoftwareTests/OllamaSharpTests.cs"
 
   - id: OTS-FileAssert
     title: Review of FileAssert OTS verification evidence

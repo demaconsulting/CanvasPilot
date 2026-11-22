@@ -72,5 +72,5 @@ Failures to write a log entry are ignored.
 
 - `ImageExporter` (through `IExportPresetSource`) — asks for the sizes when the user exports a picture.
 - `ApplicationComposition` and `MainWindowShell` — build the unit and call `ApplyDefaultToNewProjectAsync` after a
-  project is created (a later step).
-- The picker of the status bar, the guidance, the tools, and the check of a picture (later steps) — read the active kit.
+  project is created.
+- The picker of the status bar, the guidance, the tools, and the check of a picture — read the active kit.

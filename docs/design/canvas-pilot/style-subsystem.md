@@ -8,10 +8,10 @@ The `Style` subsystem holds the look that pictures should have. A **style kit** 
 advice, export sizes, and example images that a person or a team keeps in a folder: a `style.json` file and an
 `examples` folder. Kits come from four places: the kits that come with the program, the kits of the user, the kits in
 the `styles` folder of the open project, and shared folders that the user lists; the most local copy of a kit wins. The
-project says which kit it uses, the application exports pictures at the sizes of the kit, an assistant that is added
-later is given the style as a block of text and two tools, and a picture can be checked against the palette of the kit.
+project says which kit it uses, the application exports pictures at the sizes of the kit, the AI copilot is given the
+style as a block of text and two tools, and a picture can be checked against the palette of the kit.
 None of it depends on any provider of a language model or on any agent library, so what the subsystem offers can be
-given to any assistant that is added later.
+given to any provider of the copilot.
 
 The subsystem contains eleven units, `StyleKitDocument`, `StyleKitCatalog`, `StyleKitArchive`, `StyleSelection`,
 `StyleGuidance`, `StyleChecker`, `StyleTools`, `StylePicker`, `StyleSettingsPage`, `StyleKitEditor`, and
@@ -206,10 +206,11 @@ need (a source of export sizes, a sink for notes of a render) are declared in `P
 is a plain text in the project file, and the style settings are a plain record in the settings. `Style` depends on those
 subsystems, and `AppShell`, which builds every unit in one place, is the only place that knows all of them.
 
-**No provider.** The subsystem refers to no package of a language model, of an agent library, or of an AI extension
+**No provider.** The subsystem refers to no type of a language model, of an agent library, or of an AI extension
 library, and adds no package at all. Its guidance and tools are plain values and text. The test
-`StyleSubsystem_Assembly_ReferencesNoLanguageModelPackage` checks the referenced assemblies, the packages that the test
-project resolves, and the package references of the project file, the same way that the `Knowledge` subsystem does.
+`StyleSubsystem_Types_ReferenceNoLanguageModelPackage` checks the signatures of the types of the subsystem and the using
+directives of its source files, the same way that the `Knowledge` subsystem does; the application library as a whole
+refers to the libraries of the AI copilot, so the rule is checked on the subsystem and not on the assembly.
 
 **A kit is a folder.** A kit is the folder `{id}` with the file `style.json` and the folder `examples`, so that a kit
 can be copied, zipped, committed, and shared as a folder and read by a person. The id is a lower-case kebab text of 1 to

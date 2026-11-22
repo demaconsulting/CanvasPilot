@@ -5,20 +5,22 @@ charts, and OpenSCAD models. You keep the files of a drawing together in a proje
 as you work, and save the picture as a PNG file or copy it for use in email, presentations, and other documents.
 
 ![The workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in
-files, the planned AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the
+files, the AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the
 PNG; a return arrow from the preview to the description step is for marking problems or asking for
 changes](workflow.svg)
 
 ## Purpose
 
 CanvasPilot is an AI-powered desktop application that helps users create drawings and diagrams with the CanvasNet
-library. This version lets you manage projects, browse and preview their image files, export pictures, and set the AI
-provider and speech preferences. It also has a chat panel in which you compose messages: you type or dictate text,
-attach files, folders, and pictures, and mark places on the picture that you are talking about. You can send the message
-and see exactly what it contains. The AI assistant that will answer the messages is not available yet, so a sent message
-stays in the chat panel and nothing is sent to a provider. The Help menu also opens the drawing knowledge, a guide to
-the image formats and to CanvasPilot that you can read card by card and that the assistant is meant to use when it is
-added. Style kits let you keep a look (colors, fonts, sizes, and example images) for a project or a team, export
+library. You manage projects, browse and preview their image files, and export pictures. In the chat panel you compose
+messages: you type or dictate text, attach files, folders, and pictures, and mark places on the picture that you are
+talking about. When you send a message, the AI copilot answers it: it looks up how to draw, writes or changes the files
+of the project, draws them, looks at the result, and fixes what it finds. The copilot works with a local Ollama server
+in this release. GitHub Copilot can be chosen and is checked, but it cannot be used yet (see *Setting Up an AI
+Provider*). The copilot can only use CanvasPilot's own tools, which are confined to the project folder, and it
+overwrites files directly, with no backup, so keep your projects under source control. The Help menu opens the drawing
+knowledge, a guide to the image formats and to CanvasPilot that you can read card by card and that the copilot uses as
+well. Style kits let you keep a look (colors, fonts, sizes, and example images) for a project or a team, export
 pictures at sizes that fit slides, email, and paper, and check a picture against the colors of the style.
 
 ## Scope
@@ -32,12 +34,15 @@ This user guide covers:
   the clipboard, and dragging it into another program
 - Chatting: writing and dictating a message, attaching files, folders, and pictures, marking the picture, and sending
   the message and viewing its payload
+- Setting up an AI provider: Ollama and GitHub Copilot, the readiness messages, and the connection check
+- Working with the copilot: asking, marks and attachments, what the copilot can do in the project, Stop, the chat
+  history, the files that the copilot writes, and what to do about errors
 - Reading the drawing knowledge: opening the browser, the tree of cards, searching, following related cards, and
   copying examples
 - Style kits: choosing the style of a project, the Style Kits window, where kits are kept and which copy wins, making,
   editing, importing, and exporting kits, exporting at sizes, and checking a picture against the style
 - The Settings dialog, with the AI Provider, Speech, and Style Kits pages
-- Where CanvasPilot keeps its settings, logs, speech models, and attachments
+- Where CanvasPilot keeps its settings, logs, chat history, speech models, and attachments
 - Troubleshooting
 
 # Continuous Compliance
@@ -174,10 +179,11 @@ the file, the image data, or both is not confirmed. If a program does not take t
 
 # Chatting
 
-The chat panel is where you compose messages about your drawing. A message can hold text that you type or dictate,
-files, folders, and pictures that you attach, and numbered marks that point at places on the picture. You can send the
-message and see exactly what it contains. **The assistant that will answer is not part of this version**: a sent message
-is kept in the panel and nothing leaves your computer.
+The chat panel is where you talk with the AI copilot about your drawing. A message can hold text that you type or
+dictate, files, folders, and pictures that you attach, and numbered marks that point at places on the picture. When you
+send the message, the copilot answers it (see *Working with the copilot*), and you can see exactly what the message
+contains. Until you have set up an AI provider that works (see *Setting Up an AI Provider*), the panel says so in a
+banner, and a sent message stays in the panel with an explanation.
 
 ## The Chat Panel
 
@@ -185,13 +191,19 @@ The chat panel is the column at the right of the window, beside the preview. It 
 hidden when there is none. Drag the splitter between the preview and the panel to change its width; it starts at 380
 pixels. From top to bottom the panel has:
 
-- the **transcript**, the messages that you sent in this project, oldest first. While it is empty it says "Messages you
-  send appear here."
+- the **Clear chat history** button in the header (see *Chat History*).
+- a **banner**, when the AI provider that you chose cannot be used or can be used only with a warning. It says what is
+  wrong and what to do, with the buttons **Open Settings** and **Check again**. The banner is hidden when everything is
+  fine.
+- the **transcript**, the messages that you sent in this project and the copilot's answers, oldest first. While it is
+  empty it says "Messages you send appear here."
 - the **message box**, in which you write the next message. Without an open project it says "Open a project to write a
   message." and cannot be edited. A status line below it says what is going on, for example what was left out of a drop.
-- the **Hold to talk** button and the **Send** button.
+- the **Hold to talk** button and the **Send** button. While the copilot works, a moving indicator with the text "The
+  copilot is working..." and a **Stop** button appear, and Send waits.
 
-The transcript lives only in memory. It is cleared when you close the project or CanvasPilot.
+The transcript of a project is kept as text on your computer, so it comes back when you open the project again; see
+*Chat History* for what is kept and where.
 
 ## Writing a Message
 
@@ -291,12 +303,13 @@ While a marking tool is chosen, the picture cannot be dragged out. Choose **Sele
 
 ## Sending a Message and Viewing the Payload
 
-Choose **Send** when the message is ready. Send works while the message has text or an attachment and a project is open.
-CanvasPilot copies the attachments into the project, builds the payload of the message, adds the message to the
-transcript with its words and chips in the order that you wrote them, and empties the message box and the marks. If
-something goes wrong, the message stays as it was and the status line says what to fix.
+Choose **Send** when the message is ready. Send works while the message has text or an attachment and a project is open,
+and while the copilot is not still working on an earlier message. CanvasPilot copies the attachments into the project,
+builds the payload of the message, adds the message to the transcript with its words and chips in the order that you
+wrote them, empties the message box and the marks, and gives the message to the copilot. If something goes wrong, the
+message stays as it was and the status line says what to fix.
 
-The **payload** is everything that the assistant will receive for the message. To see it, choose **View payload** on a
+The **payload** is everything that the copilot receives for the message. To see it, choose **View payload** on a
 message in the transcript. A window titled "What the assistant would receive" opens and shows, read-only:
 
 - the text of the message, with `[Mark n]` and `[Attachment n: name]` where the marks and attachments were, and the same
@@ -321,6 +334,214 @@ tests, but not by dropping the picture into Windows Explorer, PowerPoint, Outloo
 program does not accept the picture, use **Image > Export as PNG...** or **Image > Copy Image**, and please report which
 program it was.
 
+# Setting Up an AI Provider
+
+The copilot needs an AI provider. CanvasPilot supports two: a local **Ollama** server, which is covered by automated
+tests (live checks against a running server are pending), and **GitHub Copilot**, which CanvasPilot checks but cannot
+use yet. Choose one in **Tools > Settings... > AI Provider** (see *Settings*), then choose **Check connection**. The
+same check runs in the background when the chat panel is shown, and the chat panel shows its result in the banner, so
+you see a problem before you send a message.
+
+## Setting Up Ollama
+
+Ollama runs language models on your own computer or on a server that you run. Nothing needs a GitHub account.
+
+1. Install [Ollama](https://ollama.com) and start it.
+2. Pull a model that can call tools. For the copilot to see the marks and pictures of your messages, choose a
+   **vision-capable** model; with a model that cannot see pictures the copilot works only from your words and the files
+   (for example `ollama pull gemma3`).
+3. In the AI Provider page choose **Ollama**, type the exact **Model name** (as `ollama list` shows it), and keep the
+   **Ollama endpoint** (default `http://localhost:11434`) or enter the address of your server. The model name is
+   required for Ollama.
+4. Keep the **Context window** at 32,768 tokens or more. The default for new settings is 32,768. Drawings with pictures
+   and tools use a lot of context, and CanvasPilot warns when the window is below 16,384 tokens, or when the model
+   itself supports fewer. A value that an earlier version stored is kept as it is, so check it.
+5. Choose **Check connection**.
+
+The check says what it found, in this order:
+
+- **The address is not valid**: "The Ollama address in Settings is not a valid http or https address". Fix the address.
+- **No model name**: "Enter the name of an Ollama model in Settings". Type it.
+- **Ollama does not answer**: "Ollama did not answer at {address}; start Ollama or fix the address in Settings". Start
+  the server or correct the address, then check again.
+- **The model is missing**: "Ollama does not have the model {name}; run `ollama pull {name}`". Run that command.
+- **The context window is small**: a warning, not an error, that names the size and recommends 32,768. The copilot
+  still works, but long or picture-heavy requests may fail.
+- **Ready**: "Ollama is running with the model {name}; pictures work only with a vision-capable model."
+
+*Not yet checked:* the automated tests of CanvasPilot use a stand-in for the Ollama server. A run with a real server and
+real models has to be done by a person before a release (see the verification of the system).
+
+## Setting Up GitHub Copilot
+
+**GitHub Copilot cannot be used in this release.** The AI library that CanvasPilot is built on can start the GitHub
+Copilot command-line tool only as a copy that is shipped with the application, and it cannot use the tool that you
+installed. CanvasPilot never ships or downloads that tool, so the Copilot provider waits for a newer version of the AI
+library. Meanwhile CanvasPilot checks everything that is in your hands, so that the day it works you only have to
+switch. Use Ollama until then.
+
+When you choose **GitHub Copilot** and **Check connection**, CanvasPilot checks four things in order and shows the first
+that fails:
+
+1. **The Copilot CLI is found.** CanvasPilot looks for the real `copilot.exe` (see *Which Copilot CLI Is Used*). If it
+   cannot find one: "The GitHub Copilot CLI was not found. Install it with `winget install GitHub.Copilot` or set its
+   path in Settings." When only the launcher of an editor was found, the message says so.
+2. **Its version is 1.0.113 or later.** Otherwise: "Copilot CLI {version} is older than 1.0.113. Run `winget upgrade
+   GitHub.Copilot`."
+3. **Credentials exist.** CanvasPilot needs a signed-in GitHub CLI or a token in the environment. Sign in with `gh auth
+   login`, or set the environment variable `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` and `GITHUB_TOKEN` also work), then check
+   again. Otherwise: "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the
+   COPILOT_GITHUB_TOKEN environment variable), then choose Check connection. The Copilot CLI's own /login session is not
+   shared with CanvasPilot's AI library yet." Signing in inside the Copilot CLI with `/login` is not enough.
+4. **The runtime can be started.** This is the step that cannot pass yet: "Copilot support needs an AgentKit update; use
+   Ollama meanwhile."
+
+CanvasPilot never stores, shows, or logs a token. To find out whether the GitHub CLI is signed in it only asks whether
+`gh auth token` prints something, and it forgets the answer's text at once. There is no field for a token in the
+settings.
+
+### Which Copilot CLI Is Used
+
+The tool that is found must be the real Copilot CLI, not a launcher. Editors such as Visual Studio Code put a small
+`copilot.exe` on the `PATH` that only forwards to the real tool, and package managers add `.cmd` or script launchers.
+CanvasPilot does not take any of them. It searches, in this order:
+
+1. the winget package folder `%LOCALAPPDATA%\Microsoft\WinGet\Packages\GitHub.Copilot_*`,
+2. the winget links folder `%LOCALAPPDATA%\Microsoft\WinGet\Links`, and
+3. every folder of the `PATH`,
+
+and it takes the first `copilot.exe` that is not a launcher: a file that is not an `.exe`, that lies in the folder of an
+editor's shim (for example `copilot-shim`, `.vscode`, or `Microsoft VS Code`), or that is far smaller than the real tool
+is skipped. Then it runs the file with `--version` and checks the version.
+
+If you keep the tool somewhere else, enter its full path in **GitHub Copilot command-line tool path**. A path that you
+enter wins over the search and is the only candidate: it must be an existing `.exe`, CanvasPilot checks its version, and
+if it fails the message says why and CanvasPilot does not fall back to the search. Leave the field empty to search.
+
+*Not yet checked:* the check with a real Copilot CLI and a real sign-in on a person's machine is a manual check before a
+release; the automated tests use stand-ins.
+
+## Check Connection and the Banner
+
+**Check connection** is on the AI Provider page. It checks the entries as they are in the dialog, before you choose OK
+or Apply, and it always looks again: it does not reuse the earlier search for the Copilot CLI. The button is unavailable
+while an entry is invalid (the page marks it in red) or a check is running, and the result is removed when you change
+an entry. The chat panel shows the result of the check for the saved settings in its **banner**, with **Open Settings**
+and **Check again**. After you change the provider settings, the banner checks again by itself.
+
+# Working with the Copilot
+
+This chapter describes what happens when you send a message and the AI provider works. It is written for Ollama, the
+provider that works in this release.
+
+## Asking
+
+Describe the picture that you want in the message box, or what to change in a picture that you have. Say what the
+picture is for and what it should contain, and name the file if you mean a file that exists. Then choose **Send**. The
+copilot is told how to draw with each format (the drawing knowledge), which style your project uses, and which files the
+project has, so you do not have to explain those.
+
+While the copilot works, the panel shows "The copilot is working..." with a moving indicator, and its answer appears as
+it is written, as plain text first and as formatted text when the answer is whole. For each tool that the copilot uses,
+one line appears in the transcript, for example "Looking up CanvasNet help", "Writing logo.svg", "Rendering logo.svg",
+and when it is done the same line in the past tense. You can read your own message and the payload at any time; sending
+another message waits until the copilot has finished or you press Stop.
+
+A good loop is: ask for a first draft, look at the preview, mark what is wrong (see below), and ask for the change.
+
+## Marks and Attachments
+
+The copilot receives the same message that **View payload** shows. For each picture that you marked, it gets the picture
+with the numbered marks drawn on it, close-ups of the area around each mark (at most ten), the note of each mark, and,
+when the file reports where things were drawn, the parts of the source file under each mark. A mark chip in your text,
+such as "Mark 2", tells it which mark you mean. A model that cannot see pictures cannot use the pictures; choose a
+vision-capable model for work with marks (see *Setting Up Ollama*).
+
+The attachments that you send are copied into the `attachments` folder of the project, and the copilot is told their
+paths. It can read a text file there, and it can look at a picture or a drawing with its drawing tool. It can also read
+the other files of the project, but never a file outside it.
+
+## What the Copilot Can Do in Your Project
+
+The copilot has only these tools, and every one works inside the project folder and nowhere else:
+
+- **Look up CanvasNet help** (`canvasnet_help`): reads the cards of the drawing knowledge.
+- **Read and check the style** (`style_get` and `style_check`): reads the style of the project and checks a picture of
+  the project against the colors of the style.
+- **List files** (`project_list`): lists the files and folders of the project, without hidden files, and links.
+- **Read a file** (`project_read`): reads a text file of the project (a drawing source, `.csv`, `.json`, or `.txt`).
+- **Write a file** (`project_write`): creates or replaces a drawing source or a small `.csv`, `.json`, or `.txt` file.
+- **Draw a picture** (`render_image`): draws a file with CanvasNet and looks at the result, so that it can see its own
+  work and correct it. The picture is made in memory and is not saved.
+
+It cannot run programs, reach the network, read or change anything outside the project folder, or open your other files.
+It also cannot write to the hidden `.canvaspilot` folder, to the project file, to the style kits in the `styles` folder,
+or to any file or folder whose name starts with a dot (such as `.vscode` or `.git`). The *Drawing Knowledge* and *Style
+Kits* chapters describe what it is given from them. CanvasPilot has no setting that gives the copilot more tools: the
+option for unrestricted tools is not offered.
+
+## Stop
+
+Choose **Stop** while the copilot works. The copilot ends at once, and what it has written so far is kept in the
+transcript, marked **Stopped**, with the note "The copilot was stopped." Files that it has already written stay as they
+are. Send works again afterwards.
+
+## Chat History
+
+CanvasPilot keeps the **text** of your conversation, so that it is there when you open the project again:
+
+- It saves your messages (with the labels of your marks and attachments), the copilot's answers, and a line for each
+  tool that it used, after every turn, including a stopped or failed one. It never saves pictures or the payload.
+  Messages that you have not sent are not saved.
+- When you open the project, the earlier messages are shown as text with the note "Saved text from an earlier session;
+  pictures are not kept." and the copilot is given the words of the conversation with your next message, so that it can
+  go on. Only the most recent part is kept: up to 200 rows and 2 MB per project.
+- The history is **not** stored in the project. It is below `%LOCALAPPDATA%\CanvasPilot\history` on this computer, in a
+  folder named from the full path of the project file, so it is not copied when you copy the project, not committed to
+  source control, and not shared with anyone. **If you move or rename the project folder or file, the project starts
+  with an empty history**; the old history stays behind (the file `project.json` in its folder names the project it
+  belonged to).
+- **Clear chat history** (the button at the top of the panel) deletes the saved history of this project from this
+  computer, empties the transcript, and makes the copilot forget the conversation. It does not ask first, and it cannot
+  be undone. The panel says "Chat history cleared."
+
+## Files the Copilot Writes
+
+**The copilot overwrites the files of your project directly. CanvasPilot keeps no backup and does not ask before the
+copilot replaces a file.** The transcript shows what it did ("created" or "replaced", with the sizes), and the explorer
+selects the file it wrote, but there is no way to undo it in CanvasPilot. Keep the project under source control (for
+example Git) or copy the project folder before you ask the copilot to change files that you care about, and check the
+result before you rely on it. The copilot is told to read a file before it replaces it and to keep what you did not ask
+it to change, but a model can be wrong.
+
+Only drawing sources and small data files are written (at most 256 KiB each), only inside the project folder, and only
+files that the copilot is asked to create or change. CanvasPilot adds nothing else to your project because of the
+copilot: no history file, no backup, no copy of its own data. The data of the Copilot runtime (its sessions, which are
+unused while Copilot is gated) would be kept in `%LOCALAPPDATA%\CanvasPilot\copilot`, outside every project, and is
+deleted when a conversation ends. A project folder that contains one of those folders is refused. Pictures that you
+pasted into a message that is not sent yet are in `.canvaspilot\attachments` of the project, as before; consider listing
+`.canvaspilot/` in the `.gitignore` of the project.
+
+## Errors and What to Do
+
+A problem appears in the transcript as an error notice with a sentence that says what to do and, when the settings can
+fix it, a button **Open Settings**. Your message stays in the transcript, and you can send it again after the fix.
+
+- **The provider cannot be used**: the notice is the sentence of the readiness check (see *Setting Up an AI Provider*).
+  Open the settings, fix the entry, and choose **Check connection**.
+- **The connection was lost or could not be made**: for Ollama, "Check that Ollama is running and that the address in
+  Settings is right, then send the message again."
+- **The model was not found**: "Run `ollama pull {model}` or choose another model in Settings."
+- **The server refused the request**: check the address and any proxy in front of the server.
+- **The copilot is still working**: "Press Stop to cancel it, then send again."
+- **Open a project first**: the copilot works on the files of a project.
+- **The project is inside CanvasPilot's own data folder**: open a project outside `%LOCALAPPDATA%\CanvasPilot`.
+- **A tool failed**: the line of the tool says why (for example that a path is outside the project), and the copilot
+  usually corrects itself in the next step.
+- **An unexpected failure**: "Send the message again. If it keeps failing, look at the application log." The log
+  records provider, model, tool names, sizes, and durations, but never the words of your messages or of the answers, the
+  pictures, or the contents of files.
+
 # Drawing Knowledge
 
 CanvasPilot carries a guide to drawing with the formats that CanvasNet draws and to working in a CanvasPilot project. It
@@ -330,9 +551,8 @@ that you use, and what the marks and attachments of a message mean. The cards of
 library that is installed with CanvasPilot, so they describe exactly what the application can draw. The few cards that
 are only about the program that hosts CanvasNet, such as the options of a render in a program's code, are left out,
 because CanvasPilot sets those itself; the cards about embedding pages of documents, pictures, and files, and about
-setting a view or a parameter in a link, are kept. You can read the cards yourself, and the AI assistant that will draw
-pictures for you is meant to use the same cards when it is added later; it is not available yet, and nothing in the
-browser sends anything anywhere.
+setting a view or a parameter in a link, are kept. You can read the cards yourself, and the AI copilot uses the same
+cards: it is given their index and looks up a card when it needs it. Opening the browser sends nothing anywhere.
 
 ## Opening the Browser
 
@@ -439,8 +659,8 @@ because the network is down, while the other groups still work. A kit marked *in
 
 Choose a kit to see it at the right: its description and place, its palette with each color's role and `#RRGGBB` value,
 fonts, line width, corner radius, spacing, notes and advice, export sizes, any warnings about the kit, small pictures of
-its example images with their captions, and, under **What an assistant is given**, the text that a future assistant
-would receive about the kit, with its length. The buttons are:
+its example images with their captions, and, under **What an assistant is given**, the text that the copilot
+receives about the kit, with its length. The buttons are:
 
 - **Use in this project** makes the chosen kit the style of the open project. It is unavailable while no project is open
   and for a kit that is hidden by a more local copy.
@@ -528,13 +748,13 @@ you to choose one in the status bar first. A picture that uses only the kit's co
 such as grey grid lines and black text, are reported when the file leaves them at the defaults, which is the reason the
 examples of the kits set every color.
 
-## What an Assistant Will Do With a Kit
+## What the Copilot Does With a Kit
 
-The AI assistant is not available yet, and nothing is sent anywhere. The kit is prepared for it: when the assistant is
-added, it will be given the style of the project's kit as a short block of text (the palette, fonts, shapes, and advice,
+The AI copilot is given the style of the project's kit as a short block of text (the palette, fonts, shapes, and advice,
 and the paths of the example images, which it can look at), and two tools, one to read the style and one to check a
 picture of the project against the palette. The text of a kit is given to it as data and not as instructions, and its
-length is limited. You can see the text in the Style Kits window under **What an assistant is given**.
+length is limited. Nothing about the kit is sent to a provider until you send a message and the provider works (see
+*Setting Up an AI Provider*). You can see the text in the Style Kits window under **What an assistant is given**.
 
 ## Checks That Only a Person Can Do
 
@@ -553,19 +773,32 @@ page shows what is wrong.
 
 ## AI Provider
 
-The AI Provider page stores your preferences for the assistant. This version only stores them; the assistant that
-would use them is not available yet, so the chat does not use them, and nothing is sent to a provider.
+The AI Provider page chooses the provider that the copilot uses and how to reach it (see *Setting Up an AI Provider* for
+what to install and the messages of the check). Changes take effect when you choose OK or Apply, and a conversation
+that is running is started again with the new choices when you send the next message.
 
-- **Provider**: GitHub Copilot or Ollama.
-- **Model name**: The model to use. Leave it empty for the provider's default model.
-- **Context window (tokens)**: The size of the context window, from 512 to 2,000,000 tokens (default 8192).
-- **Reasoning level**: Auto, Low, Medium, or High.
+- **Provider**: GitHub Copilot or Ollama. Ollama is supported and covered by automated tests (live checks are pending);
+  GitHub Copilot is checked but cannot be used yet.
+- **Model name**: The model to use. For Ollama it is required and must be the name that `ollama list` shows. For GitHub
+  Copilot, leave it empty to use the provider's default model. It is typed text, because no list of models is offered.
+- **Context window (tokens, Ollama only)**: The size of the context window that is requested for every Ollama request,
+  from 512 to 2,000,000 tokens (default 32,768). A value that you or an earlier version stored is kept as it is. Below
+  16,384 tokens the page shows a warning, not an error, that says that drawings with pictures and tools may fail. The
+  setting does not apply to GitHub Copilot, which sets its own; the page says so when Copilot is chosen.
+- **Reasoning level**: Shown, but unavailable, with the note "Not available yet: the AI library does not expose it".
+  A value that is stored is kept as it is.
 - **Ollama endpoint**: The address of the Ollama server (default `http://localhost:11434`). It is used when the
   provider is Ollama.
-- **GitHub Copilot command-line tool path**: The path of the Copilot command-line tool. Leave it empty to locate the
-  tool automatically. It is used when the provider is GitHub Copilot.
-- **Allow unrestricted agent tools**: Off by default. When it is on, the future agent may use tools that are not
-  limited to the project folder. Leave it off unless you trust the agent's instructions.
+- **GitHub Copilot command-line tool path**: The full path of the installed `copilot.exe`. Leave it empty to locate the
+  tool automatically. A path that you enter wins over the search, and launcher shims, such as the one that VS Code puts
+  on the `PATH`, are ignored by the automatic search (see *Which Copilot CLI Is Used*).
+- **Check connection**: Checks the entries on the page, as they are now, and shows the answer below the button (see
+  *Check Connection and the Banner*).
+
+There is no option for unrestricted tools: the copilot always has only the tools of CanvasPilot, confined to the
+project folder (see *What the Copilot Can Do in Your Project*). A value that an earlier version stored for it is kept in
+the settings file and has no effect. There is no field for a password or a token either; the settings file never
+contains credentials.
 
 ## Speech
 
@@ -610,9 +843,12 @@ third-party libraries that CanvasPilot uses. Include the version when you report
 | --- | --- |
 | Settings and recent projects | `%APPDATA%\CanvasPilot\settings.json` |
 | Log files | `%LOCALAPPDATA%\CanvasPilot\logs` |
+| Chat history of each project (text only) | `%LOCALAPPDATA%\CanvasPilot\history\{key}` |
+| Copilot runtime data (unused while Copilot is gated) | `%LOCALAPPDATA%\CanvasPilot\copilot` |
 | Pictures prepared for dragging out (temporary) | `%LOCALAPPDATA%\CanvasPilot\drag` |
 | Pictures that you pasted into a message that is not sent yet | `.canvaspilot\attachments` in the project |
 | Files and folders that you sent with a message | `attachments` in the project |
+| Files that the copilot created or replaced | Anywhere in the project folder |
 | Style kits of the project | `styles` in the project |
 | Your own style kits | `%APPDATA%\CanvasPilot\styles` |
 | Style kits that come with CanvasPilot (read only) | `StyleKits` next to `CanvasPilot.exe` in the installation |
@@ -620,11 +856,21 @@ third-party libraries that CanvasPilot uses. Include the version when you report
 | Your projects | The folder that you chose for each project |
 
 The settings file never contains credentials. The log files stay on your computer and are never sent anywhere; they
-roll over when they reach a size limit and old ones are removed, so they cannot fill the disk. To reset all settings,
-close CanvasPilot and delete `settings.json`. CanvasPilot never stores what you say or the audio from the microphone;
-the words of a dictation exist only in the message that you are writing. A message that you have not sent is not
-saved, so it is lost when you close the project or CanvasPilot, and the transcript of sent messages is lost the same
-way.
+roll over when they reach a size limit and old ones are removed, so they cannot fill the disk. They record what
+happened (provider, model, tool names, sizes, and durations), but never the words of your messages or of the answers,
+pictures, or the contents of your files. To reset all settings, close CanvasPilot and delete `settings.json`.
+CanvasPilot never stores what you say or the audio from the microphone; the words of a dictation exist only in the
+message that you are writing.
+
+A message that you have not sent is not saved, so it is lost when you close the project or CanvasPilot. The **text** of
+the messages that you sent and of the copilot's answers is saved on this computer, in the history folder above, and
+comes back when you open the project again; pictures and payloads are not saved. The history folder is named from the
+full path of the project file, so a project that you move or rename starts with an empty history and the old folder is
+left behind (its `project.json` says which project it belonged to; you can delete it). The history is never stored in
+the project and is not copied with it. **Clear chat history** deletes it. The only things that CanvasPilot puts in your
+project folder are the files that you and the copilot make, the `attachments` folder, and the hidden `.canvaspilot`
+folder with the draft pictures of unsent messages; if you keep projects in source control, add `.canvaspilot/` to its
+ignore list.
 
 # Troubleshooting
 
@@ -657,7 +903,50 @@ insert the file instead.
 open. Open or create a project. Without one the message box says "Open a project to write a message."
 
 **Send is not available.** Send works only while the message has some text or an attachment, no talk button is held,
-and the previous message is not still being sent. Let go of the Hold to talk button, or write something.
+the previous message is not still being sent, and the copilot is not still working on the previous message. Let go of
+the Hold to talk button, write something, or choose **Stop** while the copilot works.
+
+**The banner says "Copilot support needs an AgentKit update; use Ollama meanwhile."** GitHub Copilot cannot be used in
+this release, because the AI library that CanvasPilot uses cannot start the Copilot command-line tool that you
+installed. Nothing is wrong with your installation. Choose **Ollama** in **Tools > Settings... > AI Provider** (see
+*Setting Up Ollama*).
+
+**The banner says the GitHub Copilot CLI was not found.** Install it with `winget install GitHub.Copilot`, or enter the
+full path of the installed `copilot.exe` in the settings. If the message says that only the launcher of an editor was
+found, the real tool is missing: the launcher that Visual Studio Code puts on the `PATH` is not accepted (see *Which
+Copilot CLI Is Used*).
+
+**The banner says Copilot CLI is older than 1.0.113.** Run `winget upgrade GitHub.Copilot`, then choose **Check
+connection**.
+
+**The banner says Copilot is not signed in for CanvasPilot.** Sign in with `gh auth login`, or set the environment
+variable `COPILOT_GITHUB_TOKEN`, then close and start CanvasPilot again if you set a variable, and choose **Check
+connection**. The sign-in that you made inside the Copilot CLI with `/login` is not shared with CanvasPilot.
+
+**The banner says Ollama did not answer.** Start Ollama, or fix the **Ollama endpoint** in the settings, and choose
+**Check again**. Check that a firewall or a proxy is not in the way when the server is on another computer.
+
+**The banner says Ollama does not have the model.** Run `ollama pull` with the name that the banner shows, or choose a
+model that `ollama list` shows, and choose **Check again**.
+
+**The banner warns about the context window.** The window that you set (or that the model supports) is below 16,384
+tokens, so drawings with pictures and tools may fail. Raise **Context window** to 32,768 on the AI Provider page, or
+choose a model with a larger window.
+
+**The copilot does not see my marks or pictures.** The model must be vision-capable. Choose such a model in the settings
+(see *Setting Up Ollama*). With another model the copilot works from your words and from the files.
+
+**The copilot answered with an error.** The notice says what happened and what to do (see *Errors and What to Do*).
+Your message is still in the transcript; fix the cause, and send it again.
+
+**The copilot replaced a file that I wanted to keep.** CanvasPilot keeps no backup and does not ask before the copilot
+replaces a file. Restore the file from source control or from your own copy. To avoid it next time, keep the project
+under source control and ask the copilot to create a new file instead of changing the old one.
+
+**My chat history is gone.** The history is kept per project on this computer, named from the path of the project file.
+A project that was moved or renamed starts with an empty history, and **Clear chat history** deletes it. A history file
+that cannot be read is set aside with the ending `.bad` in its folder, and the history starts again (see *Where
+CanvasPilot Keeps Its Files*).
 
 **A message was not sent.** The status line under the message says why, and the message stays as you wrote it. The usual
 cause is a limit: one message copies at most 500 files, 500 folders, and 200 MB into the project, and a pasted picture

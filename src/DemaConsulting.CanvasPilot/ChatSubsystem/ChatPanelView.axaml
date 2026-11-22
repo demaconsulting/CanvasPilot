@@ -6,10 +6,57 @@
              x:DataType="vm:ChatPanelViewModel"
              AutomationProperties.AutomationId="ChatPanel">
 
-  <Grid Margin="8" RowDefinitions="*,Auto,Auto">
+  <Grid Margin="8" RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
 
-    <!-- The messages that were sent in this project, oldest first; a message is only in memory and cannot be changed -->
-    <Grid Grid.Row="0">
+    <!-- The header of the conversation: the button that deletes the saved chat history of the project, empties the
+         transcript, and makes the copilot forget the conversation; it does not ask first -->
+    <Grid Grid.Row="0" Margin="0,0,0,4" ColumnDefinitions="*,Auto">
+      <Button Name="ClearHistoryButton"
+              Grid.Column="1"
+              AutomationProperties.AutomationId="ChatClearHistoryButton"
+              Padding="8,2"
+              FontSize="12"
+              Content="Clear chat history"
+              Command="{Binding ClearHistoryCommand}"
+              ToolTip.Tip="Delete the saved chat history of this project from this computer and start the conversation again" />
+    </Grid>
+
+    <!-- Whether the copilot can be used, with what to do when it cannot; hidden when everything is ready -->
+    <Border Name="ReadinessBanner"
+            Grid.Row="1"
+            AutomationProperties.AutomationId="ChatReadinessBanner"
+            Margin="0,0,0,8"
+            Padding="8"
+            CornerRadius="4"
+            Background="#22E0A030"
+            IsVisible="{Binding HasReadinessIssue}">
+      <StackPanel Spacing="4">
+        <SelectableTextBlock Name="ReadinessText"
+                             AutomationProperties.AutomationId="ChatReadinessMessage"
+                             TextWrapping="Wrap"
+                             Text="{Binding ReadinessMessage}" />
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Name="ReadinessOpenSettingsButton"
+                  AutomationProperties.AutomationId="ChatReadinessOpenSettingsButton"
+                  Padding="8,2"
+                  FontSize="12"
+                  Content="Open Settings"
+                  Command="{Binding OpenSettingsCommand}"
+                  ToolTip.Tip="Open the settings of the application" />
+          <Button Name="ReadinessCheckAgainButton"
+                  AutomationProperties.AutomationId="ChatReadinessCheckAgainButton"
+                  Padding="8,2"
+                  FontSize="12"
+                  Content="Check again"
+                  Command="{Binding CheckAgainCommand}"
+                  ToolTip.Tip="Check again whether the copilot can be used" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- The conversation, oldest first: the messages that were sent, the answers of the copilot, the tools it called, and
+         notices; what was said is saved on this computer, outside the project, and it cannot be changed -->
+    <Grid Grid.Row="2">
       <ScrollViewer Name="TranscriptScroll"
                     AutomationProperties.AutomationId="ChatTranscriptScroll"
                     HorizontalScrollBarVisibility="Disabled"
@@ -28,8 +75,35 @@
                  IsVisible="{Binding !HasTranscript}" />
     </Grid>
 
+    <!-- While the copilot works: the indicator and the button that stops it -->
+    <Grid Name="BusyRow"
+          Grid.Row="3"
+          AutomationProperties.AutomationId="ChatBusyIndicator"
+          Margin="0,8,0,0"
+          ColumnDefinitions="Auto,*,Auto"
+          IsVisible="{Binding IsCopilotBusy}">
+      <ProgressBar Grid.Column="0"
+                   Width="60"
+                   Height="4"
+                   Margin="0,0,8,0"
+                   IsIndeterminate="True"
+                   VerticalAlignment="Center" />
+      <TextBlock Name="BusyText"
+                 Grid.Column="1"
+                 AutomationProperties.AutomationId="ChatBusyText"
+                 VerticalAlignment="Center"
+                 Text="{x:Static vm:ChatPanelViewModel.WorkingText}" />
+      <Button Name="StopButton"
+              Grid.Column="2"
+              AutomationProperties.AutomationId="ChatStopButton"
+              MinWidth="80"
+              Content="Stop"
+              Command="{Binding StopCommand}"
+              ToolTip.Tip="Stop the copilot; what it has written so far is kept" />
+    </Grid>
+
     <!-- The message being written, with the words that are being recognized and the status line of the composer -->
-    <Border Grid.Row="1"
+    <Border Grid.Row="4"
             Margin="0,8,0,0"
             Padding="4"
             BorderThickness="1"
@@ -41,7 +115,7 @@
     </Border>
 
     <!-- Hold to talk, and Send -->
-    <Grid Grid.Row="2" Margin="0,8,0,0" ColumnDefinitions="*,Auto,Auto">
+    <Grid Grid.Row="5" Margin="0,8,0,0" ColumnDefinitions="*,Auto,Auto">
       <Button Name="HoldToTalkButton"
               Grid.Column="1"
               AutomationProperties.AutomationId="ChatHoldToTalkButton"

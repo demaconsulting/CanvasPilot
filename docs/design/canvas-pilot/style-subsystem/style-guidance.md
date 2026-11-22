@@ -31,6 +31,8 @@ so that an assistant can open them. It has no user interface and refers to no pr
 #### Key Methods
 
 **Build**: Writes the block with the limits of the first step and returns it when it has at most 4,000 characters.
+With `includeExamples: false` (the default is `true`) the part with the example images is left out of every step, which is
+what a reader with little room asks for; the section `examples` of `BuildSection` still gives them.
 Otherwise it tries the next step, until one fits. The steps, each smaller than the one before, are: (1) the full block;
 (2) the notes cut to 400 characters with an ellipsis; (3) the Vega-Lite configuration replaced by a line that points to
 `style_get`; (4) at most six examples; (5) at most twelve Mermaid variables; (6) the notes replaced by a pointer;
@@ -63,6 +65,6 @@ block within the budget.
 
 #### Callers
 
-- `StyleTools` (a later step) — the tool `style_get` returns the block or one section of it.
-- The builder of the prompt of an assistant (a later increment) — includes the block of the active kit.
-- The manager window of the kits (a later step) — shows the block and its size.
+- `StyleTools` — the tool `style_get` returns the block or one section of it.
+- `AgentInstructions` (the `Agent` subsystem) — includes the block of the active kit in the instructions of the copilot.
+- The manager window of the kits — shows the block and its size.

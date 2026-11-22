@@ -37,6 +37,8 @@ from the background thread. No window, network, microphone, or special permissio
   staged attachments, raises one event with the sent message, and leaves an empty draft with no history, no marks, and
   no saved pictures; it refuses an empty message, a message while the talk button is held, and a second send; the draft
   cannot be changed while it is sent.
+- While sending is blocked from outside (the copilot is working) the message cannot be sent, the send command cannot
+  run, and the status text gives the reason, while editing stays possible; lifting the block restores sending.
 - When staging fails, the build fails, the send is canceled, or the project is closed meanwhile, nothing is changed, no
   event is raised, the status says why, and the same draft can be sent again.
 - Holding the talk button shows the live words, and releasing it adds one dictated block at the caret over the selection
@@ -219,6 +221,22 @@ it executes it sends the message. This scenario is tested by `ComposerViewModel_
 
 **ComposerViewModel_SendAsync_WhileTalkButtonHeld_IsRefused**: A send while the talk button is held is refused with the
 request to let go first. This scenario is tested by `ComposerViewModel_SendAsync_WhileTalkButtonHeld_IsRefused`.
+
+**ComposerViewModel_BlockSending_CannotSendButCanEdit_UnblockRestoresAndClearsTheReason**: After `BlockSending` with the
+text that the chat gives while the copilot works, `CanSend` is false, the send command cannot run, `IsSendBlocked` and
+`SendBlockedReason` say so, the status text shows the reason, and the message can still be edited; after
+`UnblockSending` the message can be sent and the reason is gone from the property and the status. This scenario is
+tested by `ComposerViewModel_BlockSending_CannotSendButCanEdit_UnblockRestoresAndClearsTheReason`.
+
+**ComposerViewModel_SendAsync_WhileBlocked_IsRefusedWithTheReasonAndKeepsTheDraft**: A send while sending is blocked is
+refused with the reason as the status text, builds nothing, and keeps the draft, including what was typed meanwhile; the
+same draft is sent once the block is lifted. This scenario is tested by
+`ComposerViewModel_SendAsync_WhileBlocked_IsRefusedWithTheReasonAndKeepsTheDraft`.
+
+**ComposerViewModel_UnblockSending_OtherStatusAndNoBlockAndEmptyReason_AreHandled**: Lifting the block when there is
+none changes nothing, an empty or missing reason is refused, and a status sentence about another action is kept when the
+block is lifted. This scenario is tested by
+`ComposerViewModel_UnblockSending_OtherStatusAndNoBlockAndEmptyReason_AreHandled`.
 
 **ComposerViewModel_PushToTalk_Unavailable_ShowsReasonAndChangesNothing**: For each of the five reasons dictation cannot
 work (no model, model not installed, runtime missing, no microphone, engine unavailable) the status holds the service's

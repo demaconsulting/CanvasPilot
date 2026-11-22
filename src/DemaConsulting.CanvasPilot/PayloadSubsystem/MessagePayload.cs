@@ -23,10 +23,10 @@ using System.Collections.Immutable;
 namespace DemaConsulting.CanvasPilot.PayloadSubsystem;
 
 /// <summary>
-///     The message that the user sent, in the form in which the assistant receives it: the text with its references in
+///     The message that the user sent, in the form in which the AI copilot receives it: the text with its references in
 ///     order, the attachments with their paths, and the pictures with their annotated images, mark crops, mark geometry
 ///     in picture pixels, and the parts of the source file under each mark. It is the contract between the chat and the
-///     assistant that is added later.
+///     copilot.
 /// </summary>
 /// <remarks>
 ///     <para>

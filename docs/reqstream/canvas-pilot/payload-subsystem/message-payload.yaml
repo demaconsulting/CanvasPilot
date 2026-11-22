@@ -21,7 +21,7 @@ sections:
                 justification: |
                   The payload is what the user sent. The draft, the registry of marks, and the buffers it was built from
                   go on living and being changed, and the payload must still say what it said when it was built. The
-                  version lets a reader that is added later recognize what it is reading.
+                  version lets a reader recognize what it is reading.
                 tests:
                   - MessagePayload_New_CarriesContractVersionOne
                   - MessagePayload_New_CopiesListsAndBytes_SoLaterChangesToTheSourcesChangeNothing

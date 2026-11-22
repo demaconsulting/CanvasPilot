@@ -1,0 +1,111 @@
+---
+# Software Unit Requirements for the ChatHistoryStore Unit
+#
+# The ChatHistoryStore unit keeps the words of the conversation of each project on the user's computer so that the
+# conversation is still there when the project is opened again, and never in the project, which may be copied or put
+# under source control. It names the folder of a project by a hash of the path of its project file, saves and reads
+# rows of words only in a small JSON file, keeps the newest rows within limits, writes whole files or none, sets aside a
+# file that it cannot use, deletes the history of a project on request, and refuses a configuration that would put the
+# history inside the project folder. It has no window; the panel gives it the rows.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Chat Subsystem Requirements
+        sections:
+          - title: ChatHistoryStore Requirements
+            requirements:
+              - id: CanvasPilot-ChatHistoryStore-SaveTextOnlyOutsideProject
+                title: >-
+                  The ChatHistoryStore shall save the rows of a conversation as words only, in a version 1 JSON file below
+                  a root folder that it is given, in a folder of its own for each project with a second file that names the
+                  project, shall keep no picture, payload, or tool result, shall keep only the newest 200 rows and no more
+                  than 2 MB of them by dropping the oldest first and cutting a text that is too long, shall write a file
+                  through a temporary file that is then moved over the old one and remove the temporary files that a
+                  crash left, and shall report a failure to write as a result and not as an exception.
+                justification: |
+                  What the user said is the user's own and may be private, so only the words are kept, in a form that a
+                  person can read and a later version can extend, and the limits keep the file small and quick to read at
+                  every start. A write that ends in the middle must not destroy the history, and a disk that is full or
+                  locked must not stop the conversation.
+                tests:
+                  - ChatHistoryStore_SaveThenLoad_RoundTripsEveryKindOfRow
+                  - ChatHistoryStore_Save_WritesTheKeyedFolderWithSidecar_AndNothingIntoTheProject
+                  - ChatHistoryStore_Save_FileHasVersion1AndHoldsTextOnly
+                  - ChatHistoryStore_Save_MoreThan200Rows_KeepsTheNewest200
+                  - ChatHistoryStore_Save_MoreThan2MegabytesOfRows_DropsTheOldestFirst
+                  - ChatHistoryStore_Cap_VeryLongText_IsCutAndShortTextStays
+                  - ChatHistoryStore_Save_AfterACrash_RemovesLeftoversAndReplacesTheFileWhole
+                  - ChatHistoryStore_Save_RootCannotBeMade_ReturnsFailureAndDoesNotThrow
+                  - ChatHistoryStore_Operations_NullArguments_Throw
+
+              - id: CanvasPilot-ChatHistoryStore-KeyByProjectPath
+                title: >-
+                  The ChatHistoryStore shall name the folder of the history of a project by the first 16 bytes of the
+                  SHA-256 hash of the full path of the project file, as 32 lowercase hexadecimal characters, made from
+                  the path with its separators normalized, a trailing separator dropped, and, where the file system
+                  ignores case, in lower case, so that a project that is moved or renamed has another key and a fresh
+                  history.
+                justification: |
+                  The history must be found again from the project alone and must not be written into the project, so the
+                  place of the project file is the only thing that can name it. A hash keeps odd characters and long paths
+                  out of folder names, and normalizing the path makes every spelling of one path find one history. A moved
+                  project is a known and accepted limit that the design and the user guide state.
+                tests:
+                  - ProjectHistoryKey_HashOf_FixedVectors_Are32LowercaseHexCharactersOfTheFirst16Bytes
+                  - ProjectHistoryKey_Compute_SpellingsOfOnePath_GiveOneKey
+                  - ProjectHistoryKey_Compute_OtherCaseOrOtherPlace_FollowsTheFileSystem
+                  - ProjectHistoryKey_Compute_NullOrBlank_Throws
+
+              - id: CanvasPilot-ChatHistoryStore-RestoreOnOpen
+                title: >-
+                  The ChatHistoryStore shall read the saved rows of a project, oldest first, create nothing when it reads,
+                  give no rows when nothing was saved, and drop the rows that cannot be used while keeping the others.
+                justification: |
+                  Opening a project must be harmless: it must not leave folders behind for projects that never had a
+                  conversation, and one damaged row must not cost the user the rest of the conversation.
+                tests:
+                  - ChatHistoryStore_SaveThenLoad_RoundTripsEveryKindOfRow
+                  - ChatHistoryStore_Save_WritesTheKeyedFolderWithSidecar_AndNothingIntoTheProject
+                  - ChatHistoryStore_Load_RowsThatCannotBeUsed_AreDroppedAndTheOthersRead
+
+              - id: CanvasPilot-ChatHistoryStore-ClearOnRequest
+                title: >-
+                  The ChatHistoryStore shall delete the folder of the history of a project, with everything in it, on
+                  request, and nothing of any other project, and shall treat a project that has no history as cleared.
+                justification: |
+                  The user must be able to remove the words of a conversation from the computer completely, including the
+                  file that was set aside as bad, without touching the conversations of other projects.
+                tests:
+                  - ChatHistoryStore_Clear_DeletesTheFolderOfThatProjectOnly
+
+              - id: CanvasPilot-ChatHistoryStore-IgnoreCorruptHistory
+                title: >-
+                  The ChatHistoryStore shall not use a history file that is not JSON of the saved form, that has no version
+                  or a version below 1 or above the one it writes, that has no rows, that holds a row of an unknown kind, or
+                  that is far bigger than any file it wrote; shall rename it to the same name with the extension .bad in
+                  its folder, replacing an earlier bad file; shall give no rows; and shall log the path and the reason and
+                  never the words.
+                justification: |
+                  A file that cannot be read must not stop the application or be read as if it were something else, and it
+                  must not be lost: a file of a newer version may be wanted by that version, and a damaged file may be
+                  wanted by the user. The log is read by support people, and the words of a conversation are not theirs.
+                tests:
+                  - ChatHistoryStore_Load_CorruptFile_IsRenamedBadIgnoredAndLoggedWithoutItsWords
+                  - ChatHistoryStore_Load_NewerVersion_IsRenamedBadAndIgnored
+                  - ChatHistoryStore_Load_FileThatIsNotAHistory_IsRenamedBadAndIgnored
+                  - ChatHistoryStore_Load_FileFarBiggerThanTheLimit_IsRenamedBad
+
+              - id: CanvasPilot-ChatHistoryStore-RefuseRootInsideProject
+                title: >-
+                  The ChatHistoryStore shall refuse to read, write, or delete when its root folder is the project folder or
+                  lies inside it, shall tell why in the result, shall leave the project folder as it was, and shall not
+                  refuse a root beside the project whose name only starts like the name of the project folder.
+                justification: |
+                  A project folder is copied, shared, and put under source control, so a configuration mistake that put the
+                  history of a conversation into it would publish the user's words. The check is cheap and is made on every
+                  operation, because the root and the project are chosen apart from each other.
+                tests:
+                  - ChatHistoryStore_RootInsideTheProject_IsRefusedForEveryOperation
+                  - ChatHistoryStore_RootBesideTheProjectWithTheSamePrefix_IsNotInsideIt
+                  - ChatHistoryStore_New_BlankRootThrows_AndTheDefaultRootIsBelowTheLocalData

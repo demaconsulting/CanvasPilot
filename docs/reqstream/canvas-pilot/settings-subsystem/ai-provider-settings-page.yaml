@@ -2,8 +2,8 @@
 # Software Unit Requirements for the AiProviderSettingsPage Unit
 #
 # The AiProviderSettingsPage unit is the "AI Provider" page of the settings dialog. It edits and validates
-# the persisted AI provider choices only; no component consumes them yet, so the page has no dependency on any
-# AI service.
+# the persisted AI provider choices and, through the IProviderCheck interface that the Settings subsystem owns,
+# can check the connection to the provider. It has no dependency on the Agent subsystem that implements the check.
 
 sections:
   - title: CanvasPilot Requirements
@@ -73,13 +73,64 @@ sections:
                   - AiProviderSettingsPageViewModel_CopilotCliPath_EditedAndCleared_IsApplied
                   - AiProviderSettingsPageViewModel_CopilotCliPath_InvalidCharacters_IsErrorOnlyForCopilot
 
-              - id: CanvasPilot-AiProviderSettingsPage-UnrestrictedToolsOptIn
+              - id: CanvasPilot-AiProviderSettingsPage-HideUnrestrictedTools
                 title: >-
-                  The AiProviderSettingsPage shall keep unrestricted agent tools off unless the user
-                  explicitly checks the opt-in.
+                  The AiProviderSettingsPage shall not offer unrestricted agent tools, shall show no text about them, and
+                  shall load and apply the stored value of that setting unchanged.
                 justification: |
-                  Unrestricted tools let the agent act beyond its normal limits, so the safe state must
-                  be the default and must change only by a deliberate user action.
+                  The copilot has no unrestricted tools, so a check box for them would promise a protection or a risk that
+                  does not exist. The stored value is still carried through, so that a later version that offers the
+                  choice finds what the user had.
                 tests:
                   - AiProviderSettingsPageViewModel_UnrestrictedAgentTools_NotChosen_StaysOff
-                  - AiProviderSettingsPageView_UnrestrictedAgentToolsCheckBox_StartsOffAndTogglesSetting
+                  - AiProviderSettingsPageViewModel_UnrestrictedAgentTools_Stored_IsKeptUnchanged
+                  - AiProviderSettingsPageView_UnrestrictedAgentTools_IsNotOffered
+
+              - id: CanvasPilot-AiProviderSettingsPage-ExplainDisabledReasoning
+                title: >-
+                  The AiProviderSettingsPage shall show the reasoning level disabled, with the stored value and the note
+                  "Not available yet: the AI library does not expose it", and shall apply the value unchanged; it shall show
+                  the context window as an Ollama setting, with a note while GitHub Copilot is selected, and the path of the
+                  Copilot command-line tool with a note that the installed copilot.exe of version 1.0.113 or later is used,
+                  that a path set here wins, and that shims are ignored.
+                justification: |
+                  A choice that nothing acts on must not look like one that does. Saying why the reasoning level is disabled,
+                  which provider the context window belongs to, and which executable is used keeps the page honest and
+                  saves the user from setting a value that has no effect.
+                tests:
+                  - AiProviderSettingsPageViewModel_Notes_ReasoningAndCliPath_ExplainTheLimits
+                  - AiProviderSettingsPageViewModel_CopilotCliPathNote_MinimumVersion_IsTheLocatorsMinimum
+                  - AiProviderSettingsPageViewModel_UnrestrictedAgentTools_Stored_IsKeptUnchanged
+                  - AiProviderSettingsPageView_ReasoningLevel_IsDisabledWithNote
+                  - AiProviderSettingsPageView_CopilotCliPath_ShowsNoteOnInstalledExecutable
+                  - AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum
+
+              - id: CanvasPilot-AiProviderSettingsPage-WarnBelowRecommendedContext
+                title: >-
+                  The AiProviderSettingsPage shall, while Ollama is selected and the context window is a valid number below
+                  16,384 tokens, show a warning under the field that recommends 32,768, and shall keep the page valid.
+                justification: |
+                  Drawings with pictures and tools often fail in a small context window, but the user may know better, so
+                  the page warns and does not block.
+                tests:
+                  - AiProviderSettingsPageViewModel_ContextWindowWarning_BelowRecommendedMinimum_WarnsWithoutInvalidating
+                  - AiProviderSettingsPageViewModel_ContextWindowWarning_InvalidOrCopilot_GivesNoWarning
+                  - AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum
+
+              - id: CanvasPilot-AiProviderSettingsPage-CheckConnection
+                title: >-
+                  The AiProviderSettingsPage shall, when it is given a provider check, offer a Check connection button that
+                  checks the provider that the entries on the page describe without saving them, show the answer as one
+                  sentence (in red when the provider cannot be used), disable the button while a check runs or the entries
+                  are invalid, drop an answer that is overtaken by an edit or by closing the dialog, and offer no button when
+                  there is no check.
+                justification: |
+                  The user should learn that the provider cannot be used at the dialog, where the fix is, and not on the
+                  first message. The check owns no knowledge of the provider: the page asks through the interface that the
+                  Settings subsystem owns, so it does not depend on the subsystem that implements it.
+                tests:
+                  - AiProviderSettingsPageViewModel_CheckConnection_NoProviderCheck_IsNotOffered
+                  - AiProviderSettingsPageViewModel_CheckConnection_ValidEntries_ChecksTheEntriesAndShowsTheAnswer
+                  - AiProviderSettingsPageViewModel_CheckConnection_FailureAndInvalidEntries_ShowFailureAndBlockTheButton
+                  - AiProviderSettingsPageViewModel_CheckConnection_ThrowsOrIsOvertaken_ShowsSentenceOrDropsAnswer
+                  - AiProviderSettingsPageView_CheckConnection_ShowsTheAnswerOfTheCheck

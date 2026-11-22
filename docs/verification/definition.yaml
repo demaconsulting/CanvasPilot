@@ -2,6 +2,7 @@
 resource-path:
   - docs/verification
   - docs/verification/canvas-pilot
+  - docs/verification/canvas-pilot/agent-subsystem
   - docs/verification/canvas-pilot/annotation-subsystem
   - docs/verification/canvas-pilot/app-shell-subsystem
   - docs/verification/canvas-pilot/chat-subsystem
@@ -22,6 +23,17 @@ input-files:
   - docs/verification/title.txt
   - docs/verification/introduction.md
   - docs/verification/canvas-pilot.md
+  - docs/verification/canvas-pilot/agent-subsystem.md
+  - docs/verification/canvas-pilot/agent-subsystem/agent-contract.md
+  - docs/verification/canvas-pilot/agent-subsystem/agent-event-mapper.md
+  - docs/verification/canvas-pilot/agent-subsystem/agent-instructions.md
+  - docs/verification/canvas-pilot/agent-subsystem/agent-provider-factory.md
+  - docs/verification/canvas-pilot/agent-subsystem/agent-readiness.md
+  - docs/verification/canvas-pilot/agent-subsystem/agent-service.md
+  - docs/verification/canvas-pilot/agent-subsystem/agent-tool-registry.md
+  - docs/verification/canvas-pilot/agent-subsystem/copilot-cli-locator.md
+  - docs/verification/canvas-pilot/agent-subsystem/payload-message-mapper.md
+  - docs/verification/canvas-pilot/agent-subsystem/project-tools.md
   - docs/verification/canvas-pilot/annotation-subsystem.md
   - docs/verification/canvas-pilot/annotation-subsystem/annotation-overlay.md
   - docs/verification/canvas-pilot/annotation-subsystem/mark-registry.md
@@ -32,6 +44,8 @@ input-files:
   - docs/verification/canvas-pilot/app-shell-subsystem/about-dialog.md
   - docs/verification/canvas-pilot/chat-subsystem.md
   - docs/verification/canvas-pilot/chat-subsystem/chat-panel.md
+  - docs/verification/canvas-pilot/chat-subsystem/chat-turn-runner.md
+  - docs/verification/canvas-pilot/chat-subsystem/chat-history-store.md
   - docs/verification/canvas-pilot/chat-subsystem/payload-inspector.md
   - docs/verification/canvas-pilot/composer-subsystem.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-document.md
@@ -93,12 +107,17 @@ input-files:
   - docs/verification/canvas-pilot/utilities-subsystem.md
   - docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/verification/ots.md
+  - docs/verification/ots/agent-framework.md
+  - docs/verification/ots/agentkit.md
   - docs/verification/ots/avalonia.md
   - docs/verification/ots/avalonia-edit.md
   - docs/verification/ots/buildmark.md
   - docs/verification/ots/canvasnet.md
   - docs/verification/ots/communitytoolkit-mvvm.md
+  - docs/verification/ots/copilot-sdk.md
+  - docs/verification/ots/extensions-ai.md
   - docs/verification/ots/fileassert.md
+  - docs/verification/ots/ollamasharp.md
   - docs/verification/ots/pandoc.md
   - docs/verification/ots/reqstream.md
   - docs/verification/ots/reviewmark.md

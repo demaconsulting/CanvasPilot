@@ -1,0 +1,86 @@
+---
+# Software Unit Requirements for the PayloadMessageMapper Unit
+#
+# The PayloadMessageMapper unit turns the message that the user sent (the payload of the Payload subsystem) into the user
+# message that a model is given: the words of the user followed by a compact block of text that says what is attached and
+# what each mark is, and the pictures as PNG images, the annotated pictures first and then the close-ups of the marks in
+# the order of their numbers, with a cap on the close-ups. The mapping is pure and deterministic and writes only paths
+# relative to the project folder.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: PayloadMessageMapper Requirements
+            requirements:
+              - id: CanvasPilot-PayloadMessageMapper-MapToUserMessage
+                title: >-
+                  The PayloadMessageMapper shall map a message payload to one message of the role user whose first content
+                  is the text of the user, unchanged apart from line breaks, followed, when the message has attachments or
+                  pictures, by a block of context with each attachment (index, kind, name, and path relative to the project
+                  folder), each picture (path relative to the project folder, format, and size in pixels), and each mark
+                  (number, shape, note, bounding box, and close-up box in picture pixels), and shall refuse a missing
+                  payload and a missing or blank project folder.
+                justification: |
+                  A model sees only text and images, so what the user marked and attached must be written in words that name
+                  the same numbers as the text of the message and the same pixels as the pictures. A message of only text
+                  must stay only text, so that an ordinary question costs nothing extra.
+                tests:
+                  - PayloadMessageMapper_Map_AttachmentAndTwoMarks_IsTheGoldenTextWithThreeImages
+                  - PayloadMessageMapper_Map_TextOnly_IsTheTextAlone
+                  - PayloadMessageMapper_Map_BadArguments_AreRefused
+
+              - id: CanvasPilot-PayloadMessageMapper-DescribeSourceElements
+                title: >-
+                  The PayloadMessageMapper shall write for each mark at most five of the parts of the source that lie under
+                  it, in the order given, each with its kind and, where known, its text, identifier, line, and box, shall
+                  say when more parts are left out, shall say that there is none when the picture could say and found none,
+                  and shall give the reason when the picture cannot say which parts lie under the mark.
+                justification: |
+                  The parts of the source under a mark tell the model which lines of the file to change, but a mark can
+                  cover many parts, so the list is bounded and says that it is. A picture that cannot say (a plain SVG)
+                  must not be mistaken for a mark that covers nothing, so the two cases are written differently.
+                tests:
+                  - PayloadMessageMapper_Map_SourceElements_AreLimitedToFiveAndTruncationIsSaid
+                  - PayloadMessageMapper_Map_UnavailableWithoutReason_StillSaysThePictureCannotSay
+
+              - id: CanvasPilot-PayloadMessageMapper-OrderAndCapImages
+                title: >-
+                  The PayloadMessageMapper shall add the annotated pictures as PNG images in the order of the pictures,
+                  then the close-ups of the marks as PNG images in the order of the numbers of the marks, at most ten
+                  close-ups, shall list the images in the text in the order in which they follow, and shall say in the text
+                  how many marks have no close-up and which.
+                justification: |
+                  A model that is sent several images must be told which is which, or it cannot connect a close-up to a
+                  mark. Images are the costly part of a request, so their number is capped, and the marks that lost their
+                  close-up are named so that the model knows to rely on their boxes or to ask the user.
+                tests:
+                  - PayloadMessageMapper_Map_AttachmentAndTwoMarks_IsTheGoldenTextWithThreeImages
+                  - PayloadMessageMapper_Map_TwoPictures_AnnotatedPicturesFirstThenCropsInMarkOrder
+                  - PayloadMessageMapper_Map_MoreThanTenMarks_SendsTenCropsAndSaysWhichAreLeftOut
+
+              - id: CanvasPilot-PayloadMessageMapper-WriteOnlyProjectPaths
+                title: >-
+                  The PayloadMessageMapper shall write only paths relative to the project folder, with forward slashes, and
+                  never the place where the user had an attachment, shall write a picture whose file is not inside the
+                  project by its file name only, and shall write every value that a user or a file supplies on one line,
+                  with double quotes made single and cut at 200 characters, so that it cannot add a line to the block.
+                justification: |
+                  The text is sent to a provider, so it must not tell the provider the folders of the user's computer. A name
+                  or note can hold any text the user typed, including a line that looks like an instruction or a heading of
+                  the block, so each value is kept inside its own line and its own quotation.
+                tests:
+                  - PayloadMessageMapper_Map_Paths_AreRelativeToTheProjectAndNeverRevealFolders
+                  - PayloadMessageMapper_Map_HostileValues_AreOneLineAndCut
+
+              - id: CanvasPilot-PayloadMessageMapper-BeDeterministic
+                title: >-
+                  The PayloadMessageMapper shall give the same text and the same images in the same order for the same
+                  payload and project folder in every culture, writing numbers of pixels as whole numbers rounded with
+                  halves away from zero and never as negative zero.
+                justification: |
+                  A mapping that is the same every time can be tested against golden text and compared when a model answers
+                  oddly, and a comma or other digits from the culture of the computer would change what the model reads.
+                tests:
+                  - PayloadMessageMapper_Map_SameMessage_SameResultInEveryCultureWithRoundedPixels

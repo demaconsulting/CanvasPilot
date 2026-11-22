@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.ChatSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.ChatSubsystem.NoticeRowView"
+             x:DataType="vm:NoticeRowViewModel"
+             AutomationProperties.AutomationId="NoticeRow">
+
+  <UserControl.Styles>
+    <Style Selector="Border.error">
+      <Setter Property="Background" Value="#22C0392B" />
+    </Style>
+  </UserControl.Styles>
+
+  <!-- A notice or an error that the application says in the conversation: what happened, what to do, and, when the
+       settings can help, the button that opens them -->
+  <Border Margin="0,0,0,8"
+          Padding="8"
+          CornerRadius="6"
+          Background="#18808080"
+          Classes.error="{Binding IsError}">
+    <StackPanel Spacing="4">
+
+      <SelectableTextBlock Name="MessageText"
+                           AutomationProperties.AutomationId="NoticeMessage"
+                           TextWrapping="Wrap"
+                           Text="{Binding Message}" />
+
+      <SelectableTextBlock Name="RemedyText"
+                           AutomationProperties.AutomationId="NoticeRemedy"
+                           TextWrapping="Wrap"
+                           Opacity="0.85"
+                           Text="{Binding Remedy}"
+                           IsVisible="{Binding HasRemedy}" />
+
+      <Button Name="OpenSettingsButton"
+              AutomationProperties.AutomationId="NoticeOpenSettingsButton"
+              HorizontalAlignment="Left"
+              Padding="8,2"
+              FontSize="12"
+              Content="Open Settings"
+              Command="{Binding OpenSettingsCommand}"
+              IsVisible="{Binding CanOpenSettings}"
+              ToolTip.Tip="Open the settings of the application" />
+
+    </StackPanel>
+  </Border>
+
+</UserControl>

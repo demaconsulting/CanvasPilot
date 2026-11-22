@@ -1,0 +1,314 @@
+---
+# Agent Subsystem Requirements
+#
+# PURPOSE:
+# - Define requirements for the CanvasPilot Agent subsystem
+# - The Agent subsystem is the AI copilot behind the chat: it checks whether the chosen AI provider can be used, runs a
+#   turn (a message in, a stream of events out), and holds the conversation with that provider. It has no user
+#   interface, and the Chat subsystem reaches it only through the provider-independent IAgentService contract
+# - This file holds the requirements of the subsystem as a whole. Its first unit is AgentContract, the contract itself;
+#   the units that implement the contract (the provider, the tools, the readiness checks) add their requirements in
+#   their own files and are linked here as children as they are added
+# - Subsystem requirements describe the behavior of the units working together
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        requirements:
+          - id: CanvasPilot-Agent-RunTurnAsEvents
+            title: >-
+              The Agent subsystem shall give its consumers one interface, independent of the AI provider, that runs a
+              turn for a sent message, with the text of the earlier turns when a conversation was restored, as an
+              ordered stream of events (answer text, tool calls, files written, usage) that ends with completion or
+              with a failure of a named kind, and that resets the conversation.
+            justification: |
+              The chat must work the same whichever AI provider answers, and must not depend on the libraries of any of
+              them. One interface with plain records for the request and for the events lets the chat be written and
+              tested against a scripted service, lets a turn be stopped by cancellation, and gives every failure a kind
+              that the chat can explain to the user. Only one turn may run at a time, so a request made while a turn runs
+              has its own failure kind.
+            children:
+              - CanvasPilot-AgentContract-StreamTurnEvents
+            tests:
+              - AgentSubsystem_RunTurn_ScriptedService_StreamsEventsInOrderAndReceivesTheRequest
+              - AgentSubsystem_RunTurn_ScriptedBusyService_EndsWithFailedEventOfKindBusy
+
+          - id: CanvasPilot-Agent-DescribeReadiness
+            title: >-
+              The Agent subsystem shall describe whether the AI provider that the settings choose can be used as a
+              report with one status and one sentence for the user, and shall tell a provider that can be used, with or
+              without a warning, from one that cannot.
+            justification: |
+              The user must learn before the first message, and not from a failed turn, that the provider is missing,
+              not signed in, not running, or short of context, and what to do about it. A status that the chat can
+              act on, with a sentence that it can show unchanged, keeps the explanation in one place. A warning, such as
+              a small context window, must not stop the user from working, so it is a status that can still run a turn.
+            children:
+              - CanvasPilot-AgentContract-ReportReadiness
+            tests:
+              - AgentSubsystem_Readiness_ScriptedReports_SeparateUsableFromBlockedProviders
+
+          - id: CanvasPilot-Agent-CheckProviderReadiness
+            title: >-
+              The Agent subsystem shall check the AI provider that the settings choose and report it as one status with
+              one sentence that says what to do: for GitHub Copilot the Copilot CLI, its version, the credentials, and
+              the runtime (which this build cannot start, so Copilot is never reported as ready), and for Ollama the
+              settings, the server, the model, and the size of the context window.
+            justification: |
+              Both providers depend on things outside the application, and the user should learn what is missing before
+              the first message. The subsystem owns the checks because it owns the knowledge of how each provider is
+              reached, and it offers them to the settings dialog through the interface that the dialog owns. Saying
+              plainly that GitHub Copilot cannot be started yet, instead of reporting it ready, keeps the user from a
+              chat that cannot answer and points to the provider that can.
+            children:
+              - CanvasPilot-AgentReadiness-CheckCopilotInOrder
+              - CanvasPilot-AgentReadiness-DetectCopilotCredentials
+              - CanvasPilot-AgentReadiness-ExplainCopilotAuthentication
+              - CanvasPilot-AgentReadiness-ReportGatedCopilotRuntime
+              - CanvasPilot-AgentReadiness-NeverRetainCredentials
+              - CanvasPilot-AgentReadiness-CheckOllamaServerAndModel
+              - CanvasPilot-AgentReadiness-WarnSmallOllamaContext
+              - CanvasPilot-AgentReadiness-ProbeOllamaSafely
+              - CanvasPilot-AgentReadiness-ServeConnectionCheck
+            tests:
+              - AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface
+
+          - id: CanvasPilot-Agent-ConfineToolsToProject
+            title: >-
+              The Agent subsystem shall build the tools that the copilot may use for one project so that they are
+              confined to the project folder (with the data folder and the project files out of reach), so that the
+              drawing knowledge and the style tools of the application are offered as tools of the AI library with their
+              own names, words, and schemas and answer every call as text, and so that a set of tools that a provider
+              could not be given is refused when it is built.
+            justification: |
+              The copilot may act only through the application's tools, so the building of those tools is where the
+              confinement is decided. One policy built from the project folder serves every pack, the existing tool
+              descriptions are reused unchanged for any provider, and a wrong set (no tool, a repeated name, a name that
+              the Copilot CLI would take over) is found when it is built and not in the middle of a conversation.
+            children:
+              - CanvasPilot-AgentToolRegistry-ConfineToolsToProject
+              - CanvasPilot-AgentToolRegistry-ProtectApplicationFiles
+              - CanvasPilot-AgentToolRegistry-OfferDescribedTools
+              - CanvasPilot-AgentToolRegistry-AnswerCallsWithoutThrowing
+              - CanvasPilot-AgentToolRegistry-LimitToolAnswers
+              - CanvasPilot-AgentToolRegistry-ComposeToolPacks
+              - CanvasPilot-AgentToolRegistry-OfferOptionalPacks
+              - CanvasPilot-AgentToolRegistry-ValidateToolSet
+            tests:
+              - AgentSubsystem_ConfineTools_ProjectFolder_OffersOnlyApplicationToolsUnderTheConfiningPolicy
+
+          - id: CanvasPilot-Agent-ConfineProjectFileTools
+            title: >-
+              The Agent subsystem shall give the copilot tools that list, read, write, and draw files of the project and
+              that are confined to the project folder, so that no path leaves the project or goes through a link, a name
+              that means something else is refused, the data folder, the project files, and the style kits of the project
+              are never written, and only text image sources and small data files are written.
+            justification: |
+              Writing files is the one power of the copilot that can hurt the user, and the application asks nothing before
+              it replaces a file. The tools therefore decide, in one place and for every path, what may be touched, and they
+              do not rest on the path policy of the AI library alone, which does not follow links. The example images of the
+              active style kit are the one place outside the project that may be drawn, read only and images only.
+            children:
+              - CanvasPilot-ProjectTools-ConfinePaths
+              - CanvasPilot-ProjectTools-RefuseDisguisedNames
+              - CanvasPilot-ProjectTools-RefuseLinks
+              - CanvasPilot-ProjectTools-LimitWrittenFiles
+              - CanvasPilot-ProjectTools-ProtectProjectFiles
+              - CanvasPilot-ProjectTools-RenderStyleKitExamples
+            tests:
+              - AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject
+
+          - id: CanvasPilot-Agent-WorkOnProjectFiles
+            title: >-
+              The Agent subsystem shall let the copilot work on the files of the project through tools that list the files,
+              read a text file, create or replace a text file directly and say which, tell the shell which file was written,
+              and draw a picture that comes back scaled for a model, with a failed drawing answered as text, and shall log
+              only the metadata of each call.
+            justification: |
+              The copilot draws by writing the source of a picture and looking at the result, so it needs to see the
+              project, to write a file, and to see what it wrote. Replacing a file directly is the user's decision, so the
+              change is made visible instead: in the answer, in the chat, and in the project explorer. The log may say what
+              happened and never what was in a file or a message.
+            children:
+              - CanvasPilot-ProjectTools-OfferTools
+              - CanvasPilot-ProjectTools-ListFiles
+              - CanvasPilot-ProjectTools-ReadTextFiles
+              - CanvasPilot-ProjectTools-WriteDirectly
+              - CanvasPilot-ProjectTools-ReportCreatedOrReplaced
+              - CanvasPilot-ProjectTools-RenderPictures
+              - CanvasPilot-ProjectTools-ScalePictures
+              - CanvasPilot-ProjectTools-AnswerRenderFailures
+              - CanvasPilot-ProjectTools-LogMetadataOnly
+            tests:
+              - AgentSubsystem_ProjectTools_ProjectFolder_WriteListReadAndDrawStayInsideTheProject
+
+          - id: CanvasPilot-Agent-InstructTheCopilot
+            title: >-
+              The Agent subsystem shall give the copilot instructions that say how to draw with CanvasNet in the open
+              project, which tools it has, and what the project holds, with the drawing knowledge and the style of the
+              project, in a full form for a model with a large context window and a compact form for a small one, each of a
+              size that is measured, and naming only tools that the copilot really has.
+            justification: |
+              A model that is not told how the tools fit together draws blind, and instructions that are too large take the
+              room that the pictures and the answer need. One unit writes them from the parts of the application, so that
+              the text, the sizes, and the agreement with the tools can be tested together.
+            children:
+              - CanvasPilot-AgentInstructions-StateTheRole
+              - CanvasPilot-AgentInstructions-DescribeProject
+              - CanvasPilot-AgentInstructions-IncludeKnowledgeAndStyle
+              - CanvasPilot-AgentInstructions-ChooseTierByContext
+              - CanvasPilot-AgentInstructions-BoundTheSize
+            tests:
+              - AgentSubsystem_InstructTheCopilot_ProjectWithKit_InstructionsNameExactlyTheToolsThatAreOffered
+
+          - id: CanvasPilot-Agent-GiveTheModelTheMessage
+            title: >-
+              The Agent subsystem shall give the model the message that the user sent as one user message made of the words
+              of the user, a compact description of the attachments, pictures, and marks, and the annotated pictures and
+              close-ups of the marks as PNG images in a stated order with a cap, using only paths relative to the project.
+            justification: |
+              The user talks to the copilot by words, marks on pictures, and attachments, and the model sees only text and
+              images. One pure mapping from the payload of the Payload subsystem to a provider message keeps what the model
+              is told in one place that can be tested against golden text, without any provider or model.
+            children:
+              - CanvasPilot-PayloadMessageMapper-MapToUserMessage
+              - CanvasPilot-PayloadMessageMapper-DescribeSourceElements
+              - CanvasPilot-PayloadMessageMapper-OrderAndCapImages
+              - CanvasPilot-PayloadMessageMapper-WriteOnlyProjectPaths
+              - CanvasPilot-PayloadMessageMapper-BeDeterministic
+            tests:
+              - AgentSubsystem_SendMessage_RealPayloadWithMarks_MapsToTextAndPngImagesInOrder
+
+          - id: CanvasPilot-Agent-ReportTurnAsEvents
+            title: >-
+              The Agent subsystem shall report what an AI agent does in a turn (its text, its tool calls with their results
+              and the picture of a look, its usage, and its end) as the events of the provider-independent contract, the
+              same for GitHub Copilot and for Ollama, and shall end a failed turn with a failure whose sentence says what
+              to do, and a stopped turn with no failure.
+            justification: |
+              The chat shows a row for each thing that happens in a turn and must not know which provider answered. One
+              mapping from the updates of the agent to the events keeps the rows, the summaries of what the copilot did to
+              the project, and the explanation of each failure in one place that can be tested with a scripted model.
+            children:
+              - CanvasPilot-AgentEventMapper-MapContentToEvents
+              - CanvasPilot-AgentEventMapper-TieCallsToResults
+              - CanvasPilot-AgentEventMapper-SummarizeToolResults
+              - CanvasPilot-AgentEventMapper-ExplainFailures
+              - CanvasPilot-AgentEventMapper-TreatCancellationAsNotAFailure
+              - CanvasPilot-AgentEventMapper-LogMetadataOnly
+            tests:
+              - AgentSubsystem_RunTurn_ScriptedModelWritesAndLooksAtADrawing_EventsShowTheCreatedFileThePictureAndTheRefusal
+
+          - id: CanvasPilot-Agent-MakeTheAgentOfTheProvider
+            title: >-
+              The Agent subsystem shall make the agent of a conversation for the AI provider that the settings choose, from
+              the settings, the tools of the project, and the instructions, so that for Ollama a whole turn runs on the
+              address, the model, and the context window of the settings, so that settings that cannot be used are
+              answered with what to enter and not with a failed request, and so that what the agent owns is disposed by its
+              owner.
+            justification: |
+              Everything above the factory is the same for every provider, so the provider is chosen in one place from
+              the settings. The user's drawing work then does not depend on whether Ollama or GitHub Copilot answers, and a
+              wrong setting is explained before a turn is spent on it.
+            children:
+              - CanvasPilot-AgentProviderFactory-MakeOllamaAgent
+              - CanvasPilot-AgentProviderFactory-RefuseUnusableSettings
+              - CanvasPilot-AgentProviderFactory-OwnWhatItStarts
+            tests:
+              - AgentSubsystem_ConverseWithOllama_ScriptedServerAndProjectTools_WritesTheDrawingAndStreamsEvents
+
+          - id: CanvasPilot-Agent-GiveTheAgentOnlyTheTools
+            title: >-
+              The Agent subsystem shall make the agent of GitHub Copilot with exactly the tools of the project and the
+              project folder as its working directory, with the default-deny permission handler of the AI library, so that
+              the runtime of Copilot can call nothing else.
+            justification: |
+              The Copilot runtime has tools of its own (a shell, file access, a web fetch). The copilot may act only through
+              the tools that the application builds and confines, so the agent is made with that list and with no
+              permission handler of the application's own that could approve more.
+            children:
+              - CanvasPilot-AgentProviderFactory-MakeCopilotAgentThroughStarter
+            tests:
+              - AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+
+          - id: CanvasPilot-Agent-ExplainUnavailableCopilot
+            title: >-
+              The Agent subsystem shall answer a request for an agent of GitHub Copilot that cannot be served with a typed
+              result and no agent, with the status and sentence of the readiness check for the same cause, so that in this
+              build, whose starter of the runtime is gated, Copilot is reported as needing an update of the AI library.
+            justification: |
+              The user who chose Copilot must be told, in the words of the readiness check and not by a failed turn, that
+              this build cannot use it yet and that Ollama can be used meanwhile.
+            children:
+              - CanvasPilot-AgentProviderFactory-ReportUnavailableCopilot
+            tests:
+              - AgentSubsystem_ConverseWithCopilot_GatedAndFakeStarter_GateGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools
+              - AgentSubsystem_ConverseWithCopilot_ServiceWithGatedStarter_TurnFailsWithTheGateSentence
+
+          - id: CanvasPilot-Agent-ConverseInProjectConversations
+            title: >-
+              The Agent subsystem shall hold one conversation with the AI provider for the open project, made when the first
+              message is sent and made again when the project or a setting that decides the agent changes, run one turn at a
+              time on it and stream the events, stop a turn on request without calling it a failure, give the text of a
+              restored conversation to a new provider session once, and delete what the provider kept when a conversation
+              ends.
+            justification: |
+              The chat is a conversation about one project, and the user expects the copilot to remember what was said, to
+              stop when told, and not to leave anything behind. The service that holds the conversation is the one place
+              that knows when a conversation starts and ends, so the rules of the lifetime of the conversation are its
+              requirements, and the chat stays free of them.
+            children:
+              - CanvasPilot-AgentService-KeepConversationPerProject
+              - CanvasPilot-AgentService-RunOneTurnAtATime
+              - CanvasPilot-AgentService-RestoreHistoryOnce
+              - CanvasPilot-AgentService-ReleaseConversations
+            tests:
+              - AgentSubsystem_ConverseWithOllama_ServiceOnStandInServer_WritesTheDrawingAndKeepsTheProjectClean
+
+          - id: CanvasPilot-Agent-KeepRuntimeDataOutsideProject
+            title: >-
+              The Agent subsystem shall keep the data of the Copilot runtime in a folder below the local data of the user
+              that it chooses itself and shall refuse to work for a project that contains that folder or the folder of the
+              chat history, so that nothing that the runtime keeps is ever written into a project.
+            justification: |
+              A project folder is shared and put under source control, and the Copilot runtime keeps its sessions in a
+              folder of its own. Leaving the choice to the library would leave the place to chance, and a project that
+              contained the folder would receive the sessions.
+            children:
+              - CanvasPilot-AgentService-KeepRuntimeDataOutsideProject
+            tests:
+              - AgentService_DataResidency_CopilotDataDirectory_IsBelowTheLocalDataRootAndOutsideTheProject
+
+          - id: CanvasPilot-Agent-LogMetadataOnly
+            title: >-
+              The Agent subsystem shall write only facts about its work to the log (which provider, how many, what outcome,
+              how long, and the type of an exception) and never the words of a message, the answer of the model, a tool's
+              arguments, or the content of a file.
+            justification: |
+              The log is a file on the user's computer that people attach to bug reports, and the copilot handles the
+              user's drawings and words. The log may say what happened and never what was in it.
+            children:
+              - CanvasPilot-AgentService-LogMetadataOnly
+            tests:
+              - AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly
+
+          - id: CanvasPilot-Agent-LocateCopilotCli
+            title: >-
+              The Agent subsystem shall locate the GitHub Copilot CLI that the user installed, tell it from the
+              launchers that editors put on the PATH, honor a path chosen in the settings, check that the CLI reports
+              a version that works, and explain what it found and what to do when it cannot be used.
+            justification: |
+              The application never ships the Copilot CLI, so it can only use the one that the user installed, and on
+              a machine with VS Code the first copilot.exe on the PATH may be an editor launcher and not the CLI. The
+              readiness checks and, later, the start of the Copilot runtime need the path and version of the real
+              CLI, or a sentence that tells the user how to get one.
+            children:
+              - CanvasPilot-CopilotCliLocator-PreferRealCli
+              - CanvasPilot-CopilotCliLocator-RejectShims
+              - CanvasPilot-CopilotCliLocator-HonorSettingsOverride
+              - CanvasPilot-CopilotCliLocator-ValidateVersion
+              - CanvasPilot-CopilotCliLocator-DiagnoseRejections
+              - CanvasPilot-CopilotCliLocator-RunProbeSafely
+            tests:
+              - AgentSubsystem_LocateCopilotCli_MachinesWithShim_FindsRealCliAndExplainsShimOnly

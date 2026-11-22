@@ -10,9 +10,9 @@ versioned JSON file in the per-user application data folder. It contains three u
 `SettingsService`, which owns the settings records and the file; `SettingsDialog`, the modal window that
 hosts settings pages; and `AiProviderSettingsPage`, the page for the AI provider choices. Settings pages
 for other subsystems, such as speech, are supplied to the dialog by the application, so the `Settings`
-subsystem does not depend on them. The AI provider choices are persisted only; no component consumes them
-yet, and an AI agent or provider client added later reads them through `ISettingsService` without changes to
-this subsystem.
+subsystem does not depend on them. The Agent subsystem reads the AI provider choices through `ISettingsService`, and
+checks them through the `IProviderCheck` interface that this subsystem owns and that the Agent subsystem implements;
+this subsystem depends on neither.
 
 ### Interfaces
 

@@ -18,13 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
 using DemaConsulting.CanvasPilot.StyleSubsystem;
+using Microsoft.Extensions.AI;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -520,6 +523,147 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that composing the application with the folders for the data of the AI copilot gives the chat panel a copilot
+    ///     and the AI Provider page a Check connection that asks the copilot's readiness check, with the stand-ins that the
+    ///     test passes for the Ollama server, and that composing without the folders builds no copilot and no check.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_CopilotIsBuiltFromItsFoldersAndFeedsTheSettingsPage()
+    {
+        // Arrange: a composition without the folders, and one with them over a scripted Ollama server
+        AiProviderSettingsPageViewModel? plainPage = null;
+        _dialogs.OnSettings = dialog =>
+        {
+            plainPage = Assert.IsType<AiProviderSettingsPageViewModel>(dialog.Pages[0]);
+            dialog.CancelCommand.Execute(null);
+        };
+        var plain = Compose();
+        await plain.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        var rig = ComposeWithCopilot();
+        rig.Probe.Models = new OllamaModelList(true, ["gemma3:latest"]);
+        AiProviderSettingsPageViewModel? page = null;
+        _dialogs.OnSettings = dialog =>
+        {
+            page = Assert.IsType<AiProviderSettingsPageViewModel>(dialog.Pages[0]);
+            page.SelectedProvider = page.Providers[1];
+            page.ModelName = "gemma3";
+            dialog.CancelCommand.Execute(null);
+        };
+
+        // Act: open the settings of the composition that has the copilot and check the connection on the page
+        await rig.Composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        await page!.CheckConnectionCommand.ExecuteAsync(null);
+
+        // Assert: only the second composition has a copilot and a check, and the check asked the stand-in server, in the
+        // address of the settings page
+        Assert.Null(plain.Agent);
+        Assert.False(plainPage!.HasConnectionCheck);
+        Assert.IsType<AgentService>(rig.Composition.Agent);
+        Assert.True(page.HasConnectionCheck);
+        Assert.True(page.IsCheckConnectionOk);
+        Assert.Equal(new Uri("http://localhost:11434"), Assert.Single(rig.Probe.ListQuestions).Endpoint);
+        Assert.Empty(rig.Factory.Requests);
+    }
+
+    /// <summary>
+    ///     Test that the chat panel's request for the settings opens the settings dialog of the shell, and that a change of
+    ///     the AI provider settings makes the panel check the provider again, while a change of other settings does not.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_CopilotAsksForSettingsAndIsCheckedAgainWhenTheyChange()
+    {
+        // Arrange: a composition whose settings choose GitHub Copilot, which cannot be used on this machine because the
+        // CLI is not signed in, with the panel having checked that
+        var token = TestContext.Current.CancellationToken;
+        var rig = ComposeWithCopilot();
+        rig.Probe.Models = new OllamaModelList(true, ["gemma3:latest"]);
+        await rig.Composition.Chat.RefreshReadinessAsync();
+        var before = rig.Composition.Chat.ReadinessMessage;
+        var questionsBefore = rig.Probe.ListQuestions.Count;
+
+        // Act: the panel asks for the settings, then another setting changes, then the user chooses Ollama
+        rig.Composition.Chat.OpenSettingsCommand.Execute(null);
+        var opened = _dialogs.SettingsCount;
+        rig.Composition.Settings.Update(settings => settings with { RecentProjects = ["C:\\Work\\a.canvaspilot"] });
+        await Task.Delay(50, token);
+        var questionsAfterOther = rig.Probe.ListQuestions.Count;
+        rig.Composition.Settings.Update(settings => settings with { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3" } });
+        await WaitUntilAsync(() => !rig.Composition.Chat.HasReadinessIssue, token);
+
+        // Assert: the dialog was opened once, the other change asked nothing, and the provider change was checked: the
+        // Copilot problem is gone and the Ollama server was asked
+        Assert.Contains("gh auth login", before, StringComparison.Ordinal);
+        Assert.Equal(1, opened);
+        Assert.Equal(questionsBefore, questionsAfterOther);
+        Assert.Equal(string.Empty, rig.Composition.Chat.ReadinessMessage);
+        Assert.True(rig.Probe.ListQuestions.Count > questionsAfterOther);
+    }
+
+    /// <summary>
+    ///     Test that a file that the copilot writes while it answers is shown in the project explorer and selected, which
+    ///     draws its picture, and that the message, the answer, and the tool row are in the transcript.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_CopilotWritesFile_ExplorerSelectsItAndPreviewDrawsIt()
+    {
+        // Arrange: a composition over a scripted model that writes a drawing, with a project open and Ollama chosen
+        var token = TestContext.Current.CancellationToken;
+        const string drawing = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"20\"><rect width=\"40\" height=\"20\" fill=\"#0000ff\"/></svg>";
+        var model = new ScriptedChatClient(
+            [
+                new ChatResponseUpdate(ChatRole.Assistant, "I will draw a box. "),
+                new ChatResponseUpdate(
+                    ChatRole.Assistant,
+                    [new FunctionCallContent("w1", "project_write", new Dictionary<string, object?> { ["path"] = "box.svg", ["content"] = drawing })]),
+            ],
+            [new ChatResponseUpdate(ChatRole.Assistant, "The box is drawn.")]);
+        var rig = ComposeWithCopilot(model);
+        rig.Composition.Settings.Update(settings => settings with { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3" } });
+        var project = (await rig.Composition.Projects.CreateAsync(Projects, "Demo", token)).Project!;
+
+        // Act: send a message and wait for the answer
+        rig.Composition.Composer.InsertTyped("Draw a box");
+        await rig.Composition.Chat.SendCommand.ExecuteAsync(null);
+        await rig.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        await rig.Composition.Preview.RenderCompletion;
+
+        // Assert: the file is in the project, the explorer lists and selects it, and the preview shows its picture
+        var path = Path.Combine(project.FolderPath, "box.svg");
+        Assert.Equal(drawing, await File.ReadAllTextAsync(path, token));
+        Assert.Equal(path, rig.Composition.Shell.Workspace.Explorer.SelectedFile, ignoreCase: true);
+        Assert.True(rig.Composition.Preview.HasImage);
+        Assert.Equal((40, 20), (rig.Composition.Preview.Image!.Width, rig.Composition.Preview.Image.Height));
+        Assert.Equal(
+            [TranscriptRowKind.User, TranscriptRowKind.Assistant, TranscriptRowKind.Tool, TranscriptRowKind.Assistant],
+            rig.Composition.Chat.Transcript.Select(row => row.Kind));
+    }
+
+    /// <summary>
+    ///     Test that disposing the composition disposes the copilot and its factory once, before the services it listens to,
+    ///     and that nothing reacts to the settings afterwards.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ComposeApplication_DisposeStopsTheCopilotAndTheWiring()
+    {
+        // Arrange: a composition with the copilot, whose chat panel has checked the provider
+        var token = TestContext.Current.CancellationToken;
+        var rig = ComposeWithCopilot();
+        rig.Probe.Models = new OllamaModelList(true, ["gemma3:latest"]);
+        await rig.Composition.Chat.RefreshReadinessAsync();
+        var questions = rig.Probe.ListQuestions.Count;
+
+        // Act: dispose, dispose again, and change the provider
+        rig.Composition.Dispose();
+        rig.Composition.Dispose();
+        rig.Composition.Settings.Update(settings => settings with { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3" } });
+        await Task.Delay(50, token);
+
+        // Assert: the factory was disposed once, and the change was not looked at
+        Assert.Equal(1, rig.Factory.DisposeCount);
+        Assert.Equal(questions, rig.Probe.ListQuestions.Count);
+    }
+
+    /// <summary>
     ///     Test that composing the application refuses missing parts.
     /// </summary>
     [Fact]
@@ -556,5 +700,64 @@ public sealed class AppShellSubsystemTests : IDisposable
         composition.Shell.AttachDialogService(_dialogs);
         _compositions.Add(composition);
         return composition;
+    }
+
+    /// <summary>
+    ///     What a composition with the AI copilot is built over, and what a test looks at.
+    /// </summary>
+    /// <param name="Composition">The composed application, with the dialog service attached.</param>
+    /// <param name="Factory">The factory that makes the agents on the scripted model.</param>
+    /// <param name="Probe">The stand-in for the Ollama server.</param>
+    private sealed record CopilotRig(ApplicationComposition Composition, ScriptedAgentFactory Factory, FakeOllamaProbe Probe);
+
+    /// <summary>
+    ///     Composes the application with the AI copilot on the test folders: the data folders are in the temporary root, the
+    ///     Copilot CLI and the processes are those of the development machine without a sign-in, and the Ollama server and
+    ///     the model are stand-ins.
+    /// </summary>
+    /// <param name="model">The scripted model; one that has no answers when <see langword="null" />.</param>
+    /// <returns>The composition and what it is built over.</returns>
+    private CopilotRig ComposeWithCopilot(IChatClient? model = null)
+    {
+        Directory.CreateDirectory(Projects);
+        var logger = new RollingFileLogger(Path.Combine(_tempRoot, "logs"));
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"), logger);
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        var factory = new ScriptedAgentFactory(model ?? new ScriptedChatClient());
+        var probe = new FakeOllamaProbe();
+        var composition = ApplicationComposition.Create(
+            logger,
+            settings,
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: Projects,
+            audioDevices: SpeechTestData.AudioDevices([], []),
+            speechModels: SpeechTestData.Models(),
+            styleUserFolder: Path.Combine(_tempRoot, "styles"),
+            localDataRoot: Path.Combine(_tempRoot, "local"),
+            agentFactory: factory,
+            processRunner: runner,
+            ollamaProbe: probe,
+            environment: DevMachine.CreateEnvironment(),
+            cliFileSystem: DevMachine.CreateFileSystem());
+        composition.Shell.AttachDialogService(_dialogs);
+        _compositions.Add(composition);
+        return new CopilotRig(composition, factory, probe);
+    }
+
+    /// <summary>
+    ///     Waits until a condition holds, which a check that runs in the background needs.
+    /// </summary>
+    /// <param name="condition">The condition.</param>
+    /// <param name="cancellationToken">A token that ends the wait.</param>
+    /// <returns>A task that completes when the condition holds or fails after ten seconds.</returns>
+    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "The condition did not hold within ten seconds.");
+            await Task.Delay(10, cancellationToken);
+        }
     }
 }

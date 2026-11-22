@@ -8,10 +8,12 @@ speech choices, a chat panel with a message composer (typed and dictated text, a
 and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload inspector, the drawing
 knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the Help menu), style kits
 (palettes, fonts, sizes, and example images that a project, a user, or a team keeps, with a window to manage them,
-export at their sizes, and a check of a picture against the palette), and the installer. Messages are composed and sent
-without an agent: the AI agent that will answer them and use the stored choices, the knowledge, and the style is out of
-scope of this version. The document covers local software items (systems, subsystems, and units) and the OTS software
-items they consume.
+export at their sizes, and a check of a picture against the palette), and the installer. Messages are answered by an AI
+copilot that runs through a local Ollama server (the provider that is covered by automated tests in this release; live
+checks are pending) or through GitHub Copilot (whose readiness checks work, but which is gated in this release because
+the AI library cannot use the user's installed Copilot CLI). The copilot draws with locked-down tools that are confined
+to the project, and the chat keeps the text of the conversation on the user's computer, outside the project. The
+document covers local software items (systems, subsystems, and units) and the OTS software items they consume.
 
 ## Purpose
 
@@ -27,9 +29,21 @@ requirements; it explains how they are realized.
 Local items:
 
 - **CanvasPilot**: system, subsystem, and unit design for all local components:
+  - **Agent** subsystem: **AgentContract** unit (`IAgentService`, the turn request, the events, and the readiness
+    report), **CopilotCliLocator** unit (the installed Copilot CLI, with its process runner, file system, and
+    environment seams), **AgentReadiness** unit (the check of whether the chosen AI provider can be used, with the gated
+    starter of the Copilot runtime and the probe of the Ollama server), **AgentToolRegistry** unit (the tools of the
+    copilot for one project, confined to the project folder), **ProjectTools** unit (the tools that list, read, write,
+    and draw the files of the project, with links refused and files replaced directly), **AgentInstructions** unit (the
+    role prompt, the knowledge index, the project facts, and the style, in a full and a compact tier),
+    **PayloadMessageMapper** unit (the message of the user as a model message with the marks described and the pictures
+    as images), **AgentEventMapper** unit (the updates of an agent as the events of a turn, and the failures of a turn
+    as sentences that say what to do), **AgentProviderFactory** unit (the agent of a conversation for Ollama or for
+    GitHub Copilot, with the gated starter of the Copilot runtime), and **AgentService** unit (the conversation of the
+    open project, one turn at a time, with the data of the Copilot runtime kept outside the project).
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, and **AboutDialog** units.
-  - **Chat** subsystem: **ChatPanel** and **PayloadInspector** units.
+  - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, **ChatHistoryStore**, and **PayloadInspector** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
   - **Knowledge** subsystem: **KnowledgeCatalog**, **KnowledgeSearch**, **KnowledgePromptBuilder**,
@@ -57,6 +71,10 @@ OTS items:
 - **CanvasNet**: integration and usage design (runtime library that draws image source files).
 - **Speech**: integration and usage design (runtime library for audio devices, speech models, and speech recognition,
   and the native speech runtime that comes with it).
+- **AgentKit**, **Microsoft.Copilot.SDK**, **Microsoft Agent Framework**, **Microsoft.Extensions.AI**, and
+  **OllamaSharp**: integration and usage design of the libraries of the AI copilot (confined tools and agent factories,
+  the client of the Copilot CLI that AgentKit drives and that is never bundled or started in this version, agents and
+  streamed turns, tool, message, and picture types, and the client of the Ollama server).
 - **WiX Toolset**: integration and usage design (builds the Windows installer package).
 - **xUnit**: integration and usage design (test framework).
 - **BuildMark**, **FileAssert**, **Pandoc**, **ReqStream**, **ReviewMark**, **SarifMark**, **SonarMark**,
@@ -67,11 +85,13 @@ The following topics are out of scope:
 
 - Design documents are not produced for the test projects, the executable project that starts the application, the
   installer project (which is covered by the WiX Toolset OTS design), or the build pipeline CI configuration
-- The AI agent that answers the messages is not part of this version; the settings that it will read are designed (see
-  the *AI Provider Seam* section of the system design), and the payload that it will receive is built and shown for
-  every sent message, but nothing reads it and no answer comes back; the drawing knowledge that it will be given is
-  built and can be read in the browser, and the style that it will be given and the two tools that it will use to read
-  the style and check a picture are built and tested, but no assistant uses any of it yet
+- GitHub Copilot as a working provider is gated in this release: the AI library (AgentKit 0.1.0-beta.3) cannot use a
+  Copilot CLI that the user installed, and the application never bundles or downloads one. The readiness checks for
+  Copilot are real (see the *AI Provider Seam* section of the system design), the runtime start is a single gated
+  seam, and enabling it is a follow-up change that depends on the AI library
+- User-selectable tool packs of the AI library (they need a version of the AI library tools that is built on a newer
+  CanvasNet line) and spoken replies of the copilot are future work; the copilot has only the fixed, locked-down set of
+  tools that the *Agent* subsystem design describes
 - The internal design of OTS software items is excluded; only integration and usage design is documented
 
 ## Software Structure
@@ -79,12 +99,12 @@ The following topics are out of scope:
 The software structure is modeled in SysML2 under `docs/sysml2/` and rendered to the diagram
 below by SysML2Tools as part of the build pipeline. AI agents should query the SysML2 model
 directly (see the `sysml2tools-query` skill) rather than parsing this diagram or the prose
-elsewhere in this document. The diagram shows the system and its thirteen subsystems, with the runtime OTS items that
+elsewhere in this document. The diagram shows the system and its fourteen subsystems, with the runtime OTS items that
 the system consumes; the units are in the view of each subsystem, and the dependencies between the units are in the
 model and are shown in the focused dependency views that the design of the larger subsystems embeds. The build and
 documentation tools listed in Scope above are documented separately (see `docs/design/ots.md`).
 
-![The CanvasPilot system with its thirteen subsystems and the runtime third-party items it
+![The CanvasPilot system with its fourteen subsystems and the runtime third-party items it
 uses](SoftwareStructureView.svg)
 
 ## Architecture
@@ -97,23 +117,30 @@ subsystem (marks on the picture), the Payload subsystem (the message that is sen
 (dictation). Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in
 the Project explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing:
 the AppShell opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards,
-so an assistant added later can be given the same cards. The Style subsystem holds the style kits: the AppShell shows
+so the copilot can be given the same cards. The Style subsystem holds the style kits: the AppShell shows
 its window from the Tools menu and its list of kits in the status bar, the Preview subsystem offers the sizes of the
 kit of the project when a picture is exported, and the check of a picture against the palette puts its result among the
 notes of the preview; it depends on Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none
-of them depends on it. Every subsystem logs through Logging, and the
+of them depends on it. The Agent subsystem is the AI copilot: the Chat subsystem reaches it only through `IAgentService`
+and the events of a turn, it uses Settings (the provider choices), Project (the open folder), Payload (the message to
+answer), Knowledge, Style, and Preview (what its tools give the copilot), and the AI libraries, and it implements the
+connection check that Settings declares, so Settings never refers to it. Every subsystem logs through Logging, and the
 subsystems that build file locations use Utilities. The third-party items are used inside the library, and the
 application reads and writes only the local data in the bottom row. Section *Architecture* of the system design
 explains the dependencies between the subsystems, which run one way, and why no subsystem refers to AppShell.
 
 ![Architecture of CanvasPilot: the desktop head starts the application library, whose AppShell subsystem builds and
-hosts the thirteen subsystems, from Chat and Composer down to Logging and Utilities, with the Knowledge and Style
-subsystems beside them, and the third-party items and the local data the application uses](architecture.svg)
+hosts the other thirteen subsystems, from Chat, Composer, and Agent down to Logging and Utilities, with the Knowledge
+and Style subsystems beside them, and the third-party items and the local data the application uses](architecture.svg)
 
 ## Folder Layout
 
 - **src/** - source files and projects
   - **DemaConsulting.CanvasPilot/** - main application library source
+    - **AgentSubsystem/** - the AI copilot behind the chat: the provider-independent contract that runs a turn and
+      reports readiness, the check of the Copilot CLI and of the Ollama server, the tools that are confined to the
+      project, the instructions, the mapping of messages and events, the agent of the chosen provider, and the service
+      that keeps the conversation of the open project
     - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, drawn with the pointer
       or the keyboard on a layer over the picture, and mapped to the parts of the source file under them
     - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, and view locator
@@ -162,7 +189,8 @@ Verification is layered, and each layer is run by `build.ps1` and by the build p
 - **User interface tests** (`test/DemaConsulting.CanvasPilot.UiTests`) show the real views and view models in the
   Avalonia headless platform, so that menus, dialogs, and bindings are tested without a display.
 - **OTS tests** (`test/OtsSoftwareTests`) call the runtime OTS libraries (Avalonia, AvaloniaEdit,
-  CommunityToolkit.Mvvm, CanvasNet, and Speech) the way the application does, and are the qualification evidence for
+  CommunityToolkit.Mvvm, CanvasNet, Speech, AgentKit, Microsoft.Copilot.SDK, the Microsoft Agent Framework,
+  Microsoft.Extensions.AI, and OllamaSharp) the way the application does, and are the qualification evidence for
   libraries that have no self-validation mode.
 - **Document and package assertions** (FileAssert, `.fileassert.yaml`) check the generated documents, the rendered
   diagrams, and the MSI package.

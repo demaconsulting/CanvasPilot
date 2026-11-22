@@ -1,0 +1,46 @@
+---
+# Software Unit Requirements for the AgentContract Unit
+#
+# The AgentContract unit is the provider-independent contract through which the chat runs the AI copilot: the
+# IAgentService interface, the turn request and its restored history, the family of events, and the readiness report.
+# It is plain records and one interface; no type of it names an AI library.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: AgentContract Requirements
+            requirements:
+              - id: CanvasPilot-AgentContract-StreamTurnEvents
+                title: >-
+                  The AgentContract shall define the request of a turn (the sent message and the text of the earlier
+                  turns), the events of a turn (answer text, tool calls, files written, usage, completion, and failure
+                  with a named kind), and an interface that runs a turn as an ordered stream of events, with summaries
+                  of tool calls cut to 200 characters and no type that names an AI library.
+                justification: |
+                  The chat must be written and tested against plain data and one interface, whichever provider answers.
+                  Cutting the summaries in the event keeps every consumer safe from a very long argument or result,
+                  naming the kind of a failure lets the chat explain it, and keeping the libraries of the providers out
+                  of the contract keeps the chat independent of them. Records that compare by value let a test assert
+                  on a whole stream.
+                tests:
+                  - AgentEvent_ToolEvents_LongSummaries_AreCutToTheLimit
+                  - AgentEvent_ToolEvents_NullSummaryEmptyIdOrName_AreHandled
+                  - AgentEvent_TextDeltaAndFailed_InvalidArguments_AreRefused
+                  - AgentEvent_Records_WithSameValues_AreEqual
+                  - AgentTurnRequest_Constructor_PayloadAndHistory_AreKept
+                  - AgentContract_Types_ReferenceNoLanguageModelPackage
+
+              - id: CanvasPilot-AgentContract-ReportReadiness
+                title: >-
+                  The AgentContract shall define the readiness report of an AI provider as a status and one sentence
+                  for the user that is never empty, and shall mark only the ready status and the small context window
+                  warning as statuses that can run a turn.
+                justification: |
+                  The chat banner, the send button, and the connection check of the settings dialog must agree on
+                  whether a turn can be run, so one rule decides it. A warning must not stop the user from working.
+                  A report without a sentence would leave the user without advice.
+                tests:
+                  - AgentReadinessReport_IsUsable_ByStatus_IsTrueOnlyForReadyAndWarning
+                  - AgentReadinessReport_Constructor_EmptyMessage_IsRefused

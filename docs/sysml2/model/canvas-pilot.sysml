@@ -1,5 +1,6 @@
 package CanvasPilot {
     private import SoftwareItemMetadata::*;
+    private import CanvasPilot_AgentSubsystem::*;
     private import CanvasPilot_AnnotationSubsystem::*;
     private import CanvasPilot_AppShellSubsystem::*;
     private import CanvasPilot_ChatSubsystem::*;
@@ -18,9 +19,10 @@ package CanvasPilot {
     doc
     /*
      * CanvasPilot is an AI-assisted drawing application built on CanvasNet.
-     * The model contains the application shell, annotation, chat, composer, knowledge, logging, payload, preview, project,
-     * settings, speech, style, and utility subsystems. Messages are composed, dictated, marked, and sent into a payload
-     * without an agent; the AI agent that would answer them is out of scope of this version.
+     * The model contains the application shell, agent, annotation, chat, composer, knowledge, logging, payload, preview,
+     * project, settings, speech, style, and utility subsystems. Messages are composed, dictated, marked, and sent into a
+     * payload; the agent subsystem holds the contract through which the AI copilot that answers them is run, and its
+     * units are added to the model as they are built.
      */
 
     part def CanvasPilotSystem {
@@ -33,6 +35,7 @@ package CanvasPilot {
             requirementFiles = ("docs/reqstream/canvas-pilot.yaml");
         }
 
+        part agent : AgentSubsystem;
         part annotation : AnnotationSubsystem;
         part appShell : AppShellSubsystem;
         part chat : ChatSubsystem;
@@ -58,6 +61,15 @@ package CanvasPilot {
 
         // The speech library is consumed at run time by the Speech subsystem.
         part speechLibrary : Speech;
+
+        // The AI libraries are consumed at run time by the AI copilot: the confined tools and agent factories, the
+        // Copilot SDK that AgentKit drives (never bundled), the agent and streaming types, the tool, message, and
+        // picture types, and the Ollama client.
+        part agentLibrary : AgentKit;
+        part copilotClient : CopilotSdk;
+        part agentRuntime : AgentFramework;
+        part aiAbstractions : ExtensionsAi;
+        part ollamaClient : OllamaSharp;
 
         // The Windows installer package is built by the WiX Toolset from the published application.
         part installer : WiX;

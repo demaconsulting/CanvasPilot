@@ -1,0 +1,103 @@
+---
+# AgentKit OTS Software Requirements
+#
+# Requirements for the DemaConsulting.AgentKit libraries (Core, Agents.Copilot, Agents.ChatClient, and Agents.Ollama),
+# the confined tool framework and agent factories that CanvasPilot's AI copilot is built on, as used by CanvasPilot at
+# run time. The libraries are runtime dependencies, so each requirement is a child of the requirement of the item that
+# uses the feature (the system requirements about confining the copilot to the project, conversing with it, and using
+# only an installed Copilot CLI; the units of the Agent subsystem take over as children when they are written) and is
+# not a root requirement. The DemaConsulting.AgentKit.Tools package is deliberately not used.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: AgentKit Requirements
+        requirements:
+          - id: CanvasPilot-OTS-AgentKit-ConfineToolPaths
+            title: >-
+              The AgentKit path policy shall refuse a read or a write whose normalized path lies outside the granted
+              locations, whether it climbs out with "..", is an absolute path elsewhere, or passes a folder that the
+              grant denies by name, shall report the refusal as a message and not as an exception, and shall judge a
+              path by its normalized spelling without following links.
+            justification: |
+              Every file the copilot may touch is decided by this policy, so a refusal must be reliable and must not
+              end the model's turn. The library states that it does not follow links, so a link inside the project
+              that leads elsewhere is permitted by the policy; the application's own tools must therefore refuse
+              links themselves, and the test pins the library's behavior so that a change in it is noticed.
+            tags: [ots]
+            tests:
+              - AgentKit_PathPolicy_ResolveWrite_RefusesEscapesAndProtectedFolders
+              - AgentKit_PathPolicy_ResolveRead_LinkInsideTheGrant_IsJudgedBySpellingAndNotFollowed
+
+          - id: CanvasPilot-OTS-AgentKit-ComposeToolPacks
+            title: >-
+              The AgentKit tool pack builder shall refuse a second pack that claims a family prefix that is already
+              taken, shall publish the tools of the packs in the order the packs were added, and the guarded tool
+              factory shall refuse tool names that break the naming convention.
+            justification: |
+              The model chooses a tool by its name, so two tools with one name, or a name that a provider rejects,
+              would make the copilot's tools ambiguous or unusable. The application composes its tools from several
+              packs, and the library must report a composing mistake where it is made.
+            tags: [ots]
+            tests:
+              - AgentKit_ToolPackBuilder_Add_RefusesDuplicatePrefixAndBuildsInOrder
+              - AgentKit_GuardedToolFactory_Create_RefusesInvalidToolNames
+
+          - id: CanvasPilot-OTS-AgentKit-BoundToolResults
+            title: >-
+              The AgentKit guarded tool shall refuse a binary result that exceeds the ceiling of its tool limits with a
+              refusal that names the reason and deliver a result within the ceiling unchanged, and an image result shall
+              carry its caption first and the picture second with the media type given and shall refuse bytes whose
+              media type is not an image.
+            justification: |
+              The copilot draws a picture and gets it back as a tool result. An unbounded result would fill the model's
+              context window, and a caption attached to bytes that are not a picture would mislead the model.
+            tags: [ots]
+            tests:
+              - AgentKit_GuardedToolFactory_AsGuarded_BinaryOverCeiling_IsRefusedAndWithinCeilingPasses
+              - AgentKit_ToolResult_Image_ReturnsCaptionThenPictureAndRefusesOtherMediaTypes
+
+          - id: CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
+            title: >-
+              The AgentKit chat client agent factory shall build an agent on any chat client that streams a tool-calling
+              turn as the tool call, then its result, then the text of the answer, hands the tool the arguments of the
+              model's call, and delivers a picture that a tool returned to the model as picture content of a following
+              user message.
+            justification: |
+              The Ollama provider runs on a plain chat client. The chat panel shows tool rows and streamed text from
+              this stream, and a model that cannot take a picture in a tool result must still see its own drawing, so
+              that it can correct it.
+            tags: [ots]
+            tests:
+              - AgentKit_ChatClientAgentFactory_ScriptedTurn_StreamsCallResultAndText
+              - AgentKit_ChatClientAgentFactory_ToolImageResult_IsPromotedToAUserMessage
+
+          - id: CanvasPilot-OTS-AgentKit-SizeOllamaContext
+            title: >-
+              The AgentKit Ollama context sizing client shall add the context length to the options of every request
+              that it forwards, shall not change the options its caller passed, shall leave a context length that the
+              caller named alone, and shall refuse a context length of zero or less.
+            justification: |
+              Ollama loads a model with a small default window unless each request names a length, and a drawing turn
+              with pictures and tools does not fit in it. The user chooses the length in the settings, so it must reach
+              every request without changing the options that other code shares.
+            tags: [ots]
+            tests:
+              - AgentKit_OllamaContextSizingChatClient_GetResponse_AddsContextLengthWithoutChangingCallersOptions
+
+          - id: CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
+            title: >-
+              With the Copilot SDK download of its runtime switched off, the AgentKit Copilot libraries shall add no
+              Copilot runtime file to the output of a project that references them, shall fail to start a Copilot
+              runtime with an error that names the missing runtime wrapper, shall start no runtime process when they
+              fail, and shall ignore the COPILOT_CLI_PATH variable of the host process.
+            justification: |
+              CanvasPilot must not ship or download the GitHub Copilot runtime. AgentKit can start only a runtime that
+              is bundled beside the application, so in this version it fails cleanly, and the failure, the empty
+              output, and the ignored variable are the facts on which the gating of Copilot in CanvasPilot rests. The
+              published output and the installer are asserted separately.
+            tags: [ots]
+            tests:
+              - AgentKit_BuildOutput_HasNoBundledCopilotRuntime
+              - AgentKit_CopilotRuntime_StartAsync_WithoutBundledRuntime_FailsAndStartsNothing
+              - AgentKit_CopilotRuntime_StartAsync_CliPathVariable_IsIgnored

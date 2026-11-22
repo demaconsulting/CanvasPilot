@@ -1,0 +1,92 @@
+---
+# Software Unit Requirements for the AgentInstructions Unit
+#
+# The AgentInstructions unit writes the instructions that the AI copilot is given for one project: the role prompt (an
+# embedded Markdown resource), the index of the drawing knowledge, the facts of the project (its name, its folder, the
+# head of the list of its files, and the name and id of its style kit), and the style of the kit. A model with a large
+# context window gets the full text and one with a small window gets a compact text. The sizes are limits that its tests
+# measure with the real cards, the real kits, and the real tools. Its supporting types (the facts of the project and the
+# tier) are part of the unit.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: AgentInstructions Requirements
+            requirements:
+              - id: CanvasPilot-AgentInstructions-StateTheRole
+                title: >-
+                  The AgentInstructions shall begin the instructions with a role prompt of at most 3,000 characters, kept
+                  as an embedded Markdown resource, that tells the copilot to draw with CanvasNet in the open project, to
+                  use only its tools, to call style_get before it draws and style_check after, to look at the picture with
+                  render_image after every change, to use paths relative to the project folder and never invent a file, to
+                  read a file before it replaces it, to know that the example images of a style can be looked at with
+                  render_image only, and to explain briefly, and shall refuse a role prompt that is empty or longer than
+                  3,000 characters.
+                justification: |
+                  A model that is not told how to work draws blind and replaces files it has not read. The role prompt is
+                  the part of the instructions that never changes, so it is kept as a resource that a person can read and
+                  review, and it is bounded because it is paid for in every request. The prompt says that a replaced file
+                  is gone because the application keeps no backup and asks nothing.
+                tests:
+                  - AgentInstructions_RolePrompt_Embedded_IsWithinBudgetAndStatesTheRules
+                  - AgentInstructions_Constructor_RolePromptAndPrompts_AreCheckedAndUsed
+
+              - id: CanvasPilot-AgentInstructions-DescribeProject
+                title: >-
+                  The AgentInstructions shall tell the copilot the name and the folder of the project, the head of the list
+                  of its files as paths relative to the folder with forward slashes (limited in number and in size, saying
+                  how many there are and that project_list gives the rest, and saying so when there is none), and the name
+                  and id of the style kit of the project, or that the project has no style kit or names one that cannot be
+                  found, and shall write a name or path on one line, cut with an ellipsis when it is too long.
+                justification: |
+                  The copilot needs to know where it works and what is already there, so that it does not invent files; a
+                  project may hold thousands of files, so the list is only a head and says that it is. A name that contains a
+                  line break could start a new instruction, so every value is written on one line.
+                tests:
+                  - AgentInstructions_Build_FullTier_HasRoleIndexFactsAndStyleInOrder
+                  - AgentInstructions_Build_Files_AreLimitedCleanedAndCountedHonestly
+                  - AgentInstructions_Build_LongNames_StopTheListAtTheCharacterLimit
+                  - AgentInstructions_Build_NoStyleOrMissingStyle_SaysSo
+
+              - id: CanvasPilot-AgentInstructions-IncludeKnowledgeAndStyle
+                title: >-
+                  The AgentInstructions shall follow the role prompt with the index of the drawing knowledge, then the facts
+                  of the project, then the style of the active kit as the style guidance writes it, in that order, with the
+                  same text for the same input.
+                justification: |
+                  The index tells the copilot which cards it can ask for, and the style tells it which colors and fonts to
+                  use. The parts that do not change from project to project come first, so that a provider that caches the
+                  start of a request can reuse it, and a text that is the same for the same input can be tested and compared.
+                tests:
+                  - AgentInstructions_Build_FullTier_HasRoleIndexFactsAndStyleInOrder
+                  - AgentInstructions_Build_SameInput_SameTextAndBadArgumentsAreRefused
+
+              - id: CanvasPilot-AgentInstructions-ChooseTierByContext
+                title: >-
+                  The AgentInstructions shall write the full instructions for every GitHub Copilot model and for an Ollama
+                  model with a context window of at least 16,384 tokens, and the compact instructions, with the cards at the
+                  top of the index only, a shorter list of files, and a style without example images, for a smaller window.
+                justification: |
+                  A model with a small window cannot hold the whole index and still draw with images and tools, so it gets
+                  what it needs to ask for the rest. The threshold is the recommended minimum of the settings, so that a user
+                  who is warned about a small window also gets the text that fits it.
+                tests:
+                  - AgentInstructions_ChooseTier_ProviderAndWindow_FullFromSixteenThousandTokensOrCopilot
+                  - AgentInstructions_Build_CompactTier_HasTopLevelIndexAndNoExamples
+
+              - id: CanvasPilot-AgentInstructions-BoundTheSize
+                title: >-
+                  The AgentInstructions shall keep the instructions of the full tier within 20,000 characters and those of
+                  the compact tier within 11,000 characters for every style kit that comes with the program and for the
+                  longest list of files, and the words and schemas of all the tools of the copilot together shall stay
+                  within 7,000 characters, each measured by a test and not estimated.
+                justification: |
+                  The instructions and the tool text are paid for in every request and take room from the picture and the
+                  answer, so their size is a limit that must be known. A card or a kit that makes the text too large must
+                  fail the build and not the model of a user with a small window.
+                tests:
+                  - AgentInstructions_Build_FullTier_EveryBuiltInKitAndLongestFileList_FitsTwentyThousandCharacters
+                  - AgentInstructions_Build_CompactTier_EveryBuiltInKitAndLongestFileList_FitsElevenThousandCharacters
+                  - AgentInstructions_ToolSchemas_AllToolsOfTheCopilot_FitSevenThousandCharacters

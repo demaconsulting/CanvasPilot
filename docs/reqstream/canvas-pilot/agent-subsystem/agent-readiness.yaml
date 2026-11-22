@@ -1,0 +1,173 @@
+---
+# Software Unit Requirements for the AgentReadiness Unit
+#
+# The AgentReadiness unit checks whether the AI provider that the settings choose can be used, and says in one sentence
+# what it found and what to do. For GitHub Copilot it runs ordered checks (the Copilot CLI and its version, credentials,
+# and the start of the runtime, which this build cannot do); for Ollama it checks the settings, the server, the model,
+# and the context window. Its supporting types (the starter of the Copilot runtime with the gated starter that this
+# build ships, and the probe of the Ollama server) are part of the unit.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: AgentReadiness Requirements
+            requirements:
+              - id: CanvasPilot-AgentReadiness-CheckCopilotInOrder
+                title: >-
+                  The AgentReadiness shall check GitHub Copilot in this order and report the first check that fails:
+                  the Copilot CLI is found, the CLI is version 1.0.113 or later, credentials exist, and the starter of
+                  the Copilot runtime says that the runtime can be started; each failure shall be one sentence that
+                  names what to do, and a CLI that is not usable shall not lead to a check of credentials.
+                justification: |
+                  Each later check needs the earlier one: credentials and the runtime mean nothing without a CLI that
+                  works. Reporting only the first problem tells the user one thing to fix at a time, in the order in
+                  which it can be fixed, and the exact sentences (install with winget, upgrade with winget) are the
+                  commands that fix them. The CLI and its version are judged by the locator, so the sentences of the
+                  locator are the ones the user sees.
+                tests:
+                  - AgentReadiness_Copilot_NoCli_ReportsMissingWithTheInstallSentence
+                  - AgentReadiness_Copilot_OnlyShim_ReportsMissingAndNamesTheShim
+                  - AgentReadiness_Copilot_OverridePathMissing_ReportsMissingForThatPath
+                  - AgentReadiness_Copilot_CliDoesNotAnswer_ReportsMissingWithReinstallAdvice
+                  - AgentReadiness_Copilot_CliTooOld_ReportsTooOldWithTheUpgradeSentence
+                  - AgentReadiness_Copilot_MinimumVersion_IsAcceptedAndGoesOnToCredentials
+                  - AgentReadiness_Copilot_StarterStarted_ReportsReadyAndAsksOnlyToCheck
+                  - AgentReadiness_Copilot_StarterFailed_ReportsUnavailableWithTheStartersSentence
+
+              - id: CanvasPilot-AgentReadiness-DetectCopilotCredentials
+                title: >-
+                  The AgentReadiness shall accept as credentials for GitHub Copilot a non-empty value of
+                  COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN, or else a GitHub CLI (gh.exe on the PATH or in the
+                  GitHub CLI folder under the program files) whose gh auth token ends with exit code 0 within 5 seconds
+                  and prints something, and shall not run the GitHub CLI when a variable already gives credentials.
+                justification: |
+                  These are the ways in which the AI library that the application is built on can sign in to GitHub.
+                  A token in the environment is the cheapest proof and needs no program; the signed-in GitHub CLI is
+                  the usual case on a developer machine. A time limit keeps a stuck program from freezing the check,
+                  and an empty or failed answer is a clear no.
+                tests:
+                  - AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndStopsAtTheGatedRuntime
+                  - AgentReadiness_Copilot_EmptyTokenVariables_AreNotCredentials
+                  - AgentReadiness_Copilot_GitHubCliSignedIn_CountsAsCredentialsAndNeverKeepsTheToken
+                  - AgentReadiness_Copilot_GitHubCliOnPath_IsRunFromThePath
+                  - AgentReadiness_Copilot_GitHubCliNotSignedIn_IsNotACredential
+
+              - id: CanvasPilot-AgentReadiness-ExplainCopilotAuthentication
+                title: >-
+                  The AgentReadiness shall, when no credentials exist, tell the user to sign in with gh auth login or
+                  to set the COPILOT_GITHUB_TOKEN environment variable and to choose Check connection, and shall say
+                  that the sign-in of the Copilot CLI itself (its /login) is not shared with the AI library of the
+                  application yet.
+                justification: |
+                  Users who signed in to the Copilot CLI will expect that to be enough. The AI library does not use that
+                  session, so without this sentence the user would be told to sign in when they believe they are. The
+                  sentence gives the two things that work and names the one that does not, so the user does not repeat
+                  the sign-in that fails.
+                tests:
+                  - AgentReadiness_Copilot_NoCredentials_ReportsNotSignedInWithTheExactSentence
+
+              - id: CanvasPilot-AgentReadiness-ReportGatedCopilotRuntime
+                title: >-
+                  The AgentReadiness shall report GitHub Copilot as unavailable with the sentence "Copilot support needs
+                  an AgentKit update; use Ollama meanwhile." whenever the starter of the runtime answers that an update
+                  of the AI library is needed, shall never report Copilot as ready then, and shall ship a starter that
+                  always gives that answer without starting anything.
+                justification: |
+                  The AI library of this build can run only a Copilot CLI that it bundles, and the application must not
+                  bundle or download the CLI. Saying that Copilot is ready would send the user into a chat that cannot
+                  answer. A starter behind an interface keeps the rest of the Copilot support built and tested, and
+                  makes the day the library allows a chosen CLI a replacement of one class.
+                tests:
+                  - AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndStopsAtTheGatedRuntime
+                  - AgentReadiness_Copilot_GatedStarter_NeverReportsReady
+                  - GatedCopilotRuntimeStarter_Start_AnswersNeedsAgentKitUpdate
+
+              - id: CanvasPilot-AgentReadiness-NeverRetainCredentials
+                title: >-
+                  The AgentReadiness shall look only at whether a token variable or the output of gh auth token is
+                  empty, shall not store, show, or log a token, and shall keep no text in its fields.
+                justification: |
+                  A token is a secret that gives access to the user's GitHub account. The check needs to know only that
+                  one exists, so nothing else about it is read, and a unit that holds no text and writes no log cannot
+                  leak one by mistake.
+                tests:
+                  - AgentReadiness_Copilot_GitHubCliSignedIn_CountsAsCredentialsAndNeverKeepsTheToken
+                  - AgentReadiness_Fields_Rule_HoldNoText
+
+              - id: CanvasPilot-AgentReadiness-CheckOllamaServerAndModel
+                title: >-
+                  The AgentReadiness shall, for Ollama, report settings that name no valid http or https address or no
+                  model without asking the server, and otherwise ask the server for its models within 5 seconds, report
+                  a server that does not answer, report a model that the server does not have with the command ollama
+                  pull and the model name, and for a model that is there say that pictures need a vision-capable model;
+                  a model name without a tag shall match the latest tag, in any letter case.
+                justification: |
+                  A local model server may not be running, and a model has to be pulled before it can be used; the user
+                  should learn that before the first message, with the command that fixes it. Pictures that the model
+                  cannot see are the most common surprise with local models, so the ready sentence says it. Matching
+                  the name the way ollama pull does keeps a correct setting from being reported as missing.
+                tests:
+                  - AgentReadiness_Ollama_InvalidEndpoint_ReportsNotConfigured
+                  - AgentReadiness_Ollama_NoModelName_ReportsNotConfigured
+                  - AgentReadiness_Ollama_ServerNotReachable_ReportsUnreachable
+                  - AgentReadiness_Ollama_ModelMissing_ReportsTheOllamaPullCommand
+                  - AgentReadiness_Ollama_ModelPresent_ReportsReadyWithTheVisionHint
+
+              - id: CanvasPilot-AgentReadiness-WarnSmallOllamaContext
+                title: >-
+                  The AgentReadiness shall report a warning that still allows a turn when the smaller of the configured
+                  context window and the largest window that the model supports (when the server says) is below
+                  16,384 tokens, and the sentence shall name the configured window and the setting to raise when the
+                  setting is the smaller, and name the limit of the model when that is the smaller.
+                justification: |
+                  Drawings with pictures and tools need a long context, and a model with a window that is too short
+                  fails in ways that look like a broken application. Raising the setting helps only when the setting is
+                  the smaller value, so the two cases give different advice. The warning must not block the user, who
+                  may know that the model copes.
+                tests:
+                  - AgentReadiness_Ollama_ConfiguredContext_WarnsAt16383AndNotAt16384
+                  - AgentReadiness_Ollama_DetectedContext_TheSmallerOfConfiguredAndDetectedDecides
+                  - AgentReadiness_DescribeSmallContext_Boundaries_AreTheRecommendedMinimum
+
+              - id: CanvasPilot-AgentReadiness-ProbeOllamaSafely
+                title: >-
+                  The OllamaProbe shall read the models of a server from its tags and the context length of a model from
+                  the entry of its information whose key ends in .context_length, shall treat a refused connection, an
+                  error status, an answer that is not what Ollama sends, and a time out as an unreachable server or an
+                  unknown length and not as an error, and shall pass on a cancellation by the caller.
+                justification: |
+                  The readiness check must always end with a sentence, so
+                  every failure of the conversation with the server is data. The context length is optional, since the
+                  shape of the answer is an assumption that only a real server can confirm, so a missing or odd value
+                  must degrade to "not known" and never to a failure.
+                tests:
+                  - OllamaProbe_ListModels_ServerAnswers_ReturnsTheNamesFromTags
+                  - OllamaProbe_ListModels_NoModels_IsReachableAndEmpty
+                  - OllamaProbe_ListModels_Failure_IsAnUnreachableServer
+                  - OllamaProbe_ListModels_NoAnswerInTime_IsAnUnreachableServer
+                  - OllamaProbe_Cancelled_ThrowsOperationCanceled
+                  - OllamaProbe_GetContextLength_ModelInfo_ReadsTheContextLengthEntry
+                  - OllamaProbe_GetContextLength_UnusableAnswer_IsUnknownNotAnError
+                  - OllamaProbe_GetContextLength_Failure_IsUnknownNotAnError
+                  - OllamaProbe_Arguments_Invalid_AreRefused
+
+              - id: CanvasPilot-AgentReadiness-ServeConnectionCheck
+                title: >-
+                  The AgentReadiness shall implement the connection check of the settings dialog by searching for the
+                  Copilot CLI again, returning the sentence of the report and whether the provider can be used, shall
+                  keep the answer of the CLI search between plain checks, and shall end a check with a cancellation when
+                  the caller cancels it.
+                justification: |
+                  A user who has just installed or fixed something and chooses Check connection must see the fix, so the
+                  connection check does not use a remembered answer, while the plain check that runs often does. The
+                  settings dialog depends only on the interface that it owns, so the result is plain data. All one-line
+                  sentences end with a full stop so that the chat can show them unchanged.
+                tests:
+                  - AgentReadiness_Constants_Rule_AreTheDocumentedValues
+                  - AgentReadiness_Copilot_RefreshAndCheckAsync_SearchAgainOnlyWhenAsked
+                  - AgentReadiness_GetReport_CancelledToken_ThrowsOperationCanceled
+                  - AgentReadiness_GetReport_NullSettings_ThrowsArgumentNull
+                  - AgentReadiness_CheckAsync_Ollama_MapsUsabilityAndMessage
+                  - AgentReadiness_Messages_Rule_AreOneLineAndEndWithAFullStop

@@ -367,6 +367,40 @@ public sealed class ComposerSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that sending is held back while the owner blocks it, over the real store and payload builder: the message
+    ///     can be written meanwhile, nothing reaches the project, and the whole draft goes out once the block is lifted.
+    /// </summary>
+    [Fact]
+    public async Task ComposerSubsystem_BlockSendingThroughViewModel_WritesMeanwhileAndSendsTheWholeDraftAfterwards()
+    {
+        // Arrange: a project, a view model over the real store and payload builder, and a block
+        var project = Directory.CreateDirectory(Path.Combine(_root, "project")).FullName;
+        var external = Directory.CreateDirectory(Path.Combine(_root, "external")).FullName;
+        var file = WriteFile(Path.Combine(external, "brief.txt"), [1, 2, 3]);
+        using var viewModel = new ComposerViewModel(new PayloadBuilder(new FakeMarkImageComposer()), new MarkRegistry(), new FakeDictationService());
+        viewModel.SetProject(project);
+        var sentMessages = new List<SentMessage>();
+        viewModel.MessageSent += (_, e) => sentMessages.Add(e.Message);
+        viewModel.BlockSending(ComposerViewModel.CopilotWorkingText);
+
+        // Act: write and attach while blocked, try to send, then lift the block and send
+        viewModel.InsertTyped("Next, ");
+        viewModel.HandleDrop(new DroppedContent { Paths = [file] });
+        var refused = await viewModel.SendAsync(TestContext.Current.CancellationToken);
+        var attachmentsWhileBlocked = Directory.Exists(Path.Combine(project, "attachments"));
+        viewModel.UnblockSending();
+        var sent = await viewModel.SendAsync(TestContext.Current.CancellationToken);
+
+        // Assert: nothing was sent or copied while blocked, and the whole draft was sent afterwards
+        Assert.False(refused);
+        Assert.False(attachmentsWhileBlocked);
+        Assert.True(sent);
+        var payload = Assert.IsType<MessagePayload>(Assert.Single(sentMessages).Payload);
+        Assert.StartsWith("Next, [Attachment 1: brief.txt]", payload.Text, StringComparison.Ordinal);
+        Assert.True(File.Exists(Path.Combine(project, "attachments", "brief.txt")));
+    }
+
+    /// <summary>
     ///     Test that a message written through the view model with every kind of action, over the real store and intake,
     ///     is undone and redone one step at a time with every step passing through the state it had when it was made.
     /// </summary>

@@ -5,11 +5,23 @@
 ## Architecture
 
 CanvasPilot is a desktop application built on .NET and Avalonia. It is structured as one system. The
-software items documented are thirteen subsystems, `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`,
-`Payload`, `Preview`, `Project`, `Settings`, `Speech`, `Style`, and `Utilities`.
+software items documented are fourteen subsystems, `Agent`, `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`,
+`Logging`, `Payload`, `Preview`, `Project`, `Settings`, `Speech`, `Style`, and `Utilities`.
 
-```{.mermaid scale=0.9}
+```{.mermaid scale=0.7}
 flowchart TD
+    subgraph Agent
+        AgentContract
+        CopilotCliLocator
+        AgentReadiness
+        AgentToolRegistry
+        ProjectTools
+        AgentInstructions
+        PayloadMessageMapper
+        AgentEventMapper
+        AgentProviderFactory
+        AgentService
+    end
     subgraph Annotation
         MarkRegistry
         MarkSourceResolver
@@ -22,6 +34,8 @@ flowchart TD
     end
     subgraph Chat
         ChatPanel
+        ChatTurnRunner
+        ChatHistoryStore
         PayloadInspector
     end
     subgraph Composer
@@ -118,8 +132,21 @@ flowchart TD
     ChatPanel --> MessagePayload
     ChatPanel --> DictationService
     ChatPanel --> PayloadInspector
+    ChatPanel --> ChatTurnRunner
+    ChatPanel --> ChatHistoryStore
+    ChatPanel --> ProjectService
+    ChatPanel --> AgentContract
+    ChatPanel --> KnowledgeMarkdown
     ChatPanel --> RollingFileLogger
     ChatPanel --> PathHelpers
+    ChatTurnRunner --> ChatPanel
+    ChatTurnRunner --> AgentContract
+    ChatTurnRunner --> ComposerViewModel
+    ChatTurnRunner --> MessagePayload
+    ChatTurnRunner --> RollingFileLogger
+    ChatHistoryStore --> ProjectService
+    ChatHistoryStore --> RollingFileLogger
+    ChatHistoryStore --> PathHelpers
     PayloadInspector --> PayloadDescriber
     PayloadInspector --> MessagePayload
     MainWindowShell --> PayloadInspector
@@ -249,6 +276,43 @@ flowchart TD
     StyleKitManager --> ProjectService
     ProjectWorkspace --> ProjectExplorer
     ProjectWorkspace --> ChatPanel
+    AgentReadiness --> CopilotCliLocator
+    AgentReadiness --> SettingsService
+    AgentReadiness --> AiProviderSettingsPage
+    AgentToolRegistry --> KnowledgeTools
+    AgentToolRegistry --> ProjectService
+    ProjectTools --> AgentToolRegistry
+    ProjectTools --> ImageRenderService
+    ProjectTools --> StyleSelection
+    ProjectTools --> StyleKitCatalog
+    ProjectTools --> ProjectService
+    ProjectTools --> ProjectExplorer
+    ProjectTools --> RollingFileLogger
+    AgentInstructions --> KnowledgePromptBuilder
+    AgentInstructions --> StyleGuidance
+    AgentInstructions --> SettingsService
+    PayloadMessageMapper --> MessagePayload
+    AgentEventMapper --> AgentContract
+    AgentEventMapper --> AgentReadiness
+    AgentEventMapper --> SettingsService
+    AgentEventMapper --> RollingFileLogger
+    AgentProviderFactory --> AgentContract
+    AgentProviderFactory --> AgentReadiness
+    AgentProviderFactory --> CopilotCliLocator
+    AgentProviderFactory --> SettingsService
+    AgentProviderFactory --> RollingFileLogger
+    AgentService --> AgentContract
+    AgentService --> AgentToolRegistry
+    AgentService --> AgentInstructions
+    AgentService --> PayloadMessageMapper
+    AgentService --> AgentEventMapper
+    AgentService --> AgentReadiness
+    AgentService --> AgentProviderFactory
+    AgentService --> ProjectTools
+    AgentService --> SettingsService
+    AgentService --> ProjectService
+    AgentService --> StyleSelection
+    AgentService --> RollingFileLogger
 ```
 
 `PathHelpers` provides safe path combination and has no dependencies on other local items.
@@ -258,10 +322,11 @@ log file outside that folder.
 
 `SettingsService` owns the persisted settings and is the only item that reads or writes the settings file.
 `SettingsDialog` hosts settings pages through a page contract and saves them through the service;
-`AiProviderSettingsPage` is the page for the AI provider choices and implements that contract. The dialog
-receives its pages from the application, so the `Settings` subsystem does not depend on the subsystems that
-contribute pages. The AI provider choices are stored only; no agent or provider client is part of the
-current build, and one added later reads the stored choices through the service.
+`AiProviderSettingsPage` is the page for the AI provider choices and implements that contract. The dialog receives its
+pages from the application, so the `Settings` subsystem does not depend on the subsystems that contribute pages. The AI
+provider choices are stored by the service and read by the `Agent` subsystem: the readiness checks and the agent of a
+conversation take them from the service and react to its `Changed` event, while `Settings` declares only the
+`IProviderCheck` interface that the settings dialog uses to check a connection, and never refers to `Agent`.
 
 `ProjectService` owns projects: a project is a folder holding a `{name}.canvaspilot` project file, a hidden
 `.canvaspilot` folder for application data (the pictures that the user pastes into a message while it is a draft), and
@@ -366,7 +431,7 @@ overlay draws only the marks of the shown picture whose chips are in the message
 tool is chosen the overlay has the preview pane turn off dragging the picture out, and Escape throws a shape away.
 
 `MessagePayload` and the values it is made of are the one form in which the message that the user sends reaches the
-assistant that is added later: the text with `[Mark n]` and `[Attachment n: name]` at the places of the marks and
+AI copilot: the text with `[Mark n]` and `[Attachment n: name]` at the places of the marks and
 attachments, the same message as parts in order that keep typed text apart from dictated text, the attachments with the
 place where the user had them and their path in the project, and, for each picture that marks were drawn on, the picture
 with the marks drawn and numbered on it, an image of the area around each mark, the geometry and note of each mark in
@@ -383,24 +448,60 @@ subsystem uses the `Annotation` subsystem except `Payload`, `Composer`, `Chat`, 
 project, oldest first; below, the composer's editing control; and between them and the user, a button that listens while
 it is held and a button that sends. The transcript shows only sent messages, each once, with its words in the order they
 were written (dictated words with the same subtle background as in the editing control), the chips of its attachments
-and marks in their places with their pictures, and a button, "View payload". The panel keeps nothing on disk: the
-transcript lives in memory and is dropped when the project changes or closes. Sending is the composer's own command, so
-the panel only follows its state and shows the result: an entry for a message that was sent, and, when sending failed,
-the composer's status text with the draft untouched. The talk button listens exactly as long as it is held: pressing the
-pointer starts it and captures the pointer, and letting go anywhere, losing the capture, losing the focus, or removing
-the panel ends it; when dictation cannot work, the composer's status line in the panel says why and what to do. The
-panel also joins the annotation layer to the composer, which do not know each other: it adds the chip of every mark that
-is drawn to the message at the caret as one undo step, and each time the message changes it tells the layer which mark
-chips the message holds and whether marks can be made. It prepares dictation when it is shown and gives the chips their
-pictures: the area around the mark, cut from the picture the mark was drawn on, and the preview of an attached picture
-file. `PayloadInspector` is the window that "View payload" opens: it shows the text that `PayloadDescriber` writes for
-the payload of the message, which is exactly what the assistant would receive, and, next to it, the pictures of the
-payload: the annotated picture of every marked file and the area around every mark, each with a caption. The window
-cannot change anything. The panel does not know what shows the inspector; it asks an `IPayloadInspectorLauncher`, which
-`IDialogService` extends, so the main window shows it as a dialog. The `Chat` subsystem depends on `Composer`,
-`Annotation`, `Payload`, `Speech`, and `Logging`, and not on `AppShell`. The main window places the panel in the chat
-column of the workspace, which is shown while a project is open, and the shell makes the panel the target of the Edit
-menu (through the composer) and of the talk key.
+and marks in their places with their pictures, and a button, "View payload". The panel writes nothing itself and keeps
+nothing in the project: the transcript is dropped from the screen when the project changes or closes, and the words of
+the conversation are kept on the user's computer by `ChatHistoryStore`, below `%LOCALAPPDATA%\CanvasPilot\history` in a
+folder named by a hash of the path of the project file, never in the project folder, which may be copied or put under
+source control. When a project is opened again the panel shows its saved conversation as text (no pictures, no payload),
+gives the saved words to the copilot with the next message, and offers "Clear chat history", which deletes the saved
+history, empties the transcript, and makes the copilot forget the conversation. Sending is the composer's own command,
+so the panel only follows its state and shows the result: an entry for a message that was sent, and, when sending
+failed, the composer's status text with the draft untouched. The talk button listens exactly as long as it is held:
+pressing the pointer starts it and captures the pointer, and letting go anywhere, losing the capture, losing the focus,
+or removing the panel ends it; when dictation cannot work, the composer's status line in the panel says why and what to
+do. The panel also joins the annotation layer to the composer, which do not know each other: it adds the chip of every
+mark that is drawn to the message at the caret as one undo step, and each time the message changes it tells the layer
+which mark chips the message holds and whether marks can be made. It prepares dictation when it is shown and gives the
+chips their pictures: the area around the mark, cut from the picture the mark was drawn on, and the preview of an
+attached picture file. `PayloadInspector` is the window that "View payload" opens: it shows the text that
+`PayloadDescriber` writes for the payload of the message, which is exactly what the assistant would receive, and, next
+to it, the pictures of the payload: the annotated picture of every marked file and the area around every mark, each with
+a caption. The window cannot change anything. The panel does not know what shows the inspector; it asks an
+`IPayloadInspectorLauncher`, which `IDialogService` extends, so the main window shows it as a dialog. `ChatTurnRunner`
+holds the logic of one turn of the conversation without a window: it gives the message that was sent to the AI copilot
+through `IAgentService`, shows the events of the turn as rows of the transcript (the streamed answer, one line for each
+tool that the copilot calls, and notices and errors), stops on request and keeps what was written, never throws into the
+interface, and tells the panel when it is busy, so that the panel can block sending while the copilot works. The panel
+starts a turn for every message that was sent when it has a copilot (without one, it only adds the entry), shows the
+moving indicator and the Stop button while the turn runs, shows the text of a reply as plain selectable text while it
+streams and as Markdown, with the `MarkdownBlocksPanel` of the `Knowledge` subsystem, once it is whole, shows a banner
+with the sentence of the readiness report of the copilot when the provider cannot be used (or can be used with a
+warning), and raises a request to open the settings, from the banner and from an error row, which the shell turns into
+its own command; it does not depend on `Settings`. The `Chat` subsystem depends on `Composer`, `Annotation`, `Payload`,
+`Speech`, `Logging`, `Project` (the open project and the path of its file, for the history), `Knowledge` (to draw
+Markdown only), and, through `IAgentService` and the events of a turn only, `Agent`, and not on `AppShell`. The `Agent`
+subsystem does not depend on `Chat`. The main window places the panel in the chat column of the workspace, which is
+shown while a project is open, and the shell makes the panel the target of the Edit menu (through the composer) and of
+the talk key.
+
+`AgentContract` is the one thing of the AI copilot that the rest of the application sees: `IAgentService` with the
+request of a turn, the events that answer it, and the readiness report, all plain records that name no AI library.
+`AgentService` implements it for the open project. It makes nothing until the first message is sent, then builds the
+tools (`AgentToolRegistry`, with `ProjectTools`), the instructions (`AgentInstructions`), the agent of the chosen
+provider (`AgentProviderFactory`), and one provider session, and runs one turn at a time: `PayloadMessageMapper` turns
+the `MessagePayload` into the message of the model, and `AgentEventMapper` turns what the agent does into the events
+that the chat shows, the same for both providers. The copilot has only locked-down tools: `canvasnet_help`, `style_get`,
+`style_check`, `project_list`, `project_read`, `project_write`, and `render_image`; every one is confined to the project
+folder, refuses links, the hidden `.canvaspilot` folder, and the project file, and a write replaces a file directly,
+with no backup and no question, and says `created` or `replaced`. `AgentReadiness` answers whether the chosen provider
+can be used, for the chat banner and for the connection check of the settings dialog: for Ollama it checks the settings,
+the server, the model, and the context window (a warning below 16,384 tokens), and for GitHub Copilot it checks in order
+that the Copilot CLI is found (`CopilotCliLocator`, which finds the real `copilot.exe`, never an editor's shim), that
+its version is 1.0.113 or later, and that credentials exist. `AgentService` never writes into a project except through
+`project_write`, keeps the data of the Copilot runtime in a folder of its own and the restored history in memory, and
+logs metadata only. The `Agent` subsystem depends on `Settings`, `Project`, `Payload`, `Knowledge`, `Style`, `Preview`,
+`Logging`, and the AI libraries, and not on `Chat` or `AppShell`; `AppShell` builds it, and `Settings` does not depend
+on it (see *AI Provider Seam*).
 
 `KnowledgeCatalog` holds the knowledge of how to draw and how to work in a project as a tree of cards: the help of
 CanvasNet, without the few cards that are only about the host program, extended with cards of CanvasPilot that are
@@ -409,8 +510,9 @@ the marks and attachments of a message. The catalog is built once, from embedded
 `KnowledgeSearch` finds the cards that fit some words, `KnowledgePromptBuilder` writes the index and the cards as text
 for the prompt of an assistant within a size budget, `KnowledgeTools` describes the one tool by which an assistant
 fetches them, and `KnowledgeSkills` describes each card as a skill; none of these units refers to a provider of a
-language model, so the same knowledge can be given to any assistant that is added later, and until then only the user
-reads it. `KnowledgeMarkdown` reads the Markdown of a card into blocks that a window can draw, without a Markdown
+language model, so the same knowledge goes to any provider: the AI copilot is given the index in its instructions and
+fetches a card with the tool `canvasnet_help`, and the user reads the same cards in the browser. `KnowledgeMarkdown`
+reads the Markdown of a card into blocks that a window can draw, without a Markdown
 library, and `KnowledgeBrowser` is the window in which the user reads the cards: a tree, a search box that runs the same
 search as the assistant, the card with its related cards and examples, and a button that copies an example. The window
 is the only unit of the subsystem with a user interface. The browser does not know the main window; the shell asks an
@@ -422,14 +524,14 @@ and not on `AppShell`.
 file (a palette of named colors, fonts, a line width, a corner radius, a spacing, a Mermaid theme, a Vega-Lite
 configuration, advice, export sizes, and captions) and an `examples` folder, read with a message for each wrong
 property. `StyleKitCatalog` finds the kits in the four places and chooses the most local copy of a kit by the order
-project, user, shared folders, program, and it is the only item that writes kits; the kits of the program and of a
-team are read only. `StyleKitArchive` exchanges a kit as a zip file and reads one as untrusted input. `StyleSelection`
-says which kit the open project uses, keeps the choice in the project file, gives a new project the default kit of the
-user, and is the source of export sizes that `ImageExporter` asks (the sizes of the kit, then the sizes of the
-application). `StyleGuidance` and `StyleTools` give the style to an assistant that is added later, as a block of text of
-a known size and as two tools, `style_get` and `style_check`, which are plain values and use no provider of a language
-model. `StyleChecker` measures the colors of a picture against the palette of a kit and `StyleCheckCommand` runs it
-for the Image menu and puts the result among the notes of the preview. `StylePicker` is the list in the status bar,
+project, user, shared folders, program, and it is the only item that writes kits; the kits of the program and of a team
+are read only. `StyleKitArchive` exchanges a kit as a zip file and reads one as untrusted input. `StyleSelection` says
+which kit the open project uses, keeps the choice in the project file, gives a new project the default kit of the user,
+and is the source of export sizes that `ImageExporter` asks (the sizes of the kit, then the sizes of the application).
+`StyleGuidance` and `StyleTools` give the style to the AI copilot, as a block of text of a known size in its
+instructions and as two tools, `style_get` and `style_check`, which are plain values and use no provider of a language
+model. `StyleChecker` measures the colors of a picture against the palette of a kit and `StyleCheckCommand` runs it for
+the Image menu and puts the result among the notes of the preview. `StylePicker` is the list in the status bar,
 `StyleSettingsPage` the page of the settings dialog for shared folders and the default kit, and `StyleKitManager` and
 `StyleKitEditor` the window in which the user sees, makes, edits, imports, exports, and chooses kits. The `Style`
 subsystem depends on `Project`, `Settings`, `Preview`, `Knowledge` (only the descriptor record of a tool), `Utilities`,
@@ -450,9 +552,17 @@ the render service, the preview pane, and the exporter, which is its job for eve
 
 Because the direction is fixed, a subsystem added later depends on the subsystems below it and never on `AppShell`; only
 the composition root and the window refer to every subsystem. The `Chat` subsystem is the first of them: it uses
-`Composer`, `Annotation`, `Payload`, and `Speech`, and the seam by which it asks for the inspector window,
+`Composer`, `Annotation`, `Payload`, `Speech`, and, for the turn of the AI copilot, `Agent` (only `IAgentService` and
+the events of a turn, never a provider), and the seam by which it asks for the inspector window,
 `IPayloadInspectorLauncher`, belongs to `Chat`, so `IDialogService` extends it just as it extends the seams of `Project`
-and `Preview`. The `Knowledge` subsystem follows the same rule: the seam by which the shell asks for the browser,
+and `Preview`. The `Agent` subsystem sits above `Settings`, `Project`, `Payload`, `Knowledge`, `Style`, and `Preview`
+and below `Chat`: it reads what they offer (the provider choices, the open project, the message, the drawing knowledge
+and style as plain tool descriptions, and the render service) and none of them refers to it, and it never refers to
+`Chat` or `AppShell`. Its one seam towards a lower subsystem is the connection check of the settings dialog:
+`Settings` owns `IProviderCheck`, which names no type of `Agent`, and `AgentReadiness` implements it, just as `Composer`
+owns `IMessageBuilder` for `Payload`; `Settings` therefore never refers to `Agent`, and the composition root hands the
+check to the AI Provider page. The `Knowledge` subsystem follows the same rule: the seam by which the shell asks for the
+browser,
 `IKnowledgeBrowserLauncher`, belongs to `Knowledge`, and `IDialogService` extends it too. The `Style` subsystem sits
 above `Project`, `Settings`, `Preview`, and `Knowledge` and none of them refers to it: the seams that they need are
 declared by the lower subsystem (`IExportPresetSource` and `IRenderNoteSink` in `Preview`), the id of the kit of a
@@ -471,21 +581,58 @@ code that shows it interpret.
 
 ### AI Provider Seam
 
-The agent that will answer the messages and use an AI provider is out of scope of this version: message composition
-exists without an agent. The user can compose, dictate, attach, mark, send, and inspect a message, and the sent message
-is kept in the transcript, but nothing reads it and no answer comes back. The application holds no reference to any AI
-provider library, the GitHub Copilot SDK, Ollama, or an agent framework. What exists is the stored choice: the
-`AiProviderSettings` of the settings file (provider, model name, context window, reasoning level, Ollama endpoint,
-Copilot command-line tool path, and the opt-in for unrestricted agent tools, which is off by default) and the
-`AiProviderSettingsPage` that edits it. The input of the agent is `MessagePayload`, which is built for every sent
-message and shown in the payload inspector. The seam for a later increment is `ISettingsService` for the choices and the
-`SentMessage` that `ComposerViewModel` raises with `MessageSent` for the message: an agent that is added as a separate
-subsystem reads the stored `AiProviderSettings` through the service and reacts to its `Changed` event, and no existing
-unit has to change. The agent is to be built detached from the user interface: it receives its settings, the project
-folder, and the message payload through its own interfaces, and answers through them, so that it can be tested without a
-window and replaced by another provider. The model-name text box will then be replaced by a list that the provider
-supplies, and the opt-in will decide whether the agent's tools are limited to the project folder. None of this exists
-yet, no interface is declared for it, and no requirement depends on it.
+The AI copilot answers the messages through one of two providers, chosen in the settings: a local Ollama server, which
+works end to end in this release (covered by automated tests; live checks against a running server are pending), and
+GitHub Copilot, which is gated. Everything provider-specific is behind the `Agent` subsystem; `Chat` sees only
+`IAgentService` and the events of a turn, and `Settings` sees only the `IProviderCheck` interface that it owns.
+
+**The seam.** The input of a turn is the `MessagePayload` that is built for every sent message (and shown in the payload
+inspector) together with the `AiProviderSettings` of the settings file (provider, model name, context window, reasoning
+level, Ollama endpoint, Copilot command-line tool path, and the flag for unrestricted agent tools). `AgentService` reads
+the settings through `SettingsService` and rebuilds its conversation when the project or one of the settings that decide
+the agent changes. The agent is detached from the user interface: it takes its settings, the project folder, and the
+payload, answers through events, and is tested without a window against a scripted model. The default context window is
+32,768 tokens for new settings, a stored value is kept as it is, and a window below 16,384 tokens is reported as a
+warning that does not block sending. The reasoning level is stored and applied unchanged but shown as not available,
+because the AI library does not expose it, and the flag for unrestricted tools is not offered in the dialog: the copilot
+has only the locked-down tools of the `Agent` subsystem.
+
+**Why Copilot is gated.** AgentKit 0.1.0-beta.3 can start the GitHub Copilot CLI only as a runtime that is bundled
+beside the application; it cannot use the `copilot.exe` that the user installed (`COPILOT_CLI_PATH` is ignored), and the
+sign-in of the CLI itself (`/login`) is not shared with the AI library. CanvasPilot never bundles, copies, or downloads
+the Copilot runtime (`CopilotSkipCliDownload` is set for every project, and the build asserts that neither the published
+output nor the installer holds a Copilot file). What CanvasPilot does ship are the readiness checks for Copilot: the
+real CLI is located by a rule that rejects the launchers (shims) of editors, its version must be 1.0.113 or later, and
+credentials must exist (a signed-in GitHub CLI, or one of the variables `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and
+`GITHUB_TOKEN`; a token is never stored, shown, or logged). The last check, starting the runtime, goes through the
+single seam `ICopilotRuntimeStarter`, and the starter that is shipped, `GatedCopilotRuntimeStarter`, answers that an
+update of the AI library is needed, so the chat shows "Copilot support needs an AgentKit update; use Ollama meanwhile."
+and starts no run. The Copilot branch of the provider factory and of the service is real and is tested with a fake
+starter. Two changes of the AI library remove the gate (a `CliPath` option of the Copilot runtime, and a way to use the
+session of the installed CLI); they are recorded in the design of the AgentKit OTS item. When they are available the one
+starter is replaced and the gated wording removed. A later direction, user-selectable AgentKit tool packs, needs the
+tools package of the AI library to move to the CanvasNet 0.2 line first; spoken replies of the copilot are deferred.
+
+**Where data lives.** Nothing the copilot needs is ever kept in the project folder except what the user or the copilot
+is asked to create.
+
+- *Project folder*: the files that the copilot creates or replaces with `project_write` (replaced directly, with no
+  backup and no question, so the user keeps a project under source control), the `attachments` copies of sent messages,
+  the `styles` folder, the project file, and, in the hidden `.canvaspilot` folder, only the pictures that the user
+  pasted into a message that is not sent yet.
+- *Chat history*: `%LOCALAPPDATA%\CanvasPilot\history\{key}`, where the key is a hash of the full path of the project
+  file; the words of the conversation only, no pictures and no payload; a project that is moved or renamed starts with
+  no history; the command "Clear chat history" deletes it.
+- *Copilot runtime data*: `%LOCALAPPDATA%\CanvasPilot\copilot`, chosen by `AgentService`; its sessions are deleted when
+  a conversation ends.
+- *Log*: `%LOCALAPPDATA%\CanvasPilot\logs`; the copilot writes only metadata (provider, model, tool names, sizes,
+  status, durations), never a message, an answer, a picture, a token, or the content of a file.
+- *Settings*: `%APPDATA%\CanvasPilot\settings.json`; it never holds a credential.
+- *Memory only*: the digest of the restored history that is given to a new provider session, and the pictures that
+  `render_image` draws.
+
+A project that contains the folder of the chat history or of the Copilot data (a project in the profile folder of the
+user, for example) is refused, so that a configuration mistake cannot write into a project.
 
 ## External Interfaces
 
@@ -591,8 +738,8 @@ made in the project when the message is sent.
 - *Type*: Embedded Markdown resources, read once into an in-memory tree; an Avalonia window opened by Help > Drawing
   Knowledge; the system clipboard.
 - *Format*: Each card has an identifier that is its path in the tree, a title, a one-line summary, tags, other names, a
-  Markdown body, related cards, and examples with their text. The assistant of a later increment is given the same
-  cards as an index, as cards on demand through one tool, or as skills.
+  Markdown body, related cards, and examples with their text. The AI copilot is given the same
+  cards as an index in its instructions and, on demand, through one tool.
 - *Constraints*: Nothing is written to a file or sent anywhere. The few cards that are only about the host program
   are left out. A card that cannot be read, or a clipboard that cannot be reached, is a message, never an
   unhandled failure.
@@ -613,6 +760,32 @@ made in the project when the message is sent.
   written. An import writes only inside the chosen place, refuses an archive as a whole when a name could leave it, and
   counts the bytes it writes (at most 100 entries, 16 MiB for an entry, and 64 MiB in all). A shared folder that cannot
   be reached is reported and never blocks the window.
+
+**AI Providers**: The Ollama server that answers the messages, and the GitHub Copilot CLI that the readiness checks look
+for.
+
+- *Direction*: Input and output for Ollama (the messages and pictures of the conversation go out, the streamed answers
+  and tool calls come back); input only for the Copilot CLI (its path and version).
+- *Type*: HTTP to the Ollama endpoint of the settings (the local address by default), through OllamaSharp; a short
+  `--version` run of the installed `copilot.exe` and, for the credential check, of `gh auth token`, whose output is
+  never kept.
+- *Format*: One agent conversation per open project; the context window of the settings is sent with every Ollama
+  request. For Copilot, only the located path, the version, and the readiness sentence exist in this release.
+- *Constraints*: The server is asked only for its model list when the provider is checked, and receives a message only
+  when the user sends one; the endpoint is the one the user typed. GitHub Copilot is never started in this release (see
+  *AI Provider Seam*), and the application never includes or downloads its runtime. Every failure, an unreachable
+  server, a missing model, or a refused tool, is a sentence that names the remedy, never an unhandled failure.
+
+**Chat History and Copilot Data**: What the AI copilot keeps on the user's computer.
+
+- *Direction*: Input and output.
+- *Type*: JSON files and folders below `%LOCALAPPDATA%\CanvasPilot`.
+- *Format*: `history\{key}\history.json` (version 1, at most 200 rows and 2 MB) with a `project.json` that names the
+  project, where the key is 32 hexadecimal characters of a hash of the project file path; the text of the conversation
+  only. `copilot\` is the home and the sessions of the Copilot runtime.
+- *Constraints*: Never inside a project folder; written atomically; a corrupt or newer file is set aside as `.bad`; the
+  history is deleted by "Clear chat history"; a moved or renamed project starts with no history; no picture, payload,
+  or credential is saved.
 
 **Speech Settings, Audio Devices, and Model Store**: The speech choices, the audio system, and the downloaded models.
 
@@ -652,7 +825,8 @@ made in the project when the message is sent.
   shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version.
 - *Constraints*: Installing a package replaces any installed version, older or newer, and asks a running
   `CanvasPilot.exe` to close first. The package contains no user data, and uninstalling leaves the user's settings,
-  logs, and projects in place.
+  logs, and projects in place. The package contains no GitHub Copilot runtime: the application never ships or
+  downloads one, which the build asserts on the published folder and on the file table of the package.
 
 **Main Window**: The application's window and menus.
 
@@ -671,24 +845,29 @@ made in the project when the message is sent.
 
 ## Dependencies
 
-The `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`, `Payload`, `Preview`, `Project`, `Settings`,
-`Speech`, `Style`, and `Utilities` subsystems use .NET base class library types, `System.Text.Json` for the settings and
-project files and the description of a payload, and, for dialogs, pages, and lists, Avalonia and CommunityToolkit.Mvvm,
-which are runtime third-party items (the `Composer` editor view also uses the AvaloniaEdit editing control, which is a
-runtime third-party item too; the other `Annotation`, `Chat`, and `Composer` units use base class library types and
-Avalonia only, and the `Payload` units base class library types and CanvasNet; of the `Knowledge` units only the browser
-uses Avalonia and CommunityToolkit.Mvvm, and the catalog reads the help cards of CanvasNet; the `Style` units read and
-write their files with `System.Text.Json` and `System.IO.Compression`, `StyleKitDocument` classifies font families with
-CanvasNet, and the picker, page, manager, and editor use Avalonia and CommunityToolkit.Mvvm). The `ImageRenderService`
-unit draws files and encodes PNG with the `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws
-the marks of a message over a picture with the same library, and the `ProjectExplorer` unit uses its extension list to
-decide which files are image sources. The `AudioDeviceService`, `SpeechModelService`, and `DictationService` units list
-audio devices and speech models, download models, create capture devices, and load and run the speech engine with the
-`DemaConsulting.Speech` library and its Sherpa model package, whose native speech runtime is shipped with the
-application, and the speech descriptor types are shown by the other units of the `Speech` subsystem; both libraries are
-documented as OTS items (see *OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS
-design documents. The Windows installer package is built from the published application by the WiX Toolset, also
-documented as an OTS item; no run-time item depends on it.
+The `Agent`, `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`, `Logging`, `Payload`, `Preview`, `Project`,
+`Settings`, `Speech`, `Style`, and `Utilities` subsystems use .NET base class library types, `System.Text.Json` for the
+settings and project files and the description of a payload, and, for dialogs, pages, and lists, Avalonia and
+CommunityToolkit.Mvvm, which are runtime third-party items (the `Composer` editor view also uses the AvaloniaEdit
+editing control, which is a runtime third-party item too; the other `Annotation`, `Chat`, and `Composer` units use base
+class library types and Avalonia only, and the `Payload` units base class library types and CanvasNet; of the
+`Knowledge` units only the browser uses Avalonia and CommunityToolkit.Mvvm, and the catalog reads the help cards of
+CanvasNet; the `Style` units read and write their files with `System.Text.Json` and `System.IO.Compression`,
+`StyleKitDocument` classifies font families with CanvasNet, and the picker, page, manager, and editor use Avalonia and
+CommunityToolkit.Mvvm). The `ImageRenderService` unit draws files and encodes PNG with the
+`DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a picture with
+the same library, and the `ProjectExplorer` unit uses its extension list to decide which files are image sources. The
+`AudioDeviceService`, `SpeechModelService`, and `DictationService` units list audio devices and speech models, download
+models, create capture devices, and load and run the speech engine with the `DemaConsulting.Speech` library and its
+Sherpa model package, whose native speech runtime is shipped with the application, and the speech descriptor types are
+shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items (see *OTS Dependencies*).
+The units of the `Agent` subsystem use the AI libraries (AgentKit, which brings the path policy and the tool framework,
+the Microsoft Agent Framework, Microsoft.Extensions.AI, and OllamaSharp, and the Copilot SDK, with which AgentKit talks
+to a Copilot CLI), which are documented as OTS items too; the Copilot runtime that the Copilot SDK would bundle is
+switched off for every project by `CopilotSkipCliDownload` in `Directory.Build.props` and is never shipped or
+downloaded. Build, documentation, and quality tools are documented in the OTS design documents. The Windows installer
+package is built from the published application by the WiX Toolset, also documented as an OTS item; no run-time item
+depends on it.
 
 ## Risk Control Measures
 
@@ -707,8 +886,31 @@ cannot leave a truncated file. A corrupt or newer file is tolerated with default
 damaged file cannot prevent startup. Values are validated when read and when entered, so an out-of-range
 value cannot reach the rest of the application.
 
-**Safe agent defaults**: The opt-in for unrestricted agent tools is stored as off by default and changes
-only when the user explicitly checks it in the dialog.
+**Safe agent defaults**: The copilot has only a fixed, locked-down set of tools. The flag for unrestricted agent tools
+is stored as off by default and is not offered in the settings dialog, and no setting widens the tools of the copilot.
+
+**Confined copilot**: The tools of the copilot (`canvasnet_help`, `style_get`, `style_check`, `project_list`,
+`project_read`, `project_write`, and `render_image`) are the only things it can call; a tool with the name of a built-in
+tool of the Copilot CLI is refused when the set is built, and the permission handler denies by default. Every path goes
+through the path policy of the project, which denies the `.canvaspilot` folder and the project file, and through a guard
+of `ProjectTools` that also refuses links (the policy of the AI library does not follow them), stream and device names,
+and short names. Writes are limited to text image sources and `.csv`, `.json`, and `.txt` files of at most 256 KiB,
+never below `styles`. A write replaces a file directly, with no backup and no question, by the decision of the product;
+the result says `created` or `replaced`, the chat shows it, the explorer selects the file, the role prompt tells the
+copilot to read a file before it replaces it, and the user guide tells the user to keep projects under source control.
+
+**Safe agent data**: What the copilot keeps for itself stays outside the project (see *AI Provider Seam*): the history
+of the chat and the data of the Copilot runtime are below `%LOCALAPPDATA%\CanvasPilot`, a project that contains them is
+refused, the restored history is given to a new provider session from memory only, and the log of the copilot holds
+metadata only, never text, pictures, tokens, or file content. A token that the readiness check finds is never stored,
+shown, or logged, and the settings file holds no credential.
+
+**No Copilot runtime shipped**: The application never bundles, copies, or downloads the GitHub Copilot runtime. The
+build asserts that the published output and the file table of the installer hold no Copilot file, so a change of a
+package or a build property cannot add one unseen.
+
+**Failures are results**: A provider that is missing, not signed in, out of reach, or gated is a readiness report, and a
+failed turn is a `Failed` event with a sentence that names the remedy; neither reaches the user as an unhandled failure.
 
 **Safe project handling**: A project is never created in a folder that already has content, and a failed or
 cancelled creation removes what it added. Project files are saved by writing a temporary file and replacing
@@ -802,14 +1004,17 @@ source (which deletes the files of earlier drags), the preview pane, the workspa
 services with the dictation service, the shell, the mark registry, the mark image composer and payload builder, the
 composer (with its attachment store and intake), the annotation overlay, and the chat panel, which it places in the
 workspace and makes the target of the talk key. It also builds the style units: the catalog of style kits, the selection
-of the project, the list for the status bar, the command of the Image menu, the two tools of an assistant (nothing
-calls them yet), and the source of export sizes that it gives the exporter; the kits are read on a worker, so the start
-never waits for them. It also gives the shell a function that gives the catalog of the drawing
-knowledge, which reads the cards the first time Help > Drawing Knowledge is used and not at startup. The
-`MainWindowView` is created over the shell and gives itself to the shell as the dialog service. From then on the user's
-menu choices become shell commands, which call the `Project` and `Settings` subsystems, show dialogs through the dialog
-service, and, when the open project changes, update the window title and open or close the project in the workspace. On
-exit `App` disposes the composition.
+of the project, the list for the status bar, the command of the Image menu, the two tools of an assistant (which it
+gives to the registry of the tools of the copilot), and the source of export sizes that it gives the exporter; the kits
+are read on a worker, so the start never waits for them. When it is given the folder for the local data of the
+application (the running application gives the local application data folder) it builds the AI copilot and the chat
+history over it, gives them to the chat panel, and joins the copilot to the explorer, the settings, and the shell as the
+`AppShell` design describes. It also gives the shell a function that gives the catalog of the drawing knowledge, which
+reads the cards the first time Help > Drawing Knowledge is used and not at startup. The `MainWindowView` is created over
+the shell and gives itself to the shell as the dialog service. From then on the user's menu choices become shell
+commands, which call the `Project` and `Settings` subsystems, show dialogs through the dialog service, and, when the
+open project changes, update the window title and open or close the project in the workspace. On exit `App` disposes the
+composition.
 
 When the user selects a file in `ProjectExplorer`, `PreviewPane` cancels any render that is running and asks
 `ImageRenderService` to draw the file in the background; the result, a picture with notes or an error with its code and
@@ -908,6 +1113,19 @@ with `KnowledgeMarkdown.Parse`, its cards below and related cards with the catal
 letters in the search box call `KnowledgeSearch.Search` and show its hits in place of the tree. Copy gives the text of
 an example to the clipboard that the window supplies and says in the status line whether it worked.
 
+When a message has been sent, `ChatPanelViewModel` hands the `SentMessage` to `ChatTurnRunner`, which asks
+`IAgentService.RunTurnAsync` for the turn with the payload and the saved words of the conversation. On the first turn
+`AgentService` asks `AgentReadiness` whether the provider can be used (when it cannot, the turn is one `Failed` event
+with the sentence of the report, which for GitHub Copilot in this build is the gated sentence), checks that the project
+does not contain the data folders of the application, and builds the tools of the project, the instructions, the agent,
+and one provider session. `PayloadMessageMapper` turns the payload into the message of the model, the agent streams its
+updates, and `AgentEventMapper` turns them into events that the runner shows as the streamed answer, one row for each
+tool call, and notices; a file that `project_write` creates or replaces also raises `FileWritten`, which the shell turns
+into a refresh and a selection of the file in the explorer. Stop cancels the token of the turn, which ends the stream
+without a failure and keeps what was written. After a completed, stopped, or failed turn the panel saves the words of
+the conversation with `ChatHistoryStore`; "Clear chat history" deletes them, empties the transcript, and has the service
+forget the conversation and delete the session of the provider.
+
 ## Design Constraints
 
 - Log files shall be written only to local disk; no telemetry or remote transmission is performed.
@@ -951,9 +1169,26 @@ an example to the clipboard that the window supplies and says in the status line
   the message holds, and the chat panel joins the two, so that the dependency between `Composer` and `Annotation`
   runs one way. It shall draw a mark with the colors and sizes of the annotated picture of a message, so that the user
   sees what the assistant gets.
-- The `Chat` subsystem shall keep the transcript only in memory, shall list only messages that were sent, and shall show
-  in the payload inspector exactly the text that `PayloadDescriber` writes and the picture bytes that the payload holds;
-  it shall not depend on `AppShell`, and it shall not write anything anywhere.
+- The `Chat` subsystem shall list only messages that were sent, shall keep the words of a conversation, and only the
+  words, on the user's computer outside the project folder, shall refuse a history folder inside the project, and shall
+  show in the payload inspector exactly the text that `PayloadDescriber` writes and the picture bytes that the payload
+  holds; it shall not depend on `AppShell`, and it shall not write anything into a project.
+- The `Chat` subsystem shall reach the AI copilot only through `IAgentService` and the `AgentEvent` records, shall never
+  refer to a provider, a tool, or a library of the `Agent` subsystem, and shall never let a failure of the copilot throw
+  into the interface; the `Agent` subsystem shall not depend on `Chat`. The composer decides whether a message can be
+  sent: the chat only gives it the reason that blocks sending while a turn runs.
+- The `Agent` subsystem shall not depend on `Chat`, `AppShell`, or any subsystem above it, and no lower subsystem shall
+  depend on it: `Settings` owns `IProviderCheck`, which `AgentReadiness` implements, and `Settings` shall never refer to
+  `Agent`. Only the composition root shall build its units.
+- The copilot shall have only the tools of the `Agent` subsystem, each confined to the project folder through the path
+  policy and the link guard; it shall write only text image sources and small data files, directly, and shall say
+  whether a file was created or replaced; and it shall never write the `.canvaspilot` folder, the project file, or the
+  style kits of the project.
+- The copilot shall keep its data, the history of the chat, and the data of the Copilot runtime outside the project
+  folder, shall refuse a project that contains them, shall write only metadata to the log, and shall never store, show,
+  or log a credential.
+- The application shall never bundle, copy, or download the GitHub Copilot runtime, and GitHub Copilot shall not be
+  reported ready until the AI library can use the Copilot CLI that the user installed.
 - The talk button shall listen only while it is held: a release of the pointer anywhere, a lost capture, a lost focus,
   and the removal of the panel shall each end it.
 - A payload shall be built only from values that cannot change and shall itself never change, and the units of the

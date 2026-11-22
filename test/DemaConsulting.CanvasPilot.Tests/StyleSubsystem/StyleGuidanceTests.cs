@@ -56,6 +56,29 @@ public sealed partial class StyleGuidanceTests
     }
 
     /// <summary>
+    ///     Validates that a block built without the example images has every other part and no example, is not cut for that
+    ///     reason, and is shorter than the block with them.
+    /// </summary>
+    [Fact]
+    public void StyleGuidance_Build_WithoutExamples_LeavesOnlyTheExampleImagesOut()
+    {
+        // Arrange: a kit that has example images
+        var entry = BuiltIn("clean");
+        var with = StyleGuidance.Build(entry);
+
+        // Act
+        var without = StyleGuidance.Build(entry, includeExamples: false);
+
+        // Assert
+        Assert.Contains("## Example images", with, StringComparison.Ordinal);
+        Assert.DoesNotContain("## Example images", without, StringComparison.Ordinal);
+        Assert.Contains("## Palette", without, StringComparison.Ordinal);
+        Assert.DoesNotContain(StyleGuidance.TruncationNote, without, StringComparison.Ordinal);
+        Assert.True(without.Length < with.Length);
+        Assert.Equal(with.Replace(with[with.IndexOf("## Example images", StringComparison.Ordinal)..], string.Empty, StringComparison.Ordinal), without);
+    }
+
+    /// <summary>
     ///     Validates for each kit that comes with the program that the text fits the budget without being cut, has every
     ///     color with its role, the Mermaid and Vega-Lite snippets, the sizes, the real example files by absolute path, the
     ///     line that says it is data, and no color that is not in the palette.

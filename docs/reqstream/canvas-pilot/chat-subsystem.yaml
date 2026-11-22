@@ -3,11 +3,16 @@
 #
 # PURPOSE:
 # - Define requirements for the CanvasPilot Chat subsystem
-# - The Chat subsystem is the panel in which the user converses with the assistant that is added later: the transcript
-#   of the messages that were sent, the composer below it with the buttons that send and that listen while held, the
-#   joining of the marks on the picture to the message, and the window that shows exactly what the assistant would
-#   receive for a message. It uses the Composer, Annotation, Payload, and Speech subsystems and holds none of their
-#   rules; it does not depend on the application shell, which places it in the chat column of the main window
+# - The Chat subsystem is the panel in which the user converses with the AI copilot: the transcript of the messages that
+#   were sent and of the answers, the composer below it with the buttons that send, that listen while held, and that stop
+#   the copilot, the banner of the readiness of the provider, the joining of the marks on the picture to the message, and
+#   the window that shows exactly what the assistant would receive for a message. It keeps the words of the conversation
+#   of each project on the user's computer, outside the project folder, restores them when the project is opened, and
+#   clears them on request. It uses the Composer, Annotation,
+#   Payload, Speech, and Knowledge (Markdown only) subsystems, the Project information types, and the Agent subsystem
+#   through its contract only, and
+#   holds none of their rules; it does not depend on the application shell, which places it in the chat column of the
+#   main window
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -19,16 +24,77 @@ sections:
             title: >-
               The Chat subsystem shall show the messages that were sent in the open project as a transcript, oldest
               first, each as it was composed with its words, marks, and attachments in their places and with their
-              pictures, shall keep the transcript only in memory, and shall drop it when the project changes or closes.
+              pictures, shall drop what it shows when the project changes or closes, and shall show, when a project is
+              opened again, the saved text of the earlier messages and answers of that project, kept on this computer
+              outside the project folder, as rows of words without pictures.
             justification: |
               A conversation needs a record of what has been said. The user composed each message from words, files, and
-              marks, and recognizes it by how it looked, so the transcript keeps that form. Messages may hold the user's
-              words and file names and belong to a project, so they are not written anywhere and go with the project.
+              marks, and recognizes it by how it looked, so the transcript keeps that form while it is on the screen.
+              Messages may hold the user's words and file names and belong to a project, so what is kept for the next
+              time is the words only, on the user's computer and never in the project, where it would travel with the
+              project, and it can be cleared.
             children:
               - CanvasPilot-ChatPanel-ListSentMessagesOnly
               - CanvasPilot-ChatPanel-ProvideChipPictures
+              - CanvasPilot-ChatPanel-RestoreChatHistory
             tests:
               - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
+              - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+
+          - id: CanvasPilot-Chat-ShowCopilotConversation
+            title: >-
+              The Chat subsystem shall run one turn of the conversation with the AI copilot for each message that was
+              sent, through the contract of the Agent subsystem only, and shall show the answer as it is written, in
+              rows after the message of the user: the text of the copilot, one line for each tool it called that says
+              what it did, such as that a file was created or replaced, and the notices, in the order in which they
+              happened, with the text of the answer changed at most once for every 50 milliseconds.
+            justification: |
+              The user draws by talking, and the answer is only useful when it can be followed while it is written and
+              when what the copilot did to the files of the project is plain. The chat holds the logic of a turn in one
+              unit that is tested without a window and that knows the copilot only through its contract, so the panel
+              stays small and no provider reaches the user interface.
+            children:
+              - CanvasPilot-ChatPanel-HoldTranscriptRows
+              - CanvasPilot-ChatPanel-ConverseWithCopilot
+              - CanvasPilot-ChatTurnRunner-RunOneTurnAtATime
+              - CanvasPilot-ChatTurnRunner-StreamAnswerIntoReplies
+              - CanvasPilot-ChatTurnRunner-CoalesceTextUpdates
+              - CanvasPilot-ChatTurnRunner-ShowToolCalls
+            tests:
+              - ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile
+
+          - id: CanvasPilot-Chat-StopTheCopilotTurn
+            title: >-
+              The Chat subsystem shall stop the turn of the AI copilot on request and keep the text that was written,
+              marked as stopped, shall report a turn that failed in the transcript with a message, what to do about it,
+              and the offer to open the settings when they can help, without ever failing the application, and shall
+              tell when a turn runs so that the next message cannot be sent before the turn has ended or was stopped.
+            justification: |
+              A model that is slow or on a wrong path must be stopped without losing what it said, a provider that is
+              not running is an everyday event, and only one turn runs at a time. The user can keep writing the next
+              message meanwhile, and it can be sent as soon as the turn is over.
+            children:
+              - CanvasPilot-ChatPanel-StopCopilotTurn
+              - CanvasPilot-ChatTurnRunner-StopTurnAndKeepText
+              - CanvasPilot-ChatTurnRunner-ReportFailureInTranscript
+            tests:
+              - ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy
+
+          - id: CanvasPilot-Chat-ShowCopilotReadiness
+            title: >-
+              The Chat subsystem shall tell the user, where the message is written, whether the configured AI provider
+              can be used, with the sentence that says what to do, including the one of GitHub Copilot that cannot be
+              used in this build yet, shall show a warning that does not block sending, shall let the user open the
+              settings and check again from there, and shall show nothing when everything is ready.
+            justification: |
+              A first message that fails with the error of a library is a poor start, and both providers depend on
+              things outside the application. The Agent subsystem checks and words the sentence; the chat shows it at the
+              place where the user is about to type and asks for the settings through a request, so that it does not
+              depend on the application shell.
+            children:
+              - CanvasPilot-ChatPanel-ReportProviderReadiness
+            tests:
+              - ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested
 
           - id: CanvasPilot-Chat-SendComposedMessage
             title: >-
@@ -95,3 +161,52 @@ sections:
               - CanvasPilot-PayloadInspector-CloseAndRelease
             tests:
               - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
+
+          - id: CanvasPilot-Chat-KeepChatHistoryOnThisComputer
+            title: >-
+              The Chat subsystem shall keep the words of the conversation of each project, and only the words, on the
+              user's computer in a folder named by a hash of the path of the project file, shall keep the newest 200 rows
+              and no more than 2 MB of them, shall write whole files only, shall read the history again when the project
+              is opened, and shall set aside a history file that it cannot use without losing it or stopping the
+              application.
+            justification: |
+              A conversation that is gone with the project makes the copilot start over every day, and a history that is
+              kept without care can grow without bound, be half written, or break the start of the application. The words
+              are kept, and never pictures or payloads, so the file is small and nothing is kept that the user did not
+              say or read. A project that is moved or renamed starts a fresh history, which is a known limit.
+            children:
+              - CanvasPilot-ChatHistoryStore-SaveTextOnlyOutsideProject
+              - CanvasPilot-ChatHistoryStore-KeyByProjectPath
+              - CanvasPilot-ChatHistoryStore-RestoreOnOpen
+              - CanvasPilot-ChatHistoryStore-IgnoreCorruptHistory
+            tests:
+              - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+
+          - id: CanvasPilot-Chat-ClearChatHistory
+            title: >-
+              The Chat subsystem shall let the user clear the chat history with one button, without a question first,
+              which deletes the saved history of the open project from the computer, empties the transcript, and makes the
+              AI copilot forget the conversation.
+            justification: |
+              The user owns the words of the conversation and must be able to remove them from the screen, from the
+              computer, and from the provider's session in one step, and a conversation that is cleared must not be
+              restored or continued by the next message.
+            children:
+              - CanvasPilot-ChatPanel-ClearChatHistory
+              - CanvasPilot-ChatHistoryStore-ClearOnRequest
+            tests:
+              - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+
+          - id: CanvasPilot-Chat-KeepHistoryOutsideProject
+            title: >-
+              The Chat subsystem shall never write the chat history into the project folder: it shall refuse to keep the
+              history in a folder that is, or lies inside, the project folder, and the project folder shall hold only the
+              files that belong to it after a turn, a save, a restore, and a clear.
+            justification: |
+              A project folder is copied, shared, and put under source control, so the words of a conversation that landed
+              in it would travel with it. The history lives with the user's computer, and a configuration mistake is
+              refused instead of obeyed.
+            children:
+              - CanvasPilot-ChatHistoryStore-RefuseRootInsideProject
+            tests:
+              - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject

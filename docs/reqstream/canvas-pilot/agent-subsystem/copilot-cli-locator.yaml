@@ -1,0 +1,129 @@
+---
+# Software Unit Requirements for the CopilotCliLocator Unit
+#
+# The CopilotCliLocator unit finds the GitHub Copilot CLI that the user installed. It prefers the real CLI and rejects
+# the launchers (shims) that editors put on the PATH, lets a path in the settings win, checks the version of the
+# candidate that it picks, and says why it rejected the others. Its supporting types (the process runner, the file
+# system, and the environment reader that make it testable) are part of the unit.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Agent Subsystem Requirements
+        sections:
+          - title: CopilotCliLocator Requirements
+            requirements:
+              - id: CanvasPilot-CopilotCliLocator-PreferRealCli
+                title: >-
+                  The CopilotCliLocator shall, when the settings name no path, look for the installed Copilot CLI in the
+                  WinGet package folders, in the WinGet links folder, and in every folder of the PATH, in that order,
+                  follow links to the file they name, and consider each file once.
+                justification: |
+                  The real CLI is a large program that WinGet puts in a package folder and links from one folder that
+                  is usually on the PATH; other products put files with the same name on the PATH as well. A fixed
+                  order that starts with the place the real CLI is installed, and that counts a link and its target as
+                  one file, finds the right file first and never checks the same file twice.
+                tests:
+                  - CopilotCliLocator_Locate_DevelopmentMachine_FindsTheRealCliAndNotTheShim
+                  - CopilotCliLocator_Locate_LinkAndPathNameTheSameFile_CheckedOnce
+                  - CopilotCliLocator_Locate_TwoPackageFolders_TriesTheLastNameFirst
+                  - CopilotCliLocator_Locate_PathWithQuotesAndEmptyEntries_IsReadEntryByEntry
+                  - CopilotCliLocator_Locate_NpmCmdAndScriptWithoutExtension_AreIgnored
+                  - CopilotCliLocator_Locate_Caching_ReusesUntilRefreshOrSettingChange
+
+              - id: CanvasPilot-CopilotCliLocator-RejectShims
+                title: >-
+                  The CopilotCliLocator shall reject a candidate that is not an .exe file, that lies in a folder of an
+                  editor shim (copilot-shim, .vscode, .vscode-insiders, github.copilot-chat, or a folder whose name
+                  starts with Microsoft VS Code), or that is smaller than 20 MiB, and shall not start it.
+                justification: |
+                  The VS Code launcher is named copilot.exe and runs, but it is not the Copilot CLI: it is under 1 MB
+                  where the CLI is about 190 MB, and it is in an editor folder. Three independent signals (the
+                  extension, the folder, and the size) keep one wrong guess from letting a launcher through, and a
+                  new editor shim is one more folder name in a list. Rejected files are never started, so no unknown
+                  program is run to find out what it is.
+                tests:
+                  - CopilotCliLocator_IsShimPath_Paths_MatchesTheShimFolderList
+                  - CopilotCliLocator_ShimDirectoryNames_Rule_ListsTheDocumentedNames
+                  - CopilotCliLocator_Locate_ShimFirstOnPath_StillRejectsTheShim
+                  - CopilotCliLocator_Locate_OnlyShimOnPath_NotFoundWithShimHint
+                  - CopilotCliLocator_Locate_FileSize_RejectsBelowTheLimitAndAcceptsTheLimit
+                  - CopilotCliLocator_Locate_LinkWithUnusableTarget_IsRejectedForTheTarget
+
+              - id: CanvasPilot-CopilotCliLocator-HonorSettingsOverride
+                title: >-
+                  The CopilotCliLocator shall, when the settings name a path, use only that path, without the shim,
+                  folder, and size filters, check its version, and report a path that is missing, is not an .exe file,
+                  or fails the check as such, without using any other candidate.
+                justification: |
+                  A path that the user chose is an explicit decision that automatic rules must not overrule, and a
+                  wrong path that silently falls back to another CLI would hide the mistake. The path is still run
+                  with --version, so a file that is not the CLI is found out, and the failure names the path that
+                  the user has to fix.
+                tests:
+                  - CopilotCliLocator_Locate_OverrideInShimFolder_WinsWithoutFiltersOrFallback
+                  - CopilotCliLocator_Locate_OverrideInQuotes_IsTrimmed
+                  - CopilotCliLocator_Locate_OverrideMissing_NotFoundWithoutFallback
+                  - CopilotCliLocator_Locate_OverrideNotExe_NotAnExecutableWithoutFallback
+                  - CopilotCliLocator_Locate_OverrideFailsValidation_ReportsItWithoutFallback
+
+              - id: CanvasPilot-CopilotCliLocator-ValidateVersion
+                title: >-
+                  The CopilotCliLocator shall run each remaining candidate with --version, allow it 10 seconds, read
+                  the version from the text GitHub Copilot CLI x.y.z, continue with the next candidate when the
+                  candidate cannot be started, does not answer in time, or does not report a version, and accept the
+                  first candidate whose version is 1.0.113 or later; a version that is too old shall be reported only
+                  when no candidate is new enough.
+                justification: |
+                  A file that has the right size and place can still be damaged or be another program, and a CLI that
+                  is too old speaks a protocol version that the AI library of the application does not understand
+                  (version 1.0.106 reports protocol 3, the library needs 4, and 1.0.114 works). Reading the version
+                  from the output, with a time limit, proves the program is the CLI and is usable, and trying the
+                  next candidate lets one broken installation not hide a good one.
+                tests:
+                  - CopilotCliLocator_TryParseVersion_OutputText_ReadsVersionOrNone
+                  - CopilotCliLocator_IsSupportedVersion_Versions_AcceptsOnlyTheMinimumAndNewer
+                  - CopilotCliLocator_Locate_FirstCandidateUnreadable_FallsThroughToTheNext
+                  - CopilotCliLocator_Locate_OldCli_IsReportedOnlyWhenNoLaterCandidatePasses
+                  - CopilotCliLocator_Locate_AllCandidatesUnreadable_ReportsTheFirst
+                  - CopilotCliLocator_Locate_Cancelled_ThrowsAndIsNotCached
+
+              - id: CanvasPilot-CopilotCliLocator-DiagnoseRejections
+                title: >-
+                  The CopilotCliLocator shall report its result as a status (found, not found, not an executable,
+                  too old, or unreadable), the path and version, one sentence for the user that names the remedy, and
+                  the candidates that it rejected with the reason for each, shall name the editor shim when that is
+                  all that was found, and shall not keep any text that a program printed.
+                justification: |
+                  A user who has VS Code but not the CLI must be told that the file on the PATH is a shim and what to
+                  install, not just that nothing was found. The list of rejected candidates lets a support request be
+                  answered without a debugger. A program that is probed for its version could print anything, so
+                  nothing it prints beyond the version number may be copied into a message or a log.
+                tests:
+                  - CopilotCliLocator_Locate_NothingInstalled_NotFoundWithoutShimHint
+                  - CopilotCliLocator_Locate_ProgramPrintsSecret_IsNeverKept
+                  - CopilotCliInfo_Constructor_InvalidArguments_AreRefused
+
+              - id: CanvasPilot-CopilotCliLocator-RunProbeSafely
+                title: >-
+                  The CopilotCliLocator shall run programs through a process runner that starts the program without a
+                  shell and without a window, gives each argument separately, collects what the program prints,
+                  stops it together with the programs it started when its time limit ends or the caller cancels, and
+                  reports a program that cannot be started as a result.
+                justification: |
+                  Probing an installed program must not open a console window, must not interpret the path or the
+                  arguments through a shell, and must never leave a program running after the time allowed. Making a
+                  program that cannot start a result, and not an exception, lets the locator treat it like any other
+                  failed candidate. The behavior is checked on real programs of the platform because a fake could not
+                  show that a process was really killed.
+                tests:
+                  - ProcessRunner_RunAsync_EchoCommand_ReturnsItsOutput
+                  - ProcessRunner_RunAsync_FailingCommand_ReturnsExitCodeAndBothStreams
+                  - ProcessRunner_RunAsync_ArgumentWithSpaces_ArrivesAsOneArgument
+                  - ProcessRunner_RunAsync_LongRunningCommand_TimesOutAndKillsTheTree
+                  - ProcessRunner_RunAsync_CancelledToken_ThrowsOperationCanceled
+                  - ProcessRunner_RunAsync_MissingProgram_ReturnsNotStarted
+                  - ProcessRunner_RunAsync_InvalidArguments_AreRefused
+                  - ProcessResult_NotStarted_Reason_HasNoExitCode
+                  - SystemEnvironmentReader_GetVariable_SetAndUnsetVariables_ReturnValueOrNull
+                  - CliFileSystem_Queries_RealFiles_AnswerFromTheDisk

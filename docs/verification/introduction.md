@@ -2,9 +2,9 @@
 
 This document provides the verification design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 The current build is an Avalonia desktop application for Windows, delivered as an MSI package, that contains the
-AppShell, Annotation, Chat, Composer, Knowledge, Logging, Payload, Preview, Project, Settings, Speech, Style, and
-Utilities subsystems; the AI agent that will answer the messages is not part of this version and is added as a further
-subsystem when it is introduced.
+Agent, Annotation, AppShell, Chat, Composer, Knowledge, Logging, Payload, Preview, Project, Settings, Speech, Style, and
+Utilities subsystems; the AI copilot of the Agent subsystem answers the messages through Ollama and reports whether
+GitHub Copilot can be used, which is gated in this release.
 
 ## Purpose
 
@@ -21,6 +21,26 @@ This document covers the verification design for the following software items:
 **Local items:**
 
 - **CanvasPilot** — system, subsystem, and unit verification:
+  - **Agent** subsystem
+    - **AgentContract** — the provider-independent contract of the AI copilot
+    - **CopilotCliLocator** — finds the Copilot CLI that the user installed, tells it from editor shims, and checks its
+      version
+    - **AgentReadiness** — checks whether the chosen AI provider can be used (the Copilot CLI, credentials, and the
+      gated runtime; the Ollama server, model, and context window) and says what to do
+    - **AgentToolRegistry** — builds the tools of the copilot for one project, confined to the project folder, from the
+      drawing knowledge and style tool descriptions, the project packs, and the optional pack catalog
+    - **ProjectTools** — the tools with which the copilot lists, reads, writes, and draws the files of the project:
+      confined to the project folder, links refused, files replaced directly, pictures kept in memory
+    - **AgentInstructions** — the instructions of the copilot: the role prompt, the knowledge index, the facts of the
+      project, and the style, in a full and a compact tier, with measured sizes
+    - **PayloadMessageMapper** — the message of the user as a model message: the words, the described attachments,
+      pictures, and marks, and the pictures and close-ups as images in a stated order
+    - **AgentEventMapper** — the updates of an agent as the provider-independent events of a turn, and the failures of a
+      turn as sentences that say what to do
+    - **AgentProviderFactory** — the agent of a conversation for Ollama or for GitHub Copilot, with the gated starter of
+      the Copilot runtime, and what it owns and disposes
+    - **AgentService** — the conversation of the open project: made when the first message is sent, one turn at a time,
+      the data of the Copilot runtime kept outside the project, and a log of metadata only
   - **Annotation** subsystem
     - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
     - **MarkSourceResolver** — the parts of the source file under a mark
@@ -32,6 +52,10 @@ This document covers the verification design for the following software items:
   - **Chat** subsystem
     - **ChatPanel** — the transcript of the sent messages, the composer with its send and hold-to-talk buttons, and the
       joining of marks to the message
+    - **ChatTurnRunner** — one turn of the conversation: the events of the AI copilot as rows of the transcript, stop,
+      and failure
+    - **ChatHistoryStore** — the words of the conversation of each project kept on this computer outside the project,
+      restored when the project is opened and cleared on request
     - **PayloadInspector** — the window that shows exactly what the assistant would receive for a sent message
   - **Composer** subsystem
     - **ComposerDocument** — the message being composed as ordered segments of text and chips
@@ -120,9 +144,10 @@ The following topics are out of scope:
 - Verification documents are not produced for the test projects themselves — they are the
   means of verification, not subjects of it
 - Build pipeline CI configuration is excluded
-- The AI agent is not part of this version, and so is not verified; the messages are composed and sent without an
-  agent, and only the stored settings that the agent will read, the payload that it will receive, the knowledge
-  and the style that it will be given, and the two style tools that it will use are verified
+- GitHub Copilot as a working provider is gated in this release and cannot be verified live: its readiness checks, the
+  messages, and the gated starter are verified, and a live run is a follow-up that depends on the AI library; the
+  live Ollama checks are manual checks of the system verification, because Ollama is not part of the build machines
+- User-selectable tool packs and spoken replies of the copilot are not part of this version
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified
@@ -134,6 +159,7 @@ The test folder structure mirrors the source subsystem breakdown:
 ```text
 test/
 ├── DemaConsulting.CanvasPilot.Tests/  — unit, subsystem, and system tests
+│   ├── AgentSubsystem/
 │   ├── AnnotationSubsystem/
 │   ├── AppShellSubsystem/
 │   ├── ChatSubsystem/

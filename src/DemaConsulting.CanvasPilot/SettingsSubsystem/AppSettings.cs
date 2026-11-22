@@ -51,7 +51,9 @@ public enum ReasoningLevel
 }
 
 /// <summary>
-///     Persisted AI provider choices. These values are stored only; no component consumes them yet.
+///     Persisted AI provider choices. The Agent subsystem reads the provider, model, endpoint, context window, and
+///     Copilot CLI path from them. The reasoning level is stored and applied unchanged, and the unrestricted tools flag is
+///     stored and kept as it is, but the AI library cannot act on the first and the dialog does not offer the second.
 /// </summary>
 public sealed record AiProviderSettings
 {
@@ -66,9 +68,16 @@ public sealed record AiProviderSettings
     public const int MaxContextWindowTokens = 2_000_000;
 
     /// <summary>
-    ///     The default context window, in tokens.
+    ///     The context window, in tokens, of settings that do not state one. A value that is already stored is kept even
+    ///     when it is smaller.
     /// </summary>
-    public const int DefaultContextWindowTokens = 8192;
+    public const int DefaultContextWindowTokens = 32768;
+
+    /// <summary>
+    ///     The smallest context window, in tokens, that drawings with pictures and tools can be expected to fit in; a
+    ///     smaller value is accepted but gets a warning.
+    /// </summary>
+    public const int RecommendedMinimumContextTokens = 16384;
 
     /// <summary>
     ///     The default Ollama server endpoint.
@@ -91,7 +100,8 @@ public sealed record AiProviderSettings
     public int ContextWindowTokens { get; init; } = DefaultContextWindowTokens;
 
     /// <summary>
-    ///     Gets the requested reasoning effort.
+    ///     Gets the requested reasoning effort. It is stored only: the AI library does not expose it yet, so the settings
+    ///     page shows it disabled.
     /// </summary>
     public ReasoningLevel ReasoningLevel { get; init; } = ReasoningLevel.Auto;
 
@@ -101,7 +111,8 @@ public sealed record AiProviderSettings
     public string OllamaEndpoint { get; init; } = DefaultOllamaEndpoint;
 
     /// <summary>
-    ///     Gets a value indicating whether the user has opted in to unrestricted agent tools. Off by default.
+    ///     Gets a value indicating whether the user has opted in to unrestricted agent tools. Off by default. The
+    ///     copilot has no unrestricted tools, so the settings page does not offer the choice and keeps the stored value.
     /// </summary>
     public bool UnrestrictedAgentTools { get; init; }
 
