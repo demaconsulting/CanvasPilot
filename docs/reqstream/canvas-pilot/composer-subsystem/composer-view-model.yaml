@@ -138,8 +138,8 @@ sections:
                   message builder build what is kept and given to the assistant from the snapshot of the message, the
                   marks whose chips are in it, and the staged attachments, and, only when that worked, raising one event
                   with the immutable sent message; shall refuse an empty or blank message that has no chip, and a send
-                  while the talk button is held or while a send is under way; and shall not let the message be changed while
-                  it is sent.
+                  while the talk button is held, while sending is blocked from outside, or while a send is under way; and
+                  shall not let the message be changed while it is sent.
                 justification: |
                   Sending is where the draft becomes a message: the attachments must be in the project before the assistant
                   is told about them, the marks must be drawn on the pictures they belong to, and what the transcript shows
@@ -150,6 +150,23 @@ sections:
                   - ComposerViewModel_SendAsync_EmptyBlankAndChipOnlyMessages_AreHandledAsExpected
                   - ComposerViewModel_SendAsync_WhileSending_DraftCannotBeChanged
                   - ComposerViewModel_SendCommand_ExecutesOnlyWithContent
+
+              - id: CanvasPilot-ComposerViewModel-BlockSendFromOutside
+                title: >-
+                  The ComposerViewModel shall, while its owner blocks sending with a reason (as the chat does while the
+                  AI copilot works on an earlier message), make the message impossible to send and the send command
+                  impossible to run, show the reason in the status text, refuse a send that is tried anyway with the same
+                  reason and without building anything, keep the draft, and keep the message editable; and shall make
+                  the message sendable again, and clear the reason from the status text, when the owner lifts the block.
+                justification: |
+                  The copilot answers one message at a time, so the next message must wait until the turn ended or was
+                  stopped. The user can write it meanwhile, which saves time, but a send that the copilot cannot take
+                  would be refused late and with an error. The composer already decides what can be sent, so the owner
+                  of the reason only tells it, and the button, the command, and the keys cannot disagree.
+                tests:
+                  - ComposerViewModel_BlockSending_CannotSendButCanEdit_UnblockRestoresAndClearsTheReason
+                  - ComposerViewModel_SendAsync_WhileBlocked_IsRefusedWithTheReasonAndKeepsTheDraft
+                  - ComposerViewModel_UnblockSending_OtherStatusAndNoBlockAndEmptyReason_AreHandled
 
               - id: CanvasPilot-ComposerViewModel-KeepDraftWhenSendFails
                 title: >-

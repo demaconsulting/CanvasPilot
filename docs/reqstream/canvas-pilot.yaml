@@ -286,6 +286,21 @@ sections:
           - CanvasPilot_ComposeMessage_TypedAttachmentAndMark_SendsAndShowsInTranscript
           - CanvasPilot_InspectPayload_SentMessageWithMark_InspectorShowsExactlyThePayload
 
+      - id: CanvasPilot-System-StopCopilotTurn
+        title: >-
+          The application shall let the user stop the AI copilot while it works on a message, keep the answer that was
+          written until then and mark it as stopped, allow the next message to be written while the copilot works but not
+          sent until the turn has ended or was stopped, and report a failed turn in the conversation with what to do
+          about it, without ever failing the application.
+        tags: [system]
+        justification: |
+          A model that is on a wrong path, or slow, costs the user time, so the user must be able to end the turn at once
+          and still keep what was written. Only one turn runs at a time, so a second message must wait rather than fail
+          late, and a provider that fails must leave the chat usable. The composer, the chat, and the turn logic each
+          own a part of this and link to this requirement.
+        children:
+          - CanvasPilot-Composer-HoldSendWhileCopilotWorks
+
       - id: CanvasPilot-System-UndoRedoMessage
         title: >-
           The application shall let the user undo and redo changes to the message being composed one action at a time,

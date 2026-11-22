@@ -37,6 +37,8 @@ project. No network, display, or special permission is needed.
 - Through the view model every kind of action is one undo step over the real units, dictation adds one block as one undo
   step, and sending puts the attachments into the project, builds the payload, and empties the draft, or keeps the draft
   and names the attachment that prevents it.
+- While the owner blocks sending (the copilot works), the message can be written and attached to but is not sent and
+  nothing is copied into the project; after the block is lifted the whole draft is sent.
 - Through the editing view, typed text, a dictated block, dropped files, and pasted text keep the editing surface equal
   to the message after every action, and undo and redo with the keyboard pass through the same states; chips are drawn
   inline in the order of the message, and deleting one with its button is one step that undo brings back in place.
@@ -96,6 +98,11 @@ mark, and the draft, the history, and the marks are empty afterwards. This scena
 is one byte over the limit of a message stops the send with a status that names it; the draft, its history, and the
 chips stay, the project has no attachments folder, and after the chip is deleted the same message is sent. This scenario
 is tested by `ComposerSubsystem_SendThroughViewModel_AttachmentTooLarge_KeepsDraftAndLeavesProjectUntouched`.
+
+**ComposerSubsystem_BlockSendingThroughViewModel_WritesMeanwhileAndSendsTheWholeDraftAfterwards**: With sending blocked
+by the owner, text is typed and a file is dropped, and a send is refused; the project has no attachments folder. After
+the block is lifted the same draft is sent with its text and attachment. This scenario is tested by
+`ComposerSubsystem_BlockSendingThroughViewModel_WritesMeanwhileAndSendsTheWholeDraftAfterwards`.
 
 **ComposerSubsystem_Drop_ProgramsScriptsAndUnsafePaths_AreOnlyDataAndNeverRun**: A program, a script, and three unsafe
 paths (a path with `..`, a path into the device namespace, and a relative path) are dropped. The program and the script

@@ -16,7 +16,9 @@ display: the editing control only reports and shows.
 - `CaretOffset` and `SelectionLength`: where the next text, dictated block, drop, or paste goes; the selection starts at
   the caret. Values are kept inside the message. Undo and redo set the caret to the one the step stored.
 - State for binding: `HasProject`, `ProjectFolder`, `CanEdit` (a project is open and nothing is being sent),
-  `HasContent` (a word or a chip), `CanSend`, `CanUndo`, `CanRedo`, `IsSending`, `StatusText` and `HasStatus` (one
+  `HasContent` (a word or a chip), `CanSend` (a project is open, the message has content, nobody holds the talk
+  control, and sending is not blocked from outside), `IsSendBlocked` and `SendBlockedReason` (the block that the chat
+  sets while the copilot works), `CanUndo`, `CanRedo`, `IsSending`, `StatusText` and `HasStatus` (one
   sentence about the last action), `DictationState` (`Idle`, `Starting`, `Listening`, `Finishing`), `IsDictating`, and
   `LivePartialText` (the words recognized so far while the talk control is held), `MarkChipIds` (the marks that are part
   of the message).
@@ -64,18 +66,27 @@ that the factory refuses (`ArgumentException`, `IOException`, `UnauthorizedAcces
 leaves no project and says why. `ClearDraft` empties the draft, the history, the marks, and the saved pictures without
 sending.
 
-**Sending.** `SendAsync(token)` refuses, with a sentence, when there is no project, when a talk control is held, or when
-there is nothing but white space; a second call while one runs returns false. It then sets `IsSending` (the draft cannot
-be changed), takes the snapshot, and on a thread-pool thread has the store put the attachment chips into the project,
-all or none. A refused staging stops the send with the sentence of the store, which names the attachment. Otherwise it
-passes the snapshot, the marks whose chips are in the message (`MarkRegistry.ActiveMarks`), and the staged attachments
-to the `IMessageBuilder`. If the project was changed in the meantime the message is not sent into another project. Only
-now does it commit: `ComposerHistory.CompleteSend` empties the document and the history, the registry is cleared, the
-caret goes to the start, saved pictures that no chip refers to are removed, and, after `IsSending` is reset and the
-observers are told, `MessageSent` is raised with the sent message. A cancellation, a failure of the builder, or any
-other failure leaves the draft, the history, and the marks as they were and puts the reason into the status text; the
-same draft can be sent again (attachments that were already put into the project stay there, and a second staging gives
-them new names).
+**Sending.** `SendAsync(token)` refuses, with a sentence, when there is no project, when sending is blocked from
+outside, when a talk control is held, or when there is nothing but white space; a second call while one runs returns
+false. It then sets `IsSending` (the draft cannot be changed), takes the snapshot, and on a thread-pool thread has the
+store put the attachment chips into the project, all or none. A refused staging stops the send with the sentence of the
+store, which names the attachment. Otherwise it passes the snapshot, the marks whose chips are in the message
+(`MarkRegistry.ActiveMarks`), and the staged attachments to the `IMessageBuilder`. If the project was changed in the
+meantime the message is not sent into another project. Only now does it commit: `ComposerHistory.CompleteSend` empties
+the document and the history, the registry is cleared, the caret goes to the start, saved pictures that no chip refers
+to are removed, and, after `IsSending` is reset and the observers are told, `MessageSent` is raised with the sent
+message. A cancellation, a failure of the builder, or any other failure leaves the draft, the history, and the marks as
+they were and puts the reason into the status text; the same draft can be sent again (attachments that were already put
+into the project stay there, and a second staging gives them new names).
+
+**Block from outside.** `BlockSending(reason)` makes `CanSend` false for a reason that the composer does not know: the
+chat panel sets it while the AI copilot works on an earlier message, with `CopilotWorkingText` ("The copilot is still
+working. Press Stop to cancel."). It sets `IsSendBlocked`, `SendBlockedReason`, and the status text to the reason, and
+tells the send command. Editing, dropping, and dictating stay possible, so the user can write the next message
+meanwhile. `SendAsync` called while blocked (a key that does not look at `CanSend`) refuses with the reason as the
+status text and changes nothing. `UnblockSending()` lifts the block, clears the status text only when it still shows the
+reason (a later sentence about another action stays), and does nothing when there is no block. The composer never lifts
+the block itself, not even when the project changes: the owner of the reason decides.
 
 **Dictation.** `BeginPushToTalkAsync` ignores a press while sending or while a dictation is starting, listening, or
 finishing. It asks the service whether dictation can work and shows the message when it cannot. Otherwise it enters

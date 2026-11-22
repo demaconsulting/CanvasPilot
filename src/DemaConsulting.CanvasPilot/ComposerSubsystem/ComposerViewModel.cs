@@ -93,6 +93,11 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public const string NoProjectText = "Open a project to write a message.";
 
     /// <summary>
+    ///     The reason that the chat gives for <see cref="BlockSending" /> while the AI copilot works on an earlier message.
+    /// </summary>
+    public const string CopilotWorkingText = "The copilot is still working. Press Stop to cancel.";
+
+    /// <summary>
     ///     The most items of one kind that a status message names before it says how many more there are.
     /// </summary>
     private const int NamedNotes = 3;
@@ -187,6 +192,11 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     ///     Whether the talk button was released while listening was being started.
     /// </summary>
     private bool _releaseRequested;
+
+    /// <summary>
+    ///     Why sending is blocked from outside, or an empty string when it is not.
+    /// </summary>
+    private string _sendBlockedReason = string.Empty;
 
     /// <summary>
     ///     A sentence about the last action, or an empty string.
@@ -315,10 +325,21 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public bool HasContent => _document.FlatText.Any(character => !char.IsWhiteSpace(character));
 
     /// <summary>
-    ///     Gets a value indicating whether the message can be sent now: it has content, can be edited, and nobody is
-    ///     holding the talk button.
+    ///     Gets a value indicating whether the message can be sent now: it has content, can be edited, nobody is holding
+    ///     the talk button, and nothing outside the composer blocks sending (see <see cref="BlockSending" />).
     /// </summary>
-    public bool CanSend => CanEdit && HasContent && DictationState == DictationState.Idle;
+    public bool CanSend => CanEdit && HasContent && DictationState == DictationState.Idle && !IsSendBlocked;
+
+    /// <summary>
+    ///     Gets a value indicating whether sending is blocked from outside, which is the case while the AI copilot works
+    ///     on an earlier message. Editing is not blocked.
+    /// </summary>
+    public bool IsSendBlocked => _sendBlockedReason.Length > 0;
+
+    /// <summary>
+    ///     Gets the sentence that says why sending is blocked, or an empty string when it is not.
+    /// </summary>
+    public string SendBlockedReason => _sendBlockedReason;
 
     /// <inheritdoc />
     public bool CanUndo => CanEdit && _history.CanUndo;
@@ -601,10 +622,49 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     }
 
     /// <summary>
+    ///     Blocks sending until <see cref="UnblockSending" /> is called, for a reason that the composer does not know, such
+    ///     as an AI copilot that is still working on an earlier message. The message can still be edited, so that the
+    ///     user can write the next one meanwhile; <see cref="CanSend" /> is <see langword="false" />, the send command
+    ///     cannot run, and <see cref="StatusText" /> shows the reason.
+    /// </summary>
+    /// <param name="reason">The sentence that says why, which is not empty.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="reason" /> is empty or white space.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="reason" /> is <see langword="null" />.</exception>
+    public void BlockSending(string reason)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        _sendBlockedReason = reason;
+        StatusText = reason;
+        NotifySendBlockChanged();
+    }
+
+    /// <summary>
+    ///     Lifts the block of <see cref="BlockSending" />. The status text is cleared when it still shows the reason of
+    ///     the block; a later sentence about another action stays. Nothing happens when sending was not blocked.
+    /// </summary>
+    public void UnblockSending()
+    {
+        if (!IsSendBlocked)
+        {
+            return;
+        }
+
+        if (string.Equals(StatusText, _sendBlockedReason, StringComparison.Ordinal))
+        {
+            StatusText = string.Empty;
+        }
+
+        _sendBlockedReason = string.Empty;
+        NotifySendBlockChanged();
+    }
+
+    /// <summary>
     ///     Sends the message: puts the attachments into the project, has the message built for the assistant, and then
     ///     empties the draft, its history, and the marks, removes saved pictures that nothing refers to, and raises
     ///     <see cref="MessageSent" />. Nothing is changed when the message is empty, no project is open, a talk button is
-    ///     held, or anything fails, and then <see cref="StatusText" /> says why.
+    ///     held, sending is blocked from outside (<see cref="BlockSending" />), or anything fails, and then
+    ///     <see cref="StatusText" /> says why.
     /// </summary>
     /// <param name="cancellationToken">Cancels the sending before the message is built.</param>
     /// <returns><see langword="true" /> when the message was sent.</returns>
@@ -619,6 +679,12 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
 
         if (IsSending)
         {
+            return false;
+        }
+
+        if (IsSendBlocked)
+        {
+            StatusText = _sendBlockedReason;
             return false;
         }
 
@@ -1091,6 +1157,17 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
         }
 
         DictationState = state;
+        OnPropertyChanged(nameof(CanSend));
+        SendCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    ///     Tells the observers that the block of sending changed and what depends on it.
+    /// </summary>
+    private void NotifySendBlockChanged()
+    {
+        OnPropertyChanged(nameof(IsSendBlocked));
+        OnPropertyChanged(nameof(SendBlockedReason));
         OnPropertyChanged(nameof(CanSend));
         SendCommand.NotifyCanExecuteChanged();
     }

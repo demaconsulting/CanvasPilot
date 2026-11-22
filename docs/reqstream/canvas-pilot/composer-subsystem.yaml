@@ -175,6 +175,20 @@ sections:
               - ComposerSubsystem_SendThroughViewModel_CopiesAttachmentsBuildsPayloadAndClearsDraft
               - ComposerSubsystem_SendThroughViewModel_AttachmentTooLarge_KeepsDraftAndLeavesProjectUntouched
 
+          - id: CanvasPilot-Composer-HoldSendWhileCopilotWorks
+            title: >-
+              The Composer subsystem shall let the owner of the composer block sending with a reason, so that while the
+              block lasts the message can still be written and attached to but cannot be sent, the reason is shown, and
+              the whole draft can be sent once the block is lifted.
+            justification: |
+              The copilot works on one message at a time, so the next message waits. The user can write it meanwhile, but
+              sending it into a turn that is still running would fail late. The composer decides what can be sent, so
+              the chat only gives the reason and the composer, its command, and its keys stay in agreement.
+            children:
+              - CanvasPilot-ComposerViewModel-BlockSendFromOutside
+            tests:
+              - ComposerSubsystem_BlockSendingThroughViewModel_WritesMeanwhileAndSendsTheWholeDraftAfterwards
+
           - id: CanvasPilot-Composer-WorkInsideAnOpenProject
             title: >-
               The Composer subsystem shall let the message be written only in an open project, shall follow the project

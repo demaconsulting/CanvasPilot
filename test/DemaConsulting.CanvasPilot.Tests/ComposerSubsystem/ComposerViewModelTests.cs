@@ -1590,6 +1590,106 @@ public sealed class ComposerViewModelTests : IDisposable
         Assert.Contains("talk button", statusWhileHeld, StringComparison.Ordinal);
     }
 
+    // ----- block from outside -----
+
+    /// <summary>
+    ///     Test that blocking sending makes sending impossible with the reason in the status text, while editing stays
+    ///     allowed, and that lifting the block restores both and clears the reason.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_BlockSending_CannotSendButCanEdit_UnblockRestoresAndClearsTheReason()
+    {
+        // Arrange: a draft that can be sent, and the changes that are announced
+        _vm.InsertTyped("hello");
+        var changed = new List<string>();
+        _vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName ?? string.Empty);
+        Assert.True(_vm.CanSend);
+        Assert.False(_vm.IsSendBlocked);
+
+        // Act: block sending
+        _vm.BlockSending(ComposerViewModel.CopilotWorkingText);
+
+        // Assert: it cannot be sent, the command cannot run, the reason is shown, and editing still works
+        Assert.False(_vm.CanSend);
+        Assert.False(_vm.SendCommand.CanExecute(null));
+        Assert.True(_vm.IsSendBlocked);
+        Assert.Equal("The copilot is still working. Press Stop to cancel.", _vm.SendBlockedReason);
+        Assert.Equal(ComposerViewModel.CopilotWorkingText, _vm.StatusText);
+        Assert.True(_vm.CanEdit);
+        _vm.InsertTyped(" world");
+        Assert.Equal("hello world", _vm.Document.FlatText);
+        Assert.Contains(nameof(ComposerViewModel.CanSend), changed);
+        Assert.Contains(nameof(ComposerViewModel.IsSendBlocked), changed);
+
+        // Act: lift the block
+        _vm.UnblockSending();
+
+        // Assert: it can be sent again and the reason is gone
+        Assert.True(_vm.CanSend);
+        Assert.True(_vm.SendCommand.CanExecute(null));
+        Assert.False(_vm.IsSendBlocked);
+        Assert.Equal(string.Empty, _vm.SendBlockedReason);
+        Assert.Equal(string.Empty, _vm.StatusText);
+    }
+
+    /// <summary>
+    ///     Test that sending is refused while blocked, with the reason as the status text, nothing is built, and the draft
+    ///     is kept and can be sent once the block is lifted.
+    /// </summary>
+    [Fact]
+    public async Task ComposerViewModel_SendAsync_WhileBlocked_IsRefusedWithTheReasonAndKeepsTheDraft()
+    {
+        // Arrange: a draft and a block, and a status that is something else
+        _vm.InsertTyped("hello");
+        _vm.BlockSending(ComposerViewModel.CopilotWorkingText);
+        _vm.InsertTyped("!");
+
+        // Act: send while blocked
+        var refused = await _vm.SendAsync(TestContext.Current.CancellationToken);
+
+        // Assert: refused, with the reason, and nothing was built
+        Assert.False(refused);
+        Assert.Empty(_builder.Messages);
+        Assert.Equal(ComposerViewModel.CopilotWorkingText, _vm.StatusText);
+        Assert.Equal("hello!", _vm.Document.FlatText);
+
+        // Act: lift the block and send
+        _vm.UnblockSending();
+        var sent = await _vm.SendAsync(TestContext.Current.CancellationToken);
+
+        // Assert: the same draft was sent
+        Assert.True(sent);
+        Assert.Single(_builder.Messages);
+    }
+
+    /// <summary>
+    ///     Test that lifting the block keeps a sentence about another action, that lifting without a block does nothing,
+    ///     and that a block needs a reason.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_UnblockSending_OtherStatusAndNoBlockAndEmptyReason_AreHandled()
+    {
+        // Arrange: a block
+        _vm.InsertTyped("hello");
+        _vm.BlockSending("Busy.");
+
+        // Act / Assert: lifting without a block changes nothing, and a block needs a reason
+        var other = CreateViewModel();
+        other.UnblockSending();
+        Assert.False(other.IsSendBlocked);
+        Assert.Equal(string.Empty, other.StatusText);
+        Assert.Throws<ArgumentException>(() => _vm.BlockSending(" "));
+        Assert.Throws<ArgumentNullException>(() => _vm.BlockSending(null!));
+
+        // Act: another sentence replaces the reason, and then the block is lifted
+        _vm.StatusText = "Another sentence.";
+        _vm.UnblockSending();
+
+        // Assert: the other sentence stays
+        Assert.False(_vm.IsSendBlocked);
+        Assert.Equal("Another sentence.", _vm.StatusText);
+    }
+
     // ----- construction -----
 
     /// <summary>

@@ -34,8 +34,10 @@ it.
   `DeleteForward`, `AddDictatedBlock`, `HandleDrop`, `HandlePaste`, `AddMark`, `DeleteChip`), each exactly one undo
   step; `Undo`, `Redo`, and their commands; `SetProject` and `ClearDraft`; `SendAsync`, which puts the attachments into
   the project, has the message built, empties the draft, and raises `MessageSent` with an immutable `SentMessage`, or
-  keeps the draft and says why; `BeginPushToTalkAsync` and `EndPushToTalkAsync`; and observable state with a `Changed`
-  event once for each action.
+  keeps the draft and says why; `BlockSending(reason)` and `UnblockSending()`, with which the owner (the chat panel
+  while the AI copilot works) makes the message impossible to send while editing stays possible, with `IsSendBlocked`
+  and `SendBlockedReason`; `BeginPushToTalkAsync` and `EndPushToTalkAsync`; and observable state with a `Changed` event
+  once for each action.
 - *Constraints*: Owned by the interface thread, not safe for concurrent use. The message can be edited only while a
   project is open and no message is being sent.
 
