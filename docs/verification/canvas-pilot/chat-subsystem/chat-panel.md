@@ -3,20 +3,25 @@
 #### Verification Approach
 
 `ChatPanel` is verified with unit tests in `test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatPanelTests.cs` for
-the view models and the picture provider, in `TranscriptRowTests.cs` of the same folder for the rows that the
-copilot's turn adds (reply, tool, and notice), and with headless Avalonia UI tests in
-`test/DemaConsulting.CanvasPilot.UiTests/ChatPanelViewTests.cs` (with `ChatUiTestSupport.cs` for the harness) for the
-views. Both use the real `ChatPanelViewModel`, `ComposerViewModel`, `ComposerDocument`, `ComposerHistory`,
-`AttachmentIntake`, `AttachmentStore`, `MarkRegistry`, and `AnnotationOverlayViewModel` over a temporary project folder,
-because the unit exists to connect them and the rule under test is how they agree. The UI tests also use the real
-`ChatPanelView`, `ComposerEditorView` with the AvaloniaEdit surface, and `TranscriptEntryView`. Only what has no place
-in a panel test is replaced: the dictation service (a controllable fake in the unit tests, a scripted one in the UI
-tests, both with a session that says words and ends with a chosen text), the builder of sent messages (one that gives a
-text, or a ready-made payload), the source of the shown picture, the composer of mark pictures (a substitute, or a stub
-that gives a one-pixel PNG), and the launcher of the payload inspector (a recording one). Input reaches the views as the
-platform delivers it: pointer presses and releases on the talk button, move events away from it, the loss of the pointer
-capture, space key presses and releases on the focused button, text input and Ctrl+Z in the editing control, and clicks
-on the Send and "View payload" buttons.
+the view models and the picture provider, in `ChatPanelCopilotTests.cs` for the part that joins the AI copilot (the
+turn, the busy state, Stop, the notices, the change of project, and the readiness banner), in `TranscriptRowTests.cs` of
+the same folder for the rows that the copilot's turn adds (reply, tool, and notice), and with headless Avalonia UI tests
+in `test/DemaConsulting.CanvasPilot.UiTests/ChatPanelViewTests.cs` and `ChatPanelCopilotViewTests.cs` (with
+`ChatUiTestSupport.cs` for the harness and the scripted copilot) for the views. Both use the real `ChatPanelViewModel`,
+`ComposerViewModel`, `ComposerDocument`, `ComposerHistory`, `AttachmentIntake`, `AttachmentStore`, `MarkRegistry`, and
+`AnnotationOverlayViewModel` over a temporary project folder, because the unit exists to connect them and the rule under
+test is how they agree. The UI tests also use the real `ChatPanelView`, `ComposerEditorView` with the AvaloniaEdit
+surface, `TranscriptEntryView`, and the views of the rows of the copilot (`AssistantReplyView` with the
+`MarkdownBlocksPanel`, `ToolActivityRowView`, and `NoticeRowView`). Only what has no place in a panel test is replaced:
+the dictation service (a controllable fake in the unit tests, a scripted one in the UI tests, both with a session that
+says words and ends with a chosen text), the builder of sent messages (one that gives a text, or a ready-made payload),
+the source of the shown picture, the composer of mark pictures (a substitute, or a stub that gives a one-pixel PNG), the
+launcher of the payload inspector (a recording one), and the AI copilot (a controlled or scripted `IAgentService` that
+streams the events the test gives it when it gives them and reports the readiness the test chooses, with a manual clock
+in the unit tests). Input reaches the views as the platform delivers it: pointer presses and releases on the talk
+button, move events away from it, the loss of the pointer capture, space key presses and releases on the focused button,
+text input and Ctrl+Z in the editing control, and clicks on the Send, Stop, "Open Settings", "Check again", and "View
+payload" buttons.
 
 #### Test Environment
 
@@ -60,8 +65,102 @@ the looks); they are not evidence for a requirement.
   picture, and keeps the report of a written file when the tool succeeded and shows the refusal when it did not; a
   notice holds its message, remedy, and whether the settings can help; the sent message keeps its payload and summary as
   a row.
+- With a copilot, a sent message starts a turn with its payload and the rows of the answer follow the entry in order;
+  the text of a reply is plain while it streams and Markdown only when it is complete (never for a stopped or failed
+  one); the composer cannot send but can be written to while the turn runs, with an indicator and a Stop button shown
+  only then; a change of project or disposing the panel stops the turn and nothing of it is shown afterwards; without a
+  copilot only the entry is added and nothing is shown or blocked.
+- Stop cancels the turn, keeps the text marked as stopped, and frees the composer; a failed turn is an error row with
+  the message and the remedy, whose "Open Settings" raises the request that the host handles.
+- The banner shows the sentence of the readiness report when the provider cannot be used or can be used with a warning
+  (the warning does not block sending), is hidden when it is ready, shows a check that throws as a sentence, offers
+  "Open Settings" and "Check again", and shows the latest check only.
 
 #### Test Scenarios
+
+**ChatPanelViewModel_Send_WithCopilot_StartsTurnStreamsReplyAndMakesMarkdownWhenComplete**: A message is sent in a panel
+with a controlled copilot; the copilot gets its payload, streams "Here is **the box**", which is the plain text of a
+streaming reply with no Markdown blocks, and completes; the reply is complete and has one paragraph block, and the rows
+are the entry and the reply. This scenario is tested by
+`ChatPanelViewModel_Send_WithCopilot_StartsTurnStreamsReplyAndMakesMarkdownWhenComplete`.
+
+**ChatPanelViewModel_TurnRuns_ComposerCannotSendAndBusyIsAnnouncedUntilTheTurnEnds**: While a turn runs the panel is
+busy and announces it, `CanSend` is false with the composer's reason, the Stop command can run, and text typed meanwhile
+is kept; when the turn completes all of it is reversed. This scenario is tested by
+`ChatPanelViewModel_TurnRuns_ComposerCannotSendAndBusyIsAnnouncedUntilTheTurnEnds`.
+
+**ChatPanelViewModel_Stop_KeepsPartialTextMarksItStoppedAndFreesTheComposer**: The Stop command ends a turn that has
+written "Let me think": the reply keeps the text, is stopped with the label `Stopped`, has no Markdown, the token of the
+turn was canceled, and the composer can send. This scenario is tested by
+`ChatPanelViewModel_Stop_KeepsPartialTextMarksItStoppedAndFreesTheComposer`.
+
+**ChatPanelViewModel_ToolCalled_AddsToolRowInOrderWithItsResult**: The copilot talks, writes a file that it replaces,
+and completes; the rows are the entry, the reply, and a tool row that says "Replaced" and the path in code format, ended
+and successful. This scenario is tested by `ChatPanelViewModel_ToolCalled_AddsToolRowInOrderWithItsResult`.
+
+**ChatPanelViewModel_TurnFails_ShowsNoticeWithRemedyAndOpenSettingsRaisesTheRequest**: The provider reports a missing
+model; the last row is an error notice with the message, a remedy, and the offer of the settings; choosing "Open
+Settings" on the notice and on the panel raises the request each time. This scenario is tested by
+`ChatPanelViewModel_TurnFails_ShowsNoticeWithRemedyAndOpenSettingsRaisesTheRequest`.
+
+**ChatPanelViewModel_ProjectChangesWhileTurnRuns_StopsItAndDropsWhatItStillSays**: A project is opened while a turn
+that has written text runs; the transcript is empty, the turn was canceled, the composer is free, and what the old turn
+adds while it ends is dropped. This scenario is tested by
+`ChatPanelViewModel_ProjectChangesWhileTurnRuns_StopsItAndDropsWhatItStillSays`.
+
+**ChatPanelViewModel_Dispose_WhileTurnRuns_StopsTheTurn**: Disposing the panel cancels a running turn and leaves the
+transcript empty. This scenario is tested by `ChatPanelViewModel_Dispose_WhileTurnRuns_StopsTheTurn`.
+
+**ChatPanelViewModel_NoCopilot_OnlyAppendsTheEntryAndBlocksNothing**: A panel without a copilot adds one user row for a
+sent message, is never busy, shows no banner, blocks nothing, and ignores Stop and the readiness check. This scenario is
+tested by `ChatPanelViewModel_NoCopilot_OnlyAppendsTheEntryAndBlocksNothing`.
+
+**ChatPanelViewModel_RefreshReadiness_ShowsTheActionableSentenceAndHidesItWhenReady**: A ready provider shows no banner;
+the gated Copilot shows the sentence that says that Copilot support needs an AgentKit update and `HasReadinessIssue` is
+announced; a warning is shown and sending stays possible; "Check again" repeats the check and a ready provider hides the
+banner. This scenario is tested by `ChatPanelViewModel_RefreshReadiness_ShowsTheActionableSentenceAndHidesItWhenReady`.
+
+**ChatPanelViewModel_RefreshReadiness_CheckThrows_ShowsTheProblemInTheBanner**: A check that throws is shown as a
+sentence that says that the copilot could not be checked, with the reason, and nothing is thrown. This scenario is
+tested by `ChatPanelViewModel_RefreshReadiness_CheckThrows_ShowsTheProblemInTheBanner`.
+
+**AssistantReplyViewModel_Blocks_AreMarkdownOnlyOnceCompleted**: A reply that streams a heading and a paragraph has no
+blocks; completing it gives two blocks, the same list each time, and announces the change; a stopped and a failed reply
+have none. This scenario is tested by `AssistantReplyViewModel_Blocks_AreMarkdownOnlyOnceCompleted`.
+
+**NoticeRowViewModel_OpenSettingsCommand_CallsWhatItWasGivenOrNothing**: The command of a notice calls the action that
+it was given once, and a notice without an action does nothing. This scenario is tested by
+`NoticeRowViewModel_OpenSettingsCommand_CallsWhatItWasGivenOrNothing`.
+
+**ChatPanelView_CopilotAnswer_StreamsPlainTextThenMarkdownWhenComplete**: A message is sent; as the copilot streams
+"Here is **the box**" the reply shows it as plain selectable text and not as Markdown; when the turn completes the
+Markdown panel is shown with "Here is the box" and the plain text is hidden. This scenario is tested by
+`ChatPanelView_CopilotAnswer_StreamsPlainTextThenMarkdownWhenComplete`.
+
+**ChatPanelView_CopilotWorking_ShowsIndicatorAndStopAndBlocksSend**: The indicator and the Stop button are hidden before
+the message is sent, shown while the turn runs with Send disabled and the typed text kept, and hidden again when the
+turn ends, when Send can be used. This scenario is tested by
+`ChatPanelView_CopilotWorking_ShowsIndicatorAndStopAndBlocksSend`.
+
+**ChatPanelView_Stop_CancelsTurnKeepsPartialTextAndEnablesSend**: Pressing Stop cancels the turn, keeps the partial text
+with the `Stopped` label, hides the indicator, and enables Send. This scenario is tested by
+`ChatPanelView_Stop_CancelsTurnKeepsPartialTextAndEnablesSend`.
+
+**ChatPanelView_ProviderFails_ShowsErrorRowWithRemedyAndOpenSettings**: A failure of the provider shows an error row
+with the message, the remedy, and the "Open Settings" button; pressing it raises the request and the composer is free.
+This scenario is tested by `ChatPanelView_ProviderFails_ShowsErrorRowWithRemedyAndOpenSettings`.
+
+**ChatPanelView_ToolCalls_ShowToolRowsInOrder**: Text, a written file, a rendered picture, and text again show two
+replies and two tool lines in order, the first saying that the file was created, and no line still shows the moving bar.
+This scenario is tested by `ChatPanelView_ToolCalls_ShowToolRowsInOrder`.
+
+**ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady**: A panel with the gated Copilot shows the
+banner with the sentence when it is shown; "Open Settings" raises the request; after the copilot is ready, "Check again"
+repeats the check and the banner is hidden. This scenario is tested by
+`ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady`.
+
+**ChatPanelView_NoCopilot_ShowsNoBannerIndicatorOrStop**: A panel without a copilot shows no banner, no indicator, and
+no Stop button. This scenario is tested by `ChatPanelView_NoCopilot_ShowsNoBannerIndicatorOrStop`.
 
 **AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted**: A new reply is streaming and
 empty; two pieces of text grow it and are announced (an empty piece changes nothing); completing it makes the text

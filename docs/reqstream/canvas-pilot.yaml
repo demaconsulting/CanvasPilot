@@ -531,6 +531,7 @@ sections:
           - CanvasPilot-Agent-DescribeReadiness
           - CanvasPilot-Agent-CheckProviderReadiness
           - CanvasPilot-Agent-ExplainUnavailableCopilot
+          - CanvasPilot-Chat-ShowCopilotReadiness
         tests:
           - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
 

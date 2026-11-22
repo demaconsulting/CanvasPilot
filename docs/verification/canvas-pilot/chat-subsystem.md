@@ -8,13 +8,13 @@ around the panel: the real `ImageRenderService` draws a Mermaid diagram in a tem
 typed text, a dropped file, and the mark, the real `PayloadBuilder` and `MarkImageComposer` build the payload, and the
 real `ChatPanelViewModel` and `PayloadInspectorViewModel` show the result. The substitutes are the dictation service,
 because speech needs a model and a microphone (the hand-written fake that the composer tests use, with a session that
-says words and ends with a text), and, for the tests of the copilot's turn, the copilot itself (a scripted
-implementation of `IAgentService` that streams the events that the test gives it, when it gives them) and the clock of
-the turn runner (a manual one), because a real model is not deterministic; the real `ChatTurnRunner` and the real
-composer are used. The tests check the observable result: what the transcript holds, which files are in the project,
-what the payload and the inspector hold, and that the draft is empty or kept. The views are verified by the headless UI
-tests described in the unit verification documents, and the system test that composes the whole application is described
-in the system verification.
+says words and ends with a text), and, for the tests of the copilot's turn and of the readiness, the copilot itself (a
+scripted implementation of `IAgentService` that streams the events that the test gives it, when it gives them, and
+reports the readiness that the test chooses) and the clock of the turn runner (a manual one), because a real model is
+not deterministic; the real `ChatTurnRunner`, the real panel, and the real composer are used. The tests check the
+observable result: what the transcript holds, which files are in the project, what the payload and the inspector hold,
+and that the draft is empty or kept. The views are verified by the headless UI tests described in the unit verification
+documents, and the system test that composes the whole application is described in the system verification.
 
 ### Test Environment
 
@@ -40,6 +40,11 @@ a requirement):
 5. *Looks.* The transcript and the panel are readable in the light and the dark theme, long messages wrap, chips in a
    sent message show their pictures, the newest message is in view after sending, and the inspector's text is selectable
    and its pictures are in proportion.
+6. *The copilot panel.* With Copilot chosen in the settings, the banner above the transcript says that Copilot support
+   needs an AgentKit update; "Open Settings" opens the settings and "Check again" repeats the check. With Ollama chosen
+   and the server stopped, the banner says what to do and a sent message ends with an error row that offers "Open
+   Settings"; with Ollama running (when it is installed), the answer streams, "Stop" ends it and keeps the text marked
+   as stopped, and the finished answer is shown with its formatting.
 
 ### Acceptance Criteria
 
@@ -59,23 +64,34 @@ a requirement):
   be written to; the answer streams into rows after the message (text, a line for the tool that created a file, text),
   and the composer can send again when the turn has ended.
 - Stopping a turn keeps the text written so far, marked as stopped, and frees the composer; a failure ends with an error
-  notice with the message, a remedy, and the offer of the settings when they can help.
+  notice with the message, a remedy, and the offer of the settings when they can help, which raises a request to open
+  them.
+- The banner shows the sentence of the readiness of the provider (the gated GitHub Copilot included), a warning does not
+  block sending, and the banner is empty when the provider is ready.
 
 ### Test Scenarios
 
-**ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile**: The real composer
-(over the real payload builder) sends "Draw a box" with the wiring that the panel will have: the runner blocks the
-composer while it is busy. The copilot, a scripted one, gets the payload of the entry. While the turn runs the composer
-cannot send, and text that is typed meanwhile is kept. The copilot streams "I will draw it.", calls `project_write`, the
-file `box.svg` is reported as created, and it streams "Done." and completes. The rows are a reply, a tool row whose
-sentence is "Created" and the path in code format, and a complete reply, and the composer can send. This scenario is
-tested by `ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile`.
+**ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile**: The real
+`ChatPanelViewModel` over the real composer (and the real payload builder) and a scripted copilot sends "Draw a box".
+The copilot gets the payload of the entry. While the turn runs the panel is busy, the composer cannot send, and text
+that is typed meanwhile is kept. The copilot streams "I will draw it.", calls `project_write`, the file `box.svg` is
+reported as created, and it streams "Done." and completes. The rows are the entry, a reply, a tool row whose sentence is
+"Created" and the path in code format, and a complete reply, and the composer can send. This scenario is tested by
+`ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile`.
 
 **ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy**: The copilot streams a part of a sentence
-and the turn is stopped: the reply keeps the text and is stopped, the outcome is stopped, and the composer, with the
-text typed meanwhile, can send. The next message is sent and the provider fails with a missing model: the last row is an
-error notice with the message, a remedy, and the offer of the settings, and the composer is free. This scenario is
-tested by `ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy`.
+and the turn is stopped with the panel's Stop command: the reply keeps the text and is stopped, and the composer, with
+the text typed meanwhile, can send. The next message is sent and the provider fails with a missing model: the last row
+is an error notice with the message, a remedy, and the offer of the settings, the composer is free, and choosing the
+offer raises the request to open the settings. This scenario is tested by
+`ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy`.
+
+**ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested**: The scripted copilot
+reports that GitHub Copilot cannot be used in this build. After the panel checks, the banner has the sentence "Copilot
+support needs an AgentKit update; use Ollama meanwhile." and choosing the settings raises the request. A warning about a
+small context window is shown and does not block sending, and when the copilot reports that it is ready the banner is
+empty. This scenario is tested by
+`ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested`.
 
 **ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft**: A diagram is drawn. The user types
 "Make this ", draws a rectangle around the node `Start`, types " like ", drops a file from outside the project, and

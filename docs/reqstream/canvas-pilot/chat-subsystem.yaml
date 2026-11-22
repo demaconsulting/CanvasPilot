@@ -3,11 +3,13 @@
 #
 # PURPOSE:
 # - Define requirements for the CanvasPilot Chat subsystem
-# - The Chat subsystem is the panel in which the user converses with the assistant that is added later: the transcript
-#   of the messages that were sent, the composer below it with the buttons that send and that listen while held, the
-#   joining of the marks on the picture to the message, and the window that shows exactly what the assistant would
-#   receive for a message. It uses the Composer, Annotation, Payload, and Speech subsystems and holds none of their
-#   rules; it does not depend on the application shell, which places it in the chat column of the main window
+# - The Chat subsystem is the panel in which the user converses with the AI copilot: the transcript of the messages that
+#   were sent and of the answers, the composer below it with the buttons that send, that listen while held, and that stop
+#   the copilot, the banner of the readiness of the provider, the joining of the marks on the picture to the message, and
+#   the window that shows exactly what the assistant would receive for a message. It uses the Composer, Annotation,
+#   Payload, Speech, and Knowledge (Markdown only) subsystems, and the Agent subsystem through its contract only, and
+#   holds none of their rules; it does not depend on the application shell, which places it in the chat column of the
+#   main window
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -44,6 +46,7 @@ sections:
               stays small and no provider reaches the user interface.
             children:
               - CanvasPilot-ChatPanel-HoldTranscriptRows
+              - CanvasPilot-ChatPanel-ConverseWithCopilot
               - CanvasPilot-ChatTurnRunner-RunOneTurnAtATime
               - CanvasPilot-ChatTurnRunner-StreamAnswerIntoReplies
               - CanvasPilot-ChatTurnRunner-CoalesceTextUpdates
@@ -62,10 +65,27 @@ sections:
               not running is an everyday event, and only one turn runs at a time. The user can keep writing the next
               message meanwhile, and it can be sent as soon as the turn is over.
             children:
+              - CanvasPilot-ChatPanel-StopCopilotTurn
               - CanvasPilot-ChatTurnRunner-StopTurnAndKeepText
               - CanvasPilot-ChatTurnRunner-ReportFailureInTranscript
             tests:
               - ChatSubsystem_StopCopilotTurn_KeepsTextFreesTheComposerAndFailureHasRemedy
+
+          - id: CanvasPilot-Chat-ShowCopilotReadiness
+            title: >-
+              The Chat subsystem shall tell the user, where the message is written, whether the configured AI provider
+              can be used, with the sentence that says what to do, including the one of GitHub Copilot that cannot be
+              used in this build yet, shall show a warning that does not block sending, shall let the user open the
+              settings and check again from there, and shall show nothing when everything is ready.
+            justification: |
+              A first message that fails with the error of a library is a poor start, and both providers depend on
+              things outside the application. The Agent subsystem checks and words the sentence; the chat shows it at the
+              place where the user is about to type and asks for the settings through a request, so that it does not
+              depend on the application shell.
+            children:
+              - CanvasPilot-ChatPanel-ReportProviderReadiness
+            tests:
+              - ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested
 
           - id: CanvasPilot-Chat-SendComposedMessage
             title: >-

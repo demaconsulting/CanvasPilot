@@ -245,8 +245,11 @@ package CanvasPilotDesignViews {
     }
 
     view ChatSubsystemPanelView : GeneralView {
-        doc /* Dependencies of the chat panel on the units that compose a message. Hub suppliers omitted: RollingFileLogger and PathHelpers. */
+        doc /* Dependencies of the chat panel on the units that compose a message, on the turn runner that runs the turn of the AI copilot, on the contract of the Agent subsystem through which it asks whether the provider can be used, and on the Markdown reader of the Knowledge subsystem that draws the final text of a reply. Hub suppliers omitted: RollingFileLogger and PathHelpers. */
         expose CanvasPilot_ChatPanel::ChatPanel;
+        expose CanvasPilot_ChatTurnRunner::ChatTurnRunner;
+        expose CanvasPilot_AgentContract::AgentContract;
+        expose CanvasPilot_KnowledgeMarkdown::KnowledgeMarkdown;
         expose CanvasPilot_ComposerViewModel::ComposerViewModel;
         expose CanvasPilot_ComposerEditor::ComposerEditor;
         expose CanvasPilot_MarkRegistry::MarkRegistry;

@@ -122,6 +122,9 @@ flowchart TD
     ChatPanel --> MessagePayload
     ChatPanel --> DictationService
     ChatPanel --> PayloadInspector
+    ChatPanel --> ChatTurnRunner
+    ChatPanel --> AgentContract
+    ChatPanel --> KnowledgeMarkdown
     ChatPanel --> RollingFileLogger
     ChatPanel --> PathHelpers
     ChatTurnRunner --> ChatPanel
@@ -410,11 +413,17 @@ cannot change anything. The panel does not know what shows the inspector; it ask
 conversation without a window: it gives the message that was sent to the AI copilot through `IAgentService`, shows the
 events of the turn as rows of the transcript (the streamed answer, one line for each tool that the copilot calls, and
 notices and errors), stops on request and keeps what was written, never throws into the interface, and tells the panel
-when it is busy, so that the panel can block sending while the copilot works. The `Chat` subsystem depends on
-`Composer`, `Annotation`, `Payload`, `Speech`, `Logging`, and, through `IAgentService` and the events of a turn only,
-`Agent`, and not on `AppShell`. The `Agent` subsystem does not depend on `Chat`. The main window places the panel in the
-chat column of the workspace, which is shown while a project is open, and the shell makes the panel the target of the
-Edit menu (through the composer) and of the talk key.
+when it is busy, so that the panel can block sending while the copilot works. The panel starts a turn for every message
+that was sent when it has a copilot (without one, it only adds the entry), shows the moving indicator and the Stop
+button while the turn runs, shows the text of a reply as plain selectable text while it streams and as Markdown, with
+the `MarkdownBlocksPanel` of the `Knowledge` subsystem, once it is whole, shows a banner with the sentence of the
+readiness report of the copilot when the provider cannot be used (or can be used with a warning), and raises a request
+to open the settings, from the banner and from an error row, which the shell turns into its own command; it does not
+depend on `Settings`. The `Chat` subsystem depends on `Composer`, `Annotation`, `Payload`, `Speech`, `Logging`,
+`Knowledge` (to draw Markdown only), and, through `IAgentService` and the events of a turn only, `Agent`, and not on
+`AppShell`. The `Agent` subsystem does not depend on `Chat`. The main window places the panel in the chat column of the
+workspace, which is shown while a project is open, and the shell makes the panel the target of the Edit menu (through
+the composer) and of the talk key.
 
 `KnowledgeCatalog` holds the knowledge of how to draw and how to work in a project as a tree of cards: the help of
 CanvasNet, without the few cards that are only about the host program, extended with cards of CanvasPilot that are

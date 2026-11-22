@@ -15,7 +15,8 @@ coalescing, stop, failure), are verified with a scripted copilot and a manual cl
 
 - `ChatTurnRunner`: `sealed class`, implements `IDisposable`. The constructor takes the `IAgentService`, the transcript
   (any `ICollection<TranscriptRowViewModel>` to which it adds rows), an optional `TimeProvider` (the system's by
-  default), and an optional logger. `IsBusy` and the `BusyChanged` event tell whether a turn runs. `UpdateInterval` is
+  default), an optional logger, and an optional action that opens the settings, which the error notices it makes call
+  from their "Open Settings" button. `IsBusy` and the `BusyChanged` event tell whether a turn runs. `UpdateInterval` is
   50 milliseconds.
 - `RunTurnAsync(SentMessage, restoredHistory)` and `RunTurnAsync(AgentTurnRequest)` run a turn and return a task of
   `ChatTurnOutcome` (`Completed`, `Stopped`, `Failed`, `Refused`) that completes when the turn has ended. `Stop` stops
