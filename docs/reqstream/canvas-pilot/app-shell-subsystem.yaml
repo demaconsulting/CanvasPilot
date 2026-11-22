@@ -147,8 +147,21 @@ sections:
               - CanvasPilot-ThemeResources-DefineDesignTokens
               - CanvasPilot-ThemeResources-MeetContrast
               - CanvasPilot-ThemeResources-FollowVariantSwitch
+              - CanvasPilot-ThemeResources-ProvideControlThemes
             tests:
               - AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants
+          - id: CanvasPilot-AppShell-ShowKeyboardFocus
+            title: >-
+              The AppShell subsystem shall show which of its buttons and splitters has the focus when the focus is moved
+              with the keyboard, on that control only.
+            justification: |
+              Someone who works with the Tab key and the arrow keys has to see where the focus is, or the window cannot be
+              used without a pointer. Showing it on one control only keeps the window calm.
+            children:
+              - CanvasPilot-ThemeResources-ShowKeyboardFocus
+            tests:
+              - AppShellSubsystem_Themes_TabKeyShowsTheFocusRingOnTheFocusedControlOnly
+
           - id: CanvasPilot-AppShell-ProvideIcons
             title: >-
               The AppShell subsystem shall give its views line icons that take the text color of the theme variant of the

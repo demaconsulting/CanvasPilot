@@ -431,7 +431,7 @@ sections:
       - id: CanvasPilot-System-ThemedInterface
         title: >-
           The application shall present its windows in a dark and a light theme, with one accent color, line icons that
-          follow the text color, and text that is easy to read in both.
+          follow the text color, a visible mark of the keyboard focus, and text that is easy to read in both.
         tags: [system]
         justification: |
           People use the application for long stretches in rooms of every brightness. A dark and a light look that
@@ -440,6 +440,7 @@ sections:
         children:
           - CanvasPilot-AppShell-ProvideThemes
           - CanvasPilot-AppShell-ProvideIcons
+          - CanvasPilot-AppShell-ShowKeyboardFocus
         tests:
           - CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight
       - id: CanvasPilot-System-ShipThirdPartyNotices

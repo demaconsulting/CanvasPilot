@@ -29,6 +29,8 @@
     <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
     <!-- The icons: geometries and the style of a PathIcon of class icon -->
     <StyleInclude Source="avares://DemaConsulting.CanvasPilot/AppShellSubsystem/Styles/Icons.axaml" />
+    <!-- The control themes (IconButton, ToolToggle, PillButton, ChipBorder, SplitterGrip) that views use by key -->
+    <StyleInclude Source="avares://DemaConsulting.CanvasPilot/AppShellSubsystem/Styles/Controls.axaml" />
   </Application.Styles>
 
   <Application.Resources>

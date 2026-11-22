@@ -1,0 +1,242 @@
+<!--
+  Control themes of CanvasPilot: the shared looks that more than one view uses, built on the design tokens of
+  Tokens.axaml (every color, radius, and space is a dynamic Cp resource, so a theme variant switch repaints them).
+
+    IconButton    a 32 by 32 button that holds an icon (PathIcon of class icon); give it a tooltip and an
+                  AutomationProperties.Name, because it has no text
+    ToolToggle    the same, as a toggle; when checked it is filled with the accent and its icon is white
+    PillButton    a rounded button with text, for suggestions and for the provider and style pills
+    ChipBorder    the rounded outline of a chip of the transcript or the composer (a Border theme)
+    SplitterGrip  a GridSplitter drawn as a 1 px line with a short grip, wider to hit; keyboard resize is 16 px
+
+  Every one of them shows a 2 px focus ring (CpFocusRing, 1 px outside the control) when it is focused with the
+  keyboard, and never after a click with the pointer, so the keyboard user always sees where they are and the pointer
+  user is not distracted. The themes do not use BasedOn the Fluent themes: their templates are their own, so no
+  state of the stock look shows through.
+-->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <Styles.Resources>
+    <ResourceDictionary>
+
+      <!-- IconButton -->
+      <ControlTheme x:Key="IconButton" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource CpTextSecondary}" />
+        <Setter Property="MinWidth" Value="32" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusInput}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Panel>
+              <Border x:Name="PART_FocusRing"
+                      Margin="-3"
+                      BorderThickness="2"
+                      BorderBrush="Transparent"
+                      CornerRadius="{TemplateBinding CornerRadius}"
+                      IsHitTestVisible="False" />
+              <ContentPresenter x:Name="PART_ContentPresenter"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                Padding="{TemplateBinding Padding}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True" />
+            </Panel>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover">
+          <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+        </Style>
+        <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTintHover}" />
+        </Style>
+        <Style Selector="^:pressed /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+        </Style>
+        <Style Selector="^:disabled">
+          <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+        </Style>
+      </ControlTheme>
+
+      <!-- ToolToggle -->
+      <ControlTheme x:Key="ToolToggle" TargetType="ToggleButton">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource CpTextSecondary}" />
+        <Setter Property="MinWidth" Value="32" />
+        <Setter Property="MinHeight" Value="32" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusInput}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Panel>
+              <Border x:Name="PART_FocusRing"
+                      Margin="-3"
+                      BorderThickness="2"
+                      BorderBrush="Transparent"
+                      CornerRadius="{TemplateBinding CornerRadius}"
+                      IsHitTestVisible="False" />
+              <ContentPresenter x:Name="PART_ContentPresenter"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                Padding="{TemplateBinding Padding}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True" />
+            </Panel>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover">
+          <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+        </Style>
+        <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTintHover}" />
+        </Style>
+        <Style Selector="^:pressed /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+        </Style>
+        <Style Selector="^:checked">
+          <Setter Property="Foreground" Value="{DynamicResource CpTextOnAccent}" />
+        </Style>
+        <Style Selector="^:checked /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource CpAccent}" />
+        </Style>
+        <Style Selector="^:disabled">
+          <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+        </Style>
+      </ControlTheme>
+
+      <!-- PillButton -->
+      <ControlTheme x:Key="PillButton" TargetType="Button">
+        <Setter Property="Background" Value="{DynamicResource CpSurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CpBorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource CpTextSecondary}" />
+        <Setter Property="FontSize" Value="{DynamicResource CpFontSmall}" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Padding" Value="12,0" />
+        <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusPill}" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Panel>
+              <Border x:Name="PART_FocusRing"
+                      Margin="-3"
+                      BorderThickness="2"
+                      BorderBrush="Transparent"
+                      CornerRadius="{DynamicResource CpRadiusPill}"
+                      IsHitTestVisible="False" />
+              <ContentPresenter x:Name="PART_ContentPresenter"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                Padding="{TemplateBinding Padding}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True" />
+            </Panel>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover">
+          <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+        </Style>
+        <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpAccent}" />
+        </Style>
+        <Style Selector="^:pressed /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+        </Style>
+        <Style Selector="^:disabled">
+          <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+        </Style>
+      </ControlTheme>
+
+      <!-- ChipBorder: the outline of a chip; the chip puts its icon and text inside -->
+      <ControlTheme x:Key="ChipBorder" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource CpSurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CpBorderSubtle}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusPill}" />
+        <Setter Property="MinHeight" Value="24" />
+        <Setter Property="Padding" Value="8,0" />
+      </ControlTheme>
+
+      <!-- SplitterGrip: a vertical splitter between two columns. The control is as wide as its hit area (set by
+           the view, 9 px in the workspace); the line is 1 px and the grip 4 by 40. -->
+      <ControlTheme x:Key="SplitterGrip" TargetType="GridSplitter">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Focusable" Value="True" />
+        <Setter Property="KeyboardIncrement" Value="16" />
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Panel Background="Transparent">
+              <Border x:Name="PART_Line"
+                      HorizontalAlignment="Center"
+                      Width="1"
+                      Background="{DynamicResource CpBorderSubtle}" />
+              <Border x:Name="PART_Grip"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Width="4"
+                      Height="40"
+                      CornerRadius="2"
+                      Background="{DynamicResource CpBorderControl}" />
+              <Border x:Name="PART_FocusRing"
+                      Margin="-1,0"
+                      BorderThickness="2"
+                      BorderBrush="Transparent"
+                      IsHitTestVisible="False" />
+            </Panel>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#PART_Line">
+          <Setter Property="Width" Value="2" />
+          <Setter Property="Background" Value="{DynamicResource CpAccent}" />
+        </Style>
+        <Style Selector="^:pressed /template/ Border#PART_Line">
+          <Setter Property="Width" Value="2" />
+          <Setter Property="Background" Value="{DynamicResource CpAccent}" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+        </Style>
+      </ControlTheme>
+
+    </ResourceDictionary>
+  </Styles.Resources>
+
+</Styles>

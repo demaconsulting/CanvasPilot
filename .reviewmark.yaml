@@ -481,7 +481,9 @@ reviews:
       - "docs/verification/canvas-pilot/app-shell-subsystem/theme-resources.md"
       - "src/**/AppShellSubsystem/Styles/Tokens.axaml"
       - "src/**/AppShellSubsystem/Styles/Icons.axaml"
+      - "src/**/AppShellSubsystem/Styles/Controls.axaml"
       - "test/**/ThemeResourcesViewTests.cs"
+      - "test/**/ControlThemesViewTests.cs"
 
   # CanvasPilot - Chat
   - id: CanvasPilot-Chat

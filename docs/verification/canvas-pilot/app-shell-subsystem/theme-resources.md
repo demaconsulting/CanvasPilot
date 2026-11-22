@@ -24,6 +24,11 @@ parallelization disabled; no display is required.
 - The focus ring, the input outline, and the mark color are at least 3 to 1 on the pane and raised surfaces.
 - Every vendored icon resolves to a geometry with a shape that lies on the 20 by 20 grid.
 - An icon of class `icon` in a button is 16 by 16 and is drawn in the foreground color of the button, inside its box.
+- The icon button and the tool toggle are 32 by 32, the pill button is at least 28 by 28, and a chip is at least 24
+  high; a checked tool toggle is filled with the accent with white content and an unchecked one is clear.
+- The icon button, tool toggle, pill button, and splitter show a 2 px ring in the focus color when focused with the
+  keyboard and none when focused with the pointer, and the ring is really drawn just outside the button.
+- A splitter draws a 1 px line and a 4 by 40 grip, and the arrow keys resize the column before it in steps of 16.
 - A border that takes its background from a token shows the color of the requested variant, and the color of the other
   variant after the window switches, without being created again.
 
@@ -53,6 +58,29 @@ whose bounds are at least one unit wide and high and lie on the 20 by 20 grid of
 class `icon` in a window of 100 by 100 that is drawn headless; the icon is 16 by 16, red pixels are found inside its box
 and none outside it. This scenario is tested by `ThemeResources_Icons_PathIconIsDrawnInTheForegroundOfItsButton`.
 
+**ThemeResources_Controls_ButtonsHaveTargetsOfAtLeast28**: An icon button, a tool toggle, and a pill button are shown
+alone; the first two are 32 by 32 and the pill is at least 28 by 28. This scenario is tested by
+`ThemeResources_Controls_ButtonsHaveTargetsOfAtLeast28`.
+
+**ThemeResources_Controls_CheckedToolToggleIsFilledWithAccent**: In both variants a tool toggle is clear while
+unchecked, and when it is checked its fill is the accent and its content is white. This scenario is tested by
+`ThemeResources_Controls_CheckedToolToggleIsFilledWithAccent`.
+
+**ThemeResources_Controls_ChipBorderIsARaisedPill**: In both variants a border with the chip theme has the raised
+surface, the subtle outline, the pill radius, and at least 24 height. This scenario is tested by
+`ThemeResources_Controls_ChipBorderIsARaisedPill`.
+
+**ThemeResources_Controls_SplitterGripResizesByKeyboardInStepsOf16**: A splitter in a grid with a column of 200 draws a
+1 px line and a 4 by 40 grip; after it is focused the right arrow makes the column 216 and the left arrow 200. This
+scenario is tested by `ThemeResources_Controls_SplitterGripResizesByKeyboardInStepsOf16`.
+
+**ThemeResources_Controls_FocusRingShowsForKeyboardFocusOnly**: In both variants each of the four controls has a
+transparent ring when it is focused with the pointer and a 2 px ring in the focus color when it is focused with the
+keyboard. This scenario is tested by `ThemeResources_Controls_FocusRingShowsForKeyboardFocusOnly`.
+
+**ThemeResources_Controls_FocusRingIsDrawnOutsideTheButton**: After keyboard focus an icon button is drawn headless and
+the pixel just above the middle of its top edge has the focus color in both variants, so the ring is not clipped away.
+This scenario is tested by `ThemeResources_Controls_FocusRingIsDrawnOutsideTheButton`.
 **ThirdPartyNotices_Published**: After the Windows build job publishes the application self-contained for win-x64,
 FileAssert asserts that the published folder, which the installer takes whole, holds exactly one
 `THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License. This scenario is tested by

@@ -92,8 +92,9 @@ here because they only join the units together.
    palettes of the theme for each variant (`App.axaml`), so the standard controls follow the brand accent and the pane
    surface, and the application asks for the theme variant of the system (`RequestedThemeVariant=Default`), so it is
    dark or light as the system is. Views take colors from the tokens with dynamic resources, and draw icons with a
-   `PathIcon` of class `icon` over the vendored line glyphs of `ThemeResources`. The project copies the notice of those
-   glyphs (`THIRD-PARTY-NOTICES.md`) beside the executable, so the installer ships it.
+   `PathIcon` of class `icon` over the vendored line glyphs of `ThemeResources`; buttons, toggles, chips, and splitters
+   take the control themes of `ThemeResources`, which show the keyboard focus with a ring. The project copies the notice
+   of those glyphs (`THIRD-PARTY-NOTICES.md`) beside the executable, so the installer ships it.
 1. At startup `App` calls `ApplicationComposition.CreateDefault`, which creates the logger, the settings service (and
    loads the settings), the project service, the recent projects list, the project explorer with its image source filter
    and refresh scheduler, the render service, the preview pane, the workspace (which shows the preview pane), the image

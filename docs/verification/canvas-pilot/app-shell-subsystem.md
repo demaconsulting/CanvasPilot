@@ -55,6 +55,7 @@ services, or display are required.
 - Disposing the composition disposes the copilot and its factory once, and the settings are no longer looked at.
 - A stock window and the text on it take the pane surface and the primary text color of the theme variant that is
   asked for, and the system accent is the brand accent, in the dark and in the light variant.
+- Walking through a window with the Tab key shows the focus ring on the control that has the focus and on no other.
 - An icon in a stock button is 16 by 16 and has the primary text color of the theme variant that is asked for.
 - The published folder holds the notice of the third-party icons (checked in the build of the installer).
 
@@ -163,6 +164,11 @@ the server was not asked again. This scenario is tested by
 dark and in the light variant (a headless UI test in `AppShellThemeTests.cs`); its background is the pane surface of the
 variant, the text is the primary text color, the system accent is the brand accent, and the two variants differ. This
 scenario is tested by `AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants`.
+
+**AppShellSubsystem_Themes_TabKeyShowsTheFocusRingOnTheFocusedControlOnly**: An icon button, a tool toggle, a pill
+button, and a splitter are in a window (a headless UI test in `AppShellThemeTests.cs`); the Tab key is pressed four
+times and after each press the ring is in the focus color on the control that has the focus and transparent on the
+others. This scenario is tested by `AppShellSubsystem_Themes_TabKeyShowsTheFocusRingOnTheFocusedControlOnly`.
 
 **AppShellSubsystem_Icons_IconInButtonTakesThePrimaryTextColorOfTheVariant**: A stock button holds an icon of class
 `icon` in a window in the dark and in the light variant (a headless UI test in `AppShellThemeTests.cs`); the icon is 16

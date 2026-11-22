@@ -20,9 +20,14 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
@@ -62,6 +67,46 @@ public sealed class AppShellThemeTests
         Assert.NotEqual(
             ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Dark),
             ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Light));
+    }
+
+    /// <summary>
+    ///     Test that walking through a window with the Tab key shows the focus ring on the control that has the focus
+    ///     and on no other, on an icon button, a tool toggle, a pill button, and a splitter.
+    /// </summary>
+    [AvaloniaFact]
+    public void AppShellSubsystem_Themes_TabKeyShowsTheFocusRingOnTheFocusedControlOnly()
+    {
+        // Arrange: four controls with the shared looks, one after the other, in a window
+        var controls = new Control[]
+        {
+            new Button { Theme = (ControlTheme)ThemeUiHelpers.Resolve("IconButton", ThemeVariant.Dark)!, Content = "A" },
+            new ToggleButton { Theme = (ControlTheme)ThemeUiHelpers.Resolve("ToolToggle", ThemeVariant.Dark)!, Content = "B" },
+            new Button { Theme = (ControlTheme)ThemeUiHelpers.Resolve("PillButton", ThemeVariant.Dark)!, Content = "C" },
+            new GridSplitter { Theme = (ControlTheme)ThemeUiHelpers.Resolve("SplitterGrip", ThemeVariant.Dark)!, Width = 9, Height = 40 }
+        };
+        var panel = new StackPanel { Margin = new Thickness(20) };
+        panel.Children.AddRange(controls);
+        var window = new Window { Content = panel, RequestedThemeVariant = ThemeVariant.Dark };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var expected = ThemeUiHelpers.ColorOf("CpFocusRing", ThemeVariant.Dark);
+
+        foreach (var focused in controls)
+        {
+            // Act: press the Tab key, which moves the focus to the next control
+            window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+            Dispatcher.UIThread.RunJobs();
+
+            // Assert: only that control shows the ring, in the focus color
+            foreach (var control in controls)
+            {
+                var ring = control.GetVisualDescendants().OfType<Border>().Single(part => part.Name == "PART_FocusRing");
+                var color = Assert.IsAssignableFrom<ISolidColorBrush>(ring.BorderBrush).Color;
+                Assert.Equal(ReferenceEquals(control, focused) ? expected : Colors.Transparent, color);
+            }
+        }
+
+        window.Close();
     }
 
     /// <summary>

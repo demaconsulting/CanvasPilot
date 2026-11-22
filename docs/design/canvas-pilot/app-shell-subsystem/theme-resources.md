@@ -5,9 +5,10 @@
 #### Purpose
 
 `ThemeResources` is the one place that says how CanvasPilot looks. It holds the design tokens (colors, spacing, corner
-radii, type sizes, and shadows) for the dark and the light theme variant, the line icons, and the palettes that make the
-standard controls of the Fluent theme follow the brand. Every view takes its look from these resources, so the look of
-the application changes in one place and a change of the theme variant repaints what is on the screen.
+radii, type sizes, and shadows) for the dark and the light theme variant, the line icons, the control themes, and the
+palettes that make the standard controls of the Fluent theme follow the brand. Every view takes its look from these
+resources, so the look of the application changes in one place and a change of the theme variant repaints what is on the
+screen.
 
 #### Data Model
 
@@ -42,6 +43,27 @@ package: they are assets in the source, like the logo, so no OTS item exists for
 header of the file and in `THIRD-PARTY-NOTICES.md` at the root of the repository, which the project copies beside the
 executable (build and publish output), so the installer, which takes the published folder whole, ships it. An icon
 button that has no text must have an automation name and a tooltip; this is the duty of the view that uses the icon.
+
+**Control themes** (`AppShellSubsystem/Styles/Controls.axaml`): keyed control themes that more than one view uses,
+each with its own template (none is based on the Fluent theme, so no state of the stock look shows through) and built
+on the tokens:
+
+- `IconButton` (a `Button`) and `ToolToggle` (a `ToggleButton`): at least 32 by 32, no fill at rest, the accent tint on
+  hover and press, 40 percent opacity when disabled; a checked `ToolToggle` is filled with the accent and its content
+  is white. The icon button has no text, so the view must give it an automation name and a tooltip.
+- `PillButton` (a `Button`): at least 28 high, fully rounded, raised surface with a subtle outline that turns to the
+  accent on hover.
+- `ChipBorder` (a `Border`): the raised, outlined, fully rounded shape of a chip, at least 24 high.
+- `SplitterGrip` (a `GridSplitter`): a 1 px line with a 4 by 40 grip centered in a hit area that the view sets (9 px in
+  the workspace); the line is 2 px in the accent while the pointer is over it or it is dragged (the thumb has the
+  `:pressed` state, there is no separate dragging state); the keyboard increment is 16 px. The theme is for a vertical
+  splitter between two columns.
+
+Each theme except the chip shows the keyboard focus the same way: a template part `PART_FocusRing`, a 2 px border
+that is transparent at rest and has the focus ring color while the control has the pseudo-class `:focus-visible` (focus
+by the keyboard, never by the pointer). The ring lies 1 px outside the control, so the themes switch off the clipping
+of the control to its bounds, and the default focus adorner of Avalonia is switched off so that two rings do not show.
+A view that puts such a control in a container must not clip the container to its bounds if the ring is to be seen.
 
 **Palettes** (`App.axaml`): `FluentTheme.Palettes` has one `ColorPaletteResources` per variant that sets the system
 accent to the brand accent, the region color (the window surface of dialogs) to the pane surface, the main text color
