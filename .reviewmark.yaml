@@ -130,6 +130,27 @@ reviews:
       - "src/**/AgentSubsystem/IAgentService.cs"
       - "test/**/AgentSubsystem/AgentContractTests.cs"
 
+  - id: CanvasPilot-Agent-CopilotCliLocator
+    title: Review of CanvasPilot CopilotCliLocator unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/agent-subsystem.md
+      - docs/reqstream/canvas-pilot/agent-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/agent-subsystem/copilot-cli-locator.yaml"
+      - "docs/design/canvas-pilot/agent-subsystem/copilot-cli-locator.md"
+      - "docs/verification/canvas-pilot/agent-subsystem/copilot-cli-locator.md"
+      - "src/**/AgentSubsystem/CopilotCliInfo.cs"
+      - "src/**/AgentSubsystem/CopilotCliLocator.cs"
+      - "src/**/AgentSubsystem/ICliFileSystem.cs"
+      - "src/**/AgentSubsystem/IEnvironmentReader.cs"
+      - "src/**/AgentSubsystem/IProcessRunner.cs"
+      - "src/**/AgentSubsystem/ProcessRunner.cs"
+      - "test/**/AgentSubsystem/CopilotCliLocatorTests.cs"
+      - "test/**/AgentSubsystem/CopilotCliTestDoubles.cs"
+      - "test/**/AgentSubsystem/ProcessRunnerTests.cs"
+
   # CanvasPilot - Annotation
   - id: CanvasPilot-Annotation
     title: Review of CanvasPilot Annotation subsystem architecture and interfaces

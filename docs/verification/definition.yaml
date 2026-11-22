@@ -25,6 +25,7 @@ input-files:
   - docs/verification/canvas-pilot.md
   - docs/verification/canvas-pilot/agent-subsystem.md
   - docs/verification/canvas-pilot/agent-subsystem/agent-contract.md
+  - docs/verification/canvas-pilot/agent-subsystem/copilot-cli-locator.md
   - docs/verification/canvas-pilot/annotation-subsystem.md
   - docs/verification/canvas-pilot/annotation-subsystem/annotation-overlay.md
   - docs/verification/canvas-pilot/annotation-subsystem/mark-registry.md

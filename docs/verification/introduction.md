@@ -24,6 +24,8 @@ This document covers the verification design for the following software items:
   - **Agent** subsystem
     - **AgentContract** — the provider-independent contract of the AI copilot; the units that implement it are added as
       they are built
+    - **CopilotCliLocator** — finds the Copilot CLI that the user installed, tells it from editor shims, and checks its
+      version
   - **Annotation** subsystem
     - **MarkRegistry** — marks on the shown picture, pinned to their picture, numbered, with geometry in picture pixels
     - **MarkSourceResolver** — the parts of the source file under a mark
