@@ -54,7 +54,12 @@ public sealed record CopilotStartRequest(string CliPath, Version CliVersion, boo
 /// </summary>
 /// <param name="Status">What came of the request.</param>
 /// <param name="Message">One sentence for the user that says what happened and, when the runtime cannot be used, what to do.</param>
-public sealed record CopilotStartResult(CopilotStartStatus Status, string Message);
+/// <param name="Agents">
+///     The started runtime as a source of agents when <paramref name="Status" /> is <see cref="CopilotStartStatus.Started" />
+///     and the request was not a check only; otherwise <see langword="null" />. Whoever receives it disposes it, which stops
+///     the runtime.
+/// </param>
+public sealed record CopilotStartResult(CopilotStartStatus Status, string Message, ICopilotAgentSource? Agents = null);
 
 /// <summary>
 ///     Starts the GitHub Copilot runtime of the AI library on the Copilot CLI that the user installed. The interface is
