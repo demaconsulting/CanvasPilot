@@ -425,6 +425,7 @@ reviews:
       - "docs/design/canvas-pilot/knowledge-subsystem.md"
       - "docs/verification/canvas-pilot/knowledge-subsystem.md"
       - "test/**/KnowledgeSubsystem/KnowledgeSubsystemTests.cs"
+      - "test/**/LanguageModelDependencyCheck.cs"
 
   - id: CanvasPilot-Knowledge-KnowledgeCatalog
     title: Review of CanvasPilot KnowledgeCatalog unit implementation and cards
@@ -1045,6 +1046,7 @@ reviews:
       - "docs/design/canvas-pilot/style-subsystem.md"
       - "docs/verification/canvas-pilot/style-subsystem.md"
       - "test/**/StyleSubsystem/StyleSubsystemTests.cs"
+      - "test/**/LanguageModelDependencyCheck.cs"
 
   - id: CanvasPilot-Style-StyleKitDocument
     title: Review of CanvasPilot StyleKitDocument unit implementation
@@ -1353,6 +1355,48 @@ reviews:
       - "docs/design/ots/communitytoolkit-mvvm.md"
       - "docs/verification/ots/communitytoolkit-mvvm.md"
       - "test/OtsSoftwareTests/CommunityToolkitMvvmTests.cs"
+
+  - id: OTS-AgentKit
+    title: Review of AgentKit OTS verification evidence and the Copilot runtime exclusion
+    paths:
+      - "docs/reqstream/ots/agentkit.yaml"
+      - "docs/design/ots/agentkit.md"
+      - "docs/verification/ots/agentkit.md"
+      - "test/OtsSoftwareTests/AgentKitTests.cs"
+      - "test/OtsSoftwareTests/AgentTestSupport.cs"
+      - "Directory.Build.props"
+
+  - id: OTS-CopilotSdk
+    title: Review of Microsoft.Copilot.SDK OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/copilot-sdk.yaml"
+      - "docs/design/ots/copilot-sdk.md"
+      - "docs/verification/ots/copilot-sdk.md"
+      - "test/OtsSoftwareTests/CopilotSdkTests.cs"
+
+  - id: OTS-AgentFramework
+    title: Review of Microsoft Agent Framework OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/agent-framework.yaml"
+      - "docs/design/ots/agent-framework.md"
+      - "docs/verification/ots/agent-framework.md"
+      - "test/OtsSoftwareTests/AgentFrameworkTests.cs"
+
+  - id: OTS-ExtensionsAi
+    title: Review of Microsoft.Extensions.AI OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/extensions-ai.yaml"
+      - "docs/design/ots/extensions-ai.md"
+      - "docs/verification/ots/extensions-ai.md"
+      - "test/OtsSoftwareTests/ExtensionsAiTests.cs"
+
+  - id: OTS-OllamaSharp
+    title: Review of OllamaSharp OTS verification evidence
+    paths:
+      - "docs/reqstream/ots/ollamasharp.yaml"
+      - "docs/design/ots/ollamasharp.md"
+      - "docs/verification/ots/ollamasharp.md"
+      - "test/OtsSoftwareTests/OllamaSharpTests.cs"
 
   - id: OTS-FileAssert
     title: Review of FileAssert OTS verification evidence

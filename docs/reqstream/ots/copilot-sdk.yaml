@@ -1,0 +1,48 @@
+---
+# Microsoft.Copilot.SDK OTS Software Requirements
+#
+# Requirements for the Microsoft.Copilot.SDK package, the client library for the GitHub Copilot CLI that AgentKit's
+# Copilot package drives, as used by CanvasPilot at run time. CanvasPilot uses no part of it directly in this version;
+# the requirements record the facts on which the gating of the Copilot provider rests. The library is a runtime
+# dependency, so each requirement is a child of the requirement of the item that uses the feature (the system
+# requirement about using only an installed Copilot CLI) and is not a root requirement.
+
+sections:
+  - title: OTS Software Requirements
+    sections:
+      - title: Copilot SDK Requirements
+        requirements:
+          - id: CanvasPilot-OTS-CopilotSdk-HonorExplicitCliPath
+            title: >-
+              The Copilot SDK shall start the Copilot CLI at the path that a runtime connection names, and shall report a
+              path that does not exist by naming it.
+            justification: |
+              Using the Copilot CLI that the user installed needs a way to name its path. The SDK offers it on its
+              connection, which is the upstream change that AgentKit has not made yet, so the test shows that the change
+              is possible and what the error looks like.
+            tags: [ots]
+            tests:
+              - CopilotSdk_Client_StartAsync_ExplicitMissingCliPath_FailsNamingThePath
+
+          - id: CanvasPilot-OTS-CopilotSdk-ReadCliPathFromConnectionEnvironment
+            title: >-
+              When a runtime connection supplies its own environment, the Copilot SDK shall take the Copilot CLI path
+              from that environment and not from the host process, and shall start no CLI when the environment names
+              none and the application carries no Copilot runtime, naming the missing runtime wrapper.
+            justification: |
+              AgentKit gives every connection an environment of its own, so a COPILOT_CLI_PATH that the user has set
+              cannot reach the SDK. A test that does not depend on the machine's variables proves it.
+            tags: [ots]
+            tests:
+              - CopilotSdk_Client_StartAsync_OwnEnvironmentWithoutCliPath_FailsNamingTheWrapper
+
+          - id: CanvasPilot-OTS-CopilotSdk-DeclareSupportedCliVersion
+            title: >-
+              The Copilot SDK package shall declare the version of the Copilot CLI it is built for, and that version
+              shall not be older than the minimum CLI version that CanvasPilot documents.
+            justification: |
+              CanvasPilot tells its users which Copilot CLI to install. The minimum it names must never be below what
+              the SDK needs, or the check would pass a CLI that the SDK then refuses.
+            tags: [ots]
+            tests:
+              - CopilotSdk_BuiltForCliVersion_IsNotBelowCanvasPilotMinimum

@@ -103,6 +103,8 @@ services, or display is required.
   when the picture is drawn again, and a project with no style is told to choose one.
 - The published win-x64 application contains the native speech and audio runtime libraries and so does the installer
   package, so that the installed application needs nothing but the model download to run a chosen speech model.
+- The published win-x64 application and the installer package contain no GitHub Copilot runtime, and the executable
+  stays within its size budget: the application never ships or downloads a Copilot runtime.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
@@ -143,8 +145,10 @@ steps are in the verification of the unit or subsystem named at each check.
    instance by installing; and look at the installed folder, or the MSI file table (`Orca` or the Windows Installer
    `File` table), for `sherpa-onnx-c-api.dll`, `onnxruntime.dll`, and `portaudio.dll` next to `CanvasPilot.exe`. The
    build already fails when any of the three is missing from the published folder or the file table
-   (`Speech_NativeRuntimePublished`); this check confirms what a user gets. (Verification of the `Speech` subsystem and
-   of the WiX Toolset.)
+   (`Speech_NativeRuntimePublished`); this check confirms what a user gets. Also check that no file whose name starts
+   with `copilot` and no `runtime.node` is in the installed folder (the build asserts the same in
+   `Copilot_RuntimeNotPublished` and in the file table). (Verification of the `Speech` subsystem and of the WiX
+   Toolset.)
 7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
    the keyboard, and check the tool bar and the chips with a screen reader. (Verification of `AnnotationOverlay`.)
 8. *Style kits with the real pickers.* On the installed package, open Tools > Style Kits, choose Import and Export with
@@ -444,6 +448,14 @@ FileAssert asserts that the published folder, which the installer takes whole, h
 the installer package's file table and fails when any of the three is missing. This scenario is tested by
 `Speech_NativeRuntimePublished`, which is run in CI only on Windows and is described in the verification of the Speech
 subsystem and of the Speech OTS item.
+
+**Copilot_RuntimeNotPublished**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the published folder, which the installer takes whole, holds no file whose name starts with
+`copilot` or `libcopilot`, nothing under `runtimes\*\native\copilot*`, no `runtime.node`, and no
+`.copilot-explicit-cli`, and that `CanvasPilot.exe` exists once and is below 160 MB; and the step that reads the
+installer package's file table fails when it lists such a file. This scenario is tested by
+`Copilot_RuntimeNotPublished`, which is run in CI only on Windows and is described in the verification of the AgentKit
+OTS item.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

@@ -395,6 +395,66 @@ sections:
         tests:
           - WiX_MsiPackage
 
+      - id: CanvasPilot-System-UseInstalledCopilotCli
+        title: >-
+          The application shall not include or download the GitHub Copilot runtime in its installed files or in its
+          build output, so that the only GitHub Copilot CLI that it can ever use is the one that the user installed.
+        tags: [system]
+        justification: |
+          The GitHub Copilot CLI is a separate product that the user installs, updates, and signs in to. Shipping a
+          copy of it, or downloading one when the application is built, would put about 180 MB of third-party code with
+          its own updates and licensing into every installation. The libraries that the AI copilot is built on would
+          bring such a runtime unless they are told not to, so the absence is checked on the published folder of every
+          Windows build and, with the file table of the installer, in the package itself. Locating and checking the
+          installed CLI is added to this requirement by the units that do it.
+        children:
+          - CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
+          - CanvasPilot-OTS-CopilotSdk-HonorExplicitCliPath
+          - CanvasPilot-OTS-CopilotSdk-ReadCliPathFromConnectionEnvironment
+          - CanvasPilot-OTS-CopilotSdk-DeclareSupportedCliVersion
+        tests:
+          - windows@Copilot_RuntimeNotPublished
+
+      - id: CanvasPilot-System-ConfineCopilotToProject
+        title: >-
+          The AI copilot shall act only through CanvasPilot's own tools, which are confined to the project folder, so
+          that it can read and change only the files of the project, with the limits that the tools set.
+        tags: [system]
+        justification: |
+          A language model that writes files is only as safe as the paths and sizes its tools allow. Offering the model
+          nothing but tools that the application builds, and building them on one reliable decision about which paths
+          are allowed, keeps the user's other files out of its reach. The units of the Agent subsystem add the tools
+          and their own limits to this requirement; the confining library it rests on is verified as an OTS item.
+        children:
+          - CanvasPilot-OTS-AgentKit-ConfineToolPaths
+          - CanvasPilot-OTS-AgentKit-ComposeToolPacks
+          - CanvasPilot-OTS-AgentKit-BoundToolResults
+
+      - id: CanvasPilot-System-ConverseWithCopilot
+        title: >-
+          The application shall let the user converse with the AI provider that is configured, so that a message
+          gets an answer that is shown while it is written, with the tool calls the answer needed, and the conversation
+          can be stopped and continued.
+        tags: [system]
+        justification: |
+          The reason for the application is to draw by talking. The libraries that stream the answer, run the tools,
+          carry the pictures, and talk to the Ollama server are verified as OTS items; the units of the Agent and Chat
+          subsystems add the behavior of the application on top of them and link to this requirement.
+        children:
+          - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
+          - CanvasPilot-OTS-AgentKit-SizeOllamaContext
+          - CanvasPilot-OTS-AgentFramework-StreamAnswerPieces
+          - CanvasPilot-OTS-AgentFramework-KeepConversationOnSession
+          - CanvasPilot-OTS-AgentFramework-StopOnCancellation
+          - CanvasPilot-OTS-ExtensionsAi-BindFunctionArguments
+          - CanvasPilot-OTS-ExtensionsAi-RunFunctionsInInvocationLoop
+          - CanvasPilot-OTS-ExtensionsAi-CarryPictureContent
+          - CanvasPilot-OTS-ExtensionsAi-JoinStreamedUpdates
+          - CanvasPilot-OTS-OllamaSharp-ListLocalModels
+          - CanvasPilot-OTS-OllamaSharp-ReportMissingModel
+          - CanvasPilot-OTS-OllamaSharp-StreamTextAndToolCalls
+          - CanvasPilot-OTS-OllamaSharp-SendContextLength
+
       - id: CanvasPilot-System-StartApplication
         title: >-
           The application shall start on every supported platform by building its parts in dependency

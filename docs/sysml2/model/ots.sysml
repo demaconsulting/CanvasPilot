@@ -59,6 +59,65 @@ package OtsDependencies {
             requirementFiles = ("docs/reqstream/ots/speech.yaml");
         }
     }
+
+    part def AgentKit {
+        doc /* DemaConsulting.AgentKit NuGet dependency (the Core, Agents.Copilot, Agents.ChatClient, and Agents.Ollama packages) that confines the AI copilot's tools to the project with a path policy, composes tool packs, bounds tool results, builds agents on a chat client, and sizes the Ollama context window; its Copilot runtime is never bundled and not started. */
+
+        metadata info : SoftwareInfo {
+            sourceFiles = ("Directory.Build.props");
+            testFiles = (
+                "test/OtsSoftwareTests/AgentKitTests.cs",
+                "test/OtsSoftwareTests/AgentTestSupport.cs"
+            );
+            designFiles = ("docs/design/ots/agentkit.md");
+            verificationFiles = ("docs/verification/ots/agentkit.md");
+            requirementFiles = ("docs/reqstream/ots/agentkit.yaml");
+        }
+    }
+
+    part def CopilotSdk {
+        doc /* Microsoft.Copilot.SDK NuGet dependency, the client library for the GitHub Copilot CLI that AgentKit drives; it is not started in this version and its runtime is neither bundled nor downloaded. */
+
+        metadata info : SoftwareInfo {
+            testFiles = ("test/OtsSoftwareTests/CopilotSdkTests.cs");
+            designFiles = ("docs/design/ots/copilot-sdk.md");
+            verificationFiles = ("docs/verification/ots/copilot-sdk.md");
+            requirementFiles = ("docs/reqstream/ots/copilot-sdk.yaml");
+        }
+    }
+
+    part def AgentFramework {
+        doc /* Microsoft Agent Framework NuGet dependency (Microsoft.Agents.AI and Microsoft.Agents.AI.Abstractions) that provides the agent, the session that holds a conversation, and the streamed turn that the chat runs on. */
+
+        metadata info : SoftwareInfo {
+            testFiles = ("test/OtsSoftwareTests/AgentFrameworkTests.cs");
+            designFiles = ("docs/design/ots/agent-framework.md");
+            verificationFiles = ("docs/verification/ots/agent-framework.md");
+            requirementFiles = ("docs/reqstream/ots/agent-framework.yaml");
+        }
+    }
+
+    part def ExtensionsAi {
+        doc /* Microsoft.Extensions.AI NuGet dependency (the abstractions and the function-invocation pipeline) that provides the function, message, picture content, and chat client types that carry the AI copilot's tools and conversation. */
+
+        metadata info : SoftwareInfo {
+            testFiles = ("test/OtsSoftwareTests/ExtensionsAiTests.cs");
+            designFiles = ("docs/design/ots/extensions-ai.md");
+            verificationFiles = ("docs/verification/ots/extensions-ai.md");
+            requirementFiles = ("docs/reqstream/ots/extensions-ai.yaml");
+        }
+    }
+
+    part def OllamaSharp {
+        doc /* OllamaSharp NuGet dependency, the client of the Ollama server that lists the installed models and streams chat answers with tool calls for the Ollama provider. */
+
+        metadata info : SoftwareInfo {
+            testFiles = ("test/OtsSoftwareTests/OllamaSharpTests.cs");
+            designFiles = ("docs/design/ots/ollamasharp.md");
+            verificationFiles = ("docs/verification/ots/ollamasharp.md");
+            requirementFiles = ("docs/reqstream/ots/ollamasharp.yaml");
+        }
+    }
     part def WiX {
         doc /* WiX Toolset v5 (WixToolset.Sdk and the Util extension) that builds the published win-x64 application into the Windows Installer (MSI) package; the installer project is built by CI and is not part of the solution. */
 

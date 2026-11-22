@@ -93,12 +93,17 @@ input-files:
   - docs/verification/canvas-pilot/utilities-subsystem.md
   - docs/verification/canvas-pilot/utilities-subsystem/path-helpers.md
   - docs/verification/ots.md
+  - docs/verification/ots/agent-framework.md
+  - docs/verification/ots/agentkit.md
   - docs/verification/ots/avalonia.md
   - docs/verification/ots/avalonia-edit.md
   - docs/verification/ots/buildmark.md
   - docs/verification/ots/canvasnet.md
   - docs/verification/ots/communitytoolkit-mvvm.md
+  - docs/verification/ots/copilot-sdk.md
+  - docs/verification/ots/extensions-ai.md
   - docs/verification/ots/fileassert.md
+  - docs/verification/ots/ollamasharp.md
   - docs/verification/ots/pandoc.md
   - docs/verification/ots/reqstream.md
   - docs/verification/ots/reviewmark.md

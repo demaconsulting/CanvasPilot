@@ -57,6 +57,10 @@ OTS items:
 - **CanvasNet**: integration and usage design (runtime library that draws image source files).
 - **Speech**: integration and usage design (runtime library for audio devices, speech models, and speech recognition,
   and the native speech runtime that comes with it).
+- **AgentKit**, **Microsoft.Copilot.SDK**, **Microsoft Agent Framework**, **Microsoft.Extensions.AI**, and
+  **OllamaSharp**: integration and usage design of the libraries of the AI copilot (confined tools and agent factories,
+  the client of the Copilot CLI that AgentKit drives and that is never bundled or started in this version, agents and
+  streamed turns, tool, message, and picture types, and the client of the Ollama server).
 - **WiX Toolset**: integration and usage design (builds the Windows installer package).
 - **xUnit**: integration and usage design (test framework).
 - **BuildMark**, **FileAssert**, **Pandoc**, **ReqStream**, **ReviewMark**, **SarifMark**, **SonarMark**,
@@ -162,7 +166,8 @@ Verification is layered, and each layer is run by `build.ps1` and by the build p
 - **User interface tests** (`test/DemaConsulting.CanvasPilot.UiTests`) show the real views and view models in the
   Avalonia headless platform, so that menus, dialogs, and bindings are tested without a display.
 - **OTS tests** (`test/OtsSoftwareTests`) call the runtime OTS libraries (Avalonia, AvaloniaEdit,
-  CommunityToolkit.Mvvm, CanvasNet, and Speech) the way the application does, and are the qualification evidence for
+  CommunityToolkit.Mvvm, CanvasNet, Speech, AgentKit, Microsoft.Copilot.SDK, the Microsoft Agent Framework,
+  Microsoft.Extensions.AI, and OllamaSharp) the way the application does, and are the qualification evidence for
   libraries that have no self-validation mode.
 - **Document and package assertions** (FileAssert, `.fileassert.yaml`) check the generated documents, the rendered
   diagrams, and the MSI package.

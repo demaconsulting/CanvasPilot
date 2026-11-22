@@ -86,6 +86,11 @@ includes:
   - docs/reqstream/ots/communitytoolkit-mvvm.yaml
   - docs/reqstream/ots/canvasnet.yaml
   - docs/reqstream/ots/speech.yaml
+  - docs/reqstream/ots/agentkit.yaml
+  - docs/reqstream/ots/copilot-sdk.yaml
+  - docs/reqstream/ots/agent-framework.yaml
+  - docs/reqstream/ots/extensions-ai.yaml
+  - docs/reqstream/ots/ollamasharp.yaml
   - docs/reqstream/ots/wix.yaml
   - docs/reqstream/ots/reqstream.yaml
   - docs/reqstream/ots/buildmark.yaml

@@ -652,7 +652,8 @@ made in the project when the message is sent.
   shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version.
 - *Constraints*: Installing a package replaces any installed version, older or newer, and asks a running
   `CanvasPilot.exe` to close first. The package contains no user data, and uninstalling leaves the user's settings,
-  logs, and projects in place.
+  logs, and projects in place. The package contains no GitHub Copilot runtime: the application never ships or
+  downloads one, which the build asserts on the published folder and on the file table of the package.
 
 **Main Window**: The application's window and menus.
 
@@ -686,7 +687,11 @@ decide which files are image sources. The `AudioDeviceService`, `SpeechModelServ
 audio devices and speech models, download models, create capture devices, and load and run the speech engine with the
 `DemaConsulting.Speech` library and its Sherpa model package, whose native speech runtime is shipped with the
 application, and the speech descriptor types are shown by the other units of the `Speech` subsystem; both libraries are
-documented as OTS items (see *OTS Dependencies*). Build, documentation, and quality tools are documented in the OTS
+documented as OTS items (see *OTS Dependencies*). The application library also references the AI libraries (AgentKit,
+which brings the Copilot SDK, the Microsoft Agent Framework, Microsoft.Extensions.AI, and OllamaSharp), which are
+documented as OTS items too; no unit calls them yet, and the Copilot runtime that the Copilot SDK would bundle is
+switched off for every project by `CopilotSkipCliDownload` in `Directory.Build.props`. Build, documentation, and quality
+tools are documented in the OTS
 design documents. The Windows installer package is built from the published application by the WiX Toolset, also
 documented as an OTS item; no run-time item depends on it.
 

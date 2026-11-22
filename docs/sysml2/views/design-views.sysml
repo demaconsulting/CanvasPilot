@@ -59,6 +59,11 @@ package CanvasPilotDesignViews {
         expose OtsDependencies::CommunityToolkitMvvm;
         expose OtsDependencies::CanvasNet;
         expose OtsDependencies::Speech;
+        expose OtsDependencies::AgentKit;
+        expose OtsDependencies::CopilotSdk;
+        expose OtsDependencies::AgentFramework;
+        expose OtsDependencies::ExtensionsAi;
+        expose OtsDependencies::OllamaSharp;
         expose OtsDependencies::WiX;
         filter not (@SysML::Documentation);
     }

@@ -59,6 +59,15 @@ package CanvasPilot {
         // The speech library is consumed at run time by the Speech subsystem.
         part speechLibrary : Speech;
 
+        // The AI libraries are consumed at run time by the AI copilot: the confined tools and agent factories, the
+        // Copilot SDK that AgentKit drives (never bundled), the agent and streaming types, the tool, message, and
+        // picture types, and the Ollama client.
+        part agentLibrary : AgentKit;
+        part copilotClient : CopilotSdk;
+        part agentRuntime : AgentFramework;
+        part aiAbstractions : ExtensionsAi;
+        part ollamaClient : OllamaSharp;
+
         // The Windows installer package is built by the WiX Toolset from the published application.
         part installer : WiX;
     }
