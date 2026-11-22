@@ -24,7 +24,7 @@ runs it over the real factory and a stand-in Ollama server with the real tools o
 Copilot with the real starter over a start function that says the runtime is not signed in. Its lifecycle, its turn, its
 data folders, and its log are verified in the unit verification document of `AgentService`. A turn of a real Copilot
 runtime cannot be part of the tests that run everywhere, because it needs the installed CLI and a sign-in; it is
-verified by two opt-in tests (`LiveCopilotTurnTests.cs`, skipped unless the variable `CANVASPILOT_LIVE_COPILOT` is `1`)
+verified by opt-in tests (`LiveCopilotTurnTests.cs`, skipped unless the variable `CANVASPILOT_LIVE_COPILOT` is `1`)
 whose runs are recorded in the manual verification of the system.
 
 ### Test Environment

@@ -15,7 +15,7 @@ disabled default exporter, and only the system tests and the user interface test
 preview, which is also what proves that the two work together. The AI copilot is verified in the `Agent` subsystem
 with a scripted model, a stand-in Ollama server, and fake starters and a stand-in start function for the Copilot
 runtime, and the system tests compose the copilot, the history, and the settings check as the application does; live
-Ollama and live GitHub Copilot are not part of the automated evidence, except for two opt-in tests of GitHub Copilot
+Ollama and live GitHub Copilot are not part of the automated evidence, except for opt-in tests of GitHub Copilot
 that are skipped unless `CANVASPILOT_LIVE_COPILOT` is `1` (see *Manual Verification* below).
 
 Dictation is verified at this level over the speech library's own recognition pipeline with a recognition backend
@@ -136,8 +136,8 @@ services, or display is required.
 
 These checks need a person, a physical machine, and programs or hardware that the automated tests cannot stand in for.
 They are performed on an installed package before each release and are not evidence for a requirement. **None of them
-has been performed on the machine on which this version was built and tested, except the live GitHub Copilot runs that
-check 10 records**: the automated tests prove the
+has been performed on the machine on which this version was built and tested, except the live GitHub Copilot runs, the
+start of the published application, and the package inspection that check 10 records**: the automated tests prove the
 application's own behavior with substitutes (a managed recognition backend and a recorded sound file instead of a
 microphone, headless pointer and keyboard events instead of an operating system drag, and Avalonia's own clipboard
 and data objects instead of the Windows ones), so what follows is unverified until someone ticks it off. The detailed
@@ -203,10 +203,10 @@ steps are in the verification of the unit or subsystem named at each check.
    8. *Marks and pictures.* With marks and an attached picture on a drawing, the answer shows that the model saw the
       marked picture and the close-ups (compare with **View payload**); with a model that cannot see pictures the
       answer works from the words only.
-10. *Live GitHub Copilot (the live runs of step 6 were performed on 2026-11-22 on the development machine; the other
-    steps are open).* Choose GitHub Copilot and use **Check connection**, the banner, and a conversation. (Verification
-    of the `Agent` subsystem and of the `CopilotCliLocator`, `CopilotRuntimeStarter`, `AgentReadiness`, and
-    `AgentProviderFactory` units.)
+10. *Live GitHub Copilot (steps 6, 7, and 8 were performed on 2026-11-22 on the development machine and are recorded
+    below; steps 1 to 5 and 9 are open, and steps 2 to 4 need a machine in another state).* Choose GitHub Copilot and
+    use **Check connection**, the banner, and a conversation. (Verification of the `Agent` subsystem and of the
+    `CopilotCliLocator`, `CopilotRuntimeStarter`, `AgentReadiness`, and `AgentProviderFactory` units.)
     1. With the winget CLI at version 1.0.113 or later and `gh auth login` done (or one of `COPILOT_GITHUB_TOKEN`,
        `GH_TOKEN`, `GITHUB_TOKEN` set): the check ends with "GitHub Copilot CLI {version} is ready.", the banner of the
        chat panel is hidden, and a sent message gets an answer.
@@ -240,7 +240,8 @@ steps are in the verification of the unit or subsystem named at each check.
           was clear (no readiness issue); the message produced the transcript rows User, Tool, Tool, and Assistant;
           `box.svg` was written in the project; and the starter was asked 3 times and handed out exactly 1 runtime, so
           the readiness check and the conversation share one runtime.
-       A run of the packaged application with a window is a later step and is not covered by these runs.
+       A run of the packaged application with a window and a conversation in it is not covered by these runs (see steps
+       8 and 9).
        4. *Run 4 (model settings through the Settings page of the composed application; the opt-in test
           `LiveCopilotTurn_SettingsPage_ListsModelsAndTheChosenModelAndEffortRun`, with `CANVASPILOT_LIVE_COPILOT_MODEL`
           and `CANVASPILOT_LIVE_COPILOT_EFFORT` for another choice).* The page listed 23 models of the account in one
@@ -258,25 +259,48 @@ steps are in the verification of the unit or subsystem named at each check.
           the banner said "Model 'claude-haiku-5.5' does not support reasoning effort 'bogus'. Supported: low, medium,
           high, xhigh, max." (the sentence of the AI library, from the live catalog). Not covered: a model that lacks
           tool calling or pictures (this account has none), and the packaged application.
-    7. *Packaging with beta.4.* On 2026-11-22 the win-x64 single-file publish of this change was inspected: no file
-       whose name starts with `copilot` or `libcopilot`, no `runtime.node`, and no `.copilot-explicit-cli` anywhere in
-       the published folder; `CanvasPilot.exe` is 125.4 MB (131.3 MB with AgentKit 0.1.0-beta.3); the MSI built from it
-       is 55.6 MB (55.5 MB with beta.3) and its file table lists 19 files and none of those names;
-       `dotnet fileassert installer` passed, including `Copilot_RuntimeNotPublished`. The build output of the test
-       projects holds no Copilot runtime file either.
-    8. *Model list and reasoning level in the packaged application (not yet run in this change).* Open Settings > AI
+       5. *Run 5 (the default-deny shell check; the opt-in test
+          `LiveCopilotTurn_AgentService_ShellCommandRequest_IsRefusedAndRunsNothing`, through the agent service with the
+          real factory and starter).* The model was asked to run a shell command that writes `shell-ran.txt` and to say
+          so if it is not allowed to. With the model `claude-haiku-5.5` and with the default model of the runtime: no
+          tool was started (the list of started tools was empty), no `shell-ran.txt` exists in the project folder or
+          beside it, and the turn was `Completed`. The answers were "I can't run that: this session has no shell tool,
+          and I'm not allowed to write the file another way." and "I can't run that command. I have no shell tool here,
+          only the CanvasNet drawing and project file tools, and you asked me not to write the file any other way." So
+          the copilot is refused: the runtime offers it no shell tool, and nothing outside the tools of the
+          application runs. What this run does not show is a refusal by the permission handler itself, because the
+          model never asked for a tool that it was not offered; the permission handler is the library's own and is not
+          reached in this run.
+    7. *Packaging with beta.4 (final build).* On 2026-11-22 the win-x64 single-file publish of this change was made as
+       the pipeline does (`dotnet publish` with
+       `--runtime win-x64 --self-contained true --property:PublishSingleFile=true`, then the `.pdb` and `.xml` files
+       removed) and the MSI was built from it with the WiX project (version 0.0.1). The published folder holds 19 files
+       (`CanvasPilot.exe`, six native libraries for graphics, text shaping, speech and audio, and the three style
+       kits with four files each) and no file whose name
+       starts with `copilot` or `libcopilot`, no `runtime.node`, and no `.copilot-explicit-cli`. `CanvasPilot.exe` is
+       131,489,762 bytes (125.4 MB; 131.3 MB with AgentKit 0.1.0-beta.3). The MSI is 58,281,984 bytes (55.6 MB; 55.5 MB
+       with beta.3), and its file table lists 19 files (the executable, the six libraries, and the twelve style kit
+       files) and none of those names. `dotnet fileassert installer` passed all four assertions (`WiX_MsiPackage`,
+       `Speech_NativeRuntimePublished`, `Copilot_RuntimeNotPublished`, and `StyleKits_BuiltInPublished`). The build
+       output of the application and of the three test projects holds no Copilot runtime file either (no file that
+       starts with `copilot` or `libcopilot`, no `runtime.node`, and no file over 100 MB other than an executable).
+    8. *The published application starts (the window was not used).* On 2026-11-22 the published `CanvasPilot.exe` was
+       started from `publish\win-x64`: after 10 seconds the process was alive and responding, its window was titled
+       "CanvasPilot", it used about 199 MB of working set and had started no child process, the log
+       (`%LOCALAPPDATA%\CanvasPilot\logs\canvaspilot.log`) had the entries "No settings file ... using default
+       settings" and "Application started.", and the process was then closed by its process id. The installed MSI, the
+       window, the Settings page, and the chat panel were not used.
+    9. *Open (a person with the installed package).* Model list and reasoning level in the window: open Settings > AI
        Provider with GitHub Copilot selected: the models of the account are listed with their notes, the choice of a
        model shows its capabilities, the reasoning level is enabled with the levels of the model, and OK stores them;
        **Refresh models** asks again. With the Copilot path set to a missing file the page says why there is no list and
        the model name can still be typed. For Ollama (check 9): the models that are pulled are listed, a model without
        tool calling is warned about and refused by the banner, and with the server stopped the page keeps the typed name
-       and says that Ollama did not answer.
-    9. *To be run with the final build; not yet run in this change.* A live turn in the packaged application with a
-       picture, a tool that returns a picture, and Stop, and a look that the project folder holds only intentional files
-       afterwards. In the same turn, ask the copilot to run a shell command: it is refused and the transcript shows no
-       tool line for a tool that is not one of the tools of the application (the default-deny permission handling of the
-       AI library approves exactly the supplied tools; no automated test can show it). Until it is run this step stays
-       open.
+       and says that Ollama did not answer. Then a live turn in the packaged application with a picture, a tool that
+       returns a picture, and Stop, a look that the project folder holds only intentional files afterwards, and a look
+       that no `copilot` process that the application started remains after it is closed. In that turn ask the copilot
+       to run a shell command: the transcript shows no tool line for a tool that is not one of the tools of the
+       application (run 5 shows this through the agent service without a window).
 
 ## Test Scenarios
 

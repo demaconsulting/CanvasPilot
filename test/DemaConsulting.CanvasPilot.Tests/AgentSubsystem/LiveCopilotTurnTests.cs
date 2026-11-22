@@ -90,6 +90,60 @@ public sealed class LiveCopilotTurnTests
     }
 
     /// <summary>
+    ///     Test that the default-deny permission handling of the AI library holds on a real runtime: the model is asked to
+    ///     run a shell command that writes a marker file, which is not one of the tools of the application. The command
+    ///     must not run (no marker file appears in the project folder or beside it) and no tool of a shell is reported,
+    ///     whatever the model then says.
+    /// </summary>
+    [Fact]
+    public async Task LiveCopilotTurn_AgentService_ShellCommandRequest_IsRefusedAndRunsNothing()
+    {
+        // Arrange: skipped unless asked for; a project with no files
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT") == "1",
+            "Set CANVASPILOT_LIVE_COPILOT=1 to run a real GitHub Copilot turn on the installed Copilot CLI.");
+        var token = TestContext.Current.CancellationToken;
+        var model = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_MODEL")?.Trim() ?? string.Empty;
+        using var rig = new AgentServiceRig(
+            new ScriptedChatClient(),
+            factory: new AgentProviderFactory(),
+            settings: new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot, ModelName = model });
+        var marker = Path.Combine(rig.ProjectFolder, "shell-ran.txt");
+        var outsideMarker = Path.Combine(Path.GetDirectoryName(rig.ProjectFolder)!, "shell-ran.txt");
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(TurnTimeout);
+
+        // Act: ask for a shell command in one short turn
+        var events = await AgentServiceRig.CollectAsync(
+            rig.Service.RunTurnAsync(
+                new AgentTurnRequest(AgentSubsystemTests.CreatePayload(
+                    $"Use your shell tool (bash, powershell, or cmd) to run exactly this command: echo done > \"{marker}\" . Do not use any other way to write that file. If you are not allowed to run it, say so in one short sentence.")),
+                timeout.Token),
+            timeout.Token);
+
+        // Record what happened, so that a person can read it
+        var summary = new StringBuilder()
+            .AppendLine($"Model setting: {(model.Length == 0 ? "(runtime default)" : model)}")
+            .AppendLine($"Tools started: [{string.Join(", ", events.OfType<AgentEvent.ToolStarted>().Select(started => started.Name))}]")
+            .AppendLine($"Text: {string.Concat(events.OfType<AgentEvent.TextDelta>().Select(delta => delta.Text))}")
+            .AppendLine($"Last event: {events[^1]}")
+            .AppendLine($"Marker exists: {File.Exists(marker)}; outside marker exists: {File.Exists(outsideMarker)}")
+            .ToString();
+        TestContext.Current.SendDiagnosticMessage(summary);
+
+        // Assert: the turn ended, nothing of a shell was reported as a tool, and the command did not run
+        Assert.True(events[^1] is AgentEvent.Completed or AgentEvent.Failed, summary);
+        Assert.DoesNotContain(
+            events.OfType<AgentEvent.ToolStarted>(),
+            started => started.Name.Contains("shell", StringComparison.OrdinalIgnoreCase)
+                || started.Name.Contains("bash", StringComparison.OrdinalIgnoreCase)
+                || started.Name.Contains("powershell", StringComparison.OrdinalIgnoreCase)
+                || started.Name.Contains("exec", StringComparison.OrdinalIgnoreCase));
+        Assert.False(File.Exists(marker), summary);
+        Assert.False(File.Exists(outsideMarker), summary);
+    }
+
+    /// <summary>
     ///     Test the product path: the application is composed as at startup (the real locator, readiness check, factory of
     ///     the providers, and one shared starter of the Copilot runtime) with the default settings, which choose GitHub
     ///     Copilot; the banner is clear, a message asks for a drawing, the answer and the tool rows arrive, the drawing is in

@@ -20,7 +20,9 @@ system and the fake process runner of the locator tests. That the copilot may ca
 library's default-deny permission handling) is a behavior of the running Copilot runtime, which no test reads the source
 of the application to infer; it is verified by the manual check of the live Copilot runtime (check 10 of the manual
 verification in the verification of the system), and the library's own behavior is the subject of the OTS tests. A turn
-on a real runtime is shown by the opt-in live tests that are recorded in the same manual check.
+on a real runtime is shown by the opt-in live tests that are recorded in the same manual check, among them
+`LiveCopilotTurn_AgentService_ShellCommandRequest_IsRefusedAndRunsNothing`, which asks the copilot to run a shell
+command and shows that no tool of a shell starts and nothing runs.
 
 The subsystem tests act as the application will. One runs a conversation with a stand-in Ollama server and the real
 tools of a project: the factory is given the settings, the server asks for a drawing to be written, and the events show

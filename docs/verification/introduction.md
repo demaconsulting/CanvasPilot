@@ -148,7 +148,7 @@ The following topics are out of scope:
 - Build pipeline CI configuration is excluded
 - A live conversation with GitHub Copilot needs the installed CLI and a sign-in, so it is not part of the tests that run
   on every machine: the readiness checks, the starter, the messages, and the agent on a stand-in runtime are verified
-  by the tests, and the live runs are two opt-in tests and the manual checks of the system verification; the live
+  by the tests, and the live runs are opt-in tests and the manual checks of the system verification; the live
   Ollama checks are manual checks of the system verification, because Ollama is not part of the build machines
 - User-selectable tool packs and spoken replies of the copilot are not part of this version
 - Appium end-to-end tests of the installed application are deferred to a later increment
