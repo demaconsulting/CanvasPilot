@@ -304,6 +304,58 @@ public sealed class ChatSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the real panel over the real composer asks the copilot whether the provider can be used and shows the
+    ///     sentence that says what to do, including the sentence of the gated GitHub Copilot, that a warning does not block
+    ///     sending, that the sentence goes away when the provider is ready, and that the settings are requested from the
+    ///     banner.
+    /// </summary>
+    [Fact]
+    public async Task ChatSubsystem_ReportProviderReadiness_GatedCopilot_BannerSaysWhatToDoAndSettingsAreRequested()
+    {
+        // Arrange: the gated Copilot is configured, and the real panel over the real composer
+        var marks = new MarkRegistry();
+        var markImages = new MarkImageComposer(_renderer);
+        using var composer = new ComposerViewModel(new PayloadBuilder(markImages), marks, new FakeDictationService());
+        using var annotation = new AnnotationOverlayViewModel(marks, new FakeRenderedImageSource(), _ => { });
+        using var agent = new ControlledAgentService
+        {
+            Readiness = new AgentReadinessReport(
+                AgentReadinessStatus.CopilotRuntimeUnavailable,
+                "Copilot support needs an AgentKit update; use Ollama meanwhile."),
+        };
+        using var panel = new ChatPanelViewModel(composer, marks, annotation, markImages, agent: agent, clock: new ManualTimeProvider());
+        var settingsRequests = 0;
+        panel.OpenSettingsRequested += (_, _) => settingsRequests++;
+        composer.SetProject(_project);
+
+        // Act: the panel is shown and checks, and the user chooses "Open Settings" in the banner
+        await panel.RefreshReadinessAsync();
+        panel.OpenSettingsCommand.Execute(null);
+
+        // Assert: the banner says what to do, and the shell was asked to open the settings
+        Assert.True(panel.HasReadinessIssue);
+        Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", panel.ReadinessMessage);
+        Assert.Equal(1, settingsRequests);
+
+        // Act: the settings choose a provider with a small context window, which only warns
+        agent.Readiness = new AgentReadinessReport(AgentReadinessStatus.OllamaContextTooSmall, "The context window is below 16,384.");
+        await panel.RefreshReadinessAsync();
+        composer.InsertTyped("Draw a box");
+
+        // Assert: the warning is shown and sending is not blocked
+        Assert.True(panel.HasReadinessIssue);
+        Assert.True(panel.CanSend);
+
+        // Act: the provider becomes ready
+        agent.Readiness = new AgentReadinessReport(AgentReadinessStatus.Ready, "Ready.");
+        await panel.RefreshReadinessAsync();
+
+        // Assert: the banner is gone
+        Assert.False(panel.HasReadinessIssue);
+        Assert.Equal(string.Empty, panel.ReadinessMessage);
+    }
+
+    /// <summary>
     ///     Draws a file in the project and returns its picture.
     /// </summary>
     /// <param name="name">The name of the file.</param>
