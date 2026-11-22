@@ -117,7 +117,7 @@ subsystem (marks on the picture), the Payload subsystem (the message that is sen
 (dictation). Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in
 the Project explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing:
 the AppShell opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards,
-so an assistant added later can be given the same cards. The Style subsystem holds the style kits: the AppShell shows
+so the copilot can be given the same cards. The Style subsystem holds the style kits: the AppShell shows
 its window from the Tools menu and its list of kits in the status bar, the Preview subsystem offers the sizes of the
 kit of the project when a picture is exported, and the check of a picture against the palette puts its result among the
 notes of the preview; it depends on Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none
