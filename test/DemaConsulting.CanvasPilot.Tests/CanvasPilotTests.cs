@@ -257,6 +257,39 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the copilot of a created project gets only the application's tools and that they are confined to the
+    ///     project: the knowledge answers from the real cards, a picture file of the project can be written, and the
+    ///     project file and data folder that the project service made, and everything outside the project, are refused.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ConfineCopilotToProject_CreatedProject_ToolsAreTheApplicationsAndTheProjectFilesAreOutOfReach()
+    {
+        // Arrange: a project that the project service created, and a registry over the real drawing knowledge with a
+        // supplied pack that keeps the policy it is given
+        var token = TestContext.Current.CancellationToken;
+        var parent = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "ConfineDocuments")).FullName;
+        var project = (await new ProjectService().CreateAsync(parent, "Brochure", token)).Project!;
+        var pack = new ToolTestDoubles.FakePack("probe", [new ToolTestDoubles.RawFunction("probe_none")]);
+        var registry = new AgentToolRegistry(KnowledgeTools.CreateAll(KnowledgeCatalog.Default), [], _ => [pack]);
+
+        // Act: build the tools of the project, call the knowledge tool, and ask the policy about the project's places
+        var tools = registry.CreateTools(new AgentToolContext(project.FolderPath), new HashSet<string>());
+        var index = await tools[0].InvokeAsync(new Microsoft.Extensions.AI.AIFunctionArguments(), token);
+        var policy = pack.LastPolicy!;
+
+        // Assert: only the knowledge tool and the supplied pack are offered, the knowledge comes from the real cards, and
+        // the policy allows a picture file but not the project file, the data folder, or a place outside the project
+        Assert.Equal(["canvasnet_help", "probe_none"], tools.Select(tool => tool.Name).ToArray());
+        Assert.Contains(KnowledgeCatalog.Default.Roots[0].Id, index?.ToString(), StringComparison.Ordinal);
+        Assert.True(policy.TryResolveWrite("cover.svg", out _, out _));
+        Assert.True(File.Exists(project.FilePath));
+        Assert.False(policy.TryResolveRead(Path.GetFileName(project.FilePath), out _, out _));
+        Assert.True(Directory.Exists(Path.Combine(project.FolderPath, ProjectDocument.DataFolderName)));
+        Assert.False(policy.TryResolveRead(ProjectDocument.DataFolderName, out _, out _));
+        Assert.False(policy.TryResolveWrite(Path.Combine("..", "other.svg"), out _, out _));
+    }
+
+    /// <summary>
     ///     Test that a user can create a project, close it, and open it again from the recent projects list, and
     ///     that an unusable project file is refused with a message.
     /// </summary>

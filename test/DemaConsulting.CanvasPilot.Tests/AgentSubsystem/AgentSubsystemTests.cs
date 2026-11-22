@@ -19,9 +19,12 @@
 // SOFTWARE.
 
 using System.Runtime.CompilerServices;
+using DemaConsulting.AgentKit.Core;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PayloadSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using Microsoft.Extensions.AI;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -203,6 +206,50 @@ public sealed class AgentSubsystemTests
         Assert.Equal("Copilot support needs an AgentKit update; use Ollama meanwhile.", copilot.Message);
         Assert.True(ollama.IsUsable);
         Assert.Contains("8,192", ollama.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that the subsystem builds the tools of a project as the copilot gets them: only the application's own tools
+    ///     (the drawing knowledge, the style tools, and the tools of a supplied pack), each pack under the one policy that
+    ///     lets a file of the project be read and written and refuses the data folder, the project file, and every place
+    ///     outside the project, and that a call of a tool reaches the knowledge of the application.
+    /// </summary>
+    [Fact]
+    public async Task AgentSubsystem_ConfineTools_ProjectFolder_OffersOnlyApplicationToolsUnderTheConfiningPolicy()
+    {
+        // Arrange: a project folder, a registry over the real drawing knowledge, and a project pack that keeps its policy
+        var token = TestContext.Current.CancellationToken;
+        var project = Directory.CreateTempSubdirectory("canvaspilot-agent-tools-").FullName;
+        try
+        {
+            var pack = new ToolTestDoubles.FakePack("project", [GuardedToolFactory.Create(() => ToolResult.Text("pong"), "project_ping", "Pings.")]);
+            var registry = new AgentToolRegistry(
+                KnowledgeTools.CreateAll(KnowledgeCatalog.Default),
+                [ToolTestDoubles.Plain("style_get")],
+                _ => [pack]);
+
+            // Act: build the tools, call the knowledge tool, and ask the policy about the places of the project
+            var tools = registry.CreateTools(new AgentToolContext(project), new HashSet<string>());
+            var index = await tools[0].InvokeAsync(new AIFunctionArguments(), token);
+            var policy = pack.LastPolicy!;
+            var inside = policy.TryResolveWrite("drawing.svg", out _, out _);
+            var data = policy.TryResolveRead(Path.Combine(".canvaspilot", "chat.json"), out _, out _);
+            var projectFile = policy.TryResolveWrite("Brochure.canvaspilot", out _, out _);
+            var outside = policy.TryResolveRead(Path.Combine("..", "other.svg"), out _, out _);
+
+            // Assert: only the application's tools are offered, the knowledge tool answers from the real cards, and the
+            // policy permits the project's pictures and nothing else
+            Assert.Equal(["canvasnet_help", "style_get", "project_ping"], tools.Select(tool => tool.Name).ToArray());
+            Assert.Contains(KnowledgeCatalog.Default.Roots[0].Id, index?.ToString(), StringComparison.Ordinal);
+            Assert.True(inside);
+            Assert.False(data);
+            Assert.False(projectFile);
+            Assert.False(outside);
+        }
+        finally
+        {
+            Directory.Delete(project, true);
+        }
     }
 
     /// <summary>
