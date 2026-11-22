@@ -62,7 +62,9 @@ replaced runs on Windows only (it opens the file without sharing). No network, d
   pictures, programs, scripts, and names that only end like an allowed one are refused. A file of exactly 256 KiB is
   written, one byte more is refused, and the size is counted in bytes.
 - The data folder, the project files, and every file below the `styles` folder of the project, in any letter case and at
-  any depth, are never written, and the answer for a style kit says why.
+  any depth, are never written, and the answer for a style kit says why. A path with a folder or file name that starts
+  with a dot (`.vscode`, `.git`, `.devcontainer`) is never written or created, and the answer says to choose another
+  path.
 - `FileWritten` is raised once per successful write with the relative path and whether the file is new, and never for a
   refused write; a listener that throws does not fail the write.
 - `render_image` returns a PNG part and a text with the size, the format, and every note, draws with the project folder
@@ -156,6 +158,16 @@ tested by `ProjectTools_Write_ApplicationFilesAndStyleKits_AreNeverWritten`.
 **ProjectTools_Write_ExistingStyleKitFile_IsNotReplacedAndTheAnswerSaysWhy**: A style kit file that exists keeps its
 content and the answer says style kits cannot be written. This scenario is tested by
 `ProjectTools_Write_ExistingStyleKitFile_IsNotReplacedAndTheAnswerSaysWhy`.
+
+**ProjectTools_Write_NamesThatStartWithADot_AreRefusedWithAnActionableAnswerAndNothingIsCreated**: Paths below
+`.vscode`, `.git`, `.devcontainer`, and a hidden folder at depth, and a file name that starts with a dot, are refused
+although the extension is allowed; the answer says the name starts with a dot and tells the model to choose another
+path; the project is unchanged, no folder is created, and the shell is not told. This scenario is tested by
+`ProjectTools_Write_NamesThatStartWithADot_AreRefusedWithAnActionableAnswerAndNothingIsCreated`.
+
+**ProjectTools_Write_ExistingFileInAHiddenFolder_IsNotReplaced**: A file that already exists in `.vscode` keeps its
+content and the shell is not told. This scenario is tested by
+`ProjectTools_Write_ExistingFileInAHiddenFolder_IsNotReplaced`.
 
 **ProjectTools_Write_EscapingPaths_AreRefusedForEveryClassAndNothingIsWritten**: Every path of the data set is refused
 and the snapshot of everything under the temporary folder, the secret included, is unchanged. This scenario is tested by

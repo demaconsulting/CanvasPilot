@@ -136,16 +136,23 @@ sections:
               - id: CanvasPilot-ProjectTools-ProtectProjectFiles
                 title: >-
                   The ProjectTools shall never write the data folder of the application (.canvaspilot), a project file
-                  (*.canvaspilot), or a file in the styles folder of the project, which holds the style kits, at the top of
-                  the project or at any depth and in any letter case, shall say that style kit files cannot be written, and
-                  shall create folders only inside the project.
+                  (*.canvaspilot), a file in the styles folder of the project, which holds the style kits, or anything
+                  whose path has a folder or file name that starts with a dot (such as .vscode, .git, or .devcontainer), at
+                  the top of the project or at any depth and in any letter case, shall say in the answer what was refused
+                  and which paths to choose instead (that style kit files cannot be written, or that names that start with
+                  a dot are not written), and shall create folders only inside the project and never one whose name starts
+                  with a dot.
                 justification: |
                   The data folder and the project file belong to the application, and a style kit belongs to the user, who
                   made it with the style kit editor. The copilot may read them but must not change them, so that the
-                  application keeps working and the user's styles are not rewritten by a model.
+                  application keeps working and the user's styles are not rewritten by a model. A folder that starts with a
+                  dot holds the settings of other tools (an editor task or a development container is run when the user
+                  opens the project), so a model that writes there could make code run that the user did not ask for.
                 tests:
                   - ProjectTools_Write_ApplicationFilesAndStyleKits_AreNeverWritten
                   - ProjectTools_Write_ExistingStyleKitFile_IsNotReplacedAndTheAnswerSaysWhy
+                  - ProjectTools_Write_NamesThatStartWithADot_AreRefusedWithAnActionableAnswerAndNothingIsCreated
+                  - ProjectTools_Write_ExistingFileInAHiddenFolder_IsNotReplaced
                   - ProjectTools_Write_NewFile_IsCreatedWithItsFoldersAndTheShellIsTold
 
               - id: CanvasPilot-ProjectTools-WriteDirectly

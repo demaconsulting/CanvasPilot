@@ -37,7 +37,8 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         a link inside the project can lead anywhere. It also refuses the spellings that name something other than the
 ///         file they seem to name: an alternate data stream (<c>name:stream</c>), a device name (<c>NUL</c>, <c>COM1</c>),
 ///         a name with a trailing dot or space, and a short 8.3 name (<c>CANVAS~1</c>) that could stand for the data folder
-///         or a project file that the policy denies by their long names.
+///         or a project file that the policy denies by their long names. For writing it also refuses any name that starts
+///         with a dot (<c>.vscode</c>, <c>.git</c>), because those folders hold settings that other tools run.
 ///     </para>
 ///     <para>
 ///         The link check looks at every existing part of the path from the project folder down; the project folder itself
@@ -106,7 +107,38 @@ internal static partial class ProjectPathGuard
             return false;
         }
 
-        return Validate(policy.WorkingDirectory, resolved ?? string.Empty, out fullPath, out relativePath, out refusal);
+        if (!Validate(policy.WorkingDirectory, resolved ?? string.Empty, out fullPath, out relativePath, out refusal))
+        {
+            return false;
+        }
+
+        // A hidden folder or file (.vscode, .git, .devcontainer) holds the settings of tools that run code when the
+        // project is opened, so the copilot may not create or change anything there, whatever the extension
+        if (forWrite)
+        {
+            var hidden = FindHiddenSegment(relativePath);
+            if (hidden is not null)
+            {
+                refusal = $"'{relativePath}' contains the name '{hidden}', which starts with a dot. Names that start with a dot hold settings of other tools and are not written. "
+                          + "Choose a path whose folders and file name do not start with a dot, such as 'drawings/cover.svg'.";
+                fullPath = string.Empty;
+                relativePath = string.Empty;
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    ///     Finds the first name of a relative path that starts with a dot.
+    /// </summary>
+    /// <param name="relativePath">The path below the project folder, with forward slashes.</param>
+    /// <returns>The first name that starts with a dot, or <see langword="null" /> when there is none.</returns>
+    private static string? FindHiddenSegment(string relativePath)
+    {
+        return relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .FirstOrDefault(segment => segment.StartsWith('.'));
     }
 
     /// <summary>

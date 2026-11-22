@@ -582,9 +582,9 @@ code that shows it interpret.
 ### AI Provider Seam
 
 The AI copilot answers the messages through one of two providers, chosen in the settings: a local Ollama server, which
-works end to end in this release, and GitHub Copilot, which is gated. Everything provider-specific is behind the
-`Agent` subsystem; `Chat` sees only `IAgentService` and the events of a turn, and `Settings` sees only the
-`IProviderCheck` interface that it owns.
+works end to end in this release (covered by automated tests; live checks against a running server are pending), and
+GitHub Copilot, which is gated. Everything provider-specific is behind the `Agent` subsystem; `Chat` sees only
+`IAgentService` and the events of a turn, and `Settings` sees only the `IProviderCheck` interface that it owns.
 
 **The seam.** The input of a turn is the `MessagePayload` that is built for every sent message (and shown in the payload
 inspector) together with the `AiProviderSettings` of the settings file (provider, model name, context window, reasoning

@@ -9,11 +9,11 @@ and numbered marks drawn on the shown picture), a transcript of the sent message
 knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the Help menu), style kits
 (palettes, fonts, sizes, and example images that a project, a user, or a team keeps, with a window to manage them,
 export at their sizes, and a check of a picture against the palette), and the installer. Messages are answered by an AI
-copilot that runs through a local Ollama server (the provider that works end to end in this release) or through GitHub
-Copilot (whose readiness checks work, but which is gated in this release because the AI library cannot use the user's
-installed Copilot CLI). The copilot draws with locked-down tools that are confined to the project, and the chat keeps
-the text of the conversation on the user's computer, outside the project. The document covers local software items
-(systems, subsystems, and units) and the OTS software items they consume.
+copilot that runs through a local Ollama server (the provider that is covered by automated tests in this release; live
+checks are pending) or through GitHub Copilot (whose readiness checks work, but which is gated in this release because
+the AI library cannot use the user's installed Copilot CLI). The copilot draws with locked-down tools that are confined
+to the project, and the chat keeps the text of the conversation on the user's computer, outside the project. The
+document covers local software items (systems, subsystems, and units) and the OTS software items they consume.
 
 ## Purpose
 
@@ -130,8 +130,8 @@ application reads and writes only the local data in the bottom row. Section *Arc
 explains the dependencies between the subsystems, which run one way, and why no subsystem refers to AppShell.
 
 ![Architecture of CanvasPilot: the desktop head starts the application library, whose AppShell subsystem builds and
-hosts the fourteen subsystems, from Chat, Composer, and Agent down to Logging and Utilities, with the Knowledge and
-Style subsystems beside them, and the third-party items and the local data the application uses](architecture.svg)
+hosts the other thirteen subsystems, from Chat, Composer, and Agent down to Logging and Utilities, with the Knowledge
+and Style subsystems beside them, and the third-party items and the local data the application uses](architecture.svg)
 
 ## Folder Layout
 

@@ -43,10 +43,10 @@ Available now:
   or a team folder; export at preset sizes and check a picture against the style
 - **AI copilot chat**: An AI copilot answers your messages in the chat panel. It writes, renders, looks at, and fixes
   drawings in a self-checking loop, sees the pictures you attach and the marks you draw, and streams its answer, with a
-  row for each tool it uses and a Stop button. **Ollama** works end to end; **GitHub Copilot** is checked (the real CLI,
-  its version, and your credentials) but is not usable yet: CanvasPilot shows "Copilot support needs an AgentKit
-  update; use Ollama meanwhile." The text of the conversation is kept on your computer, outside the project, and you
-  can clear it
+  row for each tool it uses and a Stop button. **Ollama** is supported and covered by automated tests (live checks
+  against a running server are pending); **GitHub Copilot** is checked (the real CLI, its version, and your credentials)
+  but is not usable yet: CanvasPilot shows "Copilot support needs an AgentKit update; use Ollama meanwhile." The text of
+  the conversation is kept on your computer, outside the project, and you can clear it
 - **Safe by default**: The copilot has only CanvasPilot's own tools, confined to the project folder. It overwrites the
   files it changes directly, with no backup and no question, so keep your projects under source control
 - **Settings**: Choose the AI provider (with a connection check), and the speech devices and models, with model

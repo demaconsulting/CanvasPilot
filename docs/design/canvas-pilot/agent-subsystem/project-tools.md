@@ -85,7 +85,11 @@ part of the text. An empty file is said to be empty.
 
 **project_write(path, content)**: Creates or replaces a file with the complete text. Rules, in order: the content must
 be given; the path must pass the guard for writing; the first folder of the path must not be `styles` (any case),
-because the style kits of the project are the user's and the copilot may read them but not change them; the file name
+because the style kits of the project are the user's and the copilot may read them but not change them; no name in the
+path may start with a dot (`.vscode`, `.git`, `.devcontainer`, any depth, any extension), because those folders hold
+settings of other tools that run code when the user opens the project, and the refusal tells the model to choose a path
+without such a name (the check is in `ProjectPathGuard.TryResolve` for writing only, so reading and listing are as
+before, and no folder with such a name is ever created); the file name
 must end with the extension of a *text* image source or with `.csv`, `.json`, `.txt` (the binary image sources, such as
 `.png` and `.pdf`, are refused, because writing text into them would only make a broken picture); the UTF-8 bytes must
 be at most 256 KiB; the target must not be a folder. The file is written to a temporary file in the same folder
@@ -112,6 +116,9 @@ file) and then checks, in order:
    the policy denies); and a device name (`NUL`, `CON`, `COM1`, `LPT1`, with or without an extension);
 3. no existing part of the path, from the first folder below the project down to the file itself, is a link (see *Which
    reparse points are links*). A link is judged before its existence, so a junction whose target is gone is found.
+
+For writing only (`forWrite`), a last check refuses a path in which any name starts with a dot, with a sentence that
+says which name and suggests a path such as `drawings/cover.svg`.
 
 A refusal is a sentence for the model that names the reason and not an absolute path of the user's computer; it never
 throws. The check cannot close the gap between the check and the use (a link made in between).
@@ -161,13 +168,14 @@ computer.
 
 The unit is the place where the copilot can hurt the user, so it is built to refuse first. The decisions that matter:
 the policy decides the grant, and the guard checks the result again; a path through a link is refused wherever the link
-is; the data folder, the project file, and the style kits are never written; only text sources and small data files are
-written, at most 256 KiB each; a hard link is not written through; the folders that are created are below the project
-folder because the path was checked and no part of it is a link; the picture tool writes nothing; the log holds metadata
-only (the name of the tool, the path relative to the project, a size, the outcome; never content, never a message, never
-the path of a refused request). Known limits: a link made between the check and the use cannot be prevented by a check;
-a file with a second name outside the project can be *read* through its name inside the project (only writing is made
-safe); and a project in a folder that the user shares can be changed by others while the copilot works.
+is; the data folder, the project file, the style kits, and names that start with a dot are never written; only text
+sources and small data files are written, at most 256 KiB each; a hard link is not written through; the folders that are
+created are below the project folder because the path was checked and no part of it is a link; the picture tool writes
+nothing; the log holds metadata only (the name of the tool, the path relative to the project, a size, the outcome; never
+content, never a message, never the path of a refused request). Known limits: a link made between the check and the use
+cannot be prevented by a check; a file with a second name outside the project can be *read* through its name inside the
+project (only writing is made safe); and a project in a folder that the user shares can be changed by others while the
+copilot works.
 
 #### Dependencies
 

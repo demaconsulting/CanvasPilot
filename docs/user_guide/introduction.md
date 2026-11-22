@@ -336,10 +336,11 @@ program it was.
 
 # Setting Up an AI Provider
 
-The copilot needs an AI provider. CanvasPilot supports two: a local **Ollama** server, which works now, and **GitHub
-Copilot**, which CanvasPilot checks but cannot use yet. Choose one in **Tools > Settings... > AI Provider** (see
-*Settings*), then choose **Check connection**. The same check runs in the background when the chat panel is shown, and
-the chat panel shows its result in the banner, so you see a problem before you send a message.
+The copilot needs an AI provider. CanvasPilot supports two: a local **Ollama** server, which is covered by automated
+tests (live checks against a running server are pending), and **GitHub Copilot**, which CanvasPilot checks but cannot
+use yet. Choose one in **Tools > Settings... > AI Provider** (see *Settings*), then choose **Check connection**. The
+same check runs in the background when the chat panel is shown, and the chat panel shows its result in the banner, so
+you see a problem before you send a message.
 
 ## Setting Up Ollama
 
@@ -474,9 +475,10 @@ The copilot has only these tools, and every one works inside the project folder 
   work and correct it. The picture is made in memory and is not saved.
 
 It cannot run programs, reach the network, read or change anything outside the project folder, or open your other files.
-It also cannot write to the hidden `.canvaspilot` folder, to the project file, or to the style kits in the `styles`
-folder. The *Drawing Knowledge* and *Style Kits* chapters describe what it is given from them. CanvasPilot
-has no setting that gives the copilot more tools: the option for unrestricted tools is not offered.
+It also cannot write to the hidden `.canvaspilot` folder, to the project file, to the style kits in the `styles` folder,
+or to any file or folder whose name starts with a dot (such as `.vscode` or `.git`). The *Drawing Knowledge* and *Style
+Kits* chapters describe what it is given from them. CanvasPilot has no setting that gives the copilot more tools: the
+option for unrestricted tools is not offered.
 
 ## Stop
 
@@ -775,7 +777,8 @@ The AI Provider page chooses the provider that the copilot uses and how to reach
 what to install and the messages of the check). Changes take effect when you choose OK or Apply, and a conversation
 that is running is started again with the new choices when you send the next message.
 
-- **Provider**: GitHub Copilot or Ollama. Ollama works now; GitHub Copilot is checked but cannot be used yet.
+- **Provider**: GitHub Copilot or Ollama. Ollama is supported and covered by automated tests (live checks are pending);
+  GitHub Copilot is checked but cannot be used yet.
 - **Model name**: The model to use. For Ollama it is required and must be the name that `ollama list` shows. For GitHub
   Copilot, leave it empty to use the provider's default model. It is typed text, because no list of models is offered.
 - **Context window (tokens, Ollama only)**: The size of the context window that is requested for every Ollama request,

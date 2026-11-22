@@ -446,7 +446,6 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
     [InlineData("a.ps1", false)]
     [InlineData("a.svg.exe", false)]
     [InlineData("a", false)]
-    [InlineData(".svg", false)]
     public async Task ProjectTools_Write_Extension_IsAllowedOnlyForTextImageSourcesAndSmallDataFiles(string name, bool allowed)
     {
         // Act
@@ -517,6 +516,56 @@ public sealed class ProjectToolsTests : ProjectToolsTestBase
         Assert.DoesNotContain("replaced", answer, StringComparison.Ordinal);
         Assert.Equal(before, Snapshot(Project));
         Assert.Equal(projectFile, Get(Path.Combine(Project, "Brochure.canvaspilot")));
+        Assert.Empty(Written);
+    }
+
+    /// <summary>
+    ///     Test that a name that starts with a dot is never written or created, at any depth, whatever the extension: the
+    ///     folders of other tools (.vscode, .git, .devcontainer), the answer says what to do instead, and nothing is created.
+    /// </summary>
+    /// <param name="path">The path the model sends.</param>
+    [Theory]
+    [InlineData(".vscode/tasks.json")]
+    [InlineData(".git/config.txt")]
+    [InlineData(".devcontainer/devcontainer.json")]
+    [InlineData("drawings/.hidden/notes.txt")]
+    [InlineData("drawings/.env.txt")]
+    [InlineData(".gitignore.txt")]
+    [InlineData(".svg")]
+    public async Task ProjectTools_Write_NamesThatStartWithADot_AreRefusedWithAnActionableAnswerAndNothingIsCreated(string path)
+    {
+        // Arrange
+        var before = Snapshot(Project);
+
+        // Act
+        var answer = ToolAnswers.Text(await Call("project_write", ("path", path), ("content", "{\"x\":1}")));
+
+        // Assert: the answer names the reason and a way forward, and no file or folder appeared
+        Assert.Contains("starts with a dot", answer, StringComparison.Ordinal);
+        Assert.Contains("Choose a path", answer, StringComparison.Ordinal);
+        Assert.DoesNotContain("created", answer, StringComparison.Ordinal);
+        Assert.Equal(before, Snapshot(Project));
+        Assert.False(Directory.Exists(Path.Combine(Project, ".vscode")));
+        Assert.False(Directory.Exists(Path.Combine(Project, ".devcontainer")));
+        Assert.Empty(Written);
+    }
+
+    /// <summary>
+    ///     Test that a hidden file that already exists is not replaced.
+    /// </summary>
+    [Fact]
+    public async Task ProjectTools_Write_ExistingFileInAHiddenFolder_IsNotReplaced()
+    {
+        // Arrange
+        var folder = Path.Combine(Project, ".vscode");
+        Directory.CreateDirectory(folder);
+        Put(Path.Combine(folder, "tasks.json"), "KEEP");
+
+        // Act
+        await Call("project_write", ("path", ".vscode/tasks.json"), ("content", "{}"));
+
+        // Assert
+        Assert.Equal("KEEP", Get(Path.Combine(folder, "tasks.json")));
         Assert.Empty(Written);
     }
 

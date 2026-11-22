@@ -158,7 +158,7 @@ internal sealed class ProjectFilesToolPack : IToolPack
                 WriteToolName,
                 "Creates a text file of the project, or replaces it with the complete new text. The old text is not kept, so read the file first and keep what the user did not ask you to change. Allowed: "
                 + ProjectFileKinds.DescribeTextFiles() + ", at most "
-                + (MaxWriteBytes / 1024).ToString(CultureInfo.InvariantCulture) + " KiB. Files in the styles folder (style kits) cannot be written.").AsGuarded(policy.Limits),
+                + (MaxWriteBytes / 1024).ToString(CultureInfo.InvariantCulture) + " KiB. Files in the styles folder (style kits) cannot be written, and neither can names that start with a dot (such as .vscode).").AsGuarded(policy.Limits),
         ];
     }
 
