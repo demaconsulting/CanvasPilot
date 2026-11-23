@@ -27,6 +27,9 @@ using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
+using SdkReasoningDelta = Microsoft.Copilot.AssistantReasoningDeltaEvent;
+using SdkStreamingDelta = Microsoft.Copilot.AssistantStreamingDeltaEvent;
+using SdkToolCallDelta = Microsoft.Copilot.AssistantToolCallDeltaEvent;
 
 namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 
@@ -56,6 +59,16 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         first and by the words of the message second, because the Copilot SDK reports its problems only as text.
 ///     </para>
 ///     <para>
+///         <b>Progress.</b> While the provider streams, the content of an update may be reasoning (<see cref="AgentEvent.Thinking" />)
+///         or carry, as its raw representation, the event of the Copilot SDK that tells that the model is writing the
+///         arguments of a tool call (<see cref="AgentEvent.ToolProgress" />, with the bytes so far and, once the first
+///         characters of the arguments name it, the path) or its answer (<see cref="AgentEvent.ModelWorking" />, with the
+///         bytes so far). The bytes are counted for every piece, but an event is made at most once for every
+///         <see cref="ProgressInterval" /> (by the <see cref="TimeProvider" /> that the mapper is given) or when the phase
+///         changes. Only counts and the path are ever taken from a piece; the text of the arguments is never kept beyond the
+///         first <see cref="PathScanLength" /> characters that are searched for the path.
+///     </para>
+///     <para>
 ///         The log gets metadata only: the provider, the kind of the failure, the type of the exception, and counts. The
 ///         text of the messages, the arguments and results of tools, and the text of an exception are never logged.
 ///         A mapper is made for one turn because it remembers the calls of the turn; it is not safe for concurrent use.
@@ -63,6 +76,15 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 /// </remarks>
 public sealed class AgentEventMapper
 {
+    /// <summary>
+    ///     The shortest time between two progress events of the same phase.
+    /// </summary>
+    public static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    ///     The number of characters at the start of the arguments of a call that are searched for the path.
+    /// </summary>
+    public const int PathScanLength = 256;
     /// <summary>
     ///     The words that a refusal of a tool starts with, which the AI library puts in front of the reason.
     /// </summary>
@@ -184,6 +206,27 @@ public sealed class AgentEventMapper
     private int _madeIds;
 
     /// <summary>
+    ///     The clock that spaces the progress events.
+    /// </summary>
+    private readonly TimeProvider _clock;
+
+    /// <summary>
+    ///     What is known of the arguments that the model is still writing, by the id of the call.
+    /// </summary>
+    private readonly Dictionary<string, StreamedCall> _streamed = new(StringComparer.Ordinal);
+
+    /// <summary>
+    ///     The phase of the latest progress event, or <see langword="null" /> when none was made since something else
+    ///     happened.
+    /// </summary>
+    private string? _phase;
+
+    /// <summary>
+    ///     The time stamp of the latest progress event.
+    /// </summary>
+    private long _lastProgress;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="AgentEventMapper" /> class.
     /// </summary>
     /// <param name="provider">The provider that the turn runs on, which decides the wording of a failure.</param>
@@ -193,16 +236,19 @@ public sealed class AgentEventMapper
     ///     The token that the caller cancels the turn with. An exception after it was canceled is the stop of the turn and
     ///     not a failure.
     /// </param>
+    /// <param name="clock">The clock that spaces the progress events; <see langword="null" /> for the system's.</param>
     public AgentEventMapper(
         AiProviderKind provider,
         string? modelName = null,
         RollingFileLogger? logger = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        TimeProvider? clock = null)
     {
         _provider = provider;
         _modelName = modelName?.Trim() ?? string.Empty;
         _logger = logger;
         _cancellationToken = cancellationToken;
+        _clock = clock ?? TimeProvider.System;
     }
 
     /// <summary>
@@ -220,6 +266,12 @@ public sealed class AgentEventMapper
 
         var events = new List<AgentEvent>();
         var text = new StringBuilder();
+        if (update.Contents.Count == 0 && update.RawRepresentation is { } raw)
+        {
+            // An update that carries nothing but the raw event of the provider may be a progress event
+            MapProgress(raw, events);
+        }
+
         foreach (var content in update.Contents)
         {
             if (content is TextContent piece)
@@ -245,7 +297,9 @@ public sealed class AgentEventMapper
                     events.Add(FailureFromText(error.Message));
                     break;
                 default:
-                    // Reasoning, pictures outside a tool result, and the like are not shown in the chat
+                    // Reasoning and the raw events of the provider are progress; pictures outside a tool result and the
+                    // like are not shown in the chat
+                    MapProgress(content.RawRepresentation, events, content is TextReasoningContent);
                     break;
             }
 
@@ -571,6 +625,86 @@ public sealed class AgentEventMapper
     }
 
     /// <summary>
+    ///     Maps a progress piece of the provider: a reasoning delta, or the raw event of the Copilot SDK that says that the
+    ///     model is writing the arguments of a call or its answer. Anything else is ignored.
+    /// </summary>
+    /// <param name="raw">The raw representation of the content or the update; may be <see langword="null" />.</param>
+    /// <param name="events">The events to add to.</param>
+    /// <param name="isReasoning"><see langword="true" /> when the content itself is reasoning.</param>
+    private void MapProgress(object? raw, List<AgentEvent> events, bool isReasoning = false)
+    {
+        switch (raw)
+        {
+            case SdkToolCallDelta { Data: { } data }:
+                MapToolCallDelta(data.ToolCallId, data.ToolName, data.InputDelta, events);
+                break;
+            case SdkStreamingDelta { Data: { } data }:
+                Offer("model", force: false, () => new AgentEvent.ModelWorking(Math.Max(0, data.TotalResponseSizeBytes)), events);
+                break;
+            case SdkReasoningDelta:
+                Offer("thinking", force: false, () => new AgentEvent.Thinking(), events, repeat: false);
+                break;
+            default:
+                if (isReasoning)
+                {
+                    Offer("thinking", force: false, () => new AgentEvent.Thinking(), events, repeat: false);
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>
+    ///     Counts a piece of the arguments of a call that the model is writing and, when it is time, reports the bytes so
+    ///     far and the path.
+    /// </summary>
+    /// <param name="callId">The id of the call; a piece without one is ignored.</param>
+    /// <param name="toolName">The name of the tool; a piece of a call that was never named is ignored.</param>
+    /// <param name="delta">The piece of the arguments, as the model wrote it.</param>
+    /// <param name="events">The events to add to.</param>
+    private void MapToolCallDelta(string? callId, string? toolName, string? delta, List<AgentEvent> events)
+    {
+        if (string.IsNullOrEmpty(callId))
+        {
+            return;
+        }
+
+        if (!_streamed.TryGetValue(callId, out var call))
+        {
+            if (string.IsNullOrEmpty(toolName))
+            {
+                return;
+            }
+
+            call = new StreamedCall(toolName);
+            _streamed[callId] = call;
+        }
+
+        var foundPath = call.Add(delta);
+        Offer($"tool:{callId}", foundPath, () => new AgentEvent.ToolProgress(callId, call.ToolName, call.Bytes, call.Path), events);
+    }
+
+    /// <summary>
+    ///     Adds a progress event when the phase changed, when it is forced, or when the interval has passed.
+    /// </summary>
+    /// <param name="phase">The phase that the event belongs to.</param>
+    /// <param name="force">Whether to make the event whatever the interval.</param>
+    /// <param name="make">Makes the event.</param>
+    /// <param name="events">The events to add to.</param>
+    /// <param name="repeat">Whether the event is made again, after the interval, while the phase lasts.</param>
+    private void Offer(string phase, bool force, Func<AgentEvent> make, List<AgentEvent> events, bool repeat = true)
+    {
+        var now = _clock.GetTimestamp();
+        var changed = !string.Equals(phase, _phase, StringComparison.Ordinal);
+        if (changed || force || (repeat && _clock.GetElapsedTime(_lastProgress, now) >= ProgressInterval))
+        {
+            events.Add(make());
+            _phase = phase;
+            _lastProgress = now;
+        }
+    }
+
+    /// <summary>
     ///     Moves the collected text, when there is any, into an event.
     /// </summary>
     /// <param name="text">The collected text; it is cleared.</param>
@@ -585,6 +719,7 @@ public sealed class AgentEventMapper
         events.Add(new AgentEvent.TextDelta(text.ToString()));
         text.Clear();
         _textEvents++;
+        _phase = null;
     }
 
     /// <summary>
@@ -601,6 +736,7 @@ public sealed class AgentEventMapper
         }
 
         _calls[id] = call.Name;
+        _phase = null;
         events.Add(new AgentEvent.ToolStarted(id, call.Name, SummarizeArguments(call.Arguments)));
     }
 
@@ -614,6 +750,7 @@ public sealed class AgentEventMapper
         var id = IdOfResult(result.CallId);
         var name = _calls.GetValueOrDefault(id) ?? UnknownToolName;
         _finished.Add(id);
+        _phase = null;
 
         var (text, hasImage) = ReadResult(result.Result);
         var succeeded = result.Exception is null && !text.StartsWith(RefusalPrefix, StringComparison.Ordinal);
@@ -786,6 +923,133 @@ public sealed class AgentEventMapper
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // The turn has happened; a log that cannot be written is not a reason to fail it
+        }
+    }
+
+    /// <summary>
+    ///     What is known of the arguments of one call that the model is still writing: the bytes so far, and the path once
+    ///     the first characters of the arguments name it. Only those first characters are kept, and only until the path is
+    ///     found.
+    /// </summary>
+    private sealed class StreamedCall
+    {
+        /// <summary>
+        ///     The first characters of the arguments, kept until the path is found or the scan length is reached.
+        /// </summary>
+        private readonly StringBuilder _head = new();
+
+        /// <summary>
+        ///     Whether the search for the path is over.
+        /// </summary>
+        private bool _scanned;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="StreamedCall" /> class.
+        /// </summary>
+        /// <param name="toolName">The name of the tool.</param>
+        internal StreamedCall(string toolName)
+        {
+            ToolName = toolName;
+        }
+
+        /// <summary>Gets the name of the tool.</summary>
+        internal string ToolName { get; }
+
+        /// <summary>Gets the bytes of the arguments received so far.</summary>
+        internal long Bytes { get; private set; }
+
+        /// <summary>Gets the path that the arguments name, or <see langword="null" /> while it is not known.</summary>
+        internal string? Path { get; private set; }
+
+        /// <summary>
+        ///     Counts a piece of the arguments and looks for the path in the first characters.
+        /// </summary>
+        /// <param name="delta">The piece; may be <see langword="null" />.</param>
+        /// <returns><see langword="true" /> when this piece completed the path.</returns>
+        internal bool Add(string? delta)
+        {
+            if (string.IsNullOrEmpty(delta))
+            {
+                return false;
+            }
+
+            Bytes += Encoding.UTF8.GetByteCount(delta);
+            if (_scanned)
+            {
+                return false;
+            }
+
+            var room = PathScanLength - _head.Length;
+            _head.Append(delta, 0, Math.Min(room, delta.Length));
+            Path = FindPath(_head.ToString());
+            _scanned = Path is not null || _head.Length >= PathScanLength;
+            if (_scanned)
+            {
+                _head.Clear();
+            }
+
+            return Path is not null;
+        }
+
+        /// <summary>
+        ///     Finds the value of the <c>path</c> property in the start of a JSON object that may not be whole yet.
+        /// </summary>
+        /// <param name="head">The first characters of the arguments.</param>
+        /// <returns>The path, or <see langword="null" /> when the characters do not hold a whole one.</returns>
+        private static string? FindPath(string head)
+        {
+            const string key = "\"path\"";
+            var index = head.IndexOf(key, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                return null;
+            }
+
+            index += key.Length;
+            while (index < head.Length && char.IsWhiteSpace(head[index]))
+            {
+                index++;
+            }
+
+            if (index >= head.Length || head[index] != ':')
+            {
+                return null;
+            }
+
+            index++;
+            while (index < head.Length && char.IsWhiteSpace(head[index]))
+            {
+                index++;
+            }
+
+            if (index >= head.Length || head[index] != '"')
+            {
+                return null;
+            }
+
+            var value = new StringBuilder();
+            index++;
+            while (index < head.Length)
+            {
+                var character = head[index];
+                if (character == '"')
+                {
+                    return value.Length == 0 ? null : value.ToString();
+                }
+
+                if (character == '\\' && index + 1 < head.Length)
+                {
+                    // A plain escape is read as the character it stands for; anything else is left as it was written
+                    value.Append(head[index + 1] is '\\' or '/' or '"' ? head[index + 1] : '?');
+                    index += 2;
+                    continue;
+                }
+
+                value.Append(character);
+                index++;
+            }
+
+            return null;
         }
     }
 }

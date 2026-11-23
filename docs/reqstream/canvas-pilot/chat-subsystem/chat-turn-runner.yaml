@@ -116,3 +116,25 @@ sections:
                   - ChatTurnRunner_RunTurn_Failure_KeepsPartialTextAndAddsErrorNoticeWithRemedy
                   - ChatTurnRunner_RunTurn_StreamThrowsOrEndsEarly_IsAFailureRowAndNeverThrows
                   - ChatTurnRunner_RunTurn_FailureAndException_LogFactsOnly
+
+              - id: CanvasPilot-ChatTurnRunner-ShowLiveStatus
+                title: >-
+                  The ChatTurnRunner shall, while a turn runs, keep the words of what the copilot is doing (working,
+                  thinking, the size of the response, the file that is being written with the bytes so far, the tool that
+                  runs, the wait for the model, the answer), show the progress of a file that is being written on one
+                  running row that the start and the end of the call go on to update, tick the elapsed time of the turn
+                  once a second by a timer of its clock, and, when nothing was heard from the copilot for 30 seconds and no
+                  tool runs, give a hint that says that large drawings can take minutes and that the provider may still
+                  count a stopped request, and shall show nothing of this when no turn runs.
+                justification: |
+                  A turn with a large drawing takes minutes, and a window that says nothing looks dead. Only what the
+                  provider really reports may be shown, so the words follow the events, the elapsed time is the one thing
+                  that is true for every model, and the hint is the honest explanation of a wait that some models cause
+                  by sending a drawing only when it is whole.
+                tests:
+                  - ChatTurnRunner_Status_Elapsed_IsTickedOnceASecondAndClearedAtTheEnd
+                  - ChatTurnRunner_FormatElapsed_WritesMinutesAndSeconds
+                  - ChatTurnRunner_Status_FollowsWhatTheCopilotReports
+                  - ChatTurnRunner_Progress_MakesOneRowThatTheCallUpdatesAndFinishes
+                  - ChatTurnRunner_Hint_AppearsAfterALongSilenceAndIsClearedByAnEvent
+                  - ChatTurnRunner_Status_FailureAndStop_ClearTheStatus

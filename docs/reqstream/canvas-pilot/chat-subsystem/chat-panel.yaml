@@ -406,3 +406,15 @@ sections:
                 tests:
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
                   - ChatPanelView_ComposerCard_PlaceholderNamesAndHint
+
+              - id: CanvasPilot-ChatPanel-ShowBusyStatus
+                title: >-
+                  The ChatPanel shall show, in the row that tells that the copilot works, what the copilot is doing, the
+                  time that the turn has lasted, and the hint about a long wait when there is one, shall announce each of
+                  them when it changes, and shall show nothing of them when no turn runs.
+                justification: |
+                  The user decides whether to wait or to stop from what the busy row says, so it must follow the status of
+                  the turn that the runner keeps and not a constant sentence.
+                tests:
+                  - ChatPanelViewModel_TurnRuns_BusyRowShowsPhaseElapsedTimeAndHint
+                  - ChatPanelView_CopilotProgress_BusyRowShowsElapsedTimeAndWhatIsReported

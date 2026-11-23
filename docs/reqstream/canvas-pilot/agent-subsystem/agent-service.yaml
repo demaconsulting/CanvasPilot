@@ -130,3 +130,26 @@ sections:
                   - AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly
                   - AgentService_Logging_ExceptionWhileMakingTheAgent_LogsTheTypeAndNotTheMessage
                   - RuntimeLogAdapter_Log_MessageStateAndScope_AreNeverWritten
+
+              - id: CanvasPilot-AgentService-CoalesceAndThrottleEvents
+                title: >-
+                  The AgentService shall read the stream of the provider and map it on a thread of the pool, off the
+                  thread that shows the events, hand the events to the caller through a queue in which the pieces of text
+                  that wait are joined and the progress that waits is reduced to the latest of its kind, never merging,
+                  dropping, or reordering the events that carry facts (a tool that started or finished, a file that was
+                  written, the usage, the end of the turn), and shall dispose the stream of the provider before the next
+                  turn can start, whatever ended the caller's reading.
+                justification: |
+                  Some providers send thousands of small events in one burst, and a consumer on the user interface thread
+                  that cannot keep up must not make the provider's stream overflow or the window freeze. Merging what says
+                  the same thing again loses nothing the user can see, and a fact must reach the chat exactly once and in
+                  order. A turn that is not over for the provider must not be followed by another on the same session.
+                tests:
+                  - AgentService_RunTurn_SlowConsumer_TheProviderIsReadToItsEndAndTheTextIsMerged
+                  - AgentService_RunTurn_ConsumerDisposed_EndsTheProviderStreamBeforeTheNextTurn
+                  - AgentEventCoalescer_Add_AdjacentText_IsJoined
+                  - AgentEventCoalescer_Add_Progress_KeepsOnlyTheLatestOfTheSameKind
+                  - AgentEventCoalescer_Add_FactsAndTextAroundThem_AreKeptInOrder
+                  - AgentEventCoalescer_ReadAll_WaitsForEventsAndEndsWithTheStream
+                  - AgentEventCoalescer_Complete_WithAFault_ThrowsAfterTheEventsBeforeIt
+                  - AgentEventCoalescer_ReadAll_TokenCancelled_EndsTheWait

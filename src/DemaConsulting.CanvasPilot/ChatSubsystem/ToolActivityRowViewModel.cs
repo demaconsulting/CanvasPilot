@@ -138,7 +138,7 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
     /// <summary>
     ///     Gets the short description of the arguments that the call came with, or an empty string.
     /// </summary>
-    public string ArgumentSummary { get; }
+    public string ArgumentSummary { get; private set; }
 
     /// <summary>
     ///     Gets the sentence about what the tool did, or what is under way while <see cref="IsRunning" />.
@@ -186,6 +186,26 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
     ///     Gets a value indicating whether the report that a file was written has been made for this call.
     /// </summary>
     public bool HasFileReport { get; private set; }
+
+    /// <summary>
+    ///     Changes what a call that has no result yet says, because more is known: the progress of the arguments that the
+    ///     model is writing, or the arguments themselves when the call starts. Nothing happens when the call has ended.
+    /// </summary>
+    /// <param name="argumentSummary">The short description of the arguments, or <see langword="null" /> to keep the one the row has.</param>
+    /// <param name="summary">The sentence about what is under way.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="summary" /> is <see langword="null" />.</exception>
+    public void UpdateRunning(string? argumentSummary, string summary)
+    {
+        ArgumentNullException.ThrowIfNull(summary);
+
+        if (!_isRunning)
+        {
+            return;
+        }
+
+        ArgumentSummary = argumentSummary ?? ArgumentSummary;
+        SetSummary(summary);
+    }
 
     /// <summary>
     ///     Ends the call with its result.

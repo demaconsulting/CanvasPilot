@@ -52,6 +52,12 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         so Stop, closing the project, and closing the application all end the turn the same way, with no failure.
 ///     </para>
 ///     <para>
+///         <b>Off the user interface thread.</b> The provider's stream is read, mapped, and merged into a queue on a thread
+///         of the pool (see <see cref="AgentEventCoalescer" />); the caller reads the queue at its own pace. A consumer that
+///         lags therefore never holds the provider back, and what it missed is merged (the pieces of text are joined and
+///         progress is reduced to the latest), never reordered or dropped (tools, files, usage, the end).
+///     </para>
+///     <para>
 ///         <b>Restored history.</b> The text of the earlier turns in the request becomes one block of at most
 ///         <see cref="RestoredHistoryDigest.MaxCharacters" /> characters at the start of the first message of a new provider
 ///         session, once. It lives in memory only; it is never written to a file or to the log.
@@ -203,6 +209,11 @@ public sealed class AgentService : IAgentService
     private readonly string _historyDirectory;
 
     /// <summary>
+    ///     The clock that spaces the progress events of a turn.
+    /// </summary>
+    private readonly TimeProvider _time;
+
+    /// <summary>
     ///     Cancels every turn when the service ends.
     /// </summary>
     private readonly CancellationTokenSource _lifetime = new();
@@ -250,6 +261,7 @@ public sealed class AgentService : IAgentService
     ///     The folder of the chat history, which is checked to lie outside the project; <see langword="null" /> for the
     ///     folder below <paramref name="localDataRoot" />.
     /// </param>
+    /// <param name="clock">The clock that spaces the progress events of a turn; <see langword="null" /> for the system's.</param>
     /// <exception cref="ArgumentNullException">Thrown when a required argument is <see langword="null" />.</exception>
     public AgentService(
         IProjectService projects,
@@ -262,7 +274,8 @@ public sealed class AgentService : IAgentService
         IActiveStyle? activeStyle = null,
         RollingFileLogger? logger = null,
         string? localDataRoot = null,
-        string? historyRoot = null)
+        string? historyRoot = null,
+        TimeProvider? clock = null)
     {
         ArgumentNullException.ThrowIfNull(projects);
         ArgumentNullException.ThrowIfNull(settings);
@@ -279,6 +292,7 @@ public sealed class AgentService : IAgentService
         _readiness = readiness;
         _projectTools = projectTools;
         _activeStyle = activeStyle;
+        _time = clock ?? TimeProvider.System;
         _logger = logger;
         _runtimeLogger = logger is null ? null : new RuntimeLogAdapter(logger, "CopilotRuntime");
         _copilotDataDirectory = GetCopilotDataDirectory(localDataRoot);
@@ -385,6 +399,8 @@ public sealed class AgentService : IAgentService
         var clock = Stopwatch.StartNew();
         var outcome = "Canceled";
         var events = 0;
+        Task pump = Task.CompletedTask;
+        var coalescer = new AgentEventCoalescer();
         try
         {
             var prepared = await PrepareAsync(request, turn).ConfigureAwait(false);
@@ -402,18 +418,16 @@ public sealed class AgentService : IAgentService
 
             var conversation = prepared.Conversation;
             var model = _settings.Current.AiProvider.ModelName;
-            var mapper = new AgentEventMapper(conversation.Provider, model, _logger, turn.Token);
+            var mapper = new AgentEventMapper(conversation.Provider, model, _logger, turn.Token, _time);
             var updates = conversation.Agent.RunStreamingAsync(prepared.Message!, conversation.Session, cancellationToken: turn.Token);
-            var digestPending = prepared.DigestAdded;
-            await foreach (var mapped in mapper.MapAsync(updates).ConfigureAwait(false))
-            {
-                // A file that a tool wrote while the model was working comes before the answer of the tool
-                while (turn.Writes.TryDequeue(out var written))
-                {
-                    events++;
-                    yield return written;
-                }
 
+            // The provider is read on a thread of the pool and its events wait in the coalescer, so that a consumer that is
+            // slow (the user interface) never holds the provider's stream back, and a burst of progress events reaches it as
+            // one
+            pump = Task.Run(() => PumpAsync(mapper, updates, turn, coalescer), CancellationToken.None);
+            var digestPending = prepared.DigestAdded;
+            await foreach (var mapped in coalescer.ReadAllAsync(CancellationToken.None).ConfigureAwait(false))
+            {
                 // The provider has the digest once something other than a failure came back
                 if (digestPending && mapped is not AgentEvent.Failed)
                 {
@@ -438,8 +452,48 @@ public sealed class AgentService : IAgentService
         }
         finally
         {
+            // Whatever ended the consumer, the provider is not read any longer: the turn is canceled, and the next turn
+            // begins only after the provider's stream was disposed, which the pump does when it ends
+            turn.Cancel();
+            await pump.ConfigureAwait(false);
             EndTurn(turn);
-            Write(LogLevel.Info, $"Turn ended: outcome={outcome} events={events} milliseconds={clock.ElapsedMilliseconds}");
+            Write(LogLevel.Info, $"Turn ended: outcome={outcome} events={events} merged={coalescer.Merged} milliseconds={clock.ElapsedMilliseconds}");
+        }
+    }
+
+    /// <summary>
+    ///     Reads the events of the provider into the coalescer, on a thread of the pool, and ends it. A file that a tool
+    ///     wrote while the model was working is put in before the event that follows it, so a file comes before the answer
+    ///     of the tool call that wrote it. Nothing is thrown; a fault of the mapper ends the coalescer with it.
+    /// </summary>
+    /// <param name="mapper">The mapper of the turn.</param>
+    /// <param name="updates">The updates of the agent.</param>
+    /// <param name="turn">The turn.</param>
+    /// <param name="coalescer">What receives the events.</param>
+    /// <returns>A task that completes when the provider's stream was read to its end and disposed.</returns>
+    private static async Task PumpAsync(
+        AgentEventMapper mapper,
+        IAsyncEnumerable<AgentResponseUpdate> updates,
+        TurnState turn,
+        AgentEventCoalescer coalescer)
+    {
+        try
+        {
+            await foreach (var mapped in mapper.MapAsync(updates).ConfigureAwait(false))
+            {
+                while (turn.Writes.TryDequeue(out var written))
+                {
+                    coalescer.Add(written);
+                }
+
+                coalescer.Add(mapped);
+            }
+
+            coalescer.Complete();
+        }
+        catch (Exception ex)
+        {
+            coalescer.Complete(ex);
         }
     }
 

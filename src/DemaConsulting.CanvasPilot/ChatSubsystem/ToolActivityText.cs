@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Globalization;
 using System.Text.RegularExpressions;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 
@@ -93,6 +94,35 @@ internal static partial class ToolActivityText
         return succeeded
             ? Compose(wording.Done, wording, argumentSummary)
             : WithReason(Compose(wording.Fail, wording, argumentSummary), resultSummary);
+    }
+
+    /// <summary>
+    ///     Says what is under way while the model is still writing the arguments of a call, with the bytes so far.
+    /// </summary>
+    /// <param name="toolName">The name of the tool.</param>
+    /// <param name="path">The path that the arguments name, or <see langword="null" /> while it is not known.</param>
+    /// <param name="argumentBytes">The bytes of the arguments received so far.</param>
+    /// <returns>The sentence, for example <c>Writing `cover.svg`... 9.8 KB</c>.</returns>
+    internal static string Progress(string toolName, string? path, long argumentBytes)
+    {
+        var summary = string.IsNullOrEmpty(path) ? string.Empty : $"path={path}";
+        return $"{Started(toolName, summary)}... {FormatSize(argumentBytes)}";
+    }
+
+    /// <summary>
+    ///     Writes a count of bytes for a person: bytes below a kilobyte, otherwise kilobytes or megabytes with one decimal.
+    /// </summary>
+    /// <param name="bytes">The count.</param>
+    /// <returns>The text, for example <c>512 B</c> or <c>9.8 KB</c>.</returns>
+    internal static string FormatSize(long bytes)
+    {
+        const double kilobyte = 1024;
+        return bytes switch
+        {
+            < 1024 => string.Format(CultureInfo.CurrentCulture, "{0} B", Math.Max(0, bytes)),
+            < 1024 * 1024 => string.Format(CultureInfo.CurrentCulture, "{0:0.0} KB", bytes / kilobyte),
+            _ => string.Format(CultureInfo.CurrentCulture, "{0:0.0} MB", bytes / (kilobyte * kilobyte)),
+        };
     }
 
     /// <summary>

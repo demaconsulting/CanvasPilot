@@ -287,13 +287,32 @@
         <Ellipse Classes="dot second" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
         <Ellipse Classes="dot third" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
       </StackPanel>
-      <TextBlock Name="BusyText"
-                 Grid.Column="1"
-                 AutomationProperties.AutomationId="ChatBusyText"
-                 VerticalAlignment="Center"
-                 FontSize="{DynamicResource CpFontSmall}"
-                 Foreground="{DynamicResource CpTextSecondary}"
-                 Text="{x:Static vm:ChatPanelViewModel.WorkingText}" />
+      <StackPanel Grid.Column="1"
+                  VerticalAlignment="Center"
+                  Spacing="2">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Name="BusyText"
+                     AutomationProperties.AutomationId="ChatBusyText"
+                     VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis"
+                     FontSize="{DynamicResource CpFontSmall}"
+                     Foreground="{DynamicResource CpTextSecondary}"
+                     Text="{Binding BusyText}" />
+          <TextBlock Name="BusyElapsedText"
+                     AutomationProperties.AutomationId="ChatBusyElapsed"
+                     VerticalAlignment="Center"
+                     FontSize="{DynamicResource CpFontSmall}"
+                     Foreground="{DynamicResource CpTextTertiary}"
+                     Text="{Binding BusyElapsedText}" />
+        </StackPanel>
+        <TextBlock Name="BusyHint"
+                   AutomationProperties.AutomationId="ChatBusyHint"
+                   TextWrapping="Wrap"
+                   FontSize="{DynamicResource CpFontSmall}"
+                   Foreground="{DynamicResource CpTextTertiary}"
+                   IsVisible="{Binding HasBusyHint}"
+                   Text="{Binding BusyHintText}" />
+      </StackPanel>
       <Button Name="StopButton"
               Grid.Column="2"
               AutomationProperties.AutomationId="ChatStopButton"

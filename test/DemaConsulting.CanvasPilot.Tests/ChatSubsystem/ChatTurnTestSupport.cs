@@ -265,6 +265,11 @@ internal sealed class ManualTimeProvider : TimeProvider
         public long DueAt { get; private set; }
 
         /// <summary>
+        ///     The period in milliseconds, or zero for a timer that fires once.
+        /// </summary>
+        private long _period;
+
+        /// <summary>
         ///     Gets a value indicating whether the timer is set and not disposed.
         /// </summary>
         public bool IsActive { get; private set; }
@@ -274,15 +279,24 @@ internal sealed class ManualTimeProvider : TimeProvider
         {
             IsActive = dueTime != Timeout.InfiniteTimeSpan;
             DueAt = _owner.Now() + (long)dueTime.TotalMilliseconds;
+            _period = period == Timeout.InfiniteTimeSpan ? 0 : (long)period.TotalMilliseconds;
             return true;
         }
 
         /// <summary>
-        ///     Fires the timer once.
+        ///     Fires the timer; a timer with a period is set to fire again after it.
         /// </summary>
         public void Fire()
         {
-            IsActive = false;
+            if (_period > 0)
+            {
+                DueAt += _period;
+            }
+            else
+            {
+                IsActive = false;
+            }
+
             _callback(_state);
         }
 

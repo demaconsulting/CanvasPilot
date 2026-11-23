@@ -19,7 +19,8 @@ sections:
                   content: the pieces of text of one update joined into one text event and an update or a piece without
                   text dropped (a piece of white space is kept), usage with the counts that the provider reported, an
                   error that the provider sent as content as a failure that ends the turn, and the end of the updates as
-                  completion, and shall ignore reasoning and pictures outside a tool result.
+                  completion, and shall report reasoning without its words as thinking and ignore pictures outside a tool
+                  result.
                 justification: |
                   The chat shows text as it arrives and a row for each tool call, so the order of the content must be
                   kept, an empty update must cost nothing, and the end of the stream must be an event that the chat can
@@ -28,12 +29,35 @@ sections:
                 tests:
                   - AgentEventMapper_Map_TextContent_JoinsPiecesAndDropsEmptyUpdates
                   - AgentEventMapper_Map_TextAroundACall_KeepsTheOrder
-                  - AgentEventMapper_Map_UsageAndOtherContent_UsageIsMappedOthersAreIgnored
+                  - AgentEventMapper_Map_UsageAndOtherContent_UsageIsMappedReasoningIsThinkingOthersAreIgnored
                   - AgentEventMapper_Map_ErrorContent_BecomesFailedAndStopsTheUpdate
                   - AgentEventMapper_MapAsync_StreamEnds_EndsWithCompleted
                   - AgentEventMapper_MapAsync_ErrorContent_EndsWithFailedOnly
                   - AgentEventMapper_Arguments_Null_AreRefused
                   - AgentEventMapper_Constants_Rule_AreTheDocumentedValues
+
+              - id: CanvasPilot-AgentEventMapper-MapProgress
+                title: >-
+                  The AgentEventMapper shall map the progress that the provider reports while the model works (the
+                  arguments of a tool call that it is writing, the size of its response, and its reasoning) to typed
+                  events that carry only counts of bytes and the path of the file, never the content, shall count every
+                  piece in UTF-8 bytes, shall find the path in the first 256 characters of the arguments only, and shall
+                  make such an event at most once for every 250 milliseconds of the clock it is given, or at once when the
+                  phase changes or the path becomes known.
+                justification: |
+                  A turn can take minutes, and the user has to see that it is alive and what it is doing. The content of a
+                  drawing is the user's data and large, so only counts and the file name may leave the mapper, and a
+                  stream of thousands of pieces must reach the screen as a few events.
+                tests:
+                  - AgentEventMapper_Map_ToolCallDeltas_CountBytesAndFindThePathWithoutTheContent
+                  - AgentEventMapper_Map_ToolCallDelta_CountsUtf8Bytes
+                  - AgentEventMapper_Map_ManyDeltas_AreSpacedByTheIntervalAndNotLost
+                  - AgentEventMapper_Map_PathAfterTheScanLength_IsNotReported
+                  - AgentEventMapper_Map_EscapedPathAndUnidentifiedCalls_AreHandled
+                  - AgentEventMapper_Map_StreamingDeltas_AreModelWorkingSpacedByTheInterval
+                  - AgentEventMapper_Map_Reasoning_IsThinkingOncePerPhaseWithoutWords
+                  - AgentEventMapper_Map_PhaseChange_IsReportedAtOnce
+                  - AgentEventMapper_Map_RawEventOnTheUpdate_IsMappedAndOtherRawEventsAreIgnored
 
               - id: CanvasPilot-AgentEventMapper-TieCallsToResults
                 title: >-

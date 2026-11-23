@@ -105,6 +105,40 @@ public sealed class ChatPanelCopilotViewTests
     }
 
     /// <summary>
+    ///     Test that the busy row follows what the copilot reports: the elapsed time shows from the start, the words follow
+    ///     thinking and the progress of a file that is written (with the bytes so far), and the hint about a long wait is
+    ///     not shown while the copilot is heard from.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_CopilotProgress_BusyRowShowsElapsedTimeAndWhatIsReported()
+    {
+        // Arrange: a turn that runs
+        var agent = new ScriptedAgentService();
+        using var harness = new ChatHarness(agent: agent);
+        harness.Type("Draw a flowchart");
+        harness.ClickSend();
+        Assert.True(harness.WaitFor(() => harness.BusyRow.IsEffectivelyVisible));
+
+        // Assert: the elapsed time starts at zero and there is no hint
+        Assert.Equal("0:00", harness.Find<TextBlock>("ChatBusyElapsed").Text);
+        Assert.False(harness.Find<TextBlock>("ChatBusyHint").IsEffectivelyVisible);
+
+        // Act: the copilot thinks, and then writes a file
+        agent.Emit(new AgentEvent.Thinking());
+        Assert.True(harness.WaitFor(() => harness.Find<TextBlock>("ChatBusyText").Text == ChatTurnRunner.ThinkingText));
+        agent.Emit(new AgentEvent.ToolProgress("c1", "project_write", 2048, "flow.svg"));
+        Assert.True(harness.WaitFor(() => harness.Find<TextBlock>("ChatBusyText").Text?.StartsWith("Writing `flow.svg`...", StringComparison.Ordinal) == true));
+
+        // Assert: the words name the file and the bytes so far, and the hint is still hidden
+        Assert.Contains("KB", harness.Find<TextBlock>("ChatBusyText").Text, StringComparison.Ordinal);
+        Assert.False(harness.Find<TextBlock>("ChatBusyHint").IsEffectivelyVisible);
+
+        // Act: the turn ends
+        agent.Emit(new AgentEvent.Completed());
+        Assert.True(harness.WaitFor(() => !harness.BusyRow.IsEffectivelyVisible));
+    }
+
+    /// <summary>
     ///     Test that pressing Stop cancels the turn, keeps the text that was written marked as stopped, and enables Send
     ///     again.
     /// </summary>

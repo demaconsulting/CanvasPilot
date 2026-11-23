@@ -134,7 +134,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// <summary>
     ///     The words of the indicator that shows while the copilot works on a message.
     /// </summary>
-    public const string WorkingText = "The copilot is working...";
+    public const string WorkingText = ChatTurnRunner.WorkingText;
 
     /// <summary>
     ///     The notice that says that the chat history was cleared, which is not saved.
@@ -317,6 +317,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         {
             _runner = new ChatTurnRunner(agent, _sink, clock, logger, RaiseOpenSettings);
             _runner.BusyChanged += OnBusyChanged;
+            _runner.StatusChanged += OnStatusChanged;
         }
 
         // The panel follows the composer: what depends on it is announced again, a changed project drops the transcript,
@@ -439,6 +440,28 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Gets a value indicating whether a turn of the copilot runs.
     /// </summary>
     public bool IsCopilotBusy => _runner?.IsBusy == true;
+
+    /// <summary>
+    ///     Gets what the copilot is doing now, in words, for the busy row: <see cref="WorkingText" /> when a turn starts,
+    ///     then what the copilot reports (thinking, writing a file with the bytes so far, running a tool, waiting for the
+    ///     model). Empty when no turn runs.
+    /// </summary>
+    public string BusyText => _runner?.StatusText ?? string.Empty;
+
+    /// <summary>
+    ///     Gets how long the running turn has lasted, as <c>m:ss</c>, for the busy row. Empty when no turn runs.
+    /// </summary>
+    public string BusyElapsedText => _runner?.ElapsedText ?? string.Empty;
+
+    /// <summary>
+    ///     Gets the hint that explains a long wait for the model, or an empty string when there is nothing to explain.
+    /// </summary>
+    public string BusyHintText => _runner?.HintText ?? string.Empty;
+
+    /// <summary>
+    ///     Gets a value indicating whether <see cref="BusyHintText" /> is shown.
+    /// </summary>
+    public bool HasBusyHint => BusyHintText.Length > 0;
 
     /// <summary>
     ///     Gets a value indicating whether the banner of the readiness of the copilot is shown: the latest check found that
@@ -655,6 +678,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
             // Nothing is added to a transcript that is dropped, and a turn that is still running is stopped
             _sink.Discarding = true;
             _runner.BusyChanged -= OnBusyChanged;
+            _runner.StatusChanged -= OnStatusChanged;
             _runner.Dispose();
         }
 
@@ -905,7 +929,22 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
 
         OnPropertyChanged(nameof(IsCopilotBusy));
+        OnStatusChanged(sender, e);
         StopCommand.NotifyCanExecuteChanged();
+    }
+
+    /// <summary>
+    ///     Follows the status of the turn: what the copilot is doing, how long the turn has lasted, and the hint about a long
+    ///     wait.
+    /// </summary>
+    /// <param name="sender">The runner.</param>
+    /// <param name="e">The event data.</param>
+    private void OnStatusChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(BusyText));
+        OnPropertyChanged(nameof(BusyElapsedText));
+        OnPropertyChanged(nameof(BusyHintText));
+        OnPropertyChanged(nameof(HasBusyHint));
     }
 
     /// <summary>
