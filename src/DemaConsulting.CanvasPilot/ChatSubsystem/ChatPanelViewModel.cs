@@ -306,7 +306,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         };
         Thumbnails = new ChipThumbnailProvider(chip => CropOfDraftMark(marks, markImages, chip));
         _transcriptProject = composer.ProjectFolder;
-        StopCommand = new RelayCommand(Stop, () => IsCopilotBusy);
+        StopCommand = new RelayCommand(Stop, () => IsCopilotBusy && !IsStopping);
         OpenSettingsCommand = new RelayCommand(RaiseOpenSettings);
         CheckAgainCommand = new AsyncRelayCommand(RefreshReadinessAsync);
         ClearHistoryCommand = new RelayCommand(ClearHistory);
@@ -440,6 +440,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Gets a value indicating whether a turn of the copilot runs.
     /// </summary>
     public bool IsCopilotBusy => _runner?.IsBusy == true;
+
+    /// <summary>
+    ///     Gets a value indicating whether the running turn was asked to stop and has not ended yet: the busy row says so and
+    ///     the Stop button cannot be used again.
+    /// </summary>
+    public bool IsStopping => _runner?.IsStopping == true;
 
     /// <summary>
     ///     Gets what the copilot is doing now, in words, for the busy row: <see cref="WorkingText" /> when a turn starts,
@@ -945,6 +951,8 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         OnPropertyChanged(nameof(BusyElapsedText));
         OnPropertyChanged(nameof(BusyHintText));
         OnPropertyChanged(nameof(HasBusyHint));
+        OnPropertyChanged(nameof(IsStopping));
+        StopCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>

@@ -139,6 +139,40 @@ public sealed class ChatPanelCopilotViewTests
     }
 
     /// <summary>
+    ///     Test that pressing Stop shows at once that the copilot is stopping, and that the Stop button cannot be pressed
+    ///     again, until the provider has ended its stream; then the turn is stopped and Send can be used.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_Stop_ShowsStoppingUntilTheTurnEnds()
+    {
+        // Arrange: a turn on a copilot that is slow to stop
+        var agent = new ScriptedAgentService { IgnoreCancellation = true };
+        using var harness = new ChatHarness(agent: agent);
+        harness.Type("Draw a box");
+        harness.ClickSend();
+        agent.Emit(new AgentEvent.TextDelta("Let me think about"));
+        Assert.True(harness.WaitFor(() => harness.Replies.Count == 1));
+        harness.Type("Never mind");
+
+        // Act: press Stop
+        SettingsUiHelpers.Click(harness.Window, harness.StopButton);
+
+        // Assert: the busy row says so and the Stop button cannot be used again, while the turn is still not over
+        Assert.True(harness.WaitFor(() => harness.Find<TextBlock>("ChatBusyText").Text == ChatTurnRunner.StoppingText));
+        Assert.True(harness.Chat.IsCopilotBusy);
+        Assert.False(harness.StopButton.IsEffectivelyEnabled);
+
+        // Act: the provider ends its stream
+        agent.EndStream();
+        Assert.True(harness.WaitFor(() => !harness.Chat.IsCopilotBusy));
+
+        // Assert: the turn is stopped, and Send can be used again
+        Assert.Equal("Stopped", Assert.Single(harness.Replies).FindControl<TextBlock>("StatusLabelText")!.Text);
+        Assert.True(harness.SendButton.IsEffectivelyEnabled);
+        Assert.False(harness.BusyRow.IsEffectivelyVisible);
+    }
+
+    /// <summary>
     ///     Test that pressing Stop cancels the turn, keeps the text that was written marked as stopped, and enables Send
     ///     again.
     /// </summary>

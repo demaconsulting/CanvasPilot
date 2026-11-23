@@ -52,6 +52,17 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         so Stop, closing the project, and closing the application all end the turn the same way, with no failure.
 ///     </para>
 ///     <para>
+///         <b>Stop.</b> The turn records who canceled it (the caller, a reset, a change of the project, the end of the
+///         service, or a caller that stopped reading) and logs it. The token of the turn is the provider's token, so a Stop
+///         ends the provider's stream, which is disposed before the next turn can begin. A provider that does not end its
+///         stream within <see cref="StopGrace" /> is left to finish in the background and its conversation is dropped, so the
+///         caller is never held by it. A Stop that arrives before the provider said anything also drops the conversation (what
+///         the provider session holds is not known, and a new one gets the digest of the history once); a Stop after that
+///         marks the conversation as interrupted, and if the next turn on it fails before it says anything with a lost
+///         connection or an unexpected error, the conversation is replaced and the turn is run once more, with a line in
+///         the log. Nothing else is retried.
+///     </para>
+///     <para>
 ///         <b>Off the user interface thread.</b> The provider's stream is read, mapped, and merged into a queue on a thread
 ///         of the pool (see <see cref="AgentEventCoalescer" />); the caller reads the queue at its own pace. A consumer that
 ///         lags therefore never holds the provider back, and what it missed is merged (the pieces of text are joined and
@@ -131,6 +142,12 @@ public sealed class AgentService : IAgentService
     ///     The longest time that releasing a conversation waits for its running turn to end.
     /// </summary>
     private static readonly TimeSpan ReleaseWait = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    ///     The longest time that a turn waits for the provider to end its stream after the turn was canceled, before it is
+    ///     given up and its conversation is dropped.
+    /// </summary>
+    internal static readonly TimeSpan StopGrace = TimeSpan.FromSeconds(5);
 
     /// <summary>
     ///     The longest time that disposing the service waits for the conversations to be released and the factory to stop.
@@ -397,26 +414,83 @@ public sealed class AgentService : IAgentService
         }
 
         var clock = Stopwatch.StartNew();
-        var outcome = "Canceled";
-        var events = 0;
+        var stats = new TurnStats();
+        try
+        {
+            await foreach (var item in RunAttemptAsync(request, turn, stats, canRecover: true).ConfigureAwait(false))
+            {
+                yield return item;
+            }
+
+            // A conversation that a Stop left behind and that the provider can no longer use is replaced once, with the
+            // digest of the history, and the message is sent again; the failure was not shown because nothing was
+            if (stats.RecoveryReason is { } reason)
+            {
+                Write(LogLevel.Warning, $"Session recovered: reason={reason}");
+                await foreach (var item in RunAttemptAsync(request, turn, stats, canRecover: false).ConfigureAwait(false))
+                {
+                    yield return item;
+                }
+            }
+        }
+        finally
+        {
+            EndTurn(turn);
+            Write(
+                LogLevel.Info,
+                $"Turn ended: outcome={stats.Outcome} cancelSource={turn.CancelSource} events={stats.Events} merged={stats.Merged} milliseconds={clock.ElapsedMilliseconds}");
+        }
+    }
+
+    /// <summary>
+    ///     Runs one attempt of a turn on the conversation of the project: the provider is read on a thread of the pool into
+    ///     a queue that the caller reads, and when the attempt ends the provider's stream has been disposed, so that the next
+    ///     turn never starts on a session whose turn is still running.
+    /// </summary>
+    /// <remarks>
+    ///     A Stop (or any cancellation) ends the attempt when the provider's stream ends, which is soon because the token of
+    ///     the turn is the provider's token. A provider that does not honor it within <see cref="StopGrace" /> is left to
+    ///     finish in the background: the attempt ends, and the conversation is dropped, so the next turn starts on a new
+    ///     provider session instead of waiting behind the old one. A Stop that arrives before the provider said anything
+    ///     also drops the conversation, because then it is not known what the provider session holds, and the new session
+    ///     gets the digest of the history once. A conversation that was interrupted and that fails before it says anything
+    ///     on the next turn is dropped and the turn is run once more (see <paramref name="canRecover" />).
+    /// </remarks>
+    /// <param name="request">The request.</param>
+    /// <param name="turn">The turn.</param>
+    /// <param name="stats">What is counted for the log and decides the recovery.</param>
+    /// <param name="canRecover">Whether a failure before the first event of an interrupted conversation may be recovered from.</param>
+    /// <returns>The events of the attempt.</returns>
+    private async IAsyncEnumerable<AgentEvent> RunAttemptAsync(AgentTurnRequest request, TurnState turn, TurnStats stats, bool canRecover)
+    {
         Task pump = Task.CompletedTask;
+        Conversation? conversation = null;
         var coalescer = new AgentEventCoalescer();
+        var drained = false;
+        var abandoned = false;
+        var recoveryTriggered = false;
+
+        // After a cancellation the provider has StopGrace to end its stream; then the caller stops waiting for it
+        using var grace = new CancellationTokenSource(Timeout.InfiniteTimeSpan, _time);
+        using var graceRegistration = turn.Token.Register(static state => ((CancellationTokenSource)state!).CancelAfter(StopGrace), grace);
         try
         {
             var prepared = await PrepareAsync(request, turn).ConfigureAwait(false);
             if (prepared.Failure is not null)
             {
-                outcome = $"Failed:{prepared.Failure.Kind}";
+                stats.Outcome = $"Failed:{prepared.Failure.Kind}";
+                drained = true;
                 yield return prepared.Failure;
                 yield break;
             }
 
             if (prepared.Conversation is null)
             {
+                drained = true;
                 yield break;
             }
 
-            var conversation = prepared.Conversation;
+            conversation = prepared.Conversation;
             var model = _settings.Current.AiProvider.ModelName;
             var mapper = new AgentEventMapper(conversation.Provider, model, _logger, turn.Token, _time);
             var updates = conversation.Agent.RunStreamingAsync(prepared.Message!, conversation.Session, cancellationToken: turn.Token);
@@ -426,17 +500,48 @@ public sealed class AgentService : IAgentService
             // one
             pump = Task.Run(() => PumpAsync(mapper, updates, turn, coalescer), CancellationToken.None);
             var digestPending = prepared.DigestAdded;
-            await foreach (var mapped in coalescer.ReadAllAsync(CancellationToken.None).ConfigureAwait(false))
+            await using var reader = coalescer.ReadAllAsync(grace.Token).GetAsyncEnumerator(grace.Token);
+            while (true)
             {
-                // The provider has the digest once something other than a failure came back
-                if (digestPending && mapped is not AgentEvent.Failed)
+                bool more;
+                try
                 {
-                    conversation.HistoryPrefixed = true;
-                    digestPending = false;
+                    more = await reader.MoveNextAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (grace.IsCancellationRequested)
+                {
+                    abandoned = true;
+                    break;
                 }
 
-                events++;
-                outcome = mapped switch
+                if (!more)
+                {
+                    drained = true;
+                    break;
+                }
+
+                var mapped = reader.Current;
+                if (canRecover && stats.Events == 0 && conversation.Interrupted && mapped is AgentEvent.Failed { Kind: AgentFailureKind.ConnectionLost or AgentFailureKind.Unexpected } failure)
+                {
+                    stats.RecoveryReason = failure.Kind;
+                    recoveryTriggered = true;
+                    drained = true;
+                    break;
+                }
+
+                if (mapped is not AgentEvent.Failed)
+                {
+                    // The provider has the digest once something other than a failure came back, and it works again
+                    conversation.Interrupted = false;
+                    if (digestPending)
+                    {
+                        conversation.HistoryPrefixed = true;
+                        digestPending = false;
+                    }
+                }
+
+                stats.Events++;
+                stats.Outcome = mapped switch
                 {
                     AgentEvent.Completed => "Completed",
                     AgentEvent.Failed failed => $"Failed:{failed.Kind}",
@@ -447,17 +552,86 @@ public sealed class AgentService : IAgentService
 
             if (turn.Token.IsCancellationRequested)
             {
-                outcome = "Canceled";
+                stats.Outcome = "Canceled";
             }
         }
         finally
         {
             // Whatever ended the consumer, the provider is not read any longer: the turn is canceled, and the next turn
             // begins only after the provider's stream was disposed, which the pump does when it ends
-            turn.Cancel();
+            if (!drained)
+            {
+                turn.Cancel(TurnCancelSource.Consumer);
+            }
+
+            var ended = !abandoned && await EndedAsync(pump, turn).ConfigureAwait(false);
+            stats.Merged += coalescer.Merged;
+            if (conversation is not null)
+            {
+                AfterAttempt(conversation, turn, stats, ended, recoveryTriggered);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Waits for the pump of an attempt to end: without a limit when the turn was not canceled, because the provider's
+    ///     stream then ends by itself, and for at most <see cref="StopGrace" /> after a cancellation.
+    /// </summary>
+    /// <param name="pump">The pump.</param>
+    /// <param name="turn">The turn.</param>
+    /// <returns><see langword="true" /> when the pump ended, <see langword="false" /> when the provider did not stop in time.</returns>
+    private async Task<bool> EndedAsync(Task pump, TurnState turn)
+    {
+        if (pump.IsCompleted || !turn.Token.IsCancellationRequested)
+        {
             await pump.ConfigureAwait(false);
-            EndTurn(turn);
-            Write(LogLevel.Info, $"Turn ended: outcome={outcome} events={events} merged={coalescer.Merged} milliseconds={clock.ElapsedMilliseconds}");
+            return true;
+        }
+
+        using var limit = new CancellationTokenSource(StopGrace, _time);
+        try
+        {
+            await pump.WaitAsync(limit.Token).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     Decides what the conversation is after an attempt: kept, marked as interrupted, or dropped so that the next turn
+    ///     starts on a new provider session.
+    /// </summary>
+    /// <param name="conversation">The conversation of the attempt.</param>
+    /// <param name="turn">The turn.</param>
+    /// <param name="stats">What was counted.</param>
+    /// <param name="providerEnded">Whether the provider's stream ended and was disposed.</param>
+    /// <param name="recoveryTriggered">Whether this attempt ended because the conversation has to be replaced.</param>
+    private void AfterAttempt(Conversation conversation, TurnState turn, TurnStats stats, bool providerEnded, bool recoveryTriggered)
+    {
+        if (!providerEnded)
+        {
+            Write(LogLevel.Warning, $"The provider did not stop within {StopGrace.TotalSeconds:0} seconds; its session is dropped: cancelSource={turn.CancelSource}");
+            DropConversation(existing => ReferenceEquals(existing, conversation), TurnCancelSource.None, "stop-timeout");
+        }
+        else if (recoveryTriggered)
+        {
+            // The conversation could not be used after it was interrupted; the next attempt makes a new one
+            DropConversation(existing => ReferenceEquals(existing, conversation), TurnCancelSource.None, "recovered");
+        }
+        else if (turn.CancelSource != TurnCancelSource.None)
+        {
+            if (stats.Events == 0)
+            {
+                // Nothing came back, so it is not known what the provider session holds; a new one gets the digest once
+                DropConversation(existing => ReferenceEquals(existing, conversation), TurnCancelSource.None, "stopped-early");
+            }
+            else
+            {
+                conversation.Interrupted = true;
+            }
         }
     }
 
@@ -500,7 +674,7 @@ public sealed class AgentService : IAgentService
     /// <inheritdoc />
     public void ResetConversation()
     {
-        DropConversation(_ => true, cancelTurn: true, "reset");
+        DropConversation(_ => true, TurnCancelSource.Reset, "reset");
     }
 
     /// <inheritdoc />
@@ -526,7 +700,7 @@ public sealed class AgentService : IAgentService
 
         // End the running turn, release the conversation, and then stop what the factory started
         _lifetime.Cancel();
-        DropConversation(_ => true, cancelTurn: true, "dispose");
+        DropConversation(_ => true, TurnCancelSource.Dispose, "dispose");
         lock (_sync)
         {
             pending = [.. _cleanups];
@@ -633,7 +807,7 @@ public sealed class AgentService : IAgentService
                 return null;
             }
 
-            _turn = new TurnState(CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token));
+            _turn = new TurnState(cancellationToken, _lifetime.Token);
             refusal = null;
             return _turn;
         }
@@ -685,7 +859,7 @@ public sealed class AgentService : IAgentService
             var signature = SignatureOf(settings);
             DropConversation(
                 existing => !string.Equals(existing.ProjectFile, project.FilePath, StringComparison.OrdinalIgnoreCase) || existing.Signature != signature,
-                cancelTurn: false,
+                TurnCancelSource.None,
                 "changed");
 
             Conversation? conversation;
@@ -817,9 +991,9 @@ public sealed class AgentService : IAgentService
     ///     Drops the current conversation when it matches, and releases it in the background once its turn is over.
     /// </summary>
     /// <param name="stale">Tells whether the conversation must go.</param>
-    /// <param name="cancelTurn">Whether to cancel the turn that runs on the conversation.</param>
+    /// <param name="cancelSource">Why to cancel the turn that runs on the conversation, or <see cref="TurnCancelSource.None" /> to leave it running.</param>
     /// <param name="reason">The reason, for the log.</param>
-    private void DropConversation(Func<Conversation, bool> stale, bool cancelTurn, string reason)
+    private void DropConversation(Func<Conversation, bool> stale, TurnCancelSource cancelSource, string reason)
     {
         Conversation? dropped;
         Task done = Task.CompletedTask;
@@ -840,9 +1014,9 @@ public sealed class AgentService : IAgentService
             }
         }
 
-        if (cancelTurn)
+        if (cancelSource != TurnCancelSource.None)
         {
-            running?.Cancel();
+            running?.Cancel(cancelSource);
         }
 
         lock (_sync)
@@ -900,7 +1074,7 @@ public sealed class AgentService : IAgentService
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         var signature = SignatureOf(e.Settings.AiProvider);
-        DropConversation(existing => existing.Signature != signature, cancelTurn: false, "settings");
+        DropConversation(existing => existing.Signature != signature, TurnCancelSource.None, "settings");
     }
 
     /// <summary>
@@ -914,7 +1088,7 @@ public sealed class AgentService : IAgentService
         var project = _projects.Current;
         DropConversation(
             existing => project is null || !string.Equals(existing.ProjectFile, project.FilePath, StringComparison.OrdinalIgnoreCase),
-            cancelTurn: true,
+            TurnCancelSource.Project,
             "project");
     }
 
@@ -1007,6 +1181,57 @@ public sealed class AgentService : IAgentService
 
         /// <summary>Gets or sets a value indicating whether the restored history was given to the provider.</summary>
         internal bool HistoryPrefixed { get; set; }
+
+        /// <summary>
+        ///     Gets or sets a value indicating whether the latest turn on the conversation was canceled after the provider had
+        ///     begun to answer, so that the provider session may not be usable any longer; cleared when the provider answers
+        ///     again.
+        /// </summary>
+        internal bool Interrupted { get; set; }
+    }
+
+    /// <summary>
+    ///     Who canceled a turn.
+    /// </summary>
+    private enum TurnCancelSource
+    {
+        /// <summary>Nobody did.</summary>
+        None = 0,
+
+        /// <summary>The caller did, through its token: the user pressed Stop, or the caller was closed.</summary>
+        User,
+
+        /// <summary>The conversation was reset.</summary>
+        Reset,
+
+        /// <summary>The open project changed or closed.</summary>
+        Project,
+
+        /// <summary>The service ended.</summary>
+        Dispose,
+
+        /// <summary>The caller stopped reading the events of the turn.</summary>
+        Consumer,
+    }
+
+    /// <summary>
+    ///     What a turn counts for the log, and what its attempts share.
+    /// </summary>
+    private sealed class TurnStats
+    {
+        /// <summary>Gets or sets how the turn ended, for the log.</summary>
+        internal string Outcome { get; set; } = "Canceled";
+
+        /// <summary>Gets or sets the number of events that were given to the caller.</summary>
+        internal int Events { get; set; }
+
+        /// <summary>Gets or sets the number of events that were merged into others while the caller lagged.</summary>
+        internal long Merged { get; set; }
+
+        /// <summary>
+        ///     Gets or sets why the turn is run once more on a new conversation, or <see langword="null" /> when it is not.
+        /// </summary>
+        internal AgentFailureKind? RecoveryReason { get; set; }
     }
 
     /// <summary>
@@ -1017,7 +1242,7 @@ public sealed class AgentService : IAgentService
         /// <summary>
         ///     The source of the token of the turn.
         /// </summary>
-        private readonly CancellationTokenSource _cancellation;
+        private readonly CancellationTokenSource _cancellation = new();
 
         /// <summary>
         ///     Completes when the turn is over.
@@ -1025,13 +1250,30 @@ public sealed class AgentService : IAgentService
         private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>
+        ///     What ends the link from the token of the caller and the end of the service to the turn.
+        /// </summary>
+        private readonly CancellationTokenRegistration[] _links;
+
+        /// <summary>
+        ///     The first source that canceled the turn, as <see cref="TurnCancelSource" />; zero while nobody did.
+        /// </summary>
+        private int _source;
+
+        /// <summary>
         ///     Initializes a new instance of the <see cref="TurnState" /> class.
         /// </summary>
-        /// <param name="cancellation">The source of the token of the turn; the turn disposes it.</param>
-        internal TurnState(CancellationTokenSource cancellation)
+        /// <param name="caller">The token of the caller, which cancels the turn with the source <see cref="TurnCancelSource.User" />.</param>
+        /// <param name="lifetime">The token of the end of the service, which cancels the turn with the source <see cref="TurnCancelSource.Dispose" />.</param>
+        internal TurnState(CancellationToken caller, CancellationToken lifetime)
         {
-            _cancellation = cancellation;
-            Token = cancellation.Token;
+            Token = _cancellation.Token;
+
+            // The sources are recorded before the token is canceled, so whoever sees the cancellation sees who asked for it
+            _links =
+            [
+                caller.Register(static state => ((TurnState)state!).Cancel(TurnCancelSource.User), this),
+                lifetime.Register(static state => ((TurnState)state!).Cancel(TurnCancelSource.Dispose), this),
+            ];
         }
 
         /// <summary>Gets the token that stops the turn.</summary>
@@ -1046,11 +1288,16 @@ public sealed class AgentService : IAgentService
         /// <summary>Gets or sets the conversation that the turn runs on.</summary>
         internal Conversation? Conversation { get; set; }
 
+        /// <summary>Gets who canceled the turn first, or <see cref="TurnCancelSource.None" />.</summary>
+        internal TurnCancelSource CancelSource => (TurnCancelSource)Volatile.Read(ref _source);
+
         /// <summary>
-        ///     Stops the turn.
+        ///     Stops the turn. The first source is the one that is kept.
         /// </summary>
-        internal void Cancel()
+        /// <param name="source">Who stops it.</param>
+        internal void Cancel(TurnCancelSource source)
         {
+            Interlocked.CompareExchange(ref _source, (int)source, 0);
             try
             {
                 _cancellation.Cancel();
@@ -1066,6 +1313,11 @@ public sealed class AgentService : IAgentService
         /// </summary>
         internal void Finish()
         {
+            foreach (var link in _links)
+            {
+                link.Dispose();
+            }
+
             _done.TrySetResult();
             _cancellation.Dispose();
         }

@@ -250,6 +250,38 @@ public sealed class ChatTurnRunnerStatusTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a Stop shows the stopping state at once, while the provider is still ending its stream, keeps it
+    ///     whatever the copilot still reports and without a hint, ignores a second Stop, and ends the turn as stopped with an
+    ///     empty status when the stream ends.
+    /// </summary>
+    [Fact]
+    public async Task ChatTurnRunner_Stop_ShowsStoppingUntilTheStreamEnds()
+    {
+        // Arrange: a copilot that is slow to stop, and a turn that has written some text
+        _agent.IgnoreCancellation = true;
+        var run = _runner.RunTurnAsync(ChatTestMessages.SentText("Draw"));
+        _agent.Emit(new AgentEvent.TextDelta("Let me"));
+        var changesBefore = _changes;
+
+        // Act: Stop, twice, while the copilot still reports and a long time passes
+        _runner.Stop();
+        _runner.Stop();
+        var stopping = (_runner.IsBusy, _runner.IsStopping, _runner.StatusText, _changes > changesBefore);
+        _agent.Emit(new AgentEvent.Thinking());
+        _clock.Advance(ChatTurnRunner.HintDelay * 2);
+        var later = (_runner.StatusText, _runner.HintText, _runner.IsStopping);
+        _agent.EndStream();
+        var outcome = await run.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal((true, true, ChatTurnRunner.StoppingText, true), stopping);
+        Assert.Equal((ChatTurnRunner.StoppingText, string.Empty, true), later);
+        Assert.Equal(ChatTurnOutcome.Stopped, outcome);
+        Assert.Equal((false, false, string.Empty), (_runner.IsBusy, _runner.IsStopping, _runner.StatusText));
+        Assert.Equal(AssistantReplyState.Stopped, Assert.IsType<AssistantReplyViewModel>(Assert.Single(_transcript)).State);
+    }
+
+    /// <summary>
     ///     Writes a count of bytes the way the rows do.
     /// </summary>
     /// <param name="bytes">The count.</param>

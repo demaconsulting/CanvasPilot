@@ -153,3 +153,26 @@ sections:
                   - AgentEventCoalescer_ReadAll_WaitsForEventsAndEndsWithTheStream
                   - AgentEventCoalescer_Complete_WithAFault_ThrowsAfterTheEventsBeforeIt
                   - AgentEventCoalescer_ReadAll_TokenCancelled_EndsTheWait
+
+              - id: CanvasPilot-AgentService-StopLeavesConversationUsable
+                title: >-
+                  The AgentService shall record who canceled a turn (the caller, a reset, a change of the project, the end
+                  of the service, or a caller that stopped reading) and log it, shall end the turn of a provider that does
+                  not end its stream within five seconds of the cancellation without a failure and drop its conversation,
+                  shall drop the conversation of a turn that was stopped before the provider said anything so that the next
+                  turn starts on a new provider session that gets the digest of the history once, shall keep the
+                  conversation of a turn that was stopped later and mark it as interrupted, and shall, when the next turn
+                  on an interrupted conversation fails with a lost connection or an unexpected error before it says
+                  anything, replace the conversation and run the turn once more with a line in the log, and never otherwise.
+                justification: |
+                  Stop must work at any point, including in the middle of a tool call, and the conversation must be usable
+                  afterwards. A provider that cannot be canceled must not hold the window, a session whose state is unknown
+                  must not receive the history a second time, and a session that a Stop left unusable is replaced exactly
+                  once and visibly instead of showing the user an error for a message that they could send again.
+                tests:
+                  - AgentService_Stop_MidToolCall_EndsTheTurnAndTheNextTurnAnswersOnTheSameConversation
+                  - AgentService_Stop_BeforeTheFirstUpdate_DropsTheSessionAndTheNextTurnGetsTheDigestOnce
+                  - AgentService_Stop_ProviderIgnoresTheToken_EndsAfterTheGraceAndDropsTheConversation
+                  - AgentService_NextTurnAfterStop_FailsBeforeAnyUpdate_IsRecoveredOnceOnANewConversation
+                  - AgentService_Recovery_IsOnlyOnceAndOnlyAfterAStop
+                  - AgentService_Cancel_ByAResetOrAProjectChange_LogsItsSource

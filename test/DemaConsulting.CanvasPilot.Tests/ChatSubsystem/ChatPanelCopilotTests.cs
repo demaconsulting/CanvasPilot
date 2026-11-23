@@ -105,6 +105,35 @@ public sealed class ChatPanelCopilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the busy row says that the copilot is stopping from the moment of the Stop until the turn has ended, and
+    ///     that Stop cannot be pressed again meanwhile.
+    /// </summary>
+    [Fact]
+    public async Task ChatPanelViewModel_Stop_ShowsStoppingAndDisablesStopUntilTheTurnEnds()
+    {
+        // Arrange: a turn on a copilot that is slow to stop
+        var token = TestContext.Current.CancellationToken;
+        _agent.IgnoreCancellation = true;
+        var announced = new List<string?>();
+        _panel.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
+        _composer.InsertTyped("Draw");
+        await _panel.SendCommand.ExecuteAsync(null);
+        var before = (_panel.IsStopping, _panel.StopCommand.CanExecute(null));
+
+        // Act: Stop
+        _panel.StopCommand.Execute(null);
+        var during = (_panel.IsCopilotBusy, _panel.IsStopping, _panel.BusyText, _panel.StopCommand.CanExecute(null));
+        _agent.EndStream();
+        await _panel.WaitForTurnAsync().WaitAsync(TurnTimeout, token);
+
+        // Assert
+        Assert.Equal((false, true), before);
+        Assert.Equal((true, true, ChatTurnRunner.StoppingText, false), during);
+        Assert.Contains(nameof(ChatPanelViewModel.IsStopping), announced);
+        Assert.Equal((false, false, false), (_panel.IsCopilotBusy, _panel.IsStopping, _panel.StopCommand.CanExecute(null)));
+    }
+
+    /// <summary>
     ///     Test that the busy row says what the copilot is doing, how long the turn has lasted, and, after a long silence,
     ///     the hint about a long wait, that the panel announces each change, and that all of it is empty when the turn
     ///     has ended.

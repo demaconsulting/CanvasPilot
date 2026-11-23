@@ -418,3 +418,13 @@ sections:
                 tests:
                   - ChatPanelViewModel_TurnRuns_BusyRowShowsPhaseElapsedTimeAndHint
                   - ChatPanelView_CopilotProgress_BusyRowShowsElapsedTimeAndWhatIsReported
+
+              - id: CanvasPilot-ChatPanel-ShowStopping
+                title: >-
+                  The ChatPanel shall, from the moment that Stop is pressed until the turn has ended, say in the busy row
+                  that the copilot is stopping and not allow Stop to be pressed again, and shall announce the change.
+                justification: |
+                  The user must see within one moment that Stop was heard, and a second press must not do anything else.
+                tests:
+                  - ChatPanelViewModel_Stop_ShowsStoppingAndDisablesStopUntilTheTurnEnds
+                  - ChatPanelView_Stop_ShowsStoppingUntilTheTurnEnds

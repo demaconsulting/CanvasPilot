@@ -138,3 +138,14 @@ sections:
                   - ChatTurnRunner_Progress_MakesOneRowThatTheCallUpdatesAndFinishes
                   - ChatTurnRunner_Hint_AppearsAfterALongSilenceAndIsClearedByAnEvent
                   - ChatTurnRunner_Status_FailureAndStop_ClearTheStatus
+
+              - id: CanvasPilot-ChatTurnRunner-ShowStopping
+                title: >-
+                  The ChatTurnRunner shall, from the moment the turn is asked to stop until it has ended, say that it is
+                  stopping, keep saying so whatever the copilot still reports, show no hint about a long wait, and ignore a
+                  second request to stop, and shall end the turn as stopped with an empty status.
+                justification: |
+                  A provider needs a moment to end what it was doing, and a Stop that shows nothing looks like a button that
+                  does not work, so the user would press it again or give up on the window.
+                tests:
+                  - ChatTurnRunner_Stop_ShowsStoppingUntilTheStreamEnds

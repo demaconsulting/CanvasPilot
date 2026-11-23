@@ -62,6 +62,12 @@ internal sealed class ControlledAgentService : IAgentService
     public bool EndQuietlyOnCancellation { get; set; } = true;
 
     /// <summary>
+    ///     Gets or sets a value indicating whether the stream ignores the token of the turn, as a provider does that is slow
+    ///     to stop: it then ends only when the test ends it.
+    /// </summary>
+    public bool IgnoreCancellation { get; set; }
+
+    /// <summary>
     ///     Gets the number of times the conversation was reset.
     /// </summary>
     public int ResetCount { get; private set; }
@@ -117,7 +123,7 @@ internal sealed class ControlledAgentService : IAgentService
         Requests.Add(request);
         LatestToken = cancellationToken;
         _events = Channel.CreateUnbounded<AgentEvent>(new UnboundedChannelOptions { AllowSynchronousContinuations = true });
-        return Read(_events, cancellationToken);
+        return Read(_events, cancellationToken, IgnoreCancellation);
     }
 
     /// <inheritdoc />
@@ -133,17 +139,20 @@ internal sealed class ControlledAgentService : IAgentService
     /// </summary>
     /// <param name="channel">The events of the turn.</param>
     /// <param name="cancellationToken">The token of the turn.</param>
+    /// <param name="ignoreCancellation">Whether the token is left unread, as by a provider that is slow to stop.</param>
     /// <returns>The events.</returns>
     private async IAsyncEnumerable<AgentEvent> Read(
         Channel<AgentEvent> channel,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken,
+        bool ignoreCancellation)
     {
+        var token = ignoreCancellation ? CancellationToken.None : cancellationToken;
         while (true)
         {
             var more = false;
             try
             {
-                more = await channel.Reader.WaitToReadAsync(cancellationToken);
+                more = await channel.Reader.WaitToReadAsync(token);
             }
             catch (OperationCanceledException) when (EndQuietlyOnCancellation)
             {

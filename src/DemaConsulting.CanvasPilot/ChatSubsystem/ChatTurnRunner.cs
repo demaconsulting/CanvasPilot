@@ -62,7 +62,9 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         shown; nothing is made up. <see cref="StatusChanged" /> tells when any of them changed.
 ///     </para>
 ///     <para>
-///         <b>Stop and failure.</b> <see cref="Stop" /> cancels the turn. The text written until then is kept and the reply
+///         <b>Stop and failure.</b> <see cref="Stop" /> cancels the turn and, at once, shows <see cref="StoppingText" />
+///         (<see cref="IsStopping" />) until the turn has ended, because a provider needs a moment to end what it was doing.
+///         The text written until then is kept and the reply
 ///         is marked as stopped, tool calls without a result are marked as stopped, and the outcome is
 ///         <see cref="ChatTurnOutcome.Stopped" />. A failure that the service reports, or an exception that the stream
 ///         throws, ends the turn with a failed reply and an error notice; nothing is thrown to the caller.
@@ -96,6 +98,11 @@ public sealed class ChatTurnRunner : IDisposable
     ///     The time without any event from the copilot after which <see cref="HintText" /> is shown.
     /// </summary>
     public static readonly TimeSpan HintDelay = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    ///     What the status says from the moment that the turn was asked to stop until it ends.
+    /// </summary>
+    public const string StoppingText = "Stopping...";
 
     /// <summary>
     ///     What the status says when a turn starts, before anything is known.
@@ -325,6 +332,9 @@ public sealed class ChatTurnRunner : IDisposable
         }
 
         turn.StopRequested = true;
+
+        // The user sees at once that the Stop was heard, before the provider has ended its stream
+        Refresh(turn, StoppingText);
         try
         {
             turn.Cancellation.Cancel();
@@ -334,6 +344,11 @@ public sealed class ChatTurnRunner : IDisposable
             // The turn ended at the same moment; there is nothing left to stop
         }
     }
+
+    /// <summary>
+    ///     Gets a value indicating whether a turn runs that was asked to stop and has not ended yet.
+    /// </summary>
+    public bool IsStopping => _turn is { StopRequested: true };
 
     /// <summary>
     ///     Stops the turn that runs and refuses new ones.
@@ -616,9 +631,11 @@ public sealed class ChatTurnRunner : IDisposable
                 turn.LastEvent = now;
             }
 
-            if (phase is not null && !string.Equals(phase, turn.Phase, StringComparison.Ordinal))
+            // Once the turn was asked to stop, the status says so until the turn ends, whatever the copilot still reports
+            var shown = turn.StopRequested ? StoppingText : phase;
+            if (shown is not null && !string.Equals(shown, turn.Phase, StringComparison.Ordinal))
             {
-                turn.Phase = phase;
+                turn.Phase = shown;
                 changed = true;
             }
 
@@ -630,7 +647,9 @@ public sealed class ChatTurnRunner : IDisposable
             }
 
             // A tool that runs explains the wait, so the hint is for the wait for the model alone
-            var hint = _clock.GetElapsedTime(turn.LastEvent, now) >= HintDelay && !turn.ToolOrder.Any(row => row.IsRunning);
+            var hint = !turn.StopRequested
+                && _clock.GetElapsedTime(turn.LastEvent, now) >= HintDelay
+                && !turn.ToolOrder.Any(row => row.IsRunning);
             if (hint != turn.HintShown)
             {
                 turn.HintShown = hint;

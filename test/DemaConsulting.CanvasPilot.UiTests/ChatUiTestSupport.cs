@@ -266,6 +266,17 @@ internal sealed class ScriptedAgentService : IAgentService
         }
     }
 
+    /// <summary>
+    ///     Gets or sets a value indicating whether the stream ignores the token of the turn, as a provider does that is slow
+    ///     to stop: it then ends only when the test ends it with <see cref="EndStream" />.
+    /// </summary>
+    public bool IgnoreCancellation { get; set; }
+
+    /// <summary>
+    ///     Ends the stream of the turn that runs without an event that ends the turn.
+    /// </summary>
+    public void EndStream() => _events.Writer.TryComplete();
+
     /// <inheritdoc />
     public Task<AgentReadinessReport> GetReadinessAsync(CancellationToken cancellationToken = default)
     {
@@ -279,7 +290,7 @@ internal sealed class ScriptedAgentService : IAgentService
         Requests.Add(request);
         LatestToken = cancellationToken;
         _events = Channel.CreateUnbounded<AgentEvent>();
-        return Read(_events, cancellationToken);
+        return Read(_events, cancellationToken, IgnoreCancellation);
     }
 
     /// <inheritdoc />
@@ -300,17 +311,20 @@ internal sealed class ScriptedAgentService : IAgentService
     /// </summary>
     /// <param name="channel">The events of the turn.</param>
     /// <param name="cancellationToken">The token of the turn.</param>
+    /// <param name="ignoreCancellation">Whether the token is left unread, as by a provider that is slow to stop.</param>
     /// <returns>The events.</returns>
     private static async IAsyncEnumerable<AgentEvent> Read(
         Channel<AgentEvent> channel,
-        [EnumeratorCancellation] CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken,
+        bool ignoreCancellation)
     {
+        var token = ignoreCancellation ? CancellationToken.None : cancellationToken;
         while (true)
         {
             var more = false;
             try
             {
-                more = await channel.Reader.WaitToReadAsync(cancellationToken);
+                more = await channel.Reader.WaitToReadAsync(token);
             }
             catch (OperationCanceledException)
             {
