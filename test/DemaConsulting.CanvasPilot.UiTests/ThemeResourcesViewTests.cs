@@ -65,6 +65,18 @@ internal static class ThemeUiHelpers
     }
 
     /// <summary>
+    ///     Resolves a gradient brush resource of the application in a theme variant and returns the colors of its stops, in order.
+    /// </summary>
+    /// <param name="key">The resource key of a gradient brush.</param>
+    /// <param name="variant">The theme variant to resolve it in.</param>
+    /// <returns>The colors of the gradient stops.</returns>
+    public static IReadOnlyList<Color> StopColorsOf(string key, ThemeVariant variant)
+    {
+        var brush = Assert.IsAssignableFrom<IGradientBrush>(Resolve(key, variant));
+        return [.. brush.GradientStops.Select(stop => stop.Color)];
+    }
+
+    /// <summary>
     ///     Lays a color that may be translucent over an opaque background.
     /// </summary>
     /// <param name="top">The color on top.</param>

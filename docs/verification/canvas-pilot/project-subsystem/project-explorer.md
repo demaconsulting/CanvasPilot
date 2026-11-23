@@ -160,9 +160,14 @@ open and after disposal schedule nothing. This scenario is tested by
 folder makes the real watcher request a refresh within a timeout, and running it lists the file. This scenario
 is tested by `ProjectExplorerViewModel_Open_FileCreatedInFolder_WatcherRequestsRefresh`.
 
-**ProjectExplorerViewModel_Open_ChangeInSubFolderAndInDataFolder_OnlyTheFirstRequestsRefresh**: A change in a sub-folder
-makes the real watcher request a refresh, and a change inside the hidden data folder does not. This scenario is tested
-by `ProjectExplorerViewModel_Open_ChangeInSubFolderAndInDataFolder_OnlyTheFirstRequestsRefresh`.
+**ProjectExplorerViewModel_Open_ChangeInSubFolder_WatcherRequestsRefresh**: A change in a sub-folder makes the real
+watcher request a refresh, and running it lists the new file. This scenario is tested by
+`ProjectExplorerViewModel_Open_ChangeInSubFolder_WatcherRequestsRefresh`.
+
+**ProjectExplorerViewModel_IsInDataFolder_Path_IsTrueOnlyForTheDataFolderAndItsContent**: The check that the watcher
+uses to ignore changes is true for the hidden data folder and the paths inside it, in any letter case, and false for a
+sibling whose name starts like it, a data folder of a sub-folder, a project file, and other files. This scenario is
+tested by `ProjectExplorerViewModel_IsInDataFolder_Path_IsTrueOnlyForTheDataFolderAndItsContent`.
 
 **ProjectExplorerViewModel_AddFilesToFolderAndRefreshCommand_ShowTheNewFiles**: A file added to a folder of the project
 shows in that folder, a file created behind the explorer's back shows after the Refresh command runs, and the command

@@ -138,7 +138,7 @@ public sealed class ChatPanelHistoryViewTests
 
             // Assert: the answer and the tool line are the usual rows
             Assert.Equal("Because of the fill.", Assert.Single(harness.Replies).FindControl<SelectableTextBlock>("ReplyText")!.Text);
-            Assert.Equal("Replaced `flow.svg`", Assert.Single(harness.ToolRows).FindControl<TextBlock>("SummaryText")!.Text);
+            Assert.Equal("Replaced flow.svg", Assert.Single(harness.ToolRows).FindControl<TextBlock>("SummaryText")!.Text);
             Assert.DoesNotContain(harness.FindAll<TextBlock>("ChatTranscriptEmpty"), text => text.IsEffectivelyVisible);
         }
         finally

@@ -125,7 +125,8 @@ sections:
                   - ProjectExplorerViewModel_RequestRefresh_DefaultDebounce_IsQuarterSecond
                   - ProjectExplorerViewModel_RequestRefresh_NoProjectOrDisposed_SchedulesNothing
                   - ProjectExplorerViewModel_Open_FileCreatedInFolder_WatcherRequestsRefresh
-                  - ProjectExplorerViewModel_Open_ChangeInSubFolderAndInDataFolder_OnlyTheFirstRequestsRefresh
+                  - ProjectExplorerViewModel_Open_ChangeInSubFolder_WatcherRequestsRefresh
+                  - ProjectExplorerViewModel_IsInDataFolder_Path_IsTrueOnlyForTheDataFolderAndItsContent
                   - ProjectExplorerViewModel_Refresh_FolderReappears_ClearsError
                   - ProjectExplorerView_FilesChangeOnDisk_ListRefreshesAfterDebounce
 

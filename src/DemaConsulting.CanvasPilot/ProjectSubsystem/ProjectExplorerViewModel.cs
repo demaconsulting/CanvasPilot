@@ -1339,7 +1339,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     /// <param name="projectFolder">The full path of the project folder.</param>
     /// <param name="path">The full path that changed.</param>
     /// <returns><see langword="true" /> when the path is the data folder or lies inside it.</returns>
-    private static bool IsInDataFolder(string projectFolder, string path)
+    internal static bool IsInDataFolder(string projectFolder, string path)
     {
         var dataFolder = Path.Combine(projectFolder, ProjectDocument.DataFolderName);
         return string.Equals(path, dataFolder, StringComparison.OrdinalIgnoreCase)

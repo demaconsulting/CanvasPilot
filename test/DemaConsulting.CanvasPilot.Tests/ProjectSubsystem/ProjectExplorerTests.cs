@@ -258,22 +258,17 @@ public sealed class ProjectExplorerTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a change in a sub-folder makes the watcher request a refresh, and that a change inside the hidden data
-    ///     folder does not.
+    ///     Test that a change in a sub-folder makes the watcher request a refresh that lists the new file.
     /// </summary>
     [Fact]
-    public async Task ProjectExplorerViewModel_Open_ChangeInSubFolderAndInDataFolder_OnlyTheFirstRequestsRefresh()
+    public async Task ProjectExplorerViewModel_Open_ChangeInSubFolder_WatcherRequestsRefresh()
     {
-        // Arrange: an open project with a sub-folder and a data folder
+        // Arrange: an open project with a sub-folder
         Directory.CreateDirectory(Path.Combine(Folder, "assets"));
-        Directory.CreateDirectory(Path.Combine(Folder, ".canvaspilot"));
         var explorer = CreateExplorer();
         explorer.Open(Folder);
 
-        // Act: a file is written in the data folder, and then the test waits to see nothing, and one in the sub-folder
-        await File.WriteAllTextAsync(Path.Combine(Folder, ".canvaspilot", "state.json"), "{}", TestContext.Current.CancellationToken);
-        await Task.Delay(400, TestContext.Current.CancellationToken);
-        var afterDataFolder = _scheduler.ScheduledCount;
+        // Act: a file is written in the sub-folder, and the refresh it requests runs once the watcher reported it
         await File.WriteAllTextAsync(Path.Combine(Folder, "assets", "inner.svg"), string.Empty, TestContext.Current.CancellationToken);
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (explorer.Items.Count == 0 && DateTime.UtcNow < deadline)
@@ -282,9 +277,35 @@ public sealed class ProjectExplorerTests : IDisposable
             await Task.Delay(25, TestContext.Current.CancellationToken);
         }
 
-        // Assert: the data folder asked for nothing, and the sub-folder's file was listed
-        Assert.Equal(0, afterDataFolder);
+        // Assert: the sub-folder's file was listed
         Assert.Equal(["inner.svg"], explorer.Items.Select(item => item.Name));
+    }
+
+    /// <summary>
+    ///     Test that only the hidden data folder of the project, and what lies inside it, is ignored by the watcher.
+    /// </summary>
+    /// <param name="relativePath">The changed path, relative to the project folder.</param>
+    /// <param name="expected">Whether the path is the data folder or lies inside it.</param>
+    [Theory]
+    [InlineData(".canvaspilot", true)]
+    [InlineData(".canvaspilot/state.json", true)]
+    [InlineData(".CanvasPilot/history/chat.json", true)]
+    [InlineData(".canvaspilot-backup/state.json", false)]
+    [InlineData("assets/.canvaspilot/state.json", false)]
+    [InlineData("assets/inner.svg", false)]
+    [InlineData("project.canvaspilot", false)]
+    [InlineData("", false)]
+    public void ProjectExplorerViewModel_IsInDataFolder_Path_IsTrueOnlyForTheDataFolderAndItsContent(string relativePath, bool expected)
+    {
+        // Arrange: a project folder and a changed path in or beside it
+        var projectFolder = Path.Combine(Path.GetTempPath(), "project");
+        var path = relativePath.Length == 0 ? projectFolder : Path.Combine(projectFolder, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+        // Act: ask whether the watcher ignores the path
+        var actual = ProjectExplorerViewModel.IsInDataFolder(projectFolder, path);
+
+        // Assert: only the data folder and its content are ignored
+        Assert.Equal(expected, actual);
     }
 
     /// <summary>

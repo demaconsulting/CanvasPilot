@@ -239,8 +239,9 @@ public sealed class AccessibilityViewTests : IDisposable
         }
 
         // The backdrop of the dark welcome screen: its three stops, and the worst place under a violet glow
-        var stops = new[] { "#070b1f", "#130f3b", "#071a2e" }.Select(Color.Parse).ToList();
-        var glow = ThemeUiHelpers.Over(Color.Parse("#997c3aed"), stops[1]);
+        var stops = ThemeUiHelpers.StopColorsOf("CpWelcomeBackdrop", ThemeVariant.Dark);
+        Assert.Equal(3, stops.Count);
+        var glow = ThemeUiHelpers.Over(ThemeUiHelpers.StopColorsOf("CpWelcomeGlowViolet", ThemeVariant.Dark)[0], stops[1]);
         foreach (var background in stops.Append(glow))
         {
             foreach (var text in new[] { "CpTextPrimary", "CpTextSecondary", "CpAccentText" })

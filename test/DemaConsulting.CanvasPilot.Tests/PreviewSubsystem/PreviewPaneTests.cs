@@ -538,7 +538,7 @@ public sealed class PreviewPaneTests : IDisposable
         // Act: an asset in a sub-folder changes
         await File.WriteAllTextAsync(Path.Combine(_folder, "assets", "logo.svg"), "<svg/>", TestContext.Current.CancellationToken);
         await WaitForScheduledAsync(afterFileChange + 1);
-        _previewScheduler.RunPending();
+        await WaitForRendersAsync(3);
 
         // Assert: both changes caused a new render of the selected file
         Assert.True(afterFileChange > 0, "The folder watcher did not report the changed file.");
@@ -908,6 +908,28 @@ public sealed class PreviewPaneTests : IDisposable
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (_previewScheduler.ScheduledCount < count && DateTime.UtcNow < deadline)
         {
+            await Task.Delay(25, TestContext.Current.CancellationToken);
+        }
+    }
+
+    /// <summary>
+    ///     Lets the waiting re-renders run until the renderer has been asked for a number of renders. The renderer
+    ///     is asked asynchronously after a scheduled callback ran, and the watcher may report a change in several
+    ///     events, so the waiting callbacks are run again on each step.
+    /// </summary>
+    /// <param name="count">The number of render requests to wait for.</param>
+    /// <returns>A task that completes when enough renders were requested or the wait gave up.</returns>
+    private async Task WaitForRendersAsync(int count)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (DateTime.UtcNow < deadline)
+        {
+            _previewScheduler.RunPending();
+            if (_renderer.Requests.Count >= count)
+            {
+                return;
+            }
+
             await Task.Delay(25, TestContext.Current.CancellationToken);
         }
     }
