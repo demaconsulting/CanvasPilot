@@ -400,6 +400,10 @@ and 500 gives them to the workspace; a choice of 220 and 350 is saved at once; t
 at 40, 50 that is maximized saves them with the widths. This scenario is tested by
 `MainWindowShell_WindowLayout_RestoresWidthsAndSavesChoicesAndWindow`.
 
+**MainWindowShell_AppearanceSettings_ComfortableRowsReachTheExplorer**: A shell over settings that ask for comfortable
+rows gives them to the explorer; turning the setting off and on again in the settings changes the explorer to match. This
+scenario is tested by `MainWindowShell_AppearanceSettings_ComfortableRowsReachTheExplorer`.
+
 **WorkspaceLayout_CloseWindow_SavesTheSizeAndANewWindowOpensWithIt**: Closing a window that the user made 1200 by 700
 saves that size in the normal state, and a window made later over the same shell opens with that size and state. This
 scenario is tested by `WorkspaceLayout_CloseWindow_SavesTheSizeAndANewWindowOpensWithIt`.

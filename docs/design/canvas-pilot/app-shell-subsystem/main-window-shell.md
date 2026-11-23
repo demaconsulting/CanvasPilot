@@ -10,7 +10,7 @@ the open project. It routes Undo and Redo to the part of the window that has the
 panel. The window has a title bar that holds the compact menu, the name of the open project, the list that chooses
 the style kit, and the AI provider pill; a body that shows the welcome screen while no project is open and the
 workspace once one is; and a status bar at the bottom. The shell also remembers the size, place, and state of the
-window and the widths of the explorer and the chat column, and applies the thumbnail setting of the Appearance page to
+window and the widths of the explorer and the chat column, and applies the thumbnail and row height settings of the Appearance page to
 the explorer. It talks to the user only through an `IDialogService`, which the window implements, so the shell
 is tested without a window. The small message, confirmation, and prompt dialog that the window shows for
 `ShowMessageAsync`, `ConfirmAsync`, and `PromptAsync` (`MessageDialogViewModel` and `MessageDialogView`) belongs to
@@ -222,9 +222,9 @@ optional `IThumbnailSource`, which draws off the user interface thread). The ite
 the requests for their pictures are dropped. The command of an item opens its project; its remove command removes the
 project from the list only.
 
-**Thumbnail setting**: The constructor gives the explorer `AppSettings.Appearance.ShowThumbnails`, and
-`OnSettingsChanged` gives it the new value on every change of the settings, on the user interface thread, so that the
-choice on the Appearance page takes effect in the open window.
+**Thumbnail and row settings**: The constructor gives the explorer `AppSettings.Appearance.ShowThumbnails` and
+`AppSettings.Appearance.ComfortableRows`, and `OnSettingsChanged` gives it the new values on every change of the
+settings, on the user interface thread, so that the choices on the Appearance page take effect in the open window.
 
 **Saving the layout**: `SaveWindow` writes the size (rounded), the place, and the state into `AppSettings.Window`
 through `ISettingsService.Update`. The shell also listens to `ProjectWorkspaceViewModel.LayoutChanged` and writes the

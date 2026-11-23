@@ -535,6 +535,31 @@ public sealed class ProjectExplorerTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the explorer starts with compact rows and tells when the rows are made comfortable or compact again.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_ComfortableRows_DefaultsToCompactAndRaisesPropertyChanged()
+    {
+        // Arrange: a new explorer that records the properties that change
+        var explorer = CreateExplorer();
+        var changed = new List<string?>();
+        explorer.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var atStart = explorer.ComfortableRows;
+
+        // Act: make the rows comfortable, set the same value again, and make them compact
+        explorer.ComfortableRows = true;
+        var afterOn = explorer.ComfortableRows;
+        explorer.ComfortableRows = true;
+        explorer.ComfortableRows = false;
+
+        // Assert: compact at the start, each real change was reported once, and the same value was not reported
+        Assert.False(atStart);
+        Assert.True(afterOn);
+        Assert.False(explorer.ComfortableRows);
+        Assert.Equal([nameof(ProjectExplorerViewModel.ComfortableRows), nameof(ProjectExplorerViewModel.ComfortableRows)], changed);
+    }
+
+    /// <summary>
     ///     Test that thumbnails are asked for only for files that are drawn and can be seen (every folder above them
     ///     expanded), once for each, again for a file that changed, not at all while thumbnails are off, and again for the
     ///     files that can be seen when they are turned on.

@@ -388,6 +388,7 @@ public sealed class ApplicationComposition : IDisposable
         var thumbnails = new ThumbnailProvider(renderer);
         var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), scheduler, logger: logger, thumbnails: thumbnails);
         explorer.ShowThumbnails = settings.Current.Appearance.ShowThumbnails;
+        explorer.ComfortableRows = settings.Current.Appearance.ComfortableRows;
         var dragSource = new ImageDragSource(
             renderer,
             dragFolder ?? Path.Combine(Path.GetTempPath(), "CanvasPilot", "drag"),

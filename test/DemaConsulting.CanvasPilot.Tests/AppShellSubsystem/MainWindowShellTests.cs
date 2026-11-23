@@ -409,6 +409,31 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the shell gives the explorer the row height that was saved in the Appearance settings and follows the
+    ///     setting when it changes.
+    /// </summary>
+    [Fact]
+    public void MainWindowShell_AppearanceSettings_ComfortableRowsReachTheExplorer()
+    {
+        // Arrange: settings that ask for comfortable rows, and a shell over them
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        settings.Update(s => s with { Appearance = s.Appearance with { ComfortableRows = true } });
+        var shell = CreateShell(settings: settings);
+        var atStart = shell.Workspace.Explorer.ComfortableRows;
+
+        // Act: the user turns the setting off, and then on again
+        settings.Update(s => s with { Appearance = s.Appearance with { ComfortableRows = false } });
+        var afterOff = shell.Workspace.Explorer.ComfortableRows;
+        settings.Update(s => s with { Appearance = s.Appearance with { ComfortableRows = true } });
+        var afterOn = shell.Workspace.Explorer.ComfortableRows;
+
+        // Assert: the explorer followed the setting from the start
+        Assert.True(atStart);
+        Assert.False(afterOff);
+        Assert.True(afterOn);
+    }
+
+    /// <summary>
     ///     Test that the shell gives the workspace the widths of the explorer and the chat column that were saved, saves the
     ///     widths that the user chooses with a splitter, and saves the size, place, and state of the window that it is told.
     /// </summary>

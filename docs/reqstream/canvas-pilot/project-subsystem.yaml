@@ -142,9 +142,11 @@ sections:
               - CanvasPilot-ProjectExplorer-ShowSelection
               - CanvasPilot-ProjectExplorer-ShowProblems
               - CanvasPilot-ProjectExplorer-ShowHeader
+              - CanvasPilot-ProjectExplorer-ComfortableRows
             tests:
               - ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent
               - ProjectExplorerView_Header_ShowsLabelAndButtonsThatRunTheCommands
+              - ProjectExplorerView_ComfortableRows_RowsAre32HighInsteadOf26
 
           - id: CanvasPilot-Project-ShowThumbnails
             title: >-

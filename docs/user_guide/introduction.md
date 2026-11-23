@@ -1143,8 +1143,8 @@ tools and the zoom pill, and the same title bar and status bar.](main-window-lig
   or light as your operating system is, and changes with it while it runs. **Dark** and **Light** keep that look
   whatever the system does. The theme changes in every open window as soon as you choose **OK** or **Apply**.
 - **Show a small picture beside each file** turns the thumbnails of the explorer on or off (on by default).
-- **Comfortable rows (taller, with more room between files)** is stored with your other settings, but the explorer does
-  not use it yet; its rows keep their compact height.
+- **Comfortable rows (taller, with more room between files)** makes the rows of the explorer 32 pixels high instead of
+  26 pixels (off by default). The rows change as soon as you choose **OK** or **Apply**.
 
 # Keyboard and Accessibility
 

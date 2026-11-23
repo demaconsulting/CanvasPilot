@@ -123,6 +123,7 @@
          a folder can be selected and expanded, and only a file that is drawn is previewed. -->
     <TreeView Grid.Row="1"
               Name="ExplorerTree"
+              Classes.comfortable="{Binding ComfortableRows}"
               AutomationProperties.AutomationId="ProjectExplorerList"
               AutomationProperties.Name="Project files"
               Background="Transparent"
@@ -133,6 +134,10 @@
         <Style Selector="TreeViewItem" x:DataType="vm:ProjectNodeViewModel">
           <Setter Property="Theme" Value="{DynamicResource ExplorerTreeViewItem}" />
           <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+        </Style>
+        <!-- The comfortable setting makes the rows 32 px tall instead of 26 px -->
+        <Style Selector="TreeView.comfortable TreeViewItem">
+          <Setter Property="MinHeight" Value="32" />
         </Style>
       </TreeView.Styles>
       <TreeView.ItemTemplate>

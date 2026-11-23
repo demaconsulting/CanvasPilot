@@ -33,7 +33,7 @@ selects the node with the same path. `FindNode(path)` finds the node of a path (
 
 **State**: `FolderPath` and `HasProject` (the project folder shown, or `null`); `EmptyMessage` ("No project is open." or
 "This project has no image files yet." when the tree is empty, otherwise empty); `ErrorMessage` (the last problem, shown
-in the view); `IsWatching`; `IsTruncated` (whether the tree was cut short); `ShowThumbnails` (default `true`);
+in the view); `IsWatching`; `IsTruncated` (whether the tree was cut short); `ShowThumbnails` (default `true`); `ComfortableRows` (default `false`: rows 26 px high; `true`: 32 px);
 `TargetFolder` (where a new file or folder goes: the selected folder, the folder of the selected file, or the project
 folder, or `null` with no project); `NewFileCommand` and `NewFolderCommand` (set by the application shell, which asks
 the user for the name; they are `null` until then); and `RefreshCommand` (an `IRelayCommand` that can be used while
@@ -77,6 +77,8 @@ gives the same bitmap as the first. The explorer is given the source in its cons
   an amber outline folder, open or closed) in front of the name, with the full path as tooltip, and, at the right, the
   28 by 18 px thumbnail box that shows only while the node has a thumbnail. The arrow keys, Right, and Left are the
   keyboard handling of the `TreeView`: they move the selection and expand and collapse folders.
+  The tree carries the class `comfortable` while `ComfortableRows` is on, and a style of the view sets the `MinHeight` of its rows
+  to 32 px, over the 26 px of the control theme.
 - The empty message over the tree and the error line below it: a raised card with the danger icon and the message in the
   danger color, shown while `ErrorMessage` is not empty.
 - The drop zone: a dashed outline with an attach icon and the words "Drop pictures or PDFs here", shown while a project
@@ -204,5 +206,5 @@ Failures to write a log entry are ignored.
 - The application shell (`ProjectWorkspace`) — hosts the view, calls `Open` and `Close` as the open project changes,
   sets `NewFileCommand` and `NewFolderCommand` (which ask the user for a name and call `CreateFile` and `CreateFolder`),
   reads `SelectedFile`, and calls `DeleteSelected` and `RenameSelected` after confirming with the user.
-- `MainWindowShell` and `ApplicationComposition` — give the explorer its thumbnail source and set `ShowThumbnails` from
-  the Appearance setting at the start and on every change of the settings.
+- `MainWindowShell` and `ApplicationComposition` — give the explorer its thumbnail source and set `ShowThumbnails` and
+  `ComfortableRows` from the Appearance setting at the start and (the shell) on every change of the settings.

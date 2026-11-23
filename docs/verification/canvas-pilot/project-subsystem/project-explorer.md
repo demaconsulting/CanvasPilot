@@ -56,6 +56,7 @@ platforms; the same requirements are also covered by tests that run everywhere.
   row, the problem line with the danger icon, the header label and three named buttons with tooltips that run their
   commands, and the drop zone only with a project; drops are copied where they fall and lit while the drag is over the
   place.
+- The rows are 26 high, or 32 high while the comfortable rows setting is on, and follow the setting when it changes.
 - Thumbnails are asked for only for drawn files that can be seen, once, again when a file changes, not while off, and
   freed with removed nodes; a missing or failing source leaves the rows as they were; the view shows a 28 by 18 box only
   on the rows that have one.
@@ -303,6 +304,14 @@ dropped text file is refused with a message and not copied. This scenario is tes
 28 by 18 once the picture is made, a PDF row and a folder row show none, turning thumbnails off takes them away, and
 turning them on makes them again. This scenario is tested by
 `ProjectExplorerView_Thumbnails_ShownOnRowsOfDrawnFilesAndFollowTheSetting`.
+
+**ProjectExplorerViewModel_ComfortableRows_DefaultsToCompactAndRaisesPropertyChanged**: A new explorer has compact rows,
+and each change of the setting is reported once. This scenario is tested by
+`ProjectExplorerViewModel_ComfortableRows_DefaultsToCompactAndRaisesPropertyChanged`.
+
+**ProjectExplorerView_ComfortableRows_RowsAre32HighInsteadOf26**: A row of the tree is 26 high, becomes 32 high when the
+comfortable rows setting is turned on, and is 26 high again when it is turned off. This scenario is tested by
+`ProjectExplorerView_ComfortableRows_RowsAre32HighInsteadOf26`.
 
 **Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: In the workspace of an open project, which holds the
 explorer, in both theme variants, the tree has a name and every button without text has a name, a tooltip, keyboard

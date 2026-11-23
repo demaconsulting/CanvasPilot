@@ -18,7 +18,8 @@ nothing of windows or themes: the application watches the settings and shows the
 **SelectedTheme**: `SettingsChoice<ThemeChoice>` — the choice that is edited; `Follow system` until settings are loaded.
 
 **ShowThumbnails** and **ComfortableRows**: `bool` — whether the explorer shows a small picture beside each file
-(default `true`) and whether its rows are taller (default `false`).
+(default `true`) and whether its rows are 32 px high instead of 26 px (default `false`). The main window shell copies
+both values to the explorer, at start and whenever the settings change.
 
 **IsValid**: `bool` — always `true`, because every combination of the choices can be stored.
 

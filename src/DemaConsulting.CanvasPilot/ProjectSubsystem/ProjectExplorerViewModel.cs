@@ -200,6 +200,12 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     private bool _showThumbnails = true;
 
     /// <summary>
+    ///     Whether the rows of the tree are taller, 32 px instead of 26 px. The view takes the row height from this value.
+    /// </summary>
+    [ObservableProperty]
+    private bool _comfortableRows;
+
+    /// <summary>
     ///     Creates an explorer that shows nothing until <see cref="Open" /> is called.
     /// </summary>
     /// <param name="filter">Decides which files are listed.</param>

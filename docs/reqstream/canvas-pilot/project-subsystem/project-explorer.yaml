@@ -307,6 +307,19 @@ sections:
                   - ProjectExplorerViewModel_Nodes_RemovedOrCleared_AreDisposed
                   - ProjectExplorerView_Thumbnails_ShownOnRowsOfDrawnFilesAndFollowTheSetting
 
+              - id: CanvasPilot-ProjectExplorer-ComfortableRows
+                title: >-
+                  The ProjectExplorer shall make the rows of its tree 26 pixels high, or 32 pixels high while the
+                  Comfortable rows setting is on, and shall follow the setting when the user changes it.
+                justification: |
+                  Some users want more room between the files, for easier pointing or for easier reading, and others want
+                  to see more files at once. The Appearance setting offers that choice, and a setting that has no effect on
+                  the explorer would mislead the user.
+                tests:
+                  - ProjectExplorerViewModel_ComfortableRows_DefaultsToCompactAndRaisesPropertyChanged
+                  - ProjectExplorerView_ComfortableRows_RowsAre32HighInsteadOf26
+                  - MainWindowShell_AppearanceSettings_ComfortableRowsReachTheExplorer
+
               - id: CanvasPilot-ProjectExplorer-WorkWithoutThumbnails
                 title: >-
                   The ProjectExplorer shall work as usual, showing the row without a picture, when it has no source of

@@ -273,6 +273,48 @@ public sealed class ProjectExplorerViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a row is 26 high while the rows are compact, 32 high when the explorer is set to comfortable rows, and 26
+    ///     high again when the setting is turned off.
+    /// </summary>
+    [AvaloniaFact]
+    public void ProjectExplorerView_ComfortableRows_RowsAre32HighInsteadOf26()
+    {
+        // Arrange: a shown explorer with a file
+        Touch("a.svg");
+        var (window, viewModel) = ShowExplorer(project: true);
+        var tree = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        var row = Assert.IsType<TreeViewItem>(tree.ContainerFromIndex(0));
+
+        // Act: read the height of the row compact, comfortable, and compact again
+        var compact = RowHeightOf(row, window);
+        viewModel.ComfortableRows = true;
+        var comfortable = RowHeightOf(row, window);
+        viewModel.ComfortableRows = false;
+        var compactAgain = RowHeightOf(row, window);
+
+        // Assert: the heights follow the setting
+        Assert.Equal(26, compact, 0.5);
+        Assert.Equal(32, comfortable, 0.5);
+        Assert.Equal(26, compactAgain, 0.5);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Lets the layout settle and reads the height of the row of a tree item.
+    /// </summary>
+    /// <param name="row">The tree item.</param>
+    /// <param name="window">The window that shows it.</param>
+    /// <returns>The height of the row in device independent pixels.</returns>
+    private static double RowHeightOf(TreeViewItem row, Window window)
+    {
+        window.UpdateLayout();
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
+        return row.GetVisualDescendants().OfType<Border>().First(border => border.Name == "PART_LayoutRoot").Bounds.Height;
+    }
+
+    /// <summary>
     ///     Test that an unreadable project folder shows its problem with the danger icon and words, and that the explorer
     ///     lists nothing then.
     /// </summary>
