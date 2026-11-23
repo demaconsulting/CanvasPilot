@@ -194,6 +194,7 @@ sections:
             children:
               - CanvasPilot-MainWindowShell-ShowTitleBar
               - CanvasPilot-MainWindowShell-KeepRoomForSystemButtons
+              - CanvasPilot-MainWindowShell-HaveNoFullScreenMode
               - CanvasPilot-MainWindowShell-OpenWithDesignSizes
               - CanvasPilot-MainWindowShell-HostProviderPillInTitleBar
             tests:

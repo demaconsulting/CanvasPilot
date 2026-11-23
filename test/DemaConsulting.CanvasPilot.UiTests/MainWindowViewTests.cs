@@ -160,7 +160,7 @@ public sealed class MainWindowViewTests : IDisposable
     [Theory]
     [InlineData(false, true, false, 0, 0)]
     [InlineData(false, false, true, 0, 0)]
-    [InlineData(true, true, false, 0, 138)]
+    [InlineData(true, true, false, 0, 140)]
     [InlineData(true, false, true, 78, 0)]
     [InlineData(true, false, false, 0, 0)]
     public void MainWindowView_CaptionReserve_FollowsPlatformAndExtension(bool isExtended, bool isWindows, bool isMacOs, double left, double right)
@@ -192,7 +192,7 @@ public sealed class MainWindowViewTests : IDisposable
         MainWindowView.ApplyCaptionReserve(leading, null, false, true, false);
 
         // Assert: nothing threw, the widths follow the platform, and a window that is not extended keeps none
-        Assert.Equal((0d, 138d), windowsWidths);
+        Assert.Equal((0d, 140d), windowsWidths);
         Assert.Equal((78d, 0d), macWidths);
         Assert.Equal(0, leading.Width);
     }

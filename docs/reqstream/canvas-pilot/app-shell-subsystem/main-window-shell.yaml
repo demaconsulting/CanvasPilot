@@ -287,17 +287,38 @@ sections:
 
               - id: CanvasPilot-MainWindowShell-KeepRoomForSystemButtons
                 title: >-
-                  The MainWindowShell shall, when the window extends into its frame, keep 138 pixels free at the right end of
-                  the title bar on Windows and 78 pixels free at its left end on macOS for the buttons that the system draws
-                  there, and shall keep nothing free on another platform or while the window does not extend into its frame.
+                  The MainWindowShell shall, when the window extends into its frame, keep free at the right end of the title
+                  bar on Windows the width that the buttons it draws there really cover (measured from the buttons, which
+                  are minimize, maximize or restore, and close; 140 pixels until they are laid out) so that the provider pill
+                  ends clear of the first button, in the normal and in the maximized state, and 78 pixels at its left end on
+                  macOS for the buttons that the system draws there, and shall keep nothing free on another platform or while
+                  the window does not extend into its frame.
                 justification: |
                   The system draws the buttons that minimize, maximize, and close the window over the strip when the window
-                  takes over the frame. If the title or the pills lay under them, they could not be seen or used, and a window
-                  that does not take over the frame must not waste room.
+                  takes over the frame. If the title or the pills lay under them, they could not be seen or used (the pill
+                  was drawn under an invisible button and its gear was garbled), and a window that does not take over the
+                  frame must not waste room. The buttons are drawn by the host of the window and not by the window, so the
+                  width is measured from the top of the visual tree.
                 tests:
                   - MainWindowView_CaptionReserve_FollowsPlatformAndExtension
                   - MainWindowView_ApplyCaptionReserve_ToleratesMissingControls
                   - MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes
+                  - MainWindowView_TitleBar_PillEndsClearOfTheWindowButtons
+                  - MainWindowView_CaptionReserve_FallsBackToTheConstantUntilTheButtonsAreMeasured
+
+              - id: CanvasPilot-MainWindowShell-HaveNoFullScreenMode
+                title: >-
+                  The MainWindowShell shall not offer a full-screen button among the window buttons, shall not bind a key to
+                  full screen, and shall turn a window that is put into full screen by any other means back to the normal
+                  state.
+                justification: |
+                  A window in full screen has no title bar and no buttons; the only way back is a bar that appears when the
+                  pointer rests at the top edge, which users do not find. A drawing tool has no use for it, and a user who
+                  is stuck in it has lost the window.
+                tests:
+                  - MainWindowView_TitleBarDecorations_AskForNoFullScreenButton
+                  - MainWindowView_WindowState_FullScreenIsTurnedBackToNormal
+                  - MainWindowView_KeyF11_DoesNotEnterFullScreen
 
               - id: CanvasPilot-MainWindowShell-OpenWithDesignSizes
                 title: >-
