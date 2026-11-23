@@ -22,6 +22,7 @@ platform with the Skia renderer, serialized with test parallelization disabled; 
 - Before the first answer the pill is checking, with the words "checking"; after a ready answer it shows Copilot and the
   model of the settings, with the sentence of the check as its tooltip and the sentence "AI provider: Copilot, {model}.
   Opens the settings." as its name.
+- A ready answer that names the account and the kind of sign-in has that sentence, unchanged, as the tooltip.
 - Each of the ten results of the check that are not ready has its own words and state: the state is an error for an
   unavailable runtime and needs attention for the others; the tooltip is the sentence of the check; the words are in the
   name.
@@ -38,6 +39,11 @@ platform with the Skia renderer, serialized with test parallelization disabled; 
 answer prepared, the pill is checking before the chat panel checks, and after it is ready with `Copilot`, the model, the
 separated detail, the tooltip of the check, and the accessible name. This scenario is tested by
 `ProviderPill_CheckThenReady_ShowsCheckingThenProviderAndModel`.
+
+**ProviderPill_ReadyWithSignIn_ToolTipNamesTheAccountAndTheKindOfSignIn**: A ready check whose sentence is "GitHub
+Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in)." gives a ready pill whose tooltip
+is exactly that sentence, so the user sees the account and the kind of sign-in. This scenario is tested by
+`ProviderPill_ReadyWithSignIn_ToolTipNamesTheAccountAndTheKindOfSignIn`.
 
 **ProviderPill_CheckFindsAProblem_SaysItInWordsAndPicksTheState**: For each result of the check that is not ready (not
 set up, CLI not found, CLI too old, sign-in needed, unavailable, Ollama not running, model missing, small context, model
@@ -65,6 +71,6 @@ using it opens the settings dialog on the page titled "AI Provider". This scenar
 
 The requirements are verified by these scenarios as follows: *ShowProviderAndModel* by the ready and the Ollama
 scenarios; *ShowTheStateWithWords* by the ready, the problem, and the recheck scenarios; *ExplainInTooltip* by the same
-three; *ReportMissingProvider* by the recheck scenario; *OpenSettings* by the recheck and the window scenarios;
-*ShowInTitleBar* by the window scenario; *AnnounceToScreenReader* by the ready, the problem, and the window scenarios;
-and *StopFollowingWhenDisposed* by the disposal scenario.
+three and the sign-in scenario; *ReportMissingProvider* by the recheck scenario; *OpenSettings* by the recheck and the
+window scenarios; *ShowInTitleBar* by the window scenario; *AnnounceToScreenReader* by the ready, the problem, and the
+window scenarios; and *StopFollowingWhenDisposed* by the disposal scenario.

@@ -156,9 +156,10 @@ no agent was made. This scenario is tested by
 `AppShellSubsystem_ComposeApplication_CopilotIsBuiltFromItsFoldersAndFeedsTheSettingsPage`.
 
 **AppShellSubsystem_ComposeApplication_CopilotAsksForSettingsAndIsCheckedAgainWhenTheyChange**: The settings choose
-GitHub Copilot on a machine without a sign-in and the panel shows the sign-in sentence; the panel asks for the
-settings and the settings dialog is opened once; a change of the recent projects asks nothing of the server; a change
-to Ollama with a model of the server makes the panel check again and the banner goes away. This scenario is tested by
+GitHub Copilot with a starter that says that Copilot is not signed in, and the panel shows the sign-in sentence (it
+tells the user to run `copilot` and type `/login`); the panel asks for the settings and the settings dialog is opened
+once; a change of the recent projects asks nothing of the server; a change to Ollama with a model of the server makes
+the panel check again and the banner goes away. This scenario is tested by
 `AppShellSubsystem_ComposeApplication_CopilotAsksForSettingsAndIsCheckedAgainWhenTheyChange`.
 
 **AppShellSubsystem_ComposeApplication_CopilotWritesFile_ExplorerSelectsItAndPreviewDrawsIt**: A scripted model says a
