@@ -560,7 +560,8 @@ public sealed class ApplicationComposition : IDisposable
             agent,
             history: chatHistory,
             projects: projects,
-            talkKey: shell.TalkKey);
+            talkKey: shell.TalkKey,
+            pictureFilter: new CanvasNetImageSourceFilter());
 
         // The chat panel is the right-hand column of the workspace, which shows it while a project is open, and it is
         // what the talk key of the window listens for

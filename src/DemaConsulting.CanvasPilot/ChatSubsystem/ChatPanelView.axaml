@@ -243,7 +243,7 @@
                    Text="{x:Static vm:ChatPanelViewModel.EmptyTranscriptText}" />
         <ItemsControl Name="ExamplePromptList"
                       Margin="0,8,0,0"
-                      ItemsSource="{x:Static vm:ChatPanelViewModel.ExamplePrompts}">
+                      ItemsSource="{Binding Suggestions}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <StackPanel Spacing="8" />
@@ -327,7 +327,7 @@
     <ItemsControl Name="SuggestionList"
                   Grid.Row="4"
                   Margin="16,8,16,0"
-                  ItemsSource="{x:Static vm:ChatPanelViewModel.SuggestedPrompts}"
+                  ItemsSource="{Binding Suggestions}"
                   IsVisible="{Binding ShowSuggestions}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>

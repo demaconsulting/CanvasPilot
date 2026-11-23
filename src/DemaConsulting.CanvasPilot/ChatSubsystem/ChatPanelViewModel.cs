@@ -112,25 +112,25 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public const string EmptyTipFormat = "Drop a picture, or hold {0} and speak";
 
     /// <summary>
-    ///     The prompts that the empty conversation offers; choosing one writes it in the message.
+    ///     Tells which files are drawings when the panel was not given a filter, for the files that the copilot writes.
     /// </summary>
-    public static IReadOnlyList<string> ExamplePrompts { get; } =
-    [
-        "Draw our release flow",
-        "Chart downloads by month",
-        "Put both on one page",
-        "Make it match my style kit",
-    ];
+    private static readonly CanvasNetImageSourceFilter DefaultPictureFilter = new();
 
     /// <summary>
-    ///     The follow-up prompts that are offered above the message while a conversation is going on and the copilot is idle.
+    ///     The prompts that are offered now.
     /// </summary>
-    public static IReadOnlyList<string> SuggestedPrompts { get; } =
-    [
-        "Add a legend",
-        "Make title larger",
-        "Export as PNG",
-    ];
+    private IReadOnlyList<string> _suggestions = [];
+
+    /// <summary>
+    ///     Whether the copilot wrote a drawing during this session of the project; set from any thread.
+    /// </summary>
+    private volatile bool _drawingWritten;
+
+    /// <summary>
+    ///     Tells which files are drawings, so that the project folder can be searched for one, or <see langword="null" /> for
+    ///     no search.
+    /// </summary>
+    private readonly IImageSourceFilter? _pictureFilter;
 
     /// <summary>
     ///     The words of the indicator that shows while the copilot works on a message.
@@ -278,7 +278,8 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// <param name="history">Where the text of the conversation is kept on this computer, or <see langword="null" /> for nowhere: the transcript is then only in memory.</param>
     /// <param name="projects">The project service, which tells which project is open and so where its history is kept, or <see langword="null" /> for none: nothing is then saved or restored.</param>
     /// <param name="talkKey">The talk key that the hints show, or <see langword="null" /> for the default key.</param>
-    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, the clock, the history store, the project service, and the talk key is <see langword="null" />.</exception>
+    /// <param name="pictureFilter">Tells which files are drawings, so that the prompts can follow whether the project folder holds one, or <see langword="null" /> for no search of the folder: a picture that is shown, or a drawing that the copilot wrote, still counts.</param>
+    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, the clock, the history store, the project service, the talk key, and the picture filter is <see langword="null" />.</exception>
     public ChatPanelViewModel(
         ComposerViewModel composer,
         MarkRegistry marks,
@@ -290,7 +291,8 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         TimeProvider? clock = null,
         IChatHistoryStore? history = null,
         IProjectService? projects = null,
-        PushToTalkSetting? talkKey = null)
+        PushToTalkSetting? talkKey = null,
+        IImageSourceFilter? pictureFilter = null)
     {
         ArgumentNullException.ThrowIfNull(composer);
         ArgumentNullException.ThrowIfNull(marks);
@@ -304,6 +306,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _logger = logger;
         _history = history;
         _projects = projects;
+        _pictureFilter = pictureFilter;
         _talkKey = talkKey ?? PushToTalkSetting.Fixed();
         _talkKey.PropertyChanged += OnTalkKeyChanged;
         _clock = clock ?? TimeProvider.System;
@@ -342,10 +345,17 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer.Changed += _composerChanged;
         _annotation.MarkAdded += _markAdded;
         _annotation.ClearMarksRequested += _clearMarks;
+        _annotation.PropertyChanged += OnAnnotationPropertyChanged;
+        if (_agent is not null)
+        {
+            _agent.FileWritten += OnFileWritten;
+        }
+
         JoinAnnotationToComposer();
 
         // A project that is already open has a saved conversation
         BeginHistory();
+        RefreshSuggestions();
     }
 
     /// <summary>
@@ -417,20 +427,85 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public IRelayCommand CollapseCommand { get; }
 
     /// <summary>
-    ///     Gets a value indicating whether the follow-up prompts are offered: a conversation is going on and the copilot is
-    ///     idle.
+    ///     Gets the prompts that are offered now, from what the project has: ways to start while it has no drawing, ways to
+    ///     refine while it has one, and none while the copilot works (see <see cref="FollowUpSuggestions" />). The empty
+    ///     conversation shows them as examples, and a conversation that is going on shows them above the message.
     /// </summary>
-    public bool ShowSuggestions => HasTranscript && !IsCopilotBusy;
+    public IReadOnlyList<string> Suggestions => _suggestions;
+
+    /// <summary>
+    ///     Gets a value indicating whether there are prompts to offer.
+    /// </summary>
+    public bool HasSuggestions => _suggestions.Count > 0;
+
+    /// <summary>
+    ///     Gets a value indicating whether the prompts are offered above the message: a conversation is going on, the copilot
+    ///     is idle, and there is something to offer.
+    /// </summary>
+    public bool ShowSuggestions => HasTranscript && HasSuggestions;
 
     /// <inheritdoc />
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
 
-        // The follow-up prompts depend on both of these
-        if (e.PropertyName is nameof(HasTranscript) or nameof(IsCopilotBusy))
+        // The prompts above the message depend on both of these
+        if (e.PropertyName is nameof(HasTranscript) or nameof(Suggestions))
         {
             base.OnPropertyChanged(new PropertyChangedEventArgs(nameof(ShowSuggestions)));
+        }
+    }
+
+    /// <summary>
+    ///     Plans the prompts again from what the project has now, and announces them when they changed. A project has a
+    ///     drawing when a picture is shown, when the copilot wrote one during this session, or, when the panel was given a
+    ///     filter, when its folder holds one; nothing is looked for while the copilot works, because nothing is offered then.
+    /// </summary>
+    private void RefreshSuggestions()
+    {
+        var busy = IsCopilotBusy;
+        var hasPicture = _annotation.HasPicture;
+        var hasDrawing = !busy
+            && (hasPicture
+                || _drawingWritten
+                || (_pictureFilter is not null
+                    && _composer.ProjectFolder is { Length: > 0 } folder
+                    && ProjectDrawingProbe.HasDrawing(folder, _pictureFilter)));
+        var plan = FollowUpSuggestions.Plan(hasDrawing, hasPicture, busy);
+        if (_suggestions.SequenceEqual(plan))
+        {
+            return;
+        }
+
+        _suggestions = plan;
+        OnPropertyChanged(nameof(Suggestions));
+        OnPropertyChanged(nameof(HasSuggestions));
+    }
+
+    /// <summary>
+    ///     Notes that the copilot wrote a drawing. The event may come from any thread, so only a flag is set; the prompts are
+    ///     planned again when the turn ends.
+    /// </summary>
+    /// <param name="sender">The copilot.</param>
+    /// <param name="e">The file that was written.</param>
+    private void OnFileWritten(object? sender, FileWrittenEventArgs e)
+    {
+        if ((_pictureFilter ?? DefaultPictureFilter).IsImageSource(e.RelativePath))
+        {
+            _drawingWritten = true;
+        }
+    }
+
+    /// <summary>
+    ///     Plans the prompts again when a picture appears or goes away.
+    /// </summary>
+    /// <param name="sender">The annotation layer.</param>
+    /// <param name="e">The change details.</param>
+    private void OnAnnotationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AnnotationOverlayViewModel.HasPicture))
+        {
+            RefreshSuggestions();
         }
     }
 
@@ -721,6 +796,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer.Changed -= _composerChanged;
         _annotation.MarkAdded -= _markAdded;
         _annotation.ClearMarksRequested -= _clearMarks;
+        _annotation.PropertyChanged -= OnAnnotationPropertyChanged;
+        if (_agent is not null)
+        {
+            _agent.FileWritten -= OnFileWritten;
+        }
         if (_runner is not null)
         {
             // Nothing is added to a transcript that is dropped, and a turn that is still running is stopped
@@ -811,8 +891,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
 
                     ClearTranscript();
 
+                    // A drawing that the copilot wrote belongs to the project that it wrote it in
+                    _drawingWritten = false;
+
                     // The conversation of the new project, if it was saved, takes the place of the old one
                     BeginHistory();
+                    RefreshSuggestions();
                 }
 
                 break;
@@ -979,6 +1063,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         OnPropertyChanged(nameof(IsCopilotBusy));
         OnStatusChanged(sender, e);
         StopCommand.NotifyCanExecuteChanged();
+
+        // Nothing is offered while the copilot works; when it is done, what it wrote may have given the project a drawing
+        RefreshSuggestions();
     }
 
     /// <summary>
