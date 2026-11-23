@@ -240,11 +240,9 @@ public sealed class AgentReadinessTests
         // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert: the exact sentence names gh auth login, the variables, and that the CLI's own login does not apply
+        // Assert: the sentence is the one of the starter, which names /login, gh auth login, and the variables
         Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, report.Status);
-        Assert.Equal(
-            "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to the Copilot CLI with /login does not apply to CanvasPilot.",
-            report.Message);
+        Assert.Equal(CopilotRuntimeStarter.NotSignedInMessage, report.Message);
         Assert.False(report.IsUsable);
         Assert.Empty(starter.Requests);
     }

@@ -48,7 +48,8 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///     </para>
 ///     <para>
 ///         An exception ends the turn with <see cref="AgentEvent.Failed" /> of a kind that the cause tells: a refused sign-in
-///         (the sentence names <c>gh auth login</c> and <c>COPILOT_GITHUB_TOKEN</c> for Copilot), a protocol version that the
+///         (the sentence tells the user to run <c>copilot</c> and type <c>/login</c>, and names <c>gh auth login</c> and
+///         <c>COPILOT_GITHUB_TOKEN</c> as alternatives, for Copilot), a protocol version that the
 ///         Copilot CLI and the AI library do not share, a model that the provider does not have (OllamaSharp carries only a
 ///         404 status, so the sentence names <c>ollama pull</c>), or a connection that was lost. A turn that the caller
 ///         cancels is not a failure: the stream simply ends. The exception chain is searched from the outside in, by type

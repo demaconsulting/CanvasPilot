@@ -56,8 +56,10 @@ sections:
                 title: >-
                   The CopilotRuntimeStarter shall answer a start that fails with a status and one sentence and not with an
                   exception: a CLI that is too old or speaks another protocol as too old with the explanation of the AI
-                  library, a runtime that is not signed in as not signed in with the sentence that names gh auth login and
-                  the token variables and says that the sign-in of the Copilot CLI with /login does not apply, a path that
+                  library, a runtime that is not signed in as not signed in with the sentence that tells the user to run
+                  copilot and type /login and names gh auth login and the token variables as alternatives, followed by one
+                  line that says what the AI library found at each place that it looked for a sign-in (and the sentence
+                  alone when the explanation has no such findings), a path that
                   the AI library refuses (a relative path or a batch file) as a path in the Settings that cannot be used
                   with the cause and without the name of the parameter, and any other failure as not started with the
                   explanation of the AI library, or a sentence of its own when there is none.
@@ -65,10 +67,13 @@ sections:
                   Each of these has a different remedy (upgrade the CLI, sign in, choose another path, check the
                   installation), and the user must find it in the banner of the chat and in Check connection, not in an
                   exception. The AI library has no typed causes, only explanations in words, so the starter recognizes the
-                  words and keeps them in one place. The sign-in of the Copilot CLI itself is not used by the AI library,
-                  which a user who is signed in to the CLI would not expect, so the sentence says it.
+                  words and keeps them in one place. A user who installed the Copilot CLI expects to sign in the way that the
+                  CLI does, so the sentence says to run copilot and type /login first. The AI library explains in several
+                  lines what it tried, which tells why a sign-in that the user believes to have was not found, so the
+                  starter keeps its findings on the same line, the one line that a report message is.
                 tests:
                   - CopilotRuntimeStarter_StartAsync_LibraryFailure_BecomesTheMatchingStatusAndSentence
+                  - CopilotRuntimeStarter_StartAsync_NotSignedInWithFindings_AddsAOneLineDigestOfTheFindings
                   - CopilotRuntimeStarter_StartAsync_PathTheLibraryRefuses_ReportsItAsASentenceAndStartsNothing
                   - CopilotRuntimeStarter_StartAsync_FailureThenSuccess_TriesAgain
 

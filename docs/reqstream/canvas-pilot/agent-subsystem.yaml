@@ -270,7 +270,7 @@ sections:
               The user installs, updates, and signs in to the Copilot CLI, and the application must use that CLI and never
               a copy of its own. The runtime keeps its data in one folder that two runtimes must not share, so a single
               starter owns the one runtime that the check and the conversations use, and a different CLI or folder replaces
-              it. The AI library cannot use the sign-in of the Copilot CLI itself, only the GitHub CLI or a token variable,
+              it. The AI library signs in from a token variable, the sign-in of the Copilot CLI itself, or the GitHub CLI,
               so the failures that the user can fix (too old, not signed in, a path that cannot be used) each get their own
               status and sentence.
             children:

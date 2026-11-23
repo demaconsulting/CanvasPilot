@@ -67,7 +67,7 @@ public sealed class AgentReadiness : IProviderCheck
     /// <summary>The longest time that a question to the Ollama server may take.</summary>
     public static readonly TimeSpan OllamaProbeTimeout = TimeSpan.FromSeconds(5);
 
-    /// <summary>The sentence for a Copilot that has no credentials.</summary>
+    /// <summary>The sentence for a Copilot that is not signed in, which says to run <c>copilot</c> and type <c>/login</c>.</summary>
     public const string NotSignedInMessage = CopilotRuntimeStarter.NotSignedInMessage;
 
     /// <summary>The file name of the GitHub CLI on Windows.</summary>

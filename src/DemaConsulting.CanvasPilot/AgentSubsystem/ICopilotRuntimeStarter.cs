@@ -142,8 +142,8 @@ public enum CopilotStartStatus
     CliTooOld,
 
     /// <summary>
-    ///     The runtime started but has no credentials that it can use: the Copilot CLI's own <c>/login</c> session is not
-    ///     used by the AI library.
+    ///     The runtime started but is not signed in to GitHub: it found no token variable, no sign-in of the Copilot CLI
+    ///     (run <c>copilot</c>, then <c>/login</c>), no stored sign-in, and no signed-in GitHub CLI that it could use.
     /// </summary>
     NotSignedIn,
 
