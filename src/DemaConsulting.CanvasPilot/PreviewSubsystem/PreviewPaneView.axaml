@@ -94,10 +94,7 @@
     </Grid>
 
     <StackPanel Grid.Row="2" Margin="6,4" Spacing="2">
-      <TextBlock AutomationProperties.AutomationId="PreviewStatus"
-                 Opacity="0.8"
-                 TextTrimming="CharacterEllipsis"
-                 Text="{Binding StatusText}" />
+      <!-- The status line of the picture is in the status bar of the main window, which follows this pane. -->
       <Expander AutomationProperties.AutomationId="PreviewDiagnosticsExpander"
                 Header="{Binding DiagnosticsHeader}"
                 IsExpanded="{Binding AreDiagnosticsExpanded, Mode=TwoWay}"

@@ -37,6 +37,6 @@ sections:
                   - StylePicker_ApplyDefaultToNewProjectAsync_PassesOnOrDoesNothing
                   - StylePicker_PlaceText_EveryPlace_IsNamedForTheUser
                   - StylePicker_DisposeAndConstructor_StopsFollowingAndRefusesNull
-                  - StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits
+                  - StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits
                   - StylePickerView_ChooseKit_WritesTheProjectFile
                   - StylePickerView_MissingKit_IsShownAsNotFound

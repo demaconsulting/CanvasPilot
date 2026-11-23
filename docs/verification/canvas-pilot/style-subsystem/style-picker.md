@@ -74,9 +74,10 @@ kit of the user to the open project; a picker that was given none leaves the fil
 the kits are read, and each missing collaborator is refused. This scenario is tested by
 `StylePicker_DisposeAndConstructor_StopsFollowingAndRefusesNull`.
 
-**StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits**: In the real window the status bar is hidden with no
-project; with a project it is shown with the label `Style:` and a list of no style and the three kits of the program,
-with no style selected. This scenario is tested by `StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits`.
+**StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits**: In the real window the list in the title bar is
+hidden with no project; with a project it is shown with the label `Style:` and a list of no style and the three kits of
+the program, with no style selected. This scenario is tested by
+`StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits`.
 
 **StylePickerView_ChooseKit_WritesTheProjectFile**: Choosing a kit in the combo box by index writes it into the project
 file and the active style follows; choosing no style removes it. This scenario is tested by

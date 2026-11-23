@@ -195,24 +195,23 @@
           </TextBlock.Inlines>
         </TextBlock>
 
+        <!-- The style kit of the open project is chosen here; it shows while a project is open. -->
+        <ContentControl Name="StylePickerHost"
+                        Grid.Column="4"
+                        AutomationProperties.AutomationId="StylePickerHost"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        WindowDecorationProperties.ElementRole="User"
+                        Content="{Binding StylePicker}" />
+
         <Border Name="TitleBarCaptionReserve" Grid.Column="6" Width="0" />
 
       </Grid>
     </Border>
 
-    <!-- The status bar: the style kit of the open project is chosen here. It is shown while a project is open. -->
-    <Border DockPanel.Dock="Bottom"
-            Name="StatusBar"
-            AutomationProperties.AutomationId="StatusBar"
-            BorderThickness="0,1,0,0"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-            Padding="8,3"
-            IsVisible="{Binding ShowStatusBar}">
-      <ContentControl Name="StylePickerHost"
-                      AutomationProperties.AutomationId="StylePickerHost"
-                      HorizontalAlignment="Left"
-                      Content="{Binding StylePicker}" />
-    </Border>
+    <!-- The status bar is always there: it says what the picture is, and whether the project is saved. -->
+    <vm:StatusBarView DockPanel.Dock="Bottom"
+                      DataContext="{Binding StatusBar}" />
 
     <ContentControl Name="WorkspaceHost"
                     AutomationProperties.AutomationId="WorkspaceHost"

@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
@@ -122,8 +123,15 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     The shown picture.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasImage), nameof(ShowPlaceholder), nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(HasImage), nameof(ShowPlaceholder), nameof(StatusText), nameof(ImageSizeText), nameof(FormatText))]
     private RenderedImage? _image;
+
+    /// <summary>
+    ///     How long the render of the shown picture took, in milliseconds, or null while no picture is shown.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RenderTimeText))]
+    private long? _renderMilliseconds;
 
     /// <summary>
     ///     Why the selected file could not be drawn.
@@ -174,7 +182,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     The file that is rendered or was last rendered, or null.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(StatusText), nameof(FileName))]
     private string? _currentFile;
 
     /// <summary>
@@ -310,6 +318,28 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     Gets the heading of the list of notes, with their number.
     /// </summary>
     public string DiagnosticsHeader => _diagnostics.Count == 1 ? "1 note" : $"{_diagnostics.Count} notes";
+
+    /// <summary>
+    ///     Gets the name of the file that is rendered or was last rendered, or an empty string.
+    /// </summary>
+    public string FileName => CurrentFile is null ? string.Empty : Path.GetFileName(CurrentFile);
+
+    /// <summary>
+    ///     Gets the size of the shown picture in pixels, such as <c>900 × 500 px</c>, or an empty string when no picture is shown.
+    /// </summary>
+    public string ImageSizeText => Image is { } image ? $"{image.Width} \u00D7 {image.Height} px" : string.Empty;
+
+    /// <summary>
+    ///     Gets the format of the shown picture in capital letters, such as <c>SVG</c>, or an empty string when no picture is
+    ///     shown.
+    /// </summary>
+    public string FormatText => Image?.Format.ToUpperInvariant() ?? string.Empty;
+
+    /// <summary>
+    ///     Gets the time the render of the shown picture took, such as <c>Rendered in 84 ms</c>, or an empty string when no
+    ///     picture is shown.
+    /// </summary>
+    public string RenderTimeText => RenderMilliseconds is { } milliseconds ? $"Rendered in {milliseconds} ms" : string.Empty;
 
     /// <summary>
     ///     Gets the line shown in the status area: what is being rendered, the size and format of the picture and
@@ -562,6 +592,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     private async Task RunRenderAsync(int generation, string file, string folder, CancellationToken token)
     {
         RenderResult result;
+        var started = Stopwatch.GetTimestamp();
         try
         {
             result = await _renderer.RenderAsync(file, folder, token);
@@ -578,6 +609,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
             result = RenderResult.Failure(new RenderError(RenderErrorCodes.OperationFailed, ex.Message));
         }
 
+        var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
         lock (_syncRoot)
         {
             if (_disposed || generation != _generation)
@@ -586,14 +618,15 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
             }
         }
 
-        Apply(result);
+        Apply(result, elapsed);
     }
 
     /// <summary>
     ///     Shows the result of the current render.
     /// </summary>
     /// <param name="result">The result.</param>
-    private void Apply(RenderResult result)
+    /// <param name="elapsedMilliseconds">How long the render took.</param>
+    private void Apply(RenderResult result, long elapsedMilliseconds)
     {
         IsBusy = false;
         if (result.IsCancelled)
@@ -605,12 +638,14 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
         {
             ReplaceDiagnostics(image.Diagnostics);
             Error = null;
+            RenderMilliseconds = elapsedMilliseconds;
             Image = image;
         }
         else
         {
             ReplaceDiagnostics([]);
             Image = null;
+            RenderMilliseconds = null;
             Error = result.Error ?? new RenderError(RenderErrorCodes.OperationFailed, "The file could not be rendered.");
         }
     }
@@ -632,6 +667,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     {
         ReplaceDiagnostics([]);
         Image = null;
+        RenderMilliseconds = null;
         Error = null;
     }
 

@@ -198,8 +198,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     the cards are not read at start, or <see langword="null" /> for none, which leaves the menu item disabled.
     /// </param>
     /// <param name="style">
-    ///     The list with which the user chooses the style kit of the open project, shown in the status bar, or
-    ///     <see langword="null" /> for none, which leaves the status bar out. The shell uses it to give a new project the
+    ///     The list with which the user chooses the style kit of the open project, shown in the title bar, or
+    ///     <see langword="null" /> for none, which leaves the list out. The shell uses it to give a new project the
     ///     default style kit of the user but does not dispose it.
     /// </param>
     /// <param name="checkAgainstStyle">
@@ -243,17 +243,13 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _styleKits = styleKits;
         _logger = logger;
         Workspace = workspace;
+        StatusBar = new StatusBarViewModel(workspace);
         ImageExporter = imageExporter ?? new NullImageExporter();
         RecentProjects = new ReadOnlyObservableCollection<RecentProjectItem>(_recentItems);
 
         _projectService.CurrentChanged += OnProjectChanged;
         _recentProjects.Changed += OnRecentProjectsChanged;
         ImageExporter.CanExportChanged += OnCanExportChanged;
-        if (_style is not null)
-        {
-            _style.PropertyChanged += OnStylePickerPropertyChanged;
-        }
-
         if (_styleCheck is not null)
         {
             _styleCheck.CanCheckChanged += OnCanCheckChanged;
@@ -274,12 +270,17 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     public ProjectWorkspaceViewModel Workspace { get; }
 
     /// <summary>
+    ///     Gets the status bar at the bottom of the window, which is always there and reports on the shown picture.
+    /// </summary>
+    public StatusBarViewModel StatusBar { get; }
+
+    /// <summary>
     ///     Gets what the Image menu exports and copies.
     /// </summary>
     public IImageExporter ImageExporter { get; }
 
     /// <summary>
-    ///     Gets the list in the status bar with which the user chooses the style kit of the open project, or
+    ///     Gets the list in the title bar with which the user chooses the style kit of the open project, or
     ///     <see langword="null" /> when the application has none.
     /// </summary>
     public StylePickerViewModel? StylePicker => _style;
@@ -289,12 +290,6 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     itself. A settings page that lets the user choose a folder asks for it when the user asks to browse.
     /// </summary>
     public IFolderPicker? FolderPicker => _dialogs;
-
-    /// <summary>
-    ///     Gets a value indicating whether the status bar at the bottom of the window is shown: it is while the application
-    ///     has a style picker and a project is open, because the picker is all that it holds.
-    /// </summary>
-    public bool ShowStatusBar => _style?.IsVisible == true;
 
     /// <summary>
     ///     Gets the recent projects shown in the Recent Projects menu, most recent first.
@@ -394,20 +389,17 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _projectService.CurrentChanged -= OnProjectChanged;
         _recentProjects.Changed -= OnRecentProjectsChanged;
         ImageExporter.CanExportChanged -= OnCanExportChanged;
-        if (_style is not null)
-        {
-            _style.PropertyChanged -= OnStylePickerPropertyChanged;
-        }
-
         if (_styleCheck is not null)
         {
             _styleCheck.CanCheckChanged -= OnCanCheckChanged;
         }
+
         if (EditTarget is not null)
         {
             EditTarget.UndoRedoStateChanged -= OnUndoRedoStateChanged;
         }
 
+        StatusBar.Dispose();
         Workspace.Dispose();
     }
 
@@ -866,18 +858,5 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private void OnCanCheckChanged(object? sender, EventArgs e)
     {
         RunOnOwnerThread(() => CheckAgainstStyleCommand.NotifyCanExecuteChanged());
-    }
-
-    /// <summary>
-    ///     Shows or hides the status bar when the style picker shows or hides itself.
-    /// </summary>
-    /// <param name="sender">The style picker.</param>
-    /// <param name="e">The event data.</param>
-    private void OnStylePickerPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(StylePickerViewModel.IsVisible))
-        {
-            RunOnOwnerThread(() => OnPropertyChanged(nameof(ShowStatusBar)));
-        }
     }
 }

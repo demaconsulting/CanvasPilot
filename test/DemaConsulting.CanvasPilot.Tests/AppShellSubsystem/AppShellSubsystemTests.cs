@@ -459,7 +459,6 @@ public sealed class AppShellSubsystemTests : IDisposable
         Assert.Equal("clean", composition.ActiveStyle.ActiveId);
         Assert.Equal("clean", composition.StylePicker.SelectedItem!.Id);
         Assert.True(composition.StylePicker.IsVisible);
-        Assert.True(composition.Shell.ShowStatusBar);
         Assert.Same(composition.StylePicker, composition.Shell.StylePicker);
         Assert.Equal(["style_get", "style_check"], composition.StyleToolDescriptors.Select(tool => tool.Name));
         Assert.Equal(1, _dialogs.PresetOfferCount);

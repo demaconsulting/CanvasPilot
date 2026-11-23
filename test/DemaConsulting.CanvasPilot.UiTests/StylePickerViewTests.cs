@@ -66,29 +66,30 @@ public sealed class StylePickerViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that the status bar is not shown without a project, and is shown with the label and the list of the kits
-    ///     once a project is open.
+    ///     Test that the style list in the title bar is not shown without a project, and is shown with the label and the list
+    ///     of the kits once a project is open.
     /// </summary>
     [AvaloniaFact]
-    public async Task StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits()
+    public async Task StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits()
     {
         // Arrange: a shown main window with no project, whose kits have been read
         var (composition, window) = CreateWindow();
         window.Show();
         await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
         AppShellUiHelpers.Flush();
-        var bar = SettingsUiHelpers.Find<Border>(window, "StatusBar");
-        var hiddenWithoutProject = !bar.IsVisible;
+        var host = SettingsUiHelpers.Find<ContentControl>(window, "StylePickerHost");
+        var bar = SettingsUiHelpers.Find<Border>(window, "AppTitleBar");
+        var hiddenWithoutProject = !host.GetVisualDescendants().OfType<ComboBox>().Any(box => box.IsEffectivelyVisible);
 
         // Act: open a project
         await OpenProjectAsync(composition);
         window.UpdateLayout();
 
-        // Assert: the bar and the list appeared, and the list holds no style and every built-in kit
+        // Assert: the list appeared in the title bar, and it holds no style and every built-in kit
         var picker = SettingsUiHelpers.Find<ComboBox>(window, "StylePicker");
         var labels = picker.Items.OfType<StylePickerItem>().Select(item => item.Label).ToArray();
         Assert.True(hiddenWithoutProject);
-        Assert.True(bar.IsVisible);
+        Assert.Contains(bar, picker.GetVisualAncestors());
         Assert.True(picker.IsEffectivelyVisible);
         Assert.Equal(StylePickerViewModel.NoStyleLabel, labels[0]);
         Assert.Contains("Clean (built-in)", labels);

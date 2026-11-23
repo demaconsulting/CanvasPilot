@@ -1,0 +1,139 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.AppShellSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.AppShellSubsystem.StatusBarView"
+             x:DataType="vm:StatusBarViewModel">
+
+  <!-- The status bar: 26 px, always there. The left side says what the picture is, and what state it is in, with an icon
+       and with words; the right side says that the project is saved and which key is held to talk. -->
+  <Border Name="StatusBar"
+          AutomationProperties.AutomationId="StatusBar"
+          Height="26"
+          Background="{DynamicResource CpSurfaceWindow}"
+          BorderBrush="{DynamicResource CpBorderSubtle}"
+          BorderThickness="0,1,0,0"
+          TextElement.FontSize="{DynamicResource CpFontSmall}"
+          TextElement.Foreground="{DynamicResource CpTextSecondary}">
+
+    <Grid ColumnDefinitions="*,Auto" Margin="16,0">
+
+      <!-- One group per state: the sentence that sums it up is the name of the group for a screen reader, and it is
+           announced when it changes. -->
+      <Panel Grid.Column="0"
+             AutomationProperties.AutomationId="PreviewStatus"
+             AutomationProperties.Name="{Binding Summary}"
+             AutomationProperties.LiveSetting="Polite"
+             VerticalAlignment="Center">
+
+        <StackPanel Name="StatusReady"
+                    AutomationProperties.AutomationId="StatusBarReady"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    IsVisible="{Binding IsReady}">
+          <PathIcon Classes="icon"
+                    Width="14"
+                    Height="14"
+                    Foreground="{DynamicResource CpSuccess}"
+                    Data="{DynamicResource CpIconCheckmark}" />
+          <TextBlock AutomationProperties.AutomationId="StatusBarFile"
+                     Foreground="{DynamicResource CpTextPrimary}"
+                     TextTrimming="CharacterEllipsis"
+                     MaxWidth="320"
+                     Text="{Binding FileName}" />
+          <TextBlock Foreground="{DynamicResource CpTextTertiary}" Text="&#183;" />
+          <TextBlock AutomationProperties.AutomationId="StatusBarSize" Text="{Binding SizeText}" />
+          <TextBlock Foreground="{DynamicResource CpTextTertiary}" Text="&#183;" />
+          <TextBlock AutomationProperties.AutomationId="StatusBarFormat" Text="{Binding FormatText}" />
+          <TextBlock Foreground="{DynamicResource CpTextTertiary}" Text="&#183;" />
+          <TextBlock AutomationProperties.AutomationId="StatusBarRenderTime" Text="{Binding RenderTimeText}" />
+          <TextBlock Foreground="{DynamicResource CpTextTertiary}"
+                     IsVisible="{Binding HasNotes}"
+                     Text="&#183;" />
+          <TextBlock AutomationProperties.AutomationId="StatusBarNotes"
+                     Foreground="{DynamicResource CpWarning}"
+                     IsVisible="{Binding HasNotes}"
+                     Text="{Binding NotesText}" />
+        </StackPanel>
+
+        <StackPanel Name="StatusRendering"
+                    AutomationProperties.AutomationId="StatusBarRendering"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    IsVisible="{Binding IsRendering}">
+          <ProgressBar Classes="circular"
+                       Width="14"
+                       Height="14"
+                       IsIndeterminate="True"
+                       Foreground="{DynamicResource CpAccentText}" />
+          <TextBlock Foreground="{DynamicResource CpTextPrimary}"
+                     Text="Rendering..." />
+          <TextBlock Foreground="{DynamicResource CpTextTertiary}"
+                     TextTrimming="CharacterEllipsis"
+                     MaxWidth="320"
+                     Text="{Binding FileName}" />
+        </StackPanel>
+
+        <StackPanel Name="StatusFailed"
+                    AutomationProperties.AutomationId="StatusBarFailed"
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    IsVisible="{Binding IsFailed}">
+          <PathIcon Classes="icon"
+                    Width="14"
+                    Height="14"
+                    Foreground="{DynamicResource CpDanger}"
+                    Data="{DynamicResource CpIconErrorCircle}" />
+          <TextBlock Foreground="{DynamicResource CpDanger}"
+                     Text="Render failed" />
+          <TextBlock Foreground="{DynamicResource CpTextTertiary}"
+                     TextTrimming="CharacterEllipsis"
+                     MaxWidth="320"
+                     Text="{Binding FileName}" />
+        </StackPanel>
+
+        <TextBlock Name="StatusIdle"
+                   AutomationProperties.AutomationId="StatusBarIdle"
+                   Foreground="{DynamicResource CpTextTertiary}"
+                   IsVisible="{Binding IsIdle}"
+                   Text="{Binding Summary}" />
+
+      </Panel>
+
+      <StackPanel Grid.Column="1"
+                  Orientation="Horizontal"
+                  Spacing="16"
+                  VerticalAlignment="Center"
+                  IsVisible="{Binding HasProject}">
+
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Classes="icon"
+                    Width="14"
+                    Height="14"
+                    Foreground="{DynamicResource CpSuccess}"
+                    Data="{DynamicResource CpIconCheckmark}" />
+          <TextBlock AutomationProperties.AutomationId="StatusBarProjectSaved" Text="{x:Static vm:StatusBarViewModel.ProjectSavedText}" />
+        </StackPanel>
+
+        <StackPanel AutomationProperties.AutomationId="StatusBarTalkHint"
+                    Orientation="Horizontal"
+                    Spacing="6">
+          <TextBlock Foreground="{DynamicResource CpTextTertiary}" Text="Hold" />
+          <Border Background="{DynamicResource CpSurfaceRaised}"
+                  BorderBrush="{DynamicResource CpBorderControl}"
+                  BorderThickness="1"
+                  CornerRadius="{DynamicResource CpRadiusKey}"
+                  Padding="6,0">
+            <TextBlock FontSize="{DynamicResource CpFontCaption}"
+                       FontWeight="SemiBold"
+                       Text="{x:Static vm:StatusBarViewModel.TalkKeyText}" />
+          </Border>
+          <TextBlock Foreground="{DynamicResource CpTextTertiary}" Text="to talk" />
+        </StackPanel>
+
+      </StackPanel>
+
+    </Grid>
+
+  </Border>
+
+</UserControl>

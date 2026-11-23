@@ -206,6 +206,68 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the status bar is always at the bottom of the window with its fixed height, says that no project is open,
+    ///     and, once a project is open and a picture is selected, reports the file, its size, its format, and its render time
+    ///     with an icon and with words, and a render that failed with words.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_StatusBar_AlwaysShownAndReportsThePicture()
+    {
+        // Arrange: a shown main window and a project with a picture and a broken file
+        await CreateRememberedProjectAsync("Gallery");
+        var (composition, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var bar = SettingsUiHelpers.Find<Border>(window, "StatusBar");
+        var status = SettingsUiHelpers.Find<Panel>(window, "PreviewStatus");
+        var withoutProject = (bar.IsVisible, bar.Bounds.Height, AutomationProperties.GetName(status), SettingsUiHelpers.Find<TextBlock>(window, "StatusBarIdle").IsVisible);
+
+        // Act: open the project, select the picture, and wait for it to be drawn
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "red.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='#ff0000'/></svg>",
+            TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(folder, "broken.svg"), "<svg><not closed", TestContext.Current.CancellationToken);
+        composition.Shell.Workspace.Explorer.Refresh();
+        AppShellUiHelpers.Flush();
+        var noPicture = AutomationProperties.GetName(status);
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "red.svg"));
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var shown = (
+            SettingsUiHelpers.Find<StackPanel>(window, "StatusBarReady").IsVisible,
+            SettingsUiHelpers.Find<TextBlock>(window, "StatusBarFile").Text,
+            SettingsUiHelpers.Find<TextBlock>(window, "StatusBarSize").Text,
+            SettingsUiHelpers.Find<TextBlock>(window, "StatusBarFormat").Text,
+            SettingsUiHelpers.Find<TextBlock>(window, "StatusBarRenderTime").Text,
+            AutomationProperties.GetName(status));
+        var saved = SettingsUiHelpers.Find<TextBlock>(window, "StatusBarProjectSaved");
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "broken.svg"));
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var failed = (
+            SettingsUiHelpers.Find<StackPanel>(window, "StatusBarFailed").IsVisible,
+            SettingsUiHelpers.Find<StackPanel>(window, "StatusBarReady").IsVisible,
+            AutomationProperties.GetName(status));
+
+        // Assert: always shown at 26 high; idle words with no project and with no picture; the picture's facts; the failure
+        Assert.Equal((true, 26d, "No project open", true), withoutProject);
+        Assert.Equal("No picture selected", noPicture);
+        Assert.True(shown.Item1);
+        Assert.Equal("red.svg", shown.Item2);
+        Assert.Equal("40 \u00D7 20 px", shown.Item3);
+        Assert.Equal("SVG", shown.Item4);
+        Assert.StartsWith("Rendered in ", shown.Item5, StringComparison.Ordinal);
+        Assert.Equal("red.svg: 40 x 20 px, svg", shown.Item6);
+        Assert.True(saved.IsEffectivelyVisible);
+        Assert.Equal((true, false, "broken.svg: render failed"), failed);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the menus have the expected structure, and that every menu item has a name and an automation
     ///     identifier that are the same.
     /// </summary>

@@ -154,6 +154,40 @@ public sealed class PreviewPaneTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the pane tells the file name, the size, the format in capital letters, and the render time of the shown
+    ///     picture, shows none of them while nothing is shown, and keeps none of them after a render failed.
+    /// </summary>
+    [Fact]
+    public async Task PreviewPaneViewModel_Render_ReportsFileSizeFormatAndRenderTimeOfTheShownPicture()
+    {
+        // Arrange: a pane over an open project
+        var pane = CreatePane();
+        _explorer.Open(_folder);
+        var before = (pane.FileName, pane.ImageSizeText, pane.FormatText, pane.RenderTimeText);
+
+        // Act: select a file and let its render succeed, then select another one and let its render fail
+        _explorer.SelectFile(Path.Combine(_folder, "a.svg"));
+        var whileBusy = (pane.FileName, pane.ImageSizeText, pane.RenderTimeText);
+        Assert.Single(_renderer.Requests).Succeed(900, 500);
+        await pane.RenderCompletion;
+        var shown = (pane.FileName, pane.ImageSizeText, pane.FormatText, pane.RenderTimeText);
+        _explorer.SelectFile(Path.Combine(_folder, "b.svg"));
+        _renderer.Requests[1].Fail("cannot-draw", "No.");
+        await pane.RenderCompletion;
+        var failed = (pane.FileName, pane.ImageSizeText, pane.FormatText, pane.RenderTimeText);
+
+        // Assert: nothing before and while busy, the facts of the picture when shown, only the name after a failure
+        Assert.Equal((string.Empty, string.Empty, string.Empty, string.Empty), before);
+        Assert.Equal(("a.svg", string.Empty, string.Empty), whileBusy);
+        Assert.Equal("a.svg", shown.FileName);
+        Assert.Equal("900 \u00D7 500 px", shown.ImageSizeText);
+        Assert.Equal("SVG", shown.FormatText);
+        Assert.Matches(@"^Rendered in \d+ ms$", shown.RenderTimeText);
+        Assert.Equal(("b.svg", string.Empty, string.Empty, string.Empty), failed);
+        Assert.Null(pane.RenderMilliseconds);
+    }
+
+    /// <summary>
     ///     Test that a pane created when a file is already selected renders it at once.
     /// </summary>
     [Fact]

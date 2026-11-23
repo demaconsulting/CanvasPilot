@@ -293,12 +293,12 @@ on the headless platform. This scenario is tested by `MainWindowView_Pickers_Hea
 
 **MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject**: With a style picker that counts the
 requests to give the default kit, creating a project asks once, closing it and opening it again from the recent projects
-does not ask again, and the status bar is off with no project, on with one, and the change is announced. This scenario
+does not ask again, and the picker is off with no project and on with one. This scenario
 is tested by `MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject`.
 
-**MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar**: A shell with no style picker creates a project as it
-always did and shows no status bar. This scenario is tested by
-`MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar`.
+**MainWindowShell_NewProject_WithoutStylePicker_HasNoPicker**: A shell with no style picker creates a project as it
+always did and has no picker. This scenario is tested by
+`MainWindowShell_NewProject_WithoutStylePicker_HasNoPicker`.
 
 **MainWindowShell_CheckAgainstStyle_FollowsThePictureRunsTheCheckAndReportsWhyNot**: With a check that first has no
 picture, the command is unusable; when the check says that a picture appeared the command is usable and announces it;
@@ -317,10 +317,10 @@ kit DEMA, with a blue picture that the kit does not have, lists a `style-summary
 again. This scenario is tested by
 `MainWindowView_CheckAgainstStyleMenuItem_PictureShown_EnablesAndShowsNotesInThePreview`.
 
-**StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits**: In the real window composed with the real units, the
-status bar is hidden with no project and shown with one, holds the label `Style:` and a list with no style and the three
-kits that come with the program. This scenario is tested by
-`StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits`.
+**StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits**: In the real window composed with the real units, the
+list in the title bar is hidden with no project and shown with one, holds the label `Style:` and a list with no style
+and the three kits that come with the program. This scenario is tested by
+`StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits`.
 
 **MainWindowShell_ShowStyleKits_MakesTheViewModelFromTheDialogsAndShowsIt**: With a function that makes the window of a
 real catalog, running Style Kits twice calls the function twice with the dialog service, and the dialog service shows

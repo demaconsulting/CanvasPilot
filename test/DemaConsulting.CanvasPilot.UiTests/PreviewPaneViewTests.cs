@@ -160,7 +160,7 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.Equal(new PixelSize(40, 20), bitmap.PixelSize);
         Assert.Equal([0, 0, 128, 128], FirstPixel(bitmap));
         Assert.True(SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller").IsVisible);
-        Assert.Equal("red.svg: 40 x 20 px, svg", SettingsUiHelpers.Find<TextBlock>(window, "PreviewStatus").Text);
+        Assert.Equal("red.svg: 40 x 20 px, svg", pane.StatusText);
         Assert.False(SettingsUiHelpers.Find<TextBlock>(window, "PreviewPlaceholder").IsVisible);
         Assert.False(SettingsUiHelpers.Find<StackPanel>(window, "PreviewErrorPanel").IsVisible);
         Assert.False(SettingsUiHelpers.Find<ProgressBar>(window, "PreviewBusy").IsVisible);
@@ -191,7 +191,7 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.True(hint.IsVisible);
         Assert.StartsWith("Hint:", hint.Text, StringComparison.Ordinal);
         Assert.False(SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller").IsVisible);
-        Assert.Equal("broken.svg: render failed", SettingsUiHelpers.Find<TextBlock>(window, "PreviewStatus").Text);
+        Assert.Equal("broken.svg: render failed", pane.StatusText);
 
         window.Close();
     }
@@ -213,7 +213,7 @@ public sealed class PreviewPaneViewTests : IDisposable
         // Act: select the file, look while the render waits, then release it
         explorer.SelectFile(Path.Combine(_folder, "slow.svg"));
         AppShellUiHelpers.Flush();
-        var running = (busy.IsVisible, placeholder.IsVisible, SettingsUiHelpers.Find<TextBlock>(window, "PreviewStatus").Text);
+        var running = (busy.IsVisible, placeholder.IsVisible, pane.StatusText);
         gate.Release(Path.Combine(_folder, "slow.svg"));
         await pane.RenderCompletion;
         AppShellUiHelpers.Flush();

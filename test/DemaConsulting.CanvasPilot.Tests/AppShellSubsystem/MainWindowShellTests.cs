@@ -173,9 +173,7 @@ public sealed class MainWindowShellTests : IDisposable
             parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], null, Directory.CreateDirectory(Projects).FullName, null, picker);
         shell.AttachDialogService(_dialogs);
         _shells.Add(shell);
-        var changes = new List<string?>();
-        shell.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
-        var barWithoutProject = shell.ShowStatusBar;
+        var pickerWithoutProject = picker.IsVisible;
         _dialogs.OnNewProject = dialog =>
         {
             dialog.ProjectName = "Styled";
@@ -185,25 +183,23 @@ public sealed class MainWindowShellTests : IDisposable
         // Act: create a project, close it, and open it again from the list of recent projects
         await shell.NewProjectCommand.ExecuteAsync(null);
         var appliedForNew = applied;
-        var barWithProject = shell.ShowStatusBar;
+        var pickerWithProject = picker.IsVisible;
         shell.CloseProjectCommand.Execute(null);
         await shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
 
-        // Assert: the default was given once, for the new project, and the bar was shown with the project
+        // Assert: the default was given once, for the new project, and the picker was shown with the project
         Assert.Same(picker, shell.StylePicker);
-        Assert.False(barWithoutProject);
+        Assert.False(pickerWithoutProject);
         Assert.Equal(1, appliedForNew);
         Assert.Equal(1, applied);
-        Assert.True(barWithProject);
-        Assert.True(shell.ShowStatusBar);
-        Assert.Contains(nameof(MainWindowShell.ShowStatusBar), changes);
+        Assert.True(pickerWithProject);
     }
 
     /// <summary>
-    ///     Test that a shell with no style picker shows no status bar and creates a project as before.
+    ///     Test that a shell with no style picker has none and creates a project as before.
     /// </summary>
     [Fact]
-    public async Task MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar()
+    public async Task MainWindowShell_NewProject_WithoutStylePicker_HasNoPicker()
     {
         // Arrange: a shell with no style picker
         var shell = CreateShell(defaultProjectsFolder: Directory.CreateDirectory(Projects).FullName);
@@ -216,10 +212,9 @@ public sealed class MainWindowShellTests : IDisposable
         // Act: create a project
         await shell.NewProjectCommand.ExecuteAsync(null);
 
-        // Assert: the project is open and there is no status bar
+        // Assert: the project is open and there is no picker
         Assert.True(shell.HasProject);
         Assert.Null(shell.StylePicker);
-        Assert.False(shell.ShowStatusBar);
     }
 
     /// <summary>
