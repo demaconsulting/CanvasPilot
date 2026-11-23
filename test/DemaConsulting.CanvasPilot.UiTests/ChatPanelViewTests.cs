@@ -488,7 +488,7 @@ public sealed class ChatPanelViewTests
     ///     Test that Enter on its own sends the message, and that Shift+Enter writes a line break instead.
     /// </summary>
     [AvaloniaFact]
-    public void ChatPanelView_EnterKey_SendsTheMessageAndShiftEnterWritesALineBreak()
+    public async Task ChatPanelView_EnterKey_SendsTheMessageAndShiftEnterWritesALineBreak()
     {
         // Arrange: a message in the editing control that has the focus
         using var harness = new ChatHarness();
@@ -501,12 +501,16 @@ public sealed class ChatPanelViewTests
         harness.Layout();
 
         // Assert: nothing was sent, and the message has a second line
+        Assert.Null(harness.Composer.SendCommand.ExecutionTask);
         Assert.Empty(harness.Entries);
         Assert.Contains('\n', harness.Composer.Document.FlatText);
 
-        // Act: Enter on its own
+        // Act: Enter on its own starts the send, which runs asynchronously, so wait for that very send to finish
         harness.Window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
         harness.Window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        var sending = harness.Composer.SendCommand.ExecutionTask;
+        Assert.NotNull(sending);
+        await sending;
         harness.Layout();
 
         // Assert: the message was sent

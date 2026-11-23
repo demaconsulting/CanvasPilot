@@ -78,6 +78,7 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="styleTools">The descriptors of the tools that give and check the style, for an assistant.</param>
     /// <param name="agent">The AI copilot, or <see langword="null" /> when the composition has none.</param>
     /// <param name="ownedServices">The services the composition created and must dispose.</param>
+    /// <param name="styleStartup">The task that reads the style kits when the application starts.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
         ISettingsService settings,
@@ -96,8 +97,10 @@ public sealed class ApplicationComposition : IDisposable
         ICheckAgainstStyle styleCheck,
         IReadOnlyList<KnowledgeTool> styleTools,
         IAgentService? agent,
-        IReadOnlyList<IDisposable> ownedServices)
+        IReadOnlyList<IDisposable> ownedServices,
+        Task styleStartup)
     {
+        StyleStartupRefresh = styleStartup;
         Logger = logger;
         Settings = settings;
         Projects = projects;
@@ -201,6 +204,13 @@ public sealed class ApplicationComposition : IDisposable
     ///     the shared folders. It is read in the background when the application starts, so it is empty for a moment.
     /// </summary>
     public IStyleKitCatalog StyleCatalog { get; }
+
+    /// <summary>
+    ///     Gets the task of the first reading of the style kits, which starts with the application. It completes after the
+    ///     catalog announced what it read, so a test that waits for it gets no announcement from the start of the
+    ///     application afterwards.
+    /// </summary>
+    internal Task StyleStartupRefresh { get; }
 
     /// <summary>
     ///     Gets the style kit that the open project uses, and the means to change it.
@@ -398,7 +408,7 @@ public sealed class ApplicationComposition : IDisposable
             () => projects.Current?.FolderPath,
             () => preview.CurrentImage?.SourcePath,
             renderer);
-        _ = RefreshStyleKitsAsync(styleCatalog, logger);
+        var styleStartup = RefreshStyleKitsAsync(styleCatalog, logger);
 
         var exporter = imageExporter ?? new ImageExporter(preview, renderer, logger, styleSelection);
 
@@ -558,7 +568,7 @@ public sealed class ApplicationComposition : IDisposable
         logger.Log(LogLevel.Info, "Application started.");
         return new ApplicationComposition(
             logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat,
-            styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, agent, owned);
+            styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, agent, owned, styleStartup);
     }
 
     /// <summary>

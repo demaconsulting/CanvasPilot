@@ -284,6 +284,7 @@ public sealed class AppShellSubsystemTests : IDisposable
     {
         // Arrange: a composed application whose kits are read
         var composition = Compose();
+        await composition.StyleStartupRefresh;
         await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
 
         // Act: run Style Kits, and make a kit in the window that was shown
