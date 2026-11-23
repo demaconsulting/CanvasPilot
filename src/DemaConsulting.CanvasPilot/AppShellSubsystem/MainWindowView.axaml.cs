@@ -82,6 +82,11 @@ public sealed partial class MainWindowView : Window, IDialogService
     private const double MacTrafficLightsWidth = 78;
 
     /// <summary>
+    ///     The place of the window while it is in its normal state, or <see langword="null" /> when it was not reported yet.
+    /// </summary>
+    private PixelPoint? _normalPosition;
+
+    /// <summary>
     ///     View model bound to the window.
     /// </summary>
     private readonly MainWindowShell? _shell;
@@ -118,6 +123,8 @@ public sealed partial class MainWindowView : Window, IDialogService
         DataContext = shell;
         shell.AttachDialogService(this);
         shell.ExitRequested += OnExitRequested;
+        ApplySavedLayout(shell.SavedWindow);
+        PositionChanged += OnWindowPositionChanged;
 
         // What has the focus decides what Edit > Undo and Redo reach; the talk key is watched before any control sees it
         AddHandler(GotFocusEvent, OnFocusGained, RoutingStrategies.Bubble, handledEventsToo: true);
@@ -389,6 +396,20 @@ public sealed partial class MainWindowView : Window, IDialogService
     }
 
     /// <inheritdoc />
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+
+        // The layout is saved as the window is closed: the size it has in its normal state, where it was, and whether it
+        // was maximized
+        if (_shell is not null && !e.Cancel)
+        {
+            var place = _normalPosition ?? (WindowState == WindowState.Normal ? Position : null);
+            _shell.SaveWindow(Width, Height, place?.X, place?.Y, WindowState == WindowState.Maximized);
+        }
+    }
+
+    /// <inheritdoc />
     protected override void OnClosed(EventArgs e)
     {
         if (_shell is not null)
@@ -524,6 +545,41 @@ public sealed partial class MainWindowView : Window, IDialogService
             {
                 _styleKitManager = null;
             }
+        }
+    }
+
+    /// <summary>
+    ///     Gives the window the size, place, and state that were saved, made to fit the screens that are connected now.
+    /// </summary>
+    /// <param name="saved">The saved layout.</param>
+    private void ApplySavedLayout(WindowSettings saved)
+    {
+        var areas = Screens?.All.Select(screen => screen.WorkingArea).ToList() ?? [];
+        var scaling = Screens?.Primary?.Scaling ?? 1;
+        var placement = WindowPlacement.Resolve(saved, areas, scaling);
+        Width = placement.Width;
+        Height = placement.Height;
+        if (placement.Position is { } position)
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Position = position;
+            _normalPosition = position;
+        }
+
+        WindowState = placement.State;
+    }
+
+    /// <summary>
+    ///     Remembers where the window is while it is in its normal state, because the place that the system reports while
+    ///     the window is maximized is not the place it returns to.
+    /// </summary>
+    /// <param name="sender">The window.</param>
+    /// <param name="e">The event data.</param>
+    private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
+    {
+        if (WindowState == WindowState.Normal)
+        {
+            _normalPosition = e.Point;
         }
     }
 

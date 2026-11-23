@@ -35,7 +35,7 @@ sections:
               - id: CanvasPilot-ProjectWorkspace-HostChatColumn
                 title: >-
                   The ProjectWorkspace shall host the supplied chat content in a column on the right of the preview,
-                  start it at 380 pixels wide and let the user resize it with a splitter, show it only while a project
+                  start it at 400 pixels wide and let the user resize it with a splitter, show it only while a project
                   is open and content was supplied, and leave the disposal of that content to its owner.
                 justification: |
                   A message is written in the project, because its attachments and marks belong to it, so the chat

@@ -23,6 +23,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
+using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -114,6 +115,75 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     ///     Gets a hint on how to start, shown below the placeholder while no project is open, or an empty string.
     /// </summary>
     public string HintText => HasProject ? string.Empty : "Create a project with File > New Project, or open one with File > Open Project.";
+
+    /// <summary>
+    ///     Gets the width that the user chose for the explorer, within its limits. The view shows less of it while the window
+    ///     is too narrow for it and the stage.
+    /// </summary>
+    public int ExplorerWidth { get; private set; } = WindowSettings.DefaultExplorerWidth;
+
+    /// <summary>
+    ///     Gets the width that the user chose for the chat column, within its limits. It is kept while the column is hidden.
+    /// </summary>
+    public int ChatWidth { get; private set; } = WindowSettings.DefaultChatWidth;
+
+    /// <summary>
+    ///     Raised when the user chose other widths of the explorer or the chat column by dragging a splitter or by using the
+    ///     keyboard on it. The shell saves them.
+    /// </summary>
+    public event EventHandler? LayoutChanged;
+
+    /// <summary>
+    ///     Sets the widths of the explorer and the chat column that were saved, without announcing a choice of the user.
+    /// </summary>
+    /// <param name="explorer">The width of the explorer.</param>
+    /// <param name="chat">The width of the chat column.</param>
+    public void RestoreColumnWidths(double explorer, double chat)
+    {
+        ApplyColumnWidths(explorer, chat);
+    }
+
+    /// <summary>
+    ///     Sets the widths of the explorer and the chat column that the user chose, and announces the choice when it changed
+    ///     them.
+    /// </summary>
+    /// <param name="explorer">The width of the explorer.</param>
+    /// <param name="chat">The width of the chat column.</param>
+    public void SetColumnWidths(double explorer, double chat)
+    {
+        if (ApplyColumnWidths(explorer, chat))
+        {
+            LayoutChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    ///     Keeps the widths within their limits and announces the ones that changed.
+    /// </summary>
+    /// <param name="explorer">The width of the explorer.</param>
+    /// <param name="chat">The width of the chat column.</param>
+    /// <returns><see langword="true" /> when a width changed.</returns>
+    private bool ApplyColumnWidths(double explorer, double chat)
+    {
+        var newExplorer = (int)Math.Clamp(Math.Round(explorer), WindowSettings.MinimumExplorerWidth, WindowSettings.MaximumExplorerWidth);
+        var newChat = (int)Math.Clamp(Math.Round(chat), WindowSettings.MinimumChatWidth, WindowSettings.MaximumChatWidth);
+        var changed = false;
+        if (newExplorer != ExplorerWidth)
+        {
+            ExplorerWidth = newExplorer;
+            OnPropertyChanged(nameof(ExplorerWidth));
+            changed = true;
+        }
+
+        if (newChat != ChatWidth)
+        {
+            ChatWidth = newChat;
+            OnPropertyChanged(nameof(ChatWidth));
+            changed = true;
+        }
+
+        return changed;
+    }
 
     /// <summary>
     ///     Gets the file the user selected in the explorer, or <see langword="null" />.

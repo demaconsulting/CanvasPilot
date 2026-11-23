@@ -458,7 +458,10 @@ reviews:
       - "src/**/AppShellSubsystem/ProjectWorkspaceViewModel.cs"
       - "src/**/AppShellSubsystem/ProjectWorkspaceView.axaml"
       - "src/**/AppShellSubsystem/ProjectWorkspaceView.axaml.cs"
+      - "src/**/AppShellSubsystem/WindowLayout.cs"
       - "test/**/AppShellSubsystem/ProjectWorkspaceTests.cs"
+      - "test/**/AppShellSubsystem/WindowLayoutTests.cs"
+      - "test/**/WorkspaceLayoutViewTests.cs"
 
   - id: CanvasPilot-AppShell-AboutDialog
     title: Review of CanvasPilot AboutDialog unit implementation

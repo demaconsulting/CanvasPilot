@@ -409,6 +409,32 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the shell gives the workspace the widths of the explorer and the chat column that were saved, saves the
+    ///     widths that the user chooses with a splitter, and saves the size, place, and state of the window that it is told.
+    /// </summary>
+    [Fact]
+    public void MainWindowShell_WindowLayout_RestoresWidthsAndSavesChoicesAndWindow()
+    {
+        // Arrange: settings that hold a layout, and a shell over them
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        settings.Update(s => s with { Window = s.Window with { ExplorerWidth = 300, ChatWidth = 500 } });
+        var shell = CreateShell(settings: settings);
+        var restored = (shell.Workspace.ExplorerWidth, shell.Workspace.ChatWidth, shell.SavedWindow.ExplorerWidth);
+
+        // Act: the user chooses other widths, and the window is closed maximized after it was moved
+        shell.Workspace.SetColumnWidths(220, 350);
+        var afterChoice = (settings.Current.Window.ExplorerWidth, settings.Current.Window.ChatWidth);
+        shell.SaveWindow(1200, 800, 40, 50, maximized: true);
+        var saved = settings.Current.Window;
+
+        // Assert: the saved widths were used, the choice was saved, and the window layout was saved with it
+        Assert.Equal((300, 500, 300), restored);
+        Assert.Equal((220, 350), afterChoice);
+        Assert.Equal((1200, 800, 40, 50, SavedWindowState.Maximized), (saved.Width, saved.Height, saved.Left, saved.Top, saved.State));
+        Assert.Equal((220, 350), (saved.ExplorerWidth, saved.ChatWidth));
+    }
+
+    /// <summary>
     ///     Test that a menu header keeps underscores visible instead of treating them as access keys.
     /// </summary>
     [Fact]

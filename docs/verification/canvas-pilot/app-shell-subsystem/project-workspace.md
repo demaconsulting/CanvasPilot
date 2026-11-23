@@ -73,8 +73,8 @@ because the composition root owns it. This scenario is tested by
 `ProjectWorkspace_Dispose_DoesNotDisposeChatContent`.
 
 **MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns**: In the window with no project the chat
-host and its splitter are not visible; once a project is open the chat panel is shown, 380 wide, to the right of the
-preview, which is to the right of the explorer, 260 wide; after the project is closed the chat host is hidden again.
+host and its splitter are not visible; once a project is open the chat panel is shown, 400 wide, to the right of the
+preview, which is to the right of the explorer, 264 wide; after the project is closed the chat host is hidden again.
 This scenario is tested by `MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns`.
 
 **ProjectWorkspace_Dispose_DisposesExplorer**: Disposing the workspace disposes the explorer. This scenario is

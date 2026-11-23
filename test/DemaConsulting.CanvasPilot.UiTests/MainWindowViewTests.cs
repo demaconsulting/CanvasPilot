@@ -1093,15 +1093,15 @@ public sealed class MainWindowViewTests : IDisposable
         LayOut(window);
         var chatVisibleAfter = chatHost.IsVisible;
 
-        // Assert: the chat column is 380 wide on the right of the preview only while a project is open
+        // Assert: the chat column is 400 wide on the right of the preview only while a project is open
         Assert.False(chatVisibleBefore);
         Assert.Equal(0, chatWidthBefore);
         Assert.False(splitterVisibleBefore);
         Assert.True(chatVisibleWith);
         Assert.Equal(1, panels);
-        Assert.Equal(380, chatWidthWith, 1);
-        Assert.Equal(260, explorerWidth, 1);
-        Assert.True(previewWidth > 200);
+        Assert.Equal(400, chatWidthWith, 1);
+        Assert.Equal(264, explorerWidth, 1);
+        Assert.True(previewWidth >= 360);
         Assert.True(previewLeft > explorerRight);
         Assert.True(chatLeft > previewRight);
         Assert.False(chatVisibleAfter);

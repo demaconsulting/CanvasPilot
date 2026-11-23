@@ -268,6 +268,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
             _style.ManageKitsCommand = ShowStyleKitsCommand;
         }
 
+        // The widths of the explorer and the chat column are the ones that were saved, and a new choice is saved
+        Workspace.RestoreColumnWidths(_settingsService.Current.Window.ExplorerWidth, _settingsService.Current.Window.ChatWidth);
+        Workspace.LayoutChanged += OnWorkspaceLayoutChanged;
+
         RefreshRecentProjects();
         SyncProjectState();
     }
@@ -331,6 +335,62 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Gets a value indicating whether the title bar shows the AI provider pill.
     /// </summary>
     public bool HasProviderPill => ProviderPill is not null;
+
+    /// <summary>
+    ///     Gets the layout of the window that was saved when it was last closed, which is the default layout when none was
+    ///     saved.
+    /// </summary>
+    public WindowSettings SavedWindow => _settingsService.Current.Window;
+
+    /// <summary>
+    ///     Saves the size, place, and state of the window, together with the widths of the explorer and the chat column, so
+    ///     that the window opens as the user left it. A failure to write the settings is logged and never thrown, because the
+    ///     window is closing.
+    /// </summary>
+    /// <param name="width">The width of the window in its normal state.</param>
+    /// <param name="height">The height of the window in its normal state.</param>
+    /// <param name="left">The place of the left edge of the window in its normal state, or <see langword="null" />.</param>
+    /// <param name="top">The place of the top edge of the window in its normal state, or <see langword="null" />.</param>
+    /// <param name="maximized">Whether the window is maximized.</param>
+    public void SaveWindow(double width, double height, int? left, int? top, bool maximized)
+    {
+        WriteWindowSettings(window => window with
+        {
+            Width = (int)Math.Round(width),
+            Height = (int)Math.Round(height),
+            Left = left,
+            Top = top,
+            State = maximized ? SavedWindowState.Maximized : SavedWindowState.Normal
+        });
+    }
+
+    /// <summary>
+    ///     Changes the window part of the settings and writes it, logging a failure instead of throwing.
+    /// </summary>
+    /// <param name="change">Makes the new window settings from the current ones.</param>
+    private void WriteWindowSettings(Func<WindowSettings, WindowSettings> change)
+    {
+        try
+        {
+            _settingsService.Update(settings => settings with { Window = change(settings.Window) });
+        }
+        catch (IOException ex)
+        {
+            _logger?.Log(LogLevel.Warning, $"The layout of the window could not be saved: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    ///     Saves the widths of the explorer and the chat column when the user chose other ones.
+    /// </summary>
+    /// <param name="sender">The workspace.</param>
+    /// <param name="e">The event data.</param>
+    private void OnWorkspaceLayoutChanged(object? sender, EventArgs e)
+    {
+        var explorer = Workspace.ExplorerWidth;
+        var chat = Workspace.ChatWidth;
+        WriteWindowSettings(window => window with { ExplorerWidth = explorer, ChatWidth = chat });
+    }
 
     /// <summary>
     ///     Gets a value indicating whether the Recent Projects menu has entries.
@@ -419,6 +479,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
 
         StatusBar.Dispose();
         ProviderPill?.Dispose();
+        Workspace.LayoutChanged -= OnWorkspaceLayoutChanged;
         Workspace.Dispose();
     }
 

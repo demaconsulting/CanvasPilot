@@ -334,6 +334,37 @@ public sealed class ProjectWorkspaceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the workspace starts with the default widths, keeps what the user chooses within the limits, announces a
+    ///     choice but not a restore, and says nothing when a choice changes nothing.
+    /// </summary>
+    [Fact]
+    public void ProjectWorkspace_ColumnWidths_RestoreAndChoose_AreClampedAndAnnouncedOnlyForChoices()
+    {
+        // Arrange: a new workspace that counts the announcements
+        var workspace = CreateWorkspace();
+        var layoutChanges = 0;
+        var changed = new List<string?>();
+        workspace.LayoutChanged += (_, _) => layoutChanges++;
+        workspace.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var initial = (workspace.ExplorerWidth, workspace.ChatWidth);
+
+        // Act: restore saved widths, choose too small and too large widths, and choose the same widths again
+        workspace.RestoreColumnWidths(300, 500);
+        var afterRestore = (workspace.ExplorerWidth, workspace.ChatWidth, layoutChanges);
+        workspace.SetColumnWidths(10, 9999);
+        var afterClamp = (workspace.ExplorerWidth, workspace.ChatWidth, layoutChanges);
+        workspace.SetColumnWidths(180, 640);
+
+        // Assert: the defaults, the restore without an announcement, the limits, and no announcement for no change
+        Assert.Equal((264, 400), initial);
+        Assert.Equal((300, 500, 0), afterRestore);
+        Assert.Equal((180, 640, 1), afterClamp);
+        Assert.Equal(1, layoutChanges);
+        Assert.Contains(nameof(ProjectWorkspaceViewModel.ExplorerWidth), changed);
+        Assert.Contains(nameof(ProjectWorkspaceViewModel.ChatWidth), changed);
+    }
+
+    /// <summary>
     ///     Test that a workspace with no chat content never shows the chat column, even with a project open.
     /// </summary>
     [Fact]
