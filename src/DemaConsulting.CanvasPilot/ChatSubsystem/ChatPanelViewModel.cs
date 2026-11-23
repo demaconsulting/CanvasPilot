@@ -201,6 +201,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     private int _readinessVersion;
 
     /// <summary>
+    ///     Whether a check of the copilot is running.
+    /// </summary>
+    private bool _isCheckingReadiness;
+
+    /// <summary>
     ///     The latest turn, which completes when the turn has ended.
     /// </summary>
     private Task _latestTurn = Task.CompletedTask;
@@ -370,6 +375,22 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public string ReadinessMessage => HasReadinessIssue ? _readiness!.Message : string.Empty;
 
     /// <summary>
+    ///     Gets what the latest check of the copilot found, or <see langword="null" /> when none was made yet. Unlike the
+    ///     banner it also holds the answer that everything is ready.
+    /// </summary>
+    public AgentReadinessReport? Readiness => _readiness;
+
+    /// <summary>
+    ///     Gets a value indicating whether a check of the copilot is running now.
+    /// </summary>
+    public bool IsCheckingReadiness => _isCheckingReadiness;
+
+    /// <summary>
+    ///     Gets a value indicating whether the panel has a copilot to talk to, which is what a check of the readiness asks.
+    /// </summary>
+    public bool HasCopilot => _agent is not null;
+
+    /// <summary>
     ///     Gets a value indicating whether the message can be sent now.
     /// </summary>
     public bool CanSend => _composer.CanSend;
@@ -429,6 +450,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
 
         var version = ++_readinessVersion;
+        SetCheckingReadiness(true);
         AgentReadinessReport report;
         try
         {
@@ -436,6 +458,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
         catch (OperationCanceledException)
         {
+            if (version == _readinessVersion)
+            {
+                SetCheckingReadiness(false);
+            }
+
             return;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -449,6 +476,21 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
             _readiness = report;
             OnPropertyChanged(nameof(HasReadinessIssue));
             OnPropertyChanged(nameof(ReadinessMessage));
+            OnPropertyChanged(nameof(Readiness));
+            SetCheckingReadiness(false);
+        }
+    }
+
+    /// <summary>
+    ///     Records whether a check of the copilot is running and announces a change.
+    /// </summary>
+    /// <param name="value">Whether a check is running.</param>
+    private void SetCheckingReadiness(bool value)
+    {
+        if (_isCheckingReadiness != value)
+        {
+            _isCheckingReadiness = value;
+            OnPropertyChanged(nameof(IsCheckingReadiness));
         }
     }
 

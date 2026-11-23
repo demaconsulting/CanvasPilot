@@ -75,8 +75,8 @@ the kits are read, and each missing collaborator is refused. This scenario is te
 `StylePicker_DisposeAndConstructor_StopsFollowingAndRefusesNull`.
 
 **StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits**: In the real window the list in the title bar is
-hidden with no project; with a project it is shown as a pill named `Style kit` with a list of no style and the three kits of
-the program, with no style selected. This scenario is tested by
+hidden with no project; with a project it is shown as a pill named `Style kit` with a list of no style and the three
+kits of the program, with no style selected. This scenario is tested by
 `StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits`.
 
 **StylePickerView_ChooseKit_WritesTheProjectFile**: Choosing a kit in the combo box by index writes it into the project

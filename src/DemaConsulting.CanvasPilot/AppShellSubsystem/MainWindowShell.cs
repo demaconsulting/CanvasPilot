@@ -168,6 +168,14 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private ProjectInfo? _currentProject;
 
     /// <summary>
+    ///     The pill in the title bar that tells which AI provider is chosen and whether it can be used, or null when the
+    ///     application has none. The shell disposes it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProviderPill))]
+    private ProviderPillViewModel? _providerPill;
+
+    /// <summary>
     ///     What the Edit menu undoes and redoes: the part of the window that has the focus, or null when it has nothing
     ///     to undo.
     /// </summary>
@@ -320,6 +328,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     public string TitleBarSuffix => CurrentProject is null ? string.Empty : " \u00B7 " + ApplicationName;
 
     /// <summary>
+    ///     Gets a value indicating whether the title bar shows the AI provider pill.
+    /// </summary>
+    public bool HasProviderPill => ProviderPill is not null;
+
+    /// <summary>
     ///     Gets a value indicating whether the Recent Projects menu has entries.
     /// </summary>
     public bool HasRecentProjects => _recentItems.Count > 0;
@@ -405,6 +418,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         }
 
         StatusBar.Dispose();
+        ProviderPill?.Dispose();
         Workspace.Dispose();
     }
 

@@ -318,8 +318,8 @@ again. This scenario is tested by
 `MainWindowView_CheckAgainstStyleMenuItem_PictureShown_EnablesAndShowsNotesInThePreview`.
 
 **StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits**: In the real window composed with the real units, the
-list in the title bar is hidden with no project and shown with one, as a pill named `Style kit` that holds a list with no
-style and the three kits that come with the program. This scenario is tested by
+list in the title bar is hidden with no project and shown with one, as a pill named `Style kit` that holds a list with
+no style and the three kits that come with the program. This scenario is tested by
 `StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits`.
 
 **MainWindowShell_ShowStyleKits_MakesTheViewModelFromTheDialogsAndShowsIt**: With a function that makes the window of a

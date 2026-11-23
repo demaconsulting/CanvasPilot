@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.AppShellSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.AppShellSubsystem.ProviderPillView"
+             x:DataType="vm:ProviderPillViewModel">
+
+  <UserControl.Styles>
+    <!-- The dot: a core and a halo around it. Green is ready, amber needs the user, red cannot be used, and a hollow
+         indigo ring is being checked. The words next to it say the same, so the color is never the only sign. -->
+    <Style Selector="Panel.dot Ellipse.core">
+      <Setter Property="Fill" Value="{DynamicResource CpTextTertiary}" />
+    </Style>
+    <Style Selector="Panel.dot Ellipse.halo">
+      <Setter Property="Fill" Value="Transparent" />
+    </Style>
+    <Style Selector="Panel.dot.ready Ellipse.core">
+      <Setter Property="Fill" Value="{DynamicResource CpSuccess}" />
+    </Style>
+    <Style Selector="Panel.dot.ready Ellipse.halo">
+      <Setter Property="Fill" Value="{DynamicResource CpSuccess}" />
+      <Setter Property="Opacity" Value="0.22" />
+    </Style>
+    <Style Selector="Panel.dot.attention Ellipse.core">
+      <Setter Property="Fill" Value="{DynamicResource CpWarning}" />
+    </Style>
+    <Style Selector="Panel.dot.attention Ellipse.halo">
+      <Setter Property="Fill" Value="{DynamicResource CpWarning}" />
+      <Setter Property="Opacity" Value="0.22" />
+    </Style>
+    <Style Selector="Panel.dot.error Ellipse.core">
+      <Setter Property="Fill" Value="{DynamicResource CpDanger}" />
+    </Style>
+    <Style Selector="Panel.dot.error Ellipse.halo">
+      <Setter Property="Fill" Value="{DynamicResource CpDanger}" />
+      <Setter Property="Opacity" Value="0.22" />
+    </Style>
+    <Style Selector="Panel.dot.checking Ellipse.core">
+      <Setter Property="Fill" Value="Transparent" />
+      <Setter Property="Stroke" Value="{DynamicResource CpAccentText}" />
+      <Setter Property="StrokeThickness" Value="1.5" />
+    </Style>
+    <Style Selector="TextBlock.detail.attention">
+      <Setter Property="Foreground" Value="{DynamicResource CpWarning}" />
+    </Style>
+    <Style Selector="TextBlock.detail.error">
+      <Setter Property="Foreground" Value="{DynamicResource CpDanger}" />
+    </Style>
+  </UserControl.Styles>
+
+  <!-- The AI provider pill: 26 px, the dot, the provider in bold, the model or what is wrong, and a gear. Using it opens
+       the settings, whose first page is the AI provider. -->
+  <Button Name="ProviderPillButton"
+          AutomationProperties.AutomationId="ProviderPill"
+          AutomationProperties.Name="{Binding AccessibleName}"
+          Theme="{DynamicResource PillButton}"
+          MinHeight="26"
+          Padding="10,0,8,0"
+          WindowDecorationProperties.ElementRole="User"
+          Command="{Binding OpenSettingsCommand}"
+          ToolTip.Tip="{Binding ToolTipText}">
+    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+
+      <Panel Classes="dot"
+             Classes.ready="{Binding IsReady}"
+             Classes.attention="{Binding NeedsAttention}"
+             Classes.error="{Binding IsError}"
+             Classes.checking="{Binding IsChecking}"
+             Width="14"
+             Height="14"
+             VerticalAlignment="Center">
+        <Ellipse Classes="halo" Width="14" Height="14" />
+        <Ellipse Classes="core" Width="8" Height="8" />
+      </Panel>
+
+      <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+        <TextBlock AutomationProperties.AutomationId="ProviderPillName"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource CpTextPrimary}"
+                   Text="{Binding ProviderName}" />
+        <TextBlock Classes="detail"
+                   Classes.attention="{Binding NeedsAttention}"
+                   Classes.error="{Binding IsError}"
+                   AutomationProperties.AutomationId="ProviderPillDetail"
+                   MaxWidth="200"
+                   TextTrimming="CharacterEllipsis"
+                   Text="{Binding SeparatedDetailText}" />
+      </StackPanel>
+
+      <PathIcon Classes="icon"
+                Width="14"
+                Height="14"
+                VerticalAlignment="Center"
+                Data="{DynamicResource CpIconSettings}" />
+
+    </StackPanel>
+  </Button>
+
+</UserControl>

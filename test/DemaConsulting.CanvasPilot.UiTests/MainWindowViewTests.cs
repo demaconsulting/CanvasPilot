@@ -268,6 +268,40 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the AI provider pill is in the title bar, names the provider and says in words how it is, and that using
+    ///     it opens the settings on the AI provider page.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage()
+    {
+        // Arrange: a shown main window
+        var (_, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var bar = SettingsUiHelpers.Find<Border>(window, "AppTitleBar");
+        var pill = SettingsUiHelpers.Find<Button>(window, "ProviderPill");
+        var name = AutomationProperties.GetName(pill);
+        var barRight = bar.TranslatePoint(new Point(bar.Bounds.Width, 0), window)!.Value.X;
+        var pillRight = pill.TranslatePoint(new Point(pill.Bounds.Width, 0), window)!.Value.X;
+
+        // Act: use the pill with the pointer, and read the page that the settings show
+        SettingsUiHelpers.Click(window, pill);
+        var dialog = AppShellUiHelpers.FindDialog<SettingsDialogView>(window);
+        var page = Assert.IsAssignableFrom<ISettingsPage>(SettingsUiHelpers.Find<ListBox>(dialog, "SettingsPageList").SelectedItem);
+        SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "SettingsCancelButton"));
+        await Task.Yield();
+
+        // Assert: the pill is in the title bar inside its right edge, says what it is, and opened the AI provider page
+        Assert.Contains(bar, pill.GetVisualAncestors());
+        Assert.Equal(26, pill.Bounds.Height);
+        Assert.InRange(pillRight, 0, barRight);
+        Assert.StartsWith("AI provider: Copilot, ", name, StringComparison.Ordinal);
+        Assert.Equal("AI Provider", page.Title);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the menus have the expected structure, and that every menu item has a name and an automation
     ///     identifier that are the same.
     /// </summary>

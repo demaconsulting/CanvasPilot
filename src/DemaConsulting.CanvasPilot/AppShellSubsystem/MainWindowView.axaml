@@ -204,6 +204,14 @@
                         WindowDecorationProperties.ElementRole="User"
                         Content="{Binding StylePicker}" />
 
+        <!-- The AI provider: which one is chosen and whether it can be used; it opens the settings -->
+        <ContentControl Name="ProviderPillHost"
+                        Grid.Column="5"
+                        AutomationProperties.AutomationId="ProviderPillHost"
+                        Margin="0,0,16,0"
+                        VerticalAlignment="Center"
+                        Content="{Binding ProviderPill}" />
+
         <Border Name="TitleBarCaptionReserve" Grid.Column="6" Width="0" />
 
       </Grid>

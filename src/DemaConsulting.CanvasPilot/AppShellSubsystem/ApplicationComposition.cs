@@ -524,6 +524,7 @@ public sealed class ApplicationComposition : IDisposable
         // what the talk key of the window listens for
         workspace.Chat = chat;
         shell.PushToTalk = chat;
+        shell.ProviderPill = new ProviderPillViewModel(chat, settings, shell.OpenSettingsCommand);
 
         // What the copilot does to the rest of the application: a file it writes is shown in the explorer, the chat asks
         // for the settings, and a change of the provider is checked again. These are released before the copilot.
