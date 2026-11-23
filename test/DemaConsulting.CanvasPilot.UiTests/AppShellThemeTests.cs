@@ -120,13 +120,13 @@ public sealed class AppShellThemeTests : IDisposable
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(ThemeVariant.Dark, window.ActualThemeVariant);
         Assert.Equal(
-            ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Dark),
+            ThemeUiHelpers.ColorOf("CpSurfaceWindow", ThemeVariant.Dark),
             Assert.IsAssignableFrom<ISolidColorBrush>(window.Background).Color);
         composition.Settings.Update(s => s with { Appearance = s.Appearance with { Theme = ThemeChoice.Light } });
         Dispatcher.UIThread.RunJobs();
         Assert.Equal(ThemeVariant.Light, window.ActualThemeVariant);
         Assert.Equal(
-            ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Light),
+            ThemeUiHelpers.ColorOf("CpSurfaceWindow", ThemeVariant.Light),
             Assert.IsAssignableFrom<ISolidColorBrush>(window.Background).Color);
 
         // Act / Assert: follow the system again, which is the default variant of the application

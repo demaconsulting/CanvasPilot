@@ -72,6 +72,16 @@ public sealed partial class MainWindowView : Window, IDialogService
     };
 
     /// <summary>
+    ///     The width of the three window buttons that Windows draws over the right end of the title bar.
+    /// </summary>
+    private const double WindowsCaptionButtonsWidth = 138;
+
+    /// <summary>
+    ///     The width of the traffic lights that macOS draws over the left end of the title bar.
+    /// </summary>
+    private const double MacTrafficLightsWidth = 78;
+
+    /// <summary>
     ///     View model bound to the window.
     /// </summary>
     private readonly MainWindowShell? _shell;
@@ -114,6 +124,41 @@ public sealed partial class MainWindowView : Window, IDialogService
         AddHandler(KeyDownEvent, OnKeyDownTunnel, RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, OnKeyUpTunnel, RoutingStrategies.Tunnel);
         Deactivated += OnWindowDeactivated;
+    }
+
+    /// <summary>
+    ///     Works out how much room the title bar keeps free for the buttons the system draws over it: on the right for
+    ///     Windows (the minimize, maximize, and close buttons) and on the left for macOS (the traffic lights). A window that
+    ///     is not extended into its frame has its buttons in a system title bar of its own, so nothing is kept free.
+    /// </summary>
+    /// <param name="isExtended">Whether the window extends into its frame.</param>
+    /// <param name="isWindows">Whether the platform is Windows.</param>
+    /// <param name="isMacOs">Whether the platform is macOS.</param>
+    /// <returns>The width kept free on the left and on the right, in device-independent pixels.</returns>
+    internal static (double Left, double Right) CaptionReserve(bool isExtended, bool isWindows, bool isMacOs)
+    {
+        if (!isExtended)
+        {
+            return (0, 0);
+        }
+
+        if (isWindows)
+        {
+            return (0, WindowsCaptionButtonsWidth);
+        }
+
+        return isMacOs ? (MacTrafficLightsWidth, 0) : (0, 0);
+    }
+
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == IsExtendedIntoWindowDecorationsProperty)
+        {
+            UpdateCaptionReserve();
+        }
     }
 
     /// <inheritdoc />
@@ -479,6 +524,23 @@ public sealed partial class MainWindowView : Window, IDialogService
             {
                 _styleKitManager = null;
             }
+        }
+    }
+
+    /// <summary>
+    ///     Keeps the room free at the ends of the title bar that the buttons of the system need.
+    /// </summary>
+    private void UpdateCaptionReserve()
+    {
+        var (left, right) = CaptionReserve(IsExtendedIntoWindowDecorations, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
+        if (this.FindControl<Border>("TitleBarLeadingReserve") is { } leading)
+        {
+            leading.Width = left;
+        }
+
+        if (this.FindControl<Border>("TitleBarCaptionReserve") is { } trailing)
+        {
+            trailing.Width = right;
         }
     }
 

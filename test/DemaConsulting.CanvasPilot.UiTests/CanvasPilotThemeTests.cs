@@ -119,7 +119,7 @@ public sealed class CanvasPilotThemeTests : IDisposable
         // Assert: the window is dark, and the choice is what the next run reads
         Assert.Equal(ThemeVariant.Dark, window.ActualThemeVariant);
         Assert.Equal(
-            ThemeUiHelpers.ColorOf("CpSurfacePane", ThemeVariant.Dark),
+            ThemeUiHelpers.ColorOf("CpSurfaceWindow", ThemeVariant.Dark),
             Assert.IsAssignableFrom<ISolidColorBrush>(window.Background).Color);
         Assert.Equal(ThemeChoice.Dark, remembered);
         window.Close();

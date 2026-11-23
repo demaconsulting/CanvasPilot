@@ -118,6 +118,94 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the window has the default and the smallest size of the design and shows a 44 px title bar that holds
+    ///     the menu, and that the room kept for the buttons of the system is none while the window is not extended into its
+    ///     frame (as in the headless platform).
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes()
+    {
+        // Arrange: a shown main window
+        var (_, window) = CreateWindow();
+
+        // Act: show it and find the title bar
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var bar = SettingsUiHelpers.Find<Border>(window, "AppTitleBar");
+        var menu = SettingsUiHelpers.Find<Menu>(window, "MainMenu");
+
+        // Assert: the sizes of the design, a title bar 44 high over the width of the window, and the menu inside it
+        Assert.Equal(1440, window.Width);
+        Assert.Equal(900, window.Height);
+        Assert.Equal(960, window.MinWidth);
+        Assert.Equal(600, window.MinHeight);
+        Assert.Equal(44, bar.Bounds.Height);
+        Assert.Equal(window.Bounds.Width, bar.Bounds.Width);
+        Assert.Contains(bar, menu.GetVisualAncestors());
+        Assert.Equal(0, window.FindControl<Border>("TitleBarCaptionReserve")!.Bounds.Width);
+        Assert.Equal(0, window.FindControl<Border>("TitleBarLeadingReserve")!.Bounds.Width);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the room kept free in the title bar for the buttons of the system is on the right for Windows, on the
+    ///     left for macOS, and none elsewhere or when the window is not extended into its frame.
+    /// </summary>
+    /// <param name="isExtended">Whether the window extends into its frame.</param>
+    /// <param name="isWindows">Whether the platform is Windows.</param>
+    /// <param name="isMacOs">Whether the platform is macOS.</param>
+    /// <param name="left">The expected room on the left.</param>
+    /// <param name="right">The expected room on the right.</param>
+    [Theory]
+    [InlineData(false, true, false, 0, 0)]
+    [InlineData(false, false, true, 0, 0)]
+    [InlineData(true, true, false, 0, 138)]
+    [InlineData(true, false, true, 78, 0)]
+    [InlineData(true, false, false, 0, 0)]
+    public void MainWindowView_CaptionReserve_FollowsPlatformAndExtension(bool isExtended, bool isWindows, bool isMacOs, double left, double right)
+    {
+        // Act: ask for the room that is kept free
+        var reserve = MainWindowView.CaptionReserve(isExtended, isWindows, isMacOs);
+
+        // Assert: it is where the platform draws its buttons
+        Assert.Equal((left, right), reserve);
+    }
+
+    /// <summary>
+    ///     Test that the title bar shows the name of the open project in bold with the application name after it, the
+    ///     application name alone while no project is open, and that the window title of the system is unchanged.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_TitleBar_ShowsProjectNameThenApplicationName()
+    {
+        // Arrange: a remembered project and a shown main window
+        await CreateRememberedProjectAsync("Release Overview");
+        var (composition, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var text = SettingsUiHelpers.Find<TextBlock>(window, "AppTitleBarText");
+
+        // Act: read the title bar with no project, open the project, read it again, and close the project
+        string Read() => string.Concat(text.Inlines!.OfType<Avalonia.Controls.Documents.Run>().Select(run => run.Text));
+        var closedText = Read();
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        AppShellUiHelpers.Flush();
+        var openText = Read();
+        var openTitle = window.Title;
+        window.FindControl<MenuItem>("CloseProjectMenuItem")!.Command!.Execute(null);
+        AppShellUiHelpers.Flush();
+
+        // Assert: the name is bold with the application name after it while the project is open; the system title is unchanged
+        Assert.Equal("CanvasPilot", closedText);
+        Assert.Equal("Release Overview \u00B7 CanvasPilot", openText);
+        Assert.Equal("Release Overview - CanvasPilot", openTitle);
+        Assert.Equal("CanvasPilot", Read());
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the menus have the expected structure, and that every menu item has a name and an automation
     ///     identifier that are the same.
     /// </summary>

@@ -163,7 +163,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     The open project, or null.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasProject))]
+    [NotifyPropertyChangedFor(nameof(HasProject), nameof(TitleBarName), nameof(TitleBarSuffix))]
     [NotifyCanExecuteChangedFor(nameof(SaveProjectCommand), nameof(CloseProjectCommand))]
     private ProjectInfo? _currentProject;
 
@@ -305,6 +305,19 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Gets a value indicating whether a project is open.
     /// </summary>
     public bool HasProject => CurrentProject is not null;
+
+    /// <summary>
+    ///     Gets the text the title bar shows in bold: the name of the open project, or the application name when no
+    ///     project is open. The window title (<see cref="Title" />) is unchanged and stays what the system shows in the task
+    ///     bar and window lists.
+    /// </summary>
+    public string TitleBarName => CurrentProject?.Name ?? ApplicationName;
+
+    /// <summary>
+    ///     Gets the quiet text after <see cref="TitleBarName" /> in the title bar: a middle dot and the application name
+    ///     while a project is open, and nothing otherwise.
+    /// </summary>
+    public string TitleBarSuffix => CurrentProject is null ? string.Empty : " \u00B7 " + ApplicationName;
 
     /// <summary>
     ///     Gets a value indicating whether the Recent Projects menu has entries.
