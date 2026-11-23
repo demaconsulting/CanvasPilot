@@ -262,7 +262,10 @@ as a PNG. The screenshot tests carry the category `Screenshots` and skip themsel
 the main window in a conversation (dark and light), the main window with the marketing picture that the copilot drew in
 a real session (kept as the data `ScreenshotData/crazy-monkey-robot.svg` of the test assembly, with its tool rows and
 the cost line of the turn), the welcome screen, and the Style Kits manager; the card of a project on the welcome screen
-shows the picture that was changed last, so the demonstration writes the main picture after the plain ones. The script
+shows the picture that was changed last, so the demonstration writes the main picture after the plain ones. The two texts of
+the status bar that depend on the clock are fixed by the demonstration, so that `-Check` is repeatable: the modified time
+of the project is rewritten in the project file (and the project is opened again), and the render time of the preview
+pane is set. The script
 `docs/images/render-screenshots.ps1` sets the variable and runs only those tests; with `-Check` it compares fresh
 pictures with the committed ones using a tolerance, and it is not part of the continuous integration because text
 hinting is not bit-for-bit the same on every operating system. The tool is not linked to a requirement; two tests keep

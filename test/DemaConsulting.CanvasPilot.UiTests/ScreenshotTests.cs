@@ -44,8 +44,9 @@ namespace DemaConsulting.CanvasPilot.UiTests;
 /// <remarks>
 ///     The pictures are of the real application, so they change when the application changes. The tests do not assert what
 ///     the pictures show: the other UI tests do that. The content is the same on every run, the culture is fixed to US
-///     English, and the headless platform draws with the embedded Inter font, so a new drawing differs from the committed one
-///     only by the anti-aliasing of the platform and by the render time that the status bar tells.
+///     English, and the headless platform draws with the embedded Inter font. The two texts of the status bar that depend on
+///     the clock, the time that the project file was saved and the time that the render took, are fixed by the demonstration,
+///     so a new drawing differs from the committed one only by the anti-aliasing of the platform.
 /// </remarks>
 public sealed class ScreenshotTests : IDisposable
 {
@@ -151,6 +152,7 @@ public sealed class ScreenshotTests : IDisposable
         // Act: open the project with the DEMA style kit, show the overview, mark two places, and write the message
         await composition.Projects.OpenAsync(project.FilePath, TestContext.Current.CancellationToken);
         await composition.Projects.SetActiveStyleKitAsync("dema", TestContext.Current.CancellationToken);
+        await ScreenshotDemo.FixSavedTimeAsync(composition, project, TestContext.Current.CancellationToken);
         var explorer = composition.Shell.Workspace.Explorer;
         foreach (var node in explorer.Roots.Where(root => root.IsFolder))
         {
@@ -167,6 +169,7 @@ public sealed class ScreenshotTests : IDisposable
         await SettleAsync(() =>
             AllNodes(explorer.Roots).Where(node => node.IsPreviewable).All(node => node.HasThumbnail)
             && ChipPictures(window).Count == 2 && ChipPictures(window).All(picture => picture.IsVisible));
+        ScreenshotDemo.FixRenderTime(composition);
 
         // Assert: the dark picture and the light one were written
         var dark = ScreenshotSupport.Capture(window, folder, "main-window.png", WindowWidth, WindowHeight, ThemeVariant.Dark);
@@ -199,12 +202,14 @@ public sealed class ScreenshotTests : IDisposable
         // Act: open the project with the DEMA style kit, show the picture, and fill the conversation that made it
         await composition.Projects.OpenAsync(project.FilePath, TestContext.Current.CancellationToken);
         await composition.Projects.SetActiveStyleKitAsync("dema", TestContext.Current.CancellationToken);
+        await ScreenshotDemo.FixSavedTimeAsync(composition, project, TestContext.Current.CancellationToken);
         var explorer = composition.Shell.Workspace.Explorer;
         explorer.SelectFile(Path.Combine(project.FolderPath, ScreenshotDemo.RobotPicture));
         await composition.Preview.RenderCompletion;
         ScreenshotDemo.FillRobotTranscript(composition.Chat, project.FolderPath);
         window.GetVisualDescendants().OfType<ComposerSubsystem.ComposerEditorView>().First().FocusEditor();
         await SettleAsync(() => AllNodes(explorer.Roots).Where(node => node.IsPreviewable).All(node => node.HasThumbnail));
+        ScreenshotDemo.FixRenderTime(composition);
 
         // Assert: the picture was written
         var path = ScreenshotSupport.Capture(window, folder, "main-window-robot.png", WindowWidth, WindowHeight, ThemeVariant.Dark);

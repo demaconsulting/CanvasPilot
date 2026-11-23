@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Text;
+using System.Text.Json.Nodes;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
@@ -74,6 +75,19 @@ internal static class ScreenshotDemo
     public const string RobotPicture = "crazy-monkey-robot.svg";
 
     /// <summary>
+    ///     The time that the status bar of the main windows tells for the save of the project file, as a local wall-clock time
+    ///     so that it is written the same in every time zone. A real save tells the time of the run, which would change the
+    ///     drawing every minute.
+    /// </summary>
+    public static readonly DateTimeOffset SavedTime = new(new DateTime(2026, 3, 12, 14, 32, 0, DateTimeKind.Local));
+
+    /// <summary>
+    ///     The render time in milliseconds that the status bar of the main windows tells for the picture. A real render tells
+    ///     the time that it took, which differs on every run.
+    /// </summary>
+    public const long RenderMilliseconds = 84;
+
+    /// <summary>
     ///     The two marks of the main window, in the pixels of <see cref="MainPicture" />: the ellipse around the decision of
     ///     the flow and the rectangle around the two tallest bars.
     /// </summary>
@@ -98,6 +112,34 @@ internal static class ScreenshotDemo
         var project = created.Project ?? throw new InvalidOperationException($"The demonstration project {name} was not created.");
         fill(project.FolderPath);
         return project;
+    }
+
+    /// <summary>
+    ///     Fixes the time that the status bar tells for the save of the open project: the modified time in the project file is
+    ///     set to <see cref="SavedTime" /> and the project is opened again, so that the status bar shows the same text on every
+    ///     run. It is called before the explorer and the preview are used, because opening the project again resets them.
+    /// </summary>
+    /// <param name="composition">The application, with the project open.</param>
+    /// <param name="project">The project that is open.</param>
+    /// <param name="cancellationToken">The token of the test.</param>
+    /// <returns>A task that completes when the project is open again.</returns>
+    public static async Task FixSavedTimeAsync(ApplicationComposition composition, ProjectInfo project, CancellationToken cancellationToken)
+    {
+        var node = JsonNode.Parse(await File.ReadAllTextAsync(project.FilePath, cancellationToken))
+            ?? throw new InvalidOperationException("The project file is empty.");
+        node["modifiedUtc"] = SavedTime.ToUniversalTime();
+        await File.WriteAllTextAsync(project.FilePath, node.ToJsonString(), cancellationToken);
+        await composition.Projects.OpenAsync(project.FilePath, cancellationToken);
+    }
+
+    /// <summary>
+    ///     Fixes the render time that the preview pane tells in the status bar to <see cref="RenderMilliseconds" />. It is
+    ///     called after the last render and before the window is drawn.
+    /// </summary>
+    /// <param name="composition">The application.</param>
+    public static void FixRenderTime(ApplicationComposition composition)
+    {
+        composition.Preview.RenderMilliseconds = RenderMilliseconds;
     }
 
     /// <summary>

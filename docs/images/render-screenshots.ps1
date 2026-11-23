@@ -19,8 +19,9 @@
     The pictures do not depend on the computer: the content is made by the tests, the culture is US English, and the
     fonts are embedded. The demonstration projects are made in C:\CanvasPilot (or the same place at the root of the
     drive on another system) when that folder does not exist, so that the paths on the cards are neutral, and in a
-    temporary folder otherwise; everything is removed at the end. A drawing is repeatable except for the render time
-    that the status bar of the main window tells.
+    temporary folder otherwise; everything is removed at the end. The two texts of the status bar that depend on the clock
+    are fixed by the demonstration (the project file was saved 3/12/2026, 2:32 PM, and the preview was rendered in 84 ms), so
+    a drawing is repeatable except for the anti-aliasing of the platform.
 
     Without -Check it writes the pictures over the ones in docs/images. Review them (the whole window, the text, no
     clipping), and commit the changed pictures with the change to the application that made them differ. Pictures with
