@@ -49,7 +49,8 @@ public sealed class ChatPanelHistoryViewTests
             var store = new ChatHistoryStore(historyRoot);
             var agent = new ScriptedAgentService();
             using var harness = new ChatHarness(agent: agent, history: store);
-            Assert.True(harness.ClearHistoryButton.IsEffectivelyVisible);
+            Assert.True(harness.OverflowButton.IsEffectivelyVisible);
+            Assert.Equal("Clear chat history", harness.ClearHistoryItem.Header);
             harness.Type("Draw a box");
             harness.ClickSend();
             agent.Emit(new AgentEvent.TextDelta("Here is the box."), new AgentEvent.Completed());
@@ -59,7 +60,7 @@ public sealed class ChatPanelHistoryViewTests
             harness.Type("The next one");
 
             // Act: choose Clear chat history
-            SettingsUiHelpers.Click(harness.Window, harness.ClearHistoryButton);
+            harness.ClearHistory();
 
             // Assert: the conversation is gone from the screen except for the notice, and from the computer
             Assert.True(harness.WaitFor(() => harness.Notices.Count == 1));
@@ -89,7 +90,7 @@ public sealed class ChatPanelHistoryViewTests
         using var harness = new ChatHarness();
 
         // Act
-        SettingsUiHelpers.Click(harness.Window, harness.ClearHistoryButton);
+        harness.ClearHistory();
 
         // Assert
         Assert.True(harness.WaitFor(() => harness.Notices.Count == 1));

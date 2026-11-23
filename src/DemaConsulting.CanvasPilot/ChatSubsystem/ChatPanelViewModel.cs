@@ -103,7 +103,33 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// <summary>
     ///     The text of the transcript when no message was sent yet.
     /// </summary>
-    public const string EmptyTranscriptText = "Messages you send appear here.";
+    public const string EmptyTranscriptText = "What would you like to draw?";
+
+    /// <summary>
+    ///     The tip under the example prompts of the empty conversation.
+    /// </summary>
+    public const string EmptyTipText = "Drop a picture, or hold F8 and speak";
+
+    /// <summary>
+    ///     The prompts that the empty conversation offers; choosing one writes it in the message.
+    /// </summary>
+    public static IReadOnlyList<string> ExamplePrompts { get; } =
+    [
+        "Draw our release flow",
+        "Chart downloads by month",
+        "Put both on one page",
+        "Make it match my style kit",
+    ];
+
+    /// <summary>
+    ///     The follow-up prompts that are offered above the message while a conversation is going on and the copilot is idle.
+    /// </summary>
+    public static IReadOnlyList<string> SuggestedPrompts { get; } =
+    [
+        "Add a legend",
+        "Make title larger",
+        "Export as PNG",
+    ];
 
     /// <summary>
     ///     The words of the indicator that shows while the copilot works on a message.
@@ -280,6 +306,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         OpenSettingsCommand = new RelayCommand(RaiseOpenSettings);
         CheckAgainCommand = new AsyncRelayCommand(RefreshReadinessAsync);
         ClearHistoryCommand = new RelayCommand(ClearHistory);
+        CollapseCommand = new RelayCommand(() => CollapseRequested?.Invoke(this, EventArgs.Empty));
 
         // With a copilot, a sent message starts a turn whose rows follow the entry of the message
         if (agent is not null)
@@ -311,6 +338,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     handles it.
     /// </summary>
     public event EventHandler? OpenSettingsRequested;
+
+    /// <summary>
+    ///     Raised when the user asks to hide the chat column with the button of the header. The workspace handles it.
+    /// </summary>
+    public event EventHandler? CollapseRequested;
 
     /// <summary>
     ///     Gets the composer of the message, which the panel's editing control shows.
@@ -363,6 +395,41 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     is emptied, and the copilot forgets the conversation. There is no question first.
     /// </summary>
     public IRelayCommand ClearHistoryCommand { get; }
+
+    /// <summary>
+    ///     Gets the command that asks to hide the chat column, which raises <see cref="CollapseRequested" />.
+    /// </summary>
+    public IRelayCommand CollapseCommand { get; }
+
+    /// <summary>
+    ///     Gets a value indicating whether the follow-up prompts are offered: a conversation is going on and the copilot is
+    ///     idle.
+    /// </summary>
+    public bool ShowSuggestions => HasTranscript && !IsCopilotBusy;
+
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        // The follow-up prompts depend on both of these
+        if (e.PropertyName is nameof(HasTranscript) or nameof(IsCopilotBusy))
+        {
+            base.OnPropertyChanged(new PropertyChangedEventArgs(nameof(ShowSuggestions)));
+        }
+    }
+
+    /// <summary>
+    ///     Writes a prompt in the message at the caret, so that the user can change it and send it.
+    /// </summary>
+    /// <param name="prompt">The prompt.</param>
+    /// <returns><see langword="true" /> when the prompt was written; <see langword="false" /> when the message cannot be edited.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="prompt" /> is <see langword="null" />.</exception>
+    public bool UsePrompt(string prompt)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        return _composer.CanEdit && _composer.InsertTyped(prompt);
+    }
 
     /// <summary>
     ///     Gets a value indicating whether a turn of the copilot runs.

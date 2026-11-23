@@ -334,6 +334,39 @@ public sealed class ProjectWorkspaceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that hiding the chat column keeps the chat content but not its column, shows the restore chip, and that
+    ///     restoring brings the column back.
+    /// </summary>
+    [Fact]
+    public void ProjectWorkspace_ChatCollapsed_HidesColumnAndOffersRestore()
+    {
+        // Arrange: a workspace with a project and chat content
+        Touch("a.svg");
+        var workspace = CreateWorkspace();
+        workspace.Chat = new object();
+        workspace.ShowProject(Project());
+        Assert.True(workspace.IsChatVisible);
+        Assert.False(workspace.CanRestoreChat);
+        var changed = new List<string?>();
+        workspace.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        // Act: hide the column
+        workspace.IsChatCollapsed = true;
+
+        // Assert: the column is gone, the chip is there, and both changes were announced
+        Assert.False(workspace.IsChatVisible);
+        Assert.True(workspace.CanRestoreChat);
+        Assert.Contains(nameof(ProjectWorkspaceViewModel.IsChatVisible), changed);
+        Assert.Contains(nameof(ProjectWorkspaceViewModel.CanRestoreChat), changed);
+
+        // Act: bring it back
+        workspace.RestoreChatCommand.Execute(null);
+
+        // Assert
+        Assert.True(workspace.IsChatVisible);
+        Assert.False(workspace.CanRestoreChat);
+    }
+    /// <summary>
     ///     Test that the workspace starts with the default widths, keeps what the user chooses within the limits, announces a
     ///     choice but not a restore, and says nothing when a choice changes nothing.
     /// </summary>

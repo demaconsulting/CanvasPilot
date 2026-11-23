@@ -42,7 +42,9 @@
       <!-- State -->
       <SolidColorBrush x:Key="CpSuccess" Color="#34d399" />
       <SolidColorBrush x:Key="CpWarning" Color="#fbbf24" />
+      <SolidColorBrush x:Key="CpWarningTint" Color="#26fbbf24" />
       <SolidColorBrush x:Key="CpDanger" Color="#f87171" />
+      <SolidColorBrush x:Key="CpDangerTint" Color="#26f87171" />
 
       <!-- Elevation: floating bars (E3), menus and dialogs (E4), and the picture on the stage -->
       <BoxShadows x:Key="CpShadowFloating">0 4 16 0 #66000000</BoxShadows>
@@ -78,7 +80,9 @@
       <!-- State -->
       <SolidColorBrush x:Key="CpSuccess" Color="#047857" />
       <SolidColorBrush x:Key="CpWarning" Color="#a84e08" />
+      <SolidColorBrush x:Key="CpWarningTint" Color="#1fa84e08" />
       <SolidColorBrush x:Key="CpDanger" Color="#b91c1c" />
+      <SolidColorBrush x:Key="CpDangerTint" Color="#1fb91c1c" />
 
       <!-- Elevation -->
       <BoxShadows x:Key="CpShadowFloating">0 3 12 0 #331E1B4B</BoxShadows>

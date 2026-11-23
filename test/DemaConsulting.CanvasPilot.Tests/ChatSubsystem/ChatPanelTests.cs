@@ -330,6 +330,33 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a prompt is written in the message, that the follow-up prompts show only for a conversation, and that
+    ///     the collapse command raises its request.
+    /// </summary>
+    [Fact]
+    public void ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce()
+    {
+        // Arrange: a panel with a project open and nothing said
+        _composer.SetProject(Path.GetTempPath());
+        var changed = new List<string?>();
+        _panel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var collapses = 0;
+        _panel.CollapseRequested += (_, _) => collapses++;
+        Assert.False(_panel.ShowSuggestions);
+
+        // Act
+        var written = _panel.UsePrompt(ChatPanelViewModel.ExamplePrompts[1]);
+        _panel.CollapseCommand.Execute(null);
+
+        // Assert: the prompt is the message, and the collapse was requested once
+        Assert.True(written);
+        Assert.Equal(ChatPanelViewModel.ExamplePrompts[1], _composer.Document.FlatText);
+        Assert.Equal(1, collapses);
+        Assert.Equal(4, ChatPanelViewModel.ExamplePrompts.Count);
+        Assert.NotEmpty(ChatPanelViewModel.SuggestedPrompts);
+        Assert.Throws<ArgumentNullException>(() => _panel.UsePrompt(null!));
+    }
+    /// <summary>
     ///     Test that the label of the talk button says what the button is doing and that each change is announced.
     /// </summary>
     [Fact]

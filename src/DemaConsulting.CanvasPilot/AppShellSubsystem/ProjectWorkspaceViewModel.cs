@@ -52,8 +52,20 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     ///     The content of the chat column on the right, or null while none is supplied.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsChatVisible))]
+    [NotifyPropertyChangedFor(nameof(IsChatVisible), nameof(CanRestoreChat))]
     private object? _chat;
+
+    /// <summary>
+    ///     Whether the user hid the chat column with the button of its header.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsChatVisible), nameof(CanRestoreChat))]
+    private bool _isChatCollapsed;
+
+    /// <summary>
+    ///     The chat panel that the workspace listens to for the request to hide the column, or null.
+    /// </summary>
+    private ChatPanelViewModel? _connectedPanel;
 
     /// <summary>
     ///     Creates the workspace around a project explorer. The workspace takes ownership of the explorer and
@@ -95,7 +107,13 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     ///     Gets a value indicating whether the chat column is shown: <see cref="Chat" /> holds content and a project is
     ///     open, because a message is written in the project and needs it for its attachments and marks.
     /// </summary>
-    public bool IsChatVisible => Chat is not null && HasProject;
+    public bool IsChatVisible => Chat is not null && HasProject && !IsChatCollapsed;
+
+    /// <summary>
+    ///     Gets a value indicating whether the chip that brings the chat column back is shown: the chat could be shown, but the
+    ///     user hid it.
+    /// </summary>
+    public bool CanRestoreChat => Chat is not null && HasProject && IsChatCollapsed;
 
     /// <summary>
     ///     Gets the text shown in the right-hand area while there is no preview content.
@@ -249,6 +267,38 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     }
 
     /// <summary>
+    ///     Follows the chat panel that is about to be replaced, and the one that replaces it, for the request to hide the
+    ///     column.
+    /// </summary>
+    /// <param name="value">The new content.</param>
+    partial void OnChatChanging(object? value)
+    {
+        if (_connectedPanel is not null)
+        {
+            _connectedPanel.CollapseRequested -= OnChatCollapseRequested;
+        }
+
+        _connectedPanel = value as ChatPanelViewModel;
+        if (_connectedPanel is not null)
+        {
+            _connectedPanel.CollapseRequested += OnChatCollapseRequested;
+        }
+    }
+
+    /// <summary>
+    ///     Hides the chat column because the user asked to in its header.
+    /// </summary>
+    /// <param name="sender">The chat panel.</param>
+    /// <param name="e">The event data.</param>
+    private void OnChatCollapseRequested(object? sender, EventArgs e) => IsChatCollapsed = true;
+
+    /// <summary>
+    ///     Shows the chat column again after the user hid it.
+    /// </summary>
+    [RelayCommand]
+    private void RestoreChat() => IsChatCollapsed = false;
+
+    /// <summary>
     ///     Follows a change of the chat content.
     /// </summary>
     /// <param name="value">The new content.</param>
@@ -389,6 +439,7 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
             case nameof(ProjectExplorerViewModel.HasProject):
                 OnPropertyChanged(nameof(HasProject));
                 OnPropertyChanged(nameof(IsChatVisible));
+                OnPropertyChanged(nameof(CanRestoreChat));
                 OnPropertyChanged(nameof(PlaceholderText));
                 OnPropertyChanged(nameof(HintText));
                 NewFileCommand.NotifyCanExecuteChanged();

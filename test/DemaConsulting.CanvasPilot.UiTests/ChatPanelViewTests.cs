@@ -52,7 +52,7 @@ public sealed class ChatPanelViewTests
 
         // Assert: the hint says where messages appear, there are no entries, the editing control is bound to the
         // composer, the send button is disabled, and the talk button shows its first label
-        Assert.True(harness.Find<TextBlock>("ChatTranscriptEmpty").IsVisible);
+        Assert.True(harness.Find<TextBlock>("ChatTranscriptEmpty").IsEffectivelyVisible);
         Assert.Equal(ChatPanelViewModel.EmptyTranscriptText, harness.Find<TextBlock>("ChatTranscriptEmpty").Text);
         Assert.Empty(harness.Entries);
         Assert.Same(harness.Composer, harness.Editor.DataContext);
@@ -109,7 +109,7 @@ public sealed class ChatPanelViewTests
         // Assert: the transcript shows the message, the hint is gone, the editing control is empty, and Send is disabled
         var entry = Assert.Single(harness.Entries);
         Assert.Equal("Make it blue", ChatHarness.TextOf(entry));
-        Assert.False(harness.Find<TextBlock>("ChatTranscriptEmpty").IsVisible);
+        Assert.False(harness.Find<TextBlock>("ChatTranscriptEmpty").IsEffectivelyVisible);
         Assert.Equal(string.Empty, harness.Editor.SurfaceText);
         Assert.False(harness.SendButton.IsEffectivelyEnabled);
         Assert.False(harness.Find<TextBlock>("TranscriptSummary").IsVisible);
@@ -407,5 +407,52 @@ public sealed class ChatPanelViewTests
         Assert.Equal(2, runs.Count);
         Assert.Null(runs[0].Background);
         Assert.NotNull(runs[1].Background);
+    }
+
+    /// <summary>
+    ///     Test that the empty conversation offers the example prompts, that choosing one writes it in the message, and that
+    ///     the follow-up prompts only show once there is a conversation.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation()
+    {
+        // Arrange: a new panel
+        using var harness = new ChatHarness();
+        var prompts = harness.FindAll<Button>("ChatExamplePrompt");
+        Assert.Equal(ChatPanelViewModel.ExamplePrompts, prompts.Select(button => (string)button.Content!));
+        Assert.DoesNotContain(harness.FindAll<Button>("ChatSuggestion"), button => button.IsEffectivelyVisible);
+
+        // Act: choose the first example
+        prompts[0].RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        harness.Layout();
+
+        // Assert: the words are in the message, ready to send, and the examples are still there to change one's mind
+        Assert.Equal(ChatPanelViewModel.ExamplePrompts[0], harness.Composer.Document.FlatText);
+        Assert.True(harness.SendButton.IsEffectivelyEnabled);
+
+        // Act: send it
+        harness.ClickSend();
+
+        // Assert: the examples give way to the conversation and the follow-ups appear
+        Assert.False(harness.Find<TextBlock>("ChatTranscriptEmpty").IsEffectivelyVisible);
+        Assert.Equal(ChatPanelViewModel.SuggestedPrompts.Count, harness.FindAll<Button>("ChatSuggestion").Count(button => button.IsEffectivelyVisible));
+    }
+
+    /// <summary>
+    ///     Test that the button of the header asks to hide the column, and that the workspace shows a restore button then.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_CollapseButton_RaisesCollapseRequested()
+    {
+        // Arrange
+        using var harness = new ChatHarness();
+        var raised = 0;
+        harness.Chat.CollapseRequested += (_, _) => raised++;
+
+        // Act
+        harness.Find<Button>("ChatCollapseButton").Command!.Execute(null);
+
+        // Assert
+        Assert.Equal(1, raised);
     }
 }

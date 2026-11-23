@@ -518,9 +518,31 @@ internal sealed class ChatHarness : IDisposable
     public IReadOnlyList<RestoredEntryView> RestoredEntries => FindAll<RestoredEntryView>("RestoredEntry");
 
     /// <summary>
-    ///     Gets the button that clears the chat history.
+    ///     Gets the button of the header that opens the menu of more conversation actions.
     /// </summary>
-    public Button ClearHistoryButton => Find<Button>("ChatClearHistoryButton");
+    public Button OverflowButton => Find<Button>("ChatOverflowButton");
+
+    /// <summary>
+    ///     Gets the item of the overflow menu that clears the chat history. The menu is a flyout, so its items are not in
+    ///     the visual tree until it is open; they are found in the flyout itself.
+    /// </summary>
+    public MenuItem ClearHistoryItem =>
+        ((MenuFlyout)OverflowButton.Flyout!).Items.OfType<MenuItem>().Single(item => AutomationProperties.GetAutomationId(item) == "ChatClearHistoryButton");
+
+    /// <summary>
+    ///     Opens the overflow menu, as the user does with its button, and chooses Clear chat history.
+    /// </summary>
+    public void ClearHistory()
+    {
+        var flyout = OverflowButton.Flyout!;
+        flyout.ShowAt(OverflowButton);
+        Layout();
+        Assert.True(flyout.IsOpen);
+        Assert.True(ClearHistoryItem.Command!.CanExecute(null));
+        ClearHistoryItem.Command.Execute(null);
+        flyout.Hide();
+        Layout();
+    }
 
     /// <summary>
     ///     Gets the stop button.

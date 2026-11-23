@@ -242,6 +242,20 @@ public sealed partial class ChatPanelView : UserControl
     }
 
     /// <summary>
+    ///     Writes the prompt of the button in the message and puts the keyboard focus there, so that the user can change it
+    ///     and send it.
+    /// </summary>
+    /// <param name="sender">The button of the prompt.</param>
+    /// <param name="e">The event data.</param>
+    private void OnPromptClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Content: string prompt } && _viewModel?.UsePrompt(prompt) == true)
+        {
+            ComposerView.FocusEditor();
+        }
+    }
+
+    /// <summary>
     ///     Scrolls to the newest row when one was added, and to the end again while a reply of the copilot grows.
     /// </summary>
     /// <param name="sender">The transcript.</param>
