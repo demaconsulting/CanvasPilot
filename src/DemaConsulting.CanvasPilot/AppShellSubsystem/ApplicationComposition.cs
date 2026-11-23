@@ -470,7 +470,7 @@ public sealed class ApplicationComposition : IDisposable
             // The catalogs of Ollama are shared as well, so that the check, the agents, and the model list describe the
             // models of the server once
             var catalogs = ollamaCatalogs ?? new OllamaModelCatalogs();
-            readiness = new AgentReadiness(locator, starter, runner, environmentReader, fileSystem, ollamaProbe, catalogs);
+            readiness = new AgentReadiness(locator, starter, ollamaProbe, catalogs);
             modelSource = new ProviderModelCatalog(locator, starter, catalogs);
             var projectTools = new ProjectTools(renderer, styleSelection, logger: logger);
             var registry = new AgentToolRegistry(

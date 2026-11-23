@@ -20,6 +20,7 @@
 
 using System.Runtime.CompilerServices;
 using DemaConsulting.AgentKit.Agents.ChatClient;
+using DemaConsulting.AgentKit.Agents.Copilot;
 using DemaConsulting.AgentKit.Core;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
@@ -175,30 +176,28 @@ public sealed class AgentSubsystemTests
 
     /// <summary>
     ///     Test that the subsystem checks both providers through the interface that the settings dialog owns: GitHub
-    ///     Copilot on a machine with a signed-in GitHub CLI is usable because the runtime starts on the installed CLI,
-    ///     and Ollama with a model and a small window is usable with a warning.
+    ///     Copilot is usable because the runtime starts on the installed CLI, and says how it signed in, and Ollama with a
+    ///     model and a small window is usable with a warning.
     /// </summary>
     [Fact]
     public async Task AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface()
     {
-        // Arrange: the development machine with a GitHub CLI that is signed in, a runtime that starts, and a server that has one model
+        // Arrange: the development machine, a runtime that starts and signed in through the GitHub CLI, and a server that
+        // has one model
         var token = TestContext.Current.CancellationToken;
-        const string gh = @"C:\Program Files\GitHub CLI\gh.exe";
         var runner = new FakeProcessRunner();
         runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
-        runner.Answer(gh, new ProcessResult(true, 0, "a-token-text", false));
         var environment = DevMachine.CreateEnvironment();
-        environment.Set("ProgramFiles", @"C:\Program Files");
         var fileSystem = DevMachine.CreateFileSystem();
-        fileSystem.AddFile(gh, 1_000);
         var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]), ContextLength = 131072 };
-        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started."));
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient())
+        {
+            SignIn = new CopilotSignInInfo(CopilotSignInSource.GitHubCli, "mnixon", "https://github.com"),
+        };
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
         IProviderCheck check = new AgentReadiness(
             new CopilotCliLocator(runner, fileSystem, environment),
             starter,
-            runner,
-            environment,
-            fileSystem,
             probe);
 
         // Act: check Copilot, then Ollama with a window that is too small
@@ -207,9 +206,9 @@ public sealed class AgentSubsystemTests
             new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3", ContextWindowTokens = 8192 },
             token);
 
-        // Assert: Copilot is ready on the CLI that was found; Ollama is usable and warns about the window
+        // Assert: Copilot is ready on the CLI that was found and names its sign-in; Ollama is usable and warns about the window
         Assert.True(copilot.IsUsable);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", copilot.Message);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (GitHub CLI sign-in).", copilot.Message);
         Assert.Equal(DevMachine.RealCli, Assert.Single(starter.Requests).CliPath);
         Assert.True(ollama.IsUsable);
         Assert.Contains("8,192", ollama.Message, StringComparison.Ordinal);

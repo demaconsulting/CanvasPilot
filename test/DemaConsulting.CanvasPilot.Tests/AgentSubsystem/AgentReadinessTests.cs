@@ -18,29 +18,31 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.AgentKit.Agents.Copilot;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
 /// <summary>
-///     Unit tests for <see cref="AgentReadiness" />: the ordered checks of GitHub Copilot (CLI, version, credentials,
-///     runtime) and of Ollama (address, model name, server, model, context window), the exact sentences, and the rule that
-///     no token is kept. Every collaborator is a fake, so no program is run and no server is asked.
+///     Unit tests for <see cref="AgentReadiness" />: the ordered checks of GitHub Copilot (CLI, version, runtime, model
+///     settings) and of Ollama (address, model name, server, model, context window), the exact sentences, the sentence
+///     that says how Copilot signed in, and the rule that no token is shown. Every collaborator is a fake, so no program is
+///     run and no server is asked.
 /// </summary>
 public sealed class AgentReadinessTests
 {
-    /// <summary>The path of the GitHub CLI in the folder that its installer uses.</summary>
-    private const string ProgramFilesGh = @"C:\Program Files\GitHub CLI\gh.exe";
-
-    /// <summary>The path of the GitHub CLI in a folder on the PATH.</summary>
-    private const string PathGh = @"C:\Tools\gh.exe";
-
     /// <summary>The text that stands for a token, which must never appear in a message.</summary>
     private const string SecretToken = "gho_Secret_Sentinel_0123456789";
 
+    /// <summary>The sentence that tells how a runtime signed in through the sign-in of the Copilot CLI.</summary>
+    private const string CliSignInSentence = "Signed in as mnixon on github.com (Copilot CLI sign-in).";
+
     /// <summary>The settings for GitHub Copilot with automatic detection.</summary>
     private static readonly AiProviderSettings CopilotSettings = new() { Provider = AiProviderKind.GitHubCopilot };
+
+    /// <summary>How a runtime signed in through the sign-in of the Copilot CLI.</summary>
+    private static readonly CopilotSignInInfo CliSignIn = new(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com");
 
     /// <summary>
     ///     Makes the settings for Ollama with a model and a context window.
@@ -51,6 +53,18 @@ public sealed class AgentReadinessTests
     private static AiProviderSettings OllamaSettings(string model = "gemma3", int contextTokens = 32768)
     {
         return new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = model, ContextWindowTokens = contextTokens };
+    }
+
+    /// <summary>
+    ///     Makes a started runtime that signed in the way that the given information says.
+    /// </summary>
+    /// <param name="signIn">How the runtime signed in; unknown when <see langword="null" />.</param>
+    /// <param name="catalog">The catalog of the models of the runtime; one without models when <see langword="null" />.</param>
+    /// <returns>The starter that answers started with that runtime.</returns>
+    private static FakeCopilotRuntimeStarter StartedStarter(CopilotSignInInfo? signIn, FakeModelCatalog? catalog = null)
+    {
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient(), catalog) { SignIn = signIn };
+        return new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started", source));
     }
 
     /// <summary>
@@ -85,9 +99,6 @@ public sealed class AgentReadinessTests
         return new AgentReadiness(
             new CopilotCliLocator(runner, fileSystem, environment),
             starter ?? new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started")),
-            runner,
-            environment,
-            fileSystem,
             probe ?? new FakeOllamaProbe(),
             ollamaCatalogs ?? new FakeOllamaCatalogs(new FakeModelCatalog("ollama") { Failure = new HttpRequestException("No server.") }));
     }
@@ -98,10 +109,9 @@ public sealed class AgentReadinessTests
     [Fact]
     public void AgentReadiness_Constants_Rule_AreTheDocumentedValues()
     {
-        // Assert: the three token variables in order, and the two time limits
-        Assert.Equal(["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"], AgentReadiness.TokenVariableNames);
-        Assert.Equal(TimeSpan.FromSeconds(5), AgentReadiness.CredentialProbeTimeout);
+        // Assert: the time limit of a question to Ollama, and the sentence of a runtime that is not signed in
         Assert.Equal(TimeSpan.FromSeconds(5), AgentReadiness.OllamaProbeTimeout);
+        Assert.Equal(CopilotRuntimeStarter.NotSignedInMessage, AgentReadiness.NotSignedInMessage);
     }
 
     /// <summary>
@@ -110,10 +120,9 @@ public sealed class AgentReadinessTests
     [Fact]
     public async Task AgentReadiness_Copilot_NoCli_ReportsMissingWithTheInstallSentence()
     {
-        // Arrange: a machine with nothing installed, and a token that must not be looked at yet
+        // Arrange: a machine with nothing installed
         var runner = new FakeProcessRunner();
         var environment = new FakeEnvironment(DevMachine.LocalAppData, @"C:\Windows");
-        environment.Set("GH_TOKEN", SecretToken);
         var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "unused"));
         var readiness = Create(runner, environment, new FakeCliFileSystem(), starter);
 
@@ -188,16 +197,17 @@ public sealed class AgentReadinessTests
     }
 
     /// <summary>
-    ///     Test that a CLI older than 1.0.113 gets the upgrade sentence with its version, and that credentials are not
-    ///     looked at.
+    ///     Test that a CLI older than 1.0.113 gets the upgrade sentence with its version, and that the runtime is not
+    ///     started.
     /// </summary>
     [Fact]
     public async Task AgentReadiness_Copilot_CliTooOld_ReportsTooOldWithTheUpgradeSentence()
     {
-        // Arrange: version 1.0.112 and a token that must not be looked at yet
+        // Arrange: version 1.0.112, and a starter that must not be asked
         var runner = new FakeProcessRunner();
         runner.AnswerVersion(DevMachine.RealCli, "1.0.112");
-        var readiness = Create(runner);
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "unused"));
+        var readiness = Create(runner, starter: starter);
 
         // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
@@ -207,187 +217,115 @@ public sealed class AgentReadinessTests
         Assert.Equal("Copilot CLI 1.0.112 is older than 1.0.113. Run `winget upgrade GitHub.Copilot`.", report.Message);
         Assert.False(report.IsUsable);
         Assert.Equal([DevMachine.RealCli], runner.Runs.Select(run => run.Path));
-    }
-
-    /// <summary>
-    ///     Test that version 1.0.113 itself is new enough and goes on to the credentials.
-    /// </summary>
-    [Fact]
-    public async Task AgentReadiness_Copilot_MinimumVersion_IsAcceptedAndGoesOnToCredentials()
-    {
-        // Arrange: exactly the oldest version, with no credentials
-        var runner = new FakeProcessRunner();
-        runner.AnswerVersion(DevMachine.RealCli, "1.0.113");
-        var readiness = Create(runner);
-
-        // Act
-        var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert: the check got past the version and stopped at the credentials
-        Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, report.Status);
-    }
-
-    /// <summary>
-    ///     Test that a CLI without any credentials gets the exact sign-in sentence and that the starter is not asked.
-    /// </summary>
-    [Fact]
-    public async Task AgentReadiness_Copilot_NoCredentials_ReportsNotSignedInWithTheExactSentence()
-    {
-        // Arrange: the CLI is fine, there is no token variable and no GitHub CLI
-        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "unused"));
-        var readiness = Create(starter: starter);
-
-        // Act
-        var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert: the sentence is the one of the starter, which names /login, gh auth login, and the variables
-        Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, report.Status);
-        Assert.Equal(CopilotRuntimeStarter.NotSignedInMessage, report.Message);
-        Assert.False(report.IsUsable);
         Assert.Empty(starter.Requests);
     }
 
     /// <summary>
-    ///     Test that each of the three token variables counts as credentials, that the GitHub CLI is not asked then, and that
-    ///     the check goes on to the runtime and reports Copilot as ready.
+    ///     Test that version 1.0.113 itself is new enough and goes on to the starter of the runtime.
     /// </summary>
-    /// <param name="variable">The name of the variable that is set.</param>
-    [Theory]
-    [InlineData("COPILOT_GITHUB_TOKEN")]
-    [InlineData("GH_TOKEN")]
-    [InlineData("GITHUB_TOKEN")]
-    public async Task AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndReportsReady(string variable)
+    [Fact]
+    public async Task AgentReadiness_Copilot_MinimumVersion_IsAcceptedAndGoesOnToTheStarter()
     {
-        // Arrange: one token variable, and a GitHub CLI that would fail if it were asked
+        // Arrange: exactly the oldest version, and a starter that starts the runtime
         var runner = new FakeProcessRunner();
-        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set(variable, SecretToken);
-        environment.Set("ProgramFiles", @"C:\Program Files");
-        var fileSystem = DevMachine.CreateFileSystem();
-        fileSystem.AddFile(ProgramFilesGh, 1_000);
-        var readiness = Create(runner, environment, fileSystem);
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.113");
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started"));
+        var readiness = Create(runner, starter: starter);
 
         // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert: Copilot is ready and usable, and the GitHub CLI was not run
+        // Assert: the check got past the version, asked the starter, and is ready
         Assert.Equal(AgentReadinessStatus.Ready, report.Status);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", report.Message);
-        Assert.True(report.IsUsable);
-        Assert.DoesNotContain(runner.Runs, run => run.Path == ProgramFilesGh);
+        Assert.Equal(new Version(1, 0, 113), Assert.Single(starter.Requests).CliVersion);
     }
 
     /// <summary>
-    ///     Test that an empty or white space token variable is not a credential.
+    ///     Test that a runtime that is not signed in is reported with the status and the sentence of the starter, which
+    ///     tells the user to run copilot and type /login, and that the check looked for no credentials itself.
     /// </summary>
     [Fact]
-    public async Task AgentReadiness_Copilot_EmptyTokenVariables_AreNotCredentials()
+    public async Task AgentReadiness_Copilot_StarterNotSignedIn_ReportsTheSentenceOfTheStarter()
     {
-        // Arrange: the variables exist but have no text
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("COPILOT_GITHUB_TOKEN", string.Empty);
-        environment.Set("GH_TOKEN", "   ");
-        var readiness = Create(environment: environment);
+        // Arrange: the CLI is fine, and the runtime that the starter starts finds no sign-in
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.NotSignedIn, CopilotRuntimeStarter.NotSignedInMessage));
+        var readiness = Create(runner, starter: starter);
 
         // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert: the sentence is the one of the starter, which names /login, gh auth login, and the variables, and no
+        // program but the CLI was run
+        Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, report.Status);
+        Assert.Equal(CopilotRuntimeStarter.NotSignedInMessage, report.Message);
+        Assert.False(report.IsUsable);
+        Assert.Single(starter.Requests);
+        Assert.Equal([DevMachine.RealCli], runner.Runs.Select(run => run.Path));
+    }
+
+    /// <summary>
+    ///     Test that a machine that is signed in only through the Copilot CLI (no token variable and no GitHub CLI) is not
+    ///     turned away by the check, and that the GitHub CLI is never run.
+    /// </summary>
+    [Fact]
+    public async Task AgentReadiness_Copilot_OnlyTheCopilotCliIsSignedIn_IsNotRejected()
+    {
+        // Arrange: no token variable, no GitHub CLI, and a runtime that signed in through the Copilot CLI
+        var runner = new FakeProcessRunner();
+        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
+        var starter = StartedStarter(CliSignIn);
+        var readiness = Create(runner, starter: starter);
+
+        // Act
+        var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert: ready and usable, and only the CLI itself was run
+        Assert.Equal(AgentReadinessStatus.Ready, report.Status);
+        Assert.True(report.IsUsable);
+        Assert.Equal([DevMachine.RealCli], runner.Runs.Select(run => run.Path));
+    }
+
+    /// <summary>
+    ///     Test that a ready Copilot says which account the runtime signed in as, on which host, and through which kind of
+    ///     sign-in, and that no token is in the sentence.
+    /// </summary>
+    [Fact]
+    public async Task AgentReadiness_Copilot_Ready_NamesTheAccountTheHostAndTheKindOfSignIn()
+    {
+        // Arrange: a runtime that signed in through the Copilot CLI, and a token variable that must never be shown
+        var environment = DevMachine.CreateEnvironment();
+        environment.Set("GH_TOKEN", SecretToken);
+        var readiness = Create(environment: environment, starter: StartedStarter(CliSignIn));
+
+        // Act
+        var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert: the exact sentence, the host without its scheme, and no token
+        Assert.Equal(AgentReadinessStatus.Ready, report.Status);
+        Assert.Equal($"GitHub Copilot CLI 1.0.114 is ready. {CliSignInSentence}", report.Message);
+        Assert.DoesNotContain(SecretToken, report.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("https://", report.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a runtime that does not say how it signed in leaves the sentence of a ready Copilot as it is.
+    /// </summary>
+    [Fact]
+    public async Task AgentReadiness_Copilot_Ready_SignInUnknown_AddsNothing()
+    {
+        // Arrange: a runtime without sign-in information, and one that reports nothing that is known
+        var unknown = new CopilotSignInInfo(CopilotSignInSource.Unknown, null, null);
+        var token = TestContext.Current.CancellationToken;
+
+        // Act
+        var without = await Create(starter: StartedStarter(null)).GetReportAsync(CopilotSettings, cancellationToken: token);
+        var empty = await Create(starter: StartedStarter(unknown)).GetReportAsync(CopilotSettings, cancellationToken: token);
 
         // Assert
-        Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, report.Status);
-    }
-
-    /// <summary>
-    ///     Test that a GitHub CLI in its folder under the program files that prints a token counts as credentials, that it
-    ///     is run with the documented arguments and time limit, and that the token appears in no message.
-    /// </summary>
-    [Fact]
-    public async Task AgentReadiness_Copilot_GitHubCliSignedIn_CountsAsCredentialsAndNeverKeepsTheToken()
-    {
-        // Arrange: the GitHub CLI is installed under the program files and prints a token
-        var runner = new FakeProcessRunner();
-        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
-        runner.Answer(ProgramFilesGh, new ProcessResult(true, 0, SecretToken + "\n", false));
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("ProgramFiles", @"C:\Program Files");
-        var fileSystem = DevMachine.CreateFileSystem();
-        fileSystem.AddFile(ProgramFilesGh, 1_000);
-        var readiness = Create(runner, environment, fileSystem);
-
-        // Act
-        var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert: past the credentials, run as `gh auth token` with 5 seconds, and the token is nowhere in the report
-        Assert.Equal(AgentReadinessStatus.Ready, report.Status);
-        var run = Assert.Single(runner.Runs, item => item.Path == ProgramFilesGh);
-        Assert.Equal(["auth", "token"], run.Arguments);
-        Assert.Equal(TimeSpan.FromSeconds(5), run.Timeout);
-        Assert.DoesNotContain(SecretToken, report.Message, StringComparison.Ordinal);
-        Assert.DoesNotContain(SecretToken, report.ToString(), StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    ///     Test that a GitHub CLI on the PATH is found before the one under the program files.
-    /// </summary>
-    [Fact]
-    public async Task AgentReadiness_Copilot_GitHubCliOnPath_IsRunFromThePath()
-    {
-        // Arrange: gh.exe is in a folder of the PATH and also under the program files
-        var runner = new FakeProcessRunner();
-        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
-        runner.Answer(PathGh, new ProcessResult(true, 0, SecretToken, false));
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("PATH", environment.GetVariable("PATH") + @";""C:\Tools""");
-        environment.Set("ProgramFiles", @"C:\Program Files");
-        var fileSystem = DevMachine.CreateFileSystem();
-        fileSystem.AddFile(PathGh, 1_000);
-        fileSystem.AddFile(ProgramFilesGh, 1_000);
-        var readiness = Create(runner, environment, fileSystem);
-
-        // Act
-        var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert: the one on the PATH was run, and the other was not
-        Assert.Equal(AgentReadinessStatus.Ready, report.Status);
-        Assert.Contains(runner.Runs, run => run.Path == PathGh);
-        Assert.DoesNotContain(runner.Runs, run => run.Path == ProgramFilesGh);
-    }
-
-    /// <summary>
-    ///     Test that a GitHub CLI that is not signed in (a failed exit, no output, a time out, or no start) is not a
-    ///     credential.
-    /// </summary>
-    /// <param name="started">Whether the program started.</param>
-    /// <param name="exitCode">The exit code.</param>
-    /// <param name="output">What it printed.</param>
-    /// <param name="timedOut">Whether it ran too long.</param>
-    [Theory]
-    [InlineData(true, 1, "You are not logged into any GitHub hosts.", false)]
-    [InlineData(true, 0, "", false)]
-    [InlineData(true, 0, "  \n", false)]
-    [InlineData(true, -1, "", true)]
-    [InlineData(false, -1, "cannot start", false)]
-    public async Task AgentReadiness_Copilot_GitHubCliNotSignedIn_IsNotACredential(
-        bool started,
-        int exitCode,
-        string output,
-        bool timedOut)
-    {
-        // Arrange: the GitHub CLI is installed but answers the way the theory says
-        var runner = new FakeProcessRunner();
-        runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
-        runner.Answer(ProgramFilesGh, new ProcessResult(started, exitCode, output, timedOut));
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("ProgramFiles", @"C:\Program Files");
-        var fileSystem = DevMachine.CreateFileSystem();
-        fileSystem.AddFile(ProgramFilesGh, 1_000);
-        var readiness = Create(runner, environment, fileSystem);
-
-        // Act
-        var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
-
-        // Assert: the user is told to sign in
-        Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, report.Status);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", without.Message);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", empty.Message);
     }
 
     /// <summary>
@@ -405,10 +343,8 @@ public sealed class AgentReadinessTests
         AgentReadinessStatus expected)
     {
         // Arrange: everything is in order up to the runtime, which the starter refuses
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("COPILOT_GITHUB_TOKEN", SecretToken);
         var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(start, "The sentence of the starter."));
-        var readiness = Create(environment: environment, starter: starter);
+        var readiness = Create(starter: starter);
 
         // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
@@ -426,11 +362,9 @@ public sealed class AgentReadinessTests
     [Fact]
     public async Task AgentReadiness_Copilot_StarterStarted_ReportsReadyAndAsksWithTheCliThatWasFound()
     {
-        // Arrange: a token and a starter that can start
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("GITHUB_TOKEN", SecretToken);
+        // Arrange: a starter that can start
         var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started"));
-        var readiness = Create(environment: environment, starter: starter);
+        var readiness = Create(starter: starter);
 
         // Act
         var report = await readiness.GetReportAsync(CopilotSettings, cancellationToken: TestContext.Current.CancellationToken);
@@ -451,22 +385,19 @@ public sealed class AgentReadinessTests
     [Fact]
     public async Task AgentReadiness_Copilot_ModelOfTheSettings_IsValidatedByTheRuntimeCatalogAndNamedWhenReady()
     {
-        // Arrange: a runtime whose catalog offers a model with reasoning efforts
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("GITHUB_TOKEN", SecretToken);
-        var source = new FakeCopilotAgentSource(new ScriptedChatClient(), new FakeModelCatalog("copilot", TestModels.Make("copilot", "claude-haiku-5.5", efforts: ["low", "xhigh"])));
-        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started", source));
-        var readiness = Create(environment: environment, starter: starter);
+        // Arrange: a runtime whose catalog offers a model with reasoning efforts, and that signed in through the Copilot CLI
+        var catalog = new FakeModelCatalog("copilot", TestModels.Make("copilot", "claude-haiku-5.5", efforts: ["low", "xhigh"]));
+        var readiness = Create(starter: StartedStarter(CliSignIn, catalog));
         var token = TestContext.Current.CancellationToken;
 
         // Act: the model with an effort that it offers, and no model
         var chosen = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "claude-haiku-5.5", ReasoningEffort = "xhigh" }, cancellationToken: token);
         var none = await readiness.GetReportAsync(CopilotSettings, cancellationToken: token);
 
-        // Assert
+        // Assert: both sentences end with the sentence about the sign-in
         Assert.Equal(AgentReadinessStatus.Ready, chosen.Status);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready with the model claude-haiku-5.5.", chosen.Message);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", none.Message);
+        Assert.Equal($"GitHub Copilot CLI 1.0.114 is ready with the model claude-haiku-5.5. {CliSignInSentence}", chosen.Message);
+        Assert.Equal($"GitHub Copilot CLI 1.0.114 is ready. {CliSignInSentence}", none.Message);
     }
 
     /// <summary>
@@ -484,24 +415,21 @@ public sealed class AgentReadinessTests
     public async Task AgentReadiness_Copilot_ModelSettingsTheCatalogRefuses_ReportModelSettingsInvalid(string model, string effort, string sentence)
     {
         // Arrange: a runtime with a few models
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("GITHUB_TOKEN", SecretToken);
         var catalog = new FakeModelCatalog(
             "copilot",
             TestModels.Make("copilot", "full", efforts: ["low", "high"]),
             TestModels.Make("copilot", "no-tools", toolCalls: false),
             TestModels.Make("copilot", "disabled", usable: false));
-        var source = new FakeCopilotAgentSource(new ScriptedChatClient(), catalog);
-        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started", source));
-        var readiness = Create(environment: environment, starter: starter);
+        var readiness = Create(starter: StartedStarter(CliSignIn, catalog));
 
         // Act
         var report = await readiness.GetReportAsync(new AiProviderSettings { ModelName = model, ReasoningEffort = effort }, cancellationToken: TestContext.Current.CancellationToken);
 
-        // Assert
+        // Assert: the problem is told without the sentence about the sign-in, which belongs to a provider that can be used
         Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, report.Status);
         Assert.False(report.IsUsable);
         Assert.Contains(sentence, report.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("Signed in", report.Message, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -511,13 +439,9 @@ public sealed class AgentReadinessTests
     [Fact]
     public async Task AgentReadiness_Copilot_ModelWithoutVisionAndUnreadableCatalog_WarnsAndReportsTheRuntime()
     {
-        // Arrange: a runtime with a model that cannot see
-        var environment = DevMachine.CreateEnvironment();
-        environment.Set("GITHUB_TOKEN", SecretToken);
+        // Arrange: a runtime with a model that cannot see, signed in through the Copilot CLI
         var catalog = new FakeModelCatalog("copilot", TestModels.Make("copilot", "blind", vision: false));
-        var source = new FakeCopilotAgentSource(new ScriptedChatClient(), catalog);
-        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "started", source));
-        var readiness = Create(environment: environment, starter: starter);
+        var readiness = Create(starter: StartedStarter(CliSignIn, catalog));
         var token = TestContext.Current.CancellationToken;
 
         // Act: the model that cannot see, then a catalog that fails
@@ -525,10 +449,11 @@ public sealed class AgentReadinessTests
         catalog.Failure = new InvalidOperationException("The Copilot runtime could not list models: it is not signed in.");
         var failed = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "blind" }, cancellationToken: token);
 
-        // Assert: a usable warning that says why, and then the runtime problem
+        // Assert: a usable warning that says why and still names the sign-in, and then the runtime problem
         Assert.Equal(AgentReadinessStatus.ModelLacksVision, blind.Status);
         Assert.True(blind.IsUsable);
         Assert.Contains("blind does not accept pictures", blind.Message, StringComparison.Ordinal);
+        Assert.EndsWith(CliSignInSentence, blind.Message, StringComparison.Ordinal);
         Assert.Equal(AgentReadinessStatus.CopilotRuntimeUnavailable, failed.Status);
         Assert.Contains("could not list models", failed.Message, StringComparison.Ordinal);
     }
@@ -540,10 +465,11 @@ public sealed class AgentReadinessTests
     [Fact]
     public async Task AgentReadiness_Copilot_RefreshAndCheckAsync_SearchAgainOnlyWhenAsked()
     {
-        // Arrange
+        // Arrange: a starter that finds no sign-in at first, and starts the runtime once the user has signed in
         var runner = new FakeProcessRunner();
         runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
-        var readiness = Create(runner);
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.NotSignedIn, CopilotRuntimeStarter.NotSignedInMessage));
+        var readiness = Create(runner, starter: starter);
         var token = TestContext.Current.CancellationToken;
 
         // Act: two plain checks, then Check connection
@@ -557,7 +483,13 @@ public sealed class AgentReadinessTests
         Assert.Equal(1, afterPlain);
         Assert.Equal(2, runner.Runs.Count(run => run.Path == DevMachine.RealCli));
         Assert.False(result.IsUsable);
-        Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, (await readiness.GetReportAsync(CopilotSettings, cancellationToken: token)).Status);
+        Assert.Equal(CopilotRuntimeStarter.NotSignedInMessage, result.Message);
+
+        // The user signs in, and the next Check connection sees it
+        starter.Result = new CopilotStartResult(CopilotStartStatus.Started, "started", new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = CliSignIn });
+        var after = await check.CheckAsync(CopilotSettings, token);
+        Assert.True(after.IsUsable);
+        Assert.EndsWith(CliSignInSentence, after.Message, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -892,6 +824,8 @@ public sealed class AgentReadinessTests
             (await Create(new FakeProcessRunner(), new FakeEnvironment(null, null), new FakeCliFileSystem()).GetReportAsync(CopilotSettings, cancellationToken: token)).Message,
             (await Create(runner).GetReportAsync(CopilotSettings, cancellationToken: token)).Message,
             (await Create().GetReportAsync(CopilotSettings, cancellationToken: token)).Message,
+            (await Create(starter: StartedStarter(CliSignIn)).GetReportAsync(CopilotSettings, cancellationToken: token)).Message,
+            (await Create(starter: new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.NotSignedIn, CopilotRuntimeStarter.NotSignedInMessage + " What was found: GitHub CLI: gh was not found on PATH."))).GetReportAsync(CopilotSettings, cancellationToken: token)).Message,
             (await Create().GetReportAsync(OllamaSettings(""), cancellationToken: token)).Message,
             (await Create().GetReportAsync(OllamaSettings(), cancellationToken: token)).Message,
             (await Create(probe: new FakeOllamaProbe { Models = new OllamaModelList(true, []) }).GetReportAsync(OllamaSettings(), cancellationToken: token)).Message,

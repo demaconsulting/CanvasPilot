@@ -592,7 +592,7 @@ public sealed class AppShellSubsystemTests : IDisposable
 
         // Assert: the dialog was opened once, the other change asked nothing, and the provider change was checked: the
         // Copilot problem is gone and the Ollama server was asked
-        Assert.Contains("gh auth login", before, StringComparison.Ordinal);
+        Assert.Contains("/login", before, StringComparison.Ordinal);
         Assert.Equal(1, opened);
         Assert.Equal(questionsBefore, questionsAfterOther);
         Assert.Equal(string.Empty, rig.Composition.Chat.ReadinessMessage);
@@ -739,10 +739,11 @@ public sealed class AppShellSubsystemTests : IDisposable
             processRunner: runner,
             ollamaProbe: probe,
             environment: DevMachine.CreateEnvironment(),
-            cliFileSystem: DevMachine.CreateFileSystem());
-        composition.Shell.AttachDialogService(_dialogs);
-        _compositions.Add(composition);
-        return new CopilotRig(composition, factory, probe);
+            cliFileSystem: DevMachine.CreateFileSystem(),
+            copilotStarter: new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.NotSignedIn, CopilotRuntimeStarter.NotSignedInMessage)));
+         composition.Shell.AttachDialogService(_dialogs);
+         _compositions.Add(composition);
+         return new CopilotRig(composition, factory, probe);
     }
 
     /// <summary>

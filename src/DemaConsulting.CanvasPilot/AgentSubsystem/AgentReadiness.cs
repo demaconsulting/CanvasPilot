@@ -31,15 +31,16 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 /// <remarks>
 ///     <para>
 ///         For GitHub Copilot the checks run in order and the first one that fails gives the answer: the Copilot CLI is
-///         found (by <see cref="CopilotCliLocator" />) and is new enough, credentials exist, the starter of the runtime
-///         starts the runtime, or reuses the one that runs, on that CLI (the way that start fails is the answer), and the
-///         model settings are valid for the runtime (the model is offered to the user, can call tools, and offers the
-///         reasoning effort that is chosen). A model that cannot take pictures is a warning that does not stop the provider.
-///         The credentials exist when one of the variables
-///         <c>COPILOT_GITHUB_TOKEN</c>, <c>GH_TOKEN</c>, or <c>GITHUB_TOKEN</c> is not empty, or when <c>gh auth token</c>
-///         of the GitHub CLI succeeds with some output. Only whether the variable or the output is empty is looked at; the
-///         token itself is never kept, shown, or logged. The runtime is the one that the factory of the agents uses, so the
-///         check starts no second runtime.
+///         found (by <see cref="CopilotCliLocator" />) and is new enough, the starter of the runtime starts the runtime, or
+///         reuses the one that runs, on that CLI (the way that start fails is the answer, including a runtime that is not
+///         signed in), and the model settings are valid for the runtime (the model is offered to the user, can call tools,
+///         and offers the reasoning effort that is chosen). A model that cannot take pictures is a warning that does not
+///         stop the provider. The check looks for no credentials of its own: the runtime signs in from the first source
+///         that applies (a token variable, the sign-in of the Copilot CLI, or the GitHub CLI), so only the start of the
+///         runtime can tell whether a sign-in works, and the check passes on what the starter says. When the runtime
+///         runs, the sentence of a ready provider names the account and the kind of sign-in that the runtime reports (the
+///         login, the host, and the source, never a token), so that the user sees which account the agents use. The
+///         runtime is the one that the factory of the agents uses, so the check starts no second runtime.
 ///     </para>
 ///     <para>
 ///         For Ollama the checks are: the address and the model name are set, the server answers, the server has the model,
@@ -58,41 +59,17 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 /// </remarks>
 public sealed class AgentReadiness : IProviderCheck
 {
-    /// <summary>The environment variables that hold a GitHub token that the AI library accepts, in the order they are read.</summary>
-    public static readonly IReadOnlyList<string> TokenVariableNames = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
-
-    /// <summary>The longest time that <c>gh auth token</c> may take.</summary>
-    public static readonly TimeSpan CredentialProbeTimeout = TimeSpan.FromSeconds(5);
-
     /// <summary>The longest time that a question to the Ollama server may take.</summary>
     public static readonly TimeSpan OllamaProbeTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>The sentence for a Copilot that is not signed in, which says to run <c>copilot</c> and type <c>/login</c>.</summary>
     public const string NotSignedInMessage = CopilotRuntimeStarter.NotSignedInMessage;
 
-    /// <summary>The file name of the GitHub CLI on Windows.</summary>
-    private const string GitHubCliName = "gh.exe";
-
-    /// <summary>The folder of the installation of the GitHub CLI under the program files folder.</summary>
-    private const string GitHubCliFolder = "GitHub CLI";
-
-    /// <summary>The arguments that make the GitHub CLI print its token.</summary>
-    private static readonly string[] TokenArguments = ["auth", "token"];
-
     /// <summary>Finds and checks the Copilot CLI.</summary>
     private readonly CopilotCliLocator _locator;
 
     /// <summary>Starts, or reuses, the Copilot runtime.</summary>
     private readonly ICopilotRuntimeStarter _starter;
-
-    /// <summary>Runs the GitHub CLI.</summary>
-    private readonly IProcessRunner _processRunner;
-
-    /// <summary>Reads the token variables and the folders to look in.</summary>
-    private readonly IEnvironmentReader _environment;
-
-    /// <summary>Asks whether the GitHub CLI is there.</summary>
-    private readonly ICliFileSystem _fileSystem;
 
     /// <summary>Asks the Ollama server.</summary>
     private readonly IOllamaProbe _ollama;
@@ -105,24 +82,15 @@ public sealed class AgentReadiness : IProviderCheck
     /// </summary>
     /// <param name="locator">Finds the Copilot CLI; a locator on the real system when <see langword="null" />.</param>
     /// <param name="starter">The starter of the Copilot runtime; a starter of the real runtime when <see langword="null" />.</param>
-    /// <param name="processRunner">Runs the GitHub CLI; the real runner when <see langword="null" />.</param>
-    /// <param name="environment">Reads the environment; the real one when <see langword="null" />.</param>
-    /// <param name="fileSystem">Asks the file system; the real one when <see langword="null" />.</param>
     /// <param name="ollama">Asks the Ollama server; the real probe when <see langword="null" />.</param>
     /// <param name="ollamaCatalogs">Gives the catalog of the Ollama server; the real network when <see langword="null" />.</param>
     public AgentReadiness(
         CopilotCliLocator? locator = null,
         ICopilotRuntimeStarter? starter = null,
-        IProcessRunner? processRunner = null,
-        IEnvironmentReader? environment = null,
-        ICliFileSystem? fileSystem = null,
         IOllamaProbe? ollama = null,
         IOllamaModelCatalogs? ollamaCatalogs = null)
     {
-        _processRunner = processRunner ?? new ProcessRunner();
-        _environment = environment ?? new SystemEnvironmentReader();
-        _fileSystem = fileSystem ?? new CliFileSystem();
-        _locator = locator ?? new CopilotCliLocator(_processRunner, _fileSystem, _environment);
+        _locator = locator ?? new CopilotCliLocator();
         _starter = starter ?? new CopilotRuntimeStarter();
         _ollama = ollama ?? new OllamaProbe();
         _ollamaCatalogs = ollamaCatalogs ?? new OllamaModelCatalogs();
@@ -212,13 +180,8 @@ public sealed class AgentReadiness : IProviderCheck
             return new AgentReadinessReport(status, info.Message);
         }
 
-        // 3: credentials that the AI library can use
-        if (!await HasCredentialsAsync(cancellationToken).ConfigureAwait(false))
-        {
-            return new AgentReadinessReport(AgentReadinessStatus.CopilotNotSignedIn, NotSignedInMessage);
-        }
-
-        // 4: the runtime, which the starter starts or reuses; it is the real check that the CLI runs and is signed in
+        // 3: the runtime, which the starter starts or reuses; it is the real check that the CLI runs and is signed in, and
+        // the sentence that it gives for a runtime that is not is the answer
         var started = await _starter
             .StartAsync(new CopilotStartRequest(info.Path, info.Version), cancellationToken)
             .ConfigureAwait(false);
@@ -227,7 +190,7 @@ public sealed class AgentReadiness : IProviderCheck
             return new AgentReadinessReport(started.ReadinessStatus, started.Message);
         }
 
-        // 5: the model settings, validated by the catalog of the runtime exactly as an agent will be made
+        // 4: the model settings, validated by the catalog of the runtime exactly as an agent will be made
         return await CheckCopilotModelAsync(settings, info.Version, started.Agents, cancellationToken).ConfigureAwait(false);
     }
 
@@ -249,7 +212,7 @@ public sealed class AgentReadiness : IProviderCheck
         var modelSettings = ModelRequirements.ToModelSettings(settings, withContextWindow: false);
         if (modelSettings is null || agents is null)
         {
-            return new AgentReadinessReport(AgentReadinessStatus.Ready, $"GitHub Copilot CLI {version} is ready.");
+            return new AgentReadinessReport(AgentReadinessStatus.Ready, WithSignIn($"GitHub Copilot CLI {version} is ready.", agents));
         }
 
         ModelSelection selection;
@@ -269,66 +232,24 @@ public sealed class AgentReadiness : IProviderCheck
 
         var warning = ModelRequirements.VisionWarning(selection.Model);
         return warning is null
-            ? new AgentReadinessReport(AgentReadinessStatus.Ready, $"GitHub Copilot CLI {version} is ready with the model {selection.Model.Id}.")
-            : new AgentReadinessReport(AgentReadinessStatus.ModelLacksVision, warning);
+            ? new AgentReadinessReport(AgentReadinessStatus.Ready, WithSignIn($"GitHub Copilot CLI {version} is ready with the model {selection.Model.Id}.", agents))
+            : new AgentReadinessReport(AgentReadinessStatus.ModelLacksVision, WithSignIn(warning, agents));
     }
 
     /// <summary>
-    ///     Tells whether credentials for GitHub Copilot exist: a token variable that is not empty, or a GitHub CLI that
-    ///     prints a token.
+    ///     Adds the sentence about how the runtime signed in to a sentence of a provider that can be used, so that the user
+    ///     sees which account the agents use, in Check connection and in the tooltip of the provider pill.
     /// </summary>
-    /// <param name="cancellationToken">A token that cancels the check.</param>
-    /// <returns><see langword="true" /> when credentials exist.</returns>
-    private async Task<bool> HasCredentialsAsync(CancellationToken cancellationToken)
+    /// <param name="message">The sentence of the report, which ends with a full stop.</param>
+    /// <param name="agents">The running runtime, or <see langword="null" /> when there is none.</param>
+    /// <returns>
+    ///     The sentence followed by the sign-in sentence; the sentence alone when the runtime does not say how it signed in.
+    ///     The sign-in sentence holds the login, the host, and the kind of sign-in and never a token.
+    /// </returns>
+    private static string WithSignIn(string message, ICopilotAgentSource? agents)
     {
-        // A token in the environment is enough; only whether it is empty is looked at
-        if (TokenVariableNames.Any(name => !string.IsNullOrWhiteSpace(_environment.GetVariable(name))))
-        {
-            return true;
-        }
-
-        // Otherwise the GitHub CLI may be signed in
-        var gh = FindGitHubCli();
-        if (gh is null)
-        {
-            return false;
-        }
-
-        // Only the length of the output matters; the text is not kept past this line
-        var result = await _processRunner.RunAsync(gh, TokenArguments, CredentialProbeTimeout, cancellationToken).ConfigureAwait(false);
-        return result is { Started: true, TimedOut: false, ExitCode: 0 } && result.Output.Trim().Length > 0;
-    }
-
-    /// <summary>
-    ///     Finds the GitHub CLI on the <c>PATH</c> or in its folder under the program files.
-    /// </summary>
-    /// <returns>The full path, or <see langword="null" /> when it is not installed.</returns>
-    private string? FindGitHubCli()
-    {
-        var path = _environment.GetVariable("PATH");
-        if (!string.IsNullOrWhiteSpace(path))
-        {
-            foreach (var entry in path.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-            {
-                var candidate = Combine(entry.Trim('"'), GitHubCliName);
-                if (_fileSystem.FileExists(candidate))
-                {
-                    return candidate;
-                }
-            }
-        }
-
-        var programFiles = _environment.GetVariable("ProgramFiles");
-        if (!string.IsNullOrWhiteSpace(programFiles))
-        {
-            var candidate = Combine(Combine(programFiles, GitHubCliFolder), GitHubCliName);
-            if (_fileSystem.FileExists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
+        var signIn = agents?.SignIn?.Describe();
+        return string.IsNullOrEmpty(signIn) ? message : $"{message} {signIn}";
     }
 
     /// <summary>
@@ -458,16 +379,5 @@ public sealed class AgentReadiness : IProviderCheck
         var withTag = wanted.Contains(':', StringComparison.Ordinal) ? wanted : wanted + ":latest";
         return listed.FirstOrDefault(name => string.Equals(name, withTag, StringComparison.OrdinalIgnoreCase))
             ?? listed.FirstOrDefault(name => string.Equals(name, wanted, StringComparison.OrdinalIgnoreCase));
-    }
-
-    /// <summary>
-    ///     Joins a folder and a name with a backslash, as the locator does, so that paths behave the same on every platform.
-    /// </summary>
-    /// <param name="folder">The folder.</param>
-    /// <param name="name">The name.</param>
-    /// <returns>The joined path.</returns>
-    private static string Combine(string folder, string name)
-    {
-        return folder.TrimEnd('\\', '/') + '\\' + name;
     }
 }

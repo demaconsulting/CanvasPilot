@@ -43,13 +43,15 @@ sections:
               - id: CanvasPilot-ProviderPill-ExplainInTooltip
                 title: >-
                   The ProviderPill shall show as its tooltip the same sentence that the readiness banner of the chat panel
-                  shows for the check, and a sentence that there is no AI provider in this application when there is none.
+                  shows for the check, which for a provider that can be used includes the account and the kind of sign-in
+                  of GitHub Copilot, and a sentence that there is no AI provider in this application when there is none.
                 justification: |
                   The few words in the pill cannot hold the remedy. The tooltip repeats the one sentence that the check
                   produced, so that the pill and the banner never disagree and the user finds the same advice in both
-                  places.
+                  places, and sees which account Copilot signed in as without opening the settings.
                 tests:
                   - ProviderPill_CheckThenReady_ShowsCheckingThenProviderAndModel
+                  - ProviderPill_ReadyWithSignIn_ToolTipNamesTheAccountAndTheKindOfSignIn
                   - ProviderPill_CheckFindsAProblem_SaysItInWordsAndPicksTheState
                   - ProviderPill_RecheckAndNoCopilot_CheckingAgainAndErrorWithoutCopilot
 

@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using DemaConsulting.AgentKit.Agents.Copilot;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
@@ -216,13 +217,15 @@ public sealed class CanvasPilotTests : IDisposable
 
     /// <summary>
     ///     Test that the user is told, for each provider, one sentence that says what to do: the settings of a new
-    ///     installation (GitHub Copilot) on a machine without a sign-in say how to sign in, the same machine with a token
-    ///     says that Copilot is ready, and a stored Ollama choice with a small window warns about it.
+    ///     installation (GitHub Copilot) on a machine without a sign-in say how to sign in, the same machine after the user
+    ///     signed in says that Copilot is ready and which account it uses, and a stored Ollama choice with a small window
+    ///     warns about it.
     /// </summary>
     [Fact]
     public async Task CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach()
     {
-        // Arrange: the settings of the user, stored and loaded again, and the development machine
+        // Arrange: the settings of the user, stored and loaded again, and the development machine, where the runtime finds
+        // no sign-in until the user signs in
         var token = TestContext.Current.CancellationToken;
         var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "ReadinessSettings");
         var service = new SettingsService(settingsFolder);
@@ -230,27 +233,30 @@ public sealed class CanvasPilotTests : IDisposable
         runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
         var environment = DevMachine.CreateEnvironment();
         var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]), ContextLength = null };
+        var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.NotSignedIn, CopilotRuntimeStarter.NotSignedInMessage));
         var readiness = new AgentReadiness(
             new CopilotCliLocator(runner, DevMachine.CreateFileSystem(), environment),
-            new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.")),
-            runner,
-            environment,
-            DevMachine.CreateFileSystem(),
+            starter,
             probe);
 
-        // Act: a new installation without a sign-in, then with a token, then a stored Ollama choice with a small window
+        // Act: a new installation without a sign-in, then after the user signed in, then a stored Ollama choice with a
+        // small window
         var fresh = await readiness.GetReportAsync(service.Load().AiProvider, cancellationToken: token);
-        environment.Set("COPILOT_GITHUB_TOKEN", "some-token");
-        var withToken = await readiness.GetReportAsync(service.Load().AiProvider, cancellationToken: token);
+        starter.Result = new CopilotStartResult(
+            CopilotStartStatus.Started,
+            "Started.",
+            new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com") });
+        var signedIn = await readiness.GetReportAsync(service.Load().AiProvider, cancellationToken: token);
         service.Save(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3", ContextWindowTokens = 8192 } });
         var ollama = await readiness.GetReportAsync(new SettingsService(settingsFolder).Load().AiProvider, cancellationToken: token);
 
         // Assert: each answer is one sentence with its remedy
         Assert.Equal(AgentReadinessStatus.CopilotNotSignedIn, fresh.Status);
+        Assert.Contains("/login", fresh.Message, StringComparison.Ordinal);
         Assert.Contains("gh auth login", fresh.Message, StringComparison.Ordinal);
         Assert.Contains("COPILOT_GITHUB_TOKEN", fresh.Message, StringComparison.Ordinal);
-        Assert.Equal(AgentReadinessStatus.Ready, withToken.Status);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", withToken.Message);
+        Assert.Equal(AgentReadinessStatus.Ready, signedIn.Status);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in).", signedIn.Message);
         Assert.Equal(AgentReadinessStatus.OllamaContextTooSmall, ollama.Status);
         Assert.True(ollama.IsUsable);
         Assert.Contains("Raise it in Settings (32,768 recommended)", ollama.Message, StringComparison.Ordinal);
@@ -421,8 +427,9 @@ public sealed class CanvasPilotTests : IDisposable
 
     /// <summary>
     ///     Test that a user whose settings choose GitHub Copilot on a machine without a sign-in is told how to sign in in the
-    ///     banner of the chat panel without a Copilot runtime being asked for, and that a message gets the same sentence from
-    ///     the starter in the conversation, with no answer; the only process run is the version check of the installed CLI.
+    ///     banner of the chat panel (the check asks the starter of the runtime, which finds no sign-in), and that a message
+    ///     gets the same sentence from the starter in the conversation, with no answer; the only process run is the version
+    ///     check of the installed CLI.
     /// </summary>
     [Fact]
     public async Task CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt()
@@ -442,10 +449,10 @@ public sealed class CanvasPilotTests : IDisposable
         await app.Composition.Chat.SendCommand.ExecuteAsync(null);
         await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
 
-        // Assert: the banner and the conversation say how to sign in, the check stopped before the runtime, no answer came,
-        // and the processes that were run are the version checks of the installed CLI
+        // Assert: the banner and the conversation say how to sign in, the check asked the starter, no answer came, and the
+        // processes that were run are the version checks of the installed CLI
         Assert.Equal((true, CopilotRuntimeStarter.NotSignedInMessage), banner);
-        Assert.Equal(0, askedByTheCheck);
+        Assert.Equal(1, askedByTheCheck);
         var notice = Assert.IsType<NoticeRowViewModel>(app.Composition.Chat.Transcript[^1]);
         Assert.Contains(CopilotRuntimeStarter.NotSignedInMessage, notice.Message, StringComparison.Ordinal);
         Assert.DoesNotContain(app.Composition.Chat.Transcript, row => row is AssistantReplyViewModel);
@@ -471,7 +478,6 @@ public sealed class CanvasPilotTests : IDisposable
                 TestModels.Make("copilot", "blind-model", vision: false)));
         var app = await ComposeCopilotAsync(
             scripted: false,
-            tokenVariable: true,
             starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
         AiProviderSettingsPageViewModel? page = null;
         app.Dialogs.OnSettings = dialog =>
@@ -521,7 +527,6 @@ public sealed class CanvasPilotTests : IDisposable
                 TestModels.Make("copilot", "thinker", efforts: ["low", "high"])));
         var app = await ComposeCopilotAsync(
             scripted: false,
-            tokenVariable: true,
             starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
         var banners = new List<(bool Issue, string Message)>();
 
@@ -559,12 +564,11 @@ public sealed class CanvasPilotTests : IDisposable
     [Fact]
     public async Task CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing()
     {
-        // Arrange: the application over the real factory, a machine with a token, and a runtime whose agents are scripted
+        // Arrange: the application over the real factory, a machine with the installed CLI, and a runtime whose agents are scripted
         var token = TestContext.Current.CancellationToken;
         var source = new FakeCopilotAgentSource(DrawingModel());
         var app = await ComposeCopilotAsync(
             scripted: false,
-            tokenVariable: true,
             starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
 
         // Act: the panel checks the provider, and the user sends a message
@@ -602,10 +606,11 @@ public sealed class CanvasPilotTests : IDisposable
     [Fact]
     public async Task CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach()
     {
-        // Arrange: the application with the copilot, and the settings page of its settings dialog
+        // Arrange: the application with the copilot, over a runtime that finds no sign-in until the user signs in, and the
+        // settings page of its settings dialog
         var app = await ComposeCopilotAsync(
             scripted: false,
-            starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", new FakeCopilotAgentSource(new ScriptedChatClient())));
+            starterResult: new CopilotStartResult(CopilotStartStatus.NotSignedIn, CopilotRuntimeStarter.NotSignedInMessage));
         AiProviderSettingsPageViewModel? page = null;
         app.Dialogs.OnSettings = dialog =>
         {
@@ -625,11 +630,15 @@ public sealed class CanvasPilotTests : IDisposable
         await page.CheckConnectionCommand.ExecuteAsync(null);
         var ollamaDown = (page.IsCheckConnectionOk, page.CheckConnectionResult);
 
-        // Act: GitHub Copilot on the machine without a sign-in, then with a token, then with a path that is wrong
+        // Act: GitHub Copilot on the machine without a sign-in, then after the user signed in with the Copilot CLI, then with
+        // a path that is wrong
         page.SelectedProvider = page.Providers[0];
         await page.CheckConnectionCommand.ExecuteAsync(null);
         var notSignedIn = (page.IsCheckConnectionOk, page.CheckConnectionResult);
-        app.Environment.Set("COPILOT_GITHUB_TOKEN", "some-token");
+        app.Starter.Result = new CopilotStartResult(
+            CopilotStartStatus.Started,
+            "Started.",
+            new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com") });
         await page.CheckConnectionCommand.ExecuteAsync(null);
         var ready = (page.IsCheckConnectionOk, page.CheckConnectionResult);
         page.CopilotCliPath = @"C:\nowhere\copilot.exe";
@@ -642,12 +651,55 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.False(ollamaDown.IsCheckConnectionOk);
         Assert.Contains("did not answer", ollamaDown.CheckConnectionResult, StringComparison.Ordinal);
         Assert.False(notSignedIn.IsCheckConnectionOk);
+        Assert.Contains("/login", notSignedIn.CheckConnectionResult, StringComparison.Ordinal);
         Assert.Contains("gh auth login", notSignedIn.CheckConnectionResult, StringComparison.Ordinal);
         Assert.True(ready.IsCheckConnectionOk);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready.", ready.CheckConnectionResult);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in).", ready.CheckConnectionResult);
         Assert.False(wrongPath.IsCheckConnectionOk);
         Assert.Contains(@"C:\nowhere\copilot.exe", wrongPath.CheckConnectionResult, StringComparison.Ordinal);
         Assert.Equal(settingsBefore, app.Composition.Settings.Current.AiProvider);
+    }
+
+    /// <summary>
+    ///     Test that a user whose Copilot runtime signed in through the Copilot CLI sees which account is in use, on which
+    ///     host, and through which kind of sign-in, both in the result of Check connection and in the tooltip of the
+    ///     provider pill, and that no token variable of the machine appears in either.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ReportProviderReadiness_CopilotSignedInWithCopilotCli_CheckConnectionAndPillTooltipNameTheAccountAndNoToken()
+    {
+        // Arrange: the application over a runtime that signed in through the Copilot CLI as mnixon on github.com, on a
+        // machine that also has a token variable whose value must never be shown
+        const string secret = "gho_Secret_Sentinel_0123456789";
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient())
+        {
+            SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com"),
+        };
+        var app = await ComposeCopilotAsync(
+            scripted: false,
+            starterResult: new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
+        app.Environment.Set("GH_TOKEN", secret);
+        AiProviderSettingsPageViewModel? page = null;
+        app.Dialogs.OnSettings = dialog =>
+        {
+            page = Assert.IsType<AiProviderSettingsPageViewModel>(dialog.Pages[0]);
+            dialog.CancelCommand.Execute(null);
+        };
+        await app.Composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+
+        // Act: choose Check connection, and let the panel check the provider for the pill
+        await page!.CheckConnectionCommand.ExecuteAsync(null);
+        await app.Composition.Chat.RefreshReadinessAsync();
+        var tooltip = app.Composition.Shell.ProviderPill!.ToolTipText;
+
+        // Assert: both name the account, the host without its scheme, and the kind of sign-in, and neither has a token
+        Assert.True(page.IsCheckConnectionOk);
+        Assert.Contains("mnixon on github.com", page.CheckConnectionResult, StringComparison.Ordinal);
+        Assert.Contains("Copilot CLI sign-in", page.CheckConnectionResult, StringComparison.Ordinal);
+        Assert.Contains("mnixon on github.com", tooltip, StringComparison.Ordinal);
+        Assert.Contains("Copilot CLI sign-in", tooltip, StringComparison.Ordinal);
+        Assert.DoesNotContain(secret, page.CheckConnectionResult, StringComparison.Ordinal);
+        Assert.DoesNotContain(secret, tooltip, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -2059,7 +2111,6 @@ public sealed class CanvasPilotTests : IDisposable
     ///     the stand-in server has; <see langword="false" /> for the real factory of the providers and the default settings,
     ///     which choose GitHub Copilot.
     /// </param>
-    /// <param name="tokenVariable">Whether the environment has a GitHub token for the Copilot CLI.</param>
     /// <param name="openProject">The project file to open, or <see langword="null" /> to create the project Demo.</param>
     /// <param name="starterResult">
     ///     What the stand-in starter of the Copilot runtime answers, which is a refusal when <see langword="null" />, so that
@@ -2069,7 +2120,6 @@ public sealed class CanvasPilotTests : IDisposable
     private async Task<CopilotApp> ComposeCopilotAsync(
         Microsoft.Extensions.AI.IChatClient? model = null,
         bool scripted = true,
-        bool tokenVariable = false,
         string? openProject = null,
         CopilotStartResult? starterResult = null)
     {
@@ -2081,10 +2131,6 @@ public sealed class CanvasPilotTests : IDisposable
         var runner = new FakeProcessRunner();
         runner.AnswerVersion(DevMachine.RealCli, "1.0.114");
         var environment = DevMachine.CreateEnvironment();
-        if (tokenVariable)
-        {
-            environment.Set("COPILOT_GITHUB_TOKEN", "some-token");
-        }
 
         var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]) };
         var ollamaCatalog = new FakeModelCatalog("ollama", TestModels.Make("ollama", "gemma3:latest"));
