@@ -155,7 +155,7 @@ sections:
                   - AgentEventCoalescer_Add_FactsAndTextAroundThem_AreKeptInOrder
                   - AgentEventCoalescer_ReadAll_WaitsForEventsAndEndsWithTheStream
                   - AgentEventCoalescer_Complete_WithAFault_ThrowsAfterTheEventsBeforeIt
-                  - AgentEventCoalescer_ReadAll_TokenCancelled_EndsTheWait
+                  - AgentEventCoalescer_ReadAll_TokenCanceled_EndsTheWait
 
               - id: CanvasPilot-AgentService-StopLeavesConversationUsable
                 title: >-

@@ -184,7 +184,7 @@ public sealed class AgentEventCoalescerTests
     ///     whose token was canceled still gets the events that wait before it is canceled.
     /// </summary>
     [Fact]
-    public async Task AgentEventCoalescer_ReadAll_TokenCancelled_EndsTheWaitAfterTheEventsThatWait()
+    public async Task AgentEventCoalescer_ReadAll_TokenCanceled_EndsTheWaitAfterTheEventsThatWait()
     {
         // Arrange: an event waits, and the token is canceled before it is read
         var coalescer = new AgentEventCoalescer();
@@ -208,7 +208,7 @@ public sealed class AgentEventCoalescerTests
     ///     Test that canceling the token ends the wait for the next event, and that a null event is refused.
     /// </summary>
     [Fact]
-    public async Task AgentEventCoalescer_ReadAll_TokenCancelled_EndsTheWait()
+    public async Task AgentEventCoalescer_ReadAll_TokenCanceled_EndsTheWait()
     {
         // Arrange
         var coalescer = new AgentEventCoalescer();

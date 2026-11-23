@@ -20,7 +20,7 @@ The folder that Help ▸ Open Log Folder shows is tested with a hand-written `Fa
 `AppShellSubsystemFakes.cs`) that records the folders it is asked for and can be made to fail, and, in the UI tests,
 with a recording launcher given to the composed application; `SystemFolderLauncher` itself starts Explorer, `open`, or
 `xdg-open`, which no automated test does, so it is checked manually. The platform pickers cannot be shown headless; the
-UI test confirms they answer as cancelled, and the real pickers are checked manually before a release. Likewise the real
+UI test confirms they answer as canceled, and the real pickers are checked manually before a release. Likewise the real
 keyboard (the repeat of a held F9, the window losing the active state when the user switches to another program, and a
 screen reader's use of the Edit menu), the buttons of the system over the title bar on a real window (their room is
 tested with the overlay of the theme and as a pure function, but the headless platform never extends the window into its

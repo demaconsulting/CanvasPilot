@@ -274,8 +274,8 @@ the late one. This scenario is tested by `AgentEventCoalescer_ReadAll_WaitsForEv
 event and then the exception. This scenario is tested by
 `AgentEventCoalescer_Complete_WithAFault_ThrowsAfterTheEventsBeforeIt`.
 
-**AgentEventCoalescer_ReadAll_TokenCancelled_EndsTheWait** and
-**AgentEventCoalescer_ReadAll_TokenCancelled_EndsTheWaitAfterTheEventsThatWait**: A reader that waits and a token that
+**AgentEventCoalescer_ReadAll_TokenCanceled_EndsTheWait** and
+**AgentEventCoalescer_ReadAll_TokenCanceled_EndsTheWaitAfterTheEventsThatWait**: A reader that waits and a token that
 is canceled, which ends the wait, a missing event that is refused, and a reader whose token was canceled before it
 began, which still gets the event that waits and is then canceled. These scenarios are tested by the tests of the same
 names.

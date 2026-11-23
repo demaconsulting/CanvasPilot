@@ -333,7 +333,7 @@ no clipboard or refuses the image.
 
 The constructor throws `ArgumentNullException` for a missing collaborator, and `AttachDialogService` does the same.
 Problems with projects are results shown in a message dialog, never exceptions. A platform picker that cannot be shown
-answers `null`, which the shell reads as cancelled. `MessageDialogViewModel` throws for missing texts or a blank
+answers `null`, which the shell reads as canceled. `MessageDialogViewModel` throws for missing texts or a blank
 accepting label. A failure to write the layout of the window or the widths of the columns to the settings is logged and
 swallowed (it is an `IOException`), so closing the window and dragging a splitter never fail. A drawing of a recent
 project card that fails is handled inside the welcome screen units and leaves the card without a picture. Open Log

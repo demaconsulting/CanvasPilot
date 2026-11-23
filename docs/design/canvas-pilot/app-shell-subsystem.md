@@ -143,7 +143,7 @@ here because they only join the units together.
    of the two style tools. The composition starts reading the kits on a worker and does not wait for it, so the start of
    the application never waits for a folder; the catalog, the selection, and the picker are disposed before the services
    they listen to. When the composition is disposed it also waits, for at most ten seconds, until no render of the
-   render service is still running (the units that asked for renders have cancelled them by then), so that a render that
+   render service is still running (the units that asked for renders have canceled them by then), so that a render that
    fails late cannot write to a log whose folder is gone. The shell is given the picker, which it shows as a pill in the
    title bar while a project is open and asks to give a new project the default style kit. The composition also makes
    the check of the shown picture against the style (`StyleCheckCommand`, over the preview pane as the source of

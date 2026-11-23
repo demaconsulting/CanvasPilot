@@ -135,7 +135,7 @@ already queued.
 Stop must work at any point of a turn, in the middle of a tool call as well, and the conversation must be usable
 afterwards. The pieces:
 
-1. **Who canceled.** The token of the turn is cancelled by the caller's token (`User`), by a reset (`Reset`), by a
+1. **Who canceled.** The token of the turn is canceled by the caller's token (`User`), by a reset (`Reset`), by a
    change of the project (`Project`), by the end of the service (`Dispose`), or by the service itself when the caller
    stops reading a turn that is not over (`Consumer`). The first source is recorded and logged as `cancelSource` on the
    line `Turn ended`.
