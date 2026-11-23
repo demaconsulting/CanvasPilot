@@ -311,11 +311,11 @@ steps are in the verification of the unit or subsystem named at each check.
     the window with a mouse, a keyboard, and a screen reader on Windows at 100, 125, and 150 percent display scale.
     (Verification of the `AppShell`, `Project`, `Preview`, `Chat`, and `Annotation` subsystems.)
     1. The title bar: the installed program starts and shows the window (the launch smoke test, `smoke.ps1`, checks this
-       on the published build in CI; here it is run once by hand on the installed package at 100, 125, and 150 percent),
-       the system buttons are not covered by the menu or the provider pill, no system title text lies over the brand
-       mark or the menu, the height of the system buttons against the 44 pixel bar, dragging the window by the empty
-       strip, double-clicking it to maximize, the snap layouts, and the window when maximized (no part is off the
-       screen). The menu items open with the keys and the access keys.
+       on the published build in CI, including the start while the window loads; here it is run once by hand on the
+       installed package at 100, 125, and 150 percent), the system buttons are not covered by the menu or the provider
+       pill, no system title text lies over the brand mark or the menu, the height of the system buttons against the 44
+       pixel bar, dragging the window by the empty strip, double-clicking it to maximize, the snap layouts, and the
+       window when maximized (no part is off the screen). The menu items open with the keys and the access keys.
     2. The splitters are found and moved with the mouse (the line and the grip show on hover and when pressed), the
        widths come back after a restart, and a window moved to another monitor and back stays on the screens.
     3. Zoom: Ctrl+wheel, Ctrl+0, Ctrl+1, Ctrl+plus, Ctrl+minus while the preview has the focus, and panning with the

@@ -18,7 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Reflection;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -196,41 +195,6 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal((0d, 138d), windowsWidths);
         Assert.Equal((78d, 0d), macWidths);
         Assert.Equal(0, leading.Width);
-    }
-
-    /// <summary>
-    ///     Test that the window ignores the extension into its frame while the XAML loads (when its title bar controls and
-    ///     name scope do not exist, which crashed the published program at the start), and keeps the room free for the
-    ///     buttons of the system once the extension is raised on the loaded window.
-    /// </summary>
-    [AvaloniaFact]
-    public void MainWindowView_ExtendedIntoFrame_IgnoredWhileLoadingAndAppliedAfterwards()
-    {
-        // Arrange: a shown window, and the field that tells it the XAML is loaded
-        var (_, window) = CreateWindow();
-        window.Show();
-        AppShellUiHelpers.Flush();
-        var ready = typeof(MainWindowView).GetField("_componentReady", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var raise = typeof(Window).GetMethod("ExtendClientAreaToDecorationsChanged", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var trailing = window.FindControl<Border>("TitleBarCaptionReserve")!;
-        var expected = MainWindowView.CaptionReserve(true, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
-
-        // Act: the platform raises the extension while the window is still loading, then on the loaded window
-        ready.SetValue(window, false);
-        raise.Invoke(window, [true]);
-        var whileLoading = trailing.Width;
-        ready.SetValue(window, true);
-        raise.Invoke(window, [false]);
-        raise.Invoke(window, [true]);
-        AppShellUiHelpers.Flush();
-
-        // Assert: the first is ignored without an error, and the second keeps the room the platform needs
-        Assert.True(window.IsExtendedIntoWindowDecorations);
-        Assert.Equal(0, whileLoading);
-        Assert.Equal(expected.Right, trailing.Width);
-        Assert.Equal(expected.Left, window.FindControl<Border>("TitleBarLeadingReserve")!.Width);
-
-        window.Close();
     }
 
     /// <summary>

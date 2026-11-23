@@ -207,10 +207,12 @@ project name in bold with the application name after it, and
 `MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage` shows that the AI provider pill is in the
 title bar and that using it opens the settings on the AI Provider page.
 `MainWindowView_ApplyCaptionReserve_ToleratesMissingControls` shows that the reserves are set from the platform and that
-a missing control is left alone, and `MainWindowView_ExtendedIntoFrame_IgnoredWhileLoadingAndAppliedAfterwards` shows
-that the extension into the frame is ignored while the window loads and keeps the room free once it is loaded. The
-caption buttons, dragging the empty strip, and snap layouts need a real window and are checked by hand before a release;
-the launch smoke test (`smoke.ps1`) starts the published program to guard against a crash at the start.
+a missing control is left alone. The crash while the XAML loads depends on the order of events on a real Win32 window
+and cannot be reproduced in a headless test, so no headless test covers it; the headless tests cover only the pure
+decision (`CaptionReserve`) and `ApplyCaptionReserve`. The guard for the start while the window loads is the launch
+smoke test (`smoke.ps1`, run in CI on Windows), which starts the published program, together with the manual launch
+check in `canvas-pilot.md`. The caption buttons, dragging the empty strip, and snap layouts also need a real window and
+are checked by hand before a release.
 
 **MainWindowView_StatusBar_AlwaysShownAndReportsThePicture**: The window is shown with no project and with a project
 (a headless UI test in `MainWindowViewTests.cs`); the status bar is shown at one height in both states, says that no

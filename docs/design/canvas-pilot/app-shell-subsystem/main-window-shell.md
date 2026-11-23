@@ -134,7 +134,8 @@ lights), and none elsewhere or when the window is not extended. The window appli
 real window raises that change while the XAML loads, when the window has no name scope and the reserve controls do not
 exist (a name lookup then throws and crashed the published program at the start). So the window ignores the change until
 the component is loaded (`_componentReady`), applies the value once at the end of the constructor, and sets the
-generated fields through `ApplyCaptionReserve`, which leaves a missing control alone.
+generated fields through `ApplyCaptionReserve`, which leaves a missing control alone. This gating cannot be tested
+in a headless test; it is guarded by the launch smoke test (`smoke.ps1`) and the manual launch check.
 
 **System title text**: on Windows and Linux, Avalonia 12 draws the title of the window at the left of the strip when the
 frame is extended, which would lie over the brand mark and the menu. A style in the window hides that text
