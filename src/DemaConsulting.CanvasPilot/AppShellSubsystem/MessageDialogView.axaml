@@ -5,41 +5,50 @@
         x:DataType="vm:MessageDialogViewModel"
         Title="{Binding Title}"
         Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
-        Width="460"
-        Height="220"
+        Width="480"
+        Height="240"
         CanResize="False"
+        Background="{DynamicResource CpSurfacePane}"
         WindowStartupLocation="CenterOwner">
 
-  <Grid Margin="16" RowDefinitions="Auto,Auto,Auto">
+  <Grid RowDefinitions="*,Auto">
 
-    <TextBlock Grid.Row="0"
-               AutomationProperties.AutomationId="MessageDialogText"
-               Text="{Binding Message}"
-               TextWrapping="Wrap" />
+    <StackPanel Grid.Row="0" Margin="24,24,24,16" Spacing="12">
+      <TextBlock AutomationProperties.AutomationId="MessageDialogText"
+                 FontSize="{DynamicResource CpFontBodyLarge}"
+                 Foreground="{DynamicResource CpTextPrimary}"
+                 Text="{Binding Message}"
+                 TextWrapping="Wrap" />
 
-    <TextBox Grid.Row="1"
-             Margin="0,12,0,0"
-             AutomationProperties.AutomationId="MessageDialogInput"
-             IsVisible="{Binding IsPrompt}"
-             Text="{Binding InputText}" />
-
-    <StackPanel Grid.Row="2"
-                Margin="0,16,0,0"
-                Orientation="Horizontal"
-                HorizontalAlignment="Right"
-                Spacing="8">
-      <Button AutomationProperties.AutomationId="MessageDialogOkButton"
-              Content="{Binding OkText}"
-              IsDefault="True"
-              MinWidth="80"
-              Command="{Binding OkCommand}" />
-      <Button AutomationProperties.AutomationId="MessageDialogCancelButton"
-              Content="Cancel"
-              IsCancel="True"
-              IsVisible="{Binding ShowCancel}"
-              MinWidth="80"
-              Command="{Binding CancelCommand}" />
+      <TextBox AutomationProperties.AutomationId="MessageDialogInput"
+               AutomationProperties.Name="Answer"
+               IsVisible="{Binding IsPrompt}"
+               Text="{Binding InputText}" />
     </StackPanel>
+
+    <Border Grid.Row="1"
+            Padding="24,12"
+            Background="{DynamicResource CpSurfaceWindow}"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="0,1,0,0">
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="8">
+        <Button AutomationProperties.AutomationId="MessageDialogOkButton"
+                Theme="{DynamicResource PrimaryButton}"
+                Content="{Binding OkText}"
+                IsDefault="True"
+                MinWidth="88"
+                Command="{Binding OkCommand}" />
+        <Button AutomationProperties.AutomationId="MessageDialogCancelButton"
+                Theme="{DynamicResource SecondaryButton}"
+                Content="Cancel"
+                IsCancel="True"
+                IsVisible="{Binding ShowCancel}"
+                MinWidth="88"
+                Command="{Binding CancelCommand}" />
+      </StackPanel>
+    </Border>
 
   </Grid>
 

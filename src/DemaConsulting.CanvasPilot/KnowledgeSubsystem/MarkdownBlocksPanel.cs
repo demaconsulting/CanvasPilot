@@ -23,6 +23,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Layout;
+using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 
 namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
@@ -57,7 +58,7 @@ public sealed class MarkdownBlocksPanel : StackPanel
     /// <summary>
     ///     The sizes of the text of headings of the levels from 1 to 6.
     /// </summary>
-    private static readonly double[] HeadingSizes = [22, 18, 16, 14, 14, 14];
+    private static readonly double[] HeadingSizes = [20, 16, 14, 14, 14, 14];
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="MarkdownBlocksPanel" /> class.
@@ -176,11 +177,11 @@ public sealed class MarkdownBlocksPanel : StackPanel
         };
         AutomationProperties.SetAutomationId(text, "KnowledgeBodyCode");
 
-        return new Border
+        var border = new Border
         {
-            Background = CodeBackground,
-            CornerRadius = new CornerRadius(4),
-            Padding = new Thickness(8),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(10),
             Child = new ScrollViewer
             {
                 HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
@@ -188,6 +189,11 @@ public sealed class MarkdownBlocksPanel : StackPanel
                 Content = text
             }
         };
+
+        // The block is a raised surface of the theme, so it follows a change of the theme variant
+        border.Bind(Border.BackgroundProperty, new DynamicResourceExtension("CpSurfaceRaised"));
+        border.Bind(Border.BorderBrushProperty, new DynamicResourceExtension("CpBorderSubtle"));
+        return border;
     }
 
     /// <summary>

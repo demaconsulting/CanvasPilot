@@ -612,12 +612,12 @@ public sealed class MainWindowViewTests : IDisposable
         SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "AboutCloseButton"));
         await shown;
 
-        // Assert: the dialog showed the identity and the five libraries, and Close ended the command
+        // Assert: the dialog showed the identity and the six libraries, and Close ended the command
         Assert.Equal("CanvasPilot", name);
         Assert.Equal("AI-assisted drawing creation with CanvasNet", tagline);
         Assert.StartsWith("Version ", version, StringComparison.Ordinal);
         Assert.Equal("Copyright (c) DEMA Consulting", copyright);
-        Assert.Equal(5, dependencies);
+        Assert.Equal(6, dependencies);
         Assert.Empty(window.OwnedWindows);
 
         window.Close();

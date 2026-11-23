@@ -73,7 +73,7 @@
               <PathIcon Classes="icon"
                         Width="40"
                         Height="40"
-                        Foreground="White"
+                        Foreground="{DynamicResource CpTextOnAccent}"
                         Data="{DynamicResource CpIconSparkle}" />
             </Border>
             <TextBlock VerticalAlignment="Center"
@@ -163,7 +163,7 @@
                 <StackPanel Spacing="10">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource CpAccentGradient}">
-                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="White" Data="{DynamicResource CpIconMic}" />
+                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="{DynamicResource CpTextOnAccent}" Data="{DynamicResource CpIconMic}" />
                     </Border>
                     <TextBlock VerticalAlignment="Center"
                                FontSize="{DynamicResource CpFontBodyLarge}"
@@ -189,7 +189,7 @@
                 <StackPanel Spacing="10">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource CpAccentGradient}">
-                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="White" Data="{DynamicResource CpIconRectangleLandscape}" />
+                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="{DynamicResource CpTextOnAccent}" Data="{DynamicResource CpIconRectangleLandscape}" />
                     </Border>
                     <TextBlock VerticalAlignment="Center"
                                FontSize="{DynamicResource CpFontBodyLarge}"
@@ -215,7 +215,7 @@
                 <StackPanel Spacing="10">
                   <StackPanel Orientation="Horizontal" Spacing="8">
                     <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource CpAccentGradient}">
-                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="White" Data="{DynamicResource CpIconArrowUpload}" />
+                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="{DynamicResource CpTextOnAccent}" Data="{DynamicResource CpIconArrowUpload}" />
                     </Border>
                     <TextBlock VerticalAlignment="Center"
                                FontSize="{DynamicResource CpFontBodyLarge}"

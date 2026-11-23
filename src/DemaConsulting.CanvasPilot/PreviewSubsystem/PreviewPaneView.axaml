@@ -129,8 +129,8 @@
       <TextBlock AutomationProperties.AutomationId="PreviewPlaceholder"
                  HorizontalAlignment="Center"
                  VerticalAlignment="Center"
-                 FontSize="16"
-                 Opacity="0.7"
+                 FontSize="{DynamicResource CpFontSubtitle}"
+                 Foreground="{DynamicResource CpTextSecondary}"
                  IsVisible="{Binding ShowPlaceholder}"
                  Text="{Binding PlaceholderText}" />
 
