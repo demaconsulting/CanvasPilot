@@ -57,7 +57,7 @@ tests:
         count: 0
       - pattern: "publish/win-x64/**/.copilot-explicit-cli"
         count: 0
-      # The self-contained single-file executable with the AI libraries is about 125 MB (AgentKit 0.1.0-beta.4); a bundled
+      # The self-contained single-file executable with the AI libraries is about 125 MB; a bundled
       # Copilot runtime would add about 180 MB, so a limit of 160 MB catches it even if its file names change.
       - pattern: "publish/win-x64/CanvasPilot.exe"
         count: 1

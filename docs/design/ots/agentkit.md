@@ -12,17 +12,19 @@ this use, with refusals as results and not as exceptions, and because it carries
 copilot needs. It is a library from another repository of the same organization that CanvasPilot consumes through
 NuGet, and it is treated as OTS because its internal design is out of scope here.
 
-The `DemaConsulting.AgentKit.Tools` package is deliberately not referenced in this change. Since version 0.1.0-beta.4 it
-pins the same `DemaConsulting.CanvasNet` (0.2.0-beta.13) as CanvasPilot's own CanvasNet tool and viewer, where the
-earlier version pinned 0.1.0, so the obstacle to a later increment with selectable tool packs is gone (see *Direction:
-selectable tool packs*); CanvasPilot still builds its tools itself.
+The `DemaConsulting.AgentKit.Tools` and `DemaConsulting.AgentKit.Tools.Visual` packages are deliberately not referenced
+in this change. The tools package now holds only the file and text tool packs; the visual tools package holds the image
+view tool and the diagram tools and pins the same CanvasNet viewer as CanvasPilot's own CanvasNet tool and viewer, so
+adopting it later causes no version conflict (see *Direction: selectable tool packs*). CanvasPilot still builds its
+tools itself, and a later change will compare the visual tools of the library with CanvasPilot's own help and render
+tools before any is adopted.
 
 ### Features Used
 
 - **Core**: `PathPolicy` and `PathRule` (the grants and their denied folder names), `IToolPack` and `ToolPackBuilder`
   (composition of tool families with a unique prefix each), `GuardedToolFactory` (tool names and the delivery of a
   result in the shape a provider can read, and `AsGuarded` to bound any function by `ToolLimits`), and `ToolResult`
-  (text, structured, image, and refusal results); and the model catalog and settings of version 0.1.0-beta.4:
+  (text, structured, image, and refusal results); and the model catalog and settings:
   `IModelCatalog` and `ModelInfo` (what a model can do: `ModelCapabilities`, the reasoning efforts, the context window,
   and whether it can be used), `ModelSettings` (the model, the reasoning effort, and the window that the application
   chooses) with `SelectAsync`, which validates them against the catalog and gives a `ModelSelection` or a
@@ -37,7 +39,8 @@ selectable tool packs*); CanvasPilot still builds its tools itself.
   which start a Copilot runtime on the Copilot CLI that the user installed and build a Copilot agent on it (with a model
   selection, from which the model and the reasoning effort are taken), and `CopilotModelCatalog`, which lists the models
   that the signed-in account may use. The installed CLI is the default source (`CopilotRuntimeSource.InstalledCli`);
-  `CopilotCli.MinimumVersion` is the oldest CLI that the library accepts.
+  `CopilotCli.MinimumVersion` is the oldest CLI that the library accepts. The runtime reports how it signed in
+  (`SignInSource`, `GitHubLogin`, and `GitHubHost`, none of which holds a secret).
 
 ### Integration Pattern
 
@@ -50,8 +53,8 @@ the application's own file tools check for links themselves.
 
 ### The Copilot runtime on the installed CLI
 
-AgentKit (version 0.1.0-beta.4; the Copilot SDK, the Microsoft Agent Framework, OllamaSharp, and
-Microsoft.Extensions.AI.Abstractions are pinned as before) runs the Copilot CLI that the user installed, at an explicit
+AgentKit (the Copilot SDK, the Microsoft Agent Framework, OllamaSharp, and
+Microsoft.Extensions.AI.Abstractions are pinned by it) runs the Copilot CLI that the user installed, at an explicit
 path. The `CopilotRuntimeStarter` unit builds
 `CopilotRuntimeOptions(dataDirectory, gitHubToken: null, logger, CopilotRuntimeSource.InstalledCli, cliPath)` and starts
 the runtime with `CopilotRuntime.StartAsync`. These are the rules of the library that the design relies on:
@@ -61,17 +64,27 @@ the runtime with `CopilotRuntime.StartAsync`. These are the rules of the library
 - The library checks the version of the CLI by running it with `--no-auto-update --version` and refuses a CLI older than
   `CopilotCli.MinimumVersion` (1.0.113). The locator of CanvasPilot uses the same probe and minimum, and an OTS test
   asserts that the minimum of the library is never above the one of the locator.
-- The runtime signs in from a token option (unused: CanvasPilot passes `null` and keeps no token), from the variables
-  `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN`, or from a signed-in GitHub CLI (`gh auth login`, with `gh` on
-  the `PATH`). The sign-in that the Copilot CLI keeps for itself (`copilot`, then `/login`) is **not** used, because the
-  library gives the runtime its own home (the data folder) and switches the keychain off. This was verified on
-  2026-11-22 with a CLI that was signed in with `/login`: with `gh` removed from the `PATH` and no token variable the
-  runtime started but was not authenticated, and the library refused it.
+- The runtime signs in from the first source that applies, in this order: a token or token provider that the host passes
+  (unused: CanvasPilot passes `null` and keeps no token), the variables `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and
+  `GITHUB_TOKEN`, the sign-in that the Copilot CLI keeps for itself (`copilot`, then `/login`; allowed by default and
+  read by the library through a short-lived helper runtime on the home of the CLI, which makes the first start one to
+  three seconds longer), a sign-in stored in the data folder, and last a signed-in GitHub CLI (`gh auth login`, with
+  `gh` on the `PATH`). The library reads only the host and the login of the CLI account from its configuration file, so
+  the host follows the account, including a GitHub Enterprise Cloud host, with no setting. A token variable that holds a
+  token that the host does not accept is refused and the later sources are not tried. The runtime exposes
+  `SignInSource`, `GitHubLogin`, and `GitHubHost` for the user to see, and they carry no secret. The options also have a
+  GitHub host and a switch for the sign-in of the CLI; CanvasPilot uses neither (see *Direction: future options*). The
+  OTS tests `AgentKit_CopilotRuntimeOptions_CanvasPilotArguments_AllowTheCopilotCliSignInAndLeaveTokenAndHostUnset` and
+  `AgentKit_CopilotRuntimeOptions_HostAndTokenArguments_AreNormalizedAndCombinationsRefused` pin these defaults.
 - The data directory must be empty, missing, or a directory that an earlier version of the library made; the runtime
   keeps its home and its sessions there, so only one runtime may use it at a time.
 - A runtime that cannot be used fails with an `InvalidOperationException` whose text explains the cause and the remedy
-  (a CLI that is too old, a runtime that is not signed in, and so on). The library has no typed causes, so the starter
-  recognizes the words of the message (see the design of the `CopilotRuntimeStarter` unit).
+  (a CLI that is too old, a runtime that is not signed in, and so on). For a runtime that is not signed in the text has
+  several lines: a line that the runtime is not signed in, a line that the library tried these sign-in sources in order,
+  one indented numbered line for each source with what it found (with every token redacted), and the advice of the
+  library on how to sign in. The library has no typed causes, so the starter recognizes the words of the message and
+  digests the numbered lines into one sentence (see the design of the `CopilotRuntimeStarter` unit); this text is a
+  behavior of the library that an upgrade must be checked against.
 
 CanvasPilot must not ship or download the GitHub Copilot runtime. The Copilot SDK package would download and copy a
 bundled runtime, about 180 MB, into every project that references it, so `CopilotSkipCliDownload` is set to `true` in
@@ -84,8 +97,8 @@ checked in the same build.
 ### The model catalogs and the model settings
 
 The `ProviderModelCatalog` unit lists models from the two catalogs, and the readiness check and the factory validate
-with them. These are the rules of the library that the design relies on (read from the 0.1.0-beta.4 source and verified
-on 2026-11-22 against a Copilot CLI 1.0.114 that was signed in through the GitHub CLI, which listed 23 models):
+with them. These are the rules of the library that the design relies on (read from the source of the library and
+verified on 2026-11-22 against a Copilot CLI 1.0.114 that was signed in through the GitHub CLI, which listed 23 models):
 
 - A catalog lists `ModelInfo` for the signed-in account. `ModelQuery.IncludeUnusable` also lists the models that the
   provider disables for the account, each with the reason; the plain list leaves them out. `RefreshAsync` makes the
@@ -116,17 +129,19 @@ The OTS tests `AgentKit_ModelSettings_Validate_RefusesWhatTheModelCannotDoAndBin
 `AgentKit_OllamaModelCatalog_ListAsync_DescribesCapabilitiesWindowAndEfforts` call the library as the application does
 and pin these rules.
 
-### Upstream request
-
-The sign-in of the Copilot CLI itself (`/login`) cannot be reused by CanvasPilot, so a user who is signed in only to the
-CLI must also sign in with `gh auth login` or set a token variable. A way for the library to use the signed-in session
-of the Copilot CLI that the user already has (for example by allowing the user's `COPILOT_HOME` and keychain, or through
-an explicit option) is a request to AgentKit. It is a documented limitation of CanvasPilot and is not worked around.
-
 ### Direction: selectable tool packs
 
 A later increment may let the user choose further AgentKit tool packs in the settings (a list of packs, each on or off,
-in the AI Provider page). The prerequisite recorded earlier is met: `DemaConsulting.AgentKit.Tools` now pins the same
-CanvasNet line (0.2.0-beta.13) as CanvasPilot, but the package is still not referenced in this change. Until then the
-copilot has only the fixed, locked-down tools of CanvasPilot, and the application's registry already offers an empty
-catalog of optional packs that the settings could fill.
+in the AI Provider page). Neither `DemaConsulting.AgentKit.Tools` (the file and text packs) nor
+`DemaConsulting.AgentKit.Tools.Visual` (the image view tool and the diagram packs) is referenced in this change, and the
+visual package pins the same CanvasNet viewer as CanvasPilot, so there is no version obstacle. Before any of it is
+adopted, a later change will compare the visual tools of the library with the help and render tools of CanvasPilot
+(`canvasnet_help` and `render_image`). Until then the copilot has only the fixed, locked-down tools of CanvasPilot, and
+the application's registry already offers an empty catalog of optional packs that the settings could fill.
+
+### Direction: future options
+
+The options of the library have a GitHub host (for an account on a GitHub Enterprise Cloud host that is not the host of
+the Copilot CLI account) and a switch that turns the sign-in of the Copilot CLI off. They are possible future settings
+of CanvasPilot; this change uses neither, because the host follows the account that signed in and the sign-in of the CLI
+is wanted.

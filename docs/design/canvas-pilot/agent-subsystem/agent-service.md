@@ -60,9 +60,9 @@ definition of its own.
 2. **Preparation** (`PrepareAsync`). No project open gives `Failed(NotReady)`. A data folder inside the project gives
    `Failed(DataInsideProject)` (see below). Otherwise the conversation is kept, dropped, or made as above; a factory
    that cannot make an agent gives `Failed(NotReady)` with the sentence of the readiness check for the same cause (for
-   Copilot without credentials, the sign-in sentence of the starter), and is asked again by the next turn so that a fix
-   is noticed. An exception becomes `Failed(Unexpected)` whose sentence holds the message of
-   the exception (the user sees it; the log does not).
+   Copilot that is not signed in, the sign-in sentence of the starter), and is asked again by the next turn so that a
+   fix is noticed. An exception becomes `Failed(Unexpected)` whose sentence holds the message of the exception (the user
+   sees it; the log does not).
 3. **The message.** `PayloadMessageMapper.Map(payload, projectFolder)` builds the user message. If the conversation has
    not yet given the restored history to the provider and the request carries history, the digest is inserted as the
    first text part of that message, so the provider gets it once, with the first message of its session.

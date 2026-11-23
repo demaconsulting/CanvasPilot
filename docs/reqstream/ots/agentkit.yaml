@@ -119,6 +119,24 @@ sections:
             tests:
               - AgentKit_OllamaModelCatalog_ListAsync_DescribesCapabilitiesWindowAndEfforts
 
+          - id: CanvasPilot-OTS-AgentKit-SignInWithCopilotCli
+            title: >-
+              The AgentKit Copilot runtime options built with an installed CLI, no token, no token provider, and no
+              host shall allow the sign-in of the Copilot CLI and leave the token, the token provider, and the host
+              unset, shall keep a GitHub host given without its scheme as an https URL and treat a blank host as unset,
+              and shall refuse a token together with a token provider.
+            justification: |
+              CanvasPilot has no token field and no login screen: the user signs in with the Copilot CLI (copilot, then
+              /login), the GitHub CLI, or a token variable, and the runtime takes the first that applies. That only holds
+              while the library defaults to allowing the sign-in of the Copilot CLI and sets no token or host that the
+              application did not give, and a change in these defaults would silently change which account is used, so
+              the tests pin them. The runtime reports the kind, the login, and the host of the sign-in without a token,
+              which the application shows; the live checks record them.
+            tags: [ots]
+            tests:
+              - AgentKit_CopilotRuntimeOptions_CanvasPilotArguments_AllowTheCopilotCliSignInAndLeaveTokenAndHostUnset
+              - AgentKit_CopilotRuntimeOptions_HostAndTokenArguments_AreNormalizedAndCombinationsRefused
+
           - id: CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
             title: >-
               With the Copilot SDK download of its runtime switched off, the AgentKit Copilot libraries shall add no

@@ -52,22 +52,22 @@ sections:
           - id: CanvasPilot-Agent-CheckProviderReadiness
             title: >-
               The Agent subsystem shall check the AI provider that the settings choose and report it as one status with
-              one sentence that says what to do: for GitHub Copilot the Copilot CLI, its version, the credentials, the
-              runtime (which is started on the installed CLI, or reused, and must be signed in), and the model settings,
-              and for Ollama the settings, the server, the model and the model settings, and the size of the context
-              window.
+              one sentence that says what to do: for GitHub Copilot the Copilot CLI, its version, the runtime (which is
+              started on the installed CLI, or reused, and must be signed in, in whichever way the runtime finds), and the
+              model settings, with a sentence that names the account and the kind of sign-in of a Copilot that can be
+              used, and for Ollama the settings, the server, the model and the model settings, and the size of the
+              context window.
             justification: |
               Both providers depend on things outside the application, and the user should learn what is missing before
               the first message. The subsystem owns the checks because it owns the knowledge of how each provider is
               reached, and it offers them to the settings dialog through the interface that the dialog owns. Starting the
               runtime is the one check that proves that the CLI runs and that the sign-in works, so a Copilot that is
               reported ready can answer; the catalog of the running runtime then proves that the chosen model exists and
-              can do the work.
+              can do the work. The runtime says which account it signed in as, so the user sees which one the agents use.
             children:
               - CanvasPilot-AgentReadiness-CheckCopilotInOrder
-              - CanvasPilot-AgentReadiness-DetectCopilotCredentials
-              - CanvasPilot-AgentReadiness-ExplainCopilotAuthentication
               - CanvasPilot-AgentReadiness-ReportCopilotRuntimeStart
+              - CanvasPilot-AgentReadiness-ReportCopilotSignIn
               - CanvasPilot-AgentReadiness-ValidateModelSettings
               - CanvasPilot-AgentReadiness-NeverRetainCredentials
               - CanvasPilot-AgentReadiness-CheckOllamaServerAndModel
@@ -270,13 +270,14 @@ sections:
               The user installs, updates, and signs in to the Copilot CLI, and the application must use that CLI and never
               a copy of its own. The runtime keeps its data in one folder that two runtimes must not share, so a single
               starter owns the one runtime that the check and the conversations use, and a different CLI or folder replaces
-              it. The AI library cannot use the sign-in of the Copilot CLI itself, only the GitHub CLI or a token variable,
+              it. The AI library signs in from a token variable, the sign-in of the Copilot CLI itself, or the GitHub CLI,
               so the failures that the user can fix (too old, not signed in, a path that cannot be used) each get their own
               status and sentence.
             children:
               - CanvasPilot-CopilotRuntimeStarter-RunInstalledCli
               - CanvasPilot-CopilotRuntimeStarter-ShareOneRuntime
               - CanvasPilot-CopilotRuntimeStarter-ExplainFailures
+              - CanvasPilot-CopilotRuntimeStarter-ReportSignIn
             tests:
               - CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing
 

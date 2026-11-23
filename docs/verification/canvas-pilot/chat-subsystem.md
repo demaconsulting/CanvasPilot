@@ -51,7 +51,8 @@ a requirement):
    pulse while the copilot works; the talk button is red and pulses while it listens; a mark chip is tinted like the
    mark; the card of the message has the colored outline and glow while the editing control has the focus.
 6. *The copilot panel.* With Copilot chosen in the settings on a machine that is not signed in for CanvasPilot, the
-   banner above the transcript says how to sign in (`gh auth login` or a token variable); "Open Settings" opens the
+   banner above the transcript says how to sign in (run `copilot` and type `/login`, or use `gh auth login` or a token
+   variable); "Open Settings" opens the
    settings and "Check again" repeats the check, and on a signed-in machine the banner is hidden and the answer streams
    (the live Copilot runs are in check 10 of *Manual Verification* in the system verification). With Ollama chosen
    and the server stopped, the banner says what to do and a sent message ends with an error row that offers "Open
@@ -114,9 +115,9 @@ offer raises the request to open the settings. This scenario is tested by
 
 **ChatSubsystem_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysWhatToDoAndSettingsAreRequested**: The scripted
 copilot reports that GitHub Copilot is not signed in. After the panel checks, the banner has the sign-in sentence of
-`CopilotRuntimeStarter` ("Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` ...") and choosing the
-settings raises the request. A warning about a small context window is shown and does not block sending, and when the
-copilot reports that it is ready the banner is empty. This scenario is tested by
+`CopilotRuntimeStarter` ("Copilot is not signed in for CanvasPilot. Run `copilot`, then type `/login` ...") and choosing
+the settings raises the request. A warning about a small context window is shown and does not block sending, and when
+the copilot reports that it is ready the banner is empty. This scenario is tested by
 `ChatSubsystem_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysWhatToDoAndSettingsAreRequested`.
 
 **ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject**: A project is made by the

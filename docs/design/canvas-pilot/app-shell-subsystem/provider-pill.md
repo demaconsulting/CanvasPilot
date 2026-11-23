@@ -28,7 +28,9 @@ settings service, the command, and the synchronization context of the thread tha
   the detail; it is what the view shows after the provider name.
 - *Sentences*: `AccessibleName` is `AI provider: {ProviderName}, {DetailText}. Opens the settings.` and is the
   automation name of the button. `ToolTipText` is the sentence of the check (`Readiness.Message`, the same one that the
-  banner of the chat panel shows), `Checking whether the AI provider can be used...` before the first answer, and
+  banner of the chat panel shows; for GitHub Copilot that can be used it ends with the sentence that names the account,
+  the host, and the kind of sign-in, such as "Signed in as octocat on github.com (Copilot CLI sign-in).", and never a
+  token), `Checking whether the AI provider can be used...` before the first answer, and
   `There is no AI provider in this application.` when there is no copilot.
 - *Command*: `OpenSettingsCommand` is the command that was passed in, the settings command of the shell, which opens the
   settings dialog on its first page, the AI provider.

@@ -29,14 +29,14 @@ namespace DemaConsulting.CanvasPilot.Tests;
 /// </summary>
 internal sealed class FakeCopilotRuntimeStarter : ICopilotRuntimeStarter
 {
-    /// <summary>The answer to give.</summary>
-    private readonly CopilotStartResult _result;
-
     /// <summary>The lock that guards the records, because requests may arrive from several threads.</summary>
     private readonly Lock _lock = new();
 
     /// <summary>The requests that were made.</summary>
     private readonly List<CopilotStartRequest> _requests = [];
+
+    /// <summary>The answer to give.</summary>
+    private volatile CopilotStartResult _result;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="FakeCopilotRuntimeStarter" /> class.
@@ -45,6 +45,16 @@ internal sealed class FakeCopilotRuntimeStarter : ICopilotRuntimeStarter
     internal FakeCopilotRuntimeStarter(CopilotStartResult result)
     {
         _result = result;
+    }
+
+    /// <summary>
+    ///     Gets or sets the answer that is given to every request from now on, so that a test can change what the machine
+    ///     offers (a runtime that is not signed in, then one that is) without making another starter.
+    /// </summary>
+    internal CopilotStartResult Result
+    {
+        get => _result;
+        set => _result = value;
     }
 
     /// <summary>

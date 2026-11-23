@@ -77,7 +77,7 @@ public sealed class AgentToolRegistry
     /// <summary>
     ///     The names of the tools that the Copilot CLI has built in. A tool of the application with one of these names would
     ///     be taken over by the CLI, so the registry refuses them. The list is the one of the AI library
-    ///     (<c>CopilotAgentFactory.ReservedBuiltInToolNames</c> of version 0.1.0-beta.4), which is not public; a test
+    ///     (<c>CopilotAgentFactory.ReservedBuiltInToolNames</c>), which is not public; a test
     ///     compares it with the library so that an upgrade that adds a name is noticed.
     /// </summary>
     public static readonly IReadOnlySet<string> CopilotBuiltInToolNames = new[]

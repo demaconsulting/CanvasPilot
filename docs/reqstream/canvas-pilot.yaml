@@ -543,13 +543,14 @@ sections:
           bring such a runtime unless they are told not to, so the absence is checked on the published folder of every
           Windows build and, with the file table of the installer, in the package itself. The application finds the
           installed CLI by a documented rule that tells it from the launchers that editors put on the PATH, honors a
-          path that the user sets, checks its version, and then runs exactly that CLI. The user signs in with the GitHub
-          CLI or a token variable, because the sign-in of the Copilot CLI itself is not used by the AI library, and the
-          application has no token field and no login screen of its own.
+          path that the user sets, checks its version, and then runs exactly that CLI. The user signs in the way that the
+          Copilot CLI offers (copilot, then /login), with the GitHub CLI, or with a token variable, and the application
+          has no token field and no login screen of its own.
         children:
           - CanvasPilot-Agent-LocateCopilotCli
           - CanvasPilot-Agent-RunCopilotOnInstalledCli
           - CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
+          - CanvasPilot-OTS-AgentKit-SignInWithCopilotCli
           - CanvasPilot-OTS-CopilotSdk-HonorExplicitCliPath
           - CanvasPilot-OTS-CopilotSdk-ReadCliPathFromConnectionEnvironment
           - CanvasPilot-OTS-CopilotSdk-DeclareSupportedCliVersion
@@ -667,17 +668,21 @@ sections:
         title: >-
           The application shall tell the user, before the first message and when asked in the settings, whether the
           configured AI provider can be used: for GitHub Copilot whether the installed Copilot CLI was found (by a rule
-          that rejects editor shims) and is new enough, whether credentials exist, and whether the runtime starts on
-          that CLI and is signed in, and whether the chosen model and reasoning level can be used (the model can call
-          tools and accepts pictures), and for Ollama whether the server answers, has the model, and has a context window
-          of at least 16,384 tokens, each as one sentence that says what to do.
+          that rejects editor shims) and is new enough, whether the runtime starts on that CLI and is signed in (in
+          whichever way the runtime finds: a token variable, the Copilot CLI, or the GitHub CLI), and whether the chosen
+          model and reasoning level can be used (the model can call tools and accepts pictures), with the account and
+          the kind of sign-in that Copilot uses named in the sentence of a Copilot that can be used and never a token, and
+          for Ollama whether the server answers, has the model, and has a context window of at least 16,384 tokens, each
+          as one sentence that says what to do.
         tags: [system]
         justification: |
           A chat that fails on the first message with an error of a library is a poor first experience. Both providers
           depend on things outside the application (a CLI and a sign-in, or a server and a model), so the application
-          checks them itself and words the remedy, including the honest statement that the sign-in of the Copilot CLI
-          itself does not apply to the application. A small context window and a model that cannot see pictures are
-          warnings and not blocks, because they are common but not certain causes of poor drawings.
+          checks them itself and words the remedy, which for a Copilot that is not signed in is to run copilot and type
+          /login. A machine can offer several accounts, so the sentence of a Copilot that can be used says which account
+          and which kind of sign-in the agents use, in Check connection and in the tooltip of the provider pill. A small
+          context window and a model that cannot see pictures are warnings and not blocks, because they are common but
+          not certain causes of poor drawings.
         children:
           - CanvasPilot-Agent-DescribeReadiness
           - CanvasPilot-Agent-CheckProviderReadiness
@@ -688,6 +693,7 @@ sections:
           - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
           - CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt
           - CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach
+          - CanvasPilot_ReportProviderReadiness_CopilotSignedInWithCopilotCli_CheckConnectionAndPillTooltipNameTheAccountAndNoToken
 
       - id: CanvasPilot-System-StartApplication
         title: >-

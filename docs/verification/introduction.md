@@ -27,8 +27,9 @@ This document covers the verification design for the following software items:
       version
     - **CopilotRuntimeStarter** — starts the Copilot runtime on the installed CLI, shares that one runtime, and turns
       every failure to start into a status and a sentence
-    - **AgentReadiness** — checks whether the chosen AI provider can be used (the Copilot CLI, credentials, and the
-      runtime that starts; the Ollama server, model, and context window) and says what to do
+    - **AgentReadiness** — checks whether the chosen AI provider can be used (the Copilot CLI, the runtime that starts
+      and signs in, and the model settings; the Ollama server, model, and context window), says what to do, and names
+      the account that Copilot signed in as
     - **AgentToolRegistry** — builds the tools of the copilot for one project, confined to the project folder, from the
       drawing knowledge and style tool descriptions, the project packs, and the optional pack catalog
     - **ProjectTools** — the tools with which the copilot lists, reads, writes, and draws the files of the project:
@@ -156,7 +157,9 @@ The following topics are out of scope:
   on every machine: the readiness checks, the starter, the messages, and the agent on a stand-in runtime are verified
   by the tests, and the live runs are opt-in tests and the manual checks of the system verification; the live
   Ollama checks are manual checks of the system verification, because Ollama is not part of the build machines
-- User-selectable tool packs and spoken replies of the copilot are not part of this version
+- User-selectable tool packs (neither the file and text tools package nor the visual tools package of the AI library is
+  used, and a later change will compare the visual tools with those of CanvasPilot) and spoken replies of the copilot
+  are not part of this version
 - Appium end-to-end tests of the installed application are deferred to a later increment
 - The internal implementation of OTS software items is excluded; only integration and usage
   are verified

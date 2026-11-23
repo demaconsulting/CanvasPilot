@@ -33,11 +33,96 @@ public sealed class RecordingNoteSink : IRenderNoteSink
     /// </summary>
     public List<(string Group, IReadOnlyList<RenderDiagnostic> Notes)> Calls { get; } = [];
 
+    /// <summary>
+    ///     Gets the synchronization context that was current at each call, in the order of the calls.
+    /// </summary>
+    public List<SynchronizationContext?> Contexts { get; } = [];
+
     /// <inheritdoc />
     public void ShowNotes(string group, IReadOnlyList<RenderDiagnostic> notes)
     {
         Calls.Add((group, notes));
+        Contexts.Add(SynchronizationContext.Current);
     }
+}
+
+/// <summary>
+///     A palette that holds the measure of the picture at the point where it reads the palette until the test lets it go,
+///     and notes the synchronization context of the thread that reads it. It makes the order of events of a check
+///     deterministic: the check cannot finish before the caller has awaited it.
+/// </summary>
+public sealed class GatedPalette : IReadOnlyDictionary<string, string>
+{
+    /// <summary>
+    ///     The colors that are held.
+    /// </summary>
+    private readonly IReadOnlyDictionary<string, string> _inner;
+
+    /// <summary>
+    ///     The gate that holds the reader of the palette.
+    /// </summary>
+    private readonly ManualResetEventSlim _gate = new(false);
+
+    /// <summary>
+    ///     The token that frees a reader that waits on the gate when the test is cancelled.
+    /// </summary>
+    private readonly CancellationToken _cancellation;
+
+    /// <summary>
+    ///     Creates a palette that holds its reader.
+    /// </summary>
+    /// <param name="inner">The colors.</param>
+    /// <param name="cancellation">The token that frees a held reader when the test is cancelled.</param>
+    public GatedPalette(IReadOnlyDictionary<string, string> inner, CancellationToken cancellation)
+    {
+        _inner = inner;
+        _cancellation = cancellation;
+    }
+
+    /// <summary>
+    ///     Gets the synchronization context that was current on the thread that read the palette.
+    /// </summary>
+    public SynchronizationContext? ReaderContext { get; private set; }
+
+    /// <summary>
+    ///     Gets a value indicating whether the palette was read.
+    /// </summary>
+    public bool WasRead { get; private set; }
+
+    /// <inheritdoc />
+    public int Count => _inner.Count;
+
+    /// <inheritdoc />
+    public IEnumerable<string> Keys => _inner.Keys;
+
+    /// <inheritdoc />
+    public IEnumerable<string> Values => _inner.Values;
+
+    /// <inheritdoc />
+    public string this[string key] => _inner[key];
+
+    /// <summary>
+    ///     Lets the held reader go on.
+    /// </summary>
+    public void Release() => _gate.Set();
+
+    /// <inheritdoc />
+    public bool ContainsKey(string key) => _inner.ContainsKey(key);
+
+    /// <inheritdoc />
+    public bool TryGetValue(string key, out string value) => _inner.TryGetValue(key, out value!);
+
+    /// <inheritdoc />
+    public IEnumerator<KeyValuePair<string, string>> GetEnumerator()
+    {
+        ReaderContext = SynchronizationContext.Current;
+        WasRead = true;
+        _gate.Wait(_cancellation);
+        return _inner.GetEnumerator();
+    }
+
+    /// <inheritdoc />
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }
 
 /// <summary>
@@ -255,28 +340,40 @@ public sealed class StyleCheckCommandTests
     [Fact]
     public async Task StyleCheckCommand_RunAsync_CalledUnderAContext_AppliesTheResultThroughIt()
     {
-        // Arrange: a command that is run under a context that counts what is posted to it
+        // Arrange: a command whose measure is held at the palette until the test lets it go, so that the check cannot
+        // finish before it was awaited and its continuation must be posted, and a caller that counts what is posted to it
         var (command, images, active, sink) = Create();
-        active.Use(Entry());
+        var kit = Entry().Kit;
+        var palette = new GatedPalette(kit.Palette, Ct);
+        active.Use(new StyleKitEntry(kit with { Palette = palette }, StyleKitLocation.BuiltIn, "folder", null, true, false, null, []));
         images.CurrentImage = Picture(Colors.White, Colors.Blue);
         var context = new CountingSynchronizationContext();
         var previous = SynchronizationContext.Current;
+        Task<string?> run;
         SynchronizationContext.SetSynchronizationContext(context);
-        string? message;
         try
         {
-            // Act
-            message = await command.RunAsync().WaitAsync(TimeSpan.FromSeconds(30), Ct);
+            run = command.RunAsync();
         }
         finally
         {
             SynchronizationContext.SetSynchronizationContext(previous);
         }
 
-        // Assert: the continuation went through the context of the caller, and the notes were shown
+        // Act: let the held measure go and wait for the check to finish
+        var heldUntilReleased = run.IsCompleted;
+        palette.Release();
+        var message = await run.WaitAsync(TimeSpan.FromSeconds(30), Ct);
+
+        // Assert: the check was still running when it was awaited, the colors were measured off the context of the caller,
+        // the continuation went through the context of the caller once, and the notes were shown on it
+        Assert.False(heldUntilReleased);
         Assert.Null(message);
-        Assert.True(context.Posts >= 1);
+        Assert.True(palette.WasRead);
+        Assert.Null(palette.ReaderContext);
+        Assert.Equal(1, context.Posts);
         Assert.Single(sink.Calls);
+        Assert.Same(context, Assert.Single(sink.Contexts));
     }
 
     /// <summary>

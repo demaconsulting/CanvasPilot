@@ -18,13 +18,14 @@ sections:
                 title: >-
                   The CopilotRuntimeStarter shall start the runtime of the AI library on the installed Copilot CLI at the
                   full path of the request, with the data folder of the request (or the one that the starter was made
-                  with, or the folder of the application below the local data of the user), the logger of the request, and
-                  no token, and shall never choose the runtime that the AI library could bundle.
+                  with, or the folder of the application below the local data of the user), the logger of the request, no
+                  token, no token provider, no GitHub host, and the sign-in of the Copilot CLI allowed, and shall never
+                  choose the runtime that the AI library could bundle.
                 justification: |
                   The user installs and signs in to the Copilot CLI, so the application runs that file and no other. The
                   data folder is chosen by the application and is never a place in a project. The application has no token
-                  field and no login screen: the runtime signs in from the environment of the application or from the
-                  GitHub CLI, so no secret passes through the starter.
+                  field and no login screen: the runtime signs in from the environment of the application, from the sign-in
+                  of the Copilot CLI itself, or from the GitHub CLI, so no secret passes through the starter.
                 tests:
                   - CopilotRuntimeStarter_Constants_Rule_AreTheDocumentedSentences
                   - CopilotRuntimeStarter_StartAsync_InstalledCli_PassesThePathTheFolderAndNoToken
@@ -55,8 +56,10 @@ sections:
                 title: >-
                   The CopilotRuntimeStarter shall answer a start that fails with a status and one sentence and not with an
                   exception: a CLI that is too old or speaks another protocol as too old with the explanation of the AI
-                  library, a runtime that is not signed in as not signed in with the sentence that names gh auth login and
-                  the token variables and says that the sign-in of the Copilot CLI with /login does not apply, a path that
+                  library, a runtime that is not signed in as not signed in with the sentence that tells the user to run
+                  copilot and type /login and names gh auth login and the token variables as alternatives, followed by one
+                  line that says what the AI library found at each place that it looked for a sign-in (and the sentence
+                  alone when the explanation has no such findings), a path that
                   the AI library refuses (a relative path or a batch file) as a path in the Settings that cannot be used
                   with the cause and without the name of the parameter, and any other failure as not started with the
                   explanation of the AI library, or a sentence of its own when there is none.
@@ -64,9 +67,27 @@ sections:
                   Each of these has a different remedy (upgrade the CLI, sign in, choose another path, check the
                   installation), and the user must find it in the banner of the chat and in Check connection, not in an
                   exception. The AI library has no typed causes, only explanations in words, so the starter recognizes the
-                  words and keeps them in one place. The sign-in of the Copilot CLI itself is not used by the AI library,
-                  which a user who is signed in to the CLI would not expect, so the sentence says it.
+                  words and keeps them in one place. A user who installed the Copilot CLI expects to sign in the way that the
+                  CLI does, so the sentence says to run copilot and type /login first. The AI library explains in several
+                  lines what it tried, which tells why a sign-in that the user believes to have was not found, so the
+                  starter keeps its findings on the same line, the one line that a report message is.
                 tests:
                   - CopilotRuntimeStarter_StartAsync_LibraryFailure_BecomesTheMatchingStatusAndSentence
+                  - CopilotRuntimeStarter_StartAsync_NotSignedInWithFindings_AddsAOneLineDigestOfTheFindings
                   - CopilotRuntimeStarter_StartAsync_PathTheLibraryRefuses_ReportsItAsASentenceAndStartsNothing
                   - CopilotRuntimeStarter_StartAsync_FailureThenSuccess_TriesAgain
+
+              - id: CanvasPilot-CopilotRuntimeStarter-ReportSignIn
+                title: >-
+                  The CopilotRuntimeStarter shall give a started runtime as a source that reports how the runtime signed in
+                  to GitHub (the kind of sign-in, the login, and the host, and never a token) and shall word that as one
+                  sentence that names the account, the host without its scheme, and the kind of sign-in, and that leaves
+                  out whatever the runtime did not report.
+                justification: |
+                  A machine can offer several ways to sign in (a token variable, the Copilot CLI, the GitHub CLI), possibly
+                  as different accounts, and the user must be able to see which one the agents use. The runtime reports
+                  the kind, the login, and the host and holds no secret in them, so the application can show them without
+                  ever handling a token.
+                tests:
+                  - CopilotRuntimeStarter_StartAsync_RuntimeSignedIn_TheSourceCarriesTheSignIn
+                  - CopilotSignInInfo_Describe_KnownParts_AreNamedAndUnknownPartsAreLeftOut

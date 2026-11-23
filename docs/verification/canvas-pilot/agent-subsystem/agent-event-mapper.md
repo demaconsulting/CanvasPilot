@@ -46,7 +46,8 @@ subsystem test makes one temporary project folder and deletes it. No network, di
   an I/O error, and a timeout reported as a canceled request are `ConnectionLost`.
 - For GitHub Copilot, the words of the SDK are classified as protocol mismatch, authentication, model not found,
   connection lost, or unexpected, each of the eight sample messages as its kind; the authentication sentence is the
-  sentence of the readiness check and names `gh auth login` and `COPILOT_GITHUB_TOKEN`, the protocol sentence names
+  sentence of the readiness check (it tells the user to run `copilot` and type `/login`, and names `gh auth login` and
+  the token variables as alternatives), the protocol sentence names
   `winget upgrade GitHub.Copilot`, and the model sentences name the model, or tell to clear the name when there is none.
 - A cause below wrapping exceptions, and in an aggregate, is found; an exception with no message gives the sentence with
   the type name.
@@ -137,7 +138,8 @@ error inside two exceptions, an I/O error, and a timeout reported as a canceled 
 neighbors, each with its kind. This scenario is tested by
 `AgentEventMapper_MapFailure_CopilotMessages_AreClassifiedByTheirWords`.
 
-**AgentEventMapper_MapFailure_CopilotGuidance_NamesTheRemedy**: The exact remedies for a missing sign-in, a protocol
+**AgentEventMapper_MapFailure_CopilotGuidance_NamesTheRemedy**: The exact remedies for a missing sign-in (the sentence
+names `copilot`, `/login`, `gh auth login`, and `COPILOT_GITHUB_TOKEN`), a protocol
 mismatch, a missing model with and without a name, and a lost connection. This scenario is tested by
 `AgentEventMapper_MapFailure_CopilotGuidance_NamesTheRemedy`.
 

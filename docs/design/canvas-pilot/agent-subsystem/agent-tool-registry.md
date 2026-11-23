@@ -41,8 +41,8 @@ project file, `ProjectDocument.FileExtension`). The library matches a deny patte
 every folder name on the way, so the data folder and a project file are out of reach for reading and for writing at the
 top of the project and in any folder below it. A folder that is empty, white space, or not a full path is refused,
 because a relative folder would anchor the tools to the current directory. The API of the library (verified in the
-restored package, version 0.1.0-beta.4, where `PathPolicy`, `PathRule`, and `ToolLimits` are unchanged since
-0.1.0-beta.3) is `PathPolicy(string workingDirectory, IEnumerable<PathRule> grants, ToolLimits limits)` and
+restored package, where `PathPolicy`, `PathRule`, and `ToolLimits` have kept their shape across the releases that were
+used) is `PathPolicy(string workingDirectory, IEnumerable<PathRule> grants, ToolLimits limits)` and
 `PathRule.ReadWrite(string root, IEnumerable<string> denyPatterns)`; `TryResolveRead` and `TryResolveWrite` give a
 refusal as a message and not an exception.
 

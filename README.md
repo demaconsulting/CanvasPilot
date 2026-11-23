@@ -85,10 +85,12 @@ CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
      if you want the copilot to see your marks and pictures, enter the endpoint (default `http://localhost:11434`),
      choose the model from the list (or type its name), and keep the context window at 32,768 tokens or more
      (CanvasPilot warns below 16,384). No GitHub account is needed.
-   - **GitHub Copilot**: Install the GitHub Copilot CLI (version 1.0.113 or later), and sign in with the GitHub CLI
-     (`gh auth login`) or set `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` or `GITHUB_TOKEN` also work) before you start
-     CanvasPilot. CanvasPilot finds the CLI, checks its version and your credentials, and starts it. Signing in inside
-     the Copilot CLI with `/login` does not apply to CanvasPilot. Leave the model empty to use the default model of the
+   - **GitHub Copilot**: Install the GitHub Copilot CLI (version 1.0.113 or later) and sign in: run `copilot`, then type
+     `/login` (or sign in with the GitHub CLI, `gh auth login`, or set `COPILOT_GITHUB_TOKEN`; `GH_TOKEN` or
+     `GITHUB_TOKEN` also work). CanvasPilot finds the CLI, checks its version, and starts it, and the runtime signs in
+     from a token variable first, then from the sign-in of the Copilot CLI, then from the GitHub CLI. **Check
+     connection** and the AI provider pill tell you which account is used, for example "Signed in as octocat on
+     github.com (Copilot CLI sign-in)." Leave the model empty to use the default model of the
      Copilot runtime, or choose one from the list of the models of your account; a reasoning level can be chosen when
      the model offers some.
 3. Optionally set up speech in **Tools > Settings... > Speech**: pick your microphone and speakers, and download the

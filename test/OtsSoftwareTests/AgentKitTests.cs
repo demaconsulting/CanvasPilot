@@ -564,6 +564,58 @@ public class AgentKitTests
     }
 
     /// <summary>
+    ///     Test that Copilot runtime options built the way that CanvasPilot builds them (an installed CLI, no token, no
+    ///     token provider, and no host) allow the sign-in of the Copilot CLI and leave the token and the host unset, so
+    ///     that the runtime signs in the way that the user is signed in.
+    /// </summary>
+    [Fact]
+    public void AgentKit_CopilotRuntimeOptions_CanvasPilotArguments_AllowTheCopilotCliSignInAndLeaveTokenAndHostUnset()
+    {
+        // Arrange: a data folder that need not exist, and a full path for the CLI, which is not run
+        using var folder = new TestFolder();
+        var cliPath = Path.Combine(folder.Path, OperatingSystem.IsWindows() ? "copilot.exe" : "copilot");
+
+        // Act: build the options with the arguments that the application passes
+        var options = new CopilotRuntimeOptions(
+            Path.Combine(folder.Path, "copilot-data"),
+            gitHubToken: null,
+            runtimeSource: CopilotRuntimeSource.InstalledCli,
+            cliPath: cliPath);
+
+        // Assert: the Copilot CLI sign-in is allowed, and no token, token provider, or host is set
+        Assert.True(options.UseCopilotCliSignIn);
+        Assert.Null(options.GitHubToken);
+        Assert.Null(options.GitHubTokenProvider);
+        Assert.Null(options.GitHubHost);
+        Assert.Equal(CopilotRuntimeSource.InstalledCli, options.RuntimeSource);
+    }
+
+    /// <summary>
+    ///     Test that a GitHub host given without its scheme is kept as an https URL, that a blank host is unset, and that a
+    ///     token together with a token provider is refused.
+    /// </summary>
+    [Fact]
+    public void AgentKit_CopilotRuntimeOptions_HostAndTokenArguments_AreNormalizedAndCombinationsRefused()
+    {
+        // Arrange
+        using var folder = new TestFolder();
+        var dataDirectory = Path.Combine(folder.Path, "copilot-data");
+
+        // Act
+        var named = new CopilotRuntimeOptions(dataDirectory, gitHubHost: "example.ghe.com");
+        var blank = new CopilotRuntimeOptions(dataDirectory, gitHubHost: "  ");
+
+        // Assert: the host gets its scheme, a blank host is unset, and the two ways to give a token cannot be combined
+        Assert.Equal("https://example.ghe.com", named.GitHubHost);
+        Assert.Null(blank.GitHubHost);
+        Assert.Throws<ArgumentException>(
+            () => new CopilotRuntimeOptions(
+                dataDirectory,
+                gitHubToken: "not-a-real-token",
+                gitHubTokenProvider: (_, _) => Task.FromException<CopilotGitHubToken>(new InvalidOperationException())));
+    }
+
+    /// <summary>
     ///     Test that the build output of the test project, which references the same packages as the application,
     ///     holds no Copilot runtime file: no wrapper, no CLI, no runtime library, and no <c>runtime.node</c>.
     /// </summary>

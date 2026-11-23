@@ -9,8 +9,9 @@ AgentKit confines the copilot's tools to the project with its path policy, compo
 prefixes and valid names, bounds tool results and shapes image results, runs a tool-calling turn on a chat client with
 picture promotion, adds the context length to Ollama requests, validates model settings against what a model offers and
 applies the selected model and reasoning effort to requests, describes the models of an Ollama server, and runs the
-Copilot CLI that the user installed at an explicit path (version 0.1.0-beta.4 of the library) without ever bundling or
-downloading a Copilot runtime. The application relies on each of these behaviors, so each has a requirement and a test.
+Copilot CLI that the user installed at an explicit path (signing in the way that the user is signed in, without a token
+or a host of the application) without ever bundling or downloading a Copilot runtime. The application relies on each of
+these behaviors, so each has a requirement and a test.
 
 ### Verification Approach
 
@@ -20,7 +21,10 @@ agent over a scripted chat client that plays the model. No language model and no
 runtime is started only with an explicit CLI path that does not exist, so that no Copilot process runs. The tests are
 run again before a version upgrade is accepted. That the runtime starts on a real installed CLI, signed in as the
 library requires, is shown by the live tests that are recorded in the manual verification of the system, and the starter
-of CanvasPilot is verified in the unit verification of `CopilotRuntimeStarter`.
+of CanvasPilot is verified in the unit verification of `CopilotRuntimeStarter`. On 2026-11-23 the opt-in live tests
+passed against a real Copilot CLI 1.0.114 in two runs (with the GitHub CLI available, and with it hidden and the token
+variables cleared): the runtime signed in through the sign-in of the Copilot CLI and reported the source, the login, and
+the host without a token (see check 10, item 10, of the manual verification in the system verification).
 
 Two checks complement these tests. The FileAssert test `Copilot_RuntimeNotPublished` asserts, on the published win-x64
 output that the installer harvests whole, that no file whose name starts with `copilot` or `libcopilot`, no
@@ -188,3 +192,24 @@ the runtime is started with an explicit CLI path that does not exist.
 never run, and the variable is restored afterward.
 
 **Requirement coverage**: `CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime`.
+
+#### AgentKit_CopilotRuntimeOptions_CanvasPilotArguments_AllowTheCopilotCliSignInAndLeaveTokenAndHostUnset
+
+**Scenario**: Copilot runtime options are built the way that CanvasPilot builds them: a data directory that does not
+exist, no token, the installed CLI as the source, and the full path of a CLI that is not run.
+
+**Expected**: The sign-in of the Copilot CLI is allowed, the token, the token provider, and the host are not set, and
+the source is the installed CLI. That the runtime reports its sign-in source, login, and host is shown by the live
+tests of the system verification, because it needs a real runtime.
+
+**Requirement coverage**: `CanvasPilot-OTS-AgentKit-SignInWithCopilotCli`.
+
+#### AgentKit_CopilotRuntimeOptions_HostAndTokenArguments_AreNormalizedAndCombinationsRefused
+
+**Scenario**: Options are built with the host `example.ghe.com`, with a blank host, and with a token together with a
+token provider.
+
+**Expected**: The host without a scheme is kept as `https://example.ghe.com`, the blank host is not set, and the token
+together with the token provider is refused with an argument exception.
+
+**Requirement coverage**: `CanvasPilot-OTS-AgentKit-SignInWithCopilotCli`.

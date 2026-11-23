@@ -76,9 +76,9 @@ public sealed class CopilotRuntimeStarterTests
     [Fact]
     public void CopilotRuntimeStarter_Constants_Rule_AreTheDocumentedSentences()
     {
-        // Assert: the sign-in sentence names the ways that work and says that the CLI's own login does not apply
+        // Assert: the sign-in sentence tells the user to run copilot and type /login, with the other ways as alternatives
         Assert.Equal(
-            "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to the Copilot CLI with /login does not apply to CanvasPilot.",
+            "Copilot is not signed in for CanvasPilot. Run `copilot`, then type `/login` to sign in (or sign in with `gh auth login`, or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection.",
             CopilotRuntimeStarter.NotSignedInMessage);
         Assert.Equal("The Copilot CLI path in Settings cannot be used: ", CopilotRuntimeStarter.CliPathMessage);
         Assert.Equal("The Copilot runtime could not be started. Choose Check connection to try again.", CopilotRuntimeStarter.StartFailedMessage);
@@ -110,6 +110,61 @@ public sealed class CopilotRuntimeStarterTests
         Assert.Equal(DataDirectory, given.DataDirectory);
         Assert.Same(logger, given.Logger);
         Assert.Null(given.GitHubToken);
+        Assert.Null(given.GitHubTokenProvider);
+        Assert.Null(given.GitHubHost);
+        Assert.True(given.UseCopilotCliSignIn);
+    }
+
+    /// <summary>
+    ///     Test that the sign-in of the started runtime reaches the caller on the source that the start answers with, so
+    ///     that the readiness check can say which account is in use.
+    /// </summary>
+    [Fact]
+    public async Task CopilotRuntimeStarter_StartAsync_RuntimeSignedIn_TheSourceCarriesTheSignIn()
+    {
+        // Arrange: a runtime that signed in through the Copilot CLI
+        var signIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "octocat", "https://github.com");
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = signIn };
+        await using var starter = new CopilotRuntimeStarter(DataDirectory, (_, _) => Task.FromResult<ICopilotAgentSource>(source));
+
+        // Act
+        var result = await starter.StartAsync(Request(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(signIn, result.Agents?.SignIn);
+    }
+
+    /// <summary>
+    ///     Test that the sentence about a sign-in names the account, the host without its scheme, and the kind of sign-in,
+    ///     and leaves out whatever is not known, so that it never claims more than the runtime reported.
+    /// </summary>
+    /// <param name="source">The kind of sign-in.</param>
+    /// <param name="login">The login, or <see langword="null" />.</param>
+    /// <param name="host">The host, or <see langword="null" />.</param>
+    /// <param name="expected">The sentence.</param>
+    [Theory]
+    [InlineData(CopilotSignInSource.CopilotCli, "octocat", "https://github.com", "Signed in as octocat on github.com (Copilot CLI sign-in).")]
+    [InlineData(CopilotSignInSource.EnvironmentVariable, "octocat", "https://example.ghe.com/", "Signed in as octocat on example.ghe.com (token variable).")]
+    [InlineData(CopilotSignInSource.GitHubCli, "octocat", "github.com", "Signed in as octocat on github.com (GitHub CLI sign-in).")]
+    [InlineData(CopilotSignInSource.GitHubToken, "octocat", null, "Signed in as octocat (GitHub token).")]
+    [InlineData(CopilotSignInSource.GitHubTokenProvider, null, "https://github.com", "Signed in on github.com (GitHub token).")]
+    [InlineData(CopilotSignInSource.DataDirectory, " ", " ", "Signed in (stored sign-in).")]
+    [InlineData(CopilotSignInSource.Unknown, "octocat", "https://github.com", "Signed in as octocat on github.com.")]
+    [InlineData(CopilotSignInSource.Unknown, null, null, "")]
+    public void CopilotSignInInfo_Describe_KnownParts_AreNamedAndUnknownPartsAreLeftOut(
+        CopilotSignInSource source,
+        string? login,
+        string? host,
+        string expected)
+    {
+        // Arrange
+        var signIn = new CopilotSignInInfo(source, login, host);
+
+        // Act
+        var sentence = signIn.Describe();
+
+        // Assert
+        Assert.Equal(expected, sentence);
     }
 
     /// <summary>
@@ -256,6 +311,39 @@ public sealed class CopilotRuntimeStarterTests
         // Assert
         Assert.Equal(expected, result.Status);
         Assert.Equal(sentence ?? (expected == CopilotStartStatus.NotSignedIn ? CopilotRuntimeStarter.NotSignedInMessage : message), result.Message);
+        Assert.Null(result.Agents);
+    }
+
+    /// <summary>
+    ///     Test that the multi-line explanation of the AI library for a runtime that is not signed in becomes the sentence
+    ///     of the starter followed by one line that digests what the library found at each place, without the first place,
+    ///     without the library's own advice, and ending with a full stop.
+    /// </summary>
+    [Fact]
+    public async Task CopilotRuntimeStarter_StartAsync_NotSignedInWithFindings_AddsAOneLineDigestOfTheFindings()
+    {
+        // Arrange: the explanation as the library words it, with its line breaks
+        var newLine = Environment.NewLine;
+        var library =
+            "The Copilot runtime started but is not signed in to GitHub (the runtime reports: Not authenticated), so AgentKit stopped it. AgentKit tried these sign-in sources, in order:" + newLine
+            + "  1. gitHubToken / gitHubTokenProvider: not supplied by the host" + newLine
+            + "  2. COPILOT_GITHUB_TOKEN, GH_TOKEN, GITHUB_TOKEN: none is set" + newLine
+            + "  3. Copilot CLI sign-in: no Copilot CLI configuration at 'C:\\Users\\someone\\.copilot\\config.json'." + newLine
+            + "  4. GitHub CLI: gh was not found on PATH" + newLine
+            + "To sign in: run 'copilot login' (add '--host https://<name>.ghe.com' for GitHub Enterprise Cloud), run 'gh auth login' with gh on PATH, or pass gitHubToken or gitHubTokenProvider.";
+        await using var starter = new CopilotRuntimeStarter(DataDirectory, (_, _) => throw new InvalidOperationException(library));
+
+        // Act
+        var result = await starter.StartAsync(Request(), TestContext.Current.CancellationToken);
+
+        // Assert: the sentence, then the findings of steps two to four on the same line, and none of the library's advice
+        Assert.Equal(CopilotStartStatus.NotSignedIn, result.Status);
+        Assert.Equal(
+            CopilotRuntimeStarter.NotSignedInMessage
+            + " What was found: COPILOT_GITHUB_TOKEN, GH_TOKEN, GITHUB_TOKEN: none is set; Copilot CLI sign-in: no Copilot CLI configuration at 'C:\\Users\\someone\\.copilot\\config.json'; GitHub CLI: gh was not found on PATH.",
+            result.Message);
+        Assert.DoesNotContain('\n', result.Message);
+        Assert.DoesNotContain("To sign in", result.Message, StringComparison.Ordinal);
         Assert.Null(result.Agents);
     }
 

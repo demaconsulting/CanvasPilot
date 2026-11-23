@@ -664,7 +664,9 @@ public sealed class AgentEventMapperTests
         var lost = named.MapFailure(new IOException("The pipe is being closed."));
 
         // Assert
-        Assert.Contains("`gh auth login`", auth!.Message, StringComparison.Ordinal);
+        Assert.Contains("`copilot`", auth!.Message, StringComparison.Ordinal);
+        Assert.Contains("`/login`", auth.Message, StringComparison.Ordinal);
+        Assert.Contains("`gh auth login`", auth.Message, StringComparison.Ordinal);
         Assert.Contains("COPILOT_GITHUB_TOKEN", auth.Message, StringComparison.Ordinal);
         Assert.Equal(AgentEventMapper.ProtocolMismatchMessage, protocol!.Message);
         Assert.Contains("winget upgrade GitHub.Copilot", protocol.Message, StringComparison.Ordinal);

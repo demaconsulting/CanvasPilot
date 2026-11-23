@@ -4,11 +4,13 @@
 
 `AgentReadiness` is verified with unit tests defined in `AgentReadinessTests.cs` and `OllamaProbeTests.cs`. The checks
 are tested against fakes of every collaborator (`CopilotCliTestDoubles.cs` and `ReadinessTestDoubles.cs`): the file
-system, environment, and process runner that reproduce the layout of the development machine (the same fakes that verify
-the locator, extended with the variables `ProgramFiles` and the token variables), a starter of the Copilot runtime that
-answers with a scripted result and records its requests, and an Ollama probe that answers with a scripted list of models
-and window. No program is run, no network is used, and no server is asked. The sentences of the design are asserted
-exactly, word for word, so a change of wording fails a test and the design and tests change together.
+system, environment, and process runner that reproduce the layout of the development machine (the same fakes that
+verify the locator), a starter of the Copilot runtime that answers with a scripted result (which a test can change, as a
+user who signs in between two checks) and records its requests, a source of agents that reports a scripted sign-in, and
+an Ollama probe that answers with a scripted list of models and window. The check looks for no credentials itself, so
+no fake of a token variable or of the GitHub CLI is needed for the sign-in: the sign-in is the result of the scripted
+start. No program but the CLI is run, no network is used, and no server is asked. The sentences of the design are
+asserted exactly, word for word, so a change of wording fails a test and the design and tests change together.
 
 The starter is a collaborator whose own rules (the one shared runtime, the mapping of every failure to a status and a
 sentence) are verified in the unit verification document of `CopilotRuntimeStarter`; here the scripted starter answers
@@ -27,8 +29,9 @@ settings use a catalog that cannot be read, so that they never touch a network. 
 asserted in part (the words that name the problem), because they are the library's; the real catalogs are verified in
 the OTS tests of AgentKit and in the verification of `ProviderModelCatalog`.
 
-The token rule is verified two ways: a sentinel text that stands for a token is printed by the fake GitHub CLI and
-must appear in no report, and the credential tests show that only emptiness decides.
+The token rule is verified by a sentinel text that stands for a token: it is set in a token variable of the fake
+environment and must appear in no report, and the sentence that names the account holds only the login, the host, and
+the kind of sign-in that the scripted runtime reports.
 
 #### Test Environment
 
@@ -40,21 +43,21 @@ the probe wait for a limit of a tenth of a second.
 - All unit tests pass with zero failures.
 - On the development machine layout, a machine with no Copilot CLI, only the shim, a path in the settings that does not
   exist, a CLI that does not answer, and a CLI older than 1.0.113 each give their exact sentence and status, and no
-  check after the failed one runs (no credential probe, no start).
-- Version 1.0.113 is accepted.
-- Each of the three token variables counts as credentials and then the GitHub CLI is not run; empty and white space
-  values do not count.
-- A GitHub CLI on the `PATH`, or under the program files, counts when `gh auth token` exits with 0 and prints something
-  within 5 seconds; it does not count when it fails, prints nothing, times out, or cannot start.
-- With credentials and a starter that starts the runtime the report is ready and usable with "GitHub Copilot CLI 1.0.114
-  is ready.", and the starter is asked once with the path and the version of the CLI that the locator found.
+  check after the failed one runs (no start).
+- Version 1.0.113 is accepted and goes on to the starter.
+- The check looks for no credentials of its own: a machine with no token variable and no GitHub CLI (signed in only
+  through the Copilot CLI) is not turned away, and only the CLI itself is run.
+- With a starter that starts the runtime the report is ready and usable with "GitHub Copilot CLI 1.0.114 is ready.",
+  followed by the sign-in sentence of the runtime ("Signed in as octocat on github.com (Copilot CLI sign-in).": the
+  login, the host without its scheme, and the kind of sign-in), and the starter is asked once with the path and the
+  version of the CLI that the locator found. A runtime that does not say how it signed in leaves the sentence as it was.
 - A starter that answers CLI too old, not signed in, or failed gives `CopilotCliTooOld`, `CopilotNotSignedIn`, or
   `CopilotRuntimeUnavailable` with the sentence of the starter unchanged, and the report is not usable.
 - With a model in the settings, the catalog of the started runtime validates it: a model that can call tools and see
   pictures is ready, and the sentence names it; a model that is not offered, cannot be used, cannot call tools, or does
   not offer the chosen effort gives `ModelSettingsInvalid` with the sentence of the AI library and is not usable; a
-  model that cannot take pictures gives `ModelLacksVision`, which is usable; a catalog that fails gives
-  `CopilotRuntimeUnavailable` with its message. Settings that name no model are ready as before.
+  model that cannot take pictures gives `ModelLacksVision`, which is usable and still names the sign-in; a catalog that
+  fails gives `CopilotRuntimeUnavailable` with its message. Settings that name no model are ready as before.
 - No token text is in any report.
 - Ollama: an invalid address or an empty model name is not configured and the server is not asked; no answer is
   unreachable; a missing model gives the `ollama pull` sentence; a model that is there is ready with the vision hint
@@ -69,17 +72,17 @@ the probe wait for a limit of a tenth of a second.
   an unknown detected window uses the configured one; both sentences are exact.
 - The probe turns a refused connection, an error status, text that is not JSON, and a time out into an unreachable
   server or an unknown window, and passes on a cancellation by the caller.
-- Check connection searches for the CLI again, the plain check does not, and the result keeps the sentence and the
-  usable flag of the report.
+- Check connection searches for the CLI again, the plain check does not, the result keeps the sentence and the usable
+  flag of the report, and a user who signs in between two checks is seen by the next Check connection.
 
 #### Test Scenarios
 
-**AgentReadiness_Constants_Rule_AreTheDocumentedValues**: The token variable names are `COPILOT_GITHUB_TOKEN`,
-`GH_TOKEN`, `GITHUB_TOKEN` in that order, and both time limits are 5 seconds. This scenario is tested by
+**AgentReadiness_Constants_Rule_AreTheDocumentedValues**: The time limit of a question to the Ollama server is 5
+seconds, and the sentence of a runtime that is not signed in is the one of the starter. This scenario is tested by
 `AgentReadiness_Constants_Rule_AreTheDocumentedValues`.
 
-**AgentReadiness_Copilot_NoCli_ReportsMissingWithTheInstallSentence**: A machine with nothing installed but a token
-variable set gives `CopilotCliMissing` with the install sentence, is not usable, and runs no program and no start. This
+**AgentReadiness_Copilot_NoCli_ReportsMissingWithTheInstallSentence**: A machine with nothing installed gives
+`CopilotCliMissing` with the install sentence, is not usable, and runs no program and no start. This
 scenario is tested by `AgentReadiness_Copilot_NoCli_ReportsMissingWithTheInstallSentence`.
 
 **AgentReadiness_Copilot_OnlyShim_ReportsMissingAndNamesTheShim**: A machine whose only `copilot.exe` is the VS Code
@@ -98,38 +101,31 @@ installed. This scenario is tested by `AgentReadiness_Copilot_OverridePathMissin
 `CopilotCliTooOld` with the exact upgrade sentence, is not usable, and only the version was asked for. This scenario is
 tested by `AgentReadiness_Copilot_CliTooOld_ReportsTooOldWithTheUpgradeSentence`.
 
-**AgentReadiness_Copilot_MinimumVersion_IsAcceptedAndGoesOnToCredentials**: A CLI that reports exactly 1.0.113 passes
-the version check and the result is the sign-in status, since there are no credentials. This scenario is tested by
-`AgentReadiness_Copilot_MinimumVersion_IsAcceptedAndGoesOnToCredentials`.
+**AgentReadiness_Copilot_MinimumVersion_IsAcceptedAndGoesOnToTheStarter**: A CLI that reports exactly 1.0.113 passes
+the version check, the starter is asked with that version, and the result is ready. This scenario is tested by
+`AgentReadiness_Copilot_MinimumVersion_IsAcceptedAndGoesOnToTheStarter`.
 
-**AgentReadiness_Copilot_NoCredentials_ReportsNotSignedInWithTheExactSentence**: A good CLI without a token variable and
-without a GitHub CLI gives `CopilotNotSignedIn` with the exact sentence (`gh auth login`, the variable, Check
-connection, and the statement that the `/login` session of the CLI does not apply), is not usable, and the starter is
-not asked. This scenario is tested by `AgentReadiness_Copilot_NoCredentials_ReportsNotSignedInWithTheExactSentence`.
+**AgentReadiness_Copilot_StarterNotSignedIn_ReportsTheSentenceOfTheStarter**: A good CLI and a starter that answers
+that the runtime is not signed in give `CopilotNotSignedIn` with the sentence of the starter unchanged (`copilot`,
+`/login`, `gh auth login`, the variables, and Check connection), not usable, with one request to the starter, and no
+program but the CLI was run (no credential probe). This scenario is tested by
+`AgentReadiness_Copilot_StarterNotSignedIn_ReportsTheSentenceOfTheStarter`.
 
-**AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndReportsReady**: For each of the three variables, a good CLI
-and a starter that starts give the ready status, usable, with the sentence "GitHub Copilot CLI 1.0.114 is ready.", even
-though a GitHub CLI is installed: the GitHub CLI is not run. This scenario is tested by
-`AgentReadiness_Copilot_TokenVariable_CountsAsCredentialsAndReportsReady`.
+**AgentReadiness_Copilot_OnlyTheCopilotCliIsSignedIn_IsNotRejected**: A machine with no token variable and no GitHub CLI
+whose runtime signed in through the Copilot CLI is ready and usable, and only the CLI itself was run, so the GitHub CLI
+is never asked. This scenario is tested by `AgentReadiness_Copilot_OnlyTheCopilotCliIsSignedIn_IsNotRejected`.
 
-**AgentReadiness_Copilot_EmptyTokenVariables_AreNotCredentials**: An empty value and a white space value are not
-credentials and the result is the sign-in status. This scenario is tested by
-`AgentReadiness_Copilot_EmptyTokenVariables_AreNotCredentials`.
+**AgentReadiness_Copilot_Ready_NamesTheAccountTheHostAndTheKindOfSignIn**: A runtime that signed in as `octocat` on
+`https://github.com` through the Copilot CLI gives the sentence "GitHub Copilot CLI 1.0.114 is ready. Signed in as
+octocat on github.com (Copilot CLI sign-in).", with the host shown without its scheme, and a token variable that holds a
+sentinel token appears nowhere in the sentence. This scenario is tested by
+`AgentReadiness_Copilot_Ready_NamesTheAccountTheHostAndTheKindOfSignIn`.
 
-**AgentReadiness_Copilot_GitHubCliSignedIn_CountsAsCredentialsAndNeverKeepsTheToken**: A GitHub CLI under the program
-files folder that prints a sentinel token counts as credentials, is run exactly once with the arguments `auth` and
-`token` and a limit of 5 seconds, and the sentinel is in neither the sentence nor the text form of the report. This
-scenario is tested by `AgentReadiness_Copilot_GitHubCliSignedIn_CountsAsCredentialsAndNeverKeepsTheToken`.
+**AgentReadiness_Copilot_Ready_SignInUnknown_AddsNothing**: A runtime that gives no sign-in information, and one that
+reports an unknown source with no login and no host, each leave the sentence exactly "GitHub Copilot CLI 1.0.114 is
+ready." This scenario is tested by `AgentReadiness_Copilot_Ready_SignInUnknown_AddsNothing`.
 
-**AgentReadiness_Copilot_GitHubCliOnPath_IsRunFromThePath**: A GitHub CLI in a quoted folder of the `PATH` is run, and
-the one under the program files is not. This scenario is tested by
-`AgentReadiness_Copilot_GitHubCliOnPath_IsRunFromThePath`.
-
-**AgentReadiness_Copilot_GitHubCliNotSignedIn_IsNotACredential**: A GitHub CLI that exits with 1, prints nothing, prints
-only white space, times out, or cannot be started is not a credential, and the result is the sign-in status. This
-scenario is tested by `AgentReadiness_Copilot_GitHubCliNotSignedIn_IsNotACredential`.
-
-**AgentReadiness_Copilot_StarterRefuses_ReportsTheMatchingStatusAndSentence**: With a token, a starter that answers CLI
+**AgentReadiness_Copilot_StarterRefuses_ReportsTheMatchingStatusAndSentence**: A starter that answers CLI
 too old, not signed in, or failed gives `CopilotCliTooOld`, `CopilotNotSignedIn`, or `CopilotRuntimeUnavailable`
 respectively, each with the sentence of the starter unchanged, and the report is not usable. This scenario is tested by
 `AgentReadiness_Copilot_StarterRefuses_ReportsTheMatchingStatusAndSentence`.
@@ -153,14 +149,15 @@ with that part of the sentence of the library and is not usable. This scenario i
 `AgentReadiness_Copilot_ModelSettingsTheCatalogRefuses_ReportModelSettingsInvalid`.
 
 **AgentReadiness_Copilot_ModelWithoutVisionAndUnreadableCatalog_WarnsAndReportsTheRuntime**: A model that cannot take
-pictures gives `ModelLacksVision`, usable, with the sentence "blind does not accept pictures"; after the catalog is made
-to fail with the message of a runtime that is not signed in, the same settings give `CopilotRuntimeUnavailable` with
-that message. This scenario is tested by
-`AgentReadiness_Copilot_ModelWithoutVisionAndUnreadableCatalog_WarnsAndReportsTheRuntime`.
+pictures, on a runtime that signed in through the Copilot CLI, gives `ModelLacksVision`, usable, with the sentence
+"blind does not accept pictures" followed by the sign-in sentence; after the catalog is made to fail with the message of
+a runtime that is not signed in, the same settings give `CopilotRuntimeUnavailable` with that message. This scenario is
+tested by `AgentReadiness_Copilot_ModelWithoutVisionAndUnreadableCatalog_WarnsAndReportsTheRuntime`.
 
 **AgentReadiness_Copilot_RefreshAndCheckAsync_SearchAgainOnlyWhenAsked**: Two plain checks run `--version` once; the
-connection check through `IProviderCheck` runs it again; the result is not usable (there is no sign-in on that machine).
-This scenario is tested by
+connection check through `IProviderCheck` runs it again; the result is not usable while the starter says that the
+runtime is not signed in, and after the starter is changed to start (the user signed in) the next Check connection is
+usable and ends with the sign-in sentence. This scenario is tested by
 `AgentReadiness_Copilot_RefreshAndCheckAsync_SearchAgainOnlyWhenAsked`.
 
 **AgentReadiness_GetReport_CancelledToken_ThrowsOperationCanceled**: A cancelled token ends the check for Copilot and
@@ -223,8 +220,10 @@ gives a sentence and 16,384 does not, for the configured window and for the mode
 warning are usable and a missing model is not, each with the sentence of the report. This scenario is tested by
 `AgentReadiness_CheckAsync_Ollama_MapsUsabilityAndMessage`.
 
-**AgentReadiness_Messages_Rule_AreOneLineAndEndWithAFullStop**: The sentences of seven different outcomes have no line
-break and end with a full stop. This scenario is tested by `AgentReadiness_Messages_Rule_AreOneLineAndEndWithAFullStop`.
+**AgentReadiness_Messages_Rule_AreOneLineAndEndWithAFullStop**: The sentences of nine different outcomes (including a
+ready Copilot with its sign-in sentence, and a runtime that is not signed in with the digest of what was found) have no
+line break and end with a full stop. This scenario is tested by
+`AgentReadiness_Messages_Rule_AreOneLineAndEndWithAFullStop`.
 
 **OllamaProbe_ListModels_ServerAnswers_ReturnsTheNamesFromTags**: A stand-in server with two models gives a reachable
 list with both names in order, after one GET of `/api/tags`. This scenario is tested by

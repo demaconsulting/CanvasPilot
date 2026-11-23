@@ -9,8 +9,8 @@ editors put on the `PATH`, checks that it reports a version that works, and says
 to do when it cannot be used. CanvasPilot never ships or downloads the CLI, so this is the only way the application
 learns which CLI exists. The unit also holds the supporting types that make it testable without a machine that has the
 CLI: `IProcessRunner` with its real `ProcessRunner`, `ICliFileSystem` with `CliFileSystem`, and `IEnvironmentReader`
-with `SystemEnvironmentReader`. The readiness checks of the subsystem reuse the same process runner and
-environment reader for their own checks (the credential check runs a program and reads token variables).
+with `SystemEnvironmentReader`. The readiness checks of the subsystem do not use them: the locator reads its own
+environment and runs its own programs, and the sign-in is decided by the runtime start, not by a check of credentials.
 
 #### Data Model
 

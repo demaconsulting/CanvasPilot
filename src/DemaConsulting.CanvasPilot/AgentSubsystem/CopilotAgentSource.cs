@@ -59,6 +59,13 @@ public interface ICopilotAgentSource : IAsyncDisposable
     IModelCatalog Models { get; }
 
     /// <summary>
+    ///     Gets how the runtime signed in to GitHub (the kind of sign-in, the login, and the host), which the readiness
+    ///     check words for the user so that the user can tell which account the agents use. The value holds no token.
+    ///     <see langword="null" /> when the source does not know.
+    /// </summary>
+    CopilotSignInInfo? SignIn { get; }
+
+    /// <summary>
     ///     Makes an agent that runs on the runtime with exactly the given tools. The permission handler is the default of
     ///     the AI library, which approves the given tools by name and refuses everything else.
     /// </summary>
@@ -102,10 +109,16 @@ public sealed class CopilotRuntimeAgentSource : ICopilotAgentSource
 
         _runtime = runtime;
         Models = new CopilotModelCatalog(runtime);
+
+        // The runtime reports how it signed in and keeps the values after it is disposed; none of them is a secret
+        SignIn = new CopilotSignInInfo(runtime.SignInSource, runtime.GitHubLogin, runtime.GitHubHost);
     }
 
     /// <inheritdoc />
     public IModelCatalog Models { get; }
+
+    /// <inheritdoc />
+    public CopilotSignInInfo? SignIn { get; }
 
     /// <inheritdoc />
     public AIAgent CreateAgent(CopilotAgentRequest request)

@@ -118,7 +118,9 @@ Two pills at the right of the title bar show what the project and the copilot us
   be used; a hollow dot with "checking" means that CanvasPilot is checking; an amber dot with a few words such as
   "sign-in needed", "CLI not found", or "Ollama not running" means that something needs your attention; a red dot with
   "unavailable" means that the provider cannot be used. Pause the pointer on the pill to read the full sentence, which
-  is the same sentence as in the banner of the conversation. Choose the pill, or focus it and press Enter, to open the
+  is the same sentence as in the banner of the conversation and as the answer of **Check connection**. For Copilot that
+  can be used it ends with the account that Copilot signed in as, for example "Signed in as octocat on github.com
+  (Copilot CLI sign-in)." Choose the pill, or focus it and press Enter, to open the
   settings on the AI Provider page (see *Setting Up an AI Provider*).
 
 ## The Status Bar
@@ -587,13 +589,22 @@ never ships or downloads that tool. It needs version 1.0.113 or later, which Can
 example a `winget install GitHub.Copilot` installation) or which you choose in Settings. CanvasPilot starts one Copilot
 runtime when it is first needed, and the **Check connection** button and the chat share it.
 
-**Signing in.** CanvasPilot has no token field and no sign-in screen. The Copilot runtime does not use the session that
-you made inside the Copilot CLI with `/login`. It uses one of these, which must exist before you start CanvasPilot:
+**Signing in.** CanvasPilot has no token field and no sign-in screen. The Copilot runtime signs in by itself, from the
+first of these that works, in this order:
 
-- the GitHub CLI signed in with `gh auth login` (`gh` on the `PATH` or in `C:\Program Files\GitHub CLI`), or
-- a token in the environment that CanvasPilot is started in: `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`.
+1. a token in the environment that CanvasPilot is started in: `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`;
+2. the sign-in of the Copilot CLI itself: run `copilot` in a terminal and type `/login`, then follow the steps. This is
+   the usual way, and it needs no `gh` and no variable;
+3. the GitHub CLI signed in with `gh auth login` (`gh` on the `PATH`).
 
-When you choose **GitHub Copilot** and **Check connection**, CanvasPilot checks five things in order and shows the first
+Whichever is used, the account must have GitHub Copilot. If your account is on a GitHub Enterprise Cloud host, sign in
+to that host with the Copilot CLI (`copilot login --host https://{name}.ghe.com`); CanvasPilot uses the host of the
+account that signed in and has no host setting. If you change the account in the Copilot CLI, or set or clear a token
+variable, close and start CanvasPilot again, because the Copilot runtime keeps the account that it started with. A token
+variable that holds a token that your host does not accept stops the search, so the sign-in of the Copilot CLI is not
+tried; clear the variable and start CanvasPilot again.
+
+When you choose **GitHub Copilot** and **Check connection**, CanvasPilot checks four things in order and shows the first
 that fails:
 
 1. **The Copilot CLI is found.** CanvasPilot looks for the real `copilot.exe` (see *Which Copilot CLI Is Used*). If it
@@ -602,31 +613,32 @@ that fails:
 2. **Its version is 1.0.113 or later.** CanvasPilot reads the version with `copilot --no-auto-update --version`, which
    is the version that is built into the installed program. Otherwise: "Copilot CLI {version} is older than 1.0.113.
    Run `winget upgrade GitHub.Copilot`."
-3. **Credentials exist.** CanvasPilot needs a signed-in GitHub CLI or a token in the environment. Sign in with `gh auth
-   login`, or set the environment variable `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` and `GITHUB_TOKEN` also work), then check
-   again. Otherwise: "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the
-   COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to
-   the Copilot CLI with /login does not apply to CanvasPilot."
-4. **The runtime starts on that CLI and signs in.** Then the check says "GitHub Copilot CLI 1.0.114 is ready." (with the
-   version that was found). Otherwise it shows one of these:
+3. **The runtime starts on that CLI and signs in.** The start of the runtime decides the sign-in, so there is no
+   separate check of credentials; the first start can take a few seconds longer than before. Then the check says what it
+   found, for example "GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in)."
+   (with the version that was found, the account, the host, and how it signed in: "Copilot CLI sign-in", "token
+   variable", or "GitHub CLI sign-in"; never the token itself). Otherwise it shows one of these:
    - The CLI is too old: the message says to upgrade the Copilot CLI itself and lists the commands. Running `copilot
      update` alone may not change the version that runs, so check the version again afterward.
-   - Not signed in: the sentence of step 3.
+   - Not signed in: "Copilot is not signed in for CanvasPilot. Run `copilot`, then type `/login` to sign in (or sign in
+     with `gh auth login`, or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then
+     choose Check connection." After it, "What was found:" lists what CanvasPilot's AI library looked at for each way of
+     signing in, so you can see why none worked. After you sign in, choose **Check connection** again; you do not need
+     to restart CanvasPilot to fix a missing sign-in.
    - The runtime could not be started: "The Copilot runtime could not be started. Choose Check connection to try
      again." or the explanation of the AI library.
    - The path in Settings cannot be used: "The Copilot CLI path in Settings cannot be used: ..." followed by the reason,
      for example a relative path or a `.cmd` or `.bat` file.
-5. **The model and the reasoning level are valid.** When you chose a model, the runtime says whether your account has it
+4. **The model and the reasoning level are valid.** When you chose a model, the runtime says whether your account has it
    and what it can do. A model that is not offered to you, that is switched off for your account, that cannot call
    tools, or that does not offer the reasoning level that you chose is refused with the explanation of the AI library,
    for example "Model 'x' does not support reasoning effort 'bogus'. Supported: low, medium, high." (see *Choosing a
    Model*). A model that cannot see pictures is a warning and the copilot still works. With no model chosen the check
-   ends with "GitHub Copilot CLI {version} is ready."; with one it ends with "... is ready with the model {id}."
+   ends with "GitHub Copilot CLI {version} is ready." and the account sentence; with one it ends with "... is ready with
+   the model {id}." and the account sentence.
 
-For GitHub Enterprise with data residency, the AI library also honors the `COPILOT_GH_HOST` environment variable.
-CanvasPilot never stores, shows, or logs a token. To find out whether the GitHub CLI is signed in it only asks whether
-`gh auth token` prints something, and it forgets the answer's text at once. There is no field for a token in the
-settings.
+CanvasPilot never stores, shows, or logs a token. It does not run the GitHub CLI itself, and there is no field for a
+token in the settings.
 
 The model of the AI Provider page is chosen from the list of the models of your account (see *Choosing a Model*). Leave
 it empty to use the default model of the Copilot runtime. The runtime keeps its own data, such as its sessions, in
@@ -702,15 +714,21 @@ If you keep the tool somewhere else, enter its full path in **GitHub Copilot com
 enter wins over the search and is the only candidate: it must be an existing `.exe`, CanvasPilot checks its version, and
 if it fails the message says why and CanvasPilot does not fall back to the search. Leave the field empty to search.
 
-*Verified:* a short real turn with Copilot CLI 1.0.114 and a signed-in GitHub CLI listed the project files and rendered
-a picture. Other setups, such as other sign-in methods and other versions, have not been checked on a real machine.
+*Verified:* short real turns with Copilot CLI 1.0.114 listed the project files and rendered a picture, with the runtime
+signed in through the GitHub CLI and through the sign-in of the Copilot CLI (`/login`, on a GitHub Enterprise Cloud
+host, with no GitHub CLI and no token variable). Other setups, such as a token variable and other versions, have not
+been checked on a real machine.
 
 ## Check Connection and the Banner
 
 **Check connection** is on the AI Provider page. It checks the entries as they are in the dialog, before you choose OK
 or Apply, and it always looks again: it does not reuse the earlier search for the Copilot CLI. The button is unavailable
 while an entry is invalid (the page marks it in red) or a check is running, and the result is removed when you change an
-entry. The conversation pane shows the result of the check for the saved settings in its **banner**, with **Open
+entry. For GitHub Copilot that can be used, the result also says which account the copilot uses, for example "GitHub
+Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in)." The pill in the title bar shows
+the same sentence when you pause the pointer on it. If that is not the account that you expect, see the topics about
+signing in in *Troubleshooting*. The conversation pane shows the result of the check for the saved settings in its
+**banner**, with **Open
 Settings** and **Check again**. After you change the provider settings, the banner checks again by itself.
 
 # Working with the Copilot
@@ -1312,10 +1330,25 @@ Copilot CLI Is Used*).
 **The banner says Copilot CLI is older than 1.0.113.** Run `winget upgrade GitHub.Copilot`, then choose **Check
 connection**.
 
-**The banner says Copilot is not signed in for CanvasPilot.** Sign in with `gh auth login`, or set the environment
-variable `COPILOT_GITHUB_TOKEN` (`GH_TOKEN` or `GITHUB_TOKEN` also work), then close and start CanvasPilot again if you
-set a variable, and choose **Check connection**. The sign-in that you made inside the Copilot CLI with `/login` does not
-apply to CanvasPilot.
+**The banner says Copilot is not signed in for CanvasPilot.** Sign in with the Copilot CLI: run `copilot` in a terminal,
+type `/login`, and follow the steps, then choose **Check connection** (you do not need to restart CanvasPilot).
+Instead you can sign in with `gh auth login` (with `gh` on the `PATH`), or set the environment variable
+`COPILOT_GITHUB_TOKEN` (`GH_TOKEN` or `GITHUB_TOKEN` also work) and then close and start CanvasPilot again. The words
+after "What was found:" tell what CanvasPilot's AI library looked at for each way of signing in and why it did not
+work. CanvasPilot takes the sign-in in this order: a token variable, the sign-in of the Copilot CLI, then the GitHub
+CLI.
+
+**Check connection shows the wrong account, or a new account is not used.** The sentence after "is ready" names the
+account, the host, and how Copilot signed in, for example "Signed in as octocat on github.com (Copilot CLI sign-in)." If
+you changed the account in the Copilot CLI (`/login`) or in the GitHub CLI, close and start CanvasPilot again, because
+the Copilot runtime keeps the account that it started with. A token variable wins over the sign-in of the Copilot CLI,
+so if the sentence says "(token variable)" and you wanted the other account, clear `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`,
+and `GITHUB_TOKEN` in the environment that starts CanvasPilot.
+
+**The banner says Copilot is not signed in, although I signed in with the Copilot CLI, and a token variable is set.** A
+token variable that holds a token that your GitHub host does not accept (for example a token for another host) is
+refused and stops the search, so the sign-in of the Copilot CLI is not tried. Clear the variable, and close and start
+CanvasPilot again.
 
 **The banner says the Copilot CLI is too old.** The Copilot runtime needs version 1.0.113 or later. Upgrade the Copilot
 CLI itself with the commands that the banner lists (for example `winget upgrade GitHub.Copilot`), then choose **Check
@@ -1349,7 +1382,8 @@ see your marks, your pictures, or its own drawings. Choose a model with pictures
 
 **The model list says that Ollama did not answer, or that Copilot is not signed in.** The list cannot be had, so the
 page shows the reason next to **Refresh models** and keeps the **Model name** box for typing. Fix the cause (start
-Ollama, sign in with `gh auth login`, correct the endpoint or the path), then choose **Refresh models**.
+Ollama, run `copilot` and type `/login` or sign in with `gh auth login`, correct the endpoint or the path), then choose
+**Refresh models**.
 
 **The banner warns about the context window.** The window that you set (or that the model supports) is below 16,384
 tokens, so drawings with pictures and tools may fail. Raise **Context window** to 32,768 on the AI Provider page, or

@@ -22,8 +22,7 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 
 /// <summary>
 ///     Reads environment variables of the running process, as a seam so that the code that depends on them (the Copilot CLI
-///     locator reads <c>PATH</c> and <c>LOCALAPPDATA</c>; the credential check of the readiness checks reads the token
-///     variables) can be tested without changing the environment of the test run.
+///     locator reads <c>PATH</c> and <c>LOCALAPPDATA</c>) can be tested without changing the environment of the test run.
 /// </summary>
 public interface IEnvironmentReader
 {

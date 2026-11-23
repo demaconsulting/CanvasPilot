@@ -221,18 +221,16 @@ until the menu is open. The notice is not saved.
 
 **Readiness.** `RefreshReadinessAsync` asks `IAgentService.GetReadinessAsync`, numbers the check, sets
 `IsCheckingReadiness` while it runs (and clears it when the check ends or is cancelled, but only for the latest check),
-and shows the answer
-only when no later check was started and the panel is not disposed: `Readiness` holds the latest report, which includes
-the answer that everything is ready and is what the provider pill of the title bar shows, `HasReadinessIssue` is true
-for every status other
-than `Ready` (the warning for a small context window included, which does not block sending), and `ReadinessMessage` is
-the sentence of the report, which is the actionable sentence of the Agent subsystem, such as the one that says that
-Copilot is not signed in for CanvasPilot and how to sign in. A check that throws is logged by the type of the exception
-and shown as "The
-copilot could not be checked: ..."; cancellation shows nothing. The view calls it when it is shown, `CheckAgainCommand`
-calls it from the banner, and whoever knows the settings (the composition root) calls it when they change; the panel
-does not depend on the Settings subsystem. `OpenSettingsCommand` raises `OpenSettingsRequested`, which the window shell
-turns into its own command that opens the settings.
+and shows the answer only when no later check was started and the panel is not disposed: `Readiness` holds the latest
+report, which includes the answer that everything is ready and is what the provider pill of the title bar shows,
+`HasReadinessIssue` is true for every status other than `Ready` (the warning for a small context window included, which
+does not block sending), and `ReadinessMessage` is the sentence of the report, which is the actionable sentence of the
+Agent subsystem, such as the one that says that Copilot is not signed in for CanvasPilot and to run `copilot` and type
+`/login` to sign in (or to use the GitHub CLI or a token variable instead). A check that throws is logged by the type of
+the exception and shown as "The copilot could not be checked: ..."; cancellation shows nothing. The view calls it when
+it is shown, `CheckAgainCommand` calls it from the banner, and whoever knows the settings (the composition root) calls
+it when they change; the panel does not depend on the Settings subsystem. `OpenSettingsCommand` raises
+`OpenSettingsRequested`, which the window shell turns into its own command that opens the settings.
 
 **Hold to talk in the view.** `BeginHold` starts a hold, when none is held and `CanTalk` is true, by calling
 `BeginPushToTalkAsync` and sets the flag; on the press it also captures the pointer to the button. `EndHold` clears the

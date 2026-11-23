@@ -32,9 +32,11 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         The runtime is started with the installed CLI as its source and the full path that the locator found (the
 ///         setting of the user first) as the CLI to run, so that nothing is bundled or downloaded. The folder for its data
 ///         is the one of the request, or the one that the starter was made with, and is never a folder of a project. The
-///         starter passes no token: the runtime signs in from the environment of the application (<c>COPILOT_GITHUB_TOKEN</c>,
-///         <c>GH_TOKEN</c>, or <c>GITHUB_TOKEN</c>) or from a signed-in GitHub CLI (<c>gh auth login</c>), and the sign-in
-///         of the Copilot CLI itself (<c>/login</c>) is not used by the AI library. No token is read, kept, or logged here.
+///         starter passes no token and leaves the other sign-in options at the defaults of the AI library, so the runtime
+///         signs in from the first source that applies: a token variable of the environment of the application
+///         (<c>COPILOT_GITHUB_TOKEN</c>, <c>GH_TOKEN</c>, or <c>GITHUB_TOKEN</c>), the sign-in of the Copilot CLI itself
+///         (run <c>copilot</c>, then <c>/login</c>), a sign-in stored in the data folder, or a signed-in GitHub CLI
+///         (<c>gh auth login</c>). No host, token provider, or switch is passed. No token is read, kept, or logged here.
 ///     </para>
 ///     <para>
 ///         One runtime is shared, because two runtimes must not use one data folder. A start while the runtime runs on the
@@ -52,11 +54,17 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 public sealed partial class CopilotRuntimeStarter : ICopilotRuntimeStarter, IAsyncDisposable
 {
     /// <summary>
-    ///     The sentence for a runtime that is not signed in. It names the ways that work and says that the sign-in of the
-    ///     Copilot CLI does not apply, because a user who is signed in to the CLI otherwise expects it to.
+    ///     The sentence for a runtime that is not signed in. It tells the user to sign in the way that the Copilot CLI
+    ///     does (<c>copilot</c>, then <c>/login</c>), which is the way that a user who installed the CLI expects, and names
+    ///     the GitHub CLI and the token variables only as alternatives.
     /// </summary>
     public const string NotSignedInMessage =
-        "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to the Copilot CLI with /login does not apply to CanvasPilot.";
+        "Copilot is not signed in for CanvasPilot. Run `copilot`, then type `/login` to sign in (or sign in with `gh auth login`, or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection.";
+
+    /// <summary>
+    ///     The words that introduce the digest of what the AI library found when it looked for a sign-in.
+    /// </summary>
+    private const string FoundPrefix = " What was found: ";
 
     /// <summary>
     ///     The beginning of the sentence for a CLI that cannot be used, which the cause follows.
@@ -217,7 +225,7 @@ public sealed partial class CopilotRuntimeStarter : ICopilotRuntimeStarter, IAsy
         // The library explains each cause in its own words and has no type for them, so the cause is told by the words
         if (message.Contains("is not signed in", StringComparison.OrdinalIgnoreCase))
         {
-            return new CopilotStartResult(CopilotStartStatus.NotSignedIn, NotSignedInMessage);
+            return new CopilotStartResult(CopilotStartStatus.NotSignedIn, NotSignedInMessage + DescribeFindings(message));
         }
 
         if (message.Contains("too old", StringComparison.OrdinalIgnoreCase)
@@ -229,6 +237,39 @@ public sealed partial class CopilotRuntimeStarter : ICopilotRuntimeStarter, IAsy
         return new CopilotStartResult(
             CopilotStartStatus.Failed,
             string.IsNullOrWhiteSpace(message) ? StartFailedMessage : message);
+    }
+
+    /// <summary>
+    ///     Words, in one line, what the AI library found at each place where it looked for a sign-in.
+    /// </summary>
+    /// <remarks>
+    ///     The library lists its findings as indented, numbered lines, one per place it looked, after a line that says it
+    ///     tried these places in order, and ends with its own advice on how to sign in. The advice is left out because the
+    ///     sentence of the starter gives it, and so is the first place (the token that a host passes), which this
+    ///     application never uses. A report message is one line that ends with a full stop, so the findings are joined
+    ///     with semicolons. The library has no typed form of the findings, so the lines are recognized by their shape, and
+    ///     a text that has none leaves the sentence alone. The library has redacted every token from its text already.
+    /// </remarks>
+    /// <param name="message">The message of the exception of the library.</param>
+    /// <returns>The words that follow the sentence, which begin with a space; an empty string when no findings were found.</returns>
+    private static string DescribeFindings(string message)
+    {
+        // Find the numbered lines, skipping the first place, which is never the one in use here
+        var findings = new List<string>();
+        foreach (var line in message.Split('\n', StringSplitOptions.TrimEntries))
+        {
+            var match = FindingLine().Match(line);
+            if (match.Success && match.Groups[1].Value != "1")
+            {
+                var finding = match.Groups[2].Value.Trim().TrimEnd('.', ' ');
+                if (finding.Length > 0)
+                {
+                    findings.Add(finding);
+                }
+            }
+        }
+
+        return findings.Count == 0 ? string.Empty : FoundPrefix + string.Join("; ", findings) + ".";
     }
 
     /// <summary>
@@ -272,4 +313,11 @@ public sealed partial class CopilotRuntimeStarter : ICopilotRuntimeStarter, IAsy
     /// <returns>The pattern.</returns>
     [GeneratedRegex(@"\s*\(Parameter '[^']*'\)\s*$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex ParameterSuffix();
+
+    /// <summary>
+    ///     Matches a numbered line of the findings of the AI library, such as <c>3. Copilot CLI sign-in: no configuration</c>.
+    /// </summary>
+    /// <returns>The pattern; the first group is the number and the second is the finding.</returns>
+    [GeneratedRegex(@"^(\d{1,2})\.\s+(\S.*)$", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex FindingLine();
 }

@@ -122,17 +122,20 @@ its list of pages and above the page.
 
 **View**: `AiProviderSettingsPageView` is an Avalonia user control in a scroll viewer with up to three raised cards,
 each with a section title and, above each entry, a label in the label look. The card `Provider and model` has a combo
-box for the provider, the combo box of the models (visible only while there is a list, with disabled entries for
-models that cannot be used), the text box for the model name, the Refresh models button with the sentence about the
-list, the details and the warning of the chosen model, and a combo box of the reasoning levels (enabled by the model)
-with its note. The card `Connection` has the text boxes for the context window, the Ollama endpoint, and the path of
-the Copilot tool, with their notes. The card `Check` is shown only when there is a check; it has the Check connection
-button and the answer. Notes and sentences use the hint look, warnings the caution look, and error lines the error
-look and are visible only when their message is not empty; the answer of the check is in the danger color when the
-provider cannot be used. No color is written in the view: all come from the shared styles of the controls and the
-design tokens. Every entry has an automation name (`Provider`, `Model`, `Model name`, `Reasoning level`, `Context
-window in tokens`, `Ollama endpoint`, and `GitHub Copilot command-line tool path`). Controls carry automation
-identifiers (`AiProviderComboBox`, `AiModelComboBox`, `AiModelNameTextBox`, `AiRefreshModelsButton`,
+box for the provider, the combo box of the models (visible only while there is a list, with disabled entries for models
+that cannot be used), the text box for the model name, the Refresh models button with the sentence about the list, the
+details and the warning of the chosen model, and a combo box of the reasoning levels (enabled by the model) with its
+note. The card `Connection` has the text boxes for the context window, the Ollama endpoint, and the path of the Copilot
+tool, with their notes. The card `Check` is shown only when there is a check; it has the Check connection button and the
+answer. The answer is the sentence of the provider check, which for GitHub Copilot that can be used names the account,
+the host, and the kind of sign-in (for example "GitHub Copilot CLI {version} is ready. Signed in as octocat on
+github.com (Copilot CLI sign-in)."), and for Copilot that is not signed in is the sentence that says to run `copilot`
+and type `/login`, with what the library found. Notes and sentences use the hint look, warnings the caution look, and
+error lines the error look and are visible only when their message is not empty; the answer of the check is in the
+danger color when the provider cannot be used. No color is written in the view: all come from the shared styles of the
+controls and the design tokens. Every entry has an automation name (`Provider`, `Model`, `Model name`,
+`Reasoning level`, `Context window in tokens`, `Ollama endpoint`, and `GitHub Copilot command-line tool path`). Controls
+carry automation identifiers (`AiProviderComboBox`, `AiModelComboBox`, `AiModelNameTextBox`, `AiRefreshModelsButton`,
 `AiModelListMessage`, `AiModelDetails`, `AiModelWarning`, `AiContextWindowTextBox`, `AiContextWindowWarning`,
 `AiContextWindowNote`, `AiReasoningEffortComboBox`, `AiReasoningEffortNote`, `AiOllamaEndpointTextBox`,
 `AiCopilotCliPathTextBox`, `AiCopilotCliPathNote`, `AiCheckConnectionButton`, `AiCheckConnectionResult`, and

@@ -98,7 +98,8 @@ the manual verification in the verification of the system).
 **The installed CLI is run, never bundled.** The runtime runs on the CLI that the user installed, at the path that the
 locator found, so nothing is shipped or downloaded: the packaging guards (`CopilotSkipCliDownload`, the FileAssert test
 `Copilot_RuntimeNotPublished`, and the OTS test that the build output holds no Copilot runtime file) are unchanged. The
-sign-in that the runtime uses and its limits are described in the design of the `CopilotRuntimeStarter` unit.
+sign-in that the runtime uses and the way that its source, login, and host are reported are described in the design of
+the `CopilotRuntimeStarter` unit.
 
 #### Ownership
 
@@ -152,7 +153,8 @@ The agent can call only the supplied tools, which the registry has confined to t
 enforced twice: the AI library derives the permissions from the same list and installs its default-deny handler, and the
 factory supplies no handler of its own. The application starts no process itself: only the starter does, on the CLI that
 the locator found by its rule. The factory holds no credential and passes no token; the credentials that the Copilot
-runtime uses are found by the runtime in the environment or in the GitHub CLI. The address of Ollama is the user's
+runtime uses are found by the runtime itself (in the environment, in the sign-in of the Copilot CLI, or in the GitHub
+CLI). The address of Ollama is the user's
 setting, used as given.
 
 #### Dependencies

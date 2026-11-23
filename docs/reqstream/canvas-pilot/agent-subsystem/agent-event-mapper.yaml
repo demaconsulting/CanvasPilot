@@ -73,7 +73,8 @@ sections:
                 title: >-
                   The AgentEventMapper shall turn the exception of a failed turn into a failure of a named kind with a
                   sentence that says what to do, searching the exception and its inner exceptions by type and then by the
-                  words of the message: a refused sign-in (for GitHub Copilot the sentence that names gh auth login and
+                  words of the message: a refused sign-in (for GitHub Copilot the sentence that tells the user to run copilot
+                  and type /login and names gh auth login and
                   COPILOT_GITHUB_TOKEN), a protocol version that the Copilot CLI and the AI library do not share (the
                   sentence names winget upgrade), a model that the provider does not have (for Ollama, which reports only
                   a 404 status, the sentence names ollama pull and the model), a connection that was lost or timed out,

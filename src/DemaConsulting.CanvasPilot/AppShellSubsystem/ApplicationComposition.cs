@@ -330,7 +330,7 @@ public sealed class ApplicationComposition : IDisposable
     ///     GitHub Copilot on the installed CLI). The composition passes it to the AI copilot, which disposes it.
     /// </param>
     /// <param name="processRunner">
-    ///     Runs the Copilot CLI and the GitHub CLI for the readiness check, or <see langword="null" /> for the real
+    ///     Runs the Copilot CLI for the readiness check, or <see langword="null" /> for the real
     ///     processes.
     /// </param>
     /// <param name="ollamaProbe">Asks the Ollama server for its models, or <see langword="null" /> for the real server.</param>
@@ -470,7 +470,7 @@ public sealed class ApplicationComposition : IDisposable
             // The catalogs of Ollama are shared as well, so that the check, the agents, and the model list describe the
             // models of the server once
             var catalogs = ollamaCatalogs ?? new OllamaModelCatalogs();
-            readiness = new AgentReadiness(locator, starter, runner, environmentReader, fileSystem, ollamaProbe, catalogs);
+            readiness = new AgentReadiness(locator, starter, ollamaProbe, catalogs);
             modelSource = new ProviderModelCatalog(locator, starter, catalogs);
             var projectTools = new ProjectTools(renderer, styleSelection, logger: logger);
             var registry = new AgentToolRegistry(
