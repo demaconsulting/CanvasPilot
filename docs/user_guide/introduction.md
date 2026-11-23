@@ -119,7 +119,7 @@ Two pills at the right of the title bar show what the project and the copilot us
   "sign-in needed", "CLI not found", or "Ollama not running" means that something needs your attention; a red dot with
   "unavailable" means that the provider cannot be used. Pause the pointer on the pill to read the full sentence, which
   is the same sentence as in the banner of the conversation and as the answer of **Check connection**. For Copilot that
-  can be used it ends with the account that Copilot signed in as, for example "Signed in as mnixon on github.com
+  can be used it ends with the account that Copilot signed in as, for example "Signed in as octocat on github.com
   (Copilot CLI sign-in)." Choose the pill, or focus it and press Enter, to open the
   settings on the AI Provider page (see *Setting Up an AI Provider*).
 
@@ -615,7 +615,7 @@ that fails:
    Run `winget upgrade GitHub.Copilot`."
 3. **The runtime starts on that CLI and signs in.** The start of the runtime decides the sign-in, so there is no
    separate check of credentials; the first start can take a few seconds longer than before. Then the check says what it
-   found, for example "GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in)."
+   found, for example "GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in)."
    (with the version that was found, the account, the host, and how it signed in: "Copilot CLI sign-in", "token
    variable", or "GitHub CLI sign-in"; never the token itself). Otherwise it shows one of these:
    - The CLI is too old: the message says to upgrade the Copilot CLI itself and lists the commands. Running `copilot
@@ -725,7 +725,7 @@ been checked on a real machine.
 or Apply, and it always looks again: it does not reuse the earlier search for the Copilot CLI. The button is unavailable
 while an entry is invalid (the page marks it in red) or a check is running, and the result is removed when you change an
 entry. For GitHub Copilot that can be used, the result also says which account the copilot uses, for example "GitHub
-Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in)." The pill in the title bar shows
+Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in)." The pill in the title bar shows
 the same sentence when you pause the pointer on it. If that is not the account that you expect, see the topics about
 signing in in *Troubleshooting*. The conversation pane shows the result of the check for the saved settings in its
 **banner**, with **Open
@@ -1339,7 +1339,7 @@ work. CanvasPilot takes the sign-in in this order: a token variable, the sign-in
 CLI.
 
 **Check connection shows the wrong account, or a new account is not used.** The sentence after "is ready" names the
-account, the host, and how Copilot signed in, for example "Signed in as mnixon on github.com (Copilot CLI sign-in)." If
+account, the host, and how Copilot signed in, for example "Signed in as octocat on github.com (Copilot CLI sign-in)." If
 you changed the account in the Copilot CLI (`/login`) or in the GitHub CLI, close and start CanvasPilot again, because
 the Copilot runtime keeps the account that it started with. A token variable wins over the sign-in of the Copilot CLI,
 so if the sentence says "(token variable)" and you wanted the other account, clear `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`,

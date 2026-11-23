@@ -365,7 +365,7 @@ check of the CLI and the sign-in, and it goes through the single seam `ICopilotR
   credential. The host follows the account that signed in, so an account on a GitHub Enterprise Cloud host works with no
   setting. A token variable that holds a token that the host does not accept ends the search, so the sign-in of the CLI
   is not tried then; the user clears the variable. The runtime reports the kind of sign-in, the login, and the host, and
-  the sentence of Check connection and the tooltip of the provider pill word them (for example, "Signed in as mnixon on
+  the sentence of Check connection and the tooltip of the provider pill word them (for example, "Signed in as octocat on
   github.com (Copilot CLI sign-in)."). The runtime is shared, so an account that is changed in the CLI is seen after
   CanvasPilot is restarted. A runtime that is not signed in is the sentence "Copilot is not signed in for CanvasPilot"
   that says to run `copilot` and type `/login` (or to use `gh auth login` or a token variable instead), followed by a

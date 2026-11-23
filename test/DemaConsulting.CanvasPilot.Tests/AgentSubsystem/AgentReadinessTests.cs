@@ -36,13 +36,13 @@ public sealed class AgentReadinessTests
     private const string SecretToken = "gho_Secret_Sentinel_0123456789";
 
     /// <summary>The sentence that tells how a runtime signed in through the sign-in of the Copilot CLI.</summary>
-    private const string CliSignInSentence = "Signed in as mnixon on github.com (Copilot CLI sign-in).";
+    private const string CliSignInSentence = "Signed in as octocat on github.com (Copilot CLI sign-in).";
 
     /// <summary>The settings for GitHub Copilot with automatic detection.</summary>
     private static readonly AiProviderSettings CopilotSettings = new() { Provider = AiProviderKind.GitHubCopilot };
 
     /// <summary>How a runtime signed in through the sign-in of the Copilot CLI.</summary>
-    private static readonly CopilotSignInInfo CliSignIn = new(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com");
+    private static readonly CopilotSignInInfo CliSignIn = new(CopilotSignInSource.CopilotCli, "octocat", "https://github.com");
 
     /// <summary>
     ///     Makes the settings for Ollama with a model and a context window.

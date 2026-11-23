@@ -41,8 +41,8 @@ separated detail, the tooltip of the check, and the accessible name. This scenar
 `ProviderPill_CheckThenReady_ShowsCheckingThenProviderAndModel`.
 
 **ProviderPill_ReadyWithSignIn_ToolTipNamesTheAccountAndTheKindOfSignIn**: A ready check whose sentence is "GitHub
-Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in)." gives a ready pill whose tooltip
-is exactly that sentence, so the user sees the account and the kind of sign-in. This scenario is tested by
+Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in)." gives a ready pill whose
+tooltip is exactly that sentence, so the user sees the account and the kind of sign-in. This scenario is tested by
 `ProviderPill_ReadyWithSignIn_ToolTipNamesTheAccountAndTheKindOfSignIn`.
 
 **ProviderPill_CheckFindsAProblem_SaysItInWordsAndPicksTheState**: For each result of the check that is not ready (not

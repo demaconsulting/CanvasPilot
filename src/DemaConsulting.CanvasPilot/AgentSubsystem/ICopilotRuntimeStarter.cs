@@ -42,7 +42,7 @@ public sealed record CopilotSignInInfo(CopilotSignInSource Source, string? Login
 {
     /// <summary>
     ///     Words how the runtime signed in as one sentence for the user, such as
-    ///     <c>Signed in as mnixon on github.com (Copilot CLI sign-in).</c>
+    ///     <c>Signed in as octocat on github.com (Copilot CLI sign-in).</c>
     /// </summary>
     /// <remarks>
     ///     The user needs to know which account and which kind of sign-in is in use, because a machine may offer several

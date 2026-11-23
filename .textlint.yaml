@@ -45,6 +45,7 @@ enableGlobDot: true
 # Project-specific technical terms and tool names
 words:
   - AARRGGBB
+  - octocat
   - CIEDE
   - CIELAB
   - mklink

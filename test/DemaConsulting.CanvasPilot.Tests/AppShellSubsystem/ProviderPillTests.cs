@@ -133,7 +133,7 @@ public sealed class ProviderPillTests : IDisposable
     public async Task ProviderPill_ReadyWithSignIn_ToolTipNamesTheAccountAndTheKindOfSignIn()
     {
         // Arrange: a check that is ready and says how Copilot signed in
-        const string sentence = "GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in).";
+        const string sentence = "GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in).";
         _agent.Readiness = new AgentReadinessReport(AgentReadinessStatus.Ready, sentence);
         using var pill = CreatePill();
 
@@ -143,7 +143,7 @@ public sealed class ProviderPillTests : IDisposable
         // Assert: the tooltip is the sentence of the check, with the account and the kind of sign-in
         Assert.Equal(ProviderPillState.Ready, pill.State);
         Assert.Equal(sentence, pill.ToolTipText);
-        Assert.Contains("mnixon on github.com (Copilot CLI sign-in)", pill.ToolTipText, StringComparison.Ordinal);
+        Assert.Contains("octocat on github.com (Copilot CLI sign-in)", pill.ToolTipText, StringComparison.Ordinal);
     }
 
     /// <summary>

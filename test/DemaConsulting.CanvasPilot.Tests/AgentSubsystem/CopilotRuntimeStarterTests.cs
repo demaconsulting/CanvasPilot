@@ -123,7 +123,7 @@ public sealed class CopilotRuntimeStarterTests
     public async Task CopilotRuntimeStarter_StartAsync_RuntimeSignedIn_TheSourceCarriesTheSignIn()
     {
         // Arrange: a runtime that signed in through the Copilot CLI
-        var signIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com");
+        var signIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "octocat", "https://github.com");
         var source = new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = signIn };
         await using var starter = new CopilotRuntimeStarter(DataDirectory, (_, _) => Task.FromResult<ICopilotAgentSource>(source));
 
@@ -143,13 +143,13 @@ public sealed class CopilotRuntimeStarterTests
     /// <param name="host">The host, or <see langword="null" />.</param>
     /// <param name="expected">The sentence.</param>
     [Theory]
-    [InlineData(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com", "Signed in as mnixon on github.com (Copilot CLI sign-in).")]
-    [InlineData(CopilotSignInSource.EnvironmentVariable, "mnixon", "https://example.ghe.com/", "Signed in as mnixon on example.ghe.com (token variable).")]
-    [InlineData(CopilotSignInSource.GitHubCli, "mnixon", "github.com", "Signed in as mnixon on github.com (GitHub CLI sign-in).")]
-    [InlineData(CopilotSignInSource.GitHubToken, "mnixon", null, "Signed in as mnixon (GitHub token).")]
+    [InlineData(CopilotSignInSource.CopilotCli, "octocat", "https://github.com", "Signed in as octocat on github.com (Copilot CLI sign-in).")]
+    [InlineData(CopilotSignInSource.EnvironmentVariable, "octocat", "https://example.ghe.com/", "Signed in as octocat on example.ghe.com (token variable).")]
+    [InlineData(CopilotSignInSource.GitHubCli, "octocat", "github.com", "Signed in as octocat on github.com (GitHub CLI sign-in).")]
+    [InlineData(CopilotSignInSource.GitHubToken, "octocat", null, "Signed in as octocat (GitHub token).")]
     [InlineData(CopilotSignInSource.GitHubTokenProvider, null, "https://github.com", "Signed in on github.com (GitHub token).")]
     [InlineData(CopilotSignInSource.DataDirectory, " ", " ", "Signed in (stored sign-in).")]
-    [InlineData(CopilotSignInSource.Unknown, "mnixon", "https://github.com", "Signed in as mnixon on github.com.")]
+    [InlineData(CopilotSignInSource.Unknown, "octocat", "https://github.com", "Signed in as octocat on github.com.")]
     [InlineData(CopilotSignInSource.Unknown, null, null, "")]
     public void CopilotSignInInfo_Describe_KnownParts_AreNamedAndUnknownPartsAreLeftOut(
         CopilotSignInSource source,

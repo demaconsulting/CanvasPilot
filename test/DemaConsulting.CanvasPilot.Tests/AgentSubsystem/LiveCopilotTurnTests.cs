@@ -372,7 +372,7 @@ public sealed class LiveCopilotTurnTests
             }
 
             Assert.Contains(signIn.Describe(), result.Message, StringComparison.Ordinal);
-            Assert.DoesNotMatch(@"gh[pousr]_|github_pat_", result.Message + summary);
+            Assert.DoesNotMatch(@"gh[a-z]_|github_pat_", result.Message + summary);
             foreach (var name in tokenVariables)
             {
                 var value = Environment.GetEnvironmentVariable(name);

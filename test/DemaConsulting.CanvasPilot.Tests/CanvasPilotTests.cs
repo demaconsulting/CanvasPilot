@@ -245,7 +245,7 @@ public sealed class CanvasPilotTests : IDisposable
         starter.Result = new CopilotStartResult(
             CopilotStartStatus.Started,
             "Started.",
-            new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com") });
+            new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "octocat", "https://github.com") });
         var signedIn = await readiness.GetReportAsync(service.Load().AiProvider, cancellationToken: token);
         service.Save(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3", ContextWindowTokens = 8192 } });
         var ollama = await readiness.GetReportAsync(new SettingsService(settingsFolder).Load().AiProvider, cancellationToken: token);
@@ -256,7 +256,7 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Contains("gh auth login", fresh.Message, StringComparison.Ordinal);
         Assert.Contains("COPILOT_GITHUB_TOKEN", fresh.Message, StringComparison.Ordinal);
         Assert.Equal(AgentReadinessStatus.Ready, signedIn.Status);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in).", signedIn.Message);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in).", signedIn.Message);
         Assert.Equal(AgentReadinessStatus.OllamaContextTooSmall, ollama.Status);
         Assert.True(ollama.IsUsable);
         Assert.Contains("Raise it in Settings (32,768 recommended)", ollama.Message, StringComparison.Ordinal);
@@ -638,7 +638,7 @@ public sealed class CanvasPilotTests : IDisposable
         app.Starter.Result = new CopilotStartResult(
             CopilotStartStatus.Started,
             "Started.",
-            new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com") });
+            new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "octocat", "https://github.com") });
         await page.CheckConnectionCommand.ExecuteAsync(null);
         var ready = (page.IsCheckConnectionOk, page.CheckConnectionResult);
         page.CopilotCliPath = @"C:\nowhere\copilot.exe";
@@ -654,7 +654,7 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Contains("/login", notSignedIn.CheckConnectionResult, StringComparison.Ordinal);
         Assert.Contains("gh auth login", notSignedIn.CheckConnectionResult, StringComparison.Ordinal);
         Assert.True(ready.IsCheckConnectionOk);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in).", ready.CheckConnectionResult);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in).", ready.CheckConnectionResult);
         Assert.False(wrongPath.IsCheckConnectionOk);
         Assert.Contains(@"C:\nowhere\copilot.exe", wrongPath.CheckConnectionResult, StringComparison.Ordinal);
         Assert.Equal(settingsBefore, app.Composition.Settings.Current.AiProvider);
@@ -668,12 +668,12 @@ public sealed class CanvasPilotTests : IDisposable
     [Fact]
     public async Task CanvasPilot_ReportProviderReadiness_CopilotSignedInWithCopilotCli_CheckConnectionAndPillTooltipNameTheAccountAndNoToken()
     {
-        // Arrange: the application over a runtime that signed in through the Copilot CLI as mnixon on github.com, on a
+        // Arrange: the application over a runtime that signed in through the Copilot CLI as octocat on github.com, on a
         // machine that also has a token variable whose value must never be shown
         const string secret = "gho_Secret_Sentinel_0123456789";
         var source = new FakeCopilotAgentSource(new ScriptedChatClient())
         {
-            SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com"),
+            SignIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "octocat", "https://github.com"),
         };
         var app = await ComposeCopilotAsync(
             scripted: false,
@@ -694,9 +694,9 @@ public sealed class CanvasPilotTests : IDisposable
 
         // Assert: both name the account, the host without its scheme, and the kind of sign-in, and neither has a token
         Assert.True(page.IsCheckConnectionOk);
-        Assert.Contains("mnixon on github.com", page.CheckConnectionResult, StringComparison.Ordinal);
+        Assert.Contains("octocat on github.com", page.CheckConnectionResult, StringComparison.Ordinal);
         Assert.Contains("Copilot CLI sign-in", page.CheckConnectionResult, StringComparison.Ordinal);
-        Assert.Contains("mnixon on github.com", tooltip, StringComparison.Ordinal);
+        Assert.Contains("octocat on github.com", tooltip, StringComparison.Ordinal);
         Assert.Contains("Copilot CLI sign-in", tooltip, StringComparison.Ordinal);
         Assert.DoesNotContain(secret, page.CheckConnectionResult, StringComparison.Ordinal);
         Assert.DoesNotContain(secret, tooltip, StringComparison.Ordinal);

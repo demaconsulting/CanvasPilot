@@ -324,12 +324,12 @@ steps are in the verification of the unit or subsystem named at each check.
         `LiveCopilotTurn_AgentService_ShellCommandRequest_IsRefusedAndRunsNothing`,
         `LiveCopilotTurn_ComposedApplication_ChatWritesADrawingOnTheSharedRuntime`,
         `LiveCopilotTurn_SettingsPage_ListsModelsAndTheChosenModelAndEffortRun`, and the new
-        `LiveCopilotTurn_Readiness_ReportsHowCopilotSignedIn`. No token is recorded here or by the tests; the login and the host
-        are written as placeholders.
-        1. *Run 1 (the normal machine).* `gh` was on the `PATH` and was signed in only to `<GitHub Enterprise host>` (the same
-           account), no token variable was set, and `COPILOT_HOME` was not set. The runtime reported the sign-in source
-           `CopilotCli`, the login `<login>`, and the host `<GitHub Enterprise host>`. Check connection (the
-           readiness check over the real locator and starter) was usable in 3.5 seconds, with the sentence "GitHub
+        `LiveCopilotTurn_Readiness_ReportsHowCopilotSignedIn`. No token is recorded here or by the tests; the login and
+        the host are written as placeholders.
+        1. *Run 1 (the normal machine).* `gh` was on the `PATH` and was signed in only to `<GitHub Enterprise host>`
+           (the same account), no token variable was set, and `COPILOT_HOME` was not set. The runtime reported the
+           sign-in source `CopilotCli`, the login `<login>`, and the host `<GitHub Enterprise host>`. Check connection
+           (the readiness check over the real locator and starter) was usable in 3.5 seconds, with the sentence "GitHub
            Copilot CLI 1.0.114 is ready. Signed in as <login> on <GitHub Enterprise host> (Copilot CLI sign-in)."
         2. *Run 2 (only the sign-in of the Copilot CLI is left).* `gh` was hidden from the `PATH`,
            `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN` were cleared, and
@@ -683,11 +683,11 @@ not found, names the path, and no program is run, so the installed CLI is not us
 installation (GitHub Copilot) are loaded by a settings service and checked on the development machine, whose Copilot CLI
 is good, with a starter that says that the runtime finds no sign-in: the status is not signed in and the sentence names
 `/login`, `gh auth login`, and `COPILOT_GITHUB_TOKEN`. After the starter is changed to start a runtime that signed in as
-`mnixon` on `https://github.com` through the Copilot CLI (the user signed in), the same check reports Copilot ready with
-"GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in)." A settings file that
-holds an Ollama choice with a window of 8,192 tokens is saved and loaded by a new service; against a scripted server
-that has the model, the result is the warning status, which can run a turn, with the sentence that tells the user to
-raise the window in Settings to the recommended 32,768. This scenario is tested by
+`octocat` on `https://github.com` through the Copilot CLI (the user signed in), the same check reports Copilot ready
+with "GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in)." A settings file
+that holds an Ollama choice with a window of 8,192 tokens is saved and loaded by a new service; against a scripted
+server that has the model, the result is the warning status, which can run a turn, with the sentence that tells the user
+to raise the window in Settings to the recommended 32,768. This scenario is tested by
 `CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach`.
 
 **CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt**: The application is
@@ -705,15 +705,14 @@ settings dialog of the composed application is opened and the AI Provider page c
 stand-in server has: Check connection says that Ollama is running with the model; with the server not answering it says
 that Ollama did not answer. With GitHub Copilot chosen on the fake machine, with a starter that finds no sign-in, it
 names `/login` and `gh auth login`; after the starter is changed to start a runtime that signed in through the Copilot
-CLI it says "GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (Copilot CLI sign-in)."; with a path
-of a file that does not exist it names the
-path. The stored settings are the same afterwards. This scenario is tested by
-`CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach`.
+CLI it says "GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (Copilot CLI sign-in)."; with a
+path of a file that does not exist it names the path. The stored settings are the same afterwards. This scenario is
+tested by `CanvasPilot_ReportProviderReadiness_CheckConnection_OllamaStubAndCopilotFakeMachine_ShowOneSentenceEach`.
 
 **CanvasPilot_ReportProviderReadiness_CopilotSignedInWithCopilotCli_CheckConnectionAndPillTooltipNameTheAccountAndNoToken**:
-The application is composed over a runtime that signed in as `mnixon` on `https://github.com` through the Copilot CLI,
+The application is composed over a runtime that signed in as `octocat` on `https://github.com` through the Copilot CLI,
 on a machine whose environment also holds a token variable with a sentinel value. Check connection on the AI Provider
-page succeeds and its result names "mnixon on github.com" and "Copilot CLI sign-in"; after the chat panel checks the
+page succeeds and its result names "octocat on github.com" and "Copilot CLI sign-in"; after the chat panel checks the
 provider, the tooltip of the provider pill of the title bar names the same account, host, and kind of sign-in; and the
 sentinel is in neither. This scenario is tested by
 `CanvasPilot_ReportProviderReadiness_CopilotSignedInWithCopilotCli_CheckConnectionAndPillTooltipNameTheAccountAndNoToken`.

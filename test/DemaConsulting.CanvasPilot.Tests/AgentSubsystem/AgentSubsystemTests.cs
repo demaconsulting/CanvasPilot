@@ -192,7 +192,7 @@ public sealed class AgentSubsystemTests
         var probe = new FakeOllamaProbe { Models = new OllamaModelList(true, ["gemma3:latest"]), ContextLength = 131072 };
         var source = new FakeCopilotAgentSource(new ScriptedChatClient())
         {
-            SignIn = new CopilotSignInInfo(CopilotSignInSource.GitHubCli, "mnixon", "https://github.com"),
+            SignIn = new CopilotSignInInfo(CopilotSignInSource.GitHubCli, "octocat", "https://github.com"),
         };
         var starter = new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.Started, "Started.", source));
         IProviderCheck check = new AgentReadiness(
@@ -208,7 +208,7 @@ public sealed class AgentSubsystemTests
 
         // Assert: Copilot is ready on the CLI that was found and names its sign-in; Ollama is usable and warns about the window
         Assert.True(copilot.IsUsable);
-        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (GitHub CLI sign-in).", copilot.Message);
+        Assert.Equal("GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (GitHub CLI sign-in).", copilot.Message);
         Assert.Equal(DevMachine.RealCli, Assert.Single(starter.Requests).CliPath);
         Assert.True(ollama.IsUsable);
         Assert.Contains("8,192", ollama.Message, StringComparison.Ordinal);

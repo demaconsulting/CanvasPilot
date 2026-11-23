@@ -41,9 +41,9 @@ temporary project folder and delete it.
 - Readiness reports pass through the interface unchanged, and a reset of the conversation reaches the service.
 - On a machine with the installed Copilot CLI and the VS Code shim the CLI is found and the shim is not; a machine with
   only the shim is told that only the shim was found; a path chosen in the settings is used.
-- Through `IProviderCheck`, GitHub Copilot with a runtime that starts (and reports that it signed in as `mnixon` through
-  the GitHub CLI) is usable and says "GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (GitHub
-  CLI sign-in).", and Ollama with a window of 8,192 tokens is usable and warns about it.
+- Through `IProviderCheck`, GitHub Copilot with a runtime that starts (and reports that it signed in as `octocat`
+  through the GitHub CLI) is usable and says "GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com
+  (GitHub CLI sign-in).", and Ollama with a window of 8,192 tokens is usable and warns about it.
 - The tools built for a project are only the application's own tools, in a fixed order, the knowledge tool answers from
   the real cards, and the policy that every pack receives permits a picture file of the project and refuses the data
   folder, a project file, and every place outside the project.
@@ -161,10 +161,10 @@ project folder as the working directory, and no model. This scenario is tested b
 `AgentSubsystem_ConverseWithCopilot_RefusingAndRunningStarter_RefusalGivesNoAgentAndRuntimeGivesAnAgentWithTheProjectTools`.
 
 **AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface**: The development machine has a
-good Copilot CLI, a starter that starts a runtime that reports that it signed in as `mnixon` on `https://github.com`
+good Copilot CLI, a starter that starts a runtime that reports that it signed in as `octocat` on `https://github.com`
 through the GitHub CLI, and a
 scripted Ollama server has one model with a large window. Asked through `IProviderCheck`, GitHub Copilot is usable with
-the sentence "GitHub Copilot CLI 1.0.114 is ready. Signed in as mnixon on github.com (GitHub CLI sign-in)." and the
+the sentence "GitHub Copilot CLI 1.0.114 is ready. Signed in as octocat on github.com (GitHub CLI sign-in)." and the
 starter was asked once with the path of the CLI that the
 locator found; Ollama with a configured window of 8,192 tokens is usable and the sentence names the window. This
 scenario is tested by `AgentSubsystem_CheckProviderReadiness_BothProviders_ReportThroughTheSettingsInterface`.

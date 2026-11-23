@@ -73,13 +73,13 @@ its source, the path of the request as the CLI, the folder of the starter, the l
 provider, no host, and the sign-in of the Copilot CLI allowed. This
 scenario is tested by `CopilotRuntimeStarter_StartAsync_InstalledCli_PassesThePathTheFolderAndNoToken`.
 
-**CopilotRuntimeStarter_StartAsync_RuntimeSignedIn_TheSourceCarriesTheSignIn**: A runtime that signed in as `mnixon` on
+**CopilotRuntimeStarter_StartAsync_RuntimeSignedIn_TheSourceCarriesTheSignIn**: A runtime that signed in as `octocat` on
 `https://github.com` through the Copilot CLI. The answer of the start carries that sign-in on its source of agents,
 unchanged. This scenario is tested by `CopilotRuntimeStarter_StartAsync_RuntimeSignedIn_TheSourceCarriesTheSignIn`.
 
 **CopilotSignInInfo_Describe_KnownParts_AreNamedAndUnknownPartsAreLeftOut**: Eight combinations of source, login, and
-host: the Copilot CLI sign-in gives "Signed in as mnixon on github.com (Copilot CLI sign-in)."; a token variable with a
-host that has a scheme and a closing slash gives "Signed in as mnixon on example.ghe.com (token variable)."; a host
+host: the Copilot CLI sign-in gives "Signed in as octocat on github.com (Copilot CLI sign-in)."; a token variable with a
+host that has a scheme and a closing slash gives "Signed in as octocat on example.ghe.com (token variable)."; a host
 without a scheme and the GitHub CLI give "... (GitHub CLI sign-in)."; a token and a token provider give "(GitHub token)"
 with the login or the host missing; a stored sign-in with blank login and host gives "Signed in (stored sign-in).";
 an unknown source leaves out the parentheses; and nothing known gives an empty string. This scenario is tested by

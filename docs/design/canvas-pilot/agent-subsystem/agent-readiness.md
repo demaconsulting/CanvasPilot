@@ -82,7 +82,7 @@ The sentences (exact text; the design and the tests are the same words):
   usable.
 
 **The sign-in sentence.** The runtime reports the kind of sign-in, the login, and the host, and
-`CopilotSignInInfo.Describe` words them, for example "Signed in as mnixon on github.com (Copilot CLI sign-in)." The
+`CopilotSignInInfo.Describe` words them, for example "Signed in as octocat on github.com (Copilot CLI sign-in)." The
 unit appends the sentence after a space, so Check connection and the tooltip of the provider pill (which shows the
 sentence of the report) tell the user which account the copilot uses, because a machine may offer several. The unit
 appends nothing when the runtime does not say how it signed in, so the sentence of a ready provider is then exactly the

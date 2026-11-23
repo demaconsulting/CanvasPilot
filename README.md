@@ -89,7 +89,7 @@ CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
      `/login` (or sign in with the GitHub CLI, `gh auth login`, or set `COPILOT_GITHUB_TOKEN`; `GH_TOKEN` or
      `GITHUB_TOKEN` also work). CanvasPilot finds the CLI, checks its version, and starts it, and the runtime signs in
      from a token variable first, then from the sign-in of the Copilot CLI, then from the GitHub CLI. **Check
-     connection** and the AI provider pill tell you which account is used, for example "Signed in as mnixon on
+     connection** and the AI provider pill tell you which account is used, for example "Signed in as octocat on
      github.com (Copilot CLI sign-in)." Leave the model empty to use the default model of the
      Copilot runtime, or choose one from the list of the models of your account; a reasoning level can be chosen when
      the model offers some.

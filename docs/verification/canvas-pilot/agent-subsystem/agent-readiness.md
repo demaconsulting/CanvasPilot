@@ -48,7 +48,7 @@ the probe wait for a limit of a tenth of a second.
 - The check looks for no credentials of its own: a machine with no token variable and no GitHub CLI (signed in only
   through the Copilot CLI) is not turned away, and only the CLI itself is run.
 - With a starter that starts the runtime the report is ready and usable with "GitHub Copilot CLI 1.0.114 is ready.",
-  followed by the sign-in sentence of the runtime ("Signed in as mnixon on github.com (Copilot CLI sign-in).": the
+  followed by the sign-in sentence of the runtime ("Signed in as octocat on github.com (Copilot CLI sign-in).": the
   login, the host without its scheme, and the kind of sign-in), and the starter is asked once with the path and the
   version of the CLI that the locator found. A runtime that does not say how it signed in leaves the sentence as it was.
 - A starter that answers CLI too old, not signed in, or failed gives `CopilotCliTooOld`, `CopilotNotSignedIn`, or
@@ -115,9 +115,9 @@ program but the CLI was run (no credential probe). This scenario is tested by
 whose runtime signed in through the Copilot CLI is ready and usable, and only the CLI itself was run, so the GitHub CLI
 is never asked. This scenario is tested by `AgentReadiness_Copilot_OnlyTheCopilotCliIsSignedIn_IsNotRejected`.
 
-**AgentReadiness_Copilot_Ready_NamesTheAccountTheHostAndTheKindOfSignIn**: A runtime that signed in as `mnixon` on
+**AgentReadiness_Copilot_Ready_NamesTheAccountTheHostAndTheKindOfSignIn**: A runtime that signed in as `octocat` on
 `https://github.com` through the Copilot CLI gives the sentence "GitHub Copilot CLI 1.0.114 is ready. Signed in as
-mnixon on github.com (Copilot CLI sign-in).", with the host shown without its scheme, and a token variable that holds a
+octocat on github.com (Copilot CLI sign-in).", with the host shown without its scheme, and a token variable that holds a
 sentinel token appears nowhere in the sentence. This scenario is tested by
 `AgentReadiness_Copilot_Ready_NamesTheAccountTheHostAndTheKindOfSignIn`.
 
