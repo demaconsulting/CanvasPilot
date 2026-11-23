@@ -256,6 +256,43 @@ public sealed class FollowUpSuggestionsTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the search of a project folder for a drawing finds one at the top and in a folder inside, leaves out the
+    ///     folders of the attachments and of the style kits at the top, the hidden folders, and folders deeper than the
+    ///     search goes, ignores files that are not drawings, and finds none in a folder that is missing.
+    /// </summary>
+    [Fact]
+    public async Task ProjectDrawingProbe_HasDrawing_FindsDrawingsAndLeavesOutWhatIsNotTheirs()
+    {
+        // Arrange: folders that each hold one file, and the filter of the application
+        var token = TestContext.Current.CancellationToken;
+        var filter = new CanvasNetImageSourceFilter();
+        var top = NewProject("top");
+        await File.WriteAllTextAsync(Path.Combine(top, "box.svg"), "<svg/>", token);
+        var nested = NewProject("nested");
+        Directory.CreateDirectory(Path.Combine(nested, "a", "b"));
+        await File.WriteAllTextAsync(Path.Combine(nested, "a", "b", "flow.svg"), "<svg/>", token);
+        var notDrawings = NewProject("notes");
+        await File.WriteAllTextAsync(Path.Combine(notDrawings, "notes.txt"), "words", token);
+        foreach (var skipped in new[] { "attachments", "styles", ".hidden" })
+        {
+            Directory.CreateDirectory(Path.Combine(notDrawings, skipped));
+            await File.WriteAllTextAsync(Path.Combine(notDrawings, skipped, "picture.svg"), "<svg/>", token);
+        }
+
+        var tooDeep = NewProject("deep");
+        var deepFolder = Path.Combine(tooDeep, "1", "2", "3", "4", "5");
+        Directory.CreateDirectory(deepFolder);
+        await File.WriteAllTextAsync(Path.Combine(deepFolder, "far.svg"), "<svg/>", token);
+
+        // Act and assert
+        Assert.True(ProjectDrawingProbe.HasDrawing(top, filter));
+        Assert.True(ProjectDrawingProbe.HasDrawing(nested, filter));
+        Assert.False(ProjectDrawingProbe.HasDrawing(notDrawings, filter));
+        Assert.False(ProjectDrawingProbe.HasDrawing(tooDeep, filter));
+        Assert.False(ProjectDrawingProbe.HasDrawing(Path.Combine(_root, "missing"), filter));
+    }
+
+    /// <summary>
     ///     Makes a project folder under the temporary root.
     /// </summary>
     /// <param name="name">The name of the folder.</param>
