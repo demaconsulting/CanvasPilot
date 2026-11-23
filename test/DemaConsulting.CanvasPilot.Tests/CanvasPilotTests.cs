@@ -1399,7 +1399,8 @@ public sealed class CanvasPilotTests : IDisposable
         explorer.Open(project.FolderPath);
 
         // Assert: nothing was copied while drafting; the chips came and went as one step; everything is in attachments
-        // byte for byte; the explorer shows only the project's image; the draft folder holds nothing
+        // byte for byte; the explorer shows the project's image and, in the attachments folder, the pasted picture that CanvasNet
+        // draws, but not the other attachments; the draft folder holds nothing
         Assert.False(attachmentsWhileDrafting);
         Assert.Equal(0, chipsAfterUndo);
         Assert.Equal(4, chipsAfterRedo);
@@ -1409,7 +1410,10 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(new byte[] { 0x4D, 0x5A, 1, 2 }, await File.ReadAllBytesAsync(Path.Combine(store.AttachmentsFolder, "setup.exe"), token));
         Assert.Equal("photo notes", await File.ReadAllTextAsync(Path.Combine(store.AttachmentsFolder, "photos", "a.txt"), token));
         Assert.Equal(screenshot, await File.ReadAllBytesAsync(Path.Combine(project.FolderPath, result.Attachments[3].ProjectRelativePath), token));
-        Assert.Equal(["cover.svg"], explorer.Items.Select(item => item.Name));
+        Assert.Equal(["attachments", "cover.svg"], explorer.Roots.Select(node => node.Name));
+        Assert.Equal(
+            [Path.GetFileName(result.Attachments[3].ProjectRelativePath), "cover.svg"],
+            explorer.Items.Select(item => item.Name));
         Assert.Empty(Directory.GetFiles(store.PastedImagesFolder));
         Assert.True(File.Exists(brief));
     }

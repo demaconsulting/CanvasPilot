@@ -66,29 +66,275 @@ public sealed class ProjectExplorerTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that only image source files in the root of the project folder are listed, sorted by name, and
-    ///     that sub-folders, the data folder, the project file, hidden files, and other file types are not.
+    ///     Test that the tree lists the folders of the project and the files in them, folders first and then files with
+    ///     each group sorted ignoring case, that the flat list holds the previewable files in the order of the tree, and that
+    ///     the data folder, the project file, hidden files, and other file types are not listed.
     /// </summary>
     [Fact]
-    public void ProjectExplorerViewModel_Open_ProjectFolder_ListsOnlyRootImageSourceFilesSorted()
+    public void ProjectExplorerViewModel_Open_ProjectFolder_BuildsTreeWithFoldersFirstAndSkipsHiddenAndOtherFiles()
     {
-        // Arrange: a project folder with a mix of files and folders
+        // Arrange: a project folder with a mix of files and folders, two levels deep
         Directory.CreateDirectory(Path.Combine(Folder, "assets"));
         Directory.CreateDirectory(Path.Combine(Folder, ".canvaspilot"));
-        Touch("b.svg", "A.png", "notes.txt", "project.canvaspilot", ".hidden.svg", "assets/inner.svg", ".canvaspilot/state.svg");
+        Directory.CreateDirectory(Path.Combine(Folder, "Styles", "dema"));
+        Touch(
+            "b.svg",
+            "A.png",
+            "notes.txt",
+            "project.canvaspilot",
+            ".hidden.svg",
+            "assets/inner.svg",
+            "assets/logo.jpg",
+            "assets/roadmap.pdf",
+            "Styles/dema/style.json",
+            "Styles/dema/other.json",
+            ".canvaspilot/state.svg");
         var explorer = CreateExplorer();
 
         // Act: open the folder
         explorer.Open(Folder);
 
-        // Assert: only the root image files are listed, sorted ignoring case
-        Assert.Equal(["A.png", "b.svg"], explorer.Items.Select(item => item.Name));
+        // Assert: the folders come first, and the files below them, each group sorted ignoring case
+        Assert.Equal(["assets", "Styles", "A.png", "b.svg"], explorer.Roots.Select(node => node.Name));
+        var assets = explorer.Roots[0];
+        Assert.True(assets.IsFolder);
+        Assert.Equal(ProjectNodeKind.Folder, assets.Kind);
+        Assert.Equal(["inner.svg", "logo.jpg", "roadmap.pdf"], assets.Children.Select(node => node.Name));
         Assert.Equal(
-            [Path.Combine(Folder, "A.png"), Path.Combine(Folder, "b.svg")],
+            [ProjectNodeKind.Svg, ProjectNodeKind.Bitmap, ProjectNodeKind.Pdf],
+            assets.Children.Select(node => node.Kind));
+        Assert.Equal(["SVG", "JPG", "PDF"], assets.Children.Select(node => node.Format));
+        var style = explorer.Roots[1].Children.Single().Children.Single();
+        Assert.Equal(("style.json", ProjectNodeKind.Style, false), (style.Name, style.Kind, style.IsPreviewable));
+
+        // Assert: only the files that the filter draws are previewable, and they are in the flat list in tree order
+        Assert.Equal(["inner.svg", "A.png", "b.svg"], explorer.Items.Select(item => item.Name));
+        Assert.Equal(
+            [Path.Combine(Folder, "assets", "inner.svg"), Path.Combine(Folder, "A.png"), Path.Combine(Folder, "b.svg")],
             explorer.Items.Select(item => item.FullPath));
         Assert.Equal(Folder, explorer.FolderPath);
         Assert.True(explorer.HasProject);
         Assert.Equal(string.Empty, explorer.EmptyMessage);
+        Assert.False(explorer.IsTruncated);
+    }
+
+    /// <summary>
+    ///     Test that selecting a node selects the file when CanvasNet draws it and no file when it is a folder or an asset
+    ///     that is not drawn, that selecting a file by path expands the folders above it and selects its node, and that the
+    ///     selection of the node and of the file stay in line.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_SelectedNode_FolderFileAndAsset_FollowsTheSelectionOfTheFile()
+    {
+        // Arrange: a tree with a picture in a sub-folder and a PDF beside it
+        Touch("assets/inner.svg", "assets/roadmap.pdf", "top.svg");
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+        var assets = explorer.Roots[0];
+        var changedFiles = new List<string?>();
+        explorer.PropertyChanged += (_, e) => changedFiles.Add(e.PropertyName);
+
+        // Act: select the picture's node, then the PDF's node, then the folder; then select a file by path
+        explorer.SelectedNode = assets.Children[0];
+        var afterPicture = (explorer.SelectedFile, explorer.SelectedItem?.Name);
+        explorer.SelectedNode = assets.Children[1];
+        var afterPdf = (explorer.SelectedFile, explorer.SelectedItem, explorer.SelectedNode.Name);
+        explorer.SelectedNode = assets;
+        var afterFolder = (explorer.SelectedFile, explorer.SelectedNode.Name);
+        assets.IsExpanded = false;
+        var found = explorer.SelectFile(Path.Combine(Folder, "assets", "inner.svg"));
+
+        // Assert: only a picture that is drawn makes a selected file; a path expands its folders and selects its node
+        Assert.Equal((Path.Combine(Folder, "assets", "inner.svg"), "inner.svg"), afterPicture);
+        Assert.Equal((null, null, "roadmap.pdf"), afterPdf);
+        Assert.Equal((null, "assets"), afterFolder);
+        Assert.True(found);
+        Assert.True(assets.IsExpanded);
+        Assert.Same(assets.Children[0], explorer.SelectedNode);
+        Assert.Contains(nameof(ProjectExplorerViewModel.SelectedFile), changedFiles);
+    }
+
+    /// <summary>
+    ///     Test that a refresh keeps the nodes that remain (so the selection and the expansion stay), adds new files in sub-folders
+    ///     and removes the ones that went, and clears the selection of a node that went.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_Refresh_NestedChanges_KeepsNodesSelectionAndExpansion()
+    {
+        // Arrange: a tree with an expanded folder and a selected file in it
+        Touch("assets/a.svg", "assets/b.svg", "top.svg");
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+        var assets = explorer.Roots[0];
+        assets.IsExpanded = true;
+        explorer.SelectFile(Path.Combine(Folder, "assets", "b.svg"));
+        var keptNode = assets.Children[1];
+
+        // Act: a file is added in the folder and another one is removed, and the explorer refreshes
+        Touch("assets/c.svg", "newfolder/n.svg");
+        File.Delete(Path.Combine(Folder, "assets", "a.svg"));
+        explorer.Refresh();
+        var rootNames = explorer.Roots.Select(node => node.Name).ToArray();
+        var assetNames = assets.Children.Select(node => node.Name).ToArray();
+        var sameNode = ReferenceEquals(assets.Children.Single(node => node.Name == "b.svg"), keptNode);
+        var selectedAfterFirst = explorer.SelectedNode?.Name;
+        File.Delete(Path.Combine(Folder, "assets", "b.svg"));
+        explorer.Refresh();
+
+        // Assert: the folder node and the selected node were kept, the new things are there, and the removed selection is gone
+        Assert.Equal(["assets", "newfolder", "top.svg"], rootNames);
+        Assert.Equal(["b.svg", "c.svg"], assetNames);
+        Assert.True(sameNode);
+        Assert.Equal("b.svg", selectedAfterFirst);
+        Assert.Same(assets, explorer.Roots[0]);
+        Assert.True(assets.IsExpanded);
+        Assert.Null(explorer.SelectedNode);
+        Assert.Null(explorer.SelectedFile);
+        Assert.Equal(["c.svg", "n.svg", "top.svg"], explorer.Items.Select(item => item.Name));
+    }
+
+    /// <summary>
+    ///     Test that the folders that the user expanded stay expanded after a refresh that makes new nodes for them and when
+    ///     the same project is opened again, and are forgotten when another project is opened.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_Expansion_SurvivesRefreshAndReopenOfTheSameProjectOnly()
+    {
+        // Arrange: an explorer over a project with a nested folder that the user expands
+        Touch("one/two/deep.svg");
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+        explorer.Roots[0].IsExpanded = true;
+        explorer.Roots[0].Children[0].IsExpanded = true;
+
+        // Act: the folder is removed and comes back, the same project is opened again, and another project is opened
+        Directory.Delete(Path.Combine(Folder, "one"), recursive: true);
+        explorer.Refresh();
+        Touch("one/two/deep.svg");
+        explorer.Refresh();
+        var afterRefresh = (explorer.Roots[0].IsExpanded, explorer.Roots[0].Children[0].IsExpanded);
+        explorer.Open(Folder);
+        var afterReopen = explorer.Roots[0].IsExpanded;
+        var other = Path.Combine(_tempRoot, "other");
+        Directory.CreateDirectory(Path.Combine(other, "one"));
+        explorer.Open(other);
+        var afterOther = explorer.Roots[0].IsExpanded;
+
+        // Assert: expanded again for the same project, collapsed for another
+        Assert.Equal((true, true), afterRefresh);
+        Assert.True(afterReopen);
+        Assert.False(afterOther);
+    }
+
+    /// <summary>
+    ///     Test that a folder with more nodes than the limit, or that goes deeper than the limit, is cut short and says so
+    ///     instead of listing everything, and that an unreadable folder below the top leaves only that folder empty.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_Open_TooManyOrTooDeep_IsTruncatedAndSaysSo()
+    {
+        // Arrange: a folder with more files than the limit, and one with folders deeper than the limit
+        Touch("f1.svg", "f2.svg", "f3.svg", "f4.svg", "f5.svg", "f6.svg");
+        var wide = CreateExplorer(maximumNodes: 4);
+        var deepFolder = Path.Combine(_tempRoot, "deep");
+        var path = deepFolder;
+        for (var level = 0; level < ProjectExplorerViewModel.MaximumDepth + 2; level++)
+        {
+            path = Path.Combine(path, "d" + level);
+        }
+
+        Directory.CreateDirectory(path);
+        var deep = CreateExplorer();
+
+        // Act: open both
+        wide.Open(Folder);
+        deep.Open(deepFolder);
+
+        // Assert: the wide tree holds only the limit, and both say they were cut short
+        Assert.Equal(4, wide.Roots.Count);
+        Assert.True(wide.IsTruncated);
+        Assert.True(deep.IsTruncated);
+        Assert.Throws<ArgumentOutOfRangeException>(() => new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg"), _scheduler, maximumNodes: 0));
+    }
+
+    /// <summary>
+    ///     Test that a change in a sub-folder makes the watcher request a refresh, and that a change inside the hidden data
+    ///     folder does not.
+    /// </summary>
+    [Fact]
+    public async Task ProjectExplorerViewModel_Open_ChangeInSubFolderAndInDataFolder_OnlyTheFirstRequestsRefresh()
+    {
+        // Arrange: an open project with a sub-folder and a data folder
+        Directory.CreateDirectory(Path.Combine(Folder, "assets"));
+        Directory.CreateDirectory(Path.Combine(Folder, ".canvaspilot"));
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+
+        // Act: a file is written in the data folder, and then the test waits to see nothing, and one in the sub-folder
+        await File.WriteAllTextAsync(Path.Combine(Folder, ".canvaspilot", "state.json"), "{}", TestContext.Current.CancellationToken);
+        await Task.Delay(400, TestContext.Current.CancellationToken);
+        var afterDataFolder = _scheduler.ScheduledCount;
+        await File.WriteAllTextAsync(Path.Combine(Folder, "assets", "inner.svg"), string.Empty, TestContext.Current.CancellationToken);
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (explorer.Items.Count == 0 && DateTime.UtcNow < deadline)
+        {
+            _scheduler.RunPending();
+            await Task.Delay(25, TestContext.Current.CancellationToken);
+        }
+
+        // Assert: the data folder asked for nothing, and the sub-folder's file was listed
+        Assert.Equal(0, afterDataFolder);
+        Assert.Equal(["inner.svg"], explorer.Items.Select(item => item.Name));
+    }
+
+    /// <summary>
+    ///     Test that a file in a sub-folder is deleted and renamed within its own folder.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_RenameAndDelete_FileInSubFolder_StaysInItsFolder()
+    {
+        // Arrange: two pictures in a sub-folder
+        Touch("assets/one.svg", "assets/two.svg");
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+        explorer.SelectFile(Path.Combine(Folder, "assets", "one.svg"));
+
+        // Act: rename the first picture, then delete it
+        var renamed = explorer.RenameSelected("uno.svg");
+        var afterRename = (File.Exists(Path.Combine(Folder, "assets", "uno.svg")), File.Exists(Path.Combine(Folder, "uno.svg")), explorer.SelectedFile);
+        var deleted = explorer.DeleteSelected();
+
+        // Assert: the file kept its folder, and then went from disk and tree
+        Assert.Equal(string.Empty, renamed);
+        Assert.Equal((true, false, (string?)Path.Combine(Folder, "assets", "uno.svg")), afterRename);
+        Assert.Equal(string.Empty, deleted);
+        Assert.Equal(["two.svg"], explorer.Roots[0].Children.Select(node => node.Name));
+    }
+
+    /// <summary>
+    ///     Test that the kinds and formats of the files are told from their names, including compound extensions.
+    /// </summary>
+    [Fact]
+    public void ProjectNodeViewModel_KindAndFormat_FromTheFileName()
+    {
+        // Act: classify names of the kinds that the explorer shows
+        var kinds = new[] { "a.svg", "b.MMD", "c.vl.json", "style.json", "x.pdf", "y.JPEG", "z.puml" }
+            .Select(ProjectNodeViewModel.KindOf)
+            .ToArray();
+        var formats = new[] { "a.svg", "c.VL.JSON", "y.jpeg", "noext" }
+            .Select(name => new ProjectNodeViewModel(name, Path.Combine(Folder, name), false, ProjectNodeViewModel.KindOf(name), false).Format)
+            .ToArray();
+        var folder = new ProjectNodeViewModel("dir", Path.Combine(Folder, "dir"), true, ProjectNodeKind.Folder, true);
+
+        // Assert: the kinds, the formats, and that a folder has no format and is never previewable
+        Assert.Equal(
+            [ProjectNodeKind.Svg, ProjectNodeKind.Mermaid, ProjectNodeKind.VegaLite, ProjectNodeKind.Style, ProjectNodeKind.Pdf, ProjectNodeKind.Bitmap, ProjectNodeKind.Source],
+            kinds);
+        Assert.Equal(["SVG", "VL.JSON", "JPEG", string.Empty], formats);
+        Assert.Equal((string.Empty, false), (folder.Format, folder.IsPreviewable));
+        Assert.True(ProjectNodeViewModel.IsListedAsset("logo.png"));
+        Assert.False(ProjectNodeViewModel.IsListedAsset("notes.txt"));
+        Assert.Throws<ArgumentException>(() => new ProjectNodeViewModel(" ", Folder, false, ProjectNodeKind.Svg, true));
     }
 
     /// <summary>
@@ -702,10 +948,11 @@ public sealed class ProjectExplorerTests : IDisposable
     /// </summary>
     /// <param name="debounce">The debounce delay, or <see langword="null" /> for the default.</param>
     /// <param name="logger">An optional logger.</param>
+    /// <param name="maximumNodes">The most nodes the tree holds.</param>
     /// <returns>The explorer.</returns>
-    private ProjectExplorerViewModel CreateExplorer(TimeSpan? debounce = null, RollingFileLogger? logger = null)
+    private ProjectExplorerViewModel CreateExplorer(TimeSpan? debounce = null, RollingFileLogger? logger = null, int maximumNodes = ProjectExplorerViewModel.MaximumNodes)
     {
-        var explorer = new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg", ".png"), _scheduler, debounce, logger);
+        var explorer = new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg", ".png"), _scheduler, debounce, logger, maximumNodes);
         _explorers.Add(explorer);
         return explorer;
     }

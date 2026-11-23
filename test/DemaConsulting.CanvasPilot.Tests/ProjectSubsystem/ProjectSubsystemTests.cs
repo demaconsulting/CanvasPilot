@@ -115,11 +115,11 @@ public sealed class ProjectSubsystemTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that the explorer of a created project lists the image source files in its root only, and reflects a
-    ///     rename and delete of the selected file.
+    ///     Test that the explorer of a created project lists the image source files of its folders and sub-folders but not the
+    ///     data folder, and reflects a rename and delete of the selected file.
     /// </summary>
     [Fact]
-    public async Task ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources()
+    public async Task ProjectSubsystem_BrowseImages_ProjectFolder_ListsImagesOfTheTreeButNotTheDataFolder()
     {
         // Arrange: a created project with images, a text file, a sub-folder asset, and data-folder content
         Directory.CreateDirectory(Projects);
@@ -141,11 +141,12 @@ public sealed class ProjectSubsystemTests : IDisposable
         explorer.SelectFile(Path.Combine(project.FolderPath, "diagram.svg"));
         var deleteProblem = explorer.DeleteSelected();
 
-        // Assert: only the root images were listed, and the rename and delete changed the list and the folder
-        Assert.Equal(["diagram.svg", "logo.svg"], listed);
+        // Assert: the images of the tree were listed with the sub-folder's one in tree order, and the rename and delete changed
+        // the list and the folder
+        Assert.Equal(["model.svg", "diagram.svg", "logo.svg"], listed);
         Assert.Equal(string.Empty, renameProblem);
         Assert.Equal(string.Empty, deleteProblem);
-        Assert.Equal(["brand.svg"], explorer.Items.Select(item => item.Name));
+        Assert.Equal(["model.svg", "brand.svg"], explorer.Items.Select(item => item.Name));
         Assert.True(File.Exists(Path.Combine(project.FolderPath, "assets", "model.svg")));
         Assert.True(File.Exists(project.FilePath));
     }

@@ -41,11 +41,11 @@ added to the recent list, settings are loaded by a new service, and the first pr
 the restart both are listed newest first; after the deletion only the second is listed and stored. This
 scenario is tested by `ProjectSubsystem_RememberRecentProjects_OpenedProjects_ListedMostRecentFirst`.
 
-**ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources**: A created project holds two SVG
-files, a text file, a sub-folder asset, and an SVG inside the data folder. The explorer lists the two root SVG
-files; one is renamed and the other deleted, after which only the renamed file is listed, and the asset and the
-project file remain. This scenario is tested by
-`ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources`.
+**ProjectSubsystem_BrowseImages_ProjectFolder_ListsImagesOfTheTreeButNotTheDataFolder**: A created project holds two
+SVG files, a text file, an SVG in a sub-folder, and an SVG inside the data folder. The explorer lists the sub-folder's
+SVG and the two root SVG files in tree order; one is renamed and the other deleted, after which the renamed file and
+the sub-folder's file are listed, and the project file remains. This scenario is tested by
+`ProjectSubsystem_BrowseImages_ProjectFolder_ListsImagesOfTheTreeButNotTheDataFolder`.
 
 **ProjectSubsystem_KeepTheStyleChoice_SetAndReopen_GivesTheSameChoiceAndKeepsTheProject**: A created project has an
 image file and, in its project file, a property that this version does not know. A style kit is chosen, and a second

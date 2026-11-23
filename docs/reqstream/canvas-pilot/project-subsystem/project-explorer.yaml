@@ -15,19 +15,24 @@ sections:
             requirements:
               - id: CanvasPilot-ProjectExplorer-ListProjectImages
                 title: >-
-                  The ProjectExplorer shall list, sorted by name, the files in the root of the project
-                  folder that have an image source extension, excluding sub-folders, the hidden
-                  .canvaspilot folder, the project file, and hidden files, and shall explain an empty
-                  list or an unreadable folder.
+                  The ProjectExplorer shall show the project folder as a tree, folders first and then files with each
+                  group sorted by name, with the sub-folders of the project down to a depth and node limit, listing the files
+                  that have an image source extension and the assets of the project (bitmaps, PDF files, and style.json
+                  files), excluding the hidden .canvaspilot folder, the project file, and hidden files, shall keep the
+                  expanded folders across refreshes, shall give the flat list of the files that can be previewed, and shall
+                  explain an empty tree or an unreadable folder.
                 justification: |
-                  The top-level image sources are the files the user works on. Supporting assets live in
-                  sub-folders and application data in the hidden folder, so listing them would be noise.
-                  Using the extensions that CanvasNet can draw keeps the list to files the application
-                  can show.
+                  The image sources are the files the user works on, and the assets and style kits that they use live in
+                  sub-folders, so the tree shows them where they are. Application data in the hidden folder would be noise.
+                  Using the extensions that CanvasNet can draw keeps the previewable files to those the application can
+                  show, and the limits keep a huge folder from stalling the application.
                 children:
                   - CanvasPilot-OTS-CanvasNet-ListSupportedTypes
                 tests:
-                  - ProjectExplorerViewModel_Open_ProjectFolder_ListsOnlyRootImageSourceFilesSorted
+                  - ProjectExplorerViewModel_Open_ProjectFolder_BuildsTreeWithFoldersFirstAndSkipsHiddenAndOtherFiles
+                  - ProjectExplorerViewModel_Expansion_SurvivesRefreshAndReopenOfTheSameProjectOnly
+                  - ProjectExplorerViewModel_Open_TooManyOrTooDeep_IsTruncatedAndSaysSo
+                  - ProjectNodeViewModel_KindAndFormat_FromTheFileName
                   - ProjectExplorerViewModel_Open_HiddenAttributeFile_IsNotListed
                   - ProjectExplorerViewModel_Open_NoImageFiles_ShowsEmptyMessage
                   - ProjectExplorerViewModel_Open_MissingFolder_ShowsErrorAndEmptyList

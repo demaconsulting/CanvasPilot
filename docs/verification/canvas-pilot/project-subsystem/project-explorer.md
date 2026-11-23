@@ -37,10 +37,12 @@ platforms; the same requirements are also covered by tests that run everywhere.
 
 #### Test Scenarios
 
-**ProjectExplorerViewModel_Open_ProjectFolder_ListsOnlyRootImageSourceFilesSorted**: A folder with root images,
-a text file, the project file, a hidden-name file, a sub-folder file, and a data folder file lists only the two
-root images sorted ignoring case, with their full paths. This scenario is tested by
-`ProjectExplorerViewModel_Open_ProjectFolder_ListsOnlyRootImageSourceFilesSorted`.
+**ProjectExplorerViewModel_Open_ProjectFolder_BuildsTreeWithFoldersFirstAndSkipsHiddenAndOtherFiles**: A folder with
+root images, a text file, the project file, a hidden-name file, sub-folders with a picture, a bitmap, a PDF, and style
+files, and a data folder file shows the folders first and then the files, each sorted ignoring case, with the kind and
+format of each node, lists the drawn pictures in the flat list in tree order, and shows neither the hidden files, the
+project file, the data folder, nor the text files. This scenario is tested by
+`ProjectExplorerViewModel_Open_ProjectFolder_BuildsTreeWithFoldersFirstAndSkipsHiddenAndOtherFiles`.
 
 **ProjectExplorerViewModel_Open_HiddenAttributeFile_IsNotListed**: A file with the hidden attribute is not
 listed (Windows only). This scenario is tested by

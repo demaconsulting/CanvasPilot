@@ -1146,6 +1146,7 @@ reviews:
       - "src/**/ProjectSubsystem/IImageSourceFilter.cs"
       - "src/**/ProjectSubsystem/IRefreshScheduler.cs"
       - "src/**/ProjectSubsystem/ProjectFileItem.cs"
+      - "src/**/ProjectSubsystem/ProjectNodeViewModel.cs"
       - "src/**/ProjectSubsystem/ProjectExplorerViewModel.cs"
       - "src/**/ProjectSubsystem/ProjectExplorerView.axaml"
       - "src/**/ProjectSubsystem/ProjectExplorerView.axaml.cs"

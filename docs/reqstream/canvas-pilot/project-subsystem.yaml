@@ -69,20 +69,19 @@ sections:
 
           - id: CanvasPilot-Project-BrowseProjectImages
             title: >-
-              The Project subsystem shall list the image source files in the root of the open project's
-              folder, keep the list current as files change, and let the user select a file.
+              The Project subsystem shall show the open project's folder as a tree of its folders and image source files,
+              keep it current as files change, and let the user select a file.
             justification: |
-              The top-level image source files of a project are the things the user works on. A list that
-              follows the folder as files are added, removed, or renamed, by this application or by
-              other tools, stays correct without the user refreshing it, and sub-folders and application
-              data stay out of the way.
+              The image source files of a project are the things the user works on. A tree that follows the folder as
+              files are added, removed, or renamed, by this application or by other tools, stays correct without the user
+              refreshing it, and application data stays out of the way.
             children:
               - CanvasPilot-ProjectExplorer-ListProjectImages
               - CanvasPilot-ProjectExplorer-SelectFile
               - CanvasPilot-ProjectExplorer-RefreshOnFileChanges
               - CanvasPilot-ProjectExplorer-ReleaseWatcher
             tests:
-              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources
+              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsImagesOfTheTreeButNotTheDataFolder
 
           - id: CanvasPilot-Project-ManageImageFiles
             title: >-
@@ -96,7 +95,7 @@ sections:
               - CanvasPilot-ProjectExplorer-DeleteSelectedFile
               - CanvasPilot-ProjectExplorer-RenameSelectedFile
             tests:
-              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources
+              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsImagesOfTheTreeButNotTheDataFolder
 
           - id: CanvasPilot-Project-KeepTheStyleChoice
             title: >-
