@@ -221,6 +221,10 @@ shows neither the check nor the cross and no time while it runs; after 0.8 secon
 the check and `0.8 s`; a failure that was quicker than a tenth of a second shows the cross and no time; a restored row
 shows no time. This scenario is tested by `ToolActivityRowViewModel_Finish_ShowsOutcomeAndElapsedTime`.
 
+**ToolActivityRowViewModel_DisplaySummary_ShowsNoBackticks**: A row whose sentence names a file in markdown backticks
+shows the sentence without the backticks, tells the observers when it changes, and keeps the stored sentence as it was.
+This scenario is tested by `ToolActivityRowViewModel_DisplaySummary_ShowsNoBackticks`.
+
 **ChatPanelViewModel_Transcript_MarksTheRowsThatOpenAGroup**: A reply, a tool row, a notice, a tool row, and a reply are
 added; the first row and the tool row after the notice open a group and the others do not. This scenario is tested by
 `ChatPanelViewModel_Transcript_MarksTheRowsThatOpenAGroup`.

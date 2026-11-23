@@ -146,6 +146,28 @@ public sealed class TranscriptRowTests
     }
 
     /// <summary>
+    ///     Test that the chip text shows the file name without markdown backticks, follows the sentence as it changes, and
+    ///     leaves the stored sentence as it was.
+    /// </summary>
+    [Fact]
+    public void ToolActivityRowViewModel_DisplaySummary_ShowsNoBackticks()
+    {
+        // Arrange: a running row and a restored row whose sentences name a file in backticks
+        var row = new ToolActivityRowViewModel("c1", "project_write", "path=release-flow.mmd", "Writing `release-flow.mmd`");
+        var restored = new ToolActivityRowViewModel("project_write", "Wrote `release-flow.mmd`", succeeded: true);
+        var changed = new List<string>();
+        row.PropertyChanged += (_, e) => changed.Add(e.PropertyName ?? string.Empty);
+
+        // Act: finish the row with a sentence that has backticks
+        row.Finish("Wrote `release-flow.mmd`", succeeded: true, hasImage: false);
+
+        // Assert: the chip shows plain text, the observers were told, and the stored sentence is unchanged
+        Assert.Equal(("Wrote release-flow.mmd", "Wrote `release-flow.mmd`"), (row.DisplaySummary, row.Summary));
+        Assert.Contains("DisplaySummary", changed);
+        Assert.Equal("Wrote release-flow.mmd", restored.DisplaySummary);
+    }
+
+    /// <summary>
     ///     Test that a restored tool row has ended, that a row can be abandoned once while it runs, and that the
     ///     arguments are checked.
     /// </summary>

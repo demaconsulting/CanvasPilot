@@ -225,6 +225,7 @@ sections:
                   - ToolActivityRowViewModel_StartFileReportAndFinish_KeepTheReportOnlyWhenTheToolWorked
                   - ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked
                   - ToolActivityRowViewModel_Finish_ShowsOutcomeAndElapsedTime
+                  - ToolActivityRowViewModel_DisplaySummary_ShowsNoBackticks
                   - NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven
                   - TranscriptRows_Kinds_TheEntryOfAMessageIsTheUserRow
 

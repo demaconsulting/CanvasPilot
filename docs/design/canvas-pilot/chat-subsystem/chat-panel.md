@@ -92,7 +92,8 @@ The unit is made of these parts, all in the user interface layer:
     pixels while `IsComplete` is false and draws `Blocks` with the Knowledge subsystem's `MarkdownBlocksPanel` once it
     is true, without a border; stopped and failed text stays plain, because it may end in the middle of a construct.
   - `ToolActivityRowViewModel` and `ToolActivityRowView`: one tool call with `CallId`, `ToolName`, `ArgumentSummary`,
-    `Summary` (one sentence), `IsRunning`, `Succeeded`, `HasImage`, `HasFileReport`, and for the view `ShowsSuccess`
+    `Summary` (one sentence), `DisplaySummary` (the sentence without markdown backticks, which the chip shows),
+    `IsRunning`, `Succeeded`, `HasImage`, `HasFileReport`, and for the view `ShowsSuccess`
     (ended and worked), `ShowsFailure` (ended and did not work), and `ElapsedText`. `Finish` ends it with the result,
     `ReportFile` says that a file was created or replaced (the report stays when the tool then finishes with success
     and is replaced by a refusal when it does not), and `Abandon` ends a call that has no result. The constructor of a

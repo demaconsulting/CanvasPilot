@@ -146,6 +146,12 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
     public string Summary => _summary;
 
     /// <summary>
+    ///     Gets the sentence as the chip shows it: <see cref="Summary" /> without the markdown backticks that mark a file
+    ///     name, so that the chip reads <c>Wrote release-flow.mmd</c> rather than <c>Wrote `release-flow.mmd`</c>.
+    /// </summary>
+    public string DisplaySummary => _summary.Replace("`", string.Empty, StringComparison.Ordinal);
+
+    /// <summary>
     ///     Gets a value indicating whether the call has no result yet.
     /// </summary>
     public bool IsRunning => _isRunning;
@@ -266,5 +272,6 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
     {
         _summary = summary;
         OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(DisplaySummary));
     }
 }

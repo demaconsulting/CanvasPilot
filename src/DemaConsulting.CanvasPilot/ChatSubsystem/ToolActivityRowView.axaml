@@ -108,7 +108,7 @@
                    Foreground="{DynamicResource CpTextSecondary}"
                    TextWrapping="Wrap"
                    Classes.failed="{Binding ShowsFailure}"
-                   Text="{Binding Summary}" />
+                   Text="{Binding DisplaySummary}" />
         <TextBlock Name="ElapsedText"
                    Grid.Column="2"
                    Margin="6,0,0,0"
