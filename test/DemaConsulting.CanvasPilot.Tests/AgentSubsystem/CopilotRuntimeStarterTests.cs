@@ -110,6 +110,61 @@ public sealed class CopilotRuntimeStarterTests
         Assert.Equal(DataDirectory, given.DataDirectory);
         Assert.Same(logger, given.Logger);
         Assert.Null(given.GitHubToken);
+        Assert.Null(given.GitHubTokenProvider);
+        Assert.Null(given.GitHubHost);
+        Assert.True(given.UseCopilotCliSignIn);
+    }
+
+    /// <summary>
+    ///     Test that the sign-in of the started runtime reaches the caller on the source that the start answers with, so
+    ///     that the readiness check can say which account is in use.
+    /// </summary>
+    [Fact]
+    public async Task CopilotRuntimeStarter_StartAsync_RuntimeSignedIn_TheSourceCarriesTheSignIn()
+    {
+        // Arrange: a runtime that signed in through the Copilot CLI
+        var signIn = new CopilotSignInInfo(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com");
+        var source = new FakeCopilotAgentSource(new ScriptedChatClient()) { SignIn = signIn };
+        await using var starter = new CopilotRuntimeStarter(DataDirectory, (_, _) => Task.FromResult<ICopilotAgentSource>(source));
+
+        // Act
+        var result = await starter.StartAsync(Request(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(signIn, result.Agents?.SignIn);
+    }
+
+    /// <summary>
+    ///     Test that the sentence about a sign-in names the account, the host without its scheme, and the kind of sign-in,
+    ///     and leaves out whatever is not known, so that it never claims more than the runtime reported.
+    /// </summary>
+    /// <param name="source">The kind of sign-in.</param>
+    /// <param name="login">The login, or <see langword="null" />.</param>
+    /// <param name="host">The host, or <see langword="null" />.</param>
+    /// <param name="expected">The sentence.</param>
+    [Theory]
+    [InlineData(CopilotSignInSource.CopilotCli, "mnixon", "https://github.com", "Signed in as mnixon on github.com (Copilot CLI sign-in).")]
+    [InlineData(CopilotSignInSource.EnvironmentVariable, "mnixon", "https://example.ghe.com/", "Signed in as mnixon on example.ghe.com (token variable).")]
+    [InlineData(CopilotSignInSource.GitHubCli, "mnixon", "github.com", "Signed in as mnixon on github.com (GitHub CLI sign-in).")]
+    [InlineData(CopilotSignInSource.GitHubToken, "mnixon", null, "Signed in as mnixon (GitHub token).")]
+    [InlineData(CopilotSignInSource.GitHubTokenProvider, null, "https://github.com", "Signed in on github.com (GitHub token).")]
+    [InlineData(CopilotSignInSource.DataDirectory, " ", " ", "Signed in (stored sign-in).")]
+    [InlineData(CopilotSignInSource.Unknown, "mnixon", "https://github.com", "Signed in as mnixon on github.com.")]
+    [InlineData(CopilotSignInSource.Unknown, null, null, "")]
+    public void CopilotSignInInfo_Describe_KnownParts_AreNamedAndUnknownPartsAreLeftOut(
+        CopilotSignInSource source,
+        string? login,
+        string? host,
+        string expected)
+    {
+        // Arrange
+        var signIn = new CopilotSignInInfo(source, login, host);
+
+        // Act
+        var sentence = signIn.Describe();
+
+        // Assert
+        Assert.Equal(expected, sentence);
     }
 
     /// <summary>

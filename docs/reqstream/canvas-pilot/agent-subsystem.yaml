@@ -277,6 +277,7 @@ sections:
               - CanvasPilot-CopilotRuntimeStarter-RunInstalledCli
               - CanvasPilot-CopilotRuntimeStarter-ShareOneRuntime
               - CanvasPilot-CopilotRuntimeStarter-ExplainFailures
+              - CanvasPilot-CopilotRuntimeStarter-ReportSignIn
             tests:
               - CanvasPilot_ConverseWithCopilot_CopilotRuntimeOnInstalledCli_StreamsAnswerAndWritesDrawing
 

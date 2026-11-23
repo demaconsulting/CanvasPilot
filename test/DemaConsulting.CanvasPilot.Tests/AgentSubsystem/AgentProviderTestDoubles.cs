@@ -331,6 +331,11 @@ internal sealed class FakeCopilotAgentSource : ICopilotAgentSource
     public IModelCatalog Models => Catalog;
 
     /// <summary>
+    ///     Gets or sets how the runtime signed in, which is unknown (<see langword="null" />) until a test sets it.
+    /// </summary>
+    public CopilotSignInInfo? SignIn { get; set; }
+
+    /// <summary>
     ///     Gets a snapshot of the requests for agents, in order.
     /// </summary>
     internal List<CopilotAgentRequest> Requests

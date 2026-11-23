@@ -543,13 +543,14 @@ sections:
           bring such a runtime unless they are told not to, so the absence is checked on the published folder of every
           Windows build and, with the file table of the installer, in the package itself. The application finds the
           installed CLI by a documented rule that tells it from the launchers that editors put on the PATH, honors a
-          path that the user sets, checks its version, and then runs exactly that CLI. The user signs in with the GitHub
-          CLI or a token variable, because the sign-in of the Copilot CLI itself is not used by the AI library, and the
-          application has no token field and no login screen of its own.
+          path that the user sets, checks its version, and then runs exactly that CLI. The user signs in the way that the
+          Copilot CLI offers (copilot, then /login), with the GitHub CLI, or with a token variable, and the application
+          has no token field and no login screen of its own.
         children:
           - CanvasPilot-Agent-LocateCopilotCli
           - CanvasPilot-Agent-RunCopilotOnInstalledCli
           - CanvasPilot-OTS-AgentKit-NeverBundleCopilotRuntime
+          - CanvasPilot-OTS-AgentKit-SignInWithCopilotCli
           - CanvasPilot-OTS-CopilotSdk-HonorExplicitCliPath
           - CanvasPilot-OTS-CopilotSdk-ReadCliPathFromConnectionEnvironment
           - CanvasPilot-OTS-CopilotSdk-DeclareSupportedCliVersion
