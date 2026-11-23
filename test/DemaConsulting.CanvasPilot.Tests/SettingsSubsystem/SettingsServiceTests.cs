@@ -653,6 +653,173 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the layout of the window, the look of the application, and the times of opening of recent projects
+    ///     are written to the settings file and read back unchanged by another service.
+    /// </summary>
+    [Fact]
+    public void SettingsService_SaveLoad_WindowAppearanceAndOpenedTimes_RoundTrips()
+    {
+        // Arrange: settings with a custom layout, a pinned dark theme, and the time of opening of a listed project
+        var opened = new DateTimeOffset(2026, 11, 20, 14, 30, 0, TimeSpan.Zero);
+        var settings = new AppSettings
+        {
+            RecentProjects = ["C:\\work\\one.canvaspilot"],
+            RecentProjectOpened = new Dictionary<string, DateTimeOffset> { ["C:\\work\\one.canvaspilot"] = opened },
+            Appearance = new AppearanceSettings { Theme = ThemeChoice.Dark, ShowThumbnails = false, ComfortableRows = true },
+            Window = new WindowSettings
+            {
+                Width = 1280,
+                Height = 800,
+                Left = -1200,
+                Top = 40,
+                State = SavedWindowState.Maximized,
+                ExplorerWidth = 300,
+                ChatWidth = 520
+            }
+        };
+
+        // Act: save with one service and load with another
+        new SettingsService(SettingsFolder).Save(settings);
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: every value is back
+        Assert.Equal(ThemeChoice.Dark, loaded.Appearance.Theme);
+        Assert.False(loaded.Appearance.ShowThumbnails);
+        Assert.True(loaded.Appearance.ComfortableRows);
+        Assert.Equal(settings.Window, loaded.Window);
+        Assert.Equal(opened, loaded.RecentProjectOpened["C:\\work\\one.canvaspilot"]);
+    }
+
+    /// <summary>
+    ///     Test that a settings file of an earlier build, which has no window, appearance, or times of opening, loads with
+    ///     the defaults and still keeps what it has.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_FileOfEarlierBuild_GivesDefaultWindowAndAppearance()
+    {
+        // Arrange: a version 1 file from before the layout was stored
+        WriteSettingsFile("""{ "version": 1, "recentProjects": ["C:\\a"], "aiProvider": { "modelName": "gpt-x" } }""");
+
+        // Act: load
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: the layout and the look are the defaults, and the old values are kept
+        Assert.Equal(new WindowSettings(), loaded.Window);
+        Assert.Equal(new AppearanceSettings(), loaded.Appearance);
+        Assert.Equal(1440, loaded.Window.Width);
+        Assert.Equal(900, loaded.Window.Height);
+        Assert.Equal(264, loaded.Window.ExplorerWidth);
+        Assert.Equal(400, loaded.Window.ChatWidth);
+        Assert.Equal(ThemeChoice.FollowSystem, loaded.Appearance.Theme);
+        Assert.True(loaded.Appearance.ShowThumbnails);
+        Assert.False(loaded.Appearance.ComfortableRows);
+        Assert.Empty(loaded.RecentProjectOpened);
+        Assert.Equal(["C:\\a"], loaded.RecentProjects);
+        Assert.Equal("gpt-x", loaded.AiProvider.ModelName);
+    }
+
+    /// <summary>
+    ///     Test that a layout outside the bounds is clamped to the nearest bound, a place that no screen can have is
+    ///     forgotten, and an unknown state and theme fall back to their defaults, without making the file unreadable.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_OutOfRangeWindowLayout_IsClampedAndUnknownChoicesFallBack()
+    {
+        // Arrange: a layout that is too small, one that is too large, a place far away, and choices that do not exist
+        WriteSettingsFile(
+            """{ "window": { "width": 100, "height": 99999, "left": 99999999, "top": -5, "state": "Floating", "explorerWidth": 10, "chatWidth": 9999 }, "appearance": { "theme": "Sepia" } }""");
+
+        // Act: load
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: nearest bounds, no place, defaults for the unknown choices
+        Assert.Equal(WindowSettings.MinimumWidth, loaded.Window.Width);
+        Assert.Equal(WindowSettings.MaximumSize, loaded.Window.Height);
+        Assert.Null(loaded.Window.Left);
+        Assert.Equal(-5, loaded.Window.Top);
+        Assert.Equal(SavedWindowState.Normal, loaded.Window.State);
+        Assert.Equal(WindowSettings.MinimumExplorerWidth, loaded.Window.ExplorerWidth);
+        Assert.Equal(WindowSettings.MaximumChatWidth, loaded.Window.ChatWidth);
+        Assert.Equal(ThemeChoice.FollowSystem, loaded.Appearance.Theme);
+
+        // Act / Assert: the same bounds hold for a value that is saved, and the other ends are clamped too
+        var service = new SettingsService(SettingsFolder);
+        var saved = service.Update(s => s with
+        {
+            Window = new WindowSettings { Width = 100000, Height = 10, ExplorerWidth = 5000, ChatWidth = 1 }
+        });
+        Assert.Equal(WindowSettings.MaximumSize, saved.Window.Width);
+        Assert.Equal(WindowSettings.MinimumHeight, saved.Window.Height);
+        Assert.Equal(WindowSettings.MaximumExplorerWidth, saved.Window.ExplorerWidth);
+        Assert.Equal(WindowSettings.MinimumChatWidth, saved.Window.ChatWidth);
+    }
+
+    /// <summary>
+    ///     Test that only the times of projects that are in the list of recent projects are kept, and a project of the
+    ///     list that has no time is listed without one.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_RecentProjectOpened_KeepsOnlyListedProjects()
+    {
+        // Arrange: times for a listed project, an unlisted one, and a blank name; the second listed project has none
+        WriteSettingsFile(
+            """{ "recentProjects": ["C:\\a", "C:\\b"], "recentProjectOpened": { "C:\\a": "2026-01-02T03:04:05+00:00", "C:\\gone": "2026-01-01T00:00:00+00:00", "": "2026-01-01T00:00:00+00:00" } }""");
+
+        // Act: load
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: only the listed project that has a time has one
+        Assert.Equal(["C:\\a"], loaded.RecentProjectOpened.Keys);
+        Assert.Equal(new DateTimeOffset(2026, 1, 2, 3, 4, 5, TimeSpan.Zero), loaded.RecentProjectOpened["C:\\a"]);
+        Assert.False(loaded.RecentProjectOpened.ContainsKey("C:\\b"));
+    }
+
+    /// <summary>
+    ///     Test that the new parts of the document are written with camel-case names and the choices as names, so a
+    ///     person can read and edit the file.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Save_WindowAndAppearance_WritesCamelCaseNames()
+    {
+        // Arrange / Act: save a pinned light theme and a maximized window
+        new SettingsService(SettingsFolder).Save(new AppSettings
+        {
+            Appearance = new AppearanceSettings { Theme = ThemeChoice.Light },
+            Window = new WindowSettings { State = SavedWindowState.Maximized }
+        });
+        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(SettingsFolder, "settings.json")));
+
+        // Assert: the sections and their values
+        var root = document.RootElement;
+        Assert.Equal("Light", root.GetProperty("appearance").GetProperty("theme").GetString());
+        Assert.True(root.GetProperty("appearance").GetProperty("showThumbnails").GetBoolean());
+        Assert.Equal("Maximized", root.GetProperty("window").GetProperty("state").GetString());
+        Assert.Equal(1440, root.GetProperty("window").GetProperty("width").GetInt32());
+        Assert.Equal(264, root.GetProperty("window").GetProperty("explorerWidth").GetInt32());
+        Assert.Equal(JsonValueKind.Object, root.GetProperty("recentProjectOpened").ValueKind);
+    }
+
+    /// <summary>
+    ///     Test that changing only the appearance by an update keeps the other settings and persists the appearance.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Update_Appearance_KeepsOtherSettingsAndPersists()
+    {
+        // Arrange: full settings that are stored
+        var service = new SettingsService(SettingsFolder);
+        service.Save(CreateFullSettings());
+
+        // Act: change only the appearance, then load with a fresh service
+        service.Update(s => s with { Appearance = s.Appearance with { Theme = ThemeChoice.Dark } });
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert
+        Assert.Equal(ThemeChoice.Dark, loaded.Appearance.Theme);
+        Assert.Equal("llama3", loaded.AiProvider.ModelName);
+        Assert.Equal("mic", loaded.Speech.CaptureDevice);
+    }
+
+    /// <summary>
     ///     Test that the rule of a kit id accepts 1 to 48 lower-case letters, digits, and dashes that do not start with a
     ///     dash, and nothing else.
     /// </summary>

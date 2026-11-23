@@ -1,0 +1,42 @@
+---
+# Software Unit Requirements for the AppearanceSettingsPage Unit
+#
+# The AppearanceSettingsPage unit is the "Appearance" page of the settings dialog. It edits the theme choice and the
+# options of the project explorer, and merges only those into the settings.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Settings Subsystem Requirements
+        sections:
+          - title: AppearanceSettingsPage Requirements
+            requirements:
+              - id: CanvasPilot-AppearanceSettingsPage-ChooseAppearance
+                title: >-
+                  The AppearanceSettingsPage shall let the user choose the theme (follow the system, dark, or light),
+                  whether the project explorer shows a small picture beside each file, and whether its rows are taller,
+                  show the stored choices when the dialog opens, accept every entry, and merge only these choices into the
+                  settings without changing values it does not own.
+                justification: |
+                  The look of the application is a personal choice, and people look for it in the settings. The page
+                  shows what is stored, never blocks OK because every combination is valid, and leaves the choices of the
+                  other pages alone because they share one settings file.
+                tests:
+                  - AppearanceSettingsPage_New_ListsThemesInOrderAndShowsTheDefaultLook
+                  - AppearanceSettingsPage_Load_StoredAppearance_IsShown
+                  - AppearanceSettingsPage_Apply_EditedValues_MergesOnlyTheAppearance
+                  - AppearanceSettingsPage_LoadThenApply_NoEdit_KeepsTheAppearance
+                  - AppearanceSettingsPage_LoadAndApply_NullSettings_Throw
+
+              - id: CanvasPilot-AppearanceSettingsPage-ShowPageInDialog
+                title: >-
+                  The AppearanceSettingsPage shall show its choices as a labeled list of themes and two check boxes on a
+                  page of the settings dialog, with names that assistive technology can read, and store the choices when
+                  the user chooses OK.
+                justification: |
+                  A person who uses a screen reader must be able to find and set each choice, and a choice that is made
+                  must be stored when the dialog is accepted.
+                tests:
+                  - AppearanceSettingsPageView_Show_ShowsStoredAppearanceWithAutomationIds
+                  - AppearanceSettingsPageView_ChooseThemeAndOptions_Ok_StoresThem
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

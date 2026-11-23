@@ -39,7 +39,9 @@ and no real input method is used.
    one step.
 4. *Looks.* Chips are readable and aligned with the text in the light and the dark theme, long names are shortened with
    an ellipsis, the dictated background is visible but does not hide the text, and the surface wraps long lines with
-   chips in them.
+   chips in them. A chip is a pill; a mark chip is tinted pink with a pink outline and icon like the mark on the
+   picture; the cross of a chip is announced by a screen reader as "Remove" and the name of the chip; the placeholder
+   is readable in both themes and disappears when typing starts.
 
 #### Acceptance Criteria
 
@@ -60,6 +62,7 @@ and no real input method is used.
 - Dictated text has its range drawn and only that, and the range disappears when the block is undone.
 - Previews are made only for picture files of at most 20 MB, are reused until the file changes, and are never made for
   anything else; a failing provider leaves the icon.
+- While the message of an open project is empty the surface shows the placeholder text, and typing hides it.
 
 #### Test Scenarios
 
@@ -108,6 +111,24 @@ each remove one chip as one step, and pressing Ctrl+Z twice brings them back. Th
 **ComposerEditorView_ChipReplacesChip_DrawsTheNewChip**: A selected chip is replaced by a pasted file; the text of the
 surface does not change, and the chip that is drawn is the new one. This scenario is tested by
 `ComposerEditorView_ChipReplacesChip_DrawsTheNewChip`.
+
+**ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords**: With words typed, two marks are added through
+the view model. The message is the two chips, a line feed, and the words; both chips are drawn at the same height on the
+first line, the caret, at the end of the words, is below the bottom of the chips, and the surface equals the message.
+This scenario is tested by `ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords`.
+
+**ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords**: With an empty message a
+rectangle is drawn and added with a note through the annotation layer; the message read by assistive technology is
+`[Mark 1]` and a line feed and the caret is on the line below. A click on the row of the chip puts the caret at the end
+of the row, and the words that are then typed are read as `[Mark 1]`, a line feed, and the words, and are drawn on a
+line below the chip. This scenario is tested by
+`ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords`.
+
+**ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage**: For a message with words and a mark chip
+the automation peer of the editing surface is an edit field named `Message` whose value is `[Mark 1]` and the words on
+the line below, that is not read-only; setting its value replaces the message and the surface follows; the text area has
+the name `Message` too. This scenario is tested by
+`ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage`.
 
 **ComposerEditorView_AddMark_ShowsMarkChipAndUndoCommandRemovesIt**: A mark added through the view model is drawn as a
 chip named `Mark 1`, and the undo command of the view model removes it from the surface. This scenario is tested by
@@ -233,3 +254,10 @@ tested by `ChipView_ProviderThrows_KeepsIcon`.
 chip, dictated text, typed text, and dictated text, only the two dictated stretches are reported, at offsets that count
 the chip as one position. This scenario is tested by
 `DictatedTextBackgroundRenderer_GetRanges_DictatedTextBetweenChipsAndTyped_ReturnsOnlyDictated`.
+
+**ChatPanelView_ComposerCard_PlaceholderNamesAndHint**: This UI test of the chat panel hosts the real editing view in
+the card of the message. A new panel in an open project shows the placeholder, whose text is the constant of the view
+model,
+over the empty surface, and typing "Make it blue" hides it. It is described in the verification of the `ChatPanel`
+unit, and is the evidence for the placeholder because the view is tested here only without the card around it. This
+scenario is tested by `ChatPanelView_ComposerCard_PlaceholderNamesAndHint`.

@@ -45,6 +45,9 @@ windowing system is required. No network folder is used: a folder that cannot be
   OK is clicked, and the page is listed with the other pages.
 - A missing catalog, function for the picker, or settings is refused; the rule for a folder is a full path without a
   character that a path cannot have.
+- In the accessibility sweep of the windows of the application, in both theme variants, every button of the page that
+  shows no text has a name and a tooltip, every text box, list, and drop-down has a name, and every enabled button can
+  take the keyboard focus.
 
 #### Test Scenarios
 
@@ -124,3 +127,8 @@ has the page third, after the AI Provider and Speech pages. This scenario is tes
 **MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses**: The Settings menu item of the real main window
 opens a dialog that lists the page with the other two, and Cancel closes it. This scenario is tested by
 `MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The settings dialog of the real application is shown in
+both theme variants and each of its pages, this one among them, is chosen and every control of it is looked at; a
+button that shows no text has a name and a tooltip, a text box, list, and drop-down has a name, and every enabled button
+can take the keyboard focus. This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

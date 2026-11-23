@@ -16,7 +16,8 @@ package CanvasPilot_AiProviderSettingsPage {
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/SettingsSubsystem/AiProviderSettingsPageTests.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/AiProviderSettingsPageViewTests.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/AiProviderSettingsPageViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/settings-subsystem/ai-provider-settings-page.md");
             verificationFiles = ("docs/verification/canvas-pilot/settings-subsystem/ai-provider-settings-page.md");

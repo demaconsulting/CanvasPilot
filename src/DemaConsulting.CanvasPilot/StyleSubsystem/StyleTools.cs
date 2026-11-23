@@ -538,7 +538,7 @@ public static class StyleTools
         var reason = active.IsMissing
             ? $"The project names the style kit '{Echo(active.ActiveId ?? string.Empty)}', which cannot be found."
             : "This project has no style kit.";
-        return $"{reason} Ask the user to choose one (Tools > Style Kits, or the Style list at the bottom of the window), "
+        return $"{reason} Ask the user to choose one (Tools > Style Kits, or the style pill in the title bar), "
                + $"or call {GetToolName} with kit set to the id of a kit. {KnownKits(catalog)}";
     }
 

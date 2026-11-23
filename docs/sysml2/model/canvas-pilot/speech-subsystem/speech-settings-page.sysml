@@ -18,7 +18,8 @@ package CanvasPilot_SpeechSettingsPage {
                 "test/DemaConsulting.CanvasPilot.Tests/SpeechSubsystem/SpeechSettingsPageTests.cs",
                 "test/DemaConsulting.CanvasPilot.Tests/SpeechSubsystem/SpeechSubsystemFakes.cs",
                 "test/DemaConsulting.CanvasPilot.UiTests/SpeechSettingsPageViewTests.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/SpeechUiTestSupport.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/SpeechUiTestSupport.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/speech-subsystem/speech-settings-page.md");
             verificationFiles = ("docs/verification/canvas-pilot/speech-subsystem/speech-settings-page.md");

@@ -27,6 +27,9 @@ hardware, model store, or display is required, and nothing is downloaded.
 - Closing the page, or closing the dialog window by any route, cancels a running download.
 - The settings dialog lists the Speech page after the AI Provider page, shows its content when chosen, and saves its
   choices with OK.
+- In the accessibility sweep of the windows of the application, in both theme variants, the lists of the page have
+  names, every button that shows no text has a name and a tooltip, and every enabled button can take the keyboard
+  focus.
 
 #### Test Scenarios
 
@@ -85,3 +88,8 @@ opens a dialog that lists the AI Provider and Speech pages, and Cancel closes it
 **AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages**: The application's composition builds a
 settings dialog whose pages are titled `AI Provider`, `Speech`, and `Style Kits`, the second being the Speech page. This
 scenario is tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The settings dialog of the real application is shown in
+both theme variants and each of its pages, this one among them, is chosen and every control of it is looked at; the
+lists have names, a button that shows no text has a name and a tooltip, and every enabled button can take the keyboard
+focus. This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

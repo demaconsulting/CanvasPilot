@@ -19,6 +19,8 @@ N/A - standard test environment.
 - Path traversal patterns (e.g., `../`) cause `ArgumentException` to be thrown.
 - Absolute paths supplied as the relative argument cause `ArgumentException` to be thrown.
 - Paths produced by `SafePathCombine` can be passed directly to `Directory.CreateDirectory`.
+- Finding a free file name (`UniqueFileName`) is verified by the unit test of `PathHelpers`, which the subsystem
+  requirement for free names relies on; the subsystem tests exercise path combination only.
 
 ### Test Scenarios
 
@@ -45,3 +47,8 @@ succeeds. This scenario is tested by
 passed to `Directory.CreateDirectory`; the directory is created at the expected location within
 the base directory. This scenario is tested by
 `UtilitiesSubsystem_DirectoryCreationWorkflow_ValidPaths_CreatesDirectories`.
+
+**PathHelpers_UniqueFileName_FreeAndTakenNames_NumbersBeforeTheExtension**: The requirement for free file names is
+verified with the unit test of `PathHelpers`, because no subsystem test covers it: in a folder with files and a folder,
+a free name comes back unchanged and taken names get the first free number before the extension. This scenario is tested
+by `PathHelpers_UniqueFileName_FreeAndTakenNames_NumbersBeforeTheExtension`.

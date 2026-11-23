@@ -15,7 +15,8 @@ has it show the inspector through the launcher seam. The text is compared with t
 
 The standard test runner, and for the window the headless Avalonia platform with the Skia back end and the application's
 own `App`. No window is shown on a screen. The look of the window on a real screen (the monospaced text, the proportions
-of the pictures) is checked by hand with the checks of the `Chat` subsystem.
+of the pictures, the footer bar with the primary Close button, and the grip of the splitter) is checked by hand with the
+checks of the `Chat` subsystem.
 
 #### Acceptance Criteria
 

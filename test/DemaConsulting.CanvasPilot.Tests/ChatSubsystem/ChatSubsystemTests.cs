@@ -100,11 +100,11 @@ public sealed class ChatSubsystemTests : IDisposable
         composer.HandleDrop(new DroppedContent { Paths = [notes] });
         await panel.SendCommand.ExecuteAsync(null);
 
-        // Assert: the transcript holds the message in the order it was written, with the mark chip and the file chip
+        // Assert: the transcript holds the mark chip in the row above the words, then the words, then the file chip where it was dropped
         var entry = Assert.Single(panel.SentEntries);
-        Assert.Equal(["Make this ", "#", " like ", "#"], entry.Items.Select(item => item.Text ?? "#"));
-        Assert.IsType<MarkChip>(entry.Items[1].Chip);
-        Assert.IsType<FileChip>(entry.Items[3].Chip);
+        Assert.Equal(["#", "\nMake this  like ", "#"], entry.Items.Select(item => item.Text ?? "#"));
+        Assert.IsType<MarkChip>(entry.Items[0].Chip);
+        Assert.IsType<FileChip>(entry.Items[2].Chip);
         Assert.Equal("1 mark, 1 attachment", entry.Summary);
 
         // Assert: the draft, the marks, and the layer are empty, and the file was copied into the project
@@ -117,7 +117,7 @@ public sealed class ChatSubsystemTests : IDisposable
         // project, the marked picture with its mark, and the node under the mark
         var payload = Assert.IsType<MessagePayload>(entry.Message.Payload);
         Assert.Same(payload, entry.Payload);
-        Assert.Equal("Make this [Mark 1] like [Attachment 1: notes.txt]", payload.Text);
+        Assert.Equal("[Mark 1]\nMake this  like [Attachment 1: notes.txt]", payload.Text);
         Assert.Equal("attachments/notes.txt", Assert.Single(payload.Attachments).ProjectRelativePath);
         var image = Assert.Single(payload.Images);
         Assert.Equal(picture.ContentHash, image.ContentHash);

@@ -89,6 +89,41 @@ public sealed class ImageRenderServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the service tells when none of its renders is running: it is idle before any render, not idle while a
+    ///     render is held in the drawing function, and idle again, with the result delivered, once the render has ended.
+    /// </summary>
+    [Fact]
+    public async Task ImageRenderService_WhenIdleAsync_RenderRunning_CompletesOnlyAfterItEnds()
+    {
+        // Arrange: a service whose drawing function waits for the test and then fails, which is an ordinary result
+        using var entered = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var service = new ImageRenderService(
+            (_, _) =>
+            {
+                entered.Set();
+                release.Wait(TestContext.Current.CancellationToken);
+                throw new InvalidOperationException("drawn by the test");
+            });
+        var idleBefore = service.WhenIdleAsync().IsCompleted;
+
+        // Act: start a render and wait, without a time limit, until the drawing function is running
+        var render = service.RenderAsync(Write("held.svg", HalfRedSvg), Project, TestContext.Current.CancellationToken);
+        entered.Wait(TestContext.Current.CancellationToken);
+        var idleWhileRunning = service.WhenIdleAsync();
+        var runningIsComplete = idleWhileRunning.IsCompleted;
+        release.Set();
+        await idleWhileRunning.WaitAsync(TestContext.Current.CancellationToken);
+        var result = await render;
+
+        // Assert: idle before, not idle while the render ran, idle after it, and the render ended with its failure result
+        Assert.True(idleBefore);
+        Assert.False(runningIsComplete);
+        Assert.True(service.WhenIdleAsync().IsCompleted);
+        Assert.False(result.Succeeded);
+    }
+
+    /// <summary>
     ///     Test that a picture the file embeds from outside the project folder is not drawn and is reported as a
     ///     note, because file access is confined to the project folder, while the render still succeeds.
     /// </summary>

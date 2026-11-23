@@ -118,6 +118,7 @@ sections:
               references and the examples are in the window.
             children:
               - CanvasPilot-KnowledgeMarkdown-ParseCardDialect
+              - CanvasPilot-KnowledgeMarkdown-DrawBlocks
               - CanvasPilot-KnowledgeBrowser-ShowTreeAndSelectedCard
               - CanvasPilot-KnowledgeBrowser-SearchCards
               - CanvasPilot-KnowledgeBrowser-NavigateRelatedCards
@@ -126,3 +127,15 @@ sections:
             tests:
               - KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow
               - KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample
+
+          - id: CanvasPilot-Knowledge-BeUsableWithAssistiveTechnology
+            title: >-
+              The Knowledge subsystem shall give the window that shows the cards names for its entries and tooltips for the
+              buttons that show no text, and let every button be reached with the keyboard.
+            justification: |
+              Reading the cards must be possible for people who use a screen reader or only the keyboard. An entry without a
+              name is read as nothing, and a button that cannot take the focus cannot be reached.
+            children:
+              - CanvasPilot-KnowledgeBrowser-BeUsableWithAssistiveTechnology
+            tests:
+              - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

@@ -32,6 +32,8 @@ permission is needed.
   switch for dragging the picture out was off while the tools were in use and is on again.
 - After the file changes, the overlay shows only the marks of the picture that is shown, says how many are hidden, keeps
   the other marks, and continues the numbering.
+- With two marks in the message, the *Clear marks* button of the tool bar, which is off while there is no mark, takes
+  the chips of both marks out of the message of the composed application, leaves no mark shown, and is off again.
 
 ### Test Scenarios
 
@@ -72,3 +74,9 @@ its chip is announced to the overlay. The file is edited and drawn again: the ov
 hidden mark. A mark is drawn on the new picture and is number two and the only one shown; showing the first picture
 again shows only the first mark. Both marks stay in the registry with their own pictures. This scenario is tested by
 `AnnotationSubsystem_DrawMarks_FileChanged_OverlayShowsOnlyMarksOfTheShownPicture`.
+
+**AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage**: A headless UI test of the composed application
+(see the verification of `AnnotationOverlay`): two marks are drawn and their chips are in the composer; using the *Clear
+marks* button of the tool bar leaves no chip and no shown mark, and the button is off again. It is the evidence of the
+subsystem requirement about clearing marks, because `AnnotationSubsystemTests.cs` has no scenario for it. This scenario
+is tested by `AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage`.

@@ -2,8 +2,9 @@
 # Software Unit Requirements for the KnowledgeMarkdown Unit
 #
 # The KnowledgeMarkdown unit reads the small dialect of Markdown that the knowledge cards are written in into blocks and
-# runs of text that a window can draw. It has no dependency on the user interface, on a Markdown library, or on any
-# provider of a language model.
+# runs of text, and draws those blocks as text that the user can select and copy (the control MarkdownBlocksPanel). The
+# reader has no dependency on the user interface, on a Markdown library, or on any provider of a language model; only the
+# control that draws the blocks depends on the user interface.
 
 sections:
   - title: CanvasPilot Requirements
@@ -34,3 +35,18 @@ sections:
                   - KnowledgeMarkdown_Parse_Spans_ReadBoldItalicAndCode
                   - KnowledgeMarkdown_Parse_WholeCard_KeepsOrderAndMergesRuns
                   - KnowledgeMarkdown_Parse_RealCatalog_ReadsEveryCardWithoutLosingText
+
+              - id: CanvasPilot-KnowledgeMarkdown-DrawBlocks
+                title: >-
+                  The KnowledgeMarkdown unit shall draw the blocks it reads as text that the user can select and copy: a
+                  heading in semibold type, a paragraph with its bold, italic, and code text shown in those styles, a list
+                  item with a dot for a bullet or its number as written, and a block of code with its lines in a fixed-width
+                  font in a block of its own, and shall draw the new blocks, or nothing, when the blocks it is given change.
+                justification: |
+                  A card that is shown as it was typed, with its markers, is hard to read, and the user takes words from a
+                  card to the assistant, so the text must be selectable. The same drawing serves the window that shows the
+                  cards and the replies of the copilot, so the two look alike, and the control follows the blocks it is given
+                  so that choosing another card shows that card.
+                tests:
+                  - KnowledgeBrowserView_MarkdownBlocksPanel_DrawsEveryKindOfBlock
+                  - KnowledgeBrowserView_NodeChosen_ShowsTitleSummaryTagsAndBodyDrawnFromMarkdown

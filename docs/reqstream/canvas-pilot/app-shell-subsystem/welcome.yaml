@@ -1,0 +1,154 @@
+---
+# Software Unit Requirements for the Welcome Unit
+#
+# The Welcome unit is the screen that fills the main window while no project is open (WelcomeViewModel.cs,
+# WelcomeView.axaml, RecentProjectItem.cs, ProjectPictureCounter.cs, RecentThumbnailLoader.cs). It introduces the
+# application, offers the two ways to start, lists the recent projects as cards, and tells when the AI provider needs
+# something from the user.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: Welcome Requirements
+            requirements:
+              - id: CanvasPilot-Welcome-ShowWhileNoProject
+                title: >-
+                  The Welcome shall fill the body of the main window in place of the workspace while no project is open,
+                  and shall give way to the workspace when a project is opened and come back when it is closed.
+                justification: |
+                  A window with no project has nothing to work on. A screen that says what to do first, in the place where
+                  the work will appear, is a better start than an empty workspace with messages in its panes.
+                tests:
+                  - WelcomeView_NoProject_ShowsStartButtonsStepsAndEmptyCard
+                  - WelcomeView_RecentProjects_ListCardsAndOpenAProject
+                  - MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow
+
+              - id: CanvasPilot-Welcome-DeferWorkspace
+                title: >-
+                  The Welcome shall leave the workspace unbuilt, with no explorer, preview, or chat column, until a project
+                  is opened.
+                justification: |
+                  Building the whole workspace costs time and memory that a window with no project does not need, and the
+                  application starts faster and shows the first screen sooner when it waits.
+                tests:
+                  - MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns
+
+              - id: CanvasPilot-Welcome-IntroduceApplication
+                title: >-
+                  The Welcome shall introduce the application with its name and a one sentence tagline, and shall explain
+                  in three steps, describe, mark, and share, how a picture is made.
+                justification: |
+                  A person who opens the application for the first time must learn in a few seconds what it is for and
+                  what they will do with it, before they have to choose anything.
+                tests:
+                  - WelcomeView_NoProject_ShowsStartButtonsStepsAndEmptyCard
+
+              - id: CanvasPilot-Welcome-OfferStartButtons
+                title: >-
+                  The Welcome shall offer a New project button and an Open project button that run the same commands as the
+                  New Project and Open Project menu items.
+                justification: |
+                  Starting is the one thing a user can do on this screen, so the two ways to start are the largest
+                  controls on it. They must behave as the menu items do, or the application would have two ways to do the
+                  same thing that differ.
+                tests:
+                  - WelcomeView_NoProject_ShowsStartButtonsStepsAndEmptyCard
+                  - WelcomeView_StartButtons_OpenTheNewProjectDialogAndTheFilePicker
+
+              - id: CanvasPilot-Welcome-ListRecentProjects
+                title: >-
+                  The Welcome shall show the six most recent projects as cards, the most recent first, each with a name, the
+                  folder of the project, the time of its opening in words, and the number of pictures it holds, and, when
+                  there are more recent projects than cards, how many of them are shown.
+                justification: |
+                  Most visits to the application continue work that was begun earlier. Cards with the words that tell
+                  projects apart let the user pick the right one without opening the others, and a short list keeps the
+                  screen readable.
+                tests:
+                  - WelcomeViewModel_Cards_ShowTheSixMostRecentAndCountTheRest
+                  - WelcomeViewModel_Constructor_NullShell_Throws
+                  - RecentProjectItem_New_GivesDetailLineAccessibleNameAndFolder
+                  - WelcomeView_RecentProjects_ListCardsAndOpenAProject
+
+              - id: CanvasPilot-Welcome-TellOpeningTimeInWords
+                title: >-
+                  The Welcome shall tell when a project was opened in words that grow coarser with time, from "Opened just
+                  now" through minutes, hours, yesterday, days, weeks, and last month to a date, and shall say "Opened
+                  earlier" when the time is not known.
+                justification: |
+                  "Opened 3 days ago" is understood at once where a date and a clock time must be worked out, and a project
+                  opened before the time was recorded must still be described honestly.
+                tests:
+                  - RecentProjectItem_OpenedTextFor_TellsTheTimeInWords
+
+              - id: CanvasPilot-Welcome-CountPictures
+                title: >-
+                  The Welcome shall tell how many pictures a project holds, counting the image files in the folder of the
+                  project and in the folders below it but not those of the attachments, the style kits, or the folders
+                  whose names start with a dot, and shall say "no pictures yet", "1 picture", or "N pictures". The picture
+                  of the card shall be the one at the top of the project folder that was changed last, or the one changed
+                  last in its folders when there is none at the top.
+                justification: |
+                  The number tells a finished project from an empty one. Files that the application keeps for its own use
+                  are not pictures of the user, and a folder that cannot be read must not stop the project from opening.
+                tests:
+                  - RecentProjectItem_PictureCountTextFor_UsesThePlural
+                  - ProjectPictureCounter_Count_CountsPicturesAndLeavesOutAttachmentsStylesAndHiddenFolders
+                  - ProjectPictureCounter_Count_NoPictureAtTheTop_UsesTheNewestOfTheFolders
+                  - ProjectPictureCounter_Count_MissingFolder_HasNoPictures
+
+              - id: CanvasPilot-Welcome-OpenProjectFromCard
+                title: >-
+                  The Welcome shall open a recent project when the user chooses its card,
+                  and shall then show the workspace of that project.
+                justification: |
+                  Opening a project from its card is the main use of the list, and it is the way back to earlier work.
+                tests:
+                  - WelcomeView_RecentProjects_ListCardsAndOpenAProject
+
+              - id: CanvasPilot-Welcome-MoveBetweenCardsByKeyboard
+                title: >-
+                  The Welcome shall move the keyboard focus between the cards with the arrow keys, left and right to the
+                  card before and after and up and down to the card in the row above and below.
+                justification: |
+                  Tab visits every card in turn, which is slow for a grid. The arrow keys are how people move in a grid,
+                  and a screen that can be used only by the pointer would shut out people who cannot use one.
+                tests:
+                  - WelcomeView_Keyboard_ArrowsMoveBetweenCardsAndDeleteRemovesFromList
+
+              - id: CanvasPilot-Welcome-RemoveCardFromList
+                title: >-
+                  The Welcome shall remove a project from the list of recent projects, and not delete its files, when the
+                  user presses Delete on its card or chooses Remove from list in the menu of the card.
+                justification: |
+                  A list that keeps projects that were moved or are no longer wanted becomes clutter. Removing a name from
+                  the list must never destroy the work, so the files stay where they are.
+                tests:
+                  - WelcomeViewModel_Card_RemoveCommand_RemovesTheProjectFromTheListOnly
+                  - WelcomeView_Keyboard_ArrowsMoveBetweenCardsAndDeleteRemovesFromList
+
+              - id: CanvasPilot-Welcome-InviteFirstProject
+                title: >-
+                  The Welcome shall show, when there is no recent project, one card that says so and has a New project
+                  button, in place of the list.
+                justification: |
+                  On the first start the list would be an empty space. A card that says why it is empty and offers the next
+                  step shows the user what to do.
+                tests:
+                  - WelcomeView_NoProject_ShowsStartButtonsStepsAndEmptyCard
+                  - WelcomeViewModel_Cards_ShowTheSixMostRecentAndCountTheRest
+
+              - id: CanvasPilot-Welcome-NoticeAiProviderProblem
+                title: >-
+                  The Welcome shall show a notice with the name of the AI provider, the sentence of the check, and an Open
+                  Settings button that opens the settings, while the provider needs something from the user or cannot be
+                  used, and shall show no notice while the provider is being checked or can be used.
+                justification: |
+                  A user who starts a message before the provider works loses time. The first screen is where they can be
+                  told what is missing and be taken to the place where it is fixed, and a notice for a provider that works
+                  would be noise.
+                tests:
+                  - WelcomeViewModel_ProviderBanner_FollowsTheCheckOfTheProvider
+                  - WelcomeView_ProviderNotUsable_ShowsNoticeWhoseButtonOpensSettings

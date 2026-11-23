@@ -6,14 +6,16 @@
 
 `SettingsService` owns the application settings. It reads and writes the versioned per-user settings file, keeps the
 settings in effect, and announces changes. A bad, missing, or newer file never stops the application. The `AppSettings`,
-`AiProviderSettings`, `SpeechSettings`, and `StyleSettings` records and `ISettingsService` interface belong to this
-unit.
+`AiProviderSettings`, `SpeechSettings`, `StyleSettings`, `AppearanceSettings`, and `WindowSettings` records and
+`ISettingsService` interface belong to this unit.
 
 #### Data Model
 
 **AppSettings**: `record` — the whole document: `Version` (`int`, currently 1), `RecentProjects`
 (`IReadOnlyList<string>`, most recent first), `AiProvider` (`AiProviderSettings`), `Speech`
-(`SpeechSettings`), and `Styles` (`StyleSettings`). Immutable; changed with `with` expressions.
+(`SpeechSettings`), `Styles` (`StyleSettings`), `Appearance` (`AppearanceSettings`), `Window` (`WindowSettings`), and
+`RecentProjectOpened` (`IReadOnlyDictionary<string, DateTimeOffset>`, the time at which each listed project was last
+opened, by the same path as in `RecentProjects`). Immutable; changed with `with` expressions.
 
 **AiProviderSettings**: `record` — `Provider` (`AiProviderKind`: `GitHubCopilot` or `Ollama`), `ModelName` (`string`,
 the id of the model as the provider names it; empty for the provider default), `ContextWindowTokens` (`int`, 512 to
@@ -34,6 +36,20 @@ shares style kits, in order of precedence with an earlier folder winning) and `D
 kit that a new project starts with, empty for none). `StyleSettings.IsValidKitId` is the rule of a kit id (1 to 48
 lower-case letters, digits, and dashes that start with a letter or a digit), kept here as a plain check because the
 settings subsystem does not depend on the style subsystem.
+
+**AppearanceSettings**: `record` — `Theme` (`ThemeChoice`: `FollowSystem`, `Dark`, or `Light`; default `FollowSystem`),
+`ShowThumbnails` (`bool`, default `true`), and `ComfortableRows` (`bool`, default `false`).
+
+**WindowSettings**: `record` — the layout of the main window: `Width` and `Height` (`int`, default 1440 by 900, at least
+960 by 600 and at most 16384), `Left` and `Top` (`int?`, the remembered place of the window, `null` to let the system
+place it; a value beyond 32767 in either direction is forgotten), `State` (`SavedWindowState`: `Normal` or `Maximized`),
+`ExplorerWidth` (`int`, default 264, 180 to 420), and `ChatWidth` (`int`, default 400, 320 to 640). The bounds are
+constants of the record. The place is not tested against the screens here, because the settings do not know them; the
+window clamps it when it restores itself.
+
+**Recent project times**: `RecentProjectOpened` is an additive part of the document: an earlier build ignores it and a
+file of an earlier build has none, so the version of the file stays 1. A project that is listed but has no time is
+shown without one.
 
 **File format**: a camel-case JSON object with the same names, for example
 `{"version":1,"recentProjects":[],"aiProvider":{"provider":"GitHubCopilot",...},"speech":{...}}`. Enumerations
@@ -79,7 +95,10 @@ window outside its bounds and an endpoint that is not an absolute `http` or `htt
 values (the model name and the reasoning effort among them); keeps the shared style kit folders that are full paths,
 each once (ignoring case, in the first spelling) and in their order, drops a relative, blank, or invalid entry with a
 warning in the log, and keeps a folder that does not exist because a network folder may be back later; and replaces a
-default style kit id that no kit can have with none.
+default style kit id that no kit can have with none. For the window layout it clamps the size and the widths of the
+columns to their bounds (a value outside is brought to the nearest bound, not reset), forgets a place that lies beyond
+32767, and treats an unknown state as `Normal`; an unknown theme choice becomes `FollowSystem`; and it keeps the times
+of opening only for paths that are in the list of recent projects (ignoring case).
 
 **Save**: Replaces the settings in effect and writes them.
 

@@ -754,6 +754,49 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the user can add to the open project from the project explorer: a new drawing and a new folder are
+    ///     created where the selection is, a dropped picture is copied into the project under a free name, and nothing
+    ///     that was there is replaced.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ManageProjectFiles_NewFileFolderAndAddedPicture_ShowInTheTreeAndReplaceNothing()
+    {
+        // Arrange: the application with a project that holds one drawing, and a picture somewhere else
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.svg"), "<svg id=\"original\"/>", token);
+        var outside = Path.Combine(_tempRoot, "photo.png");
+        await File.WriteAllBytesAsync(outside, [1, 2, 3], token);
+        var explorer = composition.Shell.Workspace.Explorer;
+        explorer.Refresh();
+
+        // Act: make a folder, make a drawing in it, refuse a name that is taken, and add the picture twice
+        var folderProblem = explorer.CreateFolder("sketches");
+        var fileProblem = explorer.CreateFile("flow.mmd");
+        var takenProblem = explorer.CreateFile("flow.mmd");
+        var selected = explorer.SelectedFile;
+        var firstAdd = explorer.AddFiles([outside]);
+        var secondAdd = explorer.AddFiles([outside]);
+        var roots = explorer.Roots.Select(node => node.Name).ToArray();
+        composition.Dispose();
+
+        // Assert: the folder holds the new drawing, the taken name was refused, the picture was copied twice under
+        // different names, the source was left alone, and the existing drawing was not touched
+        Assert.Equal(string.Empty, folderProblem);
+        Assert.Equal(string.Empty, fileProblem);
+        Assert.NotEqual(string.Empty, takenProblem);
+        Assert.Equal(string.Empty, firstAdd);
+        Assert.Equal(string.Empty, secondAdd);
+        Assert.Equal(Path.Combine(folder, "sketches", "flow.mmd"), selected);
+        Assert.Contains("sketches", roots);
+        Assert.Contains("a.svg", roots);
+        Assert.True(File.Exists(outside));
+        Assert.Equal(2, Directory.GetFiles(Path.Combine(folder, "attachments"), "photo*.png").Length);
+        Assert.Equal("<svg id=\"original\"/>", await File.ReadAllTextAsync(Path.Combine(folder, "a.svg"), token));
+    }
+
+    /// <summary>
     ///     Test that the knowledge that the application holds can be looked up as an assistant would: the compact index
     ///     fits its budget and names the cards of CanvasNet and of CanvasPilot, the tool answers the index, a card, an
     ///     example, and a search, the skills cover every card, and the cards that are only about the host program are not
@@ -1237,9 +1280,9 @@ public sealed class CanvasPilotTests : IDisposable
         // Assert: the message was sendable, the transcript shows its words and chip, the inspector shows the payload as
         // the describer writes it, with the place of the mark and the node under it, and two pictures
         Assert.True(canSend);
-        Assert.Equal(["Make ", "#", " green"], entry.Items.Select(item => item.Text ?? "#"));
+        Assert.Equal(["#", "\nMake  green"], entry.Items.Select(item => item.Text ?? "#"));
         Assert.NotNull(payload);
-        Assert.Equal("Make [Mark 1] green", payload.Text);
+        Assert.Equal("[Mark 1]\nMake  green", payload.Text);
         Assert.Equal(PayloadDescriber.Describe(payload), description);
         Assert.Contains("\"text\": \"Start\"", description);
         Assert.Equal(2, pictures);
@@ -1399,7 +1442,8 @@ public sealed class CanvasPilotTests : IDisposable
         explorer.Open(project.FolderPath);
 
         // Assert: nothing was copied while drafting; the chips came and went as one step; everything is in attachments
-        // byte for byte; the explorer shows only the project's image; the draft folder holds nothing
+        // byte for byte; the explorer shows the project's image and, in the attachments folder, the pasted picture that CanvasNet
+        // draws, but not the other attachments; the draft folder holds nothing
         Assert.False(attachmentsWhileDrafting);
         Assert.Equal(0, chipsAfterUndo);
         Assert.Equal(4, chipsAfterRedo);
@@ -1409,7 +1453,10 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.Equal(new byte[] { 0x4D, 0x5A, 1, 2 }, await File.ReadAllBytesAsync(Path.Combine(store.AttachmentsFolder, "setup.exe"), token));
         Assert.Equal("photo notes", await File.ReadAllTextAsync(Path.Combine(store.AttachmentsFolder, "photos", "a.txt"), token));
         Assert.Equal(screenshot, await File.ReadAllBytesAsync(Path.Combine(project.FolderPath, result.Attachments[3].ProjectRelativePath), token));
-        Assert.Equal(["cover.svg"], explorer.Items.Select(item => item.Name));
+        Assert.Equal(["attachments", "cover.svg"], explorer.Roots.Select(node => node.Name));
+        Assert.Equal(
+            [Path.GetFileName(result.Attachments[3].ProjectRelativePath), "cover.svg"],
+            explorer.Items.Select(item => item.Name));
         Assert.Empty(Directory.GetFiles(store.PastedImagesFolder));
         Assert.True(File.Exists(brief));
     }
@@ -1514,11 +1561,11 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.False(emptyBefore);
         Assert.True(canSend);
         Assert.False(attachmentsWhileDrafting);
-        Assert.Equal(["Make ", "#", " like ", "#"], items);
-        Assert.IsType<MarkChip>(chips[1]);
-        Assert.IsType<FileChip>(chips[3]);
+        Assert.Equal(["#", "\nMake  like ", "#"], items);
+        Assert.IsType<MarkChip>(chips[0]);
+        Assert.IsType<FileChip>(chips[2]);
         Assert.Equal("1 mark, 1 attachment", summary);
-        Assert.Equal("Make [Mark 1] like [Attachment 1: brief.txt]", payload.Text);
+        Assert.Equal("[Mark 1]\nMake  like [Attachment 1: brief.txt]", payload.Text);
         Assert.Equal("attachments/brief.txt", Assert.Single(payload.Attachments).ProjectRelativePath);
         var mark = Assert.Single(Assert.Single(payload.Images).Marks);
         Assert.Equal("bigger", mark.Note);
@@ -1566,7 +1613,7 @@ public sealed class CanvasPilotTests : IDisposable
         states.Add(State());
         DrawRectangleAround(composition, NodeBox(picture, "Start"));
         states.Add(State());
-        composer.DeleteChip(composer.Document.FlatText.IndexOf('\uFFFC', StringComparison.Ordinal));
+        composer.DeleteChip(composer.Document.FlatText.LastIndexOf('\uFFFC'));
         states.Add(State());
         var entriesAfterDrafting = ProjectEntries();
         var undone = new List<(string Text, int Chips, int Marks)>();
@@ -1836,7 +1883,7 @@ public sealed class CanvasPilotTests : IDisposable
 
     /// <summary>
     ///     Test that a user who draws on the shown picture with the pointer and with the keyboard gets numbered marks, each
-    ///     with its chip in the message at the place where the user was writing, and that each mark holds the exact
+    ///     with its chip in the row of chips above the words of the message, and that each mark holds the exact
     ///     picture that was shown when it was drawn: the same picture, with its file and pixel fingerprints.
     /// </summary>
     [Fact]
@@ -1863,7 +1910,7 @@ public sealed class CanvasPilotTests : IDisposable
 
         // Assert: two marks numbered in order, the rectangle with its note around the node and the ellipse from the
         // keyboard; each holds the very picture that was shown, with its fingerprints; the message holds their chips in
-        // the order the user wrote them, and the layer shows both
+        // the row above the words in the order the user made them, and the layer shows both
         Assert.Equal([1, 2], marks.Select(mark => mark.Number));
         Assert.Equal([MarkKind.Rectangle, MarkKind.Ellipse], marks.Select(mark => mark.Kind));
         Assert.Equal("this one", marks[0].Note);
@@ -1878,10 +1925,9 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.True(marks[0].Geometry.Points[0].X < start.X && marks[0].Geometry.Points[1].X > start.X + start.Width);
         Assert.Collection(
             segments,
-            segment => Assert.Equal(new TextSegment("Look: ", TextOrigin.Typed), segment),
             segment => Assert.Equal(new MarkChip(marks[0].Id, 1), segment),
-            segment => Assert.Equal(new TextSegment(" and ", TextOrigin.Typed), segment),
-            segment => Assert.Equal(new MarkChip(marks[1].Id, 2), segment));
+            segment => Assert.Equal(new MarkChip(marks[1].Id, 2), segment),
+            segment => Assert.Equal(new TextSegment("\nLook:  and ", TextOrigin.Typed), segment));
         Assert.Equal([1, 2], visible);
     }
 
@@ -2472,7 +2518,7 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a user chooses the style of a project in the status bar, that a new project starts with the default
+    ///     Test that a user chooses the style of a project in the title bar, that a new project starts with the default
     ///     kit of the user, that the choice is in the project file and is the same after the application is started
     ///     again, that a project that never had a style stays without one, and that a kit that cannot be found is said.
     /// </summary>

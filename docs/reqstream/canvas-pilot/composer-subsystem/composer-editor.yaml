@@ -2,8 +2,9 @@
 # Software Unit Requirements for the ComposerEditor Unit
 #
 # The ComposerEditor unit is the view of the message being composed: one editing surface in which typed text, dictated
-# text, and chips for attached files, folders, pictures, and marks stand in order. It shows what the ComposerViewModel
-# holds and reports everything the user does to it as that view model's actions; the editing rules, the undo steps, and
+# text, and chips for attached files, folders, pictures, and marks stand in order, with a hint of what to write while
+# it is empty. It shows what the ComposerViewModel holds and reports everything the user does to it as that view
+# model's actions; the editing rules, the undo steps, and
 # the handling of what is dropped and pasted belong to the view model and the intake. Runtime OTS requirements of the
 # editing control are children of the requirements below.
 
@@ -16,8 +17,9 @@ sections:
             requirements:
               - id: CanvasPilot-ComposerEditor-ShowChipsInline
                 title: >-
-                  The ComposerEditor shall show each file, folder, picture, and mark chip of the message inline in the
-                  text, in the order of the message and between the text before and after it, with an icon for its kind
+                  The ComposerEditor shall show each file, folder, picture, and mark chip of the message in the order of
+                  the message, between the text before and after it for a chip that was put there and in a row of its own
+                  above the words for the chip of a mark and of a file chosen with the attach button, with an icon for its kind
                   or a small picture of the item, its name, and the full path or the note as a tooltip; shall show the
                   picture when a provider has one and the icon otherwise, also when the provider fails; shall draw the
                   chip that is there after a chip took the place of another; and shall make a preview of a picture file
@@ -32,6 +34,8 @@ sections:
                 tests:
                   - ComposerEditorView_AddChip_IsDrawnInlineBetweenTexts
                   - ComposerEditorView_AddMark_ShowsMarkChipAndUndoCommandRemovesIt
+                  - ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords
+                  - ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords
                   - ComposerEditorView_ChipReplacesChip_DrawsTheNewChip
                   - ComposerEditorView_ThumbnailProvider_PictureReplacesIcon
                   - ComposerEditorView_ManyChipsAndWrappedText_StayConsistentThroughUndoAll
@@ -40,6 +44,19 @@ sections:
                   - ImageChipThumbnailProvider_GetThumbnailAsync_PictureFile_ReturnsCachedPreviewUntilChanged
                   - ImageChipThumbnailProvider_GetThumbnailAsync_NotAPictureMissingOrTooLarge_ReturnsNull
                   - ImageChipThumbnailProvider_GetThumbnailAsync_OtherChipsAndCancellation_ReturnNull
+
+              - id: CanvasPilot-ComposerEditor-ExposeMessageToAssistiveTechnology
+                title: >-
+                  The ComposerEditor shall present its editing surface to assistive technology as a text field named
+                  "Message" whose value is the text of the message with each chip named in brackets, that can be set to
+                  replace the message while it can be edited, and that takes the keyboard focus.
+                justification: |
+                  A screen reader user, and a tool that drives the window, must be able to find the field, read what the
+                  message says, and write it. The editing library's control has no automation peer, so without one the
+                  platform shows an unnamed scroll area with no text, and the main control of the application cannot be
+                  read or written by anyone who does not see it.
+                tests:
+                  - ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage
 
               - id: CanvasPilot-ComposerEditor-DeleteChipWithButtonOrKey
                 title: >-
@@ -57,8 +74,9 @@ sections:
               - id: CanvasPilot-ComposerEditor-EditTextWithCaretAndSelection
                 title: >-
                   The ComposerEditor shall let the user type text, delete it with Backspace and Delete, select it, type
-                  over a selection, commit several characters at once with an input method, and break lines with Enter,
-                  with a caret, wrapping, and word navigation, such that each typed or deleted character, each commit of
+                  over a selection, commit several characters at once with an input method, and break lines with Enter
+                  (unless the control that hosts it takes the key, as the chat panel does for Enter on its own), with a
+                  caret, wrapping, and word navigation, such that each typed or deleted character, each commit of
                   an input method, and each replacement of a selection is one step of the message.
                 justification: |
                   The editing surface is the place where most messages are written, and users expect it to behave as any
@@ -193,3 +211,14 @@ sections:
                   - ComposerEditorView_StatusAndPartialText_AreShown
                   - ComposerEditorView_DropWithoutProject_ChangesNothing
                   - ComposerEditorView_ProjectOpenedAndClosed_EditableOnlyWhileProjectIsOpen
+
+              - id: CanvasPilot-ComposerEditor-ShowPlaceholder
+                title: >-
+                  The ComposerEditor shall show the text "Describe a change, or mark the picture…" over the editing
+                  surface while the message of an open project is empty, and shall hide it as soon as the message has
+                  any text.
+                justification: |
+                  An empty box does not say what it is for, and the chat has no label above the message. A hint in the
+                  box says what to write and goes away when the user starts.
+                tests:
+                  - ChatPanelView_ComposerCard_PlaceholderNamesAndHint

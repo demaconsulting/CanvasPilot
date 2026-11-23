@@ -10,17 +10,18 @@ title, a one-line summary, tags, other names, a body in Markdown that links to o
 and examples with their text. The cards come from two places: the help of CanvasNet, which tells how to write each
 format and is as current as the library that draws the files, and cards of CanvasPilot that are embedded in the
 application and tell what the library cannot know: where files go in a project, how to make the picture the user uses,
-how to read the marks and attachments of a message, and what the user sees. Everything in it except one unit, the window
-that shows the cards to the user, has no dependency on the user interface; none of it depends on any provider of a
-language model or on any agent library, so the knowledge can be given to any provider of the copilot.
+how to read the marks and attachments of a message, and what the user sees. Everything in it except two units, the
+window that shows the cards to the user and the control that draws their text, has no dependency on the user
+interface; none of it depends on any provider of a language model or on any agent library, so the knowledge can be
+given to any provider of the copilot.
 
 The subsystem contains seven units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
 which finds the cards that fit some words, `KnowledgePromptBuilder`, which writes the cards as text for the prompt of an
 assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, `KnowledgeSkills`, which
-describes each card as a skill, `KnowledgeMarkdown`, which reads the Markdown of a card into blocks that a window can
-draw, and `KnowledgeBrowser`, the window in which the user reads the cards. It depends on CanvasNet for the help cards,
-on `Logging` for the log of a clipboard failure, and on `Project`, `Composer`, and `Annotation` only in its tests, which
-check that what the cards of CanvasPilot say about the application is what the code says.
+describes each card as a skill, `KnowledgeMarkdown`, which reads the Markdown of a card into blocks and draws them as
+selectable text, and `KnowledgeBrowser`, the window in which the user reads the cards. It depends on CanvasNet for the
+help cards, on `Logging` for the log of a clipboard failure, and on `Project`, `Composer`, and `Annotation` only in its
+tests, which check that what the cards of CanvasPilot say about the application is what the code says.
 
 ### Interfaces
 
@@ -76,16 +77,19 @@ check that what the cards of CanvasPilot say about the application is what the c
 - *Constraints*: The skills are made as they are read. The names of the skills of the catalog of the application are all
   different, which the tests check. Safe for concurrent use.
 
-**KnowledgeMarkdown**: The Markdown of a card as blocks for a window.
+**KnowledgeMarkdown**: The Markdown of a card as blocks, and the control that draws them.
 
 - *Type*: In-process static class, with the immutable values `HeadingBlock`, `ParagraphBlock`, `ListItemBlock`,
-  `CodeBlock` (all `MarkdownBlock`), `MarkdownSpan`, and the enumeration `MarkdownSpanStyle`.
+  `CodeBlock` (all `MarkdownBlock`), `MarkdownSpan`, and the enumeration `MarkdownSpanStyle`; and the Avalonia control
+  `MarkdownBlocksPanel`.
 - *Role*: Provider.
 - *Contract*: `Parse` reads the Markdown that the cards use into headings of six levels, paragraphs, list items with
   their markers, and fenced blocks of code with their language, with the text of a heading, paragraph, or item as runs
-  of normal, bold, italic, and code text.
+  of normal, bold, italic, and code text. `MarkdownBlocksPanel` draws the blocks it is given in its `Blocks` property as
+  text that can be selected, with the code blocks on a raised surface of the theme; the window of the cards and the chat
+  panel use it.
 - *Constraints*: Any text can be read and no letter or digit of a card is lost, which the tests check on every card.
-  Safe for concurrent use.
+  `Parse` is safe for concurrent use; the panel is used on the thread of the user interface.
 
 **KnowledgeBrowser**: The window in which the user reads the cards.
 

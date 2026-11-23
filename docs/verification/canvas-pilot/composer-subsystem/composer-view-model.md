@@ -48,6 +48,8 @@ from the background thread. No window, network, microphone, or special permissio
   the project or disposing the view model releases a session that is listening.
 - Each reason why dictation cannot work, a start without a session, a failure to start, a failure to end, a problem of
   the session, and a dictation without words each produce their own explanation and leave the draft as it is.
+- Deleting the chips of all marks takes every mark chip out of the message, each as its own step, and leaves the other
+  parts of the message as they were.
 
 #### Test Scenarios
 
@@ -95,9 +97,24 @@ back. This scenario is tested by `ComposerViewModel_HandleDrop_ThreeFilesAndTwoP
 replaces it as one step, and a pasted file is a second step at the caret; undo takes them back one at a time. This
 scenario is tested by `ComposerViewModel_HandlePaste_TextAndItems_AreOneStepAndReplaceSelection`.
 
-**ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip**: The chip of a mark is added at the caret as one step with
-the mark's number; undo removes it and redo brings it back; the mark stays in the registry. This scenario is tested by
+**ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip**: The chip of a mark is added to the row of chips above the
+words, with a line feed below the row, as one step with the mark's number; the caret stays after the words; undo removes
+the chip and the line feed and redo brings them back; the mark stays in the registry. This scenario is tested by
 `ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip`.
+
+**ComposerViewModel_AddMark_EmptyMessageAndSecondMark_KeepsOneRowAboveTheWords**: Two marks added to an empty message
+make two chips and one line feed, the caret is below the row, and the words typed next follow the line feed. This
+scenario is tested by `ComposerViewModel_AddMark_EmptyMessageAndSecondMark_KeepsOneRowAboveTheWords`.
+
+**ComposerViewModel_AttachFiles_GoToTheRowAboveTheWordsInOneStep**: Two files chosen with the attach button become two
+chips in the row above the words, with the line feed, as one step that undo and redo take and bring back; a file dropped
+afterwards without a place goes to the caret in the text. This scenario is tested by
+`ComposerViewModel_AttachFiles_GoToTheRowAboveTheWordsInOneStep`.
+
+**ComposerViewModel_NewText_CaretInTheChipRow_GoesBelowTheRow**: With a mark chip and its line feed in the message and
+the caret at the end of the row, typed, dictated, and pasted words are put below the row, so the message is the chip,
+the line feed, and all the words; a caret in the words keeps its place. This scenario is tested by
+`ComposerViewModel_NewText_CaretInTheChipRow_GoesBelowTheRow`.
 
 **ComposerViewModel_AddMark_MarkOfAnotherRegistry_ThrowsArgumentException**: A mark of another registry and a missing
 mark are refused and the draft is unchanged. This scenario is tested by
@@ -176,6 +193,16 @@ refuses editing with the message to open a project. This scenario is tested by
 **ComposerViewModel_SetProject_UnusableFolder_ExplainsAndHasNoProject**: A store factory that refuses the folder leaves
 no project and puts the reason into the status. This scenario is tested by
 `ComposerViewModel_SetProject_UnusableFolder_ExplainsAndHasNoProject`.
+
+**ComposerViewModel_DeleteChip_IsOneStepAndUndoRestoresItAtTheSameOffset** (also evidence of the deletion of the mark
+chips, see below): The removal of a chip is one step that one undo brings back at its offset, and the clearing of all
+mark chips is built from exactly that deletion for each chip.
+
+**AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage**: This UI test of the annotation toolbar runs the
+real chat panel and composer: with two marks drawn, two mark chips are in the message; using the clear button of the
+toolbar has `DeleteMarkChips` take both out, and no mark chip and no visible mark remain. It is described in the
+verification of the `AnnotationOverlay` unit and is the evidence for the removal of all mark chips. No unit test of
+`ComposerViewModel` calls `DeleteMarkChips` itself; the undo of its steps is evidenced through `DeleteChip`.
 
 **ComposerViewModel_ClearDraft_EmptiesEverything**: Clearing empties the draft, the history, and the marks and asks the
 store to remove the saved pictures. This scenario is tested by `ComposerViewModel_ClearDraft_EmptiesEverything`.

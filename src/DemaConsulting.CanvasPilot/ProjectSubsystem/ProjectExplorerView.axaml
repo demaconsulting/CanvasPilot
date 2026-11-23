@@ -4,37 +4,242 @@
              x:Class="DemaConsulting.CanvasPilot.ProjectSubsystem.ProjectExplorerView"
              x:DataType="vm:ProjectExplorerViewModel">
 
-  <Grid RowDefinitions="*,Auto">
+  <UserControl.Styles>
+    <!-- The badge of a file: a 16 px tile of the color of its kind with a white glyph. The name beside it always says what
+         the file is, so the badge only helps the eye. A folder is an amber outline without a tile. -->
+    <Style Selector="Border.badge">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Background" Value="{DynamicResource CpBadgeSource}" />
+    </Style>
+    <Style Selector="Border.badge PathIcon">
+      <Setter Property="Width" Value="11" />
+      <Setter Property="Height" Value="11" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Data" Value="{DynamicResource CpIconCode}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=svg]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeSvg}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=mermaid]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeMermaid}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=mermaid] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconFlow}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=vega]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeVega}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=vega] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconDataBarVertical}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=pdf]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgePdf}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=pdf] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconDocumentPdf}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=image]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeImage}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=image] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconImage}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=style]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeData}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=style] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconBraces}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=folder]">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.badge[Tag=folder] PathIcon">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="Foreground" Value="{DynamicResource CpWarning}" />
+      <Setter Property="Data" Value="{DynamicResource CpIconFolder}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=folder].open PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconFolderOpen}" />
+    </Style>
 
-    <ListBox Grid.Row="0"
-             AutomationProperties.AutomationId="ProjectExplorerList"
-             ItemsSource="{Binding Items}"
-             SelectedItem="{Binding SelectedItem}">
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="vm:ProjectFileItem">
-          <TextBlock Text="{Binding Name}" Margin="4,2" ToolTip.Tip="{Binding FullPath}" />
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
+    <!-- The drop zone lights up while a drag that it accepts is over it -->
+    <Style Selector="Panel.drag-active > Rectangle#DropZoneOutline">
+      <Setter Property="Stroke" Value="{DynamicResource CpAccent}" />
+      <Setter Property="Fill" Value="{DynamicResource CpAccentTint}" />
+    </Style>
+  </UserControl.Styles>
 
-    <TextBlock Grid.Row="0"
+  <Grid RowDefinitions="Auto,*,Auto,Auto">
+
+    <!-- The header: the label of the pane in capitals and three icon buttons -->
+    <Border Grid.Row="0"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto" Height="40" Margin="16,0,8,0">
+        <TextBlock Grid.Column="0"
+                   VerticalAlignment="Center"
+                   FontSize="{DynamicResource CpFontCaption}"
+                   FontWeight="Bold"
+                   LetterSpacing="1"
+                   Foreground="{DynamicResource CpTextSecondary}"
+                   Text="EXPLORER" />
+        <Button Grid.Column="1"
+                Name="NewFileButton"
+                AutomationProperties.AutomationId="ExplorerNewFileButton"
+                AutomationProperties.Name="New file"
+                ToolTip.Tip="New file"
+                Theme="{DynamicResource IconButton}"
+                Command="{Binding NewFileCommand}">
+          <PathIcon Classes="icon" Data="{DynamicResource CpIconDocumentAdd}" />
+        </Button>
+        <Button Grid.Column="2"
+                Name="NewFolderButton"
+                AutomationProperties.AutomationId="ExplorerNewFolderButton"
+                AutomationProperties.Name="New folder"
+                ToolTip.Tip="New folder"
+                Theme="{DynamicResource IconButton}"
+                Command="{Binding NewFolderCommand}">
+          <PathIcon Classes="icon" Data="{DynamicResource CpIconFolderAdd}" />
+        </Button>
+        <Button Grid.Column="3"
+                Name="RefreshButton"
+                AutomationProperties.AutomationId="ExplorerRefreshButton"
+                AutomationProperties.Name="Refresh"
+                ToolTip.Tip="Refresh"
+                Theme="{DynamicResource IconButton}"
+                Command="{Binding RefreshCommand}">
+          <PathIcon Classes="icon" Data="{DynamicResource CpIconArrowClockwise}" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- The project as a tree: folders first, then files. The list keeps its automation id, but its items are tree items now:
+         a folder can be selected and expanded, and only a file that is drawn is previewed. -->
+    <TreeView Grid.Row="1"
+              Name="ExplorerTree"
+              Classes.comfortable="{Binding ComfortableRows}"
+              AutomationProperties.AutomationId="ProjectExplorerList"
+              AutomationProperties.Name="Project files"
+              Background="Transparent"
+              Padding="8,4"
+              ItemsSource="{Binding Roots}"
+              SelectedItem="{Binding SelectedNode, Mode=TwoWay}">
+      <TreeView.Styles>
+        <Style Selector="TreeViewItem" x:DataType="vm:ProjectNodeViewModel">
+          <Setter Property="Theme" Value="{DynamicResource ExplorerTreeViewItem}" />
+          <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+        </Style>
+        <!-- The comfortable setting makes the rows 32 px tall instead of 26 px -->
+        <Style Selector="TreeView.comfortable TreeViewItem">
+          <Setter Property="MinHeight" Value="32" />
+        </Style>
+      </TreeView.Styles>
+      <TreeView.ItemTemplate>
+        <TreeDataTemplate x:DataType="vm:ProjectNodeViewModel" ItemsSource="{Binding Children}">
+          <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding FullPath}">
+            <Border Grid.Column="0"
+                    Classes="badge"
+                    Classes.open="{Binding IsExpanded}"
+                    Tag="{Binding BadgeKey}">
+              <PathIcon Classes="icon" />
+            </Border>
+            <TextBlock Grid.Column="1"
+                       Margin="8,0,0,0"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       Text="{Binding Name}" />
+            <!-- The small picture of a file that is drawn, 28 by 18, right aligned. It is decoration: the name says what the
+                 file is. -->
+            <Border Grid.Column="2"
+                    AutomationProperties.AutomationId="ExplorerThumbnail"
+                    Margin="8,0,0,0"
+                    Width="28"
+                    Height="18"
+                    CornerRadius="3"
+                    ClipToBounds="True"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource CpBorderSubtle}"
+                    IsVisible="{Binding HasThumbnail}">
+              <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+            </Border>
+          </Grid>
+        </TreeDataTemplate>
+      </TreeView.ItemTemplate>
+    </TreeView>
+
+    <TextBlock Grid.Row="1"
                AutomationProperties.AutomationId="ProjectExplorerEmptyMessage"
-               Margin="8"
+               Margin="16,12"
                HorizontalAlignment="Center"
                VerticalAlignment="Top"
-               Opacity="0.7"
+               Foreground="{DynamicResource CpTextTertiary}"
                TextWrapping="Wrap"
                IsHitTestVisible="False"
                IsVisible="{Binding EmptyMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                Text="{Binding EmptyMessage}" />
 
-    <TextBlock Grid.Row="1"
-               AutomationProperties.AutomationId="ProjectExplorerError"
-               Margin="4"
-               Foreground="Firebrick"
-               TextWrapping="Wrap"
-               IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-               Text="{Binding ErrorMessage}" />
+    <!-- A problem that stopped the explorer from reading the folder, or from renaming or deleting a file -->
+    <Border Grid.Row="2"
+            Margin="8"
+            Padding="8,6"
+            CornerRadius="{DynamicResource CpRadiusRow}"
+            Background="{DynamicResource CpSurfaceRaised}"
+            IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <Grid ColumnDefinitions="Auto,*">
+        <PathIcon Grid.Column="0"
+                  Classes="icon"
+                  Margin="0,2,8,0"
+                  VerticalAlignment="Top"
+                  Foreground="{DynamicResource CpDanger}"
+                  Data="{DynamicResource CpIconErrorCircle}" />
+        <TextBlock Grid.Column="1"
+                   AutomationProperties.AutomationId="ProjectExplorerError"
+                   Foreground="{DynamicResource CpDanger}"
+                   FontSize="{DynamicResource CpFontSmall}"
+                   TextWrapping="Wrap"
+                   Text="{Binding ErrorMessage}" />
+      </Grid>
+    </Border>
+
+    <!-- The drop zone: pictures and PDF files that are dropped here are copied into the attachments folder -->
+    <Panel Grid.Row="3"
+           Name="DropZone"
+           AutomationProperties.AutomationId="ExplorerDropZone"
+           Margin="16"
+           Background="Transparent"
+           IsVisible="{Binding HasProject}">
+      <Rectangle Name="DropZoneOutline"
+                 RadiusX="10"
+                 RadiusY="10"
+                 Stroke="{DynamicResource CpBorderControl}"
+                 StrokeThickness="1"
+                 StrokeDashArray="4,3"
+                 IsHitTestVisible="False" />
+      <Grid ColumnDefinitions="Auto,*" Margin="12,10">
+        <PathIcon Grid.Column="0"
+                  Classes="icon"
+                  Margin="0,0,10,0"
+                  VerticalAlignment="Center"
+                  Foreground="{DynamicResource CpTextTertiary}"
+                  Data="{DynamicResource CpIconAttach}" />
+        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+          <TextBlock FontSize="{DynamicResource CpFontSmall}"
+                     Foreground="{DynamicResource CpTextPrimary}"
+                     TextWrapping="Wrap"
+                     Text="Drop pictures or PDFs here" />
+          <TextBlock FontSize="{DynamicResource CpFontCaption}"
+                     Foreground="{DynamicResource CpTextTertiary}"
+                     TextWrapping="Wrap"
+                     Text="They are added to the project" />
+        </StackPanel>
+      </Grid>
+    </Panel>
 
   </Grid>
 

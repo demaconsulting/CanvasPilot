@@ -4,15 +4,18 @@
 
 ### Overview
 
-The `Settings` subsystem stores the user's settings and lets the user change them. Its boundary starts with
-settings values supplied by other subsystems and by the user in the settings dialog, and ends with one
-versioned JSON file in the per-user application data folder. It contains three units:
-`SettingsService`, which owns the settings records and the file; `SettingsDialog`, the modal window that
-hosts settings pages; and `AiProviderSettingsPage`, the page for the AI provider choices. Settings pages
-for other subsystems, such as speech, are supplied to the dialog by the application, so the `Settings`
-subsystem does not depend on them. The Agent subsystem reads the AI provider choices through `ISettingsService`, and
-checks them and lists the models of the provider through the `IProviderCheck` and `IProviderModelSource` interfaces that
-this subsystem owns and that the Agent subsystem implements; this subsystem depends on neither.
+The `Settings` subsystem stores the user's settings and lets the user change them. Its boundary starts with settings
+values supplied by other subsystems and by the user in the settings dialog, and ends with one versioned JSON file in the
+per-user application data folder. It contains four units: `SettingsService`, which owns the settings records and the
+file; `SettingsDialog`, the modal window that hosts settings pages; `AiProviderSettingsPage`, the page for the AI
+provider choices; and `AppearanceSettingsPage`, the page for the theme and the options of the project explorer. Settings
+pages for other subsystems, such as speech, are supplied to the dialog by the application, so the `Settings` subsystem
+does not depend on them. The same file keeps the layout of the main window (size, place, state, and the widths of the
+explorer and chat columns), the appearance (the theme choice and the options of the explorer), and the time at which
+each recent project was last opened; the shell reads them when it builds and restores the window. The Agent subsystem
+reads the AI provider choices through `ISettingsService`, and checks them and lists the models of the provider through
+the `IProviderCheck` and `IProviderModelSource` interfaces that this subsystem owns and that the Agent subsystem
+implements; this subsystem depends on neither.
 
 ### Interfaces
 
@@ -32,9 +35,10 @@ this subsystem owns and that the Agent subsystem implements; this subsystem depe
 
 - *Type*: In-process .NET API (`ISettingsPage`).
 - *Role*: Provider.
-- *Contract*: A page has a `Title` and an `IsValid` flag, loads its working state from `AppSettings`,
-  returns an updated `AppSettings` from `Apply`, and is told once through `OnClosed` when the dialog closes.
-  A page view model is named `...ViewModel`, so the view locator finds its `...View`.
+- *Contract*: A page has a `Title`, a `Description` (the sentence under the title; empty by default), an `IconKey` (the
+  resource key of its icon; a default icon by default), and an `IsValid` flag, loads its working state from
+  `AppSettings`, returns an updated `AppSettings` from `Apply`, and is told once through `OnClosed` when the dialog
+  closes. A page view model is named `...ViewModel`, so the view locator finds its `...View`.
 - *Constraints*: `Apply` throws `InvalidOperationException` when the page is not valid.
 
 **Settings File**: The local persistent store.
@@ -50,7 +54,9 @@ this subsystem owns and that the Agent subsystem implements; this subsystem depe
 
 - *Type*: Avalonia window (`SettingsDialogView`) shown modally by its caller.
 - *Role*: Provider.
-- *Contract*: A page list on the left, the selected page on the right, and OK, Cancel, and Apply buttons.
+- *Contract*: A rail of pages on the left, each with an icon and a title; the selected page on the right under its
+  title and a sentence; and a footer with a banner for a problem with saving and the OK, Cancel, and Apply buttons. The
+  window is 860 by 620 and at least 640 by 420.
 - *Constraints*: OK and Apply are disabled while any page is invalid.
 
 ### Design

@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia.Media.Imaging;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
@@ -146,5 +147,71 @@ public sealed class FakeImageSourceFilter(params string[] extensions) : IImageSo
     public bool IsImageSource(string fileName)
     {
         return extensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase);
+    }
+}
+
+/// <summary>
+///     Hand-written source of thumbnails for tests: it records which files it was asked for and gives no bitmap, or fails with
+///     the exception that a test gives it, so that the explorer can be tested without a platform that makes bitmaps.
+/// </summary>
+public sealed class RecordingThumbnailSource : IThumbnailSource
+{
+    /// <summary>
+    ///     Gets the full paths of the files that thumbnails were asked for, in order.
+    /// </summary>
+    public List<string> Requested { get; } = [];
+
+    /// <summary>
+    ///     Gets the project folders that came with the requests, in order.
+    /// </summary>
+    public List<string> Folders { get; } = [];
+
+    /// <summary>
+    ///     Gets or sets the exception that a request fails with, or <see langword="null" /> for none.
+    /// </summary>
+    public Exception? Failure { get; set; }
+
+    /// <inheritdoc />
+    public Task<Bitmap?> CreateAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
+    {
+        Requested.Add(filePath);
+        Folders.Add(projectFolder);
+        return Failure is null ? Task.FromResult<Bitmap?>(null) : Task.FromException<Bitmap?>(Failure);
+    }
+}
+
+/// <summary>
+///     Hand-written source of thumbnails for tests that does not answer until the test says so: it tells when a request
+///     started, with the token of the request, and when it ended.
+/// </summary>
+public sealed class PendingThumbnailSource : IThumbnailSource
+{
+    /// <summary>
+    ///     Gets the task that completes with the token of the first request when it starts.
+    /// </summary>
+    public TaskCompletionSource<CancellationToken> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    ///     Gets the answer to the requests, which the test completes or fails.
+    /// </summary>
+    public TaskCompletionSource<Bitmap?> Answer { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    ///     Gets the task that completes when the first request has ended.
+    /// </summary>
+    public TaskCompletionSource Finished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <inheritdoc />
+    public async Task<Bitmap?> CreateAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
+    {
+        Started.TrySetResult(cancellationToken);
+        try
+        {
+            return await Answer.Task;
+        }
+        finally
+        {
+            Finished.TrySetResult();
+        }
     }
 }

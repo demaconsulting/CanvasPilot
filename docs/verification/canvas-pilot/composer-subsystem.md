@@ -42,6 +42,9 @@ project. No network, display, or special permission is needed.
 - Through the editing view, typed text, a dictated block, dropped files, and pasted text keep the editing surface equal
   to the message after every action, and undo and redo with the keyboard pass through the same states; chips are drawn
   inline in the order of the message, and deleting one with its button is one step that undo brings back in place.
+- The clearing of the marks takes every mark chip out of the message and no visible mark remains (the user interface
+  test of the annotation toolbar over the real panel and composer), and the empty message shows its placeholder in the
+  chat panel until text is typed (the user interface test of the chat panel).
 
 ### Test Scenarios
 
@@ -120,3 +123,15 @@ the message. This scenario is tested by `ComposerSubsystem_EditMessageInEditor_M
 are dropped after typed text and drawn as three chips in order. A click on the delete button of the middle chip leaves
 the other two; undo draws the middle chip again between them, and redo removes it again. This scenario is tested by
 `ComposerSubsystem_ShowChipsInline_DropThenDeleteAndUndo_ChipsFollowTheMessage`.
+
+**ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage**: The user interface test of the editing
+surface asks for its automation peer, which is an edit field named `Message` that tells the message with the chip named
+`[Mark 1]` and the words, and that replaces the message when its value is set. It is the evidence of the exposure of the
+message to assistive technology, described in the verification of the `ComposerEditor` unit. This scenario is tested by
+`ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage`.
+
+**AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage**: The user interface test of the annotation toolbar
+runs the real composer through the real chat panel: two marks are drawn and two mark chips are in the message; using
+the clear button of the toolbar takes both out and leaves no visible mark. It is the evidence of the removal of all
+mark chips, described in the verification of the `ComposerViewModel` unit. This scenario is tested by
+`AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage`.

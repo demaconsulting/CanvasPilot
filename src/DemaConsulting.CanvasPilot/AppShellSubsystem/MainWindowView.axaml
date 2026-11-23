@@ -6,8 +6,13 @@
         Name="MainWindow"
         Title="{Binding Title}"
         Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
-        Width="1100"
-        Height="720">
+        Width="1440"
+        Height="900"
+        MinWidth="960"
+        MinHeight="600"
+        Background="{DynamicResource CpSurfaceWindow}"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="44">
 
   <Window.Resources>
     <!-- Each recent project becomes a menu item that shows its name and opens the project. -->
@@ -20,11 +25,60 @@
     </ControlTheme>
   </Window.Resources>
 
+  <Window.Styles>
+    <!-- The window draws its own title text at the left of the strip when the frame is extended (Avalonia 12 on Windows
+         and Linux), which would lie under the brand mark and the menu; the strip has its own centered title. -->
+    <Style Selector="WindowDrawnDecorations /template/ Panel#PART_TitleTextPanel > TextBlock">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <!-- The menu keeps all its items and keys; only its look is quiet: no fill, compact items, secondary text. -->
+    <Style Selector="Menu#MainMenu">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Menu#MainMenu > MenuItem">
+      <Setter Property="Padding" Value="8,4" />
+      <Setter Property="Foreground" Value="{DynamicResource CpTextSecondary}" />
+      <Setter Property="FontSize" Value="{DynamicResource CpFontBody}" />
+    </Style>
+  </Window.Styles>
+
   <DockPanel>
 
-    <Menu DockPanel.Dock="Top"
-          Name="MainMenu"
-          AutomationProperties.AutomationId="MainMenu">
+    <!-- The title bar: 44 px high. When the platform lets the window extend into its frame, the strip is the frame
+         and the system keeps drawing the window buttons over its right end (reserved below); when it cannot, the same
+         strip is a normal row under the system title bar. The empty strip drags the window. -->
+    <Border DockPanel.Dock="Top"
+            Name="AppTitleBar"
+            AutomationProperties.AutomationId="AppTitleBar"
+            Height="44"
+            Background="{DynamicResource CpSurfaceWindow}"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="0,0,0,1"
+            WindowDecorationProperties.ElementRole="TitleBar">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto">
+
+        <Border Name="TitleBarLeadingReserve" Grid.Column="0" Width="0" />
+
+        <Border Grid.Column="1"
+                Width="24"
+                Height="24"
+                Margin="16,0,12,0"
+                VerticalAlignment="Center"
+                CornerRadius="7"
+                IsHitTestVisible="False"
+                Background="{DynamicResource CpAccentGradient}">
+          <PathIcon Classes="icon"
+                    Width="14"
+                    Height="14"
+                    Foreground="{DynamicResource CpTextOnAccent}"
+                    Data="{DynamicResource CpIconSparkle}" />
+        </Border>
+
+        <Menu Grid.Column="2"
+              Name="MainMenu"
+              AutomationProperties.AutomationId="MainMenu"
+              WindowDecorationProperties.ElementRole="User">
 
       <MenuItem Name="FileMenu"
                 AutomationProperties.AutomationId="FileMenu"
@@ -127,23 +181,64 @@
 
     </Menu>
 
-    <!-- The status bar: the style kit of the open project is chosen here. It is shown while a project is open. -->
-    <Border DockPanel.Dock="Bottom"
-            Name="StatusBar"
-            AutomationProperties.AutomationId="StatusBar"
-            BorderThickness="0,1,0,0"
-            BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-            Padding="8,3"
-            IsVisible="{Binding ShowStatusBar}">
-      <ContentControl Name="StylePickerHost"
-                      AutomationProperties.AutomationId="StylePickerHost"
-                      HorizontalAlignment="Left"
-                      Content="{Binding StylePicker}" />
+        <!-- The name of the open project (or of the application) in the middle, with the application after it -->
+        <TextBlock Grid.Column="3"
+                   Name="TitleBarText"
+                   AutomationProperties.AutomationId="AppTitleBarText"
+                   Margin="16,0"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"
+                   IsHitTestVisible="False"
+                   FontSize="{DynamicResource CpFontBody}"
+                   Foreground="{DynamicResource CpTextTertiary}">
+          <TextBlock.Inlines>
+            <Run Name="TitleBarName"
+                 FontWeight="SemiBold"
+                 Foreground="{DynamicResource CpTextPrimary}"
+                 Text="{Binding TitleBarName}" /><Run Name="TitleBarSuffix" Text="{Binding TitleBarSuffix}" />
+          </TextBlock.Inlines>
+        </TextBlock>
+
+        <!-- The style kit of the open project is chosen here; it shows while a project is open. -->
+        <ContentControl Name="StylePickerHost"
+                        Grid.Column="4"
+                        AutomationProperties.AutomationId="StylePickerHost"
+                        Margin="0,0,8,0"
+                        VerticalAlignment="Center"
+                        WindowDecorationProperties.ElementRole="User"
+                        Content="{Binding StylePicker}" />
+
+        <!-- The AI provider: which one is chosen and whether it can be used; it opens the settings -->
+        <ContentControl Name="ProviderPillHost"
+                        Grid.Column="5"
+                        AutomationProperties.AutomationId="ProviderPillHost"
+                        Margin="0,0,16,0"
+                        VerticalAlignment="Center"
+                        Content="{Binding ProviderPill}" />
+
+        <Border Name="TitleBarCaptionReserve" Grid.Column="6" Width="0" />
+
+      </Grid>
     </Border>
 
-    <ContentControl Name="WorkspaceHost"
-                    AutomationProperties.AutomationId="WorkspaceHost"
-                    Content="{Binding Workspace}" />
+    <!-- The status bar is always there: it says what the picture is, and whether the project is saved. -->
+    <vm:StatusBarView DockPanel.Dock="Bottom"
+                      DataContext="{Binding StatusBar}" />
+
+    <!-- With no project open the welcome screen fills the body; the workspace takes its place once a project is open. -->
+    <Grid>
+      <ContentControl Name="WorkspaceHost"
+                      AutomationProperties.AutomationId="WorkspaceHost"
+                      IsVisible="{Binding HasProject}"
+                      Content="{Binding Workspace}" />
+      <ContentControl Name="WelcomeHost"
+                      AutomationProperties.AutomationId="WelcomeHost"
+                      HorizontalContentAlignment="Stretch"
+                      VerticalContentAlignment="Stretch"
+                      IsVisible="{Binding !HasProject}"
+                      Content="{Binding Welcome}" />
+    </Grid>
 
   </DockPanel>
 

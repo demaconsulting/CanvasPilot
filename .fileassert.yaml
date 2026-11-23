@@ -83,6 +83,19 @@ tests:
         count: 3
         min-size: 300
 
+  # The notices of the third-party material that is vendored in the source (the license of the icons) are a file beside
+  # the executable. The installer harvests every file of publish/win-x64, so the file asserted here is the file in the MSI.
+  - name: ThirdPartyNotices_Published
+    description: "Published win-x64 application contains the notices of the vendored third-party material"
+    tags: [installer]
+    files:
+      - pattern: "publish/win-x64/THIRD-PARTY-NOTICES.md"
+        count: 1
+        min-size: 1000
+        text:
+          - contains: "Fluent System Icons"
+          - contains: "MIT License"
+
   # --- BUILD NOTES ---
 
   - name: Pandoc_BuildNotesHtml
@@ -348,6 +361,12 @@ tests:
           - query: "//*[local-name()='svg']"
             count: 1
       - pattern: "docs/design/generated/AppShellSubsystemWorkspaceView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
+      - pattern: "docs/design/generated/AppShellSubsystemChromeView.svg"
         count: 1
         min-size: 100
         xml:

@@ -57,6 +57,8 @@ public sealed class SettingsService : ISettingsService
         Converters =
         {
             new TolerantEnumConverter<AiProviderKind>(),
+            new TolerantEnumConverter<ThemeChoice>(),
+            new TolerantEnumConverter<SavedWindowState>(),
         },
     };
 
@@ -198,6 +200,10 @@ public sealed class SettingsService : ISettingsService
         var ai = source.AiProvider ?? new AiProviderSettings();
         var speech = source.Speech ?? new SpeechSettings();
         var styles = source.Styles ?? new StyleSettings();
+        var appearance = source.Appearance ?? new AppearanceSettings();
+        var recentProjects = (source.RecentProjects ?? [])
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToList();
 
         var parameters = new Dictionary<string, IReadOnlyDictionary<string, string>>(StringComparer.Ordinal);
         foreach (var (modelId, values) in speech.ModelParameters ?? new Dictionary<string, IReadOnlyDictionary<string, string>>())
@@ -215,9 +221,7 @@ public sealed class SettingsService : ISettingsService
         return new AppSettings
         {
             Version = AppSettings.CurrentVersion,
-            RecentProjects = (source.RecentProjects ?? [])
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .ToList(),
+            RecentProjects = recentProjects,
             AiProvider = ai with
             {
                 ModelName = ai.ModelName?.Trim() ?? string.Empty,
@@ -243,7 +247,72 @@ public sealed class SettingsService : ISettingsService
                 SharedKitFolders = NormalizeSharedFolders(styles.SharedKitFolders),
                 DefaultKitId = StyleSettings.IsValidKitId(styles.DefaultKitId?.Trim()) ? styles.DefaultKitId!.Trim() : string.Empty,
             },
+            Appearance = appearance with
+            {
+                Theme = Enum.IsDefined(appearance.Theme) ? appearance.Theme : ThemeChoice.FollowSystem,
+            },
+            Window = NormalizeWindow(source.Window ?? new WindowSettings()),
+            RecentProjectOpened = NormalizeOpenedTimes(source.RecentProjectOpened, recentProjects),
         };
+    }
+
+    /// <summary>
+    ///     Brings the layout of the main window within its documented bounds: a size below the smallest or above the
+    ///     largest (or not a size at all) becomes the nearest bound, a column width outside its range becomes the nearest
+    ///     end of the range, a place that no screen can have is forgotten, and an unknown state is a normal window.
+    /// </summary>
+    /// <remarks>
+    ///     Clamping, and not a reset to the default, keeps what the user meant: a column dragged beyond its limit by a
+    ///     hand edit is still a wide column. The place is not tested against the screens here, because the screens of
+    ///     the machine are not known to the settings; the window does that when it restores itself.
+    /// </remarks>
+    /// <param name="window">The layout as read or supplied.</param>
+    /// <returns>A layout that satisfies every documented bound.</returns>
+    private static WindowSettings NormalizeWindow(WindowSettings window)
+    {
+        return window with
+        {
+            Width = Math.Clamp(window.Width, WindowSettings.MinimumWidth, WindowSettings.MaximumSize),
+            Height = Math.Clamp(window.Height, WindowSettings.MinimumHeight, WindowSettings.MaximumSize),
+            Left = NormalizeCoordinate(window.Left),
+            Top = NormalizeCoordinate(window.Top),
+            State = Enum.IsDefined(window.State) ? window.State : SavedWindowState.Normal,
+            ExplorerWidth = Math.Clamp(window.ExplorerWidth, WindowSettings.MinimumExplorerWidth, WindowSettings.MaximumExplorerWidth),
+            ChatWidth = Math.Clamp(window.ChatWidth, WindowSettings.MinimumChatWidth, WindowSettings.MaximumChatWidth),
+        };
+    }
+
+    /// <summary>
+    ///     Keeps a place of the window only when a screen can have it.
+    /// </summary>
+    /// <param name="coordinate">The stored place, or <see langword="null" />.</param>
+    /// <returns>The place, or <see langword="null" /> when it was none or lies beyond any screen.</returns>
+    private static int? NormalizeCoordinate(int? coordinate)
+    {
+        return coordinate is { } value && Math.Abs(value) <= WindowSettings.MaximumCoordinate ? value : null;
+    }
+
+    /// <summary>
+    ///     Keeps the times of opening only for the projects that are in the list of recent projects, so the table cannot
+    ///     grow beyond the list and a time never belongs to a project that is gone from it.
+    /// </summary>
+    /// <param name="opened">The times as read or supplied; may be <see langword="null" /> after parsing.</param>
+    /// <param name="recentProjects">The recent projects that are kept.</param>
+    /// <returns>The times of the projects that are listed, by their paths.</returns>
+    private static Dictionary<string, DateTimeOffset> NormalizeOpenedTimes(
+        IReadOnlyDictionary<string, DateTimeOffset>? opened,
+        List<string> recentProjects)
+    {
+        var kept = new Dictionary<string, DateTimeOffset>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (path, time) in opened ?? new Dictionary<string, DateTimeOffset>())
+        {
+            if (!string.IsNullOrWhiteSpace(path) && recentProjects.Contains(path, StringComparer.OrdinalIgnoreCase))
+            {
+                kept[path] = time;
+            }
+        }
+
+        return kept;
     }
 
     /// <summary>

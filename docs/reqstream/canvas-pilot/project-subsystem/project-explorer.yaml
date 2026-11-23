@@ -1,10 +1,13 @@
 ---
 # Software Unit Requirements for the ProjectExplorer Unit
 #
-# The ProjectExplorer unit is the project explorer view model and its list view. It lists the image source
-# files in the root of the open project's folder, keeps the list current by watching the folder, and deletes
-# or renames the selected file. The file types come from an IImageSourceFilter, backed in the application by
-# the CanvasNet viewer library's extension list, and refreshes are delayed through an IRefreshScheduler.
+# The ProjectExplorer unit is the project explorer view model, its tree node, and its view. It shows the open project's
+# folder as a tree of folders and files with a header (EXPLORER, New file, New folder, and Refresh), keeps the tree
+# current by watching the folder and its sub-folders, remembers which folders are expanded, selects, creates, renames, and
+# deletes files and folders, copies dropped or added files into the project, and shows small pictures of the drawings. The
+# file types come from an IImageSourceFilter, backed in the application by the CanvasNet viewer library's extension list,
+# refreshes are delayed through an IRefreshScheduler, and the small pictures come from an IThumbnailSource that the
+# Preview subsystem implements.
 
 sections:
   - title: CanvasPilot Requirements
@@ -15,19 +18,22 @@ sections:
             requirements:
               - id: CanvasPilot-ProjectExplorer-ListProjectImages
                 title: >-
-                  The ProjectExplorer shall list, sorted by name, the files in the root of the project
-                  folder that have an image source extension, excluding sub-folders, the hidden
-                  .canvaspilot folder, the project file, and hidden files, and shall explain an empty
-                  list or an unreadable folder.
+                  The ProjectExplorer shall show the project folder as a tree of its folders and files, folders first and
+                  then files with each group sorted by name ignoring letter case, listing the folders of the project at
+                  any depth and, in them, the files that have an image source extension and the assets of the project
+                  (bitmaps, PDF files, and style.json files), excluding the hidden .canvaspilot data folder, the project
+                  file, and hidden files and folders, and shall explain an empty tree or an unreadable folder.
                 justification: |
-                  The top-level image sources are the files the user works on. Supporting assets live in
-                  sub-folders and application data in the hidden folder, so listing them would be noise.
-                  Using the extensions that CanvasNet can draw keeps the list to files the application
-                  can show.
+                  The image sources are the files the user works on, and the assets and style kits that they use live in
+                  sub-folders, such as the attachments folder that receives the pictures pasted into a message, so the tree
+                  shows them where they are. Application data in the hidden folder would be noise. Using the extensions
+                  that CanvasNet can draw keeps the drawn files to those the application can show, and a message
+                  for an empty or unreadable folder tells the user what to do next.
                 children:
                   - CanvasPilot-OTS-CanvasNet-ListSupportedTypes
                 tests:
-                  - ProjectExplorerViewModel_Open_ProjectFolder_ListsOnlyRootImageSourceFilesSorted
+                  - ProjectExplorerViewModel_Open_ProjectFolder_BuildsTreeWithFoldersFirstAndSkipsHiddenAndOtherFiles
+                  - ProjectNodeViewModel_KindAndFormat_FromTheFileName
                   - ProjectExplorerViewModel_Open_HiddenAttributeFile_IsNotListed
                   - ProjectExplorerViewModel_Open_NoImageFiles_ShowsEmptyMessage
                   - ProjectExplorerViewModel_Open_MissingFolder_ShowsErrorAndEmptyList
@@ -37,46 +43,113 @@ sections:
                   - ProjectExplorerView_OpenProject_ListsImageFiles
                   - ProjectExplorerView_NoProjectOrNoImages_ShowsEmptyMessage
 
+              - id: CanvasPilot-ProjectExplorer-ListDrawnFiles
+                title: >-
+                  The ProjectExplorer shall give the list of the files that can be previewed (the files that CanvasNet
+                  draws) wherever they lie in the tree, in the order of the tree, and shall leave the bitmaps, PDF files,
+                  and style.json files, which are shown in the tree but not drawn, out of that list.
+                justification: |
+                  Other parts of the application act on the drawings of the project, such as the preview and the
+                  composer, and they need to know which files those are without walking the tree. The assets are shown
+                  to the user as part of the project but are not drawings that can be previewed.
+                tests:
+                  - ProjectExplorerViewModel_Open_ProjectFolder_BuildsTreeWithFoldersFirstAndSkipsHiddenAndOtherFiles
+                  - ProjectExplorerViewModel_Refresh_FilesAddedAndRemoved_UpdatesListAndKeepsSelection
+                  - ProjectExplorerViewModel_Refresh_NestedChanges_KeepsNodesSelectionAndExpansion
+
+              - id: CanvasPilot-ProjectExplorer-LimitTheTree
+                title: >-
+                  The ProjectExplorer shall list at most 5000 entries and go at most 12 folders deep, and shall mark the
+                  tree as cut short when the project folder holds more entries or goes deeper.
+                justification: |
+                  A project folder may be pointed at a huge or very deep folder tree, and reading all of it would stall
+                  the application. A limit keeps the application responsive, and a mark that the tree is cut short keeps
+                  a missing file from being a mystery.
+                tests:
+                  - ProjectExplorerViewModel_Open_TooManyOrTooDeep_IsTruncatedAndSaysSo
+
               - id: CanvasPilot-ProjectExplorer-SelectFile
                 title: >-
-                  The ProjectExplorer shall expose the selected file, let the selection be set from the
-                  list or by path, keep the selection of a file that is still listed after a refresh,
-                  and clear it when the file is gone.
+                  The ProjectExplorer shall expose the selected file that can be previewed, let the selection be set from
+                  the tree or by path (expanding the folders above the file so that it can be seen), keep the selection of
+                  a file that is still listed after a refresh, and clear it when the file is gone.
                 justification: |
-                  Other parts of the application act on the selected file, so it must be available and
-                  stay stable while the list changes around it.
+                  Other parts of the application act on the selected file, so it must be available and stay stable while
+                  the tree changes around it. A file selected by path, for example one the assistant just made, must
+                  be visible to the user.
                 tests:
                   - ProjectExplorerViewModel_SelectFile_ListedAndUnlisted_ReportsResult
                   - ProjectExplorerViewModel_Refresh_FilesAddedAndRemoved_UpdatesListAndKeepsSelection
                   - ProjectExplorerViewModel_Refresh_SelectedFileRemoved_ClearsSelection
+                  - ProjectExplorerViewModel_SelectedNode_FolderFileAndAsset_FollowsTheSelectionOfTheFile
                   - ProjectExplorerView_SelectItem_UpdatesSelectedFile
                   - ProjectExplorerView_SelectFileInViewModel_SelectsItemInList
 
+              - id: CanvasPilot-ProjectExplorer-SelectNode
+                title: >-
+                  The ProjectExplorer shall let the user select a folder or a file in the tree, shall select no file that
+                  can be previewed while a folder or an asset that is not drawn is selected, and shall keep the selected
+                  file and the selected row in step with each other.
+                justification: |
+                  Folders are where new files go and assets are part of the project, so they must be selectable, but only a
+                  drawing can be previewed, renamed, or deleted. Selecting a folder must therefore leave no drawing
+                  selected, or the preview and the file commands would act on a file the user did not choose.
+                tests:
+                  - ProjectExplorerViewModel_SelectedNode_FolderFileAndAsset_FollowsTheSelectionOfTheFile
+                  - ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent
+
+              - id: CanvasPilot-ProjectExplorer-RememberExpansion
+                title: >-
+                  The ProjectExplorer shall keep the folders that the user expanded expanded, and the selection, when the
+                  tree is refreshed and when the same project is opened again in the same session, and shall forget them
+                  when another project is opened.
+                justification: |
+                  A tree that collapses whenever a file changes would be unusable, since the assistant and other tools
+                  change files all the time. Another project has other folders, so the memory must not leak into it.
+                tests:
+                  - ProjectExplorerViewModel_Refresh_NestedChanges_KeepsNodesSelectionAndExpansion
+                  - ProjectExplorerViewModel_Expansion_SurvivesRefreshAndReopenOfTheSameProjectOnly
+
               - id: CanvasPilot-ProjectExplorer-RefreshOnFileChanges
                 title: >-
-                  The ProjectExplorer shall watch the project folder and refresh the list after file
-                  changes, waiting a short delay so that a burst of changes causes one refresh, and
-                  shall recover when a previously unreadable folder can be read.
+                  The ProjectExplorer shall watch the project folder and its sub-folders, but not the hidden data folder,
+                  and refresh the tree after file changes, waiting a short delay so that a burst of changes causes one
+                  refresh, and shall recover when a previously unreadable folder can be read.
                 justification: |
-                  Files are added, removed, and renamed by this application and by other tools. A list
-                  that follows the folder without the user asking stays correct, and the delay avoids
-                  redrawing for every intermediate change of a large copy.
+                  Files are added, removed, and renamed by this application and by other tools, in any folder of the
+                  project. A tree that follows the folders without the user asking stays correct, the delay avoids
+                  redrawing for every intermediate change of a large copy, and the data folder, which changes while the
+                  user works and which the tree never shows, must not cause refreshes.
                 tests:
                   - ProjectExplorerViewModel_RequestRefresh_Burst_CoalescesIntoOneRefresh
                   - ProjectExplorerViewModel_RequestRefresh_DefaultDebounce_IsQuarterSecond
                   - ProjectExplorerViewModel_RequestRefresh_NoProjectOrDisposed_SchedulesNothing
                   - ProjectExplorerViewModel_Open_FileCreatedInFolder_WatcherRequestsRefresh
+                  - ProjectExplorerViewModel_Open_ChangeInSubFolder_WatcherRequestsRefresh
+                  - ProjectExplorerViewModel_IsInDataFolder_Path_IsTrueOnlyForTheDataFolderAndItsContent
                   - ProjectExplorerViewModel_Refresh_FolderReappears_ClearsError
                   - ProjectExplorerView_FilesChangeOnDisk_ListRefreshesAfterDebounce
 
+              - id: CanvasPilot-ProjectExplorer-RefreshNow
+                title: >-
+                  The ProjectExplorer shall offer a Refresh command that reads the project folder again at once, usable
+                  only while a project is open.
+                justification: |
+                  A watcher can miss changes, for example on a network drive, and the user needs a way to see the folder as
+                  it is now without waiting or reopening the project.
+                tests:
+                  - ProjectExplorerViewModel_AddFilesToFolderAndRefreshCommand_ShowTheNewFiles
+                  - ProjectExplorerView_Header_ShowsLabelAndButtonsThatRunTheCommands
+                  - ProjectExplorerView_NoCommandsNoProject_ButtonsOffAndDropZoneHidden
+
               - id: CanvasPilot-ProjectExplorer-ReleaseWatcher
                 title: >-
-                  The ProjectExplorer shall stop watching, cancel any pending refresh, and clear the
-                  list when the project is closed, replaced, or the explorer is disposed, and shall
-                  ignore a refresh that was scheduled for an earlier project.
+                  The ProjectExplorer shall stop watching, cancel any pending refresh, and clear the tree when the project
+                  is closed, replaced, or the explorer is disposed, and shall ignore a refresh that was scheduled for an
+                  earlier project.
                 justification: |
-                  A watcher left running would keep a folder handle open and could refresh a list that
-                  now belongs to another project.
+                  A watcher left running would keep a folder handle open and could refresh a tree that now belongs to
+                  another project.
                 tests:
                   - ProjectExplorerViewModel_OpenAndClose_StartsAndStopsWatchingAndClearsList
                   - ProjectExplorerViewModel_Open_AnotherFolder_ReplacesListAndIgnoresStaleRefresh
@@ -85,30 +158,187 @@ sections:
 
               - id: CanvasPilot-ProjectExplorer-DeleteSelectedFile
                 title: >-
-                  The ProjectExplorer shall delete the selected file from the project folder, shall
-                  report a message instead of throwing when nothing is selected or the file cannot be
-                  deleted, and shall log a failed deletion.
+                  The ProjectExplorer shall delete the selected file, wherever it lies in the project, shall report a
+                  message instead of throwing when nothing is selected or the file cannot be deleted, and shall log a
+                  failed deletion.
                 justification: |
-                  Removing a source file from the list is a normal editing step. Problems such as a file
-                  open in another program are expected and must be explained to the user.
+                  Removing a source file from the project is a normal editing step. Problems such as a file open in
+                  another program are expected and must be explained to the user.
                 tests:
                   - ProjectExplorerViewModel_DeleteSelected_SelectedFile_DeletesFileAndRefreshes
                   - ProjectExplorerViewModel_DeleteAndRename_NothingSelected_ReportMessage
                   - ProjectExplorerViewModel_DeleteSelected_FileInUse_ReturnsMessageAndLogs
+                  - ProjectExplorerViewModel_RenameAndDelete_FileInSubFolder_StaysInItsFolder
 
               - id: CanvasPilot-ProjectExplorer-RenameSelectedFile
                 title: >-
-                  The ProjectExplorer shall rename the selected file within the project folder to a new
-                  name that is valid and still has an image source extension, never replacing an
-                  existing file or folder, shall select the renamed file, and shall report a message for
-                  a refused rename.
+                  The ProjectExplorer shall rename the selected file within the folder that holds it to a new name that is
+                  valid and still has an image source extension, never replacing an existing file or folder, shall select
+                  the renamed file, and shall report a message for a refused rename.
                 justification: |
-                  Renaming keeps a file in the project, so the new name must stay inside the folder, stay
-                  a file the application can show, and never overwrite the user's other files.
+                  Renaming keeps a file in the project and in its place in the tree, so the new name must stay in the
+                  folder, stay a file the application can show, and never overwrite the user's other files.
                 tests:
                   - ProjectExplorerViewModel_RenameSelected_ValidName_RenamesAndSelectsNewFile
                   - ProjectExplorerViewModel_RenameSelected_CaseOnlyChange_IsAllowed
                   - ProjectExplorerViewModel_RenameSelected_SameName_DoesNothing
                   - ProjectExplorerViewModel_RenameSelected_InvalidName_IsRefused
                   - ProjectExplorerViewModel_RenameSelected_TargetExists_IsRefusedAndNothingReplaced
+                  - ProjectExplorerViewModel_RenameAndDelete_FileInSubFolder_StaysInItsFolder
                   - ProjectExplorerView_RenameRefused_ShowsErrorMessage
+
+              - id: CanvasPilot-ProjectExplorer-CreateFile
+                title: >-
+                  The ProjectExplorer shall create a new file with a name that has a supported extension in the selected
+                  folder, in the folder of the selected file, or in the project folder when nothing is selected, giving it
+                  a blank drawing for SVG, Mermaid, and Vega-Lite and no content for other kinds, then list it and select
+                  it, and shall refuse, with a message, a name that is invalid, unsupported, or taken, and any creation
+                  while no project is open.
+                justification: |
+                  Starting a new drawing is the first step of the work. A blank drawing that can be drawn at once gives the
+                  user, or the assistant, a file to start from, and creating it where the user is looking keeps the tree
+                  in order. Refusing a bad or taken name protects the files that are already there.
+                tests:
+                  - ProjectExplorerViewModel_CreateFile_TargetFolderAndNames_CreatesOrRefuses
+                  - ProjectExplorerViewModel_CreateFile_KindsAndNoProject_GetTemplatesOrAreRefused
+
+              - id: CanvasPilot-ProjectExplorer-CreateFolder
+                title: >-
+                  The ProjectExplorer shall create a new folder in the selected folder, the folder of the selected file, or
+                  the project folder, then select it and expand the folders above it, and shall refuse, with a message, a
+                  name that is invalid, starts with a period, or is taken, and any creation while no project is open.
+                justification: |
+                  Folders let the user organize the pictures of a project. A name that starts with a period would make a
+                  hidden folder that the tree never shows, so it is refused, and a taken name must not merge with or
+                  replace what is there.
+                tests:
+                  - ProjectExplorerViewModel_CreateFolder_NamesAndTarget_CreatesOrRefuses
+
+              - id: CanvasPilot-ProjectExplorer-AddFiles
+                title: >-
+                  The ProjectExplorer shall copy pictures, PDF files, and drawings that are given to it into the
+                  attachments folder of the project, or into a chosen folder of the project, under a name that no file or
+                  folder there has, leaving the source files as they were, and shall refuse, with a message that names
+                  them, folders and files of other kinds, and any target that is outside the project or inside its hidden
+                  data folder.
+                justification: |
+                  Users bring in logos, photographs, and documents from elsewhere. Copying them keeps the originals safe,
+                  giving each copy a free name never overwrites a file of the project, and refusing text and unknown files
+                  keeps the project to what the application can use. A target outside the project or in its data folder
+                  would write where the user did not mean to.
+                tests:
+                  - ProjectExplorerViewModel_AddFiles_PicturesAndOthers_CopiesAndExplains
+                  - ProjectExplorerViewModel_AddFilesToFolderAndRefreshCommand_ShowTheNewFiles
+
+              - id: CanvasPilot-ProjectExplorer-AcceptDroppedFiles
+                title: >-
+                  The ProjectExplorer shall accept files dropped from the file manager on its drop zone, which copies them
+                  into the attachments folder, or on the row of a folder, which copies them into that folder, shall light
+                  up the place where a drop would go while a drag is over it, shall show the drop zone only while a project
+                  is open, shall change nothing for a drop that is not of files, and shall refuse, with a message, a
+                  dropped file that is not a picture, a PDF file, or a drawing.
+                justification: |
+                  Dragging files from the file manager is the quickest way to bring them into a project, and the lit place
+                  tells the user where they will land. A drop of other kinds of data must not do anything surprising, and a
+                  refused file must be explained.
+                tests:
+                  - ProjectExplorerView_DropFiles_OnZoneAndOnFolderRow_CopiesAndHighlights
+                  - ProjectExplorerView_DropTextOrOtherFile_ChangesNothingOrExplains
+                  - ProjectExplorerView_NoCommandsNoProject_ButtonsOffAndDropZoneHidden
+
+              - id: CanvasPilot-ProjectExplorer-ShowTreeRows
+                title: >-
+                  The ProjectExplorer shall show each folder and file as a row 26 pixels high, with a chevron on a folder,
+                  its children indented 16 pixels for each level, and a badge for its kind in front of its name, with the
+                  name of a file shown with its extension.
+                justification: |
+                  Rows of a fixed height and a steady indent make a long tree easy to scan. The kind is shown by a badge and
+                  by the extension in the name, so the kind never depends on color alone.
+                tests:
+                  - ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent
+
+              - id: CanvasPilot-ProjectExplorer-ShowSelection
+                title: >-
+                  The ProjectExplorer shall show the selected row with an accent bar at its left edge and a semibold name,
+                  and no other row with them.
+                justification: |
+                  The selected file is the one that is previewed and acted on, so the user must see it at a glance, by a
+                  bar and a heavier name as well as by color.
+                tests:
+                  - ProjectExplorerView_SelectedRow_ShowsBarAndSemiboldName
+
+              - id: CanvasPilot-ProjectExplorer-ShowProblems
+                title: >-
+                  The ProjectExplorer shall show a problem, such as an unreadable folder or a refused rename or drop, as
+                  words with an icon, both in the danger color, below the tree.
+                justification: |
+                  The user must be told why nothing happened or what could not be read. Words and an icon, not color
+                  alone, carry the message to every user.
+                tests:
+                  - ProjectExplorerView_UnreadableFolder_ShowsTheProblemWithTheDangerIcon
+                  - ProjectExplorerView_RenameRefused_ShowsErrorMessage
+                  - ProjectExplorerView_DropTextOrOtherFile_ChangesNothingOrExplains
+
+              - id: CanvasPilot-ProjectExplorer-ShowHeader
+                title: >-
+                  The ProjectExplorer shall show the label EXPLORER in capitals above the tree, with the icon buttons New
+                  file, New folder, and Refresh that run their commands, and shall leave a button off while it has no
+                  command or no project is open.
+                justification: |
+                  The explorer is where the user creates and manages the files of a project, so the actions for that are in
+                  its header, and an action that cannot be done must look so.
+                tests:
+                  - ProjectExplorerView_Header_ShowsLabelAndButtonsThatRunTheCommands
+                  - ProjectExplorerView_NoCommandsNoProject_ButtonsOffAndDropZoneHidden
+
+              - id: CanvasPilot-ProjectExplorer-ShowThumbnails
+                title: >-
+                  The ProjectExplorer shall, while thumbnails are on, ask its source of thumbnails for a small picture of
+                  each file that is drawn and whose row can be seen, once for each file and again when the time or size of
+                  the file changes, show it 28 by 18 pixels at the right of the row, show none for a folder or an asset
+                  that is not drawn, take the pictures away while thumbnails are off and ask again when they are turned
+                  on, and free the picture of a row that is removed or cleared.
+                justification: |
+                  A small picture of each drawing lets the user find a file without opening it. Asking only for the rows that
+                  can be seen and only when a file changes keeps a large project fast, the setting lets users who do not
+                  want the pictures switch them off, and freeing them keeps memory use steady.
+                tests:
+                  - ProjectExplorerViewModel_Thumbnails_AskedOnlyForDrawnVisibleFilesAndAgainWhenTheFileChangesOrTheSettingIsOn
+                  - ProjectExplorerViewModel_Nodes_RemovedOrCleared_AreDisposed
+                  - ProjectExplorerViewModel_Dispose_ThumbnailBeingMade_IsCancelled
+                  - ProjectExplorerView_Thumbnails_ShownOnRowsOfDrawnFilesAndFollowTheSetting
+
+              - id: CanvasPilot-ProjectExplorer-ComfortableRows
+                title: >-
+                  The ProjectExplorer shall make the rows of its tree 26 pixels high, or 32 pixels high while the
+                  Comfortable rows setting is on, and shall follow the setting when the user changes it.
+                justification: |
+                  Some users want more room between the files, for easier pointing or for easier reading, and others want
+                  to see more files at once. The Appearance setting offers that choice, and a setting that has no effect on
+                  the explorer would mislead the user.
+                tests:
+                  - ProjectExplorerViewModel_ComfortableRows_DefaultsToCompactAndRaisesPropertyChanged
+                  - ProjectExplorerView_ComfortableRows_RowsAre32HighInsteadOf26
+                  - MainWindowShell_AppearanceSettings_ComfortableRowsReachTheExplorer
+
+              - id: CanvasPilot-ProjectExplorer-WorkWithoutThumbnails
+                title: >-
+                  The ProjectExplorer shall work as usual, showing the row without a picture, when it has no source of
+                  thumbnails or when the source fails or gives none for a file.
+                justification: |
+                  A picture is decoration. A file that cannot be drawn, or a source that is missing, must never break the
+                  tree or hide a file.
+                tests:
+                  - ProjectExplorerViewModel_Thumbnails_NoSourceOrFailingSource_LeavesNodesWithoutThumbnail
+
+              - id: CanvasPilot-ProjectExplorer-NameTheControls
+                title: >-
+                  The ProjectExplorer shall give the tree the accessible name Project files, and give each icon button of
+                  its header an accessible name and a tooltip, let each button take the keyboard focus, and make each at
+                  least 28 by 28 pixels.
+                justification: |
+                  A person who uses a screen reader or the keyboard needs to know what the tree and the icon buttons are,
+                  and a target that is too small is hard to hit with a pointer or a finger.
+                tests:
+                  - ProjectExplorerView_Header_ShowsLabelAndButtonsThatRunTheCommands
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

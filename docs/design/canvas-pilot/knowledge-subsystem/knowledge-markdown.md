@@ -4,9 +4,10 @@
 
 #### Purpose
 
-`KnowledgeMarkdown` reads the Markdown of a knowledge card into blocks and runs of text that a window can draw with its
-own controls. The cards use only a few constructs, so the unit is small and has no dependency on a Markdown library; a
-library would add a third-party item with its own documents and tests and give nothing the cards need.
+`KnowledgeMarkdown` reads the Markdown of a knowledge card into blocks and runs of text, and draws those blocks with its
+own control, `MarkdownBlocksPanel`. The cards use only a few constructs, so the unit is small and has no dependency on a
+Markdown library; a library would add a third-party item with its own documents and tests and give nothing the cards
+need. The reader holds no state and does not depend on the user interface; the control that draws the blocks does.
 
 #### Data Model
 
@@ -15,7 +16,20 @@ library would add a third-party item with its own documents and tests and give n
   text of the lines).
 - A run is a `MarkdownSpan` of text and a `MarkdownSpanStyle`: `Normal`, `Bold`, `Italic`, or `Code`. The text of a run
   has no markers. A block never has an empty run or two neighbors of the same style.
-- The unit holds no state.
+- The reader holds no state.
+- `MarkdownBlocksPanel` is a vertical stack (6 pixels apart) with the property `Blocks`; it is made again from the
+  blocks whenever they change, which is when another card is shown, and draws nothing for `null`. It draws a text block
+  for each block, so the text can be selected and copied as the text of any page can:
+  - a heading is semibold, in a size that falls with its level (20, then 16, then 14 pixels for the levels 3 to 6), with
+    a gap above it (`KnowledgeBodyHeading`);
+  - a paragraph is wrapped text with a run for each style: bold, italic, and code, whose run is in the fixed-width font
+    on a gray shade that lets the theme show through (`KnowledgeBodyText`);
+  - a list item is a grid with its marker (a dot for `-`, `*`, and `+`, and the number as written otherwise) and its
+    text (`KnowledgeBodyItem`), indented by 12 pixels;
+  - a block of code is its lines in the fixed-width font that scrolls sideways, in a border of 8 pixel corners and 10
+    pixels of padding whose background and outline are the tokens `CpSurfaceRaised` and `CpBorderSubtle` through dynamic
+    resources, so that the block follows a change of the theme variant (`KnowledgeBodyCode`).
+  Nothing in the panel can run or open anything.
 
 #### Key Methods
 
@@ -40,18 +54,27 @@ further; text between `**` is `Bold` and text between `*` is `Italic`, where the
 white space and the marker that closes is not preceded by white space and is found outside code. Code inside bold or
 italic text is code, and italic inside bold text is italic. A marker that has no end is kept as text.
 
+**Drawing (`MarkdownBlocksPanel`)**: When `Blocks` changes, the panel removes what it drew and draws each block in
+order as described in the data model. Runs become inline runs of the text block: bold and italic runs get the weight
+and the style, and a code run gets the fixed-width font and the gray shade. A block that is a list item is a grid of
+the marker and the text; a code block is a border around a sideways scrolling, fixed-width, unwrapped text. The panel
+does not keep the blocks it drew, so the same blocks drawn again give the same controls.
+
 #### Error Handling
 
 A missing text is an `ArgumentNullException`. Any text can be read: nothing is rejected, and a marker that has no end is
 text. The tests check, on every card and every example description of the catalog of the application, that no letter or
 digit of the source is lost, so a construct that the reader does not know shows up as text and not as a missing piece.
-The unit performs no I/O and logs nothing, and is safe for concurrent use.
+The reader performs no I/O and logs nothing, and is safe for concurrent use. The panel draws a block that it does not
+know as nothing, which cannot happen while the hierarchy of blocks is closed, and it is used on the thread of the user
+interface only.
 
 #### Dependencies
 
-None: the unit reads text and makes its own values.
+- **Avalonia** (OTS) - only for `MarkdownBlocksPanel`: the controls, the inline runs, and the dynamic resources of the
+  design tokens of `ThemeResources`. The reader has none.
 
 #### Callers
 
-- The window that shows the cards draws the blocks with its own controls, and so does the chat panel for the replies of
-  the copilot.
+- `KnowledgeBrowser` shows the text of the card that is chosen with the panel.
+- The chat panel draws the replies of the copilot with the same panel, so a reply and a card look alike.

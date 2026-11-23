@@ -372,8 +372,9 @@ public sealed class ComposerViewModelTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that adding a mark is one step that inserts its chip at the caret, that undo removes the chip, and that
-    ///     redo brings it back.
+    ///     Test that adding a mark is one step that inserts its chip into the row of chips at the start of the message with a
+    ///     line break below the row, that the caret stays after the words, that undo removes the chip and the break, and that
+    ///     redo brings them back.
     /// </summary>
     [Fact]
     public void ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip()
@@ -395,8 +396,87 @@ public sealed class ComposerViewModelTests : IDisposable
         Assert.Empty(idsAfterUndo);
         Assert.Equal([mark.Id], _vm.MarkChipIds);
         Assert.Equal(new MarkChip(mark.Id, mark.Number), _vm.Document.Chips.Single());
-        Assert.Equal("see " + Chip, _vm.Document.FlatText);
+        Assert.Equal(Chip + "\nsee ", _vm.Document.FlatText);
+        Assert.Equal(Chip.Length + 1 + "see ".Length, _vm.CaretOffset);
         Assert.Same(mark, _marks.Find(mark.Id));
+    }
+
+    /// <summary>
+    ///     Test that a mark added to an empty message, and then a second one, are both in the row of chips, with one line
+    ///     feed below the row, and that the caret is below the row where the words go.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_AddMark_EmptyMessageAndSecondMark_KeepsOneRowAboveTheWords()
+    {
+        // Arrange: two marks that were drawn
+        var first = NewMark();
+        var second = NewMark();
+
+        // Act: add both, and then type
+        _vm.AddMark(first);
+        _vm.AddMark(second);
+        var caretBeforeTyping = _vm.CaretOffset;
+        _vm.InsertTyped("words");
+
+        // Assert: the row, one line feed, and the words; the caret was below the row before the words were typed
+        Assert.Equal(Chip + Chip + "\nwords", _vm.Document.FlatText);
+        Assert.Equal([first.Id, second.Id], _vm.MarkChipIds);
+        Assert.Equal(3, caretBeforeTyping);
+        Assert.Equal(_vm.Document.Length, _vm.CaretOffset);
+    }
+
+    /// <summary>
+    ///     Test that words typed, dictated, or pasted with the caret in or at the end of the row of chips go to the line
+    ///     below the row, and that a caret on the line of the words, or a selection, keeps its place.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_NewText_CaretInTheChipRow_GoesBelowTheRow()
+    {
+        // Arrange: a message that is one mark chip and a line feed, with the caret put at the end of the row, as a click does
+        _vm.AddMark(NewMark());
+        _vm.SetSelection(1);
+
+        // Act: type, dictate, and paste with the caret in the row, going back into the row each time
+        var offsetInRow = _vm.CaretForNewText();
+        _vm.InsertTyped("typed ");
+        _vm.SetSelection(0);
+        _vm.AddDictatedBlock("spoken ");
+        _vm.SetSelection(1);
+        _vm.HandlePaste(new DroppedContent { Text = "pasted " });
+        _vm.SetSelection(3);
+        var offsetInWords = _vm.CaretForNewText();
+
+        // Assert: the words are all below the row, each put at the start of the line of the words, one line feed separates
+        // them from the chip, and the caret in the words stays
+        Assert.Equal(2, offsetInRow);
+        Assert.Equal(Chip + "\npasted spoken typed ", _vm.Document.FlatText);
+        Assert.Equal(3, offsetInWords);
+    }
+
+    /// <summary>
+    ///     Test that files chosen with the attach button go to the row of chips above the words as one step, wherever the
+    ///     caret is, and that a drop at the caret still puts them in the text.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_AttachFiles_GoToTheRowAboveTheWordsInOneStep()
+    {
+        // Arrange: a typed start with the caret at its end
+        _vm.InsertTyped("Hi ");
+
+        // Act: attach two files, and then drop a third at the caret
+        var attached = _vm.AttachFiles(new DroppedContent { Paths = [CreateFile("a.txt"), CreateFile("b.txt")] });
+        var afterAttach = _vm.Document.FlatText;
+        _vm.Undo();
+        var afterUndo = _vm.Document.FlatText;
+        _vm.Redo();
+        _vm.HandleDrop(new DroppedContent { Paths = [CreateFile("c.txt")] });
+
+        // Assert: the two chips, a line feed, and the words, as one step; the dropped file is after the words
+        Assert.True(attached);
+        Assert.Equal(Chip + Chip + "\nHi ", afterAttach);
+        Assert.Equal("Hi ", afterUndo);
+        Assert.Equal(Chip + Chip + "\nHi " + Chip, _vm.Document.FlatText);
+        Assert.Throws<ArgumentNullException>(() => _vm.AttachFiles(null!));
     }
 
     /// <summary>
@@ -637,7 +717,7 @@ public sealed class ComposerViewModelTests : IDisposable
         Assert.Equal(3, changes);
         _vm.AddMark(mark);
         Assert.Equal(4, changes);
-        _vm.DeleteChip(1);
+        _vm.DeleteChip(0);
         Assert.Equal(5, changes);
         _vm.Undo();
         Assert.Equal(6, changes);
@@ -908,7 +988,7 @@ public sealed class ComposerViewModelTests : IDisposable
         Assert.True(sent);
         _stores[_project].Received(1).StageForSend(Arg.Is<IReadOnlyList<AttachmentChip>>(list => list.SequenceEqual(chips)));
         var built = Assert.Single(_builder.Messages);
-        Assert.Equal("Look at this box" + Chip + Chip, built.FlatText);
+        Assert.Equal(Chip + "\nLook at this box" + Chip, built.FlatText);
         Assert.Equal([mark], _builder.Marks.Single());
         Assert.NotNull(unused);
         Assert.Equal(chips, _builder.Attachments.Single().Select(item => item.Chip));
@@ -916,7 +996,7 @@ public sealed class ComposerViewModelTests : IDisposable
         // Assert: one event with the immutable message, whose payload came from the builder
         var message = Assert.Single(sentMessages);
         Assert.Equal(FakeMessageBuilder.Now, message.SentUtc);
-        Assert.Equal("payload of: Look at this box" + Chip + Chip, message.Payload);
+        Assert.Equal("payload of: " + Chip + "\nLook at this box" + Chip, message.Payload);
         Assert.Equal([mark], message.Marks);
         Assert.Equal("attachments/brief.txt", Assert.Single(message.Attachments).ProjectRelativePath);
 

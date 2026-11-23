@@ -20,7 +20,9 @@ shown headless; they are checked by hand before a release together with the othe
 #### Test Environment
 
 Unit tests use the standard test environment with temporary local folders and real file I/O. No network, no window, and
-no platform picker is used. A render that has to be slow is a render that waits for a task of the test.
+no platform picker is used. A render that has to be slow is a render that waits for a task of the test. UI tests run
+under the Avalonia headless platform with the Skia renderer, serialized with test parallelization disabled; no display
+is required.
 
 #### Acceptance Criteria
 
@@ -54,10 +56,14 @@ no platform picker is used. A render that has to be slow is a render that waits 
 - Missing arguments are refused.
 - The real window lists the groups and a card for each kit that comes with the program, shows the preview of a chosen
   kit (name, colors, text for an assistant and its length) with a picture drawn by the real renderer for each example,
-  tints the chosen card, and shows the note of a shared folder that cannot be reached. Its buttons follow the rules
-  above: Edit and Delete are off for a kit of the program, Use in this project and Copy into project need a project, and
-  the buttons use the project (the id is written into the project file and the card of the kit in use is marked), edit
-  (the list shows the saved kit), delete (after a question), export, import, make a kit, refresh, and close the window.
+  tints the chosen card and gives only that card a check icon, and shows the note of a shared folder that cannot be
+  reached. Its buttons follow the rules above: Edit and Delete are off for a kit of the program, Use in this project
+  and Copy into project need a project, and the buttons use the project (the id is written into the project file and
+  the card of the kit in use is marked), edit (the list shows the saved kit), delete (after a question), export,
+  import, make a kit, refresh, and close the window.
+- In the accessibility sweep of the windows of the application, in both theme variants, every button of this window that
+  shows no text has a name and a tooltip, every text field, list, and drop-down has a name, and every enabled button can
+  take the keyboard focus.
 
 #### Test Scenarios
 
@@ -201,3 +207,13 @@ by `StyleKitManagerView_DeleteExportImportAndEdit_ChangeTheListAndTheFiles`.
 shows it in the preview; a shared folder that is not there is noted in its group; Refresh says the kits were read again;
 Close closes the window. This scenario is tested by
 `StyleKitManagerView_NewNotesAndClose_ShowTheKitTheNoteAndCloseTheWindow`.
+
+**StyleKitManagerView_ChoosingAKit_MarksOnlyThatCardWithACheck**: The window is shown over the kits that come with the
+program and the second card is clicked; that card has the class `selected` and shows one check icon, and no other card
+shows one. This scenario is tested by `StyleKitManagerView_ChoosingAKit_MarksOnlyThatCardWithACheck`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The main window with and without a project and each
+dialog and window of the application, among them the Style Kits window, are shown in both theme variants and every
+control is looked at; a button or toggle that shows no text has a name and a tooltip, a text box, drop-down, list, and
+slider has a name, every enabled button can take the keyboard focus, and an icon button is at least 28 by 28. This
+scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

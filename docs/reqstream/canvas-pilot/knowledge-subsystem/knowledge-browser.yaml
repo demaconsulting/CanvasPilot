@@ -100,3 +100,15 @@ sections:
                 tests:
                   - KnowledgeBrowserViewModel_Commands_NoExampleAndClose_DoNothingAndRaiseCloseRequested
                   - KnowledgeBrowserView_CloseButton_ClosesTheWindow
+
+              - id: CanvasPilot-KnowledgeBrowser-BeUsableWithAssistiveTechnology
+                title: >-
+                  The KnowledgeBrowser shall give the search box, the tree of cards, and the list of hits a name, give every
+                  button that shows no text a name and a tooltip, and let every enabled button take the keyboard focus, in
+                  both theme variants.
+                justification: |
+                  People who use a screen reader or only the keyboard must be able to search the cards, move through them, and
+                  follow the links. An entry that has no name is read as nothing, and a button that cannot take the focus
+                  cannot be reached by the keyboard.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

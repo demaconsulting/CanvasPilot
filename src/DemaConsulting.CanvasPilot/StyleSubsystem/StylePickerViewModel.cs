@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Collections.ObjectModel;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
@@ -26,7 +27,7 @@ using DemaConsulting.CanvasPilot.ProjectSubsystem;
 namespace DemaConsulting.CanvasPilot.StyleSubsystem;
 
 /// <summary>
-///     The list in the status bar of the main window with which the user chooses the style kit of the open project. It
+///     The pill in the title bar of the main window with which the user chooses the style kit of the open project. It
 ///     offers no style and every kit that is not hidden by a kit of a more local place, shows the kit that the project
 ///     uses, writes a choice into the project file, and says so when the project names a kit that cannot be found.
 /// </summary>
@@ -114,6 +115,14 @@ public sealed partial class StylePickerViewModel : ObservableObject, IDisposable
     private string _errorMessage = string.Empty;
 
     /// <summary>
+    ///     What the footer entry of the list does, which is to open the window that manages style kits, or null for none.
+    ///     The main window sets it, because the picker does not know the windows of the application.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasManageKits))]
+    private ICommand? _manageKitsCommand;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="StylePickerViewModel" /> class and shows the choices that are known
     ///     now.
     /// </summary>
@@ -170,6 +179,11 @@ public sealed partial class StylePickerViewModel : ObservableObject, IDisposable
     ///     Gets a value indicating whether the last choice could not be kept.
     /// </summary>
     public bool HasError => ErrorMessage.Length > 0;
+
+    /// <summary>
+    ///     Gets a value indicating whether the list has a footer entry that opens the window that manages style kits.
+    /// </summary>
+    public bool HasManageKits => ManageKitsCommand is not null;
 
     /// <summary>
     ///     Gets the task of the latest choice that was written, or a completed task when there was none. A user interface
@@ -346,7 +360,26 @@ public sealed partial class StylePickerViewModel : ObservableObject, IDisposable
             entry.Kit.Id,
             $"{entry.Kit.Name} ({PlaceText(entry.Location)})",
             string.Join(Environment.NewLine, lines),
-            false);
+            false,
+            entry.Kit.Name,
+            string.Join(';', MainColors(entry.Kit)));
+    }
+
+    /// <summary>
+    ///     Picks up to three colors of a kit that stand for it: its primary, secondary, and accent colors when it has them,
+    ///     then others, never the background or the text.
+    /// </summary>
+    /// <param name="kit">The kit.</param>
+    /// <returns>The colors as <c>#RRGGBB</c>, without repeats.</returns>
+    private static IEnumerable<string> MainColors(StyleKit kit)
+    {
+        var preferred = new[] { "primary", "secondary", "accent" };
+        var others = kit.Palette.Keys.Where(role => !preferred.Contains(role, StringComparer.Ordinal) && role is not ("background" or "text"));
+        return preferred.Concat(others)
+            .Where(kit.Palette.ContainsKey)
+            .Select(role => kit.Palette[role])
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(3);
     }
 
     /// <summary>

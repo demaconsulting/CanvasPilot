@@ -8,321 +8,9 @@ CanvasPilot is a desktop application built on .NET and Avalonia. It is structure
 software items documented are fourteen subsystems, `Agent`, `Annotation`, `AppShell`, `Chat`, `Composer`, `Knowledge`,
 `Logging`, `Payload`, `Preview`, `Project`, `Settings`, `Speech`, `Style`, and `Utilities`.
 
-```{.mermaid scale=0.7}
-flowchart TD
-    subgraph Agent
-        AgentContract
-        CopilotCliLocator
-        CopilotRuntimeStarter
-        ProviderModelCatalog
-        AgentReadiness
-        AgentToolRegistry
-        ProjectTools
-        AgentInstructions
-        PayloadMessageMapper
-        AgentEventMapper
-        AgentProviderFactory
-        AgentService
-    end
-    subgraph Annotation
-        MarkRegistry
-        MarkSourceResolver
-        AnnotationOverlay
-    end
-    subgraph AppShell
-        MainWindowShell
-        ProjectWorkspace
-        AboutDialog
-    end
-    subgraph Chat
-        ChatPanel
-        ChatTurnRunner
-        ChatHistoryStore
-        PayloadInspector
-    end
-    subgraph Composer
-        ComposerDocument
-        ComposerHistory
-        AttachmentIntake
-        AttachmentStore
-        ComposerViewModel
-        ComposerEditor
-    end
-    subgraph Knowledge
-        KnowledgeCatalog
-        KnowledgeSearch
-        KnowledgePromptBuilder
-        KnowledgeTools
-        KnowledgeSkills
-        KnowledgeMarkdown
-        KnowledgeBrowser
-    end
-    subgraph Logging
-        RollingFileLogger
-    end
-    subgraph Payload
-        MessagePayload
-        MarkImageComposer
-        PayloadBuilder
-        PayloadDescriber
-    end
-    subgraph Preview
-        ImageRenderService
-        PreviewPane
-        ImageExporter
-        ImageDragSource
-        ExportPresetDialog
-    end
-    subgraph Project
-        ProjectService
-        RecentProjects
-        NewProjectDialog
-        ProjectExplorer
-    end
-    subgraph Settings
-        SettingsService
-        SettingsDialog
-        AiProviderSettingsPage
-    end
-    subgraph Speech
-        AudioDeviceService
-        SpeechModelService
-        DictationService
-        DeviceSelection
-        ModelCatalogPanel
-        ModelParameterEditor
-        SpeechSettingsPage
-    end
-    subgraph Style
-        StyleKitDocument
-        StyleKitCatalog
-        StyleKitArchive
-        StyleSelection
-        StyleGuidance
-        StyleChecker
-        StyleTools
-        StylePicker
-        StyleSettingsPage
-        StyleKitEditor
-        StyleKitManager
-    end
-    subgraph Utilities
-        PathHelpers
-    end
-    RollingFileLogger --> PathHelpers
-    ComposerHistory --> ComposerDocument
-    AttachmentIntake --> ComposerDocument
-    AttachmentIntake --> AttachmentStore
-    AttachmentIntake --> RollingFileLogger
-    AttachmentStore --> PathHelpers
-    AttachmentStore --> RollingFileLogger
-    AttachmentStore --> ProjectService
-    ComposerViewModel --> ComposerDocument
-    ComposerViewModel --> ComposerHistory
-    ComposerViewModel --> AttachmentIntake
-    ComposerViewModel --> AttachmentStore
-    ComposerViewModel --> MarkRegistry
-    ComposerViewModel --> DictationService
-    ComposerViewModel --> RollingFileLogger
-    ComposerEditor --> ComposerViewModel
-    ComposerEditor --> AttachmentIntake
-    ChatPanel --> ComposerViewModel
-    ChatPanel --> ComposerEditor
-    ChatPanel --> MarkRegistry
-    ChatPanel --> AnnotationOverlay
-    ChatPanel --> MarkImageComposer
-    ChatPanel --> MessagePayload
-    ChatPanel --> DictationService
-    ChatPanel --> PayloadInspector
-    ChatPanel --> ChatTurnRunner
-    ChatPanel --> ChatHistoryStore
-    ChatPanel --> ProjectService
-    ChatPanel --> AgentContract
-    ChatPanel --> KnowledgeMarkdown
-    ChatPanel --> RollingFileLogger
-    ChatPanel --> PathHelpers
-    ChatTurnRunner --> ChatPanel
-    ChatTurnRunner --> AgentContract
-    ChatTurnRunner --> ComposerViewModel
-    ChatTurnRunner --> MessagePayload
-    ChatTurnRunner --> RollingFileLogger
-    ChatHistoryStore --> ProjectService
-    ChatHistoryStore --> RollingFileLogger
-    ChatHistoryStore --> PathHelpers
-    PayloadInspector --> PayloadDescriber
-    PayloadInspector --> MessagePayload
-    MainWindowShell --> PayloadInspector
-    MainWindowShell --> ComposerViewModel
-    MarkRegistry --> ImageRenderService
-    AnnotationOverlay --> MarkRegistry
-    AnnotationOverlay --> PreviewPane
-    AnnotationOverlay --> RollingFileLogger
-    MarkSourceResolver --> MarkRegistry
-    MarkSourceResolver --> ImageRenderService
-    MarkImageComposer --> ImageRenderService
-    MarkImageComposer --> MarkRegistry
-    PayloadBuilder --> ComposerDocument
-    PayloadBuilder --> AttachmentStore
-    PayloadBuilder --> MarkRegistry
-    PayloadBuilder --> MarkSourceResolver
-    PayloadBuilder --> MarkImageComposer
-    PayloadBuilder --> MessagePayload
-    PayloadBuilder --> ComposerViewModel
-    PayloadBuilder --> ImageRenderService
-    PayloadDescriber --> MessagePayload
-    MessagePayload --> ComposerDocument
-    MessagePayload --> MarkRegistry
-    MessagePayload --> MarkSourceResolver
-    MessagePayload --> ImageRenderService
-    ImageRenderService --> RollingFileLogger
-    PreviewPane --> ImageRenderService
-    PreviewPane --> ProjectExplorer
-    PreviewPane --> ProjectService
-    PreviewPane --> ImageDragSource
-    PreviewPane --> RollingFileLogger
-    ImageExporter --> ImageRenderService
-    ImageExporter --> RollingFileLogger
-    ImageDragSource --> ImageRenderService
-    ImageDragSource --> ImageExporter
-    ImageDragSource --> PathHelpers
-    ImageDragSource --> RollingFileLogger
-    ProjectService --> PathHelpers
-    ProjectService --> RollingFileLogger
-    RecentProjects --> SettingsService
-    NewProjectDialog --> ProjectService
-    NewProjectDialog --> PathHelpers
-    ProjectExplorer --> ProjectService
-    ProjectExplorer --> PathHelpers
-    ProjectExplorer --> RollingFileLogger
-    SettingsService --> PathHelpers
-    SettingsService --> RollingFileLogger
-    SettingsDialog --> SettingsService
-    AiProviderSettingsPage --> SettingsDialog
-    AudioDeviceService --> RollingFileLogger
-    SpeechModelService --> RollingFileLogger
-    DictationService --> SettingsService
-    DictationService --> SpeechModelService
-    DictationService --> AudioDeviceService
-    DictationService --> RollingFileLogger
-    DeviceSelection --> AudioDeviceService
-    ModelCatalogPanel --> SpeechModelService
-    SpeechSettingsPage --> SettingsDialog
-    SpeechSettingsPage --> DeviceSelection
-    SpeechSettingsPage --> ModelCatalogPanel
-    SpeechSettingsPage --> ModelParameterEditor
-    MainWindowShell --> ProjectService
-    MainWindowShell --> RecentProjects
-    MainWindowShell --> NewProjectDialog
-    MainWindowShell --> SettingsDialog
-    MainWindowShell --> ProjectWorkspace
-    MainWindowShell --> ImageExporter
-    MainWindowShell --> AboutDialog
-    MainWindowShell --> KnowledgeBrowser
-    KnowledgeSearch --> KnowledgeCatalog
-    KnowledgePromptBuilder --> KnowledgeCatalog
-    KnowledgePromptBuilder --> KnowledgeSearch
-    KnowledgeTools --> KnowledgeCatalog
-    KnowledgeTools --> KnowledgeSearch
-    KnowledgeTools --> KnowledgePromptBuilder
-    KnowledgeSkills --> KnowledgeCatalog
-    KnowledgeSkills --> KnowledgePromptBuilder
-    KnowledgeBrowser --> KnowledgeCatalog
-    KnowledgeBrowser --> KnowledgeSearch
-    KnowledgeBrowser --> KnowledgeMarkdown
-    KnowledgeBrowser --> RollingFileLogger
-    MainWindowShell --> ExportPresetDialog
-    MainWindowShell --> StyleChecker
-    MainWindowShell --> StylePicker
-    MainWindowShell --> StyleKitManager
-    StyleKitCatalog --> StyleKitDocument
-    StyleKitCatalog --> ProjectService
-    StyleKitCatalog --> SettingsService
-    StyleKitCatalog --> PathHelpers
-    StyleKitCatalog --> RollingFileLogger
-    StyleKitArchive --> StyleKitDocument
-    StyleKitArchive --> PathHelpers
-    StyleSelection --> StyleKitCatalog
-    StyleSelection --> ProjectService
-    StyleSelection --> SettingsService
-    StyleSelection --> ImageExporter
-    StyleGuidance --> StyleKitDocument
-    StyleGuidance --> StyleKitCatalog
-    StyleChecker --> StyleKitDocument
-    StyleChecker --> StyleSelection
-    StyleChecker --> ImageRenderService
-    StyleChecker --> PreviewPane
-    StyleTools --> StyleSelection
-    StyleTools --> StyleKitCatalog
-    StyleTools --> StyleGuidance
-    StyleTools --> StyleChecker
-    StyleTools --> ImageRenderService
-    StyleTools --> KnowledgeTools
-    StyleTools --> PathHelpers
-    StylePicker --> StyleSelection
-    StylePicker --> StyleKitCatalog
-    StylePicker --> ProjectService
-    StyleSettingsPage --> SettingsDialog
-    StyleSettingsPage --> StyleKitCatalog
-    StyleSettingsPage --> StylePicker
-    StyleSettingsPage --> ProjectService
-    StyleKitEditor --> StyleKitCatalog
-    StyleKitEditor --> StyleKitDocument
-    StyleKitEditor --> StylePicker
-    StyleKitManager --> StyleKitCatalog
-    StyleKitManager --> StyleSelection
-    StyleKitManager --> StyleKitArchive
-    StyleKitManager --> StyleKitEditor
-    StyleKitManager --> StyleGuidance
-    StyleKitManager --> StylePicker
-    StyleKitManager --> ImageRenderService
-    StyleKitManager --> ProjectService
-    ProjectWorkspace --> ProjectExplorer
-    ProjectWorkspace --> ChatPanel
-    AgentReadiness --> CopilotCliLocator
-    AgentReadiness --> CopilotRuntimeStarter
-    CopilotRuntimeStarter --> AgentContract
-    ProviderModelCatalog --> CopilotRuntimeStarter
-    ProviderModelCatalog --> CopilotCliLocator
-    ProviderModelCatalog --> AiProviderSettingsPage
-    AgentReadiness --> ProviderModelCatalog
-    AgentReadiness --> SettingsService
-    AgentReadiness --> AiProviderSettingsPage
-    AgentToolRegistry --> KnowledgeTools
-    AgentToolRegistry --> ProjectService
-    ProjectTools --> AgentToolRegistry
-    ProjectTools --> ImageRenderService
-    ProjectTools --> StyleSelection
-    ProjectTools --> StyleKitCatalog
-    ProjectTools --> ProjectService
-    ProjectTools --> ProjectExplorer
-    ProjectTools --> RollingFileLogger
-    AgentInstructions --> KnowledgePromptBuilder
-    AgentInstructions --> StyleGuidance
-    AgentInstructions --> SettingsService
-    PayloadMessageMapper --> MessagePayload
-    AgentEventMapper --> AgentContract
-    AgentEventMapper --> AgentReadiness
-    AgentEventMapper --> SettingsService
-    AgentEventMapper --> RollingFileLogger
-    AgentProviderFactory --> AgentContract
-    AgentProviderFactory --> CopilotRuntimeStarter
-    AgentProviderFactory --> ProviderModelCatalog
-    AgentProviderFactory --> CopilotCliLocator
-    AgentProviderFactory --> SettingsService
-    AgentProviderFactory --> RollingFileLogger
-    AgentService --> AgentContract
-    AgentService --> AgentToolRegistry
-    AgentService --> AgentInstructions
-    AgentService --> PayloadMessageMapper
-    AgentService --> AgentEventMapper
-    AgentService --> AgentReadiness
-    AgentService --> AgentProviderFactory
-    AgentService --> ProjectTools
-    AgentService --> SettingsService
-    AgentService --> ProjectService
-    AgentService --> StyleSelection
-    AgentService --> RollingFileLogger
-```
+The diagram above, rendered from the SysML2 model, shows the subsystems. Each subsystem design document embeds a
+diagram of its own units, and the larger subsystems also embed diagrams of their units' dependencies, all rendered from
+the same model. The paragraphs below describe how the units collaborate.
 
 `PathHelpers` provides safe path combination and has no dependencies on other local items.
 `RollingFileLogger` is the application's only log writer. It uses `PathHelpers` to resolve the active
@@ -343,17 +31,23 @@ that the page uses to list the models of the provider, and never refers to `Agen
 the image source files, and, once a message with attachments is sent, an `attachments` folder. It is the only item that
 writes project files. `RecentProjects` keeps the list of recently opened project files in the application settings
 through `SettingsService`. `NewProjectDialog` collects and validates a project name and location, using
-`ProjectService`, and `ProjectExplorer` lists, watches, selects, renames, and deletes the image source files in the root
-of the open project's folder. The application supplies the folder picker, the image source filter, and the refresh
-scheduler that these units use, so the `Project` subsystem does not depend on the main window.
+`ProjectService`, and `ProjectExplorer` shows the folders and the image source files of the open project as a tree,
+watches it, selects, renames, and deletes files, creates files and folders, copies added and dropped files into the
+project, and asks for the small pictures of the rows through the `IThumbnailSource` seam that the `Preview` subsystem
+implements (`ThumbnailProvider`). The application supplies the folder picker, the image source filter, the refresh
+scheduler, and the thumbnail source that these units use, so the `Project` subsystem does not depend on the main window
+or on `Preview`.
 
 `MainWindowShell` is the view model of the main window and the only item that talks to the user about projects and
 settings: it runs the File, Edit, Image, Tools, and Help commands and shows its dialogs through an `IDialogService` that
-the window implements. The Edit commands, Undo and Redo, act on the part of the window that has the focus (the
-message editor), and the shell starts and stops the chat panel's dictation while the talk key (F8) is held.
-`ProjectWorkspace` holds the project explorer, the preview pane, and, while a project is open, the chat column, and
-`AboutDialog` identifies the application. At startup the application builds all units in one place,
-`ApplicationComposition`, which system tests also use without a window.
+the window implements. The Edit commands, Undo and Redo, act on the part of the window that has the focus (the message
+editor), and the shell starts and stops the chat panel's dictation while the talk key (F8) is held. `ProjectWorkspace`
+holds the project explorer, the preview pane, and, while a project is open, the chat column, with splitters whose widths
+are kept; `StatusBar` reports the shown picture at the bottom of the window, `ProviderPill` tells in the title bar which
+AI provider answers and whether it can be used, `Welcome` is the start screen while no project is open, and
+`AboutDialog` identifies the application, and `ThemeResources` holds the design tokens of the dark and the light theme
+and its line icons from which every view takes its colors, spacing, type, and icons. At startup the application builds
+all units in one place, `ApplicationComposition`, which system tests also use without a window.
 
 `AudioDeviceService` is the only item that uses the audio system and `SpeechModelService` the only item that uses
 the speech model catalog and its model store, both through the DemaConsulting.Speech library; each returns a machine
@@ -381,8 +75,10 @@ confined to the project folder, and returns the pixels, notes, or a coded error.
 exactly which picture it is (the file, a fingerprint of the file, and a fingerprint of the pixels) and where the
 elements of a diagram, chart, or model were drawn, so that something said about the picture later can be tied to what
 the user saw. `PreviewPane` also provides a layer over the shown picture, laid out in the picture's own pixel
-coordinates and scaled with it, which other items fill with content that refers to places in the picture, and a slot in
-its top bar, not scaled, for the controls of that content. `PreviewPane`
+coordinates and scaled with it, which other items fill with content that refers to places in the picture, and a slot
+that floats at the top center of the stage, not scaled, for the controls of that content. `PreviewPane` also holds the
+zoom (fitted to the window, or 25 to 400 percent in steps) with a pill of zoom controls, and reports the file, size,
+format, and render time of the shown picture to the status bar. `PreviewPane`
 follows the selected file of `ProjectExplorer`, shows what `ImageRenderService` returns, discards results of renders
 that are no longer wanted, and renders again when files in the project change. `ImageExporter` saves the shown picture
 as a PNG file or copies it to the clipboard for the Image menu: it first asks which size to export at (the picture as
@@ -545,7 +241,7 @@ and is the source of export sizes that `ImageExporter` asks (the sizes of the ki
 `StyleGuidance` and `StyleTools` give the style to the AI copilot, as a block of text of a known size in its
 instructions and as two tools, `style_get` and `style_check`, which are plain values and use no provider of a language
 model. `StyleChecker` measures the colors of a picture against the palette of a kit and `StyleCheckCommand` runs it for
-the Image menu and puts the result among the notes of the preview. `StylePicker` is the list in the status bar,
+the Image menu and puts the result among the notes of the preview. `StylePicker` is the pill in the title bar,
 `StyleSettingsPage` the page of the settings dialog for shared folders and the default kit, and `StyleKitManager` and
 `StyleKitEditor` the window in which the user sees, makes, edits, imports, exports, and chooses kits. The `Style`
 subsystem depends on `Project`, `Settings`, `Preview`, `Knowledge` (only the descriptor record of a tool), `Utilities`,
@@ -716,8 +412,10 @@ user, for example) is refused, so that a configuration mistake cannot write into
 
 - *Direction*: Input and output.
 - *Type*: JSON file on the local file system.
-- *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects, the AI provider
-  choices, the speech choices, and the style choices (the shared kit folders and the default kit). Unknown properties
+- *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects with the time each was opened,
+  the AI provider choices, the speech choices, the style choices (the shared kit folders and the default kit), the
+  window layout (size, place, state, and the widths of the explorer and the chat column), and the appearance (the theme
+  choice, the small pictures of the explorer, and the row height). Unknown properties
   are ignored.
 - *Constraints*: The default location is `%APPDATA%\CanvasPilot\settings.json`. The file is written
   atomically. A corrupt file is renamed `settings.json.bad` and defaults are used. The file never
@@ -815,7 +513,7 @@ made in the project when the message is sent.
 - *Direction*: Input (kits from four places and from zip files) and output (kits the user makes, copies, edits, or
   exports).
 - *Type*: Folders on the local file system, `.zip` files, an Avalonia window opened by Tools > Style Kits, the list in
-  the status bar, and the Style Kits page of the settings dialog.
+  the pill in the title bar, and the Style Kits page of the settings dialog.
 - *Format*: A kit is a folder `{id}` with a `style.json` file (`formatVersion` 1) and an `examples` folder. The places
   are, from the winning one down, the `styles` folder of the open project, `%APPDATA%\CanvasPilot\styles`, the shared
   folders listed in the settings (earlier ones first), and the `StyleKits` folder beside the executable that comes with
@@ -900,17 +598,23 @@ made in the project when the message is sent.
 **Main Window**: The application's window and menus.
 
 - *Direction*: Input and output.
-- *Type*: Avalonia window with File, Edit, Image, Tools, and Help menus, a project explorer, a preview area with a
-  layer for marks, a chat column with the message composer and the transcript, a status bar with the style kit of the
-  project, and modal dialogs (New Project, Settings, About, payload inspector, export size, style kit editor, and
-  message, confirmation, and prompt dialogs) and, from the Help and Tools menus, the windows of the drawing knowledge
-  and of the style kits, which do not block the main window.
+- *Type*: Avalonia window with a title bar that holds the File, Edit, Image, Tools, and Help menus, the project name,
+  the style pill, and the AI provider pill; while no project is open a welcome screen with the recent project cards;
+  while a project is open a project explorer tree, a preview stage with zoom and a layer and floating tool bar for
+  marks, and a chat column with the message composer and the transcript, which the user can resize and hide; a status
+  bar at the bottom; and modal dialogs (New Project, Settings, About, payload inspector, export size, style kit editor,
+  and message, confirmation, and prompt dialogs) and, from the Help and Tools menus, the windows of the drawing
+  knowledge and of the style kits, which do not block the main window.
 - *Format*: The window title is `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`.
   Every menu item has a name and an automation identifier that are the same. The F8 key is the talk key: dictation
-  listens while it is held.
+  listens while it is held. The window opens at the size, place, and state that the user left (1440 by 900 at first,
+  never smaller than 960 by 600), fitted to the screens, with the widths of the explorer and the chat column that the
+  user chose; these are kept in the settings (see *Settings*).
 - *Constraints*: Menu items are enabled only when their command can run; Undo and Redo act on the part of the window
   that has the focus and are disabled when that part has nothing to undo. The chat column is shown only while a project
-  is open. Problems are shown in a dialog, never as an unhandled failure.
+  is open. Problems are shown in a dialog, never as an unhandled failure. Every control that shows only an icon has a
+  name, a tooltip, and a target of at least 28 by 28 pixels, every field has a name, and the colors take their
+  contrast from the design tokens in both theme variants.
 
 ## Dependencies
 
@@ -1074,7 +778,7 @@ source (which deletes the files of earlier drags), the preview pane, the workspa
 services with the dictation service, the shell, the mark registry, the mark image composer and payload builder, the
 composer (with its attachment store and intake), the annotation overlay, and the chat panel, which it places in the
 workspace and makes the target of the talk key. It also builds the style units: the catalog of style kits, the selection
-of the project, the list for the status bar, the command of the Image menu, the two tools of an assistant (which it
+of the project, the pill for the title bar, the command of the Image menu, the two tools of an assistant (which it
 gives to the registry of the tools of the copilot), and the source of export sizes that it gives the exporter; the kits
 are read on a worker, so the start never waits for them. When it is given the folder for the local data of the
 application (the running application gives the local application data folder) it builds the AI copilot and the chat

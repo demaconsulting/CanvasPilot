@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -72,11 +73,12 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="chat">The chat panel, which joins the composer and the annotation layer.</param>
     /// <param name="styleCatalog">The catalog of style kits.</param>
     /// <param name="activeStyle">The style kit that the open project uses.</param>
-    /// <param name="stylePicker">The list in the status bar with which the user chooses the style kit.</param>
+    /// <param name="stylePicker">The pill in the title bar with which the user chooses the style kit.</param>
     /// <param name="styleCheck">What the Check Against Style item of the Image menu runs.</param>
     /// <param name="styleTools">The descriptors of the tools that give and check the style, for an assistant.</param>
     /// <param name="agent">The AI copilot, or <see langword="null" /> when the composition has none.</param>
     /// <param name="ownedServices">The services the composition created and must dispose.</param>
+    /// <param name="styleStartup">The task that reads the style kits when the application starts.</param>
     private ApplicationComposition(
         RollingFileLogger logger,
         ISettingsService settings,
@@ -95,8 +97,10 @@ public sealed class ApplicationComposition : IDisposable
         ICheckAgainstStyle styleCheck,
         IReadOnlyList<KnowledgeTool> styleTools,
         IAgentService? agent,
-        IReadOnlyList<IDisposable> ownedServices)
+        IReadOnlyList<IDisposable> ownedServices,
+        Task styleStartup)
     {
+        StyleStartupRefresh = styleStartup;
         Logger = logger;
         Settings = settings;
         Projects = projects;
@@ -116,8 +120,21 @@ public sealed class ApplicationComposition : IDisposable
         Agent = agent;
         _ownedServices = ownedServices;
 
-        // The message is written in the open project: follow it, and start with the one that is open now
-        _projectChanged = (_, _) => Composer.SetProject(Projects.Current?.FolderPath);
+        // The message is written in the open project: follow it, and start with the one that is open now. A project that is
+        // opened may be announced from a worker thread, and the composer drives the editor, so it is told on the thread of the
+        // user interface that created the composition.
+        var context = SynchronizationContext.Current;
+        _projectChanged = (_, _) =>
+        {
+            if (context is null || SynchronizationContext.Current == context)
+            {
+                Composer.SetProject(Projects.Current?.FolderPath);
+            }
+            else
+            {
+                context.Post(_ => Composer.SetProject(Projects.Current?.FolderPath), null);
+            }
+        };
         Projects.CurrentChanged += _projectChanged;
         Composer.SetProject(Projects.Current?.FolderPath);
     }
@@ -189,12 +206,19 @@ public sealed class ApplicationComposition : IDisposable
     public IStyleKitCatalog StyleCatalog { get; }
 
     /// <summary>
+    ///     Gets the task of the first reading of the style kits, which starts with the application. It completes after the
+    ///     catalog announced what it read, so a test that waits for it gets no announcement from the start of the
+    ///     application afterwards.
+    /// </summary>
+    internal Task StyleStartupRefresh { get; }
+
+    /// <summary>
     ///     Gets the style kit that the open project uses, and the means to change it.
     /// </summary>
     public IActiveStyle ActiveStyle { get; }
 
     /// <summary>
-    ///     Gets the list in the status bar of the main window with which the user chooses the style kit of the open project.
+    ///     Gets the pill in the title bar of the main window with which the user chooses the style kit of the open project.
     /// </summary>
     public StylePickerViewModel StylePicker { get; }
 
@@ -223,8 +247,12 @@ public sealed class ApplicationComposition : IDisposable
     ///     offered for new projects, the dispatcher-based refresh scheduler, and the AI copilot, which keeps its data
     ///     (the Copilot runtime files and the chat history) under <c>CanvasPilot</c> in the local application data folder.
     /// </summary>
+    /// <param name="application">
+    ///     The running application, whose theme variant follows the theme choice of the settings, or <see langword="null" />
+    ///     for a composition that has no application (the theme then stays as it is).
+    /// </param>
     /// <returns>The composition, with the settings already loaded.</returns>
-    public static ApplicationComposition CreateDefault()
+    public static ApplicationComposition CreateDefault(Application? application = null)
     {
         var logger = RollingFileLogger.CreateDefault();
         var settings = SettingsService.CreateDefault(logger);
@@ -237,7 +265,8 @@ public sealed class ApplicationComposition : IDisposable
             defaultProjectsFolder: string.IsNullOrWhiteSpace(documents) ? null : documents,
             dragFolder: ImageDragSource.DefaultFolder,
             localDataRoot: localDataRoot,
-            historyRoot: ChatHistoryStore.DefaultHistoryRoot);
+            historyRoot: ChatHistoryStore.DefaultHistoryRoot,
+            application: application);
     }
 
     /// <summary>
@@ -316,6 +345,11 @@ public sealed class ApplicationComposition : IDisposable
     ///     Gives the catalog of the Ollama server for the readiness check, the factory of the agents, and the model list of
     ///     the settings page, or <see langword="null" /> for catalogs on the real network.
     /// </param>
+    /// <param name="application">
+    ///     The running application, whose theme variant follows the theme choice of the settings (it is applied before the
+    ///     composition is returned, so the first window opens in the right theme), or <see langword="null" /> for a
+    ///     composition that has no application, such as a test without a window, which leaves the theme as it is.
+    /// </param>
     /// <returns>The composition.</returns>
     public static ApplicationComposition Create(
         RollingFileLogger logger,
@@ -339,7 +373,8 @@ public sealed class ApplicationComposition : IDisposable
         IEnvironmentReader? environment = null,
         ICliFileSystem? cliFileSystem = null,
         ICopilotRuntimeStarter? copilotStarter = null,
-        IOllamaModelCatalogs? ollamaCatalogs = null)
+        IOllamaModelCatalogs? ollamaCatalogs = null,
+        Application? application = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(settings);
@@ -349,8 +384,11 @@ public sealed class ApplicationComposition : IDisposable
 
         var projects = new ProjectService(logger);
         var recentProjects = new RecentProjects(settings);
-        var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), scheduler, logger: logger);
         var renderer = renderService ?? new ImageRenderService(logger);
+        var thumbnails = new ThumbnailProvider(renderer);
+        var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), scheduler, logger: logger, thumbnails: thumbnails);
+        explorer.ShowThumbnails = settings.Current.Appearance.ShowThumbnails;
+        explorer.ComfortableRows = settings.Current.Appearance.ComfortableRows;
         var dragSource = new ImageDragSource(
             renderer,
             dragFolder ?? Path.Combine(Path.GetTempPath(), "CanvasPilot", "drag"),
@@ -371,14 +409,22 @@ public sealed class ApplicationComposition : IDisposable
             () => projects.Current?.FolderPath,
             () => preview.CurrentImage?.SourcePath,
             renderer);
-        _ = RefreshStyleKitsAsync(styleCatalog, logger);
+        var styleStartup = RefreshStyleKitsAsync(styleCatalog, logger);
 
         var exporter = imageExporter ?? new ImageExporter(preview, renderer, logger, styleSelection);
 
         // The speech services are shared by the Speech settings page and by dictation. They touch the model store
         // and the audio system only when they are first used, so creating them costs nothing at startup; the ones
         // created here are the composition's to dispose, the dictation service before the model service it uses.
-        var owned = new List<IDisposable>();
+        var owned = new List<IDisposable> { thumbnails };
+
+        // The renders that run in the background write to the log when they fail; when the composition is disposed it waits
+        // for them (they are cancelled by then), so that nothing writes to the log after it has gone
+        if (renderer is ImageRenderService drawing)
+        {
+            owned.Add(new RenderDrain(drawing));
+        }
+
         if (speechModels is null)
         {
             var modelService = new SpeechModelService(logger);
@@ -463,6 +509,7 @@ public sealed class ApplicationComposition : IDisposable
             new AiProviderSettingsPageViewModel(readiness, modelSource),
             new SpeechSettingsPageViewModel(audioDevices, speechModels),
             new StyleSettingsPageViewModel(styleCatalog, () => pickerOwner?.FolderPicker),
+            new AppearanceSettingsPageViewModel(),
         ];
 
         var shell = new MainWindowShell(
@@ -477,7 +524,8 @@ public sealed class ApplicationComposition : IDisposable
             stylePicker,
             styleCheck,
             dialogs => new StyleKitManagerViewModel(styleCatalog, styleSelection, renderer, dialogs, projects, logger),
-            logger);
+            logger,
+            thumbnails);
         pickerOwner = shell;
 
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project
@@ -511,6 +559,7 @@ public sealed class ApplicationComposition : IDisposable
         // what the talk key of the window listens for
         workspace.Chat = chat;
         shell.PushToTalk = chat;
+        shell.ProviderPill = new ProviderPillViewModel(chat, settings, shell.OpenSettingsCommand);
 
         // What the copilot does to the rest of the application: a file it writes is shown in the explorer, the chat asks
         // for the settings, and a change of the provider is checked again. These are released before the copilot.
@@ -519,10 +568,45 @@ public sealed class ApplicationComposition : IDisposable
             owned.Insert(0, new CopilotWiring(agent, settings, explorer, chat, shell, logger));
         }
 
+        // The theme variant of the application follows the choice of the settings, from the first window on
+        if (application is not null)
+        {
+            owned.Add(new ThemeVariantApplier(application, settings));
+        }
+
         logger.Log(LogLevel.Info, "Application started.");
         return new ApplicationComposition(
             logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat,
-            styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, agent, owned);
+            styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, agent, owned, styleStartup);
+    }
+
+    /// <summary>
+    ///     Waits, when the composition is disposed, for the renders that are still running in the background, which the
+    ///     units that asked for them have cancelled; the last of the owned services, after the units that start renders.
+    /// </summary>
+    private sealed class RenderDrain : IDisposable
+    {
+        /// <summary>The longest time that a render may take to end.</summary>
+        private static readonly TimeSpan DrainWait = TimeSpan.FromSeconds(10);
+
+        /// <summary>The service whose renders are waited for.</summary>
+        private readonly ImageRenderService _service;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="RenderDrain" /> class.
+        /// </summary>
+        /// <param name="service">The service whose renders are waited for.</param>
+        internal RenderDrain(ImageRenderService service)
+        {
+            _service = service;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            // The wait is bounded so that a render that does not end cannot keep the application open
+            _ = _service.WhenIdleAsync().Wait(DrainWait);
+        }
     }
 
     /// <summary>

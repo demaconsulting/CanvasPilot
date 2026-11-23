@@ -21,6 +21,7 @@
 using System.ComponentModel;
 using System.Text;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -320,6 +321,11 @@ public sealed partial class ComposerEditorView : UserControl
     {
         var area = Editor.TextArea;
 
+        // Assistive technology reads the message with its chips named, and can replace it as a whole
+        AutomationProperties.SetName(area, "Message");
+        Editor.ValueProvider = () => _viewModel is { } viewModel ? DescribeForClipboard(viewModel.Document.Segments) : Editor.Text;
+        Editor.ValueSetter = SetMessageFromAutomation;
+
         // The message owns the history, so the surface must not keep one, and its commands must not reach it
         Editor.Document.UndoStack.SizeLimit = 0;
         foreach (var binding in area.CommandBindings.Where(binding => binding.Command.Name is "Undo" or "Redo").ToList())
@@ -365,6 +371,19 @@ public sealed partial class ComposerEditorView : UserControl
             target.AddHandler(DragDrop.DragOverEvent, OnDragOver);
             target.AddHandler(DragDrop.DragLeaveEvent, OnDragLeave);
             target.AddHandler(DragDrop.DropEvent, OnDrop);
+        }
+    }
+
+    /// <summary>
+    ///     Replaces the whole message by a text that automation sets, as one step of the message. Chips are not kept,
+    ///     because the text has no way to name them.
+    /// </summary>
+    /// <param name="text">The new text.</param>
+    private void SetMessageFromAutomation(string text)
+    {
+        if (_viewModel is { CanEdit: true } viewModel)
+        {
+            viewModel.ApplyTextChange(0, viewModel.Document.Length, text);
         }
     }
 
@@ -478,15 +497,29 @@ public sealed partial class ComposerEditorView : UserControl
     }
 
     /// <summary>
-    ///     Refuses typed or input-method text that holds a character that must not enter the message.
+    ///     Refuses typed or input-method text that holds a character that must not enter the message, and moves a caret that is
+    ///     in the row of chips to the line below before the text enters.
     /// </summary>
     /// <param name="sender">The text area.</param>
     /// <param name="e">The event data.</param>
-    private static void OnTextEntering(object? sender, TextInputEventArgs e)
+    private void OnTextEntering(object? sender, TextInputEventArgs e)
     {
-        if (e.Text is { } text && ContainsForbiddenCharacter(text))
+        if (e.Text is not { } text)
+        {
+            return;
+        }
+
+        if (ContainsForbiddenCharacter(text))
         {
             e.Handled = true;
+            return;
+        }
+
+        // Words typed with the caret in the row of chips (a click on the row puts it there) go to the line below, so that
+        // they never join the chips; the caret moves before the text enters
+        if (_viewModel is { } viewModel && Editor.SelectionLength == 0 && viewModel.CaretForNewText() is var offset && offset != Editor.CaretOffset)
+        {
+            Editor.CaretOffset = offset;
         }
     }
 

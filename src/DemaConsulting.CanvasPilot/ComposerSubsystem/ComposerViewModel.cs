@@ -93,6 +93,11 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public const string NoProjectText = "Open a project to write a message.";
 
     /// <summary>
+    ///     The placeholder of the editing control while the message is empty.
+    /// </summary>
+    public const string PlaceholderText = "Describe a change, or mark the picture…";
+
+    /// <summary>
     ///     The reason that the chat gives for <see cref="BlockSending" /> while the AI copilot works on an earlier message.
     /// </summary>
     public const string CopilotWorkingText = "The copilot is still working. Press Stop to cancel.";
@@ -325,6 +330,12 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public bool HasContent => _document.FlatText.Any(character => !char.IsWhiteSpace(character));
 
     /// <summary>
+    ///     Gets a value indicating whether the editing control shows its placeholder: a project is open and the message has
+    ///     neither text nor chips.
+    /// </summary>
+    public bool ShowsPlaceholder => HasProject && _document.FlatText.Length == 0;
+
+    /// <summary>
     ///     Gets a value indicating whether the message can be sent now: it has content, can be edited, nobody is holding
     ///     the talk button, and nothing outside the composer blocks sending (see <see cref="BlockSending" />).
     /// </summary>
@@ -473,7 +484,17 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     /// <param name="text">The typed text.</param>
     /// <returns><see langword="true" /> when the message changed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="text" /> is <see langword="null" />.</exception>
-    public bool InsertTyped(string text) => ApplyTextChange(_caretOffset, _selectionLength, text);
+    public bool InsertTyped(string text) => ApplyTextChange(CaretForNewText(), _selectionLength, text);
+
+    /// <summary>
+    ///     Gets the offset where new words go: the caret, except that a caret in or at the end of the row of chips at the
+    ///     start of the message, which has a line feed below it, goes to the start of the line below, so that words never
+    ///     join the chips on their row. A selection keeps the caret.
+    /// </summary>
+    /// <returns>The offset for new text, dictated words, and pasted content.</returns>
+    public int CaretForNewText() => _selectionLength == 0 && ComposerEdit.FindChipRow(_document) is (var length, true) && _caretOffset <= length
+        ? length + 1
+        : _caretOffset;
 
     /// <summary>
     ///     Deletes a range of text and chips, as one step.
@@ -523,11 +544,12 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public bool AddDictatedBlock(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
-        return BeginEdit() && Execute(ComposerEdit.Dictate(_document, _caretOffset, text, _selectionLength));
+        return BeginEdit() && Execute(ComposerEdit.Dictate(_document, CaretForNewText(), text, _selectionLength));
     }
 
     /// <summary>
-    ///     Adds the chip of a mark at the caret as one step. The mark must have been made in this composer's registry;
+    ///     Adds the chip of a mark to the row of chips at the start of the message as one step, with the line break below
+    ///     the row that puts the words on their own line. The mark must have been made in this composer's registry;
     ///     marks are made by pointing at the picture, never by voice.
     /// </summary>
     /// <param name="mark">The mark that was made.</param>
@@ -542,7 +564,7 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
             throw new ArgumentException("The mark was not made in this composer's registry.", nameof(mark));
         }
 
-        return BeginEdit() && Execute(ComposerEdit.AddMark(_document, _caretOffset, new MarkChip(mark.Id, mark.Number)));
+        return BeginEdit() && Execute(ComposerEdit.AddLeadingChips(_document, [new MarkChip(mark.Id, mark.Number)], _caretOffset));
     }
 
     /// <summary>
@@ -553,6 +575,41 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     /// <exception cref="ArgumentException">Thrown when the position at the offset is text and not a chip.</exception>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the offset is not inside the message.</exception>
     public bool DeleteChip(int offset) => BeginEdit() && Execute(ComposerEdit.DeleteChip(_document, offset));
+
+    /// <summary>
+    ///     Deletes the chips of all marks from the message, one step for each chip, as the delete button of each chip does.
+    /// </summary>
+    /// <returns>How many chips were deleted.</returns>
+    public int DeleteMarkChips()
+    {
+        var deleted = 0;
+        while (FindMarkChipOffset() is { } offset && DeleteChip(offset))
+        {
+            deleted++;
+        }
+
+        return deleted;
+    }
+
+    /// <summary>
+    ///     Finds the offset of the first chip of a mark.
+    /// </summary>
+    /// <returns>The offset, or <see langword="null" /> when the message holds no mark chip.</returns>
+    private int? FindMarkChipOffset()
+    {
+        var offset = 0;
+        foreach (var segment in _document.Segments)
+        {
+            if (segment is MarkChip)
+            {
+                return offset;
+            }
+
+            offset += segment.Length;
+        }
+
+        return null;
+    }
 
     /// <summary>
     ///     Handles content that was dropped on the message: its files, folders, pictures, and text become chips and text
@@ -570,6 +627,20 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     }
 
     /// <summary>
+    ///     Handles files that the user chose with the attach button: like a drop, but the chips go to the row of chips at
+    ///     the start of the message, as the chip of a mark does, and not to the caret, when the content holds nothing but
+    ///     files, folders, and pictures. It is one step.
+    /// </summary>
+    /// <param name="content">The files that were chosen.</param>
+    /// <returns><see langword="true" /> when something was added.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="content" /> is <see langword="null" />.</exception>
+    public bool AttachFiles(DroppedContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        return AddContent(content, Math.Clamp(_caretOffset, 0, _document.Length), 0, toChipRow: true);
+    }
+
+    /// <summary>
     ///     Handles content that was pasted into the message: like a drop, but at the caret and replacing the selection.
     ///     A paste of plain text is one step too.
     /// </summary>
@@ -579,7 +650,7 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public bool HandlePaste(DroppedContent content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return AddContent(content, _caretOffset, _selectionLength);
+        return AddContent(content, CaretForNewText(), _selectionLength);
     }
 
     /// <inheritdoc />
@@ -934,8 +1005,12 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     /// <param name="content">What was dropped or pasted.</param>
     /// <param name="offset">The offset at which the items are put.</param>
     /// <param name="replaceLength">The length of the selection that the items replace.</param>
+    /// <param name="toChipRow">
+    ///     Whether chips go to the row of chips at the start of the message instead of the offset; it only applies when
+    ///     the content holds nothing but chips.
+    /// </param>
     /// <returns><see langword="true" /> when something was added.</returns>
-    private bool AddContent(DroppedContent content, int offset, int replaceLength)
+    private bool AddContent(DroppedContent content, int offset, int replaceLength, bool toChipRow = false)
     {
         if (!BeginEdit())
         {
@@ -944,8 +1019,11 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
 
         // The intake only looks at the content and saves pasted pictures; nothing is copied while drafting
         var result = _intake!.Accept(content);
+        var chipsOnly = !result.Segments.IsEmpty && result.Segments.All(segment => segment is ChipSegment);
         var added = !result.Segments.IsEmpty &&
-                    Execute(ComposerEdit.Drop(_document, offset, result.Segments, replaceLength));
+                    Execute(toChipRow && chipsOnly
+                        ? ComposerEdit.AddLeadingChips(_document, [.. result.Segments.Cast<ChipSegment>()], _caretOffset)
+                        : ComposerEdit.Drop(_document, offset, result.Segments, replaceLength));
 
         // Say what was left out and what to check, so that no item disappears without a word
         StatusText = Summarize(result);
@@ -1226,6 +1304,7 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
         OnPropertyChanged(nameof(Document));
         OnPropertyChanged(nameof(MarkChipIds));
         OnPropertyChanged(nameof(HasContent));
+        OnPropertyChanged(nameof(ShowsPlaceholder));
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanSend));
         OnPropertyChanged(nameof(CanUndo));

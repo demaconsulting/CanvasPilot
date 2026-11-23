@@ -9,75 +9,48 @@
         Height="760"
         MinWidth="820"
         MinHeight="520"
+        Background="{DynamicResource CpSurfacePane}"
         WindowStartupLocation="CenterOwner">
 
   <Window.Styles>
-    <!-- A kit in the list is a flat button that shows a card; the chosen kit has a tint -->
+    <!-- A kit in the list is a raised card that is a button; the chosen kit has the accent outline and tint, and a check
+         that says so in a shape as well -->
     <Style Selector="Button.kit-card">
-      <Setter Property="Background" Value="Transparent" />
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-      <Setter Property="Padding" Value="8,6" />
-      <Setter Property="Margin" Value="0,2" />
+      <Setter Property="Margin" Value="0,4" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusCard}" />
     </Style>
-    <Style Selector="Button.kit-card.selected">
-      <Setter Property="Background" Value="{DynamicResource SystemAccentColorLight3}" />
-    </Style>
-    <Style Selector="Button.kit-card.selected /template/ ContentPresenter">
-      <Setter Property="Background" Value="{DynamicResource SystemAccentColorLight3}" />
+    <Style Selector="Button.kit-card.selected /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="BorderBrush" Value="{DynamicResource CpAccent}" />
+      <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
     </Style>
     <Style Selector="TextBlock.section">
+      <Setter Property="FontSize" Value="{DynamicResource CpFontBodyLarge}" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Margin" Value="0,12,0,4" />
+      <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+      <Setter Property="Margin" Value="0,16,0,6" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="Margin" Value="0,0,8,8" />
     </Style>
   </Window.Styles>
 
-  <DockPanel Margin="12">
+  <Grid RowDefinitions="*,Auto">
 
-    <!-- What the last command did, the place for new kits, and the actions. -->
-    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0" Spacing="6">
-
-      <TextBlock AutomationProperties.AutomationId="StyleKitStatus"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding HasStatusMessage}"
-                 Text="{Binding StatusMessage}" />
-
-      <WrapPanel Orientation="Horizontal">
-        <Button AutomationProperties.AutomationId="StyleKitUseButton" Margin="0,0,6,6" Content="Use in this project" Command="{Binding UseInProjectCommand}" />
-        <Button AutomationProperties.AutomationId="StyleKitNewButton" Margin="0,0,6,6" Content="New..." Command="{Binding NewCommand}" />
-        <Button AutomationProperties.AutomationId="StyleKitDuplicateButton" Margin="0,0,6,6" Content="Duplicate..." Command="{Binding DuplicateCommand}" />
-        <Button AutomationProperties.AutomationId="StyleKitEditButton" Margin="0,0,6,6" Content="Edit..." Command="{Binding EditCommand}" />
-        <Button AutomationProperties.AutomationId="StyleKitDeleteButton" Margin="0,0,6,6" Content="Delete..." Command="{Binding DeleteCommand}" />
-        <Button AutomationProperties.AutomationId="StyleKitImportButton" Margin="0,0,6,6" Content="Import..." Command="{Binding ImportCommand}" />
-        <Button AutomationProperties.AutomationId="StyleKitExportButton" Margin="0,0,6,6" Content="Export..." Command="{Binding ExportCommand}" />
-        <Button AutomationProperties.AutomationId="StyleKitCopyIntoProjectButton" Margin="0,0,6,6" Content="Copy into project" Command="{Binding CopyIntoProjectCommand}" />
-        <Button AutomationProperties.AutomationId="StyleKitRefreshButton" Margin="0,0,6,6" Content="Refresh" Command="{Binding RefreshCommand}" />
-        <StackPanel Orientation="Horizontal" Spacing="6" Margin="12,0,6,6">
-          <TextBlock VerticalAlignment="Center" Text="New and imported kits go to:" />
-          <ComboBox AutomationProperties.AutomationId="StyleKitTargetComboBox"
-                    MinWidth="130"
-                    ItemsSource="{x:Static vm:StyleKitManagerViewModel.TargetChoices}"
-                    SelectedIndex="{Binding TargetIndex}" />
-        </StackPanel>
-        <Button AutomationProperties.AutomationId="StyleKitCloseButton" Margin="0,0,0,6" Content="Close" IsCancel="True" Command="{Binding CloseCommand}" />
-      </WrapPanel>
-
-    </StackPanel>
-
-    <Grid ColumnDefinitions="360,Auto,*">
+    <Grid Grid.Row="0" ColumnDefinitions="360,Auto,*">
 
       <!-- The kits in groups by place -->
       <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
-        <ItemsControl AutomationProperties.AutomationId="StyleKitGroups" ItemsSource="{Binding Groups}">
+        <ItemsControl AutomationProperties.AutomationId="StyleKitGroups"
+                      Margin="16,12,8,12"
+                      ItemsSource="{Binding Groups}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:StyleKitGroupViewModel">
-              <StackPanel Margin="0,0,8,14">
+              <StackPanel Margin="0,0,0,16">
                 <TextBlock AutomationProperties.AutomationId="StyleKitGroupTitle"
-                           FontWeight="Bold"
-                           FontSize="15"
+                           Classes="sectionTitle"
                            Text="{Binding Title}" />
-                <TextBlock Opacity="0.7"
-                           TextWrapping="Wrap"
+                <TextBlock Classes="hint"
                            Margin="0,2"
                            IsVisible="{Binding IsEmpty}"
                            Text="{Binding EmptyText}" />
@@ -87,41 +60,72 @@
                       <Button AutomationProperties.AutomationId="StyleKitCard"
                               Classes="kit-card"
                               Classes.selected="{Binding IsSelected}"
+                              Theme="{DynamicResource CardButton}"
                               Opacity="{Binding CardOpacity}"
                               Click="OnKitCardClick">
-                        <StackPanel Spacing="3">
-                          <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock FontWeight="SemiBold" Text="{Binding Name}" />
-                            <TextBlock Foreground="SeaGreen" IsVisible="{Binding IsInUse}" Text="in use" />
+                        <Grid ColumnDefinitions="*,Auto">
+                          <StackPanel Grid.Column="0" Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                              <TextBlock FontSize="{DynamicResource CpFontBodyLarge}"
+                                         FontWeight="SemiBold"
+                                         Foreground="{DynamicResource CpTextPrimary}"
+                                         TextTrimming="CharacterEllipsis"
+                                         Text="{Binding Name}" />
+                              <Border Padding="8,0"
+                                      CornerRadius="{DynamicResource CpRadiusPill}"
+                                      BorderBrush="{DynamicResource CpSuccess}"
+                                      BorderThickness="1"
+                                      VerticalAlignment="Center"
+                                      IsVisible="{Binding IsInUse}">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                  <PathIcon Classes="icon"
+                                            Width="12"
+                                            Height="12"
+                                            VerticalAlignment="Center"
+                                            Foreground="{DynamicResource CpSuccess}"
+                                            Data="{DynamicResource CpIconCheckmark}" />
+                                  <TextBlock FontSize="{DynamicResource CpFontCaption}"
+                                             FontWeight="SemiBold"
+                                             Foreground="{DynamicResource CpSuccess}"
+                                             Text="in use" />
+                                </StackPanel>
+                              </Border>
+                            </StackPanel>
+                            <TextBlock Classes="hint"
+                                       IsVisible="{Binding HasDescription}"
+                                       Text="{Binding Description}" />
+                            <ItemsControl ItemsSource="{Binding StripColors}">
+                              <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                  <StackPanel Orientation="Horizontal" Spacing="2" />
+                                </ItemsPanelTemplate>
+                              </ItemsControl.ItemsPanel>
+                              <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                  <Border Width="34"
+                                          Height="16"
+                                          CornerRadius="3"
+                                          BorderBrush="{DynamicResource CpBorderStrong}"
+                                          BorderThickness="1"
+                                          Background="{Binding ., Converter={x:Static vm:ColorEditorView.HexToBrush}}" />
+                                </DataTemplate>
+                              </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock FontSize="{DynamicResource CpFontCaption}"
+                                       Foreground="{DynamicResource CpTextTertiary}"
+                                       Text="{Binding PlaceText}" />
+                            <TextBlock Classes="caution"
+                                       FontSize="{DynamicResource CpFontCaption}"
+                                       IsVisible="{Binding IsOverridden}"
+                                       Text="{Binding OverriddenText}" />
                           </StackPanel>
-                          <TextBlock Opacity="0.7"
-                                     TextWrapping="Wrap"
-                                     IsVisible="{Binding HasDescription}"
-                                     Text="{Binding Description}" />
-                          <ItemsControl ItemsSource="{Binding StripColors}">
-                            <ItemsControl.ItemsPanel>
-                              <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="2" />
-                              </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                              <DataTemplate x:DataType="x:String">
-                                <Border Width="34"
-                                        Height="16"
-                                        CornerRadius="3"
-                                        BorderBrush="Gray"
-                                        BorderThickness="1"
-                                        Background="{Binding ., Converter={x:Static vm:ColorEditorView.HexToBrush}}" />
-                              </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                          </ItemsControl>
-                          <TextBlock Opacity="0.7" FontSize="11" Text="{Binding PlaceText}" />
-                          <TextBlock Foreground="DarkGoldenrod"
-                                     FontSize="11"
-                                     TextWrapping="Wrap"
-                                     IsVisible="{Binding IsOverridden}"
-                                     Text="{Binding OverriddenText}" />
-                        </StackPanel>
+                          <PathIcon Classes="icon"
+                                    Grid.Column="1"
+                                    VerticalAlignment="Top"
+                                    Foreground="{DynamicResource CpAccentText}"
+                                    IsVisible="{Binding IsSelected}"
+                                    Data="{DynamicResource CpIconCheckmarkCircle}" />
+                        </Grid>
                       </Button>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
@@ -130,9 +134,8 @@
                   <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="x:String">
                       <TextBlock AutomationProperties.AutomationId="StyleKitGroupNote"
-                                 Foreground="DarkGoldenrod"
-                                 FontSize="12"
-                                 TextWrapping="Wrap"
+                                 Classes="caution"
+                                 FontSize="{DynamicResource CpFontSmall}"
                                  Margin="0,2"
                                  Text="{Binding}" />
                     </DataTemplate>
@@ -144,15 +147,20 @@
         </ItemsControl>
       </ScrollViewer>
 
-      <GridSplitter Grid.Column="1" Width="6" Background="Transparent" />
+      <GridSplitter Grid.Column="1"
+                    AutomationProperties.AutomationId="StyleKitSplitter"
+                    AutomationProperties.Name="Resize the list of kits"
+                    Theme="{DynamicResource SplitterGrip}"
+                    Width="9"
+                    ResizeDirection="Columns" />
 
       <!-- The preview of the chosen kit -->
       <Panel Grid.Column="2">
 
         <TextBlock AutomationProperties.AutomationId="StyleKitNoSelection"
-                   Opacity="0.7"
-                   Margin="12"
-                   TextWrapping="Wrap"
+                   Classes="hint"
+                   Margin="24"
+                   FontSize="{DynamicResource CpFontBody}"
                    IsVisible="{Binding !HasSelection}"
                    Text="Choose a kit in the list to see its colors, fonts, sizes, and example images." />
 
@@ -162,26 +170,26 @@
           <ContentControl Content="{Binding SelectedItem}">
             <ContentControl.ContentTemplate>
               <DataTemplate x:DataType="vm:StyleKitItemViewModel">
-                <StackPanel Margin="8,0,12,12" Spacing="2">
+                <StackPanel Margin="20,16,24,24" Spacing="2">
 
                   <TextBlock AutomationProperties.AutomationId="StylePreviewName"
-                             FontSize="22"
-                             FontWeight="Bold"
+                             Classes="pageTitle"
                              TextWrapping="Wrap"
                              Text="{Binding Name}" />
-                  <TextBlock Opacity="0.8" TextWrapping="Wrap" IsVisible="{Binding HasDescription}" Text="{Binding Description}" />
+                  <TextBlock Classes="hint"
+                             FontSize="{DynamicResource CpFontBody}"
+                             IsVisible="{Binding HasDescription}"
+                             Text="{Binding Description}" />
                   <TextBlock AutomationProperties.AutomationId="StylePreviewLocation"
-                             Opacity="0.7"
-                             FontSize="12"
+                             Foreground="{DynamicResource CpTextTertiary}"
+                             FontSize="{DynamicResource CpFontSmall}"
                              TextWrapping="Wrap"
                              Text="{Binding LocationText}" />
                   <TextBlock AutomationProperties.AutomationId="StylePreviewReadOnly"
-                             Foreground="DarkGoldenrod"
-                             TextWrapping="Wrap"
+                             Classes="caution"
                              IsVisible="{Binding IsReadOnly}"
                              Text="{Binding ReadOnlyText}" />
-                  <TextBlock Foreground="DarkGoldenrod"
-                             TextWrapping="Wrap"
+                  <TextBlock Classes="caution"
                              IsVisible="{Binding IsOverridden}"
                              Text="{Binding OverriddenText}" />
 
@@ -190,7 +198,7 @@
                                 IsVisible="{Binding HasWarnings}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock Foreground="DarkGoldenrod" TextWrapping="Wrap" Text="{Binding}" />
+                        <TextBlock Classes="caution" Text="{Binding}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -206,9 +214,9 @@
                       <DataTemplate x:DataType="vm:StyleSwatch">
                         <Border Width="104"
                                 Height="58"
-                                Margin="0,0,6,6"
-                                CornerRadius="5"
-                                BorderBrush="Gray"
+                                Margin="0,0,8,8"
+                                CornerRadius="{DynamicResource CpRadiusInput}"
+                                BorderBrush="{DynamicResource CpBorderStrong}"
                                 BorderThickness="1"
                                 Background="{Binding Hex, Converter={x:Static vm:ColorEditorView.HexToBrush}}">
                           <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
@@ -217,7 +225,7 @@
                                        Foreground="{Binding LabelHex, Converter={x:Static vm:ColorEditorView.HexToBrush}}"
                                        Text="{Binding Role}" />
                             <TextBlock HorizontalAlignment="Center"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource CpFontCaption}"
                                        Foreground="{Binding LabelHex, Converter={x:Static vm:ColorEditorView.HexToBrush}}"
                                        Text="{Binding Hex}" />
                           </StackPanel>
@@ -230,27 +238,27 @@
                   <ItemsControl ItemsSource="{Binding FontLines}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock TextWrapping="Wrap" Text="{Binding}" />
+                        <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource CpTextPrimary}" Text="{Binding}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
-                  <TextBlock AutomationProperties.AutomationId="StylePreviewNumbers" Text="{Binding NumbersText}" />
-                  <TextBlock Text="{Binding MermaidText}" />
-                  <TextBlock Text="{Binding VegaLiteText}" />
+                  <TextBlock AutomationProperties.AutomationId="StylePreviewNumbers" Foreground="{DynamicResource CpTextPrimary}" Text="{Binding NumbersText}" />
+                  <TextBlock Foreground="{DynamicResource CpTextPrimary}" Text="{Binding MermaidText}" />
+                  <TextBlock Foreground="{DynamicResource CpTextPrimary}" Text="{Binding VegaLiteText}" />
 
                   <TextBlock Classes="section" Text="Advice" IsVisible="{Binding HasNotes}" />
-                  <TextBlock TextWrapping="Wrap" IsVisible="{Binding HasNotes}" Text="{Binding Notes}" />
+                  <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource CpTextPrimary}" IsVisible="{Binding HasNotes}" Text="{Binding Notes}" />
                   <ItemsControl ItemsSource="{Binding DoItems}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock TextWrapping="Wrap" Foreground="SeaGreen" Text="{Binding ., StringFormat='Do: {0}'}" />
+                        <TextBlock Classes="success" TextWrapping="Wrap" Text="{Binding ., StringFormat='Do: {0}'}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
                   <ItemsControl ItemsSource="{Binding DontItems}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock TextWrapping="Wrap" Foreground="Firebrick" Text="{Binding ., StringFormat='✗ {0}'}" />
+                        <TextBlock Classes="error" Text="{Binding ., StringFormat='✗ {0}'}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -261,7 +269,7 @@
                                 IsVisible="{Binding HasPresets}">
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="x:String">
-                        <TextBlock Text="{Binding}" />
+                        <TextBlock Foreground="{DynamicResource CpTextPrimary}" Text="{Binding}" />
                       </DataTemplate>
                     </ItemsControl.ItemTemplate>
                   </ItemsControl>
@@ -277,12 +285,10 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                       <DataTemplate x:DataType="vm:StyleThumbnailViewModel">
-                        <Border Width="256"
+                        <Border Classes="card"
+                                Width="256"
                                 Margin="0,0,8,8"
-                                Padding="6"
-                                CornerRadius="5"
-                                BorderBrush="Gray"
-                                BorderThickness="1">
+                                Padding="8">
                           <StackPanel Spacing="4">
                             <Image AutomationProperties.AutomationId="StyleThumbnailImage"
                                    MaxWidth="240"
@@ -291,12 +297,12 @@
                                    IsVisible="{Binding HasImage}"
                                    Source="{Binding Image, Converter={x:Static vm:StyleKitManagerView.ImageToBitmap}}" />
                             <TextBlock AutomationProperties.AutomationId="StyleThumbnailPlaceholder"
-                                       Opacity="0.7"
-                                       TextWrapping="Wrap"
+                                       Classes="hint"
                                        IsVisible="{Binding HasPlaceholder}"
                                        Text="{Binding PlaceholderText}" />
                             <TextBlock AutomationProperties.AutomationId="StyleThumbnailLabel"
-                                       FontSize="12"
+                                       FontSize="{DynamicResource CpFontSmall}"
+                                       Foreground="{DynamicResource CpTextPrimary}"
                                        TextWrapping="Wrap"
                                        Text="{Binding Label}" />
                           </StackPanel>
@@ -306,9 +312,10 @@
                   </ItemsControl>
 
                   <TextBlock Classes="section" Text="What an assistant is given" />
-                  <TextBlock AutomationProperties.AutomationId="StylePreviewGuidanceSize" Opacity="0.7" Text="{Binding GuidanceSizeText}" />
+                  <TextBlock AutomationProperties.AutomationId="StylePreviewGuidanceSize" Classes="hint" Text="{Binding GuidanceSizeText}" />
                   <Expander Header="Show the text">
                     <TextBox AutomationProperties.AutomationId="StylePreviewGuidanceText"
+                             AutomationProperties.Name="The text an assistant is given"
                              IsReadOnly="True"
                              AcceptsReturn="True"
                              TextWrapping="NoWrap"
@@ -327,6 +334,96 @@
 
     </Grid>
 
-  </DockPanel>
+    <!-- What the last command did, the place for new kits, and the actions: the main one is the accent button -->
+    <Border Grid.Row="1"
+            Padding="16,12,16,4"
+            Background="{DynamicResource CpSurfaceWindow}"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="0,1,0,0">
+      <StackPanel Spacing="8">
+
+        <TextBlock AutomationProperties.AutomationId="StyleKitStatus"
+                   Classes="hint"
+                   FontSize="{DynamicResource CpFontBody}"
+                   IsVisible="{Binding HasStatusMessage}"
+                   Text="{Binding StatusMessage}" />
+
+        <WrapPanel Orientation="Horizontal">
+          <Button AutomationProperties.AutomationId="StyleKitUseButton"
+                  Classes="action"
+                  Theme="{DynamicResource PrimaryButton}"
+                  Content="Use in this project"
+                  Command="{Binding UseInProjectCommand}" />
+          <Button AutomationProperties.AutomationId="StyleKitNewButton" Classes="action" Theme="{DynamicResource SecondaryButton}" Command="{Binding NewCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconAdd}" />
+              <TextBlock VerticalAlignment="Center" Text="New..." />
+            </StackPanel>
+          </Button>
+          <Button AutomationProperties.AutomationId="StyleKitDuplicateButton" Classes="action" Theme="{DynamicResource SecondaryButton}" Command="{Binding DuplicateCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconCopy}" />
+              <TextBlock VerticalAlignment="Center" Text="Duplicate..." />
+            </StackPanel>
+          </Button>
+          <Button AutomationProperties.AutomationId="StyleKitEditButton" Classes="action" Theme="{DynamicResource SecondaryButton}" Command="{Binding EditCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconEdit}" />
+              <TextBlock VerticalAlignment="Center" Text="Edit..." />
+            </StackPanel>
+          </Button>
+          <Button AutomationProperties.AutomationId="StyleKitDeleteButton" Classes="action" Theme="{DynamicResource SecondaryButton}" Command="{Binding DeleteCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconDelete}" />
+              <TextBlock VerticalAlignment="Center" Text="Delete..." />
+            </StackPanel>
+          </Button>
+          <Button AutomationProperties.AutomationId="StyleKitImportButton" Classes="action" Theme="{DynamicResource SecondaryButton}" Command="{Binding ImportCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconFolderOpen}" />
+              <TextBlock VerticalAlignment="Center" Text="Import..." />
+            </StackPanel>
+          </Button>
+          <Button AutomationProperties.AutomationId="StyleKitExportButton" Classes="action" Theme="{DynamicResource SecondaryButton}" Command="{Binding ExportCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconArrowUpload}" />
+              <TextBlock VerticalAlignment="Center" Text="Export..." />
+            </StackPanel>
+          </Button>
+          <Button AutomationProperties.AutomationId="StyleKitCopyIntoProjectButton" Classes="action" Theme="{DynamicResource SecondaryButton}" Command="{Binding CopyIntoProjectCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconDocumentAdd}" />
+              <TextBlock VerticalAlignment="Center" Text="Copy into project" />
+            </StackPanel>
+          </Button>
+          <Button AutomationProperties.AutomationId="StyleKitRefreshButton" Classes="action" Theme="{DynamicResource SecondaryButton}" Command="{Binding RefreshCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconArrowClockwise}" />
+              <TextBlock VerticalAlignment="Center" Text="Refresh" />
+            </StackPanel>
+          </Button>
+          <StackPanel Orientation="Horizontal" Spacing="8" Margin="12,0,8,8">
+            <TextBlock VerticalAlignment="Center"
+                       Classes="hint"
+                       FontSize="{DynamicResource CpFontBody}"
+                       Text="New and imported kits go to:" />
+            <ComboBox AutomationProperties.AutomationId="StyleKitTargetComboBox"
+                      AutomationProperties.Name="Where new and imported kits go"
+                      MinWidth="130"
+                      ItemsSource="{x:Static vm:StyleKitManagerViewModel.TargetChoices}"
+                      SelectedIndex="{Binding TargetIndex}" />
+          </StackPanel>
+          <Button AutomationProperties.AutomationId="StyleKitCloseButton"
+                  Classes="action"
+                  Theme="{DynamicResource SecondaryButton}"
+                  Content="Close"
+                  IsCancel="True"
+                  Command="{Binding CloseCommand}" />
+        </WrapPanel>
+
+      </StackPanel>
+    </Border>
+
+  </Grid>
 
 </Window>

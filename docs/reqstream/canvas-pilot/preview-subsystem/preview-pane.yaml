@@ -3,9 +3,12 @@
 #
 # The PreviewPane unit is the preview pane's view model and view. It follows the file selected in the project
 # explorer, renders it in the background through the image render service, keeps stale renders from replacing
-# newer ones, renders again when files change on disk, converts the picture for display, and shows the picture,
-# the busy state, the render error with its code and hint, and the notes of the render. It also provides the
-# slot for the layer shown exactly over the picture, in the picture's own pixel coordinates.
+# newer ones, renders again when files change on disk, converts the picture for display, and shows the picture on
+# its stage, scaled to fit or at a zoom from 25 to 400 percent that the zoom controls and the zoom keys change. It
+# tells the facts of the shown picture (file name, size, format, render time) and shows the busy line, the render
+# error as a card, the notes of the render in a drawer, and the placeholder. It also provides the slot for the layer
+# shown exactly over the picture, in the picture's own pixel coordinates, and the slot for the controls of that layer
+# that floats over the stage.
 
 sections:
   - title: CanvasPilot Requirements
@@ -18,7 +21,7 @@ sections:
                 title: >-
                   The PreviewPane shall render the file selected in the project explorer, in the open
                   project's folder, as soon as the selection or the project changes, and shall show the
-                  resulting picture with its size and format.
+                  resulting picture.
                 justification: |
                   The user works on one file at a time and expects to see it as soon as it is chosen,
                   without a separate command.
@@ -27,6 +30,23 @@ sections:
                   - PreviewPaneViewModel_New_FileAlreadySelected_StartsRender
                   - PreviewPaneView_SvgSelected_ShowsBitmapWithConvertedPixels
                   - MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu
+
+              - id: CanvasPilot-PreviewPane-ReportShownPictureFacts
+                title: >-
+                  The PreviewPane shall tell the name of the file that is rendered or shown, and, for the shown picture,
+                  its size in pixels, its format in capital letters, and how long its render took in milliseconds, shall
+                  tell none of the picture's facts while no picture is shown, including after a render failed, and shall
+                  sum up its state in one sentence that names the file and says whether it is rendering, shown with its size,
+                  format, and number of notes, or failed.
+                justification: |
+                  The user wants to know which file the picture is, how large it is, and how long it took to draw without
+                  opening anything. The pane does not show these facts itself, so it must hand them, as separate values and as
+                  one sentence, to whatever part of the window reports them, and they must never describe an earlier picture
+                  or one that failed.
+                tests:
+                  - PreviewPaneViewModel_Render_ReportsFileSizeFormatAndRenderTimeOfTheShownPicture
+                  - PreviewPaneViewModel_SelectFile_RenderSucceeds_ShowsBusyThenImageStatusAndNotes
+                  - PreviewPaneViewModel_RenderFails_ShowsCodeMessageAndHintAndClearsImage
 
               - id: CanvasPilot-PreviewPane-DiscardStaleRenders
                 title: >-
@@ -47,13 +67,13 @@ sections:
 
               - id: CanvasPilot-PreviewPane-ShowBusyAndErrors
                 title: >-
-                  The PreviewPane shall show a busy indicator and the name of the file while a render runs,
-                  and shall show a render that failed as its error code, message, and hint, without a
-                  picture, and shall not stay busy when the render service fails unexpectedly.
+                  The PreviewPane shall show a thin animated line along the top of the stage while a render runs, and
+                  shall show a render that failed as a card in the middle of the stage with its error code, message, and
+                  hint, without a picture, and shall not stay busy when the render service fails unexpectedly.
                 justification: |
                   A render can take noticeable time, and a file that cannot be drawn is the usual result of
-                  an edit in progress. The user needs to see that work is going on, and then either the
-                  picture or what to fix.
+                  an edit in progress. The user needs to see that work is going on without the picture jumping around, and
+                  then either the picture or what to fix, in a place that cannot be missed.
                 children:
                   - CanvasPilot-OTS-CommunityToolkitMvvm-NotifyPropertyChanges
                 tests:
@@ -66,14 +86,17 @@ sections:
 
               - id: CanvasPilot-PreviewPane-ShowDiagnostics
                 title: >-
-                  The PreviewPane shall list the notes that the render reported, with their number, next to
-                  the picture, and shall show no list when there are none.
+                  The PreviewPane shall list the notes that the render reported, with their number, in a drawer over
+                  the bottom left of the stage that is closed to a chip with the number of notes until the user opens
+                  it, and shall show no drawer when there are none.
                 justification: |
                   A picture can be drawn and still lack something, such as an embedded file that was denied.
-                  Listing the notes explains why the picture differs from what the file intends.
+                  Listing the notes explains why the picture differs from what the file intends, and keeping them in a
+                  closed drawer lets the user see the whole picture and still know that there is something to read.
                 tests:
                   - PreviewPaneViewModel_SelectFile_RenderSucceeds_ShowsBusyThenImageStatusAndNotes
                   - PreviewPaneView_RenderWithNotes_ListsDiagnostics
+                  - PreviewPaneView_DiagnosticsDrawerOnNarrowStage_DoesNotOverlapTheZoomPill
 
               - id: CanvasPilot-PreviewPane-RenderAgainOnFileChanges
                 title: >-
@@ -98,12 +121,10 @@ sections:
                 title: >-
                   The PreviewPane shall convert a rendered picture's straight-alpha red, green, blue, alpha
                   pixels to the premultiplied blue, green, red, alpha pixels of a display bitmap, rounding to
-                  the nearest value and respecting the bitmap's row size, and shall show the bitmap scaled to
-                  fit the pane or at its own size with scroll bars as the user chooses.
+                  the nearest value and respecting the bitmap's row size.
                 justification: |
                   Showing a picture with the wrong channel order or alpha representation gives wrong colors
-                  and dark fringes around transparent areas. Fitting large pictures to the pane makes them
-                  viewable at a glance, while actual size lets the user inspect detail.
+                  and dark fringes around transparent areas.
                 children:
                   - CanvasPilot-OTS-Avalonia-DisplayPixelBuffers
                 tests:
@@ -113,16 +134,65 @@ sections:
                   - RenderedImageBitmap_Convert_WiderDestinationRows_UsesStrideAndKeepsPadding
                   - RenderedImageBitmap_Convert_InvalidArguments_Throw
                   - RenderedImageBitmap_Create_Picture_HasSizeAndPremultipliedBgraPixels
-                  - PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars
+
+              - id: CanvasPilot-PreviewPane-ShowPlaceholder
+                title: >-
+                  The PreviewPane shall say, while it has no picture, no error, and no running render, that no project
+                  is open or that an image file is to be selected, and shall show no such text while a picture, an error,
+                  or a running render is shown.
+                justification: |
+                  An empty stage looks like a defect. A sentence that says what is missing tells a new user what to do
+                  next, and it must disappear as soon as there is something to show, or it would sit on the picture.
+                tests:
                   - PreviewPaneViewModel_New_NoProject_ShowsPlaceholderAndFitsWindow
-                  - PreviewPaneViewModel_New_NullArguments_Throw
+                  - PreviewPaneView_RenderRunning_ShowsBusyIndicatorUntilDone
+                  - PreviewPaneView_SvgSelected_ShowsBitmapWithConvertedPixels
+                  - PreviewPaneView_ProjectClosed_ClearsPicture
+
+              - id: CanvasPilot-PreviewPane-StepZoom
+                title: >-
+                  The PreviewPane shall let the picture be shown at a zoom between 25 and 400 percent of its own size,
+                  moving in the steps 25, 50, 75, 100, 150, 200, 300, and 400 to the next step above or below the zoom
+                  in effect, also from the zoom at which a fitted picture is shown, never leaving that range, and shall
+                  show the picture at its own size, fit it to the pane, or return to the zoom last chosen, 100 percent
+                  at first, when the user asks, and tell the zoom in effect in percent.
+                justification: |
+                  A user checks the whole picture and then looks at a detail, and expects each press of a zoom control to
+                  make the same kind of step. Starting from the fitted size, which is rarely a round number, the next
+                  step must be the next round number in that direction, not a step back through values the user never
+                  saw. A limited range keeps the picture from vanishing or from needing an unreasonable amount of memory
+                  to draw, and the same sizes are what other programs offer.
+                tests:
+                  - PreviewPaneViewModel_Zoom_StepsClampAndFit_FollowTheStepList
+                  - PreviewPaneViewModel_ZoomOut_FromFit_GoesToTheStepBelowTheFittedZoom
+                  - PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars
+                  - PreviewPaneView_FitToggle_ShowsItsOnStateWithTintOutlineAndAccentIcon
+
+              - id: CanvasPilot-PreviewPane-ZoomWithControls
+                title: >-
+                  The PreviewPane shall show the picture scaled down to fit the pane, never enlarged and without scroll
+                  bars, or at the chosen zoom, with scroll bars where the picture is larger than the pane, scaling the
+                  content of the overlay slot together with the picture, and shall offer, over the bottom right of the
+                  stage while a picture is shown, a Fit toggle, a button for the actual size, buttons for a smaller and a
+                  larger zoom that are off at the end of the range, and a label that tells the zoom in effect and fits the
+                  picture again when it is used.
+                justification: |
+                  Large pictures are viewable at a glance when fitted to the pane, while the actual size and the larger
+                  zooms let the user inspect detail. Whatever is laid over the picture, such as marks, must keep to the
+                  same spot of the picture at every zoom. The controls sit on the stage so that they are found without a
+                  menu, and the label shows at a glance whether the picture is shown at its own size or reduced.
+                tests:
+                  - PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars
+                  - PreviewPaneView_FitToggle_ShowsItsOnStateWithTintOutlineAndAccentIcon
+                  - PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether
+                  - PreviewPaneViewModel_Zoom_StepsClampAndFit_FollowTheStepList
 
               - id: CanvasPilot-PreviewPane-HostOverlay
                 title: >-
                   The PreviewPane shall provide a slot for content that it shows exactly over the shown picture,
                   laid out in the picture's own pixel coordinates at any zoom, so that the content's size is
                   the picture's pixel size and it is scaled together with the picture when the picture is
-                  fitted to the pane, and shall show nothing there while the slot is empty.
+                  fitted to the pane or zoomed, and shall show nothing there while the slot is empty.
                 justification: |
                   Marks drawn on a picture must stay on the same spot of the picture whatever the pane's size
                   or the zoom. Laying the content out in picture pixels, and scaling picture and content
@@ -133,17 +203,19 @@ sections:
                   - PreviewPaneViewModel_Overlay_AssignedContent_IsExposedAndAnnounced
                   - PreviewPaneView_FitOff_ImageAtNaturalSize_OverlayCoversImage
                   - PreviewPaneView_FitOn_OverlaySizeEqualsImagePixelSize
+                  - PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether
                   - PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown
 
               - id: CanvasPilot-PreviewPane-HostToolbar
                 title: >-
-                  The PreviewPane shall provide a slot in its top bar, beside the fit option, for content that the host
-                  fills, shown at its own size and not scaled with the picture, and shall show nothing there while the
+                  The PreviewPane shall provide a slot for content that the host fills, floating over the top center of
+                  the stage, shown at its own size and not scaled with the picture, and shall show nothing there while the
                   slot is empty.
                 justification: |
                   The controls that belong to the layer over the picture, such as the tools for marking it, must be
-                  readable and operable at every zoom, so they cannot be placed on the scaled layer; and the pane must
-                  not know what they are, so that it can serve other tools.
+                  readable and operable at every zoom, so they cannot be placed on the scaled layer; floating over the
+                  stage they take no room from the picture; and the pane must not know what they are, so that it can
+                  serve other tools.
                 tests:
                   - PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced
                   - PreviewPaneView_ToolbarSlot_EmptyThenAssigned_IsHiddenThenShownOutsideThePicture

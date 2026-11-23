@@ -6,43 +6,71 @@
              AutomationProperties.AutomationId="NoticeRow">
 
   <UserControl.Styles>
-    <Style Selector="Border.error">
-      <Setter Property="Background" Value="#22C0392B" />
+    <Style Selector="Border.notice">
+      <Setter Property="Background" Value="{DynamicResource CpSurfaceRaised}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CpBorderSubtle}" />
+    </Style>
+    <Style Selector="Border.notice.error">
+      <Setter Property="Background" Value="{DynamicResource CpDangerTint}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CpDanger}" />
     </Style>
   </UserControl.Styles>
 
   <!-- A notice or an error that the application says in the conversation: what happened, what to do, and, when the
-       settings can help, the button that opens them -->
-  <Border Margin="0,0,0,8"
-          Padding="8"
-          CornerRadius="6"
-          Background="#18808080"
-          Classes.error="{Binding IsError}">
-    <StackPanel Spacing="4">
+       settings can help, the button that opens them. It is a centered neutral card with an icon; an error is red. -->
+  <Border Classes="notice"
+          Classes.error="{Binding IsError}"
+          Margin="0,0,0,16"
+          Padding="12,8"
+          HorizontalAlignment="Center"
+          CornerRadius="{DynamicResource CpRadiusCard}"
+          BorderThickness="1">
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
 
-      <SelectableTextBlock Name="MessageText"
-                           AutomationProperties.AutomationId="NoticeMessage"
-                           TextWrapping="Wrap"
-                           Text="{Binding Message}" />
+      <PathIcon Classes="icon"
+                Grid.Column="0"
+                VerticalAlignment="Top"
+                Margin="0,2,0,0"
+                Foreground="{DynamicResource CpTextSecondary}"
+                Data="{DynamicResource CpIconInfo}"
+                IsVisible="{Binding !IsError}" />
+      <PathIcon Classes="icon"
+                Grid.Column="0"
+                VerticalAlignment="Top"
+                Margin="0,2,0,0"
+                Foreground="{DynamicResource CpDanger}"
+                Data="{DynamicResource CpIconErrorCircle}"
+                IsVisible="{Binding IsError}" />
 
-      <SelectableTextBlock Name="RemedyText"
-                           AutomationProperties.AutomationId="NoticeRemedy"
-                           TextWrapping="Wrap"
-                           Opacity="0.85"
-                           Text="{Binding Remedy}"
-                           IsVisible="{Binding HasRemedy}" />
+      <StackPanel Grid.Column="1" Spacing="4">
 
-      <Button Name="OpenSettingsButton"
-              AutomationProperties.AutomationId="NoticeOpenSettingsButton"
-              HorizontalAlignment="Left"
-              Padding="8,2"
-              FontSize="12"
-              Content="Open Settings"
-              Command="{Binding OpenSettingsCommand}"
-              IsVisible="{Binding CanOpenSettings}"
-              ToolTip.Tip="Open the settings of the application" />
+        <SelectableTextBlock Name="MessageText"
+                             AutomationProperties.AutomationId="NoticeMessage"
+                             FontSize="{DynamicResource CpFontBody}"
+                             Foreground="{DynamicResource CpTextPrimary}"
+                             TextWrapping="Wrap"
+                             Text="{Binding Message}" />
 
-    </StackPanel>
+        <SelectableTextBlock Name="RemedyText"
+                             AutomationProperties.AutomationId="NoticeRemedy"
+                             FontSize="{DynamicResource CpFontSmall}"
+                             Foreground="{DynamicResource CpTextSecondary}"
+                             TextWrapping="Wrap"
+                             Text="{Binding Remedy}"
+                             IsVisible="{Binding HasRemedy}" />
+
+        <Button Name="OpenSettingsButton"
+                AutomationProperties.AutomationId="NoticeOpenSettingsButton"
+                Theme="{DynamicResource PillButton}"
+                HorizontalAlignment="Left"
+                MinHeight="26"
+                Content="Open Settings"
+                Command="{Binding OpenSettingsCommand}"
+                IsVisible="{Binding CanOpenSettings}"
+                ToolTip.Tip="Open the settings of the application" />
+
+      </StackPanel>
+    </Grid>
   </Border>
 
 </UserControl>

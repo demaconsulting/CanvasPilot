@@ -184,7 +184,7 @@ sections:
                 title: >-
                   The AiProviderSettingsPage shall, when it is given a provider check, offer a Check connection button that
                   checks the provider that the entries on the page describe without saving them, show the answer as one
-                  sentence (in red when the provider cannot be used), disable the button while a check runs or the entries
+                  sentence (in the color of errors when the provider cannot be used), disable the button while a check runs or the entries
                   are invalid, drop an answer that is overtaken by an edit or by closing the dialog, and offer no button when
                   there is no check.
                 justification: |
@@ -197,3 +197,26 @@ sections:
                   - AiProviderSettingsPageViewModel_CheckConnection_FailureAndInvalidEntries_ShowFailureAndBlockTheButton
                   - AiProviderSettingsPageViewModel_CheckConnection_ThrowsOrIsOvertaken_ShowsSentenceOrDropsAnswer
                   - AiProviderSettingsPageView_CheckConnection_ShowsTheAnswerOfTheCheck
+
+              - id: CanvasPilot-AiProviderSettingsPage-ShowPageHeading
+                title: >-
+                  The AiProviderSettingsPage shall be a page titled AI Provider with a sentence that says what the page is for
+                  and an icon, so that the settings dialog can show them in its list of pages and above the page.
+                justification: |
+                  A person who looks for the choice of the model finds the page by its title and icon, and the sentence tells
+                  what can be done on it before any entry is read.
+                tests:
+                  - SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner
+
+              - id: CanvasPilot-AiProviderSettingsPage-BeUsableWithAssistiveTechnology
+                title: >-
+                  The AiProviderSettingsPage shall give every entry (the provider, the model list, the model name, the
+                  reasoning level, the context window, the Ollama endpoint, and the path of the Copilot tool) a name that
+                  assistive technology can read, and let every enabled button take the keyboard focus, in both theme
+                  variants.
+                justification: |
+                  People who use a screen reader or only the keyboard must be able to choose the provider and the model. A
+                  field that has a label beside it but no name is read as nothing, and a button that cannot take the focus
+                  cannot be reached by the keyboard.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

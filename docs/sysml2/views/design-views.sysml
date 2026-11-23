@@ -233,6 +233,22 @@ package CanvasPilotDesignViews {
         filter not (@SysML::Documentation);
     }
 
+    view AppShellSubsystemChromeView : GeneralView {
+        doc /* Dependencies of the main window shell on the status bar, the AI provider pill, and the welcome screen that it creates, on the settings it saves and follows, and on the design tokens, and of those three units on the panels they report. Hub supplier omitted: RollingFileLogger. */
+        expose CanvasPilot_MainWindowShell::MainWindowShell;
+        expose CanvasPilot_StatusBar::StatusBar;
+        expose CanvasPilot_ProviderPill::ProviderPill;
+        expose CanvasPilot_Welcome::Welcome;
+        expose CanvasPilot_ThemeResources::ThemeResources;
+        expose CanvasPilot_SettingsService::SettingsService;
+        expose CanvasPilot_ProjectWorkspace::ProjectWorkspace;
+        expose CanvasPilot_PreviewPane::PreviewPane;
+        expose CanvasPilot_ChatPanel::ChatPanel;
+        expose CanvasPilot_AgentContract::AgentContract;
+        expose CanvasPilot_ProjectExplorer::ProjectExplorer;
+        filter not (@SysML::Documentation);
+    }
+
     view AppShellSubsystemActionsView : GeneralView {
         doc /* Dependencies of the main window shell on the dialogs and actions that it opens. Hub supplier omitted: ProjectService. */
         expose CanvasPilot_MainWindowShell::MainWindowShell;

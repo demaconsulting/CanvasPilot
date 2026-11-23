@@ -221,6 +221,11 @@ jobs:
         run: |
           Get-ChildItem publish/win-x64 -Include *.pdb,*.xml -Recurse | Remove-Item -Force
 
+      - name: Smoke test the published application (win-x64)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./smoke.ps1
+
       - name: Compute MSI version
         if: matrix.os == 'windows-latest'
         shell: bash

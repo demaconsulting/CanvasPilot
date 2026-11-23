@@ -6,9 +6,11 @@
 # - The Project subsystem spans ProjectService (ProjectService.cs, IProjectService.cs, ProjectDocument.cs,
 #   ProjectNameRules.cs), RecentProjects (RecentProjects.cs, IRecentProjects.cs), NewProjectDialog
 #   (NewProjectDialogViewModel.cs, NewProjectDialogView.axaml, IFolderPicker.cs), and ProjectExplorer
-#   (ProjectExplorerViewModel.cs, ProjectExplorerView.axaml, IImageSourceFilter.cs, IRefreshScheduler.cs,
-#   ProjectFileItem.cs)
+#   (ProjectExplorerViewModel.cs, ProjectNodeViewModel.cs, ProjectExplorerView.axaml, IImageSourceFilter.cs,
+#   IRefreshScheduler.cs, IThumbnailSource.cs, ProjectFileItem.cs)
 # - Subsystem requirements describe the project behavior that satisfies the system-level project requirements
+# - The requirements for the explorer as a tree with a header, a drop zone, thumbnails, and accessible controls are
+#   verified by the headless view tests of the ProjectExplorer unit, which run its view model over real folders
 
 sections:
   - title: CanvasPilot Requirements
@@ -39,64 +41,140 @@ sections:
           - id: CanvasPilot-Project-CreateNewProject
             title: >-
               The Project subsystem shall let the user choose a project name and a location in a New
-              Project dialog that accepts them only when a project can be created from them.
+              Project dialog that accepts them only when a project can be created from them, and that
+              can be used with a screen reader and the keyboard.
             justification: |
               Names and locations come from the user and become folder and file names. Checking them as
               they are typed, and allowing OK only for a project that can be created, keeps mistakes out
-              of the file system and shows the user what is wrong before anything is written.
+              of the file system and shows the user what is wrong before anything is written. The dialog
+              is the first thing a new user sees, so everyone must be able to use it.
             children:
               - CanvasPilot-NewProjectDialog-CollectNameAndLocation
               - CanvasPilot-NewProjectDialog-ValidateEntries
               - CanvasPilot-NewProjectDialog-BrowseForLocation
               - CanvasPilot-NewProjectDialog-AcceptOrCancel
+              - CanvasPilot-NewProjectDialog-NameTheEntries
             tests:
               - ProjectSubsystem_ManageProjects_DialogCreateSaveReopen_RoundTrips
 
           - id: CanvasPilot-Project-RememberRecentProjects
             title: >-
               The Project subsystem shall remember the most recently opened projects between runs,
-              most recent first, and shall not offer projects whose files no longer exist.
+              most recent first, with the time each was opened, and shall not offer projects whose
+              files no longer exist.
             justification: |
               Users usually return to the projects they used last. A short, ordered list kept in the
-              application settings lets them reopen those projects quickly, and dropping missing files
-              avoids offering choices that can only fail.
+              application settings lets them reopen those projects quickly, the time of opening tells
+              them which is which, and dropping missing files avoids offering choices that can only fail.
             children:
               - CanvasPilot-RecentProjects-KeepMostRecentFirst
               - CanvasPilot-RecentProjects-DropMissingProjects
               - CanvasPilot-RecentProjects-StoreInSettings
+              - CanvasPilot-RecentProjects-RecordOpeningTime
             tests:
               - ProjectSubsystem_RememberRecentProjects_OpenedProjects_ListedMostRecentFirst
 
           - id: CanvasPilot-Project-BrowseProjectImages
             title: >-
-              The Project subsystem shall list the image source files in the root of the open project's
-              folder, keep the list current as files change, and let the user select a file.
+              The Project subsystem shall show the open project's folder as a tree of its folders and image source files,
+              keep it current as files change, remember which folders are open, and let the user select a file or a folder.
             justification: |
-              The top-level image source files of a project are the things the user works on. A list that
-              follows the folder as files are added, removed, or renamed, by this application or by
-              other tools, stays correct without the user refreshing it, and sub-folders and application
-              data stay out of the way.
+              The image source files of a project are the things the user works on. A tree that follows the folder as
+              files are added, removed, or renamed, by this application or by other tools, stays correct without the user
+              refreshing it, and application data stays out of the way.
             children:
               - CanvasPilot-ProjectExplorer-ListProjectImages
+              - CanvasPilot-ProjectExplorer-ListDrawnFiles
+              - CanvasPilot-ProjectExplorer-LimitTheTree
               - CanvasPilot-ProjectExplorer-SelectFile
+              - CanvasPilot-ProjectExplorer-SelectNode
+              - CanvasPilot-ProjectExplorer-RememberExpansion
               - CanvasPilot-ProjectExplorer-RefreshOnFileChanges
+              - CanvasPilot-ProjectExplorer-RefreshNow
               - CanvasPilot-ProjectExplorer-ReleaseWatcher
             tests:
-              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources
+              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsImagesOfTheTreeButNotTheDataFolder
 
           - id: CanvasPilot-Project-ManageImageFiles
             title: >-
-              The Project subsystem shall let the user rename and delete an image source file in the open
-              project's folder, keep the list current, and refuse a change that would lose or misplace a file.
+              The Project subsystem shall let the user rename and delete an image source file of the open
+              project, wherever it lies in the project, keep the tree current, and refuse a change that would lose or
+              misplace a file.
             justification: |
               Managing a project's image files is part of working on them. Renaming and deleting through the
-              project list keeps it current and lets the application refuse a name that is invalid, is not an
+              project tree keeps it current and lets the application refuse a name that is invalid, is not an
               image source file, or would replace another file, and report a file that cannot be changed.
             children:
               - CanvasPilot-ProjectExplorer-DeleteSelectedFile
               - CanvasPilot-ProjectExplorer-RenameSelectedFile
             tests:
-              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsOnlyRootImageSources
+              - ProjectSubsystem_BrowseImages_ProjectFolder_ListsImagesOfTheTreeButNotTheDataFolder
+
+          - id: CanvasPilot-Project-AddToTheProject
+            title: >-
+              The Project subsystem shall let the user add to the open project a new blank drawing, a new
+              folder, and pictures, PDF files, and drawings copied from elsewhere, also by dropping them on the explorer,
+              without replacing a file and without writing outside the project or into its hidden data folder.
+            justification: |
+              A project grows as the user starts new drawings, organizes them in folders, and brings in logos,
+              photographs, and documents. Doing this from the explorer keeps the work in one place, and never
+              replacing a file or writing outside the project keeps the user's files safe.
+            children:
+              - CanvasPilot-ProjectExplorer-CreateFile
+              - CanvasPilot-ProjectExplorer-CreateFolder
+              - CanvasPilot-ProjectExplorer-AddFiles
+              - CanvasPilot-ProjectExplorer-AcceptDroppedFiles
+            tests:
+              - ProjectExplorerView_DropFiles_OnZoneAndOnFolderRow_CopiesAndHighlights
+              - ProjectExplorerView_DropTextOrOtherFile_ChangesNothingOrExplains
+
+          - id: CanvasPilot-Project-ShowProjectFilesClearly
+            title: >-
+              The Project subsystem shall show the files of the open project as rows of a tree with a badge for
+              the kind, the selected row marked by more than color, a header with the actions for files, and
+              problems in words with an icon.
+            justification: |
+              The explorer is on the screen all the time, so a tree that is easy to scan, shows what is selected, and
+              puts the file actions at hand makes every task quicker. Words, icons, and shapes, not color alone,
+              carry the meaning to every user.
+            children:
+              - CanvasPilot-ProjectExplorer-ShowTreeRows
+              - CanvasPilot-ProjectExplorer-ShowSelection
+              - CanvasPilot-ProjectExplorer-ShowProblems
+              - CanvasPilot-ProjectExplorer-ShowHeader
+              - CanvasPilot-ProjectExplorer-ComfortableRows
+            tests:
+              - ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent
+              - ProjectExplorerView_Header_ShowsLabelAndButtonsThatRunTheCommands
+              - ProjectExplorerView_ComfortableRows_RowsAre32HighInsteadOf26
+
+          - id: CanvasPilot-Project-ShowThumbnails
+            title: >-
+              The Project subsystem shall show a small picture of each drawing in the explorer when the user
+              wants them, made only for rows that can be seen and without holding up the tree, and shall work
+              without them.
+            justification: |
+              A picture of a drawing lets the user find it at a glance. Making the pictures lazily, off the main thread,
+              and only for rows that can be seen keeps a large project fast, and a setting lets users who do not want
+              them switch them off.
+            children:
+              - CanvasPilot-ProjectExplorer-ShowThumbnails
+              - CanvasPilot-ProjectExplorer-WorkWithoutThumbnails
+            tests:
+              - ProjectExplorerView_Thumbnails_ShownOnRowsOfDrawnFilesAndFollowTheSetting
+
+          - id: CanvasPilot-Project-BeAccessible
+            title: >-
+              The Project subsystem shall give the controls of the project explorer and of the New Project dialog
+              accessible names, tooltips on icon buttons, keyboard focus, and targets that are large enough to hit.
+            justification: |
+              People who use a screen reader or only the keyboard, and people who use a touch screen, must be able to
+              use the explorer and the dialog as well as everyone else.
+            children:
+              - CanvasPilot-ProjectExplorer-NameTheControls
+              - CanvasPilot-NewProjectDialog-NameTheEntries
+            tests:
+              - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
 
           - id: CanvasPilot-Project-KeepTheStyleChoice
             title: >-

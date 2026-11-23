@@ -23,6 +23,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
+using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -51,8 +52,20 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     ///     The content of the chat column on the right, or null while none is supplied.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsChatVisible))]
+    [NotifyPropertyChangedFor(nameof(IsChatVisible), nameof(CanRestoreChat))]
     private object? _chat;
+
+    /// <summary>
+    ///     Whether the user hid the chat column with the button of its header.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsChatVisible), nameof(CanRestoreChat))]
+    private bool _isChatCollapsed;
+
+    /// <summary>
+    ///     The chat panel that the workspace listens to for the request to hide the column, or null.
+    /// </summary>
+    private ChatPanelViewModel? _connectedPanel;
 
     /// <summary>
     ///     Creates the workspace around a project explorer. The workspace takes ownership of the explorer and
@@ -65,6 +78,8 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
 
         Explorer = explorer;
         Explorer.PropertyChanged += OnExplorerPropertyChanged;
+        Explorer.NewFileCommand = NewFileCommand;
+        Explorer.NewFolderCommand = NewFolderCommand;
     }
 
     /// <summary>
@@ -92,7 +107,13 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     ///     Gets a value indicating whether the chat column is shown: <see cref="Chat" /> holds content and a project is
     ///     open, because a message is written in the project and needs it for its attachments and marks.
     /// </summary>
-    public bool IsChatVisible => Chat is not null && HasProject;
+    public bool IsChatVisible => Chat is not null && HasProject && !IsChatCollapsed;
+
+    /// <summary>
+    ///     Gets a value indicating whether the chip that brings the chat column back is shown: the chat could be shown, but the
+    ///     user hid it.
+    /// </summary>
+    public bool CanRestoreChat => Chat is not null && HasProject && IsChatCollapsed;
 
     /// <summary>
     ///     Gets the text shown in the right-hand area while there is no preview content.
@@ -114,6 +135,75 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     ///     Gets a hint on how to start, shown below the placeholder while no project is open, or an empty string.
     /// </summary>
     public string HintText => HasProject ? string.Empty : "Create a project with File > New Project, or open one with File > Open Project.";
+
+    /// <summary>
+    ///     Gets the width that the user chose for the explorer, within its limits. The view shows less of it while the window
+    ///     is too narrow for it and the stage.
+    /// </summary>
+    public int ExplorerWidth { get; private set; } = WindowSettings.DefaultExplorerWidth;
+
+    /// <summary>
+    ///     Gets the width that the user chose for the chat column, within its limits. It is kept while the column is hidden.
+    /// </summary>
+    public int ChatWidth { get; private set; } = WindowSettings.DefaultChatWidth;
+
+    /// <summary>
+    ///     Raised when the user chose other widths of the explorer or the chat column by dragging a splitter or by using the
+    ///     keyboard on it. The shell saves them.
+    /// </summary>
+    public event EventHandler? LayoutChanged;
+
+    /// <summary>
+    ///     Sets the widths of the explorer and the chat column that were saved, without announcing a choice of the user.
+    /// </summary>
+    /// <param name="explorer">The width of the explorer.</param>
+    /// <param name="chat">The width of the chat column.</param>
+    public void RestoreColumnWidths(double explorer, double chat)
+    {
+        ApplyColumnWidths(explorer, chat);
+    }
+
+    /// <summary>
+    ///     Sets the widths of the explorer and the chat column that the user chose, and announces the choice when it changed
+    ///     them.
+    /// </summary>
+    /// <param name="explorer">The width of the explorer.</param>
+    /// <param name="chat">The width of the chat column.</param>
+    public void SetColumnWidths(double explorer, double chat)
+    {
+        if (ApplyColumnWidths(explorer, chat))
+        {
+            LayoutChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>
+    ///     Keeps the widths within their limits and announces the ones that changed.
+    /// </summary>
+    /// <param name="explorer">The width of the explorer.</param>
+    /// <param name="chat">The width of the chat column.</param>
+    /// <returns><see langword="true" /> when a width changed.</returns>
+    private bool ApplyColumnWidths(double explorer, double chat)
+    {
+        var newExplorer = (int)Math.Clamp(Math.Round(explorer), WindowSettings.MinimumExplorerWidth, WindowSettings.MaximumExplorerWidth);
+        var newChat = (int)Math.Clamp(Math.Round(chat), WindowSettings.MinimumChatWidth, WindowSettings.MaximumChatWidth);
+        var changed = false;
+        if (newExplorer != ExplorerWidth)
+        {
+            ExplorerWidth = newExplorer;
+            OnPropertyChanged(nameof(ExplorerWidth));
+            changed = true;
+        }
+
+        if (newChat != ChatWidth)
+        {
+            ChatWidth = newChat;
+            OnPropertyChanged(nameof(ChatWidth));
+            changed = true;
+        }
+
+        return changed;
+    }
 
     /// <summary>
     ///     Gets the file the user selected in the explorer, or <see langword="null" />.
@@ -173,8 +263,41 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
         if (_dialogs is not null && Chat is ChatPanelViewModel panel)
         {
             panel.InspectorLauncher = _dialogs;
+            panel.AttachmentPicker = _dialogs;
         }
     }
+
+    /// <summary>
+    ///     Follows the chat panel that is about to be replaced, and the one that replaces it, for the request to hide the
+    ///     column.
+    /// </summary>
+    /// <param name="value">The new content.</param>
+    partial void OnChatChanging(object? value)
+    {
+        if (_connectedPanel is not null)
+        {
+            _connectedPanel.CollapseRequested -= OnChatCollapseRequested;
+        }
+
+        _connectedPanel = value as ChatPanelViewModel;
+        if (_connectedPanel is not null)
+        {
+            _connectedPanel.CollapseRequested += OnChatCollapseRequested;
+        }
+    }
+
+    /// <summary>
+    ///     Hides the chat column because the user asked to in its header.
+    /// </summary>
+    /// <param name="sender">The chat panel.</param>
+    /// <param name="e">The event data.</param>
+    private void OnChatCollapseRequested(object? sender, EventArgs e) => IsChatCollapsed = true;
+
+    /// <summary>
+    ///     Shows the chat column again after the user hid it.
+    /// </summary>
+    [RelayCommand]
+    private void RestoreChat() => IsChatCollapsed = false;
 
     /// <summary>
     ///     Follows a change of the chat content.
@@ -242,6 +365,62 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     }
 
     /// <summary>
+    ///     Asks the user for the name of a new file and creates it, with an empty drawing of its kind, in the selected folder
+    ///     of the explorer, reporting a problem if it could not be created.
+    /// </summary>
+    /// <returns>A task that completes when the operation has finished.</returns>
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task NewFileAsync()
+    {
+        if (_dialogs is null || Explorer.TargetFolder is null)
+        {
+            return;
+        }
+
+        var name = await _dialogs.PromptAsync(
+            "New File",
+            "Name of the new file, with its extension (for example drawing.svg, flow.mmd, or chart.vl.json):",
+            "untitled.svg",
+            "Create");
+        if (name is null)
+        {
+            return;
+        }
+
+        var problem = Explorer.CreateFile(name);
+        if (problem.Length > 0)
+        {
+            await _dialogs.ShowMessageAsync("New File", problem);
+        }
+    }
+
+    /// <summary>
+    ///     Asks the user for the name of a new folder and creates it in the selected folder of the explorer, reporting a
+    ///     problem if it could not be created.
+    /// </summary>
+    /// <returns>A task that completes when the operation has finished.</returns>
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task NewFolderAsync()
+    {
+        if (_dialogs is null || Explorer.TargetFolder is null)
+        {
+            return;
+        }
+
+        var name = await _dialogs.PromptAsync("New Folder", "Name of the new folder:", "New folder", "Create");
+        if (name is null)
+        {
+            return;
+        }
+
+        var problem = Explorer.CreateFolder(name);
+        if (problem.Length > 0)
+        {
+            await _dialogs.ShowMessageAsync("New Folder", problem);
+        }
+    }
+
+    /// <summary>
     ///     Forwards the explorer's changes that affect the workspace's own state.
     /// </summary>
     /// <param name="sender">The explorer.</param>
@@ -261,8 +440,11 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
             case nameof(ProjectExplorerViewModel.HasProject):
                 OnPropertyChanged(nameof(HasProject));
                 OnPropertyChanged(nameof(IsChatVisible));
+                OnPropertyChanged(nameof(CanRestoreChat));
                 OnPropertyChanged(nameof(PlaceholderText));
                 OnPropertyChanged(nameof(HintText));
+                NewFileCommand.NotifyCanExecuteChanged();
+                NewFolderCommand.NotifyCanExecuteChanged();
                 break;
         }
     }

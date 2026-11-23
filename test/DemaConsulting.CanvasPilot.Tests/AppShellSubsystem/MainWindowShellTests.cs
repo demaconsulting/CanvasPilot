@@ -173,9 +173,7 @@ public sealed class MainWindowShellTests : IDisposable
             parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], null, Directory.CreateDirectory(Projects).FullName, null, picker);
         shell.AttachDialogService(_dialogs);
         _shells.Add(shell);
-        var changes = new List<string?>();
-        shell.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
-        var barWithoutProject = shell.ShowStatusBar;
+        var pickerWithoutProject = picker.IsVisible;
         _dialogs.OnNewProject = dialog =>
         {
             dialog.ProjectName = "Styled";
@@ -185,25 +183,23 @@ public sealed class MainWindowShellTests : IDisposable
         // Act: create a project, close it, and open it again from the list of recent projects
         await shell.NewProjectCommand.ExecuteAsync(null);
         var appliedForNew = applied;
-        var barWithProject = shell.ShowStatusBar;
+        var pickerWithProject = picker.IsVisible;
         shell.CloseProjectCommand.Execute(null);
         await shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
 
-        // Assert: the default was given once, for the new project, and the bar was shown with the project
+        // Assert: the default was given once, for the new project, and the picker was shown with the project
         Assert.Same(picker, shell.StylePicker);
-        Assert.False(barWithoutProject);
+        Assert.False(pickerWithoutProject);
         Assert.Equal(1, appliedForNew);
         Assert.Equal(1, applied);
-        Assert.True(barWithProject);
-        Assert.True(shell.ShowStatusBar);
-        Assert.Contains(nameof(MainWindowShell.ShowStatusBar), changes);
+        Assert.True(pickerWithProject);
     }
 
     /// <summary>
-    ///     Test that a shell with no style picker shows no status bar and creates a project as before.
+    ///     Test that a shell with no style picker has none and creates a project as before.
     /// </summary>
     [Fact]
-    public async Task MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar()
+    public async Task MainWindowShell_NewProject_WithoutStylePicker_HasNoPicker()
     {
         // Arrange: a shell with no style picker
         var shell = CreateShell(defaultProjectsFolder: Directory.CreateDirectory(Projects).FullName);
@@ -216,10 +212,9 @@ public sealed class MainWindowShellTests : IDisposable
         // Act: create a project
         await shell.NewProjectCommand.ExecuteAsync(null);
 
-        // Assert: the project is open and there is no status bar
+        // Assert: the project is open and there is no picker
         Assert.True(shell.HasProject);
         Assert.Null(shell.StylePicker);
-        Assert.False(shell.ShowStatusBar);
     }
 
     /// <summary>
@@ -411,6 +406,57 @@ public sealed class MainWindowShellTests : IDisposable
         Assert.Equal([second, first], before);
         Assert.Equal("First - CanvasPilot", shell.Title);
         Assert.Equal([first, second], shell.RecentProjects.Select(item => item.FilePath));
+    }
+
+    /// <summary>
+    ///     Test that the shell gives the explorer the row height that was saved in the Appearance settings and follows the
+    ///     setting when it changes.
+    /// </summary>
+    [Fact]
+    public void MainWindowShell_AppearanceSettings_ComfortableRowsReachTheExplorer()
+    {
+        // Arrange: settings that ask for comfortable rows, and a shell over them
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        settings.Update(s => s with { Appearance = s.Appearance with { ComfortableRows = true } });
+        var shell = CreateShell(settings: settings);
+        var atStart = shell.Workspace.Explorer.ComfortableRows;
+
+        // Act: the user turns the setting off, and then on again
+        settings.Update(s => s with { Appearance = s.Appearance with { ComfortableRows = false } });
+        var afterOff = shell.Workspace.Explorer.ComfortableRows;
+        settings.Update(s => s with { Appearance = s.Appearance with { ComfortableRows = true } });
+        var afterOn = shell.Workspace.Explorer.ComfortableRows;
+
+        // Assert: the explorer followed the setting from the start
+        Assert.True(atStart);
+        Assert.False(afterOff);
+        Assert.True(afterOn);
+    }
+
+    /// <summary>
+    ///     Test that the shell gives the workspace the widths of the explorer and the chat column that were saved, saves the
+    ///     widths that the user chooses with a splitter, and saves the size, place, and state of the window that it is told.
+    /// </summary>
+    [Fact]
+    public void MainWindowShell_WindowLayout_RestoresWidthsAndSavesChoicesAndWindow()
+    {
+        // Arrange: settings that hold a layout, and a shell over them
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        settings.Update(s => s with { Window = s.Window with { ExplorerWidth = 300, ChatWidth = 500 } });
+        var shell = CreateShell(settings: settings);
+        var restored = (shell.Workspace.ExplorerWidth, shell.Workspace.ChatWidth, shell.SavedWindow.ExplorerWidth);
+
+        // Act: the user chooses other widths, and the window is closed maximized after it was moved
+        shell.Workspace.SetColumnWidths(220, 350);
+        var afterChoice = (settings.Current.Window.ExplorerWidth, settings.Current.Window.ChatWidth);
+        shell.SaveWindow(1200, 800, 40, 50, maximized: true);
+        var saved = settings.Current.Window;
+
+        // Assert: the saved widths were used, the choice was saved, and the window layout was saved with it
+        Assert.Equal((300, 500, 300), restored);
+        Assert.Equal((220, 350), afterChoice);
+        Assert.Equal((1200, 800, 40, 50, SavedWindowState.Maximized), (saved.Width, saved.Height, saved.Left, saved.Top, saved.State));
+        Assert.Equal((220, 350), (saved.ExplorerWidth, saved.ChatWidth));
     }
 
     /// <summary>

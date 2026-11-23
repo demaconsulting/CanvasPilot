@@ -18,7 +18,8 @@ package CanvasPilot_StyleSettingsPage {
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/StyleSubsystem/StyleSettingsPageTests.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/StyleSettingsPageViewTests.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/StyleSettingsPageViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/style-subsystem/style-settings-page.md");
             verificationFiles = ("docs/verification/canvas-pilot/style-subsystem/style-settings-page.md");

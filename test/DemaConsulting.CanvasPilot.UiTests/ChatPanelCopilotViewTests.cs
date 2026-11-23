@@ -198,8 +198,9 @@ public sealed class ChatPanelCopilotViewTests
 
         // Assert: two tool lines, the first saying the file was created, and no line still running
         Assert.Equal(2, harness.ToolRows.Count);
-        Assert.Equal("Created `box.svg`", harness.ToolRows[0].FindControl<TextBlock>("SummaryText")!.Text);
-        Assert.All(harness.ToolRows, row => Assert.False(row.FindControl<ProgressBar>("RunningBar")!.IsEffectivelyVisible));
+        Assert.Equal("Created box.svg", harness.ToolRows[0].FindControl<TextBlock>("SummaryText")!.Text);
+        Assert.All(harness.ToolRows, row => Assert.False(row.FindControl<PathIcon>("RunningSpinner")!.IsEffectivelyVisible));
+        Assert.All(harness.ToolRows, row => Assert.True(row.FindControl<PathIcon>("SuccessIcon")!.IsEffectivelyVisible));
         Assert.Equal(["Drawing.", "Done."], harness.Replies.Select(reply => reply.DataContext).OfType<AssistantReplyViewModel>().Select(reply => reply.Text));
     }
 

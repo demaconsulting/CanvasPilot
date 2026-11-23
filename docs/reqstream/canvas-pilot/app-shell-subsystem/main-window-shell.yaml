@@ -1,12 +1,16 @@
 ---
 # Software Unit Requirements for the MainWindowShell Unit
 #
-# The MainWindowShell unit is the main window's view model and the window that shows it. It owns the File, Edit,
-# Image, Tools, and Help commands, follows the open project in the window title, lists the recent projects, and talks
-# to the user only through an IDialogService that the window implements. The Image menu commands run through an
-# IImageExporter (owned by the Preview subsystem) that the image preview supplies. The Edit menu runs through the
-# IUndoRedoTarget of the part of the window that has the focus, and the talk key runs through an IPushToTalkTarget
-# (both owned by the Composer subsystem).
+# The MainWindowShell unit is the main window's view model and the window that shows it. The window has a title bar
+# that holds the compact menu, the name of the open project, the list that chooses the style kit, and the AI provider
+# pill; a body that shows the welcome screen while no project is open and the workspace once one is; and a status bar
+# at the bottom. The unit owns the File, Edit, Image, Tools, and Help commands, follows the open project in the window
+# title, lists the recent projects, remembers the size, place, and state of the window and the widths of the explorer
+# and the chat column, and talks to the user only through an IDialogService that the window implements. The Image menu
+# commands run through an IImageExporter (owned by the Preview subsystem) that the image preview supplies. The Edit
+# menu runs through the IUndoRedoTarget of the part of the window that has the focus, and the talk key runs through an
+# IPushToTalkTarget (both owned by the Composer subsystem). The status bar, the provider pill, and the welcome screen
+# are units of their own; this file states only that the window shows them.
 
 sections:
   - title: CanvasPilot Requirements
@@ -209,21 +213,21 @@ sections:
                   - MainWindowView_Pickers_HeadlessPlatform_ReturnNull
                   - MainWindowView_CopyImageToClipboard_Picture_ReportsResultAndIsReadable
 
-              - id: CanvasPilot-MainWindowShell-ShowTheActiveStyleInAStatusBar
+              - id: CanvasPilot-MainWindowShell-ShowTheActiveStyleInTheTitleBar
                 title: >-
-                  The MainWindowShell shall show a status bar at the bottom of the window that holds the list with which the
-                  user chooses the style kit of the project, shall show the bar only while a project is open and the
-                  application has such a list, shall follow the list when it shows or hides itself, and shall give a project
-                  that was just created the default style kit of the user and no project that is only opened.
+                  The MainWindowShell shall show, in the title bar of the window, the list with which the user chooses the
+                  style kit of the project, shall show the list only while a project is open and the application has such a
+                  list, and shall give a project that was just created the default style kit of the user and no project that
+                  is only opened.
                 justification: |
-                  The style belongs to the project, so the choice has to be in sight while the user works, and an empty bar
-                  with no project open would only take room. A project should say which style it uses from the day it is
-                  made, but opening a project must not change what its file says, and a later change of the preference of the
-                  user must not move projects that exist.
+                  The style belongs to the project, so the choice has to be in sight while the user works, and a list with no
+                  project open would offer a choice that cannot be kept. A project should say which style it uses from the day
+                  it is made, but opening a project must not change what its file says, and a later change of the preference
+                  of the user must not move projects that exist.
                 tests:
                   - MainWindowShell_NewProject_WithStylePicker_AppliesTheDefaultOnlyForANewProject
-                  - MainWindowShell_NewProject_WithoutStylePicker_HasNoStatusBar
-                  - StylePickerView_StatusBar_ShownOnlyWithAProjectAndListsTheKits
+                  - MainWindowShell_NewProject_WithoutStylePicker_HasNoPicker
+                  - StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits
 
               - id: CanvasPilot-MainWindowShell-CheckAgainstStyleFromTheImageMenu
                 title: >-
@@ -263,3 +267,114 @@ sections:
                   - MainWindowView_StyleKitsMenuItem_SecondRequest_ReusesTheOpenWindow
                   - MainWindowView_ShowStyleKitEditor_OverTheManagerOrTheMainWindow_ShowsEditorModally
                   - MainWindowView_Close_ClosesTheStyleKitsWindowItOwns
+
+              - id: CanvasPilot-MainWindowShell-ShowTitleBar
+                title: >-
+                  The MainWindowShell shall show a title bar, 44 pixels high over the whole width of the window, that holds
+                  the File, Edit, Image, Tools, and Help menus with all their items and keys, and that shows the name of the
+                  open project in bold followed by the application name, or the application name alone while no project is
+                  open, while the title that the system shows for the window keeps the project name followed by a hyphen and
+                  the application name.
+                justification: |
+                  The title bar is the first thing the user sees and tells which project the work is in. Putting the menu in
+                  the same strip gives the picture and the chat more room than a menu bar under a separate title would, and
+                  none of the commands may be lost by the move. The system still needs a plain title for the task bar and the
+                  list of windows.
+                tests:
+                  - MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes
+                  - MainWindowView_TitleBar_ShowsProjectNameThenApplicationName
+                  - MainWindowView_Menus_HaveExpectedStructureAndAutomationIds
+
+              - id: CanvasPilot-MainWindowShell-KeepRoomForSystemButtons
+                title: >-
+                  The MainWindowShell shall, when the window extends into its frame, keep 138 pixels free at the right end of
+                  the title bar on Windows and 78 pixels free at its left end on macOS for the buttons that the system draws
+                  there, and shall keep nothing free on another platform or while the window does not extend into its frame.
+                justification: |
+                  The system draws the buttons that minimize, maximize, and close the window over the strip when the window
+                  takes over the frame. If the title or the pills lay under them, they could not be seen or used, and a window
+                  that does not take over the frame must not waste room.
+                tests:
+                  - MainWindowView_CaptionReserve_FollowsPlatformAndExtension
+                  - MainWindowView_ApplyCaptionReserve_ToleratesMissingControls
+                  - MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes
+
+              - id: CanvasPilot-MainWindowShell-OpenWithDesignSizes
+                title: >-
+                  The MainWindowShell shall open the window 1440 by 900 pixels when no size was saved and never let the
+                  user make it smaller than 960 by 600 pixels.
+                justification: |
+                  The window holds an explorer, a picture, and a chat side by side. A first size that shows all three well,
+                  and a least size below which they would be cropped, keep the application usable on the screens that people
+                  have.
+                tests:
+                  - MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes
+
+              - id: CanvasPilot-MainWindowShell-HostProviderPillInTitleBar
+                title: >-
+                  The MainWindowShell shall show, in the title bar of the window and inside its right edge, the pill that tells
+                  which AI provider is chosen and how it is, when the application has one.
+                justification: |
+                  Whether the AI provider can be used decides whether a message can be answered, so the user should see it at
+                  all times, in the same place, and be able to reach the settings from it.
+                tests:
+                  - MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage
+
+              - id: CanvasPilot-MainWindowShell-ShowStatusBarAtBottom
+                title: >-
+                  The MainWindowShell shall show the status bar at the bottom of the window at all times, with a project open
+                  and without one, 26 pixels high.
+                justification: |
+                  The status bar says what the picture is and whether the application is idle. A bar that comes and goes would
+                  move the picture, so it is always there, and no setting turns it off.
+                tests:
+                  - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
+
+              - id: CanvasPilot-MainWindowShell-ShowWelcomeOrWorkspace
+                title: >-
+                  The MainWindowShell shall show the welcome screen in the body of the window while no project is open and
+                  the workspace of the project, which is built only when a project is first opened, in its place while one is
+                  open, and show the welcome screen again when the project is closed.
+                justification: |
+                  With no project there is nothing to explore, preview, or write about, so the window offers a way to start
+                  instead of empty panes. Building the workspace only when it is needed keeps the start of the application
+                  quick.
+                tests:
+                  - MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns
+                  - MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow
+
+              - id: CanvasPilot-MainWindowShell-RememberWindowLayout
+                title: >-
+                  The MainWindowShell shall save the size, the place, and whether the window is maximized when the window
+                  closes, open the next window with them, give the workspace the saved widths of the explorer and the chat
+                  column, and save the widths when the user chooses other ones.
+                justification: |
+                  People arrange the window to suit their screen and expect to find it as they left it, rather than moving
+                  and resizing it at every start.
+                tests:
+                  - MainWindowShell_WindowLayout_RestoresWidthsAndSavesChoicesAndWindow
+                  - WorkspaceLayout_CloseWindow_SavesTheSizeAndANewWindowOpensWithIt
+                  - WorkspaceLayout_Splitters_SavedWidthsUsedAndKeyboardChoiceSaved
+
+              - id: CanvasPilot-MainWindowShell-MakeMenuUsableByKeyboard
+                title: >-
+                  The MainWindowShell shall give every menu of the title bar and every item of a menu an access key that no
+                  other entry of the same menu has, so the whole menu can be used with the keyboard alone.
+                justification: |
+                  A person who cannot use a pointer must reach every command, and two entries that share a key would make one
+                  of them unreachable.
+                tests:
+                  - Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey
+
+              - id: CanvasPilot-MainWindowShell-NameAndSizeControls
+                title: >-
+                  The MainWindowShell shall give the main window, with and without a project, in both theme variants, buttons
+                  that show no text a name and a tooltip, fields, lists, drop-downs, and sliders a name, buttons that are
+                  enabled the ability to take the focus with the keyboard, and buttons that show no text a size of at least
+                  28 by 28 pixels.
+                justification: |
+                  A screen reader says only what a control is named, a person with a pointer or a finger needs a target that
+                  is large enough to hit, and a person with a keyboard must be able to reach every button. A button that holds
+                  only an icon must therefore say in words what it does.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

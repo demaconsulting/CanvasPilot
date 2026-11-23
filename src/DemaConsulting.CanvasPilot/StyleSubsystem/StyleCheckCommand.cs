@@ -108,8 +108,8 @@ public sealed class StyleCheckCommand : ICheckAgainstStyle, IDisposable
         if (entry is null)
         {
             return _active.IsMissing
-                ? $"The style kit '{_active.ActiveId}' of this project cannot be found. Choose another style kit in the status bar."
-                : "This project has no style kit. Choose a style kit in the status bar first.";
+                ? $"The style kit '{_active.ActiveId}' of this project cannot be found. Choose another style kit in the title bar."
+                : "This project has no style kit. Choose a style kit in the title bar first.";
         }
 
         StyleCheckReport report;

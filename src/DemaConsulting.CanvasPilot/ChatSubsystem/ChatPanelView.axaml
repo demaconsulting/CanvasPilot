@@ -6,132 +6,407 @@
              x:DataType="vm:ChatPanelViewModel"
              AutomationProperties.AutomationId="ChatPanel">
 
-  <Grid Margin="8" RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+  <UserControl.Styles>
+    <!-- The card of the message shows the focus ring and a glow while the editor has the focus -->
+    <Style Selector="Border.composer:focus-within">
+      <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource CpShadowFocus}" />
+    </Style>
 
-    <!-- The header of the conversation: the button that deletes the saved chat history of the project, empties the
-         transcript, and makes the copilot forget the conversation; it does not ask first -->
-    <Grid Grid.Row="0" Margin="0,0,0,4" ColumnDefinitions="*,Auto">
-      <Button Name="ClearHistoryButton"
-              Grid.Column="1"
-              AutomationProperties.AutomationId="ChatClearHistoryButton"
-              Padding="8,2"
-              FontSize="12"
-              Content="Clear chat history"
-              Command="{Binding ClearHistoryCommand}"
-              ToolTip.Tip="Delete the saved chat history of this project from this computer and start the conversation again" />
-    </Grid>
+    <!-- The talk button is red and pulses while it listens, and says so with words in its name and tooltip -->
+    <Style Selector="Button.talk.talking">
+      <Setter Property="Foreground" Value="{DynamicResource CpDanger}" />
+      <Setter Property="Background" Value="{DynamicResource CpDangerTint}" />
+      <Style.Animations>
+        <Animation Duration="0:0:1" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="50%">
+            <Setter Property="Opacity" Value="0.55" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <!-- Send keeps its gradient when the pointer is over it -->
+    <Style Selector="Button#SendButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource CpAccentGradient}" />
+    </Style>
+    <Style Selector="Button#SendButton:pointerover">
+      <Setter Property="Foreground" Value="{DynamicResource CpTextOnAccent}" />
+    </Style>
+
+    <!-- The dots of the typing indicator pulse over 1.2 seconds, one after the other -->
+    <Style Selector="Ellipse.dot">
+      <Setter Property="Opacity" Value="0.3" />
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="40%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="80%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="Ellipse.dot.second">
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" Delay="0:0:0.2" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="40%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="80%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="Ellipse.dot.third">
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" Delay="0:0:0.4" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="40%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="80%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+
+    <!-- The header of the conversation: the sparkle, the title, the menu of more actions, and the button that hides the
+         column. The menu holds the item that deletes the saved chat history of the project, empties the transcript, and
+         makes the copilot forget the conversation; it does not ask first. -->
+    <Border Grid.Row="0"
+            Height="48"
+            Padding="16,0,8,0"
+            BorderThickness="0,0,0,1"
+            BorderBrush="{DynamicResource CpBorderSubtle}">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Border Grid.Column="0"
+                Width="22"
+                Height="22"
+                CornerRadius="11"
+                VerticalAlignment="Center"
+                Background="{DynamicResource CpAccentGradient}">
+          <PathIcon Classes="icon"
+                    Width="12"
+                    Height="12"
+                    Foreground="{DynamicResource CpTextOnAccent}"
+                    Data="{DynamicResource CpIconSparkle}" />
+        </Border>
+        <TextBlock Grid.Column="1"
+                   Margin="10,0,0,0"
+                   VerticalAlignment="Center"
+                   FontSize="{DynamicResource CpFontBodyLarge}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource CpTextPrimary}"
+                   Text="Conversation" />
+        <Button Name="OverflowButton"
+                Grid.Column="2"
+                AutomationProperties.AutomationId="ChatOverflowButton"
+                AutomationProperties.Name="More conversation actions"
+                Theme="{DynamicResource IconButton}"
+                ToolTip.Tip="More conversation actions">
+          <PathIcon Classes="icon" Data="{DynamicResource CpIconMoreHorizontal}" />
+          <Button.Flyout>
+            <MenuFlyout Placement="BottomEdgeAlignedRight">
+              <MenuItem Name="ClearHistoryItem"
+                        AutomationProperties.AutomationId="ChatClearHistoryButton"
+                        Header="Clear chat history"
+                        Command="{Binding ClearHistoryCommand}"
+                        ToolTip.Tip="Delete the saved chat history of this project from this computer and start the conversation again" />
+            </MenuFlyout>
+          </Button.Flyout>
+        </Button>
+        <Button Name="CollapseButton"
+                Grid.Column="3"
+                AutomationProperties.AutomationId="ChatCollapseButton"
+                AutomationProperties.Name="Hide the conversation"
+                Theme="{DynamicResource IconButton}"
+                Command="{Binding CollapseCommand}"
+                ToolTip.Tip="Hide the conversation">
+          <PathIcon Classes="icon" Data="{DynamicResource CpIconPanelRight}" />
+        </Button>
+      </Grid>
+    </Border>
 
     <!-- Whether the copilot can be used, with what to do when it cannot; hidden when everything is ready -->
     <Border Name="ReadinessBanner"
             Grid.Row="1"
             AutomationProperties.AutomationId="ChatReadinessBanner"
-            Margin="0,0,0,8"
-            Padding="8"
-            CornerRadius="4"
-            Background="#22E0A030"
+            Margin="16,12,16,0"
+            Padding="12,10"
+            CornerRadius="{DynamicResource CpRadiusInput}"
+            Background="{DynamicResource CpWarningTint}"
             IsVisible="{Binding HasReadinessIssue}">
-      <StackPanel Spacing="4">
-        <SelectableTextBlock Name="ReadinessText"
-                             AutomationProperties.AutomationId="ChatReadinessMessage"
-                             TextWrapping="Wrap"
-                             Text="{Binding ReadinessMessage}" />
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Name="ReadinessOpenSettingsButton"
-                  AutomationProperties.AutomationId="ChatReadinessOpenSettingsButton"
-                  Padding="8,2"
-                  FontSize="12"
-                  Content="Open Settings"
-                  Command="{Binding OpenSettingsCommand}"
-                  ToolTip.Tip="Open the settings of the application" />
-          <Button Name="ReadinessCheckAgainButton"
-                  AutomationProperties.AutomationId="ChatReadinessCheckAgainButton"
-                  Padding="8,2"
-                  FontSize="12"
-                  Content="Check again"
-                  Command="{Binding CheckAgainCommand}"
-                  ToolTip.Tip="Check again whether the copilot can be used" />
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+        <PathIcon Classes="icon"
+                  VerticalAlignment="Top"
+                  Margin="0,2,0,0"
+                  Foreground="{DynamicResource CpWarning}"
+                  Data="{DynamicResource CpIconWarning}" />
+        <StackPanel Grid.Column="1" Spacing="8">
+          <SelectableTextBlock Name="ReadinessText"
+                               AutomationProperties.AutomationId="ChatReadinessMessage"
+                               FontSize="{DynamicResource CpFontSmall}"
+                               Foreground="{DynamicResource CpTextPrimary}"
+                               TextWrapping="Wrap"
+                               Text="{Binding ReadinessMessage}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Name="ReadinessOpenSettingsButton"
+                    AutomationProperties.AutomationId="ChatReadinessOpenSettingsButton"
+                    Theme="{DynamicResource PillButton}"
+                    MinHeight="26"
+                    Content="Open Settings"
+                    Command="{Binding OpenSettingsCommand}"
+                    ToolTip.Tip="Open the settings of the application" />
+            <Button Name="ReadinessCheckAgainButton"
+                    AutomationProperties.AutomationId="ChatReadinessCheckAgainButton"
+                    Theme="{DynamicResource PillButton}"
+                    MinHeight="26"
+                    Content="Check again"
+                    Command="{Binding CheckAgainCommand}"
+                    ToolTip.Tip="Check again whether the copilot can be used" />
+          </StackPanel>
         </StackPanel>
-      </StackPanel>
+      </Grid>
     </Border>
 
     <!-- The conversation, oldest first: the messages that were sent, the answers of the copilot, the tools it called, and
-         notices; what was said is saved on this computer, outside the project, and it cannot be changed -->
+         notices; what was said is saved on this computer, outside the project, and it cannot be changed. While it is empty
+         the pane says what to try. -->
     <Grid Grid.Row="2">
       <ScrollViewer Name="TranscriptScroll"
                     AutomationProperties.AutomationId="ChatTranscriptScroll"
+                    Padding="16,12"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Auto">
         <ItemsControl Name="TranscriptList"
                       AutomationProperties.AutomationId="ChatTranscript"
                       ItemsSource="{Binding Transcript}" />
       </ScrollViewer>
-      <TextBlock Name="EmptyTranscriptText"
-                 AutomationProperties.AutomationId="ChatTranscriptEmpty"
-                 Margin="4"
-                 Opacity="0.6"
-                 IsHitTestVisible="False"
-                 TextWrapping="Wrap"
-                 Text="{x:Static vm:ChatPanelViewModel.EmptyTranscriptText}"
-                 IsVisible="{Binding !HasTranscript}" />
+
+      <StackPanel Name="EmptyState"
+                  Margin="24,0"
+                  MaxWidth="320"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="8"
+                  IsVisible="{Binding !HasTranscript}">
+        <Border Width="56"
+                Height="56"
+                Margin="0,0,0,8"
+                CornerRadius="28"
+                HorizontalAlignment="Center"
+                Background="{DynamicResource CpAccentGradient}">
+          <PathIcon Classes="icon"
+                    Width="28"
+                    Height="28"
+                    Foreground="{DynamicResource CpTextOnAccent}"
+                    Data="{DynamicResource CpIconSparkle}" />
+        </Border>
+        <TextBlock Name="EmptyTranscriptText"
+                   AutomationProperties.AutomationId="ChatTranscriptEmpty"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   FontSize="{DynamicResource CpFontSubtitle}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource CpTextPrimary}"
+                   Text="{x:Static vm:ChatPanelViewModel.EmptyTranscriptText}" />
+        <ItemsControl Name="ExamplePromptList"
+                      Margin="0,8,0,0"
+                      ItemsSource="{x:Static vm:ChatPanelViewModel.ExamplePrompts}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Spacing="8" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <Button AutomationProperties.AutomationId="ChatExamplePrompt"
+                      Theme="{DynamicResource PillButton}"
+                      HorizontalAlignment="Stretch"
+                      MinHeight="36"
+                      Content="{Binding}"
+                      Click="OnPromptClicked" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Name="EmptyTipText"
+                   Margin="0,8,0,0"
+                   HorizontalAlignment="Center"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   FontSize="{DynamicResource CpFontSmall}"
+                   Foreground="{DynamicResource CpTextTertiary}"
+                   Text="{x:Static vm:ChatPanelViewModel.EmptyTipText}" />
+      </StackPanel>
     </Grid>
 
-    <!-- While the copilot works: the indicator and the button that stops it -->
+    <!-- While the copilot works: three pulsing dots, what is going on, and the button that stops it -->
     <Grid Name="BusyRow"
           Grid.Row="3"
           AutomationProperties.AutomationId="ChatBusyIndicator"
-          Margin="0,8,0,0"
+          Margin="16,8,16,0"
           ColumnDefinitions="Auto,*,Auto"
           IsVisible="{Binding IsCopilotBusy}">
-      <ProgressBar Grid.Column="0"
-                   Width="60"
-                   Height="4"
-                   Margin="0,0,8,0"
-                   IsIndeterminate="True"
-                   VerticalAlignment="Center" />
+      <StackPanel Grid.Column="0"
+                  Margin="0,0,8,0"
+                  Orientation="Horizontal"
+                  Spacing="4"
+                  VerticalAlignment="Center">
+        <Ellipse Classes="dot" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
+        <Ellipse Classes="dot second" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
+        <Ellipse Classes="dot third" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
+      </StackPanel>
       <TextBlock Name="BusyText"
                  Grid.Column="1"
                  AutomationProperties.AutomationId="ChatBusyText"
                  VerticalAlignment="Center"
+                 FontSize="{DynamicResource CpFontSmall}"
+                 Foreground="{DynamicResource CpTextSecondary}"
                  Text="{x:Static vm:ChatPanelViewModel.WorkingText}" />
       <Button Name="StopButton"
               Grid.Column="2"
               AutomationProperties.AutomationId="ChatStopButton"
-              MinWidth="80"
+              Theme="{DynamicResource PillButton}"
+              MinHeight="26"
               Content="Stop"
               Command="{Binding StopCommand}"
               ToolTip.Tip="Stop the copilot; what it has written so far is kept" />
     </Grid>
 
-    <!-- The message being written, with the words that are being recognized and the status line of the composer -->
-    <Border Grid.Row="4"
-            Margin="0,8,0,0"
-            Padding="4"
+    <!-- A few follow-ups to try, while a conversation is going on and the copilot is idle -->
+    <ItemsControl Name="SuggestionList"
+                  Grid.Row="4"
+                  Margin="16,8,16,0"
+                  ItemsSource="{x:Static vm:ChatPanelViewModel.SuggestedPrompts}"
+                  IsVisible="{Binding ShowSuggestions}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel ItemSpacing="8" LineSpacing="8" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <Button AutomationProperties.AutomationId="ChatSuggestion"
+                  Theme="{DynamicResource PillButton}"
+                  Content="{Binding}"
+                  Click="OnPromptClicked" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- The message being written: a card with the editing control (words and chips, with the words that are being recognized
+         above them), and under it the attach button, the talk button with its key, the hint, and Send. The card has the
+         focus ring and a soft glow while the editor has the focus. -->
+    <Border Name="ComposerCard"
+            Classes="composer"
+            Grid.Row="5"
+            Margin="16,8,16,16"
+            Padding="12,10,8,8"
             BorderThickness="1"
-            CornerRadius="4"
-            BorderBrush="#55808080">
-      <composer:ComposerEditorView Name="ComposerView"
-                                   MaxHeight="240"
-                                   DataContext="{Binding Composer}" />
+            CornerRadius="{DynamicResource CpRadiusCard}"
+            Background="{DynamicResource CpSurfaceRaised}"
+            BorderBrush="{DynamicResource CpBorderStrong}">
+      <Grid RowDefinitions="*,Auto">
+        <composer:ComposerEditorView Name="ComposerView"
+                                     MaxHeight="240"
+                                     Margin="0,0,4,0"
+                                     DataContext="{Binding Composer}" />
+
+        <Grid Grid.Row="1"
+              Margin="0,6,0,0"
+              ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+          <Button Name="AttachButton"
+                  Grid.Column="0"
+                  AutomationProperties.AutomationId="ChatAttachButton"
+                  AutomationProperties.Name="Attach files"
+                  Theme="{DynamicResource IconButton}"
+                  Command="{Binding AttachCommand}"
+                  IsEnabled="{Binding CanTalk}"
+                  ToolTip.Tip="Attach files to the message">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconAttach}" />
+          </Button>
+
+          <!-- Hold to talk: the name and the tooltip say what the button does now, such as "Listening... let go to finish" -->
+          <Button Name="HoldToTalkButton"
+                  Classes="talk"
+                  Grid.Column="1"
+                  AutomationProperties.AutomationId="ChatHoldToTalkButton"
+                  AutomationProperties.Name="{Binding TalkText}"
+                  Theme="{DynamicResource IconButton}"
+                  Classes.talking="{Binding IsTalking}"
+                  IsEnabled="{Binding CanTalk}"
+                  ToolTip.Tip="Hold this button, speak, and let go to add what you said to the message">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconMic}" />
+          </Button>
+          <Border Grid.Column="2"
+                  Margin="4,0,0,0"
+                  Padding="6,1"
+                  VerticalAlignment="Center"
+                  CornerRadius="{DynamicResource CpRadiusKey}"
+                  Background="{DynamicResource CpSurfaceOverlay}"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource CpBorderStrong}">
+            <TextBlock FontSize="{DynamicResource CpFontCaption}"
+                       Foreground="{DynamicResource CpTextSecondary}"
+                       Text="F8" />
+          </Border>
+
+          <TextBlock Name="SendHintText"
+                     Grid.Column="4"
+                     AutomationProperties.AutomationId="ChatSendHint"
+                     Margin="0,0,8,0"
+                     VerticalAlignment="Center"
+                     FontSize="{DynamicResource CpFontCaption}"
+                     Foreground="{DynamicResource CpTextTertiary}"
+                     Text="Enter to send" />
+          <Button Name="SendButton"
+                  Grid.Column="5"
+                  AutomationProperties.AutomationId="ChatSendButton"
+                  AutomationProperties.Name="Send"
+                  Theme="{DynamicResource IconButton}"
+                  MinWidth="36"
+                  Height="32"
+                  Background="{DynamicResource CpAccentGradient}"
+                  Foreground="{DynamicResource CpTextOnAccent}"
+                  Command="{Binding SendCommand}"
+                  ToolTip.Tip="Send the message">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconArrowUp}" />
+          </Button>
+        </Grid>
+      </Grid>
     </Border>
 
-    <!-- Hold to talk, and Send -->
-    <Grid Grid.Row="5" Margin="0,8,0,0" ColumnDefinitions="*,Auto,Auto">
-      <Button Name="HoldToTalkButton"
-              Grid.Column="1"
-              AutomationProperties.AutomationId="ChatHoldToTalkButton"
-              Margin="0,0,8,0"
-              MinWidth="150"
-              Content="{Binding TalkText}"
-              IsEnabled="{Binding CanTalk}"
-              ToolTip.Tip="Hold this button, speak, and let go to add what you said to the message" />
-      <Button Name="SendButton"
-              Grid.Column="2"
-              AutomationProperties.AutomationId="ChatSendButton"
-              MinWidth="80"
-              Content="Send"
-              Command="{Binding SendCommand}"
-              ToolTip.Tip="Send the message" />
-    </Grid>
 
   </Grid>
 

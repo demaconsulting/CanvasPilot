@@ -6,31 +6,33 @@
 
   <StackPanel Spacing="6">
 
-    <TextBlock Text="Audio devices" FontWeight="SemiBold" />
+    <TextBlock Classes="sectionTitle" Text="Audio devices" Margin="0,0,0,6" />
 
-    <TextBlock Text="Microphone (capture)" Margin="0,4,0,0" />
+    <TextBlock Classes="label" Text="Microphone (capture)" />
     <ComboBox AutomationProperties.AutomationId="SpeechCaptureDeviceComboBox"
+              AutomationProperties.Name="Microphone"
               HorizontalAlignment="Stretch"
               ItemsSource="{Binding CaptureDevices}"
               SelectedItem="{Binding SelectedCaptureDevice}" />
-    <TextBlock AutomationProperties.AutomationId="SpeechCaptureStatus"
-               TextWrapping="Wrap"
-               Opacity="0.7"
+    <TextBlock Classes="hint"
+               AutomationProperties.AutomationId="SpeechCaptureStatus"
                Text="{Binding CaptureStatus}" />
 
-    <TextBlock Text="Speakers (playback)" Margin="0,4,0,0" />
+    <TextBlock Classes="label" Text="Speakers (playback)" Margin="0,8,0,0" />
     <ComboBox AutomationProperties.AutomationId="SpeechPlaybackDeviceComboBox"
+              AutomationProperties.Name="Speakers"
               HorizontalAlignment="Stretch"
               ItemsSource="{Binding PlaybackDevices}"
               SelectedItem="{Binding SelectedPlaybackDevice}" />
-    <TextBlock AutomationProperties.AutomationId="SpeechPlaybackStatus"
-               TextWrapping="Wrap"
-               Opacity="0.7"
+    <TextBlock Classes="hint"
+               AutomationProperties.AutomationId="SpeechPlaybackStatus"
                Text="{Binding PlaybackStatus}" />
 
     <Button AutomationProperties.AutomationId="SpeechRefreshDevicesButton"
+            Theme="{DynamicResource SecondaryButton}"
             Content="Refresh devices"
             HorizontalAlignment="Left"
+            Margin="0,4,0,0"
             Command="{Binding RefreshCommand}" />
 
   </StackPanel>

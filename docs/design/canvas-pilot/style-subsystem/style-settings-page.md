@@ -30,6 +30,9 @@ the default kit (`StyleKitChoice`), and a view (`StyleSettingsPageView`) that th
   that id with `(not found)`. `SelectedDefaultKit`: the choice that is selected, which is the default of the settings
   until the user chooses another.
 - `IsValid`: true while every folder in the list is a full path.
+- `Title` is `Style Kits`, `Description` the sentence `Where shared style kits are kept, and which kit a new project
+  starts with.`, and `IconKey` is `CpIconBraces`, which the settings dialog shows in its page list and under the title
+  of the page.
 
 #### Key Methods
 
@@ -60,10 +63,13 @@ the user interface, makes the rows and the choices again, so the status of the f
 default are current when the catalog has read them, which is after the dialog is shown when it is opened early.
 `OnClosed` stops listening, and a later `Load` starts again.
 
-**View**: `StyleSettingsPageView` has the list of folders (`StyleSharedFolders`) with the status under each path, the
-buttons `StyleFolderUpButton`, `StyleFolderDownButton`, and `StyleFolderRemoveButton`, the text box
-`StyleNewFolderTextBox` with `StyleFolderAddButton` and `StyleFolderBrowseButton`, the message `StyleFolderError`, and
-the combo box `StyleDefaultKitComboBox` for the default kit.
+**View**: `StyleSettingsPageView` shows two raised cards, each with a section title. The card `Shared kit folders` has a
+sentence about the order, the list of folders (`StyleSharedFolders`, named `Shared kit folders`) with the status under
+each path in the hint look, the buttons `StyleFolderUpButton`, `StyleFolderDownButton`, and `StyleFolderRemoveButton`,
+the text box `StyleNewFolderTextBox` (named `New shared folder path`, with a placeholder that shows a full path) with
+`StyleFolderAddButton` and `StyleFolderBrowseButton`, and the message `StyleFolderError` in the error look. The card
+`Default kit for new projects` has the combo box `StyleDefaultKitComboBox` (named after the card) and a hint. All
+colors come from the shared styles of the controls, none is written in the view.
 
 #### Error Handling
 

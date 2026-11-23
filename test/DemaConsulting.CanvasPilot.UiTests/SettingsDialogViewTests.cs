@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -98,6 +99,69 @@ public sealed class SettingsDialogViewTests : IDisposable
         // Assert: the second page's content replaces the first
         Assert.Contains(window.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Test page content");
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<ComboBox>(), IsAiProviderCombo);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that each row of the list of pages is announced by the title of its page, and not by the type name of the
+    ///     view model of the page.
+    /// </summary>
+    [AvaloniaFact]
+    public void SettingsDialogView_PageRows_AreNamedByThePageTitle()
+    {
+        // Arrange: a shown dialog over the AI provider page and a second page
+        var (window, _, _) = CreateDialog();
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var list = SettingsUiHelpers.Find<ListBox>(window, "SettingsPageList");
+        var titles = list.Items.OfType<ISettingsPage>().Select(page => page.Title).ToList();
+
+        // Act: ask for the name that a screen reader gets for each row
+        var names = list.GetVisualDescendants().OfType<ListBoxItem>()
+            .Select(item => ControlAutomationPeer.CreatePeerForElement(item).GetName())
+            .ToList();
+
+        // Assert: one name per page, the title of the page, and no type name
+        Assert.Equal(titles, names);
+        Assert.Contains("AI Provider", names);
+        Assert.All(names, name => Assert.DoesNotContain("ViewModel", name, StringComparison.Ordinal));
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the heading over the page shows the title and the sentence of the chosen page, that every page in the rail
+    ///     has an icon, and that a problem is shown in the banner of the footer with an icon and words.
+    /// </summary>
+    [AvaloniaFact]
+    public void SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner()
+    {
+        // Arrange: a shown dialog on its first page
+        var (window, _, _) = CreateDialog();
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var list = SettingsUiHelpers.Find<ListBox>(window, "SettingsPageList");
+        var title = SettingsUiHelpers.Find<TextBlock>(window, "SettingsPageTitle");
+        var description = SettingsUiHelpers.Find<TextBlock>(window, "SettingsPageDescription");
+        var error = SettingsUiHelpers.Find<TextBlock>(window, "SettingsErrorMessage");
+        var firstTitle = title.Text;
+        var firstDescription = description.Text;
+        var bannerBefore = error.IsEffectivelyVisible;
+
+        // Act: choose the second page and report a problem
+        list.SelectedIndex = 1;
+        ((SettingsDialogViewModel)window.DataContext!).ErrorMessage = "The value cannot be saved.";
+        Dispatcher.UIThread.RunJobs();
+
+        // Assert: the heading followed the page, each item has an icon with a shape, and the banner shows with its words
+        Assert.Equal("AI Provider", firstTitle);
+        Assert.False(string.IsNullOrEmpty(firstDescription));
+        Assert.Equal("Other", title.Text);
+        Assert.False(description.IsEffectivelyVisible);
+        Assert.Equal(2, list.GetVisualDescendants().OfType<PathIcon>().Count(icon => icon.Data is not null));
+        Assert.False(bannerBefore);
+        Assert.True(error.IsEffectivelyVisible);
 
         window.Close();
     }

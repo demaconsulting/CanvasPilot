@@ -20,11 +20,13 @@ dictated block is one undo step" and its siblings true, in a unit that needs no 
 #### Key Methods
 
 **ComposerEdit factories**: `TypeText`, `Dictate`, `Paste` (text, optionally over a selection), `Drop` (several
-segments), `AddMark` (one mark chip), `Delete` (a range), and `DeleteChip` (the chip at an offset). Each takes the
-offset, reads what is removed, and sets the caret before (by default the end of the removed range) and after (the end of
-the inserted segments; the start of the range for deletions). `Dictate` and `TypeText` differ only in the origin of the
-text, `Paste` is typed text that is one edit however long it is, and `Drop` takes the chips and text of one operation as
-one edit.
+segments), `AddMark` (one mark chip at an offset), `AddLeadingChips` (chips at the end of the row of chips at the start
+of the message, with a line feed after the row when there is none, so that the words are on the line below; the caret
+goes to the start of the words when it was in or before the row and moves with the text otherwise), `Delete` (a range),
+and `DeleteChip` (the chip at an offset). Each takes the offset, reads what is removed, and sets the caret before (by
+default the end of the removed range) and after (the end of the inserted segments; the start of the range for
+deletions). `Dictate` and `TypeText` differ only in the origin of the text, `Paste` is typed text that is one edit
+however long it is, and `Drop` takes the chips and text of one operation as one edit.
 
 **Apply / Revert**: remove the positions at the offset and insert the replacement, or the reverse. Before changing the
 document they check that it holds exactly the segments the edit expects there and throw `InvalidOperationException`

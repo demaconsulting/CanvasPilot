@@ -16,7 +16,8 @@ sections:
                 title: >-
                   The ComposerHistory shall make each of these one undo step: a typed character, a deleted character,
                   a deleted selection, typing over a selection, a dictated block, a drop or a paste of any number of
-                  items or of any length of text, an added mark, and a deleted chip; shall give back the caret of the
+                  items or of any length of text, an added mark, chips added to the row of chips at the start of the
+                  message together with the line feed below the row, and a deleted chip; shall give back the caret of the
                   step when it is undone or redone; and shall not record a change that changes nothing.
                 justification: |
                   Undo has to take back what the user just did, no more and no less. A dictated block or a drop of
@@ -31,6 +32,8 @@ sections:
                   - ComposerHistory_DropOfSeveralItems_IsOneStep
                   - ComposerHistory_TextPaste_IsOneStep
                   - ComposerHistory_AddMark_IsOneStep
+                  - ComposerHistory_AddLeadingChips_PutsChipsInTheRowAboveTheWordsInOneStep
+                  - ComposerHistory_AddLeadingChips_EmptyMessage_AddsTheLineFeedAndPutsTheCaretBelowTheRow
                   - ComposerHistory_DeleteChip_IsOneStep
                   - ComposerEdit_DeleteChip_OffsetOfTextOrEnd_ThrowsArgumentException
                   - ComposerHistory_UndoAndRedo_RestoreCaret

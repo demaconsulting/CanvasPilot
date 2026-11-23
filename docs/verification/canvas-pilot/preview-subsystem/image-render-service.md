@@ -43,6 +43,12 @@ rendered. The result succeeded, with the file's path, format `svg`, 40 by 20 pix
 255, 0, 0, 128, and no notes. This scenario is tested by
 `ImageRenderService_RenderAsync_SvgFile_ReturnsPixelsSizeAndFormat`.
 
+**ImageRenderService_WhenIdleAsync_RenderRunning_CompletesOnlyAfterItEnds**: A service whose drawing function is held by
+the test is idle before any render; after a render has started and its drawing function is running, the task of
+`WhenIdleAsync` is not complete; when the function is released and ends, the task completes, and the render has its
+failure result. No time limit is used: the test waits for the drawing function to be entered and for the task to
+complete. This scenario is tested by `ImageRenderService_WhenIdleAsync_RenderRunning_CompletesOnlyAfterItEnds`.
+
 **ImageRenderService_RenderAsync_EmbeddedPictureOutsideProject_ReportsAccessDeniedNote**: An SVG embeds a file that
 lies beside the project folder. The render succeeds and the one note is a warning with the code
 `image-access-denied` naming the file. This scenario is tested by

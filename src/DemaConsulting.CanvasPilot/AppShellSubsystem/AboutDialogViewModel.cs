@@ -108,7 +108,8 @@ public sealed partial class AboutDialogViewModel : ObservableObject
         new("Avalonia.AvaloniaEdit", "Text editing control that the message composer is built on"),
         new("CommunityToolkit.Mvvm", "Model-view-view model helpers"),
         new("DemaConsulting.CanvasNet", "Composes SVG, Mermaid, Vega-Lite, and other sources into images"),
-        new("DemaConsulting.Speech", "Speech recognition and synthesis models and audio devices")
+        new("DemaConsulting.Speech", "Speech recognition and synthesis models and audio devices"),
+        new("Fluent System Icons", "The line icons of the user interface, by Microsoft Corporation (MIT license)")
     ];
 
     /// <summary>

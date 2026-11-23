@@ -33,6 +33,9 @@ see; they check what the window is given and what it shows.
 - Copy puts the text of the example on the clipboard and names it in the status; a missing clipboard, one that cannot be
   reached, and one that throws all give the status that the clipboard cannot be reached and no failure.
 - Close closes the window; the window gives the view model the clipboard of the window when it has none.
+- In the accessibility sweep of the windows of the application, in both theme variants, the search box, the tree, and
+  the list of hits of this window have names, every button that shows no text has a name and a tooltip, and every
+  enabled button can take the keyboard focus.
 
 #### Test Scenarios
 
@@ -137,3 +140,9 @@ from the window, and copying through it ends in a status that says whether it wa
 
 **KnowledgeBrowserView_CloseButton_ClosesTheWindow**: Pressing Close closes the window. This scenario is tested by
 `KnowledgeBrowserView_CloseButton_ClosesTheWindow`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The main window and each dialog and window of the
+application, among them the Drawing Knowledge window, are shown in both theme variants and every control is looked at;
+a button that shows no text has a name and a tooltip, a text box, drop-down, list, tree, and slider has a name, and
+every enabled button can take the keyboard focus. This scenario is tested by
+`Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

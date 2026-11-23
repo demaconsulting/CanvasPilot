@@ -9,6 +9,7 @@
     <StackPanel Orientation="Horizontal" Spacing="8">
 
       <TextBox AutomationProperties.AutomationId="ColorEditorRoleBox"
+               AutomationProperties.Name="Color role"
                Width="150"
                VerticalAlignment="Center"
                IsEnabled="{Binding IsRoleEditable}"
@@ -17,13 +18,14 @@
       <Border AutomationProperties.AutomationId="ColorEditorSwatch"
               Width="30"
               Height="30"
-              CornerRadius="4"
-              BorderBrush="Gray"
+              CornerRadius="{DynamicResource CpRadiusKey}"
+              BorderBrush="{DynamicResource CpBorderControl}"
               BorderThickness="1"
               VerticalAlignment="Center"
               Background="{Binding Hex, Converter={x:Static vm:ColorEditorView.HexToBrush}}" />
 
       <TextBox AutomationProperties.AutomationId="ColorEditorHexBox"
+               AutomationProperties.Name="Color as #RRGGBB"
                Width="110"
                VerticalAlignment="Center"
                FontFamily="Consolas,Menlo,monospace"
@@ -31,6 +33,8 @@
                Text="{Binding Hex}" />
 
       <Button AutomationProperties.AutomationId="ColorEditorSlidersButton"
+              AutomationProperties.Name="Edit the color with red, green, and blue sliders"
+              Theme="{DynamicResource SecondaryButton}"
               VerticalAlignment="Center"
               Content="RGB...">
         <Button.Flyout>
@@ -39,6 +43,7 @@
               <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Red" />
               <Slider Grid.Row="0" Grid.Column="1"
                       AutomationProperties.AutomationId="ColorEditorRedSlider"
+                      AutomationProperties.Name="Red"
                       Minimum="0" Maximum="255" TickFrequency="1" IsSnapToTickEnabled="True"
                       Value="{Binding Red}" />
               <TextBlock Grid.Row="0" Grid.Column="2" VerticalAlignment="Center" Text="{Binding Red, StringFormat='{}{0:0}'}" />
@@ -46,6 +51,7 @@
               <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Green" />
               <Slider Grid.Row="1" Grid.Column="1"
                       AutomationProperties.AutomationId="ColorEditorGreenSlider"
+                      AutomationProperties.Name="Green"
                       Minimum="0" Maximum="255" TickFrequency="1" IsSnapToTickEnabled="True"
                       Value="{Binding Green}" />
               <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="{Binding Green, StringFormat='{}{0:0}'}" />
@@ -53,6 +59,7 @@
               <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Blue" />
               <Slider Grid.Row="2" Grid.Column="1"
                       AutomationProperties.AutomationId="ColorEditorBlueSlider"
+                      AutomationProperties.Name="Blue"
                       Minimum="0" Maximum="255" TickFrequency="1" IsSnapToTickEnabled="True"
                       Value="{Binding Blue}" />
               <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Text="{Binding Blue, StringFormat='{}{0:0}'}" />
@@ -63,9 +70,9 @@
 
     </StackPanel>
 
-    <TextBlock AutomationProperties.AutomationId="ColorEditorHexError"
+    <TextBlock Classes="error"
+               AutomationProperties.AutomationId="ColorEditorHexError"
                Margin="158,0,0,0"
-               Foreground="Firebrick"
                IsVisible="{Binding !IsHexValid}"
                Text="{Binding HexError}" />
   </StackPanel>

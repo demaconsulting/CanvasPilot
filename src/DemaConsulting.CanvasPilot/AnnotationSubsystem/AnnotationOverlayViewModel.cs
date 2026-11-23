@@ -262,6 +262,7 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
         CommitNoteCommand = new RelayCommand(CommitNote, () => IsNoteEditing);
         SkipNoteCommand = new RelayCommand(SkipNote, () => IsNoteEditing);
         CancelCommand = new RelayCommand(() => Cancel(), () => IsDrawing || IsNoteEditing);
+        ClearMarksCommand = new RelayCommand(() => ClearMarksRequested?.Invoke(this, EventArgs.Empty));
         _pictures.CurrentImageChanged += OnPictureChanged;
         RefreshMarks();
     }
@@ -271,6 +272,12 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     ///     message adds the mark's chip to the message when this is raised.
     /// </summary>
     public event EventHandler<MarkAddedEventArgs>? MarkAdded;
+
+    /// <summary>
+    ///     Raised when the user asks to clear the marks. Whoever joins the overlay to the message takes the chips of all
+    ///     marks out of the message.
+    /// </summary>
+    public event EventHandler? ClearMarksRequested;
 
     /// <summary>
     ///     Gets the command that chooses a tool; its parameter is an <see cref="AnnotationTool" />.
@@ -291,6 +298,12 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     ///     Gets the command that throws the shape that is drawn, or that waits for its note, away.
     /// </summary>
     public IRelayCommand CancelCommand { get; }
+
+    /// <summary>
+    ///     Gets the command that asks the host to take every mark out of the message, as the clear button of the tool bar
+    ///     does. The tool bar offers it while <see cref="HasMarks" /> says that the message holds a mark.
+    /// </summary>
+    public IRelayCommand ClearMarksCommand { get; }
 
     /// <summary>
     ///     Gets the tool that is chosen.
@@ -404,6 +417,11 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     ///     Gets a value indicating whether some marks of the message are not shown.
     /// </summary>
     public bool HasHiddenMarks => _hiddenMarkCount > 0;
+
+    /// <summary>
+    ///     Gets a value indicating whether the message holds any mark, shown here or not, which the tool bar can clear.
+    /// </summary>
+    public bool HasMarks => _visibleMarks.Count > 0 || _hiddenMarkCount > 0;
 
     /// <summary>
     ///     Gets the sentence that says that marks are hidden, or an empty text when none are.
@@ -1007,6 +1025,7 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HiddenMarkCount));
         OnPropertyChanged(nameof(HasHiddenMarks));
         OnPropertyChanged(nameof(HiddenMarksText));
+        OnPropertyChanged(nameof(HasMarks));
     }
 
     /// <summary>

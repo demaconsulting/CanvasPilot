@@ -27,17 +27,21 @@ it.
 **ComposerViewModel**: The message as the user works on it.
 
 - *Type*: In-process .NET class, with the interfaces `IUndoRedoTarget` and `IPushToTalkTarget`, which it implements,
-  and `IMessageBuilder`, which it uses and the payload builder implements.
+  `IMessageBuilder`, which it uses and the payload builder implements, and `IAttachmentPicker`, which the main window
+  implements and the chat panel calls.
 - *Role*: Provider to the editing control, the menu, and the talk key; consumer of the intake, the store, the marks, and
   dictation.
 - *Contract*: Methods that report the user's actions (`ApplyTextChange`, `InsertTyped`, `Delete`, `DeleteBackward`,
   `DeleteForward`, `AddDictatedBlock`, `HandleDrop`, `HandlePaste`, `AddMark`, `DeleteChip`), each exactly one undo
-  step; `Undo`, `Redo`, and their commands; `SetProject` and `ClearDraft`; `SendAsync`, which puts the attachments into
+  step, and `DeleteMarkChips`, which deletes the chips of all marks one step each; `Undo`, `Redo`, and their commands;
+  `SetProject` and `ClearDraft`; `SendAsync`, which puts the attachments into
   the project, has the message built, empties the draft, and raises `MessageSent` with an immutable `SentMessage`, or
   keeps the draft and says why; `BlockSending(reason)` and `UnblockSending()`, with which the owner (the chat panel
   while the AI copilot works) makes the message impossible to send while editing stays possible, with `IsSendBlocked`
   and `SendBlockedReason`; `BeginPushToTalkAsync` and `EndPushToTalkAsync`; and observable state with a `Changed` event
-  once for each action.
+  once for each action, including `ShowsPlaceholder`, which says that the editing control shows its hint
+  (`PlaceholderText`). `IAttachmentPicker.PickAttachmentsAsync(initialFolder)` is the seam by which the chat panel asks
+  the window for the full paths of files to attach; the panel gives them to `HandleDrop`.
 - *Constraints*: Owned by the interface thread, not safe for concurrent use. The message can be edited only while a
   project is open and no message is being sent.
 
@@ -166,13 +170,23 @@ cleaned, or a change it refused, never shows. Paste, copy, cut, and drop are tak
 `DataTransferReader` reads a drop or the clipboard into `DroppedContent` (files before a picture before text), copy puts
 readable text on the clipboard instead of the placeholder characters, and typed text with a placeholder or a control
 character is refused before it enters. Chips are drawn inline by a generator that makes a small control for each
-placeholder, with the picture that an `IChipThumbnailProvider` gives it, and dictated words get a background.
+placeholder, with the picture that an `IChipThumbnailProvider` gives it, and dictated words get a background. While the
+message is empty a hint (the placeholder) shows over the surface and does not take the pointer. A chip is a pill of the
+shared look; the chip of a mark is tinted and outlined in the mark color, and the delete button of each chip is named
+for the chip it removes.
+
+**The seam for files.** A file dialog needs the main window as its owner, which the subsystem does not know. The
+subsystem therefore owns the interface `IAttachmentPicker`, the main window implements it through its dialog service,
+and the chat panel, which has the attach button, calls it; the files it returns enter the message through `HandleDrop`,
+so a chosen file and a dropped file follow the same rules of the intake.
 
 **Marks.** The composer knows a mark only as a `MarkChip` (identity and number), except that the view model holds the
 registry of marks, so that it can check the mark it adds, pass the marks that are part of the message to the builder,
 and clear them when the message is sent. A mark is part of the message exactly
 while its chip is in the sequence, so undoing the addition of a mark, or deleting its chip, removes the mark from the
-message, and redoing brings it back, with one undo system for text, chips, and marks.
+message, and redoing brings it back, with one undo system for text, chips, and marks. `DeleteMarkChips` deletes every
+mark chip, one `DeleteChip` for each, so that a request to clear the marks of the picture can be taken back in steps,
+like deleting the chips one by one.
 
 **Attachments are data.** What is dropped or pasted comes from outside the application and is never trusted. The intake
 works on the text of a path and on what the file system says about it (file or folder, size); it does not open a

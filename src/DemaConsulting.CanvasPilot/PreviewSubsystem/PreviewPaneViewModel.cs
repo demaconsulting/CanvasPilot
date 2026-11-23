@@ -19,7 +19,9 @@
 // SOFTWARE.
 
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
@@ -38,6 +40,16 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     How long the pane waits after the last file system change before it renders again.
     /// </summary>
     public static readonly TimeSpan DefaultDebounce = TimeSpan.FromMilliseconds(400);
+
+    /// <summary>
+    ///     The zoom at which the picture is shown at its own size, in percent.
+    /// </summary>
+    public const int ActualSizePercent = 100;
+
+    /// <summary>
+    ///     The zoom steps, in percent, that the zoom commands move between, smallest first.
+    /// </summary>
+    public static readonly IReadOnlyList<int> ZoomSteps = [25, 50, 75, 100, 150, 200, 300, 400];
 
     /// <summary>
     ///     Draws the files.
@@ -122,8 +134,15 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     The shown picture.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasImage), nameof(ShowPlaceholder), nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(HasImage), nameof(ShowPlaceholder), nameof(StatusText), nameof(ImageSizeText), nameof(FormatText))]
     private RenderedImage? _image;
+
+    /// <summary>
+    ///     How long the render of the shown picture took, in milliseconds, or null while no picture is shown.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RenderTimeText))]
+    private long? _renderMilliseconds;
 
     /// <summary>
     ///     Why the selected file could not be drawn.
@@ -143,7 +162,23 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     Whether the picture is scaled down to fit the pane instead of being shown at its size.
     /// </summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZoomLabel), nameof(IsZoomInPossible), nameof(IsZoomOutPossible), nameof(IsActualSize))]
     private bool _fitToWindow = true;
+
+    /// <summary>
+    ///     The zoom, in percent of the picture's own size, that applies while <see cref="FitToWindow" /> is off.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZoomLabel), nameof(IsZoomInPossible), nameof(IsZoomOutPossible), nameof(IsActualSize))]
+    private int _zoomPercent = ActualSizePercent;
+
+    /// <summary>
+    ///     The zoom, in percent, at which the picture is shown while it is fitted to the pane. The view reports it,
+    ///     because only the view knows the size of the pane.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ZoomLabel), nameof(IsZoomInPossible), nameof(IsZoomOutPossible))]
+    private int _fitPercent = ActualSizePercent;
 
     /// <summary>
     ///     The content shown over the picture, or null. It is a slot that the pane does not interpret: the view
@@ -174,7 +209,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     The file that is rendered or was last rendered, or null.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(StatusText))]
+    [NotifyPropertyChangedFor(nameof(StatusText), nameof(FileName))]
     private string? _currentFile;
 
     /// <summary>
@@ -251,6 +286,32 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     public Task RenderCompletion => _renderCompletion;
 
     /// <summary>
+    ///     Gets the zoom that is in effect, in percent of the picture's own size: the fitted zoom while the picture
+    ///     is fitted to the pane, otherwise <see cref="ZoomPercent" />.
+    /// </summary>
+    public int EffectiveZoomPercent => FitToWindow ? FitPercent : ZoomPercent;
+
+    /// <summary>
+    ///     Gets the words for the zoom that is in effect, such as "90%".
+    /// </summary>
+    public string ZoomLabel => $"{EffectiveZoomPercent}%";
+
+    /// <summary>
+    ///     Gets a value indicating whether the picture is shown at its own size.
+    /// </summary>
+    public bool IsActualSize => !FitToWindow && ZoomPercent == ActualSizePercent;
+
+    /// <summary>
+    ///     Gets a value indicating whether a zoom step above the one in effect exists.
+    /// </summary>
+    public bool IsZoomInPossible => EffectiveZoomPercent < ZoomSteps[^1];
+
+    /// <summary>
+    ///     Gets a value indicating whether a zoom step below the one in effect exists.
+    /// </summary>
+    public bool IsZoomOutPossible => EffectiveZoomPercent > ZoomSteps[0];
+
+    /// <summary>
     ///     Gets a value indicating whether a picture is shown.
     /// </summary>
     public bool HasImage => Image is not null;
@@ -310,6 +371,28 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     ///     Gets the heading of the list of notes, with their number.
     /// </summary>
     public string DiagnosticsHeader => _diagnostics.Count == 1 ? "1 note" : $"{_diagnostics.Count} notes";
+
+    /// <summary>
+    ///     Gets the name of the file that is rendered or was last rendered, or an empty string.
+    /// </summary>
+    public string FileName => CurrentFile is null ? string.Empty : Path.GetFileName(CurrentFile);
+
+    /// <summary>
+    ///     Gets the size of the shown picture in pixels, such as <c>900 × 500 px</c>, or an empty string when no picture is shown.
+    /// </summary>
+    public string ImageSizeText => Image is { } image ? $"{image.Width} \u00D7 {image.Height} px" : string.Empty;
+
+    /// <summary>
+    ///     Gets the format of the shown picture in capital letters, such as <c>SVG</c>, or an empty string when no picture is
+    ///     shown.
+    /// </summary>
+    public string FormatText => Image?.Format.ToUpperInvariant() ?? string.Empty;
+
+    /// <summary>
+    ///     Gets the time the render of the shown picture took, such as <c>Rendered in 84 ms</c>, or an empty string when no
+    ///     picture is shown.
+    /// </summary>
+    public string RenderTimeText => RenderMilliseconds is { } milliseconds ? $"Rendered in {milliseconds} ms" : string.Empty;
 
     /// <summary>
     ///     Gets the line shown in the status area: what is being rendered, the size and format of the picture and
@@ -430,6 +513,62 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
         }
 
         _explorer.PropertyChanged -= OnExplorerPropertyChanged;
+    }
+
+    /// <summary>
+    ///     Shows the picture at the next zoom step above the one in effect, up to 400 percent.
+    /// </summary>
+    [RelayCommand]
+    public void ZoomIn()
+    {
+        var current = EffectiveZoomPercent;
+        var next = ZoomSteps.Where(step => step > current).Select(step => (int?)step).FirstOrDefault();
+        if (next is { } percent)
+        {
+            SetZoom(percent);
+        }
+    }
+
+    /// <summary>
+    ///     Shows the picture at the next zoom step below the one in effect, down to 25 percent.
+    /// </summary>
+    [RelayCommand]
+    public void ZoomOut()
+    {
+        var current = EffectiveZoomPercent;
+        var previous = ZoomSteps.Where(step => step < current).Select(step => (int?)step).LastOrDefault();
+        if (previous is { } percent)
+        {
+            SetZoom(percent);
+        }
+    }
+
+    /// <summary>
+    ///     Shows the picture at its own size.
+    /// </summary>
+    [RelayCommand]
+    public void ZoomActualSize()
+    {
+        SetZoom(ActualSizePercent);
+    }
+
+    /// <summary>
+    ///     Fits the picture to the pane again.
+    /// </summary>
+    [RelayCommand]
+    public void ZoomToFit()
+    {
+        FitToWindow = true;
+    }
+
+    /// <summary>
+    ///     Shows the picture at a zoom, which is kept within the range of the zoom steps.
+    /// </summary>
+    /// <param name="percent">The zoom, in percent of the picture's own size.</param>
+    private void SetZoom(int percent)
+    {
+        ZoomPercent = Math.Clamp(percent, ZoomSteps[0], ZoomSteps[^1]);
+        FitToWindow = false;
     }
 
     /// <summary>
@@ -562,6 +701,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     private async Task RunRenderAsync(int generation, string file, string folder, CancellationToken token)
     {
         RenderResult result;
+        var started = Stopwatch.GetTimestamp();
         try
         {
             result = await _renderer.RenderAsync(file, folder, token);
@@ -578,6 +718,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
             result = RenderResult.Failure(new RenderError(RenderErrorCodes.OperationFailed, ex.Message));
         }
 
+        var elapsed = (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds;
         lock (_syncRoot)
         {
             if (_disposed || generation != _generation)
@@ -586,14 +727,15 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
             }
         }
 
-        Apply(result);
+        Apply(result, elapsed);
     }
 
     /// <summary>
     ///     Shows the result of the current render.
     /// </summary>
     /// <param name="result">The result.</param>
-    private void Apply(RenderResult result)
+    /// <param name="elapsedMilliseconds">How long the render took.</param>
+    private void Apply(RenderResult result, long elapsedMilliseconds)
     {
         IsBusy = false;
         if (result.IsCancelled)
@@ -605,12 +747,14 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
         {
             ReplaceDiagnostics(image.Diagnostics);
             Error = null;
+            RenderMilliseconds = elapsedMilliseconds;
             Image = image;
         }
         else
         {
             ReplaceDiagnostics([]);
             Image = null;
+            RenderMilliseconds = null;
             Error = result.Error ?? new RenderError(RenderErrorCodes.OperationFailed, "The file could not be rendered.");
         }
     }
@@ -632,6 +776,7 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     {
         ReplaceDiagnostics([]);
         Image = null;
+        RenderMilliseconds = null;
         Error = null;
     }
 

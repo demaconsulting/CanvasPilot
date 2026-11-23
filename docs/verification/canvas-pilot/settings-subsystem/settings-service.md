@@ -18,6 +18,10 @@ services are required.
 - All unit tests pass with zero failures.
 - Every setting survives a save and a load by a fresh service, and the written JSON has the documented
   camel-case names, version, and value shapes.
+- The layout of the window, the theme choice, the options of the explorer, and the times of opening survive a save and a
+  load; a file of an earlier build gets the default layout (1440 by 900, columns of 264 and 400) and look (follow the
+  system, thumbnails on, compact rows); sizes and widths outside the bounds are clamped, a place beyond any screen is
+  forgotten, and unknown states and themes fall back; only listed projects keep a time.
 - A missing file, missing properties, unknown properties, out-of-range values, and unrecognized enumeration
   values never fail a load.
 - A file of an earlier build that stores the reasoning as `reasoningLevel` loads with the level `low`, `medium`, or
@@ -165,3 +169,31 @@ keeps the AI provider and speech settings, and a fresh service reads the new sty
 **SettingsService_StyleSettings_IsValidKitId_FollowsTheRule**: Ids of 1 to 48 lower-case letters, digits, and dashes
 that do not start with a dash are valid; 49 characters, none, empty text, a leading dash, upper case, an underscore, and
 a line feed are not. This scenario is tested by `SettingsService_StyleSettings_IsValidKitId_FollowsTheRule`.
+
+**SettingsService_SaveLoad_WindowAppearanceAndOpenedTimes_RoundTrips**: A layout with a place, a maximized state, and
+custom column widths, a dark theme with no thumbnails and tall rows, and the time of a listed project are saved by one
+service and loaded by another; every value is the same. This scenario is tested by
+`SettingsService_SaveLoad_WindowAppearanceAndOpenedTimes_RoundTrips`.
+
+**SettingsService_Load_FileOfEarlierBuild_GivesDefaultWindowAndAppearance**: A version 1 file with no layout, look, or
+times loads with 1440 by 900, columns of 264 and 400, follow the system, thumbnails on, compact rows, and no times, and
+keeps its recent project and model name. This scenario is tested by
+`SettingsService_Load_FileOfEarlierBuild_GivesDefaultWindowAndAppearance`.
+
+**SettingsService_Load_OutOfRangeWindowLayout_IsClampedAndUnknownChoicesFallBack**: A file with a width of 100, a height
+of 99999, a place of 99999999, an unknown state, columns of 10 and 9999, and an unknown theme loads with the nearest
+bounds, no left place, the normal state, and following the system; the other ends of the bounds are checked through an
+update. This scenario is tested by `SettingsService_Load_OutOfRangeWindowLayout_IsClampedAndUnknownChoicesFallBack`.
+
+**SettingsService_Load_RecentProjectOpened_KeepsOnlyListedProjects**: A file with times for a listed project, an
+unlisted one, and a blank name loads with the time of the listed project only, and the second listed project has none.
+This scenario is tested by `SettingsService_Load_RecentProjectOpened_KeepsOnlyListedProjects`.
+
+**SettingsService_Save_WindowAndAppearance_WritesCamelCaseNames**: A saved light theme and maximized window are written
+as `appearance.theme` of `Light`, `window.state` of `Maximized`, and the numbers and the empty `recentProjectOpened`
+object under their camel-case names. This scenario is tested by
+`SettingsService_Save_WindowAndAppearance_WritesCamelCaseNames`.
+
+**SettingsService_Update_Appearance_KeepsOtherSettingsAndPersists**: The theme is changed by an update of full settings;
+a fresh service loads the new theme and the other settings as they were. This scenario is tested by
+`SettingsService_Update_Appearance_KeepsOtherSettingsAndPersists`.

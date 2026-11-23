@@ -9,20 +9,22 @@
         Height="700"
         MinWidth="560"
         MinHeight="360"
+        Background="{DynamicResource CpSurfacePane}"
         WindowStartupLocation="CenterOwner">
 
-  <Grid Margin="12" RowDefinitions="*,Auto" ColumnDefinitions="*,Auto,*">
+  <Grid RowDefinitions="*,Auto" ColumnDefinitions="*,Auto,*">
 
     <!-- What the assistant would receive, as text: the message with the places of the marks and attachments, the
          attachments, and for each marked picture its marks with geometry, note, area, and source elements -->
-    <Grid Grid.Row="0" Grid.Column="0" RowDefinitions="Auto,*">
+    <Grid Grid.Row="0" Grid.Column="0" Margin="16,16,0,16" RowDefinitions="Auto,*">
       <TextBlock Grid.Row="0"
-                 Margin="0,0,0,6"
-                 FontWeight="SemiBold"
+                 Classes="sectionTitle"
+                 Margin="0,0,0,8"
                  Text="What the assistant would receive" />
       <TextBox Name="DescriptionText"
                Grid.Row="1"
                AutomationProperties.AutomationId="PayloadInspectorText"
+               AutomationProperties.Name="What the assistant would receive"
                IsReadOnly="True"
                AcceptsReturn="True"
                TextWrapping="NoWrap"
@@ -32,20 +34,26 @@
                Text="{Binding Description, Mode=OneWay}" />
     </Grid>
 
-    <GridSplitter Grid.Row="0" Grid.Column="1" Width="6" ResizeDirection="Columns" Background="Transparent" />
+    <GridSplitter Grid.Row="0"
+                  Grid.Column="1"
+                  AutomationProperties.AutomationId="PayloadInspectorSplitter"
+                  AutomationProperties.Name="Resize the text and the pictures"
+                  Theme="{DynamicResource SplitterGrip}"
+                  Width="9"
+                  ResizeDirection="Columns" />
 
     <!-- The pictures of the payload: each marked picture with its marks drawn on it, and the area around each mark -->
-    <Grid Grid.Row="0" Grid.Column="2" RowDefinitions="Auto,*">
+    <Grid Grid.Row="0" Grid.Column="2" Margin="0,16,16,16" RowDefinitions="Auto,*">
       <TextBlock Grid.Row="0"
-                 Margin="0,0,0,6"
-                 FontWeight="SemiBold"
+                 Classes="sectionTitle"
+                 Margin="0,0,0,8"
                  Text="Pictures" />
       <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
         <StackPanel>
           <TextBlock Name="NoPicturesText"
+                     Classes="hint"
                      AutomationProperties.AutomationId="PayloadInspectorNoPictures"
-                     Opacity="0.7"
-                     TextWrapping="Wrap"
+                     FontSize="{DynamicResource CpFontBody}"
                      Text="This message has no marks, so it has no pictures."
                      IsVisible="{Binding !HasPictures}" />
           <ItemsControl Name="PictureList"
@@ -55,9 +63,9 @@
               <DataTemplate x:DataType="vm:PayloadPictureViewModel">
                 <StackPanel Margin="0,0,0,12" Spacing="4">
                   <TextBlock AutomationProperties.AutomationId="PayloadInspectorPictureCaption"
-                             TextWrapping="Wrap"
+                             Classes="hint"
                              Text="{Binding Caption}" />
-                  <Border BorderThickness="1" BorderBrush="#55808080" HorizontalAlignment="Left">
+                  <Border BorderThickness="1" BorderBrush="{DynamicResource CpBorderStrong}" HorizontalAlignment="Left">
                     <Image AutomationProperties.AutomationId="PayloadInspectorPicture"
                            Stretch="Uniform"
                            StretchDirection="DownOnly"
@@ -73,16 +81,22 @@
       </ScrollViewer>
     </Grid>
 
-    <Button Grid.Row="1"
-            Grid.Column="2"
-            AutomationProperties.AutomationId="PayloadInspectorCloseButton"
-            Margin="0,12,0,0"
-            HorizontalAlignment="Right"
-            Content="Close"
-            IsDefault="True"
-            IsCancel="True"
-            MinWidth="80"
-            Command="{Binding CloseCommand}" />
+    <Border Grid.Row="1"
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            Padding="16,12"
+            Background="{DynamicResource CpSurfaceWindow}"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="0,1,0,0">
+      <Button AutomationProperties.AutomationId="PayloadInspectorCloseButton"
+              Theme="{DynamicResource PrimaryButton}"
+              HorizontalAlignment="Right"
+              Content="Close"
+              IsDefault="True"
+              IsCancel="True"
+              MinWidth="88"
+              Command="{Binding CloseCommand}" />
+    </Border>
 
   </Grid>
 

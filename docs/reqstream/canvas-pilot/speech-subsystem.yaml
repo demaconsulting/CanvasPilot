@@ -59,6 +59,18 @@ sections:
             tests:
               - SpeechSubsystem_CancelDownloadsOnClose_DialogCancelled_StopsRunningDownload
 
+          - id: CanvasPilot-Speech-BeUsableWithAssistiveTechnology
+            title: >-
+              The Speech subsystem shall give the lists of the Speech page of the settings dialog names that assistive
+              technology can read, and let every button of the page be reached with the keyboard.
+            justification: |
+              Choosing a microphone and a model must be possible for people who use a screen reader or only the keyboard. A
+              list without a name is read as nothing, and a button that cannot take the focus cannot be reached.
+            children:
+              - CanvasPilot-SpeechSettingsPage-BeUsableWithAssistiveTechnology
+            tests:
+              - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
           - id: CanvasPilot-Speech-ToleratePoorMachines
             title: >-
               The Speech subsystem shall keep the settings dialog working, explain what is missing, and keep the

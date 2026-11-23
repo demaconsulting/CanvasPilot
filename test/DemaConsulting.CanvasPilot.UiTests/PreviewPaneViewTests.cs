@@ -20,6 +20,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -160,7 +161,7 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.Equal(new PixelSize(40, 20), bitmap.PixelSize);
         Assert.Equal([0, 0, 128, 128], FirstPixel(bitmap));
         Assert.True(SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller").IsVisible);
-        Assert.Equal("red.svg: 40 x 20 px, svg", SettingsUiHelpers.Find<TextBlock>(window, "PreviewStatus").Text);
+        Assert.Equal("red.svg: 40 x 20 px, svg", pane.StatusText);
         Assert.False(SettingsUiHelpers.Find<TextBlock>(window, "PreviewPlaceholder").IsVisible);
         Assert.False(SettingsUiHelpers.Find<StackPanel>(window, "PreviewErrorPanel").IsVisible);
         Assert.False(SettingsUiHelpers.Find<ProgressBar>(window, "PreviewBusy").IsVisible);
@@ -191,7 +192,7 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.True(hint.IsVisible);
         Assert.StartsWith("Hint:", hint.Text, StringComparison.Ordinal);
         Assert.False(SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller").IsVisible);
-        Assert.Equal("broken.svg: render failed", SettingsUiHelpers.Find<TextBlock>(window, "PreviewStatus").Text);
+        Assert.Equal("broken.svg: render failed", pane.StatusText);
 
         window.Close();
     }
@@ -213,7 +214,7 @@ public sealed class PreviewPaneViewTests : IDisposable
         // Act: select the file, look while the render waits, then release it
         explorer.SelectFile(Path.Combine(_folder, "slow.svg"));
         AppShellUiHelpers.Flush();
-        var running = (busy.IsVisible, placeholder.IsVisible, SettingsUiHelpers.Find<TextBlock>(window, "PreviewStatus").Text);
+        var running = (busy.IsVisible, placeholder.IsVisible, pane.StatusText);
         gate.Release(Path.Combine(_folder, "slow.svg"));
         await pane.RenderCompletion;
         AppShellUiHelpers.Flush();
@@ -221,6 +222,8 @@ public sealed class PreviewPaneViewTests : IDisposable
         // Assert: idle shows the placeholder, running shows the busy indicator and status, done shows neither
         Assert.Equal((false, true), idle);
         Assert.Equal((true, false, "Rendering slow.svg..."), running);
+        Assert.Equal(2.0, busy.Bounds.Height);
+        Assert.Equal(0.0, ScreenExtent(window, busy).Y - ScreenExtent(window, SettingsUiHelpers.Find<Grid>(window, "PreviewStage")).Y);
         Assert.False(busy.IsVisible);
         Assert.Equal(1, gate.Requested);
 
@@ -251,15 +254,58 @@ public sealed class PreviewPaneViewTests : IDisposable
         expander.IsExpanded = true;
         AppShellUiHelpers.Flush();
 
-        // Assert: the expander appeared with a one-note header and the list holds the note
+        // Assert: the expander appeared with a one-note header and the list holds the note, in a drawer inside the stage
         Assert.True(hiddenBefore);
         Assert.True(expander.IsVisible);
         Assert.Equal("1 note", expander.Header);
+        var stage = SettingsUiHelpers.Find<Grid>(window, "PreviewStage");
+        Assert.True(ScreenExtent(window, stage).Contains(ScreenExtent(window, expander).TopLeft));
+        Assert.True(ScreenExtent(window, stage).Contains(ScreenExtent(window, expander).BottomRight));
         var list = SettingsUiHelpers.Find<ItemsControl>(window, "PreviewDiagnostics");
         var note = Assert.IsType<RenderDiagnostic>(Assert.Single(list.Items));
         Assert.Equal("image-access-denied", note.Code);
 
         File.Delete(Path.Combine(Path.GetDirectoryName(_folder)!, "canvaspilot-outside.png"));
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the diagnostics drawer, closed and open, lies above the zoom pill and does not cover it, on a stage that is
+    ///     narrow (400 px).
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_DiagnosticsDrawerOnNarrowStage_DoesNotOverlapTheZoomPill()
+    {
+        // Arrange: an SVG that the render reports a note for, selected and drawn in a narrow pane, so that the pill and the
+        // drawer both show
+        await File.WriteAllTextAsync(Path.Combine(Path.GetDirectoryName(_folder)!, "canvaspilot-outside-pill.png"), "x", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(
+            Path.Combine(_folder, "linked.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='10' height='10'>" +
+            "<image href='../canvaspilot-outside-pill.png' width='10' height='10'/></svg>",
+            TestContext.Current.CancellationToken);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        var expander = SettingsUiHelpers.Find<Expander>(window, "PreviewDiagnosticsExpander");
+        var pill = SettingsUiHelpers.Find<Border>(window, "PreviewZoomPill");
+        explorer.SelectFile(Path.Combine(_folder, "linked.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+
+        // Act: measure the drawer and the pill while the drawer is closed, and again while it is open
+        var closedDrawer = ScreenExtent(window, expander);
+        var pillExtent = ScreenExtent(window, pill);
+        expander.IsExpanded = true;
+        AppShellUiHelpers.Flush();
+        var openDrawer = ScreenExtent(window, expander);
+
+        // Assert: both are shown, and the drawer is above the pill in both states
+        Assert.True(expander.IsVisible);
+        Assert.True(pill.IsVisible);
+        Assert.False(closedDrawer.Intersects(pillExtent), $"The closed drawer {closedDrawer} covers the pill {pillExtent}.");
+        Assert.False(openDrawer.Intersects(pillExtent), $"The open drawer {openDrawer} covers the pill {pillExtent}.");
+        Assert.True(openDrawer.Bottom <= pillExtent.Top);
+
+        File.Delete(Path.Combine(Path.GetDirectoryName(_folder)!, "canvaspilot-outside-pill.png"));
         window.Close();
     }
 
@@ -281,8 +327,8 @@ public sealed class PreviewPaneViewTests : IDisposable
         var scroller = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
         var fitted = (viewbox.Stretch, viewbox.StretchDirection, scroller.HorizontalScrollBarVisibility);
 
-        // Act: turn fitting off with the check box, then on again
-        var check = SettingsUiHelpers.Find<CheckBox>(window, "PreviewFitToWindow");
+        // Act: turn fitting off with the Fit toggle, then on again
+        var check = SettingsUiHelpers.Find<ToggleButton>(window, "PreviewFitToWindow");
         check.IsChecked = false;
         AppShellUiHelpers.Flush();
         var actual = (viewbox.Stretch, viewbox.StretchDirection, scroller.HorizontalScrollBarVisibility, pane.FitToWindow);
@@ -295,6 +341,49 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.Equal((Stretch.None, StretchDirection.Both, ScrollBarVisibility.Auto, false), actual);
         Assert.Equal(Stretch.Uniform, viewbox.Stretch);
         Assert.Equal(Stretch.None, image.Stretch);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the Fit toggle shows when it is on: a tinted background, an outline, and an accent colored icon, and none
+    ///     of them when it is off.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_FitToggle_ShowsItsOnStateWithTintOutlineAndAccentIcon()
+    {
+        // Arrange: a shown dark pane that shows a picture, with Fit on, which is how a picture opens
+        await File.WriteAllTextAsync(Path.Combine(_folder, "red.svg"), HalfRedSvg, TestContext.Current.CancellationToken);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        window.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
+        explorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var fit = SettingsUiHelpers.Find<ToggleButton>(window, "PreviewFitToWindow");
+        var presenter = fit.GetVisualDescendants().OfType<ContentPresenter>().First(item => item.Name == "PART_ContentPresenter");
+        var tint = ThemeUiHelpers.ColorOf("CpAccentTint", Avalonia.Styling.ThemeVariant.Dark);
+        var accent = ThemeUiHelpers.ColorOf("CpAccentText", Avalonia.Styling.ThemeVariant.Dark);
+
+        // Act: read how it looks with Fit on, then turn Fit off and read it again
+        var onBackground = Assert.IsAssignableFrom<ISolidColorBrush>(presenter.Background).Color;
+        var onOutline = Assert.IsAssignableFrom<ISolidColorBrush>(presenter.BorderBrush).Color;
+        var onThickness = presenter.BorderThickness;
+        var onIcon = Assert.IsAssignableFrom<ISolidColorBrush>(fit.Foreground).Color;
+        fit.IsChecked = false;
+        AppShellUiHelpers.Flush();
+        var offBackground = presenter.Background is ISolidColorBrush brush ? brush.Color : Colors.Transparent;
+        var offThickness = presenter.BorderThickness;
+        var offIcon = Assert.IsAssignableFrom<ISolidColorBrush>(fit.Foreground).Color;
+
+        // Assert: on, it has the accent tint, an accent outline of one pixel, and the accent icon; off, it has none of them
+        Assert.False(pane.FitToWindow);
+        Assert.Equal(tint, onBackground);
+        Assert.Equal(accent, onOutline);
+        Assert.Equal(new Thickness(1), onThickness);
+        Assert.Equal(accent, onIcon);
+        Assert.Equal(0, offBackground.A);
+        Assert.Equal(new Thickness(0), offThickness);
+        Assert.NotEqual(accent, offIcon);
 
         window.Close();
     }
@@ -321,6 +410,45 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.Equal(new Size(800, 400), image.Bounds.Size);
         Assert.Equal(new Size(800, 400), overlayExtent.Size);
         Assert.Equal(imageExtent, overlayExtent);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the zoom pill zooms the picture and the overlay together: the buttons change the zoom to the
+    ///     next step, the label says it, the overlay keeps the picture's pixel size and covers the picture exactly,
+    ///     and clicking the label fits the picture again.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether()
+    {
+        // Arrange: a pane over a picture of 800 x 400 pixels, fitted to the pane, with an overlay
+        var (window, pane, overlay) = await ShowLargePictureWithOverlayAsync();
+        var image = SettingsUiHelpers.Find<Image>(window, "PreviewImage");
+        var label = Assert.IsType<TextBlock>(SettingsUiHelpers.Find<Button>(window, "PreviewZoomLabel").Content);
+        var fitLabel = label.Text;
+
+        // Act: go to actual size, then out to 50 percent, then fit again through the label
+        SettingsUiHelpers.Click(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomActual"));
+        AppShellUiHelpers.Flush();
+        var actual = (label.Text, ScreenExtent(window, image).Width, pane.FitToWindow);
+        SettingsUiHelpers.Click(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomOut"));
+        SettingsUiHelpers.Click(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomOut"));
+        AppShellUiHelpers.Flush();
+        var half = (label.Text, ScreenExtent(window, image), ScreenExtent(window, overlay));
+        SettingsUiHelpers.Click(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomLabel"));
+        AppShellUiHelpers.Flush();
+
+        // Assert
+        Assert.EndsWith("%", fitLabel);
+        Assert.Equal(("100%", 800.0, false), actual);
+        Assert.Equal("50%", half.Item1);
+        Assert.Equal(400.0, half.Item2.Width, 3);
+        Assert.Equal(200.0, half.Item2.Height, 3);
+        Assert.Equal(half.Item2, half.Item3);
+        Assert.Equal(new Size(800, 400), overlay.Bounds.Size);
+        Assert.True(pane.FitToWindow);
+        Assert.Equal(fitLabel, label.Text);
 
         window.Close();
     }

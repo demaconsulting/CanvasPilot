@@ -6,27 +6,63 @@
              x:DataType="vm:AssistantReplyViewModel"
              AutomationProperties.AutomationId="AssistantReply">
 
-  <!-- A part of the answer of the copilot: plain selectable text while it streams, and the same text drawn from its
-       Markdown once the part is whole; a part that was stopped or failed stays plain, because it may end in the middle
-       of a construct -->
-  <Border Margin="0,0,0,8"
-          Padding="8"
-          CornerRadius="6"
-          BorderThickness="1"
-          BorderBrush="#33808080">
-    <StackPanel Spacing="4">
+  <!-- A part of the answer of the copilot: the avatar and the name of the copilot on the first row of its group, a small chip
+       that says what became of a reply that did not end well, and the text. The text is plain and selectable while it
+       streams, and the same text drawn from its Markdown once the part is whole; a part that was stopped or failed stays
+       plain, because it may end in the middle of a construct. -->
+  <Grid Margin="0,0,0,16"
+        ColumnDefinitions="22,*"
+        RowDefinitions="Auto,Auto,Auto">
 
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock FontWeight="SemiBold" Text="Copilot" />
-        <TextBlock Name="StatusLabelText"
-                   AutomationProperties.AutomationId="AssistantReplyStatus"
-                   Opacity="0.7"
-                   Text="{Binding StatusLabel}"
-                   IsVisible="{Binding StatusLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-      </StackPanel>
+    <Border Name="AvatarBadge"
+            Grid.Row="0"
+            Grid.Column="0"
+            Width="22"
+            Height="22"
+            CornerRadius="11"
+            VerticalAlignment="Center"
+            Background="{DynamicResource CpAccentGradient}"
+            IsVisible="{Binding OpensGroup}">
+      <PathIcon Classes="icon"
+                Width="12"
+                Height="12"
+                Foreground="{DynamicResource CpTextOnAccent}"
+                Data="{DynamicResource CpIconSparkle}" />
+    </Border>
 
+    <TextBlock Name="NameText"
+               Grid.Row="0"
+               Grid.Column="1"
+               Margin="8,0,0,0"
+               VerticalAlignment="Center"
+               FontSize="{DynamicResource CpFontSmall}"
+               FontWeight="SemiBold"
+               Foreground="{DynamicResource CpTextPrimary}"
+               Text="Copilot"
+               IsVisible="{Binding OpensGroup}" />
+
+    <Border Grid.Row="1"
+            Grid.Column="1"
+            Margin="8,6,0,0"
+            HorizontalAlignment="Left"
+            Theme="{DynamicResource ChipBorder}"
+            IsVisible="{Binding StatusLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <TextBlock Name="StatusLabelText"
+                 AutomationProperties.AutomationId="AssistantReplyStatus"
+                 VerticalAlignment="Center"
+                 FontSize="{DynamicResource CpFontCaption}"
+                 Foreground="{DynamicResource CpTextSecondary}"
+                 Text="{Binding StatusLabel}" />
+    </Border>
+
+    <StackPanel Grid.Row="2"
+                Grid.Column="1"
+                Margin="8,6,0,0"
+                TextElement.FontSize="{DynamicResource CpFontBody}"
+                TextElement.Foreground="{DynamicResource CpTextPrimary}">
       <SelectableTextBlock Name="ReplyText"
                            AutomationProperties.AutomationId="AssistantReplyText"
+                           LineHeight="{DynamicResource CpLineBody}"
                            TextWrapping="Wrap"
                            Text="{Binding Text}"
                            IsVisible="{Binding !IsComplete}" />
@@ -35,8 +71,8 @@
                                      AutomationProperties.AutomationId="AssistantReplyMarkdown"
                                      Blocks="{Binding Blocks}"
                                      IsVisible="{Binding IsComplete}" />
-
     </StackPanel>
-  </Border>
+
+  </Grid>
 
 </UserControl>

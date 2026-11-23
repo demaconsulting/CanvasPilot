@@ -9,20 +9,26 @@
     <KeyBinding Gesture="Delete" Command="{Binding DeleteSelectedCommand}" />
   </UserControl.KeyBindings>
 
-  <!-- Explorer | preview | chat. The chat column and its splitter get their widths from the code of the view, because a
-       column cannot be hidden by binding: they are 0 while no chat is shown. -->
-  <Grid Name="WorkspaceGrid">
+  <!-- Explorer | stage | chat. The widths of the explorer and the chat column come from the code of the view, because they
+       follow what the user chose and the width of the window, and a column cannot be hidden by binding: the chat column
+       and its splitter are 0 wide while no chat is shown. A splitter takes one pixel in the layout, which is its line; its
+       hit area is wider and lies over the panes beside it. -->
+  <Grid Name="WorkspaceGrid"
+        Background="{DynamicResource CpSurfaceWindow}">
 
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="260" MinWidth="140" />
-      <ColumnDefinition Width="Auto" />
-      <ColumnDefinition Width="*" MinWidth="200" />
+      <ColumnDefinition Width="264" MinWidth="180" MaxWidth="420" />
+      <ColumnDefinition Width="1" />
+      <ColumnDefinition Width="*" MinWidth="360" />
       <ColumnDefinition Width="0" />
-      <ColumnDefinition Width="0" MinWidth="0" />
+      <ColumnDefinition Width="0" MinWidth="0" MaxWidth="640" />
     </Grid.ColumnDefinitions>
 
     <ContentControl Grid.Column="0"
                     AutomationProperties.AutomationId="WorkspaceExplorerHost"
+                    Background="{DynamicResource CpSurfacePane}"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
                     Content="{Binding Explorer}">
       <ContentControl.ContextMenu>
         <ContextMenu>
@@ -40,14 +46,12 @@
       </ContentControl.ContextMenu>
     </ContentControl>
 
-    <GridSplitter Grid.Column="1"
-                  AutomationProperties.AutomationId="WorkspaceSplitter"
-                  Width="5"
-                  ResizeDirection="Columns" />
-
-    <Grid Grid.Column="2">
+    <Grid Grid.Column="2"
+          Background="{DynamicResource CpSurfaceStage}">
 
       <ContentControl AutomationProperties.AutomationId="WorkspacePreviewHost"
+                      HorizontalContentAlignment="Stretch"
+                      VerticalContentAlignment="Stretch"
                       IsVisible="{Binding HasPreview}"
                       Content="{Binding Preview}" />
 
@@ -57,29 +61,65 @@
                   IsVisible="{Binding !HasPreview}">
         <TextBlock AutomationProperties.AutomationId="WorkspacePlaceholder"
                    HorizontalAlignment="Center"
-                   FontSize="20"
-                   Opacity="0.7"
+                   FontSize="{DynamicResource CpFontTitle}"
+                   Foreground="{DynamicResource CpTextTertiary}"
                    Text="{Binding PlaceholderText}" />
         <TextBlock AutomationProperties.AutomationId="WorkspaceHint"
                    HorizontalAlignment="Center"
-                   Opacity="0.6"
+                   Foreground="{DynamicResource CpTextTertiary}"
                    TextWrapping="Wrap"
                    IsVisible="{Binding HintText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                    Text="{Binding HintText}" />
       </StackPanel>
 
-    </Grid>
+      <!-- Brings the chat column back after it was hidden with the button of its header -->
+      <Border HorizontalAlignment="Right"
+              VerticalAlignment="Top"
+              Margin="0,12,12,0"
+              CornerRadius="{DynamicResource CpRadiusInput}"
+              Background="{DynamicResource CpSurfaceOverlay}"
+              BoxShadow="{DynamicResource CpShadowFloating}"
+              IsVisible="{Binding CanRestoreChat}">
+        <Button Name="RestoreChatButton"
+                AutomationProperties.AutomationId="ChatRestoreButton"
+                AutomationProperties.Name="Show the conversation"
+                Theme="{DynamicResource IconButton}"
+                Command="{Binding RestoreChatCommand}"
+                ToolTip.Tip="Show the conversation">
+          <PathIcon Classes="icon" Data="{DynamicResource CpIconPanelRight}" />
+        </Button>
+      </Border>
 
-    <GridSplitter Grid.Column="3"
-                  AutomationProperties.AutomationId="WorkspaceChatSplitter"
-                  Width="5"
-                  IsVisible="{Binding IsChatVisible}"
-                  ResizeDirection="Columns" />
+    </Grid>
 
     <ContentControl Grid.Column="4"
                     AutomationProperties.AutomationId="WorkspaceChatHost"
+                    Background="{DynamicResource CpSurfacePane}"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch"
                     IsVisible="{Binding IsChatVisible}"
                     Content="{Binding Chat}" />
+
+    <!-- The splitters come last so that their hit areas lie over the panes. They resize with the pointer, and with the
+         arrow keys by 16 pixels once they have the focus. -->
+    <GridSplitter Name="ExplorerSplitter"
+                  Grid.Column="1"
+                  AutomationProperties.AutomationId="WorkspaceSplitter"
+                  AutomationProperties.Name="Resize the explorer"
+                  Theme="{DynamicResource SplitterGrip}"
+                  Width="9"
+                  HorizontalAlignment="Center"
+                  ResizeDirection="Columns" />
+
+    <GridSplitter Name="ChatSplitter"
+                  Grid.Column="3"
+                  AutomationProperties.AutomationId="WorkspaceChatSplitter"
+                  AutomationProperties.Name="Resize the chat"
+                  Theme="{DynamicResource SplitterGrip}"
+                  Width="9"
+                  HorizontalAlignment="Center"
+                  IsVisible="{Binding IsChatVisible}"
+                  ResizeDirection="Columns" />
 
   </Grid>
 

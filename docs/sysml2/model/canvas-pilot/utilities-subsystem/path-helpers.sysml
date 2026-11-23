@@ -2,7 +2,7 @@ package CanvasPilot_PathHelpers {
     private import SoftwareItemMetadata::*;
 
     part def PathHelpers {
-        doc /* Safe path-combination utility guarding against path-traversal. */
+        doc /* Safe path-combination utility guarding against path-traversal, and finder of free file names. */
 
         metadata info : SoftwareInfo {
             sourceFiles = ("src/DemaConsulting.CanvasPilot/UtilitiesSubsystem/PathHelpers.cs");

@@ -16,6 +16,10 @@ Unit tests use the standard test environment. UI tests run under the Avalonia he
 serialized with test parallelization disabled; no display or windowing system is required. No file, network, or external
 service is used.
 
+The look of the window (the pane surface, the footer bar, the primary Export and secondary Cancel buttons, the hint
+style of the size lines) is part of the shared look of the dialogs and is checked by hand in both themes before a
+release; no test asserts it.
+
 #### Acceptance Criteria
 
 - All unit and UI tests pass with zero failures.

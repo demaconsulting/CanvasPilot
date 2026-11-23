@@ -26,21 +26,21 @@ services, or display are required.
   from the Recent Projects menu with its files.
 - Renaming and deleting the selected file through the workspace changes the project folder and the explorer list.
 - Choices made in the settings dialog opened from the shell are stored and in effect in the next run, and the
-  dialog hosts the AI Provider page followed by the Speech page.
-- The About dialog opened from the composed shell shows the application name, a version, and the five libraries.
+  dialog hosts the AI Provider page followed by the Speech page, the Style Kits page, and the Appearance page.
+- The About dialog opened from the composed shell shows the application name, a version, and the six libraries.
 - The Drawing Knowledge command of the composed shell gives the dialog service a browser over the catalog of the
   application, whose tree is the roots of the catalog.
 - The composer of the message created by the composition works in the folder of the project that is open, and has no
   project and no draft once the project is closed.
-- The layer for marks is the overlay of the preview pane with its tool bar in the pane's top bar, and it can make marks
-  only while a project is open.
+- The layer for marks is the overlay of the preview pane with its tool bar in the toolbar slot of the stage, and it can
+  make marks only while a project is open.
 - The chat panel of the composition works with the composition's composer, can be used only while a project is open,
   keeps the message that was sent in its transcript, and has an empty transcript once the project is closed.
 - The chat panel is the chat content of the workspace (shown only while a project is open), the push-to-talk target
   of the shell, and has the window's dialog service as its launcher of the payload inspector.
 - The composition has the catalog of style kits with the kits that come with the program, the picker of the style, the
   two style tool descriptors, and an exporter that asks for sizes; a new project of the composed shell has the default
-  kit of the user as its style, and the status bar shows the picker while a project is open.
+  kit of the user as its style, and the title bar shows the picker while a project is open.
 - The Style Kits item of the composed shell shows a window over the catalog of the application, which lists the kits
   that come with the program and with which a kit of the user can be made in the folder of the user of the composition.
 - Check Against Style on the composed shell checks the picture that is shown against the kit of the project, shows the
@@ -53,6 +53,22 @@ services, or display are required.
   makes the panel check the provider again (the banner follows), and a change of other settings does not.
 - A file that the copilot writes while it answers is listed and selected in the explorer, and the preview draws it.
 - Disposing the composition disposes the copilot and its factory once, and the settings are no longer looked at.
+- A stock window and the text on it take the pane surface and the primary text color of the theme variant that is
+  asked for, and the system accent is the brand accent, in the dark and in the light variant.
+- A change of the theme choice in the settings of the application composed for a running application changes the theme
+  variant of the open main window, to dark, to light, and back to the system.
+- Walking through a window with the Tab key shows the focus ring on the control that has the focus and on no other.
+- An icon in a stock button is 16 by 16 and has the primary text color of the theme variant that is asked for.
+- The published folder holds the notice of the third-party icons (checked in the build of the installer).
+- The main window has a title bar that holds the menu, the project name, and the provider pill, opens at the design
+  size, and keeps its size, place, state, and column widths for the next window; the layout is fitted to the screens
+  and never crops the stage below 360 pixels.
+- The status bar is always shown and reports the picture that is shown, rendering, and failure in words.
+- The welcome screen is shown while no project is open and lists the recent projects as cards; the workspace is not
+  built until a project is open.
+- Every icon-only button of the main window, the workspace of an open project, and the dialogs has a name, a tooltip,
+  and a target of at least 28 by 28 pixels; every field has a name; every menu item has a unique access key; and the
+  text of notices, the amber button, and the welcome screen has a contrast of at least 4.5 to 1.
 
 ### Test Scenarios
 
@@ -70,7 +86,8 @@ transcript is empty. This scenario is tested by `AppShellSubsystem_ComposeApplic
 
 **AppShellSubsystem_ComposeApplication_AnnotationLayerIsOnThePictureAndFollowsTheOpenProject**: A composition starts
 with no project, and the layer for marks does not allow marks. The layer is the overlay of the preview pane and its tool
-bar is in the pane's top bar. After a project is created marks are allowed; after the project is closed they are not.
+bar is in the toolbar slot of the stage. After a project is created marks are allowed; after the project is closed they
+are not.
 This scenario is tested by `AppShellSubsystem_ComposeApplication_AnnotationLayerIsOnThePictureAndFollowsTheOpenProject`.
 
 **AppShellSubsystem_ComposeApplication_ComposerFollowsTheOpenProject**: A composition starts with no project, and its
@@ -97,13 +114,13 @@ each change and no message was shown. This scenario is tested by
 settings dialog opened from the shell and chooses OK; a new composition has the model name in effect. This scenario
 is tested by `AppShellSubsystem_Settings_DialogOk_StoresChoicesForNextRun`.
 
-**AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages**: The Settings command of a composed
-shell shows a dialog whose pages are titled AI Provider, Speech, and Style Kits, in that order, and the second page is
-the Speech page and the third is the Style Kits page. This scenario is tested by
-`AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
+**AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages**: The Settings command of a composed shell
+shows a dialog whose pages are titled AI Provider, Speech, Style Kits, and Appearance, in that order, and the second
+page is the Speech page, the third is the Style Kits page, and the fourth is the Appearance page. This scenario is
+tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages`.
 
 **AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries**: The About command of a composed shell
-shows a dialog with the application name, a non-blank version, and five libraries. This scenario is tested by
+shows a dialog with the application name, a non-blank version, and six libraries. This scenario is tested by
 `AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries`.
 
 **AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication**: The Drawing Knowledge
@@ -113,7 +130,7 @@ the application, and the browser can show a card of CanvasPilot. This scenario i
 
 **AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired**: A composition whose user chose
 `clean` as the default kit finds the three kits that come with the program, shows no picker with no project, gives a
-project created through the shell the kit `clean` as its style (the picker selects it and the status bar is shown),
+project created through the shell the kit `clean` as its style (the picker selects it and the title bar shows it),
 describes the tools `style_get` and `style_check`, and, when the user exports the picture that is shown, asks which
 size to export at. This scenario is tested by
 `AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired`.
@@ -155,5 +172,85 @@ composition is disposed twice and the AI provider settings are changed; the fact
 the server was not asked again. This scenario is tested by
 `AppShellSubsystem_ComposeApplication_DisposeStopsTheCopilotAndTheWiring`.
 
+**AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants**: A stock window with a text block is shown in the
+dark and in the light variant (a headless UI test in `AppShellThemeTests.cs`); its background is the pane surface of the
+variant, the text is the primary text color, the system accent is the brand accent, and the two variants differ. This
+scenario is tested by `AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants`.
+
+**AppShellSubsystem_Themes_SettingsChoiceChangesTheVariantOfTheOpenWindow**: The application is composed for the running
+application and its main window is shown (a headless UI test in `AppShellThemeTests.cs`); the settings are updated to
+the dark theme, to the light theme, and to follow the system; after each the window has the variant, and the background
+of the window is the pane surface of the variant. This scenario is tested by
+`AppShellSubsystem_Themes_SettingsChoiceChangesTheVariantOfTheOpenWindow`.
+
+**AppShellSubsystem_Themes_TabKeyShowsTheFocusRingOnTheFocusedControlOnly**: An icon button, a tool toggle, a pill
+button, and a splitter are in a window (a headless UI test in `AppShellThemeTests.cs`); the Tab key is pressed four
+times and after each press the ring is in the focus color on the control that has the focus and transparent on the
+others. This scenario is tested by `AppShellSubsystem_Themes_TabKeyShowsTheFocusRingOnTheFocusedControlOnly`.
+
+**AppShellSubsystem_Icons_IconInButtonTakesThePrimaryTextColorOfTheVariant**: A stock button holds an icon of class
+`icon` in a window in the dark and in the light variant (a headless UI test in `AppShellThemeTests.cs`); the icon is 16
+by 16 and its foreground is the primary text color of the variant. This scenario is tested by
+`AppShellSubsystem_Icons_IconInButtonTakesThePrimaryTextColorOfTheVariant`.
+
+**ThirdPartyNotices_Published**: The notice of the third-party icons is in the published folder, which the installer
+takes whole; it is checked by FileAssert in the build of the installer and is described in the system verification
+document. This scenario is tested by `ThirdPartyNotices_Published`, which is run in CI only.
+
 **AppShellSubsystem_Create_NullArguments_Throw**: Composing with a missing logger, settings service, or scheduler
 is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_Throw`.
+
+**MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes**: The composed main window is shown (a headless UI test in
+`MainWindowViewTests.cs`); the title bar holds the menu, the window is 1440 by 900 with a minimum of 960 by 600, and
+room is kept for the buttons of the system. `MainWindowView_TitleBar_ShowsProjectNameThenApplicationName` shows the
+project name in bold with the application name after it, and
+`MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage` shows that the AI provider pill is in the
+title bar and that using it opens the settings on the AI Provider page.
+`MainWindowView_ApplyCaptionReserve_ToleratesMissingControls` shows that the reserves are set from the platform and that
+a missing control is left alone. The crash while the XAML loads depends on the order of events on a real Win32 window
+and cannot be reproduced in a headless test, so no headless test covers it; the headless tests cover only the pure
+decision (`CaptionReserve`) and `ApplyCaptionReserve`. The guard for the start while the window loads is the launch
+smoke test (`smoke.ps1`, run in CI on Windows), which starts the published program, together with the manual launch
+check in `canvas-pilot.md`. The caption buttons, dragging the empty strip, and snap layouts also need a real window and
+are checked by hand before a release.
+
+**MainWindowView_StatusBar_AlwaysShownAndReportsThePicture**: The window is shown with no project and with a project
+(a headless UI test in `MainWindowViewTests.cs`); the status bar is shown at one height in both states, says that no
+project is open and then that no picture is selected, and, once a picture is shown, names its file, size, format, and
+render time. This scenario is tested by `MainWindowView_StatusBar_AlwaysShownAndReportsThePicture`.
+
+**WelcomeView_RecentProjects_ListCardsAndOpenAProject**: The welcome screen is shown over recent projects (a headless UI
+test in `WelcomeViewTests.cs`); it lists a card for each project, and a card opens its project.
+`MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns` shows that the workspace and the chat column
+are not built before a project is open, and `MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow`
+shows that the welcome screen comes back when the project is closed.
+
+**WorkspaceLayout_WindowWidth_NothingIsCroppedAndTheExplorerGivesUpRoomFirst**: The main window is shown at several
+widths (a headless UI test in `WorkspaceLayoutViewTests.cs`); the explorer gives up room first, then the chat column,
+the stage keeps at least 360 pixels, and nothing is cropped at 960.
+`WorkspaceLayout_Splitters_SavedWidthsUsedAndKeyboardChoiceSaved` shows that saved widths are used and that a choice
+made with the arrow keys is saved, and `WorkspaceLayout_CloseWindow_SavesTheSizeAndANewWindowOpensWithIt` shows that
+closing saves the size and that a new window opens with it.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The welcome screen, the workspace of an open project,
+About, Drawing Knowledge, New Project, Style Kits, and every page of the settings are walked in both theme variants (a
+headless UI test in `AccessibilityViewTests.cs`); every button that shows no text has a name and a tooltip, can take the
+keyboard focus, and is at least 28 by 28 pixels, and every text field, list, tree, drop-down, and slider has a name.
+`Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey` checks the access keys of the menus,
+`Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly` the focus ring of the main, quiet, and card
+buttons, and `Accessibility_Colors_NoticesAndWelcomeTextAreReadable` the contrast of the text of notices, the amber
+button, and the welcome backdrop.
+
+### Screenshot Generation (Opt-In Tool)
+
+The pictures of the README and the user guide are drawn from the real application by headless UI tests of the `UiTests`
+project, so that they cannot drift from what the program shows. `ScreenshotSupport` shows a window at a fixed size and
+theme in the headless Avalonia platform with Skia and the embedded Inter font, lets it settle, and saves the drawn frame
+as a PNG. The screenshot tests carry the category `Screenshots` and skip themselves unless the environment variable
+`CANVASPILOT_SCREENSHOT_DIR` names an output folder, so the normal run of `build.ps1` writes nothing. The script
+`docs/images/render-screenshots.ps1` sets the variable and runs only those tests; with `-Check` it compares fresh
+pictures with the committed ones using a tolerance, and it is not part of the continuous integration because text
+hinting is not bit-for-bit the same on every operating system. The tool is not linked to a requirement; two tests keep
+it honest in every run: `ScreenshotSupport_Capture_WritesPngOfRequestedSize` proves that a drawn window is saved as a
+PNG of exactly the requested size that is not a single flat color, in both theme variants, and
+`ScreenshotSmoke_MainWindow_WritesBothThemes` is the opt-in smoke test of the whole route.

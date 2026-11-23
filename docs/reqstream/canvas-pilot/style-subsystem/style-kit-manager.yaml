@@ -96,3 +96,30 @@ sections:
                   - StyleKitManager_CopyIntoProject_BuiltInKit_FreezesACopyInTheProject
                   - StyleKitManager_Import_HostileZipAndMissingProject_AreRefusedWithAReason
                   - StyleKitManagerView_Buttons_BuiltInAndOwnKits_EnableWhatApplies
+
+              - id: CanvasPilot-StyleKitManager-MarkChosenAndInUseKits
+                title: >-
+                  The StyleKitManager shall show each kit as a raised card, mark the chosen kit with an accent outline and
+                  with a check icon, so that it is told from the others by a shape as well as by a color, and no other card
+                  with the check, and mark the kit that the open project uses with an in use pill that has a check and the
+                  words in use.
+                justification: |
+                  A person who compares kits must see at once which one is chosen and which one the project uses. A color
+                  alone is lost on people who do not see color well and in a bright room, so the chosen kit also shows a
+                  shape, and the kit in use is told in words as well as by a mark. The two marks mean different things, so
+                  neither is taken for the other.
+                tests:
+                  - StyleKitManagerView_ChoosingAKit_MarksOnlyThatCardWithACheck
+                  - StyleKitManagerView_Show_ListsGroupsAndChoosingAKitShowsThePreview
+                  - StyleKitManagerView_UseInProjectAndCopyIntoProject_ChangeTheProject
+
+              - id: CanvasPilot-StyleKitManager-BeUsableWithAssistiveTechnology
+                title: >-
+                  The StyleKitManager shall give every button that shows no text a name and a tooltip, every text field,
+                  list, and drop-down a name, and let every enabled button take the keyboard focus, in both theme variants.
+                justification: |
+                  People who use a screen reader or only the keyboard must be able to find and use every command of the
+                  window. A control that has no name is read as nothing, and a button that cannot take the focus cannot be
+                  reached by the keyboard.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

@@ -65,7 +65,8 @@ services, or display is required.
   name and model identifier and restored by the next run, using substitute audio and model services.
 - A project created in a folder is reopened from the recent projects list, and a damaged project file is
   refused with a message and a log entry without changing the open project.
-- The project explorer lists the image source files of the open project and not other content.
+- The project explorer shows the folders and the image source files of the open project as a tree, and not other
+  content.
 - A selected image source file is rendered and shown with its size, a file that cannot be drawn shows an error with
   its code, and the shown picture can be exported as a valid PNG file.
 - The shown picture of a diagram is identified by its file and by fingerprints of the file and the pixels, which
@@ -112,9 +113,9 @@ services, or display is required.
   of a kit wins, an unreachable shared folder and a kit with a wrong value are reported without hiding the other kits,
   and the Style Kits window makes, exports, deletes, imports, and copies kits into the project, and chooses the style of
   the project, while the kits of the program cannot be changed.
-- The style of a project is chosen in the status bar, is kept in the project file, comes from the default kit for a new
-  project only, is the same after a restart, is said to be missing when the kit is not found, and stays empty for a
-  project that never had one.
+- The style of a project is chosen in the pill of the title bar, is kept in the project file, comes from the default kit
+  for a new project only, is the same after a restart, is said to be missing when the kit is not found, and stays empty
+  for a project that never had one.
 - The shown picture is exported at the sizes of the style kit and of the application with the size, the background, and
   the resolution that the size says, and as drawn; a project with no style is offered the sizes of the application only.
 - The guidance, the two tools, and the card about style kits agree: the guidance is within its budget, the tools read
@@ -131,6 +132,11 @@ services, or display is required.
   version; installing it is checked by hand before each release.
 - The main window shell creates a project, lists its image files, finds it in the recent projects after a
   restart, and keeps a changed setting across the restart.
+- A folder and a drawing can be created in the open project and a picture added to it, a name or file that exists is
+  never replaced, and the tree shows the result.
+- In the windows of the composed application every icon-only button has a name, a tooltip, and a target of at least 28
+  by 28 pixels, every field has a name, the menus have unique access keys, the shared buttons show the focus ring on the
+  keyboard only, and the text of notices and of the welcome screen has the contrast that is asked for.
 
 ## Manual Verification
 
@@ -176,7 +182,7 @@ steps are in the verification of the unit or subsystem named at each check.
    the system zip pickers, add example images with the image picker in the editor, change a color with the flyout and
    its sliders, and add a shared folder on the Style Kits page of the settings with the folder picker, including a
    network path that is not reachable; then check that the three kits that come with the program are listed, that the
-   status bar of a project shows the chosen kit, and that exporting at a size writes the file that the window said.
+   title bar of a project shows the chosen kit, and that exporting at a size writes the file that the window said.
    (Verification of the `Style` subsystem and of the units `StyleKitManager`, `StyleKitEditor`, and
    `StyleSettingsPage`.)
 9. *Live Ollama (a reviewer with Ollama installed; Ollama is not installed on the machine on which this version was
@@ -301,6 +307,25 @@ steps are in the verification of the unit or subsystem named at each check.
        that no `copilot` process that the application started remains after it is closed. In that turn ask the copilot
        to run a shell command: the transcript shows no tool line for a tool that is not one of the tools of the
        application (run 5 shows this through the agent service without a window).
+11. *The redesigned window on a real display (a person with the installed package; none of this has been run).* Check
+    the window with a mouse, a keyboard, and a screen reader on Windows at 100, 125, and 150 percent display scale.
+    (Verification of the `AppShell`, `Project`, `Preview`, `Chat`, and `Annotation` subsystems.)
+    1. The title bar: the installed program starts and shows the window (the launch smoke test, `smoke.ps1`, checks this
+       on the published build in CI, including the start while the window loads; here it is run once by hand on the
+       installed package at 100, 125, and 150 percent), the system buttons are not covered by the menu or the provider
+       pill, no system title text lies over the brand mark or the menu, the height of the system buttons against the 44
+       pixel bar, dragging the window by the empty strip, double-clicking it to maximize, the snap layouts, and the
+       window when maximized (no part is off the screen). The menu items open with the keys and the access keys.
+    2. The splitters are found and moved with the mouse (the line and the grip show on hover and when pressed), the
+       widths come back after a restart, and a window moved to another monitor and back stays on the screens.
+    3. Zoom: Ctrl+wheel, Ctrl+0, Ctrl+1, Ctrl+plus, Ctrl+minus while the preview has the focus, and panning with the
+       middle button; the tool keys V, R, E, F, and A choose a tool while the focus is in the preview and not in a text
+       box.
+    4. The chat: Enter sends and Shift+Enter writes a line break; hold the talk button and the F8 key (the button turns
+       red and pulses); the Attach button opens the system file dialog; the header menu clears the history; the collapse
+       button hides the column and the chip on the stage brings it back.
+    5. A screen reader reads the names of the icon buttons, the status bar sentence, and the AI provider pill, and the
+       arrow keys move between the cards of the welcome screen and between the rows of the project tree.
 
 ## Test Scenarios
 
@@ -355,6 +380,14 @@ creates a project that holds two SVG files and selects the first. Renaming it to
 file is refused with a message; renaming it to `cover.svg` renames the file. Deleting `cover.svg` is first declined
 at the confirmation, which keeps the file, and then confirmed, which removes it. The explorer then lists only the
 other file. This scenario is tested by `CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems`.
+
+**CanvasPilot_ManageProjectFiles_NewFileFolderAndAddedPicture_ShowInTheTreeAndReplaceNothing**: The composed
+application's user creates a project that holds one SVG file and has a picture outside the project. A new folder and a
+new Mermaid file are made, the new file being created in the new folder and selected; making the same file again is
+refused with a message; and the picture is added twice, which copies it into the `attachments` folder under two
+different names and leaves the original where it was. The tree lists the new folder and the existing file, and the
+existing file is unchanged. This scenario is tested by
+`CanvasPilot_ManageProjectFiles_NewFileFolderAndAddedPicture_ShowInTheTreeAndReplaceNothing`.
 
 **CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell**: The application's units are composed exactly as
 at startup, without a window, over temporary per-user folders; the shell is titled with the application name,
@@ -558,7 +591,7 @@ project, wins over the kit of the program, and is made the style of the project,
 scenario is tested by `CanvasPilot_ManageStyleKits_ShellCommandAndManager_CreateEditExportImportAndDelete`.
 
 **CanvasPilot_ChooseProjectStyle_PickerAndNewProject_KeepTheChoiceInTheProjectFile**: With a default kit in the
-settings, a new project says that kit in its file and the status bar shows it. The user chooses another kit, no style,
+settings, a new project says that kit in its file and the title bar shows it. The user chooses another kit, no style,
 and a kit again, and the file follows each choice. After the application is started again on the same files the project
 shows the chosen kit and not the default. A kit that is not found is shown as missing with the reason, and a project
 created without the shell has no style, shows none, and its file has no style property. This scenario is tested by
@@ -705,6 +738,33 @@ creates a project through the New Project dialog; two files are added, one an im
 image and the title names the project. The user changes the AI model name in the settings dialog and the
 application is restarted: the project is in the recent projects menu and the model name is in effect. This
 scenario is tested by `CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip`.
+
+**CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight**: The composed application's main window is drawn
+headless in the dark and in the light theme variant (a headless UI test in `CanvasPilotThemeTests.cs`); the picture of
+the dark window is dark on average and the picture of the light window is light. This scenario is tested by
+`CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight`.
+
+**CanvasPilot_Theme_ChoiceInSettingsDialogChangesTheWindowAndIsRemembered**: The application is composed for the running
+application with its main window shown (a headless UI test in `CanvasPilotThemeTests.cs`); the user opens Settings from
+the Tools menu, chooses the Appearance page, chooses Dark, and chooses OK. The window turns dark and a new settings
+service over the same folder reads the dark choice. This scenario is tested by
+`CanvasPilot_Theme_ChoiceInSettingsDialogChangesTheWindowAndIsRemembered`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The windows of the composed application (the welcome
+screen, the workspace of an open project, About, Drawing Knowledge, New Project, Style Kits, and every page of the
+Settings dialog) are walked in both theme variants (a headless UI test in `AccessibilityViewTests.cs`). Every button or
+toggle that shows no text has a name and a tooltip, can take the keyboard focus, and is at least 28 by 28 pixels, and
+every text field, drop-down, slider, number box, list, and tree has a name or a placeholder. This scenario is tested by
+`Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`. The other three tests of the same file complete the
+requirement: `Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey` (every menu and menu item has a unique access key),
+`Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly` (the main, quiet, and card buttons show the
+focus ring on the Tab key and on no other control), and `Accessibility_Colors_NoticesAndWelcomeTextAreReadable` (the
+text on notices, the amber button, and the welcome backdrop has a contrast of at least 4.5 to 1).
+
+**ThirdPartyNotices_Published**: After the Windows build job publishes the application self-contained for win-x64,
+FileAssert asserts that the published folder, which the installer takes whole, holds exactly one
+`THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License, so the notice of the vendored icons is in
+the package. This scenario is tested by `ThirdPartyNotices_Published`, which is run in CI only.
 
 **WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64, builds the
 installer project with the numeric build version, and copies the package, FileAssert asserts that exactly one

@@ -103,7 +103,33 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// <summary>
     ///     The text of the transcript when no message was sent yet.
     /// </summary>
-    public const string EmptyTranscriptText = "Messages you send appear here.";
+    public const string EmptyTranscriptText = "What would you like to draw?";
+
+    /// <summary>
+    ///     The tip under the example prompts of the empty conversation.
+    /// </summary>
+    public const string EmptyTipText = "Drop a picture, or hold F8 and speak";
+
+    /// <summary>
+    ///     The prompts that the empty conversation offers; choosing one writes it in the message.
+    /// </summary>
+    public static IReadOnlyList<string> ExamplePrompts { get; } =
+    [
+        "Draw our release flow",
+        "Chart downloads by month",
+        "Put both on one page",
+        "Make it match my style kit",
+    ];
+
+    /// <summary>
+    ///     The follow-up prompts that are offered above the message while a conversation is going on and the copilot is idle.
+    /// </summary>
+    public static IReadOnlyList<string> SuggestedPrompts { get; } =
+    [
+        "Add a legend",
+        "Make title larger",
+        "Export as PNG",
+    ];
 
     /// <summary>
     ///     The words of the indicator that shows while the copilot works on a message.
@@ -181,6 +207,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     private readonly EventHandler<MarkAddedEventArgs> _markAdded;
 
     /// <summary>
+    ///     The handler that takes the chips of all marks out of the message, kept so that it can be removed.
+    /// </summary>
+    private readonly EventHandler _clearMarks;
+
+    /// <summary>
     ///     The handler of the sent messages, kept so that it can be removed.
     /// </summary>
     private readonly EventHandler<MessageSentEventArgs> _messageSent;
@@ -199,6 +230,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Counts the checks, so that only the latest answer is shown.
     /// </summary>
     private int _readinessVersion;
+
+    /// <summary>
+    ///     Whether a check of the copilot is running.
+    /// </summary>
+    private bool _isCheckingReadiness;
 
     /// <summary>
     ///     The latest turn, which completes when the turn has ended.
@@ -263,13 +299,18 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _clock = clock ?? TimeProvider.System;
         Transcript = [];
         _sink = new TranscriptSink(Transcript);
-        Transcript.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTranscript));
+        Transcript.CollectionChanged += (_, _) =>
+        {
+            MarkGroupStarts();
+            OnPropertyChanged(nameof(HasTranscript));
+        };
         Thumbnails = new ChipThumbnailProvider(chip => CropOfDraftMark(marks, markImages, chip));
         _transcriptProject = composer.ProjectFolder;
         StopCommand = new RelayCommand(Stop, () => IsCopilotBusy);
         OpenSettingsCommand = new RelayCommand(RaiseOpenSettings);
         CheckAgainCommand = new AsyncRelayCommand(RefreshReadinessAsync);
         ClearHistoryCommand = new RelayCommand(ClearHistory);
+        CollapseCommand = new RelayCommand(() => CollapseRequested?.Invoke(this, EventArgs.Empty));
 
         // With a copilot, a sent message starts a turn whose rows follow the entry of the message
         if (agent is not null)
@@ -284,10 +325,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _messageSent = (_, e) => OnMessageSent(e.Message);
         _composerChanged = (_, _) => JoinAnnotationToComposer();
         _markAdded = (_, e) => _composer.AddMark(e.Mark);
+        _clearMarks = (_, _) => _composer.DeleteMarkChips();
         _composer.PropertyChanged += _composerPropertyChanged;
         _composer.MessageSent += _messageSent;
         _composer.Changed += _composerChanged;
         _annotation.MarkAdded += _markAdded;
+        _annotation.ClearMarksRequested += _clearMarks;
         JoinAnnotationToComposer();
 
         // A project that is already open has a saved conversation
@@ -299,6 +342,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     handles it.
     /// </summary>
     public event EventHandler? OpenSettingsRequested;
+
+    /// <summary>
+    ///     Raised when the user asks to hide the chat column with the button of the header. The workspace handles it.
+    /// </summary>
+    public event EventHandler? CollapseRequested;
 
     /// <summary>
     ///     Gets the composer of the message, which the panel's editing control shows.
@@ -353,6 +401,41 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public IRelayCommand ClearHistoryCommand { get; }
 
     /// <summary>
+    ///     Gets the command that asks to hide the chat column, which raises <see cref="CollapseRequested" />.
+    /// </summary>
+    public IRelayCommand CollapseCommand { get; }
+
+    /// <summary>
+    ///     Gets a value indicating whether the follow-up prompts are offered: a conversation is going on and the copilot is
+    ///     idle.
+    /// </summary>
+    public bool ShowSuggestions => HasTranscript && !IsCopilotBusy;
+
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+    {
+        base.OnPropertyChanged(e);
+
+        // The follow-up prompts depend on both of these
+        if (e.PropertyName is nameof(HasTranscript) or nameof(IsCopilotBusy))
+        {
+            base.OnPropertyChanged(new PropertyChangedEventArgs(nameof(ShowSuggestions)));
+        }
+    }
+
+    /// <summary>
+    ///     Writes a prompt in the message at the caret, so that the user can change it and send it.
+    /// </summary>
+    /// <param name="prompt">The prompt.</param>
+    /// <returns><see langword="true" /> when the prompt was written; <see langword="false" /> when the message cannot be edited.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="prompt" /> is <see langword="null" />.</exception>
+    public bool UsePrompt(string prompt)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        return _composer.CanEdit && _composer.InsertTyped(prompt);
+    }
+
+    /// <summary>
     ///     Gets a value indicating whether a turn of the copilot runs.
     /// </summary>
     public bool IsCopilotBusy => _runner?.IsBusy == true;
@@ -368,6 +451,22 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     ready.
     /// </summary>
     public string ReadinessMessage => HasReadinessIssue ? _readiness!.Message : string.Empty;
+
+    /// <summary>
+    ///     Gets what the latest check of the copilot found, or <see langword="null" /> when none was made yet. Unlike the
+    ///     banner it also holds the answer that everything is ready.
+    /// </summary>
+    public AgentReadinessReport? Readiness => _readiness;
+
+    /// <summary>
+    ///     Gets a value indicating whether a check of the copilot is running now.
+    /// </summary>
+    public bool IsCheckingReadiness => _isCheckingReadiness;
+
+    /// <summary>
+    ///     Gets a value indicating whether the panel has a copilot to talk to, which is what a check of the readiness asks.
+    /// </summary>
+    public bool HasCopilot => _agent is not null;
 
     /// <summary>
     ///     Gets a value indicating whether the message can be sent now.
@@ -403,6 +502,31 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public IPayloadInspectorLauncher? InspectorLauncher { get; set; }
 
     /// <summary>
+    ///     Gets or sets what shows the picker of files to attach. While it is <see langword="null" /> the attach command does
+    ///     nothing. The window sets it when the panel is placed in it.
+    /// </summary>
+    public IAttachmentPicker? AttachmentPicker { get; set; }
+
+    /// <summary>
+    ///     Asks the user for files and adds them to the message as attachments, the same way that a drop of the files does.
+    /// </summary>
+    /// <returns>A task that completes when the files were added, or the user cancelled.</returns>
+    [RelayCommand]
+    private async Task AttachAsync()
+    {
+        if (AttachmentPicker is not { } picker || !_composer.CanEdit)
+        {
+            return;
+        }
+
+        var paths = await picker.PickAttachmentsAsync(_composer.ProjectFolder);
+        if (paths.Count > 0 && _composer.CanEdit)
+        {
+            _composer.AttachFiles(new DroppedContent { Paths = paths });
+        }
+    }
+
+    /// <summary>
     ///     Stops the turn of the copilot that runs, if any. The text written so far is kept and marked as stopped, and the
     ///     composer can send again when the turn has ended, which is soon.
     /// </summary>
@@ -429,6 +553,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
 
         var version = ++_readinessVersion;
+        SetCheckingReadiness(true);
         AgentReadinessReport report;
         try
         {
@@ -436,6 +561,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
         catch (OperationCanceledException)
         {
+            if (version == _readinessVersion)
+            {
+                SetCheckingReadiness(false);
+            }
+
             return;
         }
         catch (Exception ex) when (ex is not OutOfMemoryException)
@@ -449,6 +579,21 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
             _readiness = report;
             OnPropertyChanged(nameof(HasReadinessIssue));
             OnPropertyChanged(nameof(ReadinessMessage));
+            OnPropertyChanged(nameof(Readiness));
+            SetCheckingReadiness(false);
+        }
+    }
+
+    /// <summary>
+    ///     Records whether a check of the copilot is running and announces a change.
+    /// </summary>
+    /// <param name="value">Whether a check is running.</param>
+    private void SetCheckingReadiness(bool value)
+    {
+        if (_isCheckingReadiness != value)
+        {
+            _isCheckingReadiness = value;
+            OnPropertyChanged(nameof(IsCheckingReadiness));
         }
     }
 
@@ -504,6 +649,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer.MessageSent -= _messageSent;
         _composer.Changed -= _composerChanged;
         _annotation.MarkAdded -= _markAdded;
+        _annotation.ClearMarksRequested -= _clearMarks;
         if (_runner is not null)
         {
             // Nothing is added to a transcript that is dropped, and a turn that is still running is stopped
@@ -766,6 +912,22 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Tells the shell that the user asked to open the settings.
     /// </summary>
     private void RaiseOpenSettings() => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    ///     Tells each row of the transcript whether it opens a group: the first row, and the first row of the copilot after a
+    ///     message or a notice.
+    /// </summary>
+    private void MarkGroupStarts()
+    {
+        TranscriptRowKind? previous = null;
+        foreach (var row in Transcript)
+        {
+            row.OpensGroup = previous is null
+                || (row.Kind is TranscriptRowKind.Assistant or TranscriptRowKind.Tool
+                    && previous is TranscriptRowKind.User or TranscriptRowKind.Notice);
+            previous = row.Kind;
+        }
+    }
 
     /// <summary>
     ///     Adds a sent message to the end of the transcript.

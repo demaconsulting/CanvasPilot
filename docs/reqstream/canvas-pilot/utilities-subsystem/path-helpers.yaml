@@ -3,7 +3,7 @@
 #
 # The PathHelpers class provides safe path-combination utilities that protect
 # against path-traversal attacks by rejecting relative paths containing ".."
-# or absolute paths when a relative path is expected.
+# or absolute paths when a relative path is expected. It also finds a free name for a file that is copied into a folder.
 
 sections:
   - title: CanvasPilot Requirements
@@ -29,3 +29,15 @@ sections:
                   - PathHelpers_SafePathCombine_DotDotPrefixedName_CombinesCorrectly
                   - PathHelpers_SafePathCombine_NullBasePath_ThrowsArgumentNullException
                   - PathHelpers_SafePathCombine_NullRelativePath_ThrowsArgumentNullException
+
+              - id: CanvasPilot-PathHelpers-UniqueFileName
+                title: >-
+                  The PathHelpers class shall give, for a wanted file name and a folder, the wanted name when no file or
+                  folder in the folder has it, and otherwise the name with a number in parentheses before the extension,
+                  starting at 2, that no file or folder in the folder has.
+                justification: |
+                  Files that are copied into a folder, such as pictures dropped on a project, must never replace what is
+                  already there. A numbered name keeps both files and keeps the extension, so the file still opens with
+                  the same program.
+                tests:
+                  - PathHelpers_UniqueFileName_FreeAndTakenNames_NumbersBeforeTheExtension

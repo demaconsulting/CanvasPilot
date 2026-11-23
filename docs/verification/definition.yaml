@@ -44,6 +44,10 @@ input-files:
   - docs/verification/canvas-pilot/app-shell-subsystem/main-window-shell.md
   - docs/verification/canvas-pilot/app-shell-subsystem/project-workspace.md
   - docs/verification/canvas-pilot/app-shell-subsystem/about-dialog.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/theme-resources.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/status-bar.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/provider-pill.md
+  - docs/verification/canvas-pilot/app-shell-subsystem/welcome.md
   - docs/verification/canvas-pilot/chat-subsystem.md
   - docs/verification/canvas-pilot/chat-subsystem/chat-panel.md
   - docs/verification/canvas-pilot/chat-subsystem/chat-turn-runner.md
@@ -74,6 +78,7 @@ input-files:
   - docs/verification/canvas-pilot/preview-subsystem.md
   - docs/verification/canvas-pilot/preview-subsystem/image-render-service.md
   - docs/verification/canvas-pilot/preview-subsystem/preview-pane.md
+  - docs/verification/canvas-pilot/preview-subsystem/thumbnail-provider.md
   - docs/verification/canvas-pilot/preview-subsystem/image-exporter.md
   - docs/verification/canvas-pilot/preview-subsystem/export-preset-dialog.md
   - docs/verification/canvas-pilot/preview-subsystem/image-drag-source.md
@@ -86,6 +91,7 @@ input-files:
   - docs/verification/canvas-pilot/settings-subsystem/settings-service.md
   - docs/verification/canvas-pilot/settings-subsystem/settings-dialog.md
   - docs/verification/canvas-pilot/settings-subsystem/ai-provider-settings-page.md
+  - docs/verification/canvas-pilot/settings-subsystem/appearance-settings-page.md
   - docs/verification/canvas-pilot/speech-subsystem.md
   - docs/verification/canvas-pilot/speech-subsystem/audio-device-service.md
   - docs/verification/canvas-pilot/speech-subsystem/speech-model-service.md

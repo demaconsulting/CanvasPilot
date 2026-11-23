@@ -6,53 +6,67 @@
         Title="{Binding Title}"
         Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
         Width="520"
-        Height="420"
+        Height="440"
         MinWidth="420"
-        MinHeight="320"
+        MinHeight="340"
+        Background="{DynamicResource CpSurfacePane}"
         WindowStartupLocation="CenterOwner">
 
-  <Grid Margin="16" RowDefinitions="Auto,*,Auto,Auto">
+  <Grid RowDefinitions="*,Auto">
 
-    <TextBlock Grid.Row="0"
-               Text="Choose how the picture is exported."
-               Margin="0,0,0,8" />
+    <Grid Grid.Row="0" Margin="24,24,24,16" RowDefinitions="Auto,*,Auto">
 
-    <ListBox Grid.Row="1"
-             AutomationProperties.AutomationId="ExportPresetList"
-             ItemsSource="{Binding Items}"
-             SelectedItem="{Binding SelectedItem}">
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="vm:ExportPresetItemViewModel">
-          <StackPanel Margin="4,2" Spacing="2">
-            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding SizeLine}" Opacity="0.7" />
-          </StackPanel>
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
+      <TextBlock Grid.Row="0"
+                 Classes="sectionTitle"
+                 Text="Choose how the picture is exported."
+                 Margin="0,0,0,12" />
 
-    <TextBlock Grid.Row="2"
-               AutomationProperties.AutomationId="ExportPresetResult"
-               Margin="0,8,0,0"
-               TextWrapping="Wrap"
-               Text="{Binding ResultText}" />
+      <ListBox Grid.Row="1"
+               AutomationProperties.AutomationId="ExportPresetList"
+               AutomationProperties.Name="Export sizes"
+               ItemsSource="{Binding Items}"
+               SelectedItem="{Binding SelectedItem}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ExportPresetItemViewModel">
+            <StackPanel Margin="4,2" Spacing="2">
+              <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+              <TextBlock Classes="hint" Text="{Binding SizeLine}" />
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
 
-    <StackPanel Grid.Row="3"
-                Margin="0,16,0,0"
-                Orientation="Horizontal"
-                HorizontalAlignment="Right"
-                Spacing="8">
-      <Button AutomationProperties.AutomationId="ExportPresetOkButton"
-              Content="Export..."
-              IsDefault="True"
-              MinWidth="80"
-              Command="{Binding ExportCommand}" />
-      <Button AutomationProperties.AutomationId="ExportPresetCancelButton"
-              Content="Cancel"
-              IsCancel="True"
-              MinWidth="80"
-              Command="{Binding CancelCommand}" />
-    </StackPanel>
+      <TextBlock Grid.Row="2"
+                 Classes="hint"
+                 AutomationProperties.AutomationId="ExportPresetResult"
+                 FontSize="{DynamicResource CpFontBody}"
+                 Margin="0,12,0,0"
+                 Text="{Binding ResultText}" />
+
+    </Grid>
+
+    <Border Grid.Row="1"
+            Padding="24,12"
+            Background="{DynamicResource CpSurfaceWindow}"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="0,1,0,0">
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="8">
+        <Button AutomationProperties.AutomationId="ExportPresetOkButton"
+                Theme="{DynamicResource PrimaryButton}"
+                Content="Export..."
+                IsDefault="True"
+                MinWidth="88"
+                Command="{Binding ExportCommand}" />
+        <Button AutomationProperties.AutomationId="ExportPresetCancelButton"
+                Theme="{DynamicResource SecondaryButton}"
+                Content="Cancel"
+                IsCancel="True"
+                MinWidth="88"
+                Command="{Binding CancelCommand}" />
+      </StackPanel>
+    </Border>
 
   </Grid>
 

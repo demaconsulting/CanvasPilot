@@ -34,36 +34,6 @@ using DemaConsulting.CanvasPilot.StyleSubsystem;
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
 /// <summary>
-///     An entry of the Recent Projects menu.
-/// </summary>
-/// <param name="name">The project name shown in the menu.</param>
-/// <param name="filePath">The full path of the project file.</param>
-/// <param name="openCommand">The command that opens the project.</param>
-public sealed class RecentProjectItem(string name, string filePath, IAsyncRelayCommand openCommand)
-{
-    /// <summary>
-    ///     Gets the project name.
-    /// </summary>
-    public string Name { get; } = name;
-
-    /// <summary>
-    ///     Gets the menu header: the project name with underscores doubled so the menu shows them as typed
-    ///     instead of treating them as access keys.
-    /// </summary>
-    public string Header { get; } = name.Replace("_", "__", StringComparison.Ordinal);
-
-    /// <summary>
-    ///     Gets the full path of the project file.
-    /// </summary>
-    public string FilePath { get; } = filePath;
-
-    /// <summary>
-    ///     Gets the command that opens the project.
-    /// </summary>
-    public IAsyncRelayCommand OpenCommand { get; } = openCommand;
-}
-
-/// <summary>
 ///     View model of the application's main window: the File, Edit, Image, Tools, and Help menus, the open project, the
 ///     recent projects list, the window title, and the workspace. The Help menu shows the About dialog and the browser of
 ///     the drawing knowledge. The Edit menu undoes and redoes in the part of the window that has the focus
@@ -134,6 +104,16 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private readonly RollingFileLogger? _logger;
 
     /// <summary>
+    ///     Draws the picture of the recent project cards of the welcome screen, or null for none.
+    /// </summary>
+    private readonly RecentThumbnailLoader? _recentThumbnails;
+
+    /// <summary>
+    ///     Tells which files of a project are pictures.
+    /// </summary>
+    private readonly IImageSourceFilter _pictureFilter = new CanvasNetImageSourceFilter();
+
+    /// <summary>
     ///     The synchronization context of the thread that created the shell, which owns the user interface, or null.
     /// </summary>
     private readonly SynchronizationContext? _context = SynchronizationContext.Current;
@@ -163,9 +143,17 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     The open project, or null.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasProject))]
+    [NotifyPropertyChangedFor(nameof(HasProject), nameof(TitleBarName), nameof(TitleBarSuffix))]
     [NotifyCanExecuteChangedFor(nameof(SaveProjectCommand), nameof(CloseProjectCommand))]
     private ProjectInfo? _currentProject;
+
+    /// <summary>
+    ///     The pill in the title bar that tells which AI provider is chosen and whether it can be used, or null when the
+    ///     application has none. The shell disposes it.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProviderPill))]
+    private ProviderPillViewModel? _providerPill;
 
     /// <summary>
     ///     What the Edit menu undoes and redoes: the part of the window that has the focus, or null when it has nothing
@@ -198,8 +186,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     the cards are not read at start, or <see langword="null" /> for none, which leaves the menu item disabled.
     /// </param>
     /// <param name="style">
-    ///     The list with which the user chooses the style kit of the open project, shown in the status bar, or
-    ///     <see langword="null" /> for none, which leaves the status bar out. The shell uses it to give a new project the
+    ///     The list with which the user chooses the style kit of the open project, shown in the title bar, or
+    ///     <see langword="null" /> for none, which leaves the list out. The shell uses it to give a new project the
     ///     default style kit of the user but does not dispose it.
     /// </param>
     /// <param name="checkAgainstStyle">
@@ -212,6 +200,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     window disposes the view model it is given.
     /// </param>
     /// <param name="logger">Optional logger for diagnostics.</param>
+    /// <param name="recentThumbnails">
+    ///     Draws the pictures on the cards of the recent projects of the welcome screen, or <see langword="null" /> for none, which
+    ///     leaves the cards without a picture. The shell does not dispose it.
+    /// </param>
     public MainWindowShell(
         IProjectService projectService,
         IRecentProjects recentProjects,
@@ -224,7 +216,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         StylePickerViewModel? style = null,
         ICheckAgainstStyle? checkAgainstStyle = null,
         Func<IStyleKitDialogs, StyleKitManagerViewModel>? styleKits = null,
-        RollingFileLogger? logger = null)
+        RollingFileLogger? logger = null,
+        IThumbnailSource? recentThumbnails = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
         ArgumentNullException.ThrowIfNull(recentProjects);
@@ -242,22 +235,34 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _styleCheck = checkAgainstStyle;
         _styleKits = styleKits;
         _logger = logger;
+        _recentThumbnails = recentThumbnails is null ? null : new RecentThumbnailLoader(recentThumbnails, RunOnOwnerThread, logger);
         Workspace = workspace;
+        StatusBar = new StatusBarViewModel(workspace);
         ImageExporter = imageExporter ?? new NullImageExporter();
         RecentProjects = new ReadOnlyObservableCollection<RecentProjectItem>(_recentItems);
+        Welcome = new WelcomeViewModel(this);
 
         _projectService.CurrentChanged += OnProjectChanged;
         _recentProjects.Changed += OnRecentProjectsChanged;
         ImageExporter.CanExportChanged += OnCanExportChanged;
-        if (_style is not null)
-        {
-            _style.PropertyChanged += OnStylePickerPropertyChanged;
-        }
-
         if (_styleCheck is not null)
         {
             _styleCheck.CanCheckChanged += OnCanCheckChanged;
         }
+
+        if (_style is not null)
+        {
+            _style.ManageKitsCommand = ShowStyleKitsCommand;
+        }
+
+        // The widths of the explorer and the chat column are the ones that were saved, and a new choice is saved
+        Workspace.RestoreColumnWidths(_settingsService.Current.Window.ExplorerWidth, _settingsService.Current.Window.ChatWidth);
+        Workspace.LayoutChanged += OnWorkspaceLayoutChanged;
+
+        // The explorer shows thumbnails and rows as the Appearance page says, now and whenever the choice changes
+        Workspace.Explorer.ShowThumbnails = _settingsService.Current.Appearance.ShowThumbnails;
+        Workspace.Explorer.ComfortableRows = _settingsService.Current.Appearance.ComfortableRows;
+        _settingsService.Changed += OnSettingsChanged;
 
         RefreshRecentProjects();
         SyncProjectState();
@@ -274,12 +279,22 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     public ProjectWorkspaceViewModel Workspace { get; }
 
     /// <summary>
+    ///     Gets the status bar at the bottom of the window, which is always there and reports on the shown picture.
+    /// </summary>
+    public StatusBarViewModel StatusBar { get; }
+
+    /// <summary>
+    ///     Gets the welcome screen, which is shown instead of the workspace while no project is open.
+    /// </summary>
+    public WelcomeViewModel Welcome { get; }
+
+    /// <summary>
     ///     Gets what the Image menu exports and copies.
     /// </summary>
     public IImageExporter ImageExporter { get; }
 
     /// <summary>
-    ///     Gets the list in the status bar with which the user chooses the style kit of the open project, or
+    ///     Gets the list in the title bar with which the user chooses the style kit of the open project, or
     ///     <see langword="null" /> when the application has none.
     /// </summary>
     public StylePickerViewModel? StylePicker => _style;
@@ -291,12 +306,6 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     public IFolderPicker? FolderPicker => _dialogs;
 
     /// <summary>
-    ///     Gets a value indicating whether the status bar at the bottom of the window is shown: it is while the application
-    ///     has a style picker and a project is open, because the picker is all that it holds.
-    /// </summary>
-    public bool ShowStatusBar => _style?.IsVisible == true;
-
-    /// <summary>
     ///     Gets the recent projects shown in the Recent Projects menu, most recent first.
     /// </summary>
     public ReadOnlyObservableCollection<RecentProjectItem> RecentProjects { get; }
@@ -305,6 +314,97 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Gets a value indicating whether a project is open.
     /// </summary>
     public bool HasProject => CurrentProject is not null;
+
+    /// <summary>
+    ///     Gets the text the title bar shows in bold: the name of the open project, or the application name when no
+    ///     project is open. The window title (<see cref="Title" />) is unchanged and stays what the system shows in the task
+    ///     bar and window lists.
+    /// </summary>
+    public string TitleBarName => CurrentProject?.Name ?? ApplicationName;
+
+    /// <summary>
+    ///     Gets the quiet text after <see cref="TitleBarName" /> in the title bar: a middle dot and the application name
+    ///     while a project is open, and nothing otherwise.
+    /// </summary>
+    public string TitleBarSuffix => CurrentProject is null ? string.Empty : " \u00B7 " + ApplicationName;
+
+    /// <summary>
+    ///     Gets a value indicating whether the title bar shows the AI provider pill.
+    /// </summary>
+    public bool HasProviderPill => ProviderPill is not null;
+
+    /// <summary>
+    ///     Gets the layout of the window that was saved when it was last closed, which is the default layout when none was
+    ///     saved.
+    /// </summary>
+    public WindowSettings SavedWindow => _settingsService.Current.Window;
+
+    /// <summary>
+    ///     Saves the size, place, and state of the window, together with the widths of the explorer and the chat column, so
+    ///     that the window opens as the user left it. A failure to write the settings is logged and never thrown, because the
+    ///     window is closing.
+    /// </summary>
+    /// <param name="width">The width of the window in its normal state.</param>
+    /// <param name="height">The height of the window in its normal state.</param>
+    /// <param name="left">The place of the left edge of the window in its normal state, or <see langword="null" />.</param>
+    /// <param name="top">The place of the top edge of the window in its normal state, or <see langword="null" />.</param>
+    /// <param name="maximized">Whether the window is maximized.</param>
+    public void SaveWindow(double width, double height, int? left, int? top, bool maximized)
+    {
+        WriteWindowSettings(window => window with
+        {
+            Width = (int)Math.Round(width),
+            Height = (int)Math.Round(height),
+            Left = left,
+            Top = top,
+            State = maximized ? SavedWindowState.Maximized : SavedWindowState.Normal
+        });
+    }
+
+    /// <summary>
+    ///     Changes the window part of the settings and writes it, logging a failure instead of throwing.
+    /// </summary>
+    /// <param name="change">Makes the new window settings from the current ones.</param>
+    private void WriteWindowSettings(Func<WindowSettings, WindowSettings> change)
+    {
+        try
+        {
+            _settingsService.Update(settings => settings with { Window = change(settings.Window) });
+        }
+        catch (IOException ex)
+        {
+            _logger?.Log(LogLevel.Warning, $"The layout of the window could not be saved: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    ///     Shows or hides the thumbnails of the explorer, and sets the height of its rows, when the choice in the settings
+    ///     changed.
+    /// </summary>
+    /// <param name="sender">The settings service.</param>
+    /// <param name="e">The settings now in effect.</param>
+    private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
+    {
+        var show = e.Settings.Appearance.ShowThumbnails;
+        var comfortable = e.Settings.Appearance.ComfortableRows;
+        RunOnOwnerThread(() =>
+        {
+            Workspace.Explorer.ShowThumbnails = show;
+            Workspace.Explorer.ComfortableRows = comfortable;
+        });
+    }
+
+    /// <summary>
+    ///     Saves the widths of the explorer and the chat column when the user chose other ones.
+    /// </summary>
+    /// <param name="sender">The workspace.</param>
+    /// <param name="e">The event data.</param>
+    private void OnWorkspaceLayoutChanged(object? sender, EventArgs e)
+    {
+        var explorer = Workspace.ExplorerWidth;
+        var chat = Workspace.ChatWidth;
+        WriteWindowSettings(window => window with { ExplorerWidth = explorer, ChatWidth = chat });
+    }
 
     /// <summary>
     ///     Gets a value indicating whether the Recent Projects menu has entries.
@@ -381,18 +481,25 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _projectService.CurrentChanged -= OnProjectChanged;
         _recentProjects.Changed -= OnRecentProjectsChanged;
         ImageExporter.CanExportChanged -= OnCanExportChanged;
-        if (_style is not null)
-        {
-            _style.PropertyChanged -= OnStylePickerPropertyChanged;
-        }
-
         if (_styleCheck is not null)
         {
             _styleCheck.CanCheckChanged -= OnCanCheckChanged;
         }
+
         if (EditTarget is not null)
         {
             EditTarget.UndoRedoStateChanged -= OnUndoRedoStateChanged;
+        }
+
+        StatusBar.Dispose();
+        ProviderPill?.Dispose();
+        _settingsService.Changed -= OnSettingsChanged;
+        Workspace.LayoutChanged -= OnWorkspaceLayoutChanged;
+        Welcome.Dispose();
+        _recentThumbnails?.Dispose();
+        foreach (var item in _recentItems)
+        {
+            item.Dispose();
         }
 
         Workspace.Dispose();
@@ -771,12 +878,41 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     {
         // Read the list first: reading drops missing files and may announce a change, which refreshes the menu.
         var files = _recentProjects.GetRecent();
+        var opened = _settingsService.Current.RecentProjectOpened;
+        var now = DateTimeOffset.Now;
+
+        // The pictures of the cards that are replaced are not wanted any more
+        _recentThumbnails?.Restart();
+        foreach (var old in _recentItems)
+        {
+            old.Dispose();
+        }
+
         _recentItems.Clear();
         foreach (var file in files)
         {
             var path = file;
             var name = Path.GetFileNameWithoutExtension(path);
-            _recentItems.Add(new RecentProjectItem(name, path, new AsyncRelayCommand(() => OpenProjectFileAsync(path))));
+            DateTimeOffset? lastOpened = opened.TryGetValue(path, out var time) ? time : null;
+
+            // Only the cards that the welcome screen shows need their pictures counted and drawn
+            var shown = _recentItems.Count < WelcomeViewModel.MaximumCards;
+            var (count, main) = shown && Path.GetDirectoryName(path) is { } folder
+                ? ProjectPictureCounter.Count(folder, _pictureFilter)
+                : (0, null);
+            var item = new RecentProjectItem(
+                name,
+                path,
+                new AsyncRelayCommand(() => OpenProjectFileAsync(path)),
+                lastOpened,
+                count,
+                new RelayCommand(() => _recentProjects.Remove(path)),
+                now);
+            _recentItems.Add(item);
+            if (main is not null && _recentThumbnails is not null && Path.GetDirectoryName(path) is { } projectFolder)
+            {
+                _recentThumbnails.Load(item, main, projectFolder);
+            }
         }
 
         OnPropertyChanged(nameof(HasRecentProjects));
@@ -853,18 +989,5 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private void OnCanCheckChanged(object? sender, EventArgs e)
     {
         RunOnOwnerThread(() => CheckAgainstStyleCommand.NotifyCanExecuteChanged());
-    }
-
-    /// <summary>
-    ///     Shows or hides the status bar when the style picker shows or hides itself.
-    /// </summary>
-    /// <param name="sender">The style picker.</param>
-    /// <param name="e">The event data.</param>
-    private void OnStylePickerPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(StylePickerViewModel.IsVisible))
-        {
-            RunOnOwnerThread(() => OnPropertyChanged(nameof(ShowStatusBar)));
-        }
     }
 }

@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
@@ -32,7 +33,7 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///     <see cref="TranscriptEntryViewModel" />, but it is not one of the <see cref="ChatPanelViewModel.SentEntries" />,
 ///     because it was not sent in this session.
 /// </remarks>
-public sealed class RestoredEntryViewModel : TranscriptRowViewModel
+public sealed partial class RestoredEntryViewModel : TranscriptRowViewModel
 {
     /// <summary>
     ///     What the row says about itself, so that the lack of pictures is not a surprise.
@@ -54,7 +55,7 @@ public sealed class RestoredEntryViewModel : TranscriptRowViewModel
         }
 
         Row = row;
-        Text = row.Text;
+        Text = ChipLabelWithoutSeparator().Replace(row.Text, "$1 ");
         SentText = row.Utc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
         var marks = row.Marks ?? [];
         var attachments = row.Attachments ?? [];
@@ -73,7 +74,8 @@ public sealed class RestoredEntryViewModel : TranscriptRowViewModel
     public ChatHistoryRow Row { get; }
 
     /// <summary>
-    ///     Gets the words of the message with the labels of its marks and attachments in their places.
+    ///     Gets the words of the message with the labels of its marks and attachments in their places, with a space after a
+    ///     label that was saved with no separator before the words.
     /// </summary>
     public string Text { get; }
 
@@ -96,6 +98,14 @@ public sealed class RestoredEntryViewModel : TranscriptRowViewModel
     ///     Gets a value indicating whether the row has lines about marks or attachments.
     /// </summary>
     public bool HasDetails => DetailsText.Length > 0;
+
+    /// <summary>
+    ///     Finds the label of a chip that is followed by a word with nothing between them, as rows saved before the chips
+    ///     were put on a line of their own hold them (<c>[Mark 1]Chart</c>); a space is put after such a label.
+    /// </summary>
+    /// <returns>The pattern.</returns>
+    [GeneratedRegex(@"(\[(?:Mark \d+|Attachment: [^\]\r\n]*)\])(?=[\p{L}\p{N}])", RegexOptions.CultureInvariant)]
+    private static partial Regex ChipLabelWithoutSeparator();
 
     /// <summary>
     ///     Writes the line about a mark.

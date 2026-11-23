@@ -25,6 +25,8 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using DemaConsulting.CanvasNet.Viewer;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
@@ -72,6 +74,21 @@ public sealed partial class MainWindowView : Window, IDialogService
     };
 
     /// <summary>
+    ///     The width of the three window buttons that Windows draws over the right end of the title bar.
+    /// </summary>
+    private const double WindowsCaptionButtonsWidth = 138;
+
+    /// <summary>
+    ///     The width of the traffic lights that macOS draws over the left end of the title bar.
+    /// </summary>
+    private const double MacTrafficLightsWidth = 78;
+
+    /// <summary>
+    ///     The place of the window while it is in its normal state, or <see langword="null" /> when it was not reported yet.
+    /// </summary>
+    private PixelPoint? _normalPosition;
+
+    /// <summary>
     ///     View model bound to the window.
     /// </summary>
     private readonly MainWindowShell? _shell;
@@ -80,6 +97,13 @@ public sealed partial class MainWindowView : Window, IDialogService
     ///     The browser of the drawing knowledge while it is open, or <see langword="null" />.
     /// </summary>
     private KnowledgeBrowserView? _knowledgeBrowser;
+
+    /// <summary>
+    ///     Whether the XAML is fully loaded. While it loads, the window has no name scope and the named title bar
+    ///     controls do not exist yet, but the platform can already raise property changes (the extension into the
+    ///     frame is one), so changes that reach the title bar are ignored until this is set.
+    /// </summary>
+    private bool _componentReady;
 
     /// <summary>
     ///     The window that manages style kits while it is open, or <see langword="null" />.
@@ -93,6 +117,11 @@ public sealed partial class MainWindowView : Window, IDialogService
     public MainWindowView()
     {
         InitializeComponent();
+
+        // The platform may already have raised the extension while the XAML was loading (when it was ignored, see
+        // OnPropertyChanged), so apply the value it reached once, now that the title bar controls exist
+        _componentReady = true;
+        UpdateCaptionReserve();
     }
 
     /// <summary>
@@ -108,12 +137,69 @@ public sealed partial class MainWindowView : Window, IDialogService
         DataContext = shell;
         shell.AttachDialogService(this);
         shell.ExitRequested += OnExitRequested;
+        ApplySavedLayout(shell.SavedWindow);
+        PositionChanged += OnWindowPositionChanged;
 
         // What has the focus decides what Edit > Undo and Redo reach; the talk key is watched before any control sees it
         AddHandler(GotFocusEvent, OnFocusGained, RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(KeyDownEvent, OnKeyDownTunnel, RoutingStrategies.Tunnel);
         AddHandler(KeyUpEvent, OnKeyUpTunnel, RoutingStrategies.Tunnel);
         Deactivated += OnWindowDeactivated;
+    }
+
+    /// <summary>
+    ///     Works out how much room the title bar keeps free for the buttons the system draws over it: on the right for
+    ///     Windows (the minimize, maximize, and close buttons) and on the left for macOS (the traffic lights). A window that
+    ///     is not extended into its frame has its buttons in a system title bar of its own, so nothing is kept free.
+    /// </summary>
+    /// <param name="isExtended">Whether the window extends into its frame.</param>
+    /// <param name="isWindows">Whether the platform is Windows.</param>
+    /// <param name="isMacOs">Whether the platform is macOS.</param>
+    /// <returns>The width kept free on the left and on the right, in device-independent pixels.</returns>
+    internal static (double Left, double Right) CaptionReserve(bool isExtended, bool isWindows, bool isMacOs)
+    {
+        if (!isExtended)
+        {
+            return (0, 0);
+        }
+
+        if (isWindows)
+        {
+            return (0, WindowsCaptionButtonsWidth);
+        }
+
+        return isMacOs ? (MacTrafficLightsWidth, 0) : (0, 0);
+    }
+
+    /// <inheritdoc />
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        // Raised while the XAML loads on a real window (the hint in the XAML sets it); the constructor applies it after
+        if (change.Property == IsExtendedIntoWindowDecorationsProperty && _componentReady)
+        {
+            UpdateCaptionReserve();
+            RequestCaptionReserveUpdate();
+        }
+        else if (change.Property == WindowStateProperty)
+        {
+            RequestCaptionReserveUpdate();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        RequestCaptionReserveUpdate();
+    }
+
+    /// <inheritdoc />
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        RequestCaptionReserveUpdate();
     }
 
     /// <inheritdoc />
@@ -240,6 +326,21 @@ public sealed partial class MainWindowView : Window, IDialogService
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> PickAttachmentsAsync(string? initialFolder)
+    {
+        var options = new FilePickerOpenOptions
+        {
+            Title = "Attach Files",
+            AllowMultiple = true,
+            FileTypeFilter = [FilePickerFileTypes.All],
+            SuggestedStartLocation = await TryGetFolderAsync(initialFolder)
+        };
+
+        var files = await StorageProvider.OpenFilePickerAsync(options);
+        return files.Select(file => file.TryGetLocalPath()).OfType<string>().ToList();
+    }
+
+    /// <inheritdoc />
     public async Task<string?> PickFolderAsync(string? initialFolder)
     {
         var options = new FolderPickerOpenOptions
@@ -341,6 +442,20 @@ public sealed partial class MainWindowView : Window, IDialogService
         var viewModel = new MessageDialogViewModel(title, message, confirmText, showCancel: true, inputText: initialText);
         await new MessageDialogView(viewModel).ShowDialog<bool>(this);
         return viewModel.Accepted ? viewModel.InputText.Trim() : null;
+    }
+
+    /// <inheritdoc />
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+
+        // The layout is saved as the window is closed: the size it has in its normal state, where it was, and whether it
+        // was maximized
+        if (_shell is not null && !e.Cancel)
+        {
+            var place = _normalPosition ?? (WindowState == WindowState.Normal ? Position : null);
+            _shell.SaveWindow(Width, Height, place?.X, place?.Y, WindowState == WindowState.Maximized);
+        }
     }
 
     /// <inheritdoc />
@@ -479,6 +594,107 @@ public sealed partial class MainWindowView : Window, IDialogService
             {
                 _styleKitManager = null;
             }
+        }
+    }
+
+    /// <summary>
+    ///     Gives the window the size, place, and state that were saved, made to fit the screens that are connected now.
+    /// </summary>
+    /// <param name="saved">The saved layout.</param>
+    private void ApplySavedLayout(WindowSettings saved)
+    {
+        var areas = Screens?.All.Select(screen => screen.WorkingArea).ToList() ?? [];
+        var scaling = Screens?.Primary?.Scaling ?? 1;
+        var placement = WindowPlacement.Resolve(saved, areas, scaling);
+        Width = placement.Width;
+        Height = placement.Height;
+        if (placement.Position is { } position)
+        {
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Position = position;
+            _normalPosition = position;
+        }
+
+        WindowState = placement.State;
+    }
+
+    /// <summary>
+    ///     Remembers where the window is while it is in its normal state, because the place that the system reports while
+    ///     the window is maximized is not the place it returns to.
+    /// </summary>
+    /// <param name="sender">The window.</param>
+    /// <param name="e">The event data.</param>
+    private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
+    {
+        if (WindowState == WindowState.Normal)
+        {
+            _normalPosition = e.Point;
+        }
+    }
+
+    /// <summary>
+    ///     Keeps the room free at the ends of the title bar that the buttons of the system need. The controls are the
+    ///     generated fields of the XAML names (a name lookup throws while the window has no name scope, which is the
+    ///     case during the load); a control that does not exist yet has nothing to update.
+    /// </summary>
+    private void UpdateCaptionReserve()
+    {
+        ApplyCaptionReserve(TitleBarLeadingReserve, TitleBarCaptionReserve, IsExtendedIntoWindowDecorations, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
+
+        // The window draws its own buttons, whose number, size, and margin (the shadow and the frame) are the theme's, so
+        // the room is taken from where they really are as soon as there is a layout; the constant is the fallback
+        if (IsExtendedIntoWindowDecorations && OperatingSystem.IsWindows() && MeasureCaptionButtonsReserve() is { } measured)
+        {
+            TitleBarCaptionReserve.Width = measured;
+        }
+    }
+
+    /// <summary>
+    ///     Measures how much of the right end of the window the buttons that the window draws over its title bar cover,
+    ///     from their left edge to the edge of the window, so that the pill next to them is never under a button.
+    /// </summary>
+    /// <returns>The width in device-independent pixels, or <see langword="null" /> when the buttons are not laid out.</returns>
+    private double? MeasureCaptionButtonsReserve()
+    {
+        var buttons = this.GetVisualDescendants()
+            .OfType<StackPanel>()
+            .FirstOrDefault(panel => panel.Name == "PART_OverlayPanel" && panel.IsEffectivelyVisible && panel.Bounds.Width > 0);
+        return buttons?.TranslatePoint(new Point(0, 0), this) is { } origin
+            ? Math.Max(0, Bounds.Width - origin.X)
+            : null;
+    }
+
+    /// <summary>
+    ///     Asks for the room that the window buttons need to be worked out again once the window has been laid out.
+    /// </summary>
+    private void RequestCaptionReserveUpdate()
+    {
+        if (_componentReady)
+        {
+            Dispatcher.UIThread.Post(UpdateCaptionReserve, DispatcherPriority.Loaded);
+        }
+    }
+
+    /// <summary>
+    ///     Sets the widths of the two title bar reserves; a reserve that is <see langword="null" /> (the control does not
+    ///     exist yet) is left alone.
+    /// </summary>
+    /// <param name="leading">The reserve on the left, or <see langword="null" />.</param>
+    /// <param name="trailing">The reserve on the right, or <see langword="null" />.</param>
+    /// <param name="isExtended">Whether the window extends into its frame.</param>
+    /// <param name="isWindows">Whether the platform is Windows.</param>
+    /// <param name="isMacOs">Whether the platform is macOS.</param>
+    internal static void ApplyCaptionReserve(Border? leading, Border? trailing, bool isExtended, bool isWindows, bool isMacOs)
+    {
+        var (left, right) = CaptionReserve(isExtended, isWindows, isMacOs);
+        if (leading is not null)
+        {
+            leading.Width = left;
+        }
+
+        if (trailing is not null)
+        {
+            trailing.Width = right;
         }
     }
 

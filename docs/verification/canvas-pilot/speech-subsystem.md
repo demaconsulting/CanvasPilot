@@ -34,6 +34,9 @@ FileAssert test runs only in the Windows build job after the application is publ
   model identifier, restored by a new settings service, and shown by a new page.
 - A machine whose audio system and model store cannot be used still opens the dialog, explains both problems, saves,
   and keeps the stored device and model choices.
+- In the accessibility sweep of the windows of the application, in both theme variants, the lists of the Speech page
+  have names, every button that shows no text has a name and a tooltip, and every enabled button can take the keyboard
+  focus.
 - Canceling the dialog while a download runs cancels the download and leaves the model not downloaded.
 - Holding to talk over the speech library's recognition pipeline returns the final sentence when the user lets go, and
   the next hold can start.
@@ -82,6 +85,11 @@ shown when OK is chosen, and the stored microphone and model are still in the fi
 and waits for its token. The user cancels the dialog. The download had been running, its token is cancelled, and the
 model is left not downloaded. This scenario is tested by
 `SpeechSubsystem_CancelDownloadsOnClose_DialogCancelled_StopsRunningDownload`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: Headless UI test of the whole application. The settings
+dialog is shown with each of its pages, the Speech page among them, in both theme variants and every control is looked
+at; lists have names, a button that shows no text has a name and a tooltip, and every enabled button can take the
+keyboard focus. This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
 
 **SpeechSubsystem_Dictation_FakeEngine_ReturnsFinalTextAfterRelease**: The settings choose a speech-to-text model that
 is installed in a temporary store, and the microphone is a recorded sound file. The speech library's recognition

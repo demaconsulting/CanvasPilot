@@ -4,18 +4,19 @@
 
 ### Overview
 
-The `Preview` subsystem turns the image source file that the user selects into a picture on the screen, and the
-picture into a PNG file, a clipboard image, or a picture dragged into another program. Its boundary starts with the
-selection and the project folder of the project explorer and ends with the picture shown in the main window, files
-written where the user chooses, the system clipboard, and the operating system's drag and drop. It contains five
-units: `ImageRenderService`, which draws a file with the CanvasNet
-viewer library in the background, at a size if asked, and encodes pictures as PNG; `PreviewPane`, the view model and
-view that follow
-the selection, show the picture, the busy state, errors, and notes, render again when files change, host a layer over
-the picture, and start the drag of the picture; `ImageExporter`, which the Image menu uses to save or copy the shown
-picture, as it is shown or at a size; `ExportPresetDialog`, the window in which the user chooses how the picture is
-exported; and `ImageDragSource`, which writes the picture as a PNG file for dragging it out. CanvasNet is used in
-exactly one unit, `ImageRenderService`, so the other units and their tests work with a substitute render service.
+The `Preview` subsystem turns the image source file that the user selects into a picture on the screen, and the picture
+into a PNG file, a clipboard image, or a picture dragged into another program. Its boundary starts with the selection
+and the project folder of the project explorer and ends with the picture shown in the main window, files written where
+the user chooses, the system clipboard, and the operating system's drag and drop. It contains six units:
+`ImageRenderService`, which draws a file with the CanvasNet viewer library in the background, at a size if asked, and
+encodes pictures as PNG; `PreviewPane`, the view model and view that follow the selection, show the picture on a stage
+at a fitted size or a zoom, with the busy line, errors, and notes, render again when files change, tell the facts of the
+picture, host a layer over the picture, and start the drag of the picture; `ImageExporter`, which the Image menu uses to
+save or copy the shown picture, as it is shown or at a size; `ExportPresetDialog`, the window in which the user chooses
+how the picture is exported; `ImageDragSource`, which writes the picture as a PNG file for dragging it out; and
+`ThumbnailProvider`, which makes the small pictures that the project explorer and the welcome screen show for files.
+CanvasNet is used in exactly one unit, `ImageRenderService`, so the other units and their tests work with a substitute
+render service.
 
 ### Interfaces
 
@@ -82,12 +83,23 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
 
 - *Type*: Avalonia control (`PreviewPaneView`) hosted by the main window's workspace.
 - *Role*: Provider.
-- *Contract*: A scrollable picture that is scaled to fit or shown at its own size, a busy indicator, an error
-  panel with the error code, message, and hint, a status line, and an expandable list of notes. The pane view
-  model's `Overlay` property is a slot for content that the view shows exactly over the picture, laid out in the
-  picture's own pixel coordinates and scaled together with the picture, so that the host's content needs no
-  conversion between the screen and the picture; the slot is empty by default. A second slot, `Toolbar`, is shown in
-  the top bar of the pane beside the fit option and is not scaled, for the host's controls of the overlay.
+- *Contract*: A picture on a stage that is scaled down to fit or shown at a zoom from 25 to 400 percent with scroll
+  bars, a zoom pill (Fit, actual size, smaller, label, larger) over the stage, a thin busy line along its top, an error
+  card with the error code, message, and hint, a placeholder, and a drawer with the expandable list of notes. The pane
+  view holds no status line: the status bar of the main window reports the facts of the picture that the pane view model
+  tells (`FileName`, `ImageSizeText`, `FormatText`, `RenderTimeText`). The pane view model's `Overlay` property is a
+  slot for content that the view shows exactly over the picture, laid out in the picture's own pixel coordinates and
+  scaled together with the picture, so that the host's content needs no conversion between the screen and the picture;
+  the slot is empty by default. A second slot, `Toolbar`, floats over the top center of the stage and is not scaled, for
+  the host's controls of the overlay.
+
+**Thumbnails**: The small pictures of files.
+
+- *Type*: In-process .NET API (`IThumbnailSource`, declared by the `Project` subsystem, and `ThumbnailProvider`).
+- *Role*: Provider (`ThumbnailProvider`); the explorer and the welcome screen of the main window consume it.
+- *Contract*: `CreateAsync(filePath, projectFolder, cancellationToken)` gives a new bitmap of 56 by 36 pixels, or `null`
+  when the file cannot be drawn; the overload with a width and a height gives a picture of that size. The caller owns
+  and disposes the bitmap, and the work is done off the user interface thread.
 
 **Image Drag-out**: How the shown picture leaves the application by drag and drop.
 
@@ -106,14 +118,15 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
 2. When the explorer's selected file changes, the pane cancels the render that is running, starts a new one
    through `IImageRenderService.RenderAsync`, and shows the busy state. A counter identifies each render; a result
    that arrives for an older render is ignored.
-3. When the render finishes, the pane shows the picture and its notes, or the error with its code and hint.
-   The view converts the picture's pixels to an Avalonia bitmap and shows it. The picture also carries its
-   identity (file, file fingerprint, pixel fingerprint, snapshot key) and the positions of its elements, which later
-   units use to tie marks and messages to exactly this picture; the pane itself does not use them.
-   The picture and the overlay slot share one surface of the picture's pixel size inside a `Viewbox`, so content the
-   host assigns to `Overlay` is laid out in picture pixels at any zoom. The slot keeps its content while pictures
-   change, are rendered again, or fail to draw. The slot in the top bar, `Toolbar`, shows the host's controls for the
-   overlay at their own size.
+3. When the render finishes, the pane shows the picture and its notes, or the error with its code and hint. The view
+   converts the picture's pixels to an Avalonia bitmap and shows it. The picture also carries its identity (file, file
+   fingerprint, pixel fingerprint, snapshot key) and the positions of its elements, which later units use to tie marks
+   and messages to exactly this picture; the pane itself does not use them. The picture and the overlay slot share one
+   surface of the picture's pixel size inside a `Viewbox`, so content the host assigns to `Overlay` is laid out in
+   picture pixels at any zoom; the zoom is fixed by the size of the `Viewbox`. The slot keeps its content while pictures
+   change, are rendered again, or fail to draw. The slot that floats over the stage, `Toolbar`, shows the host's
+   controls for the overlay at their own size. The view model tells the file name, size, format, and render time of the
+   picture, which the status bar of the main window shows.
 4. When files in the project folder change, the pane asks the scheduler for a render after a short delay. The
    current picture stays visible until the new result arrives.
 5. The exporter is enabled while the pane shows a picture. Export asks the dialog service how to export when sizes are
@@ -124,6 +137,10 @@ exactly one unit, `ImageRenderService`, so the other units and their tests work 
    picture as a file; `ImageDragSource` writes it as a PNG in its own folder, and the view starts the system's drag
    with that file and a bitmap of the picture. The application deletes the files in that folder when it starts and when
    it ends.
+7. The explorer asks `ThumbnailProvider` for the thumbnail of each file that can be drawn and whose row is visible. The
+   provider
+   draws the file through the render service at 56 by 36 pixels on white, at most two at a time, keeps the pixels of the
+   latest 256 thumbnails keyed by the file's path, time, size, and the picture size, and gives each caller a new bitmap.
 
 The subsystem does not depend on `AppShell`: the exporter asks the user only through `IExportDialogs`, which this
 subsystem defines and the main window implements; the application composes the units in `ApplicationComposition`.

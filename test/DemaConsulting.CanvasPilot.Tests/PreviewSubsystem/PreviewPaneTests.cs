@@ -154,6 +154,40 @@ public sealed class PreviewPaneTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the pane tells the file name, the size, the format in capital letters, and the render time of the shown
+    ///     picture, shows none of them while nothing is shown, and keeps none of them after a render failed.
+    /// </summary>
+    [Fact]
+    public async Task PreviewPaneViewModel_Render_ReportsFileSizeFormatAndRenderTimeOfTheShownPicture()
+    {
+        // Arrange: a pane over an open project
+        var pane = CreatePane();
+        _explorer.Open(_folder);
+        var before = (pane.FileName, pane.ImageSizeText, pane.FormatText, pane.RenderTimeText);
+
+        // Act: select a file and let its render succeed, then select another one and let its render fail
+        _explorer.SelectFile(Path.Combine(_folder, "a.svg"));
+        var whileBusy = (pane.FileName, pane.ImageSizeText, pane.RenderTimeText);
+        Assert.Single(_renderer.Requests).Succeed(900, 500);
+        await pane.RenderCompletion;
+        var shown = (pane.FileName, pane.ImageSizeText, pane.FormatText, pane.RenderTimeText);
+        _explorer.SelectFile(Path.Combine(_folder, "b.svg"));
+        _renderer.Requests[1].Fail("cannot-draw", "No.");
+        await pane.RenderCompletion;
+        var failed = (pane.FileName, pane.ImageSizeText, pane.FormatText, pane.RenderTimeText);
+
+        // Assert: nothing before and while busy, the facts of the picture when shown, only the name after a failure
+        Assert.Equal((string.Empty, string.Empty, string.Empty, string.Empty), before);
+        Assert.Equal(("a.svg", string.Empty, string.Empty), whileBusy);
+        Assert.Equal("a.svg", shown.FileName);
+        Assert.Equal("900 \u00D7 500 px", shown.ImageSizeText);
+        Assert.Equal("SVG", shown.FormatText);
+        Assert.Matches(@"^Rendered in \d+ ms$", shown.RenderTimeText);
+        Assert.Equal(("b.svg", string.Empty, string.Empty, string.Empty), failed);
+        Assert.Null(pane.RenderMilliseconds);
+    }
+
+    /// <summary>
     ///     Test that a pane created when a file is already selected renders it at once.
     /// </summary>
     [Fact]
@@ -504,7 +538,7 @@ public sealed class PreviewPaneTests : IDisposable
         // Act: an asset in a sub-folder changes
         await File.WriteAllTextAsync(Path.Combine(_folder, "assets", "logo.svg"), "<svg/>", TestContext.Current.CancellationToken);
         await WaitForScheduledAsync(afterFileChange + 1);
-        _previewScheduler.RunPending();
+        await WaitForRendersAsync(3);
 
         // Assert: both changes caused a new render of the selected file
         Assert.True(afterFileChange > 0, "The folder watcher did not report the changed file.");
@@ -572,6 +606,66 @@ public sealed class PreviewPaneTests : IDisposable
         Assert.True(PreviewPaneViewModel.IsRelevantChange(project, Path.Combine(Path.GetTempPath(), "other", "a.svg")));
         Assert.Throws<ArgumentException>(() => PreviewPaneViewModel.IsRelevantChange(" ", "a"));
         Assert.Throws<ArgumentException>(() => PreviewPaneViewModel.IsRelevantChange(project, ""));
+    }
+
+    /// <summary>
+    ///     Test that the zoom commands step between 25 and 400 percent from the fitted zoom, never leave that range,
+    ///     and that Fit returns to the fitted picture.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_Zoom_StepsClampAndFit_FollowTheStepList()
+    {
+        // Arrange: a fitted pane whose view reported that the picture is shown at 90 percent
+        var pane = CreatePane();
+        pane.FitPercent = 90;
+        var fitted = (pane.ZoomLabel, pane.FitToWindow);
+
+        // Act: zoom in from the fit, to the end of the list, then out to its start, then actual size and fit
+        pane.ZoomIn();
+        var firstIn = (pane.ZoomPercent, pane.FitToWindow, pane.ZoomLabel);
+        for (var i = 0; i < 10; i++)
+        {
+            pane.ZoomIn();
+        }
+
+        var top = (pane.ZoomPercent, pane.IsZoomInPossible, pane.IsZoomOutPossible);
+        for (var i = 0; i < 10; i++)
+        {
+            pane.ZoomOut();
+        }
+
+        var bottom = (pane.ZoomPercent, pane.IsZoomInPossible, pane.IsZoomOutPossible);
+        pane.ZoomActualSize();
+        var actual = (pane.ZoomPercent, pane.IsActualSize, pane.FitToWindow);
+        pane.ZoomToFit();
+
+        // Assert
+        Assert.Equal(("90%", true), fitted);
+        Assert.Equal((100, false, "100%"), firstIn);
+        Assert.Equal((400, false, true), top);
+        Assert.Equal((25, true, false), bottom);
+        Assert.Equal((100, true, false), actual);
+        Assert.True(pane.FitToWindow);
+        Assert.False(pane.IsActualSize);
+        Assert.Equal("90%", pane.ZoomLabel);
+    }
+
+    /// <summary>
+    ///     Test that zooming out from a fitted picture that is shown at 90 percent goes to the step below it.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_ZoomOut_FromFit_GoesToTheStepBelowTheFittedZoom()
+    {
+        // Arrange: a fitted pane shown at 90 percent
+        var pane = CreatePane();
+        pane.FitPercent = 90;
+
+        // Act
+        pane.ZoomOutCommand.Execute(null);
+
+        // Assert
+        Assert.Equal(75, pane.ZoomPercent);
+        Assert.False(pane.FitToWindow);
     }
 
     /// <summary>
@@ -814,6 +908,28 @@ public sealed class PreviewPaneTests : IDisposable
         var deadline = DateTime.UtcNow.AddSeconds(15);
         while (_previewScheduler.ScheduledCount < count && DateTime.UtcNow < deadline)
         {
+            await Task.Delay(25, TestContext.Current.CancellationToken);
+        }
+    }
+
+    /// <summary>
+    ///     Lets the waiting re-renders run until the renderer has been asked for a number of renders. The renderer
+    ///     is asked asynchronously after a scheduled callback ran, and the watcher may report a change in several
+    ///     events, so the waiting callbacks are run again on each step.
+    /// </summary>
+    /// <param name="count">The number of render requests to wait for.</param>
+    /// <returns>A task that completes when enough renders were requested or the wait gave up.</returns>
+    private async Task WaitForRendersAsync(int count)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(15);
+        while (DateTime.UtcNow < deadline)
+        {
+            _previewScheduler.RunPending();
+            if (_renderer.Requests.Count >= count)
+            {
+                return;
+            }
+
             await Task.Delay(25, TestContext.Current.CancellationToken);
         }
     }

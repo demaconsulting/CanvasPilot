@@ -4,8 +4,10 @@
 # PURPOSE:
 # - Define requirements for the CanvasPilot Preview subsystem
 # - The Preview subsystem spans ImageRenderService (IImageRenderService.cs, ImageRenderService.cs, RenderResult.cs),
-#   PreviewPane (PreviewPaneViewModel.cs, PreviewPaneView.axaml, RenderedImageBitmap.cs, IRenderedImageSource.cs), and
-#   ImageExporter (ImageExporter.cs, IImageExporter.cs, IExportDialogs.cs), and ImageDragSource (ImageDragSource.cs)
+#   PreviewPane (PreviewPaneViewModel.cs, PreviewPaneView.axaml, RenderedImageBitmap.cs, IRenderedImageSource.cs),
+#   ImageExporter (ImageExporter.cs, IImageExporter.cs, IExportDialogs.cs), ExportPresetDialog, ImageDragSource
+#   (ImageDragSource.cs), and ThumbnailProvider (ThumbnailProvider.cs, which implements IThumbnailSource.cs of the
+#   Project subsystem)
 # - Subsystem requirements describe the preview behavior that satisfies the system-level preview requirements
 
 sections:
@@ -16,16 +18,21 @@ sections:
           - id: CanvasPilot-Preview-RenderSelectedImage
             title: >-
               The Preview subsystem shall draw the image source file selected in the open project with CanvasNet,
-              confined to the project folder, in the background, and show the picture in the main window.
+              confined to the project folder, in the background, show the picture in the main window, tell the name,
+              size, format, and render time of the shown picture, and say, while there is nothing to show, that no
+              project is open or that a file is to be selected.
             justification: |
               Seeing the picture of the selected file is the purpose of the application's main window. Drawing in
               the background keeps the window responsive, and confining the files the drawing may read to the
-              project keeps a file from pulling in unrelated files.
+              project keeps a file from pulling in unrelated files. The facts of the picture let the user tell which
+              file is shown and how large it is, and the sentence on an empty stage tells a new user what to do.
             children:
               - CanvasPilot-ImageRenderService-RenderFileToPixels
               - CanvasPilot-ImageRenderService-ConfineFileAccess
               - CanvasPilot-PreviewPane-RenderSelectedFile
               - CanvasPilot-PreviewPane-ConvertPixelsForDisplay
+              - CanvasPilot-PreviewPane-ReportShownPictureFacts
+              - CanvasPilot-PreviewPane-ShowPlaceholder
             tests:
               - PreviewSubsystem_RenderSelectedImage_SvgInProject_ShowsRenderedPixels
 
@@ -113,8 +120,9 @@ sections:
             title: >-
               The Preview subsystem shall provide a layer over the shown picture that the host fills with its own
               content, laid out in the picture's pixel coordinates at any zoom and scaled together with the
-              picture, and that stays the same while pictures are shown, change, or fail to draw, and a place in
-              the pane's top bar for the host's controls for that layer, which is not scaled with the picture.
+              picture, and that stays the same while pictures are shown, change, or fail to draw, and a place
+              floating over the pane's stage for the host's controls for that layer, which is not scaled with the
+              picture.
             justification: |
               Marks and other content that refer to places in the picture need a surface whose coordinates are
               the picture's pixels. Keeping the layer in the preview and its content outside keeps the preview
@@ -155,3 +163,34 @@ sections:
               - CanvasPilot-PreviewPane-StartImageDrag
             tests:
               - PreviewSubsystem_DragImageOut_ShownPicture_ProvidesPngFileAndBytes
+
+          - id: CanvasPilot-Preview-ZoomPicture
+            title: >-
+              The Preview subsystem shall let the user view the shown picture fitted to the pane or at a zoom from 25 to
+              400 percent in fixed steps, with buttons for fitting, the actual size, and a smaller and a larger zoom and a
+              label that tells the zoom in effect, with the layer over the picture zooming together with the picture.
+            justification: |
+              Pictures come in all sizes: a large drawing must be seen whole before its parts can be inspected, and a small
+              one must be seen larger to check a detail. Zooming in steps that every program offers, with the layer of marks
+              following the picture exactly, lets the user look closer without losing what was pointed at.
+            children:
+              - CanvasPilot-PreviewPane-StepZoom
+              - CanvasPilot-PreviewPane-ZoomWithControls
+            tests:
+              - PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether
+
+          - id: CanvasPilot-Preview-MakeThumbnails
+            title: >-
+              The Preview subsystem shall make a small picture of a file that can be drawn, at the size of a thumbnail on a
+              white background, drawing a file again only when it has changed, keeping no more than a fixed number of
+              them, and giving each caller a bitmap of its own.
+            justification: |
+              A small picture beside a file name lets the user find a drawing without opening it. A project can hold many
+              files, so making the pictures must not be repeated for files that did not change and must not use more
+              memory as the project grows.
+            children:
+              - CanvasPilot-ThumbnailProvider-DrawThumbnail
+              - CanvasPilot-ThumbnailProvider-ReuseDrawnThumbnails
+            tests:
+              - ThumbnailProvider_CreateAsync_DrawsOnceUntilTheFileChanges
+              - ThumbnailProvider_CreateAsync_FullCacheOrBadFile_EvictsLeastRecentlyUsedAndGivesNoBitmap

@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using DemaConsulting.CanvasPilot.ChatSubsystem;
+using DemaConsulting.CanvasPilot.ComposerSubsystem;
 using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
@@ -33,11 +34,11 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 ///     is needed. Every method completes when the user has closed the dialog, except the browser of the drawing
 ///     knowledge, which is a window that does not block and completes when it is shown. It includes the dialogs that
 ///     lower subsystems ask for through their own interfaces: the folder picker of the project subsystem, the export
-///     dialogs of the preview subsystem, the payload inspector of the chat subsystem, the browser of the knowledge
+///     dialogs of the preview subsystem, the payload inspector of the chat subsystem, the attachment picker of the composer subsystem, the browser of the knowledge
 ///     subsystem, and the windows, file pickers, and questions of the style kits window (which include asking the user to
 ///     confirm an action and to type a line of text).
 /// </summary>
-public interface IDialogService : IFolderPicker, IExportDialogs, IPayloadInspectorLauncher, IKnowledgeBrowserLauncher, IStyleKitDialogs
+public interface IDialogService : IFolderPicker, IExportDialogs, IPayloadInspectorLauncher, IKnowledgeBrowserLauncher, IStyleKitDialogs, IAttachmentPicker
 {
     /// <summary>
     ///     Shows the New Project dialog modally. The view model reports whether it was accepted.

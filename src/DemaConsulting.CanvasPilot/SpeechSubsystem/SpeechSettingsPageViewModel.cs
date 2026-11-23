@@ -66,6 +66,12 @@ public sealed class SpeechSettingsPageViewModel : ObservableObject, ISettingsPag
     public string Title => "Speech";
 
     /// <inheritdoc />
+    public string Description => "The microphone and speakers, and the models that turn speech into text and text into speech.";
+
+    /// <inheritdoc />
+    public string IconKey => "CpIconMic";
+
+    /// <inheritdoc />
     public bool IsValid => true;
 
     /// <summary>

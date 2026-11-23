@@ -120,7 +120,7 @@ public sealed class StyleCheckCommandTests
 
         // Assert: each message says what to do, the second names the kit, and nothing was shown
         Assert.Contains("no style kit", withoutKit, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("status bar", withoutKit, StringComparison.Ordinal);
+        Assert.Contains("title bar", withoutKit, StringComparison.Ordinal);
         Assert.Contains("'team-kit'", withMissingKit, StringComparison.Ordinal);
         Assert.Contains("cannot be found", withMissingKit, StringComparison.Ordinal);
         Assert.Empty(sink.Calls);

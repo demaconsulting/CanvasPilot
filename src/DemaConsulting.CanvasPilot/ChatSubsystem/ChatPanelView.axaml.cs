@@ -80,6 +80,24 @@ public sealed partial class ChatPanelView : UserControl
         HoldToTalkButton.AddHandler(KeyDownEvent, OnTalkKeyDown, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
         HoldToTalkButton.AddHandler(KeyUpEvent, OnTalkKeyUp, RoutingStrategies.Tunnel | RoutingStrategies.Bubble, handledEventsToo: true);
         HoldToTalkButton.LostFocus += OnTalkLostFocus;
+
+        // Enter sends the message, and Shift+Enter (or any other modifier) writes a new line in it
+        ComposerView.AddHandler(KeyDownEvent, OnComposerKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    /// <summary>
+    ///     Sends the message when Enter is pressed on its own and the message can be sent; in every other case the editing
+    ///     control gets the key, so a line break is written.
+    /// </summary>
+    /// <param name="sender">The editing control.</param>
+    /// <param name="e">The key event.</param>
+    private void OnComposerKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && e.KeyModifiers == KeyModifiers.None && _viewModel?.SendCommand.CanExecute(null) == true)
+        {
+            e.Handled = true;
+            _viewModel.SendCommand.Execute(null);
+        }
     }
 
     /// <summary>
@@ -238,6 +256,20 @@ public sealed partial class ChatPanelView : UserControl
         if (_viewModel is not null)
         {
             _ = _viewModel.EndPushToTalkAsync();
+        }
+    }
+
+    /// <summary>
+    ///     Writes the prompt of the button in the message and puts the keyboard focus there, so that the user can change it
+    ///     and send it.
+    /// </summary>
+    /// <param name="sender">The button of the prompt.</param>
+    /// <param name="e">The event data.</param>
+    private void OnPromptClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Content: string prompt } && _viewModel?.UsePrompt(prompt) == true)
+        {
+            ComposerView.FocusEditor();
         }
     }
 

@@ -1,12 +1,13 @@
 ---
 # Software Unit Requirements for the AnnotationOverlay Unit
 #
-# The AnnotationOverlay unit is the layer on which the user marks the shown picture: the tool bar with the choice of a
-# rectangle, ellipse, freehand, or arrow tool, the drawing of the shape in the pixels of the picture with the pointer or
+# The AnnotationOverlay unit is the layer on which the user marks the shown picture: the floating bar of icon tool
+# buttons with the choice of a rectangle, ellipse, freehand, or arrow tool (also by the keys V, R, E, F, and A) and the
+# button that clears the marks of the message, the drawing of the shape in the pixels of the picture with the pointer or
 # the keyboard, the optional short note, the numbered marks that are shown over the picture, and the switch that keeps the
 # picture from being dragged out while a tool is chosen. It makes every mark in the MarkRegistry and reports it; it does
-# not know the composer, so whoever joins the two adds the chip of each reported mark to the message and tells the
-# overlay which chips the message holds.
+# not know the composer, so whoever joins the two adds the chip of each reported mark to the message, takes the chips out
+# when the user clears the marks, and tells the overlay which chips the message holds.
 
 sections:
   - title: CanvasPilot Requirements
@@ -66,6 +67,7 @@ sections:
                   - AnnotationOverlayViewModel_CancelCommand_OnlyWhileShapeUnderConstruction
                   - AnnotationOverlayView_NoteTyped_EnterMakesMarkWithNoteAndFocusIsInNote
                   - AnnotationOverlayView_NoteButtons_AddMarkOrSkipNote
+                  - AnnotationOverlayView_NoteCard_UsesThePrimaryAndSecondaryButtonsAndTheCardRadius
 
               - id: CanvasPilot-AnnotationOverlay-CancelWithEscape
                 title: >-
@@ -130,21 +132,51 @@ sections:
 
               - id: CanvasPilot-AnnotationOverlay-OperateByKeyboard
                 title: >-
-                  The AnnotationOverlay shall let the user choose a tool and make a mark without a pointing device, with
-                  named tool buttons that show the chosen tool, arrow keys that move a cursor over the picture in steps of
-                  eight, one, or forty pixels, and Enter that starts and finishes the shape at the cursor, shall show the
-                  cursor, shall give the keyboard to the note when it asks for one, and shall tell the user in words what
-                  to do next.
+                  The AnnotationOverlay shall let the user make a mark without a pointing device, with arrow keys that
+                  move a cursor over the picture in steps of eight, one, or forty pixels, and Enter that starts and
+                  finishes the shape at the cursor, shall show the cursor, shall give the keyboard to the note when it
+                  asks for one, and shall tell the user in words what to do next.
                 justification: |
                   A user who cannot or does not want to use a mouse must be able to mark a picture, and a screen reader
-                  must be able to name the tools, the marks, and the state. The keyboard makes the same marks, with the
-                  same geometry, as the pointer.
+                  must be able to name the marks and the state. The keyboard makes the same marks, with the same
+                  geometry, as the pointer.
                 tests:
                   - AnnotationOverlayViewModel_Keyboard_ArrowKeysAndEnter_DrawRectangle
                   - AnnotationOverlayViewModel_Keyboard_NoToolOrNoteWaiting_DoesNothingAndCursorStaysInPicture
                   - AnnotationOverlayViewModel_Keyboard_FreehandMovesAddPointsAndHideCursorStops
                   - AnnotationOverlayView_Keyboard_ArrowKeysAndEnter_DrawRectangleMark
+
+              - id: CanvasPilot-AnnotationOverlay-ChooseToolsFromBar
+                title: >-
+                  The AnnotationOverlay shall offer its tools in a floating bar of icon buttons named Select, Rectangle,
+                  Ellipse, Freehand, and Arrow, each with a tooltip that gives its name and its key, check exactly the
+                  button of the chosen tool, choose the tool of the keys V, R, E, F, and A while the keyboard focus is in
+                  the pane that shows the bar and not in a text box, tell what to do next in the tooltip of the bar and to a
+                  screen reader, and keep the bar and the note card inside a stage that is 360 wide.
+                justification: |
+                  Icons take little room over the picture, so the picture stays in view while the user marks it, and a
+                  name and a key in the tooltip tell what each icon does and how to choose it without the pointer. A
+                  checked button must show the tool in use, a bar that is cut off at the edge of a narrow window would hide
+                  tools, and the sentence that says what to do next must reach a user who cannot see the bar.
+                tests:
+                  - AnnotationToolbarView_FloatingBar_HasTooltipsKeysAndStaysInsideNarrowStage
                   - AnnotationToolbarView_ToolButtons_AreNamedCheckedWithTheToolAndOffWithoutPicture
+                  - AnnotationOverlayViewModel_ToolFlags_SetFromCheckBoxes_ChooseAndRevert
+                  - AnnotationOverlayViewModel_StatusText_EachState_TellsWhatToDo
+
+              - id: CanvasPilot-AnnotationOverlay-ClearMarks
+                title: >-
+                  The AnnotationOverlay shall offer a Clear marks button in the bar that is available only while the
+                  message holds a mark, shown on this picture or not, and that asks its host to take every mark out of the
+                  message.
+                justification: |
+                  A user who has marked a picture several times and changes their mind needs one step to start again,
+                  instead of removing each mark by hand. The marks that were drawn on an earlier picture of the file are
+                  also part of the message, so the button must count them. The overlay does not know the message, so it
+                  only asks, and the host that holds the message removes the marks.
+                tests:
+                  - AnnotationOverlayViewModel_ClearMarksCommand_OnlyWithMarks_AsksTheHost
+                  - AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage
 
               - id: CanvasPilot-AnnotationOverlay-OfferToolsOnlyWithPictureAndMessage
                 title: >-

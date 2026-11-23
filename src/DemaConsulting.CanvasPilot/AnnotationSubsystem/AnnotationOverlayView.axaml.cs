@@ -82,6 +82,9 @@ public sealed partial class AnnotationOverlayView : UserControl
         Surface.PointerReleased += OnPointerReleased;
         Surface.PointerCaptureLost += OnPointerCaptureLost;
         LostFocus += OnViewLostFocus;
+
+        // Focusing the layer for its keys must not scroll the picture to show the whole of the layer.
+        AddHandler(RequestBringIntoViewEvent, (_, e) => e.Handled = true);
     }
 
     /// <inheritdoc />

@@ -39,6 +39,11 @@ Each OTS item is verified by a combination of:
 
 Internal OTS design is out of scope; only integration and usage evidence is documented.
 
+Third-party material that is copied into the repository and is not restored by the build (the vendored Fluent System
+Icons glyphs of the user interface) is not an OTS item. Its evidence is the check that the published folder and the
+installer carry its license notice (`THIRD-PARTY-NOTICES.md`), which the verification of the `ThemeResources` unit and
+the system verification describe.
+
 ## OTS Items
 
 The following OTS items have verification evidence in this section:

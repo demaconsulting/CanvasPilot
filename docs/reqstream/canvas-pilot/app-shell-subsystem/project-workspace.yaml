@@ -4,7 +4,10 @@
 # The ProjectWorkspace unit is the main window's content area, in three columns: the project explorer on the left, an
 # area in the middle that shows supplied preview content or explains what is missing, and, while a project is open,
 # the chat column on the right. It is the extension point where the image preview and the chat panel are plugged in,
-# and it confirms deletions and asks for new names on behalf of the explorer.
+# it confirms deletions and asks for the names of new and renamed files and folders on behalf of the explorer, it lets
+# the user hide the chat column and bring it back, and it keeps the widths of the explorer and the chat column within
+# their limits and fitted to the window. The same unit holds the rules that fit a saved window to the screens that are
+# connected.
 
 sections:
   - title: CanvasPilot Requirements
@@ -34,9 +37,10 @@ sections:
 
               - id: CanvasPilot-ProjectWorkspace-HostChatColumn
                 title: >-
-                  The ProjectWorkspace shall host the supplied chat content in a column on the right of the preview,
-                  start it at 380 pixels wide and let the user resize it with a splitter, show it only while a project
-                  is open and content was supplied, and leave the disposal of that content to its owner.
+                  The ProjectWorkspace shall host the supplied chat content in a column on the right of the preview, 400
+                  pixels wide at first and between 320 and 640 pixels wide, with a splitter between them, show it only
+                  while a project is open, content was supplied, and the user has not hidden it, and leave the disposal of
+                  that content to its owner.
                 justification: |
                   A message is written in the project, because its attachments and marks belong to it, so the chat
                   has no use while no project is open and would only take room from the picture. Placing the chat
@@ -72,3 +76,74 @@ sections:
                   - ProjectWorkspace_RenameSelected_CancelledOrInvalidName_ChangesNothingAndReports
                   - ProjectWorkspace_FileCommands_NoDialogService_DoNothing
                   - MainWindowView_DeleteSelectedFile_ConfirmDialog_RemovesFile
+
+              - id: CanvasPilot-ProjectWorkspace-AskForNamesOfNewFilesAndFolders
+                title: >-
+                  The ProjectWorkspace shall offer New File and New Folder commands that are available only while a project
+                  is open, ask the user for a name, suggest a name to start from, create what was named in the folder that
+                  is selected in the explorer, do nothing when the user cancels, and show the user the reason when a name is
+                  refused.
+                justification: |
+                  Users add drawings and folders while they work. The name is theirs to choose, and a name that cannot be used,
+                  such as one without a supported extension, must be explained rather than silently ignored.
+                tests:
+                  - ProjectWorkspace_NewFileAndNewFolder_AskForNameCreateOrReport
+
+              - id: CanvasPilot-ProjectWorkspace-HideAndRestoreChat
+                title: >-
+                  The ProjectWorkspace shall hide the chat column when the user hides it, keep the chat and what the user
+                  wrote in it, offer a button on the preview area that brings the column back while it is hidden, and show
+                  the column and remove the button when the user uses it.
+                justification: |
+                  A user who wants the whole window for the picture can set the conversation aside without losing it, and must
+                  be able to find the way back.
+                tests:
+                  - ProjectWorkspace_ChatCollapsed_HidesColumnAndOffersRestore
+
+              - id: CanvasPilot-ProjectWorkspace-ResizeColumns
+                title: >-
+                  The ProjectWorkspace shall start with the explorer 264 pixels wide and the chat column 400 pixels wide,
+                  let the user resize them with the splitters beside the preview by the pointer or, once a splitter has the
+                  focus, by the arrow keys in steps of 16 pixels, keep the explorer between 180 and 420 pixels and the chat
+                  column between 320 and 640 pixels, and tell its owner when the user chose other widths but not when saved
+                  widths were put back.
+                justification: |
+                  People differ in how much room they give the file list and the conversation, and some cannot use a pointer.
+                  The limits stop a column from vanishing or taking the whole window, and the owner is told of a choice, and
+                  of no restore, so that it can save the choice of the user and nothing else.
+                tests:
+                  - ProjectWorkspace_ColumnWidths_RestoreAndChoose_AreClampedAndAnnouncedOnlyForChoices
+                  - WorkspaceLayout_Splitters_SavedWidthsUsedAndKeyboardChoiceSaved
+
+              - id: CanvasPilot-ProjectWorkspace-FitColumnsToWindow
+                title: >-
+                  The ProjectWorkspace shall show the explorer, the preview, and the chat column inside the window with the
+                  preview at least 360 pixels wide and nothing cropped down to the smallest window, taking the room that a
+                  narrow window lacks first from the explorer, down to 180 pixels, and then from the chat column, down to
+                  320 pixels, and shall give the chat column no width while no chat is shown.
+                justification: |
+                  A picture that is cut off, or a pane that sticks out of the window, cannot be used. The file list can give
+                  up room more easily than the picture or the conversation, and a chat column that is not shown must not
+                  take room from the others.
+                tests:
+                  - WorkspaceLayout_Fit_WideWindow_UsesTheChosenWidthsWithinTheirLimits
+                  - WorkspaceLayout_Fit_NarrowWindow_TakesRoomFromTheExplorerFirst
+                  - WorkspaceLayout_Fit_ChatNotShown_HasNoChatWidth
+                  - WorkspaceLayout_WindowWidth_NothingIsCroppedAndTheExplorerGivesUpRoomFirst
+
+              - id: CanvasPilot-ProjectWorkspace-FitSavedWindowToScreens
+                title: >-
+                  The ProjectWorkspace shall make a saved size, place, and state of the window fit the screens that are
+                  connected: keep a layout that lies on a screen, move a window that hangs over the edge of a screen back
+                  inside it, make a window that is larger than the screen as large as the screen holds, never make it smaller
+                  than 960 by 600 pixels, take the display scale into account, and leave the place to the system when almost
+                  none of the window would be on a screen.
+                justification: |
+                  A window saved on a monitor that is no longer connected, or on a larger screen, must not open where it cannot
+                  be seen or reached, and the user must never have to recover a window that is off the screen.
+                tests:
+                  - WindowPlacement_Resolve_LayoutOnAScreen_IsKept
+                  - WindowPlacement_Resolve_ScreenRemovedOrUnknown_LeavesThePlaceToTheSystem
+                  - WindowPlacement_Resolve_HangingOrTooLarge_IsMovedAndShrunkToTheScreen
+                  - WindowPlacement_Resolve_TooSmallOrScaled_KeepsTheSmallestSizeAndUsesTheScale
+                  - WindowPlacement_Resolve_NullArguments_Throw

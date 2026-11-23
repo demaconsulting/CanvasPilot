@@ -6,69 +6,75 @@
         Title="{Binding Title}"
         Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
         Width="560"
-        Height="340"
+        Height="360"
         CanResize="False"
+        Background="{DynamicResource CpSurfacePane}"
         WindowStartupLocation="CenterOwner">
 
-  <Grid Margin="16" RowDefinitions="*,Auto">
+  <Grid RowDefinitions="*,Auto">
 
-  <StackPanel Grid.Row="0" Spacing="6">
+    <StackPanel Grid.Row="0" Margin="24,24,24,16" Spacing="6">
 
-    <TextBlock Text="Project name" />
-    <TextBox AutomationProperties.AutomationId="NewProjectNameTextBox"
-             Text="{Binding ProjectName}" />
-    <TextBlock AutomationProperties.AutomationId="NewProjectNameError"
-               Foreground="Firebrick"
-               TextWrapping="Wrap"
-               IsVisible="{Binding NameError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-               Text="{Binding NameError}" />
+      <TextBlock Classes="label" Text="Project name" />
+      <TextBox AutomationProperties.AutomationId="NewProjectNameTextBox"
+               AutomationProperties.Name="Project name"
+               Text="{Binding ProjectName}" />
+      <TextBlock Classes="error"
+                 AutomationProperties.AutomationId="NewProjectNameError"
+                 IsVisible="{Binding NameError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding NameError}" />
 
-    <TextBlock Text="Location" Margin="0,8,0,0" />
-    <Grid ColumnDefinitions="*,8,Auto">
-      <TextBox Grid.Column="0"
-               AutomationProperties.AutomationId="NewProjectFolderTextBox"
-               Text="{Binding ParentFolder}" />
-      <Button Grid.Column="2"
-              AutomationProperties.AutomationId="NewProjectBrowseButton"
-              Content="Browse..."
-              Command="{Binding BrowseCommand}" />
-    </Grid>
-    <TextBlock AutomationProperties.AutomationId="NewProjectFolderError"
-               Foreground="Firebrick"
-               TextWrapping="Wrap"
-               IsVisible="{Binding FolderError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-               Text="{Binding FolderError}" />
-    <TextBlock AutomationProperties.AutomationId="NewProjectTargetError"
-               Foreground="Firebrick"
-               TextWrapping="Wrap"
-               IsVisible="{Binding TargetError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-               Text="{Binding TargetError}" />
+      <TextBlock Classes="label" Text="Location" Margin="0,8,0,0" />
+      <Grid ColumnDefinitions="*,8,Auto">
+        <TextBox Grid.Column="0"
+                 AutomationProperties.AutomationId="NewProjectFolderTextBox"
+                 AutomationProperties.Name="Location"
+                 Text="{Binding ParentFolder}" />
+        <Button Grid.Column="2"
+                AutomationProperties.AutomationId="NewProjectBrowseButton"
+                Theme="{DynamicResource SecondaryButton}"
+                Content="Browse..."
+                Command="{Binding BrowseCommand}" />
+      </Grid>
+      <TextBlock Classes="error"
+                 AutomationProperties.AutomationId="NewProjectFolderError"
+                 IsVisible="{Binding FolderError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding FolderError}" />
+      <TextBlock Classes="error"
+                 AutomationProperties.AutomationId="NewProjectTargetError"
+                 IsVisible="{Binding TargetError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding TargetError}" />
 
-    <TextBlock AutomationProperties.AutomationId="NewProjectTargetPath"
-               Margin="0,8,0,0"
-               Opacity="0.7"
-               TextWrapping="Wrap"
-               IsVisible="{Binding TargetPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-               Text="{Binding TargetPath, StringFormat='The project folder will be created at: {0}'}" />
+      <TextBlock Classes="hint"
+                 AutomationProperties.AutomationId="NewProjectTargetPath"
+                 Margin="0,8,0,0"
+                 IsVisible="{Binding TargetPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                 Text="{Binding TargetPath, StringFormat='The project folder will be created at: {0}'}" />
 
-  </StackPanel>
-
-    <StackPanel Grid.Row="1"
-                Margin="0,16,0,0"
-                Orientation="Horizontal"
-                HorizontalAlignment="Right"
-                Spacing="8">
-      <Button AutomationProperties.AutomationId="NewProjectOkButton"
-              Content="OK"
-              IsDefault="True"
-              MinWidth="80"
-              Command="{Binding OkCommand}" />
-      <Button AutomationProperties.AutomationId="NewProjectCancelButton"
-              Content="Cancel"
-              IsCancel="True"
-              MinWidth="80"
-              Command="{Binding CancelCommand}" />
     </StackPanel>
+
+    <Border Grid.Row="1"
+            Padding="24,12"
+            Background="{DynamicResource CpSurfaceWindow}"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="0,1,0,0">
+      <StackPanel Orientation="Horizontal"
+                  HorizontalAlignment="Right"
+                  Spacing="8">
+        <Button AutomationProperties.AutomationId="NewProjectOkButton"
+                Theme="{DynamicResource PrimaryButton}"
+                Content="OK"
+                IsDefault="True"
+                MinWidth="88"
+                Command="{Binding OkCommand}" />
+        <Button AutomationProperties.AutomationId="NewProjectCancelButton"
+                Theme="{DynamicResource SecondaryButton}"
+                Content="Cancel"
+                IsCancel="True"
+                MinWidth="88"
+                Command="{Binding CancelCommand}" />
+      </StackPanel>
+    </Border>
 
   </Grid>
 

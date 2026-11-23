@@ -66,21 +66,35 @@ a drawing that failed for a reason that may pass (it was cancelled, or the rende
 that is not there is reported without a drawing; when the cache is full the picture that was asked for longest ago goes
 first; disposing the cache cancels what is being drawn.
 
-**View**: `StyleKitManagerView` is a window with the list on the left and the preview on the right, split by a bar that
-can be dragged. The list is an `ItemsControl` of groups (`StyleKitGroups`); each group has its title, its empty text, a
-card for each kit (`StyleKitCard`, a flat button with the name, the mark `in use`, the description, the strip of colors,
-the place, and what hides the kit, tinted when it is chosen and dimmed when another kit hides it), and its notes. The
-preview (`StyleKitPreview`) shows the name, the place, why the kit cannot be changed, the warnings, the colors as
-swatches that carry their role and color in a readable label, the fonts and numbers, the advice, the sizes, the small
-pictures of the examples with their captions or the reason that one could not be drawn, and the text for an assistant
-with its length behind an expander. Along the bottom are the status line (`StyleKitStatus`), the buttons of the commands
-(`StyleKitUseButton`, `StyleKitNewButton`, `StyleKitDuplicateButton`, `StyleKitEditButton`, `StyleKitDeleteButton`,
-`StyleKitImportButton`, `StyleKitExportButton`, `StyleKitCopyIntoProjectButton`, `StyleKitRefreshButton`,
-`StyleKitCloseButton`), and the list that chooses where new and imported kits go (`StyleKitTargetComboBox`). Choosing a
-card is handled in the code of the window, which passes the card's kit to `SelectItemCommand`. The bitmaps of the
-pictures are made from the rendered pictures by a converter of the window. The window closes when the view model asks,
-and disposes the view model when it is closed. It is shown by the main window, which keeps one such window (see the
-design of `MainWindowShell`).
+**View**: `StyleKitManagerView` is a window (1120 by 760, at least 820 by 520, on the pane surface) with the list on
+the left and the preview on the right, split by a bar that can be dragged (`StyleKitSplitter`, the shared splitter
+look, named `Resize the list of kits`; the list starts 360 wide). The list is an `ItemsControl` of groups
+(`StyleKitGroups`); each group has its title (the section title look), its empty text, a card for each kit, and its
+notes. A card (`StyleKitCard`) is a `Button` with the shared `CardButton` look, so it is a raised card with the
+keyboard focus ring: it shows the name, a pill `in use` (a check icon and the words, in the success color, so that the
+state is told by a shape and a word as well as by a color) while the open project uses the kit, the description, the
+strip of the first colors, the place, and what hides the kit. The chosen card gets the class `selected`, which gives it
+the accent outline and the accent tint, and a check icon (a circle with a check, in the accent text color) at its right
+edge that is visible only on the chosen card; a card that another kit hides is dimmed. The preview
+(`StyleKitPreview`) shows the name as the page title, the place, why the kit cannot be changed, the warnings, the
+colors as swatches that carry their role and color in a readable label, the fonts and numbers, the advice, the sizes,
+the small pictures of the examples as cards (a picture with its caption, or the reason that one could not be drawn),
+and the text for an assistant with its length behind an expander. Colors come from the design tokens (success, warning,
+and danger for the lines, `CpBorderStrong` for the strips and swatches), with no literal colors. Along the bottom is a
+footer bar (the window surface with a line above it) with the status line (`StyleKitStatus`) and the buttons of the
+commands: the main one, `Use in this project` (`StyleKitUseButton`), has the primary look, and the others have the
+secondary look with an icon and a label (`StyleKitNewButton`, `StyleKitDuplicateButton`, `StyleKitEditButton`,
+`StyleKitDeleteButton`, `StyleKitImportButton`, `StyleKitExportButton`, `StyleKitCopyIntoProjectButton`,
+`StyleKitRefreshButton`, `StyleKitCloseButton`), and the list that chooses where new and imported kits go
+(`StyleKitTargetComboBox`, named `Where new and imported kits go`). Choosing a card is handled in the code of the
+window, which passes the card's kit to `SelectItemCommand`. The bitmaps of the pictures are made from the rendered
+pictures by a converter of the window. The window closes when the view model asks, and disposes the view model when it
+is closed. It is shown by the main window, which keeps one such window (see the design of `MainWindowShell`), and the
+pill of the style picker opens it through its last entry.
+
+**Accessibility**: the buttons of the footer show words, so the window has no button that shows only an icon; the
+splitter, the drop-down, and the text box of the guidance text have names, and every button is a tab stop. The sweep of
+the accessibility tests walks this window in both theme variants.
 
 #### Error Handling
 

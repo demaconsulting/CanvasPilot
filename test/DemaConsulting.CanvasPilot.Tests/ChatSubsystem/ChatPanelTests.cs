@@ -219,7 +219,7 @@ public sealed class ChatPanelTests : IDisposable
     [Fact]
     public async Task ChatPanelViewModel_Send_TypedDictatedAndMark_EntryKeepsOrderOriginsAndSummary()
     {
-        // Arrange: "Hello " typed, "box" dictated, and a mark added at the end
+        // Arrange: "Hello " typed, "box" dictated, and a mark added after them
         _composer.InsertTyped("Hello ");
         _dictation.Session.FinalText = "box";
         await _panel.BeginPushToTalkAsync();
@@ -230,12 +230,13 @@ public sealed class ChatPanelTests : IDisposable
         // Act: send it
         await _panel.SendCommand.ExecuteAsync(null);
 
-        // Assert: typed, dictated, and the mark chip, in that order, with a summary naming the mark
+        // Assert: the mark chip first, in the row above the words, then the typed and the dictated words in the order they were
+        // written, with a summary naming the mark
         var entry = Assert.Single(_panel.SentEntries);
         Assert.Equal(3, entry.Items.Count);
-        Assert.Equal(("Hello ", TextOrigin.Typed), (entry.Items[0].Text, entry.Items[0].Origin));
-        Assert.Equal(("box", TextOrigin.Dictated), (entry.Items[1].Text, entry.Items[1].Origin));
-        var chip = Assert.IsType<MarkChip>(entry.Items[2].Chip);
+        var chip = Assert.IsType<MarkChip>(entry.Items[0].Chip);
+        Assert.Equal(("\nHello ", TextOrigin.Typed), (entry.Items[1].Text, entry.Items[1].Origin));
+        Assert.Equal(("box", TextOrigin.Dictated), (entry.Items[2].Text, entry.Items[2].Origin));
         Assert.Equal(1, chip.Number);
         Assert.Equal("1 mark", entry.Summary);
     }
@@ -261,7 +262,7 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a mark drawn on the picture becomes one chip of the message at the caret as one undo step, that the
+    ///     Test that a mark drawn on the picture becomes one chip in the row of chips of the message as one undo step, that the
     ///     layer shows it while the chip is in the message, and that undo removes the chip and hides the mark and redo brings
     ///     both back.
     /// </summary>
@@ -278,8 +279,8 @@ public sealed class ChatPanelTests : IDisposable
         _annotation.EndStroke(new RenderPoint(50, 40));
         _annotation.SkipNote();
 
-        // Assert: one mark chip is at the caret after the text and the layer shows the mark
-        Assert.Equal("see \uFFFC", _composer.Document.FlatText);
+        // Assert: one mark chip is in the row above the text and the layer shows the mark
+        Assert.Equal("\uFFFC\nsee ", _composer.Document.FlatText);
         var chip = Assert.Single(_composer.Document.Chips.OfType<MarkChip>());
         Assert.Equal(1, chip.Number);
         Assert.Single(_annotation.VisibleMarks);
@@ -329,6 +330,89 @@ public sealed class ChatPanelTests : IDisposable
         Assert.Empty(_annotation.VisibleMarks);
     }
 
+    /// <summary>
+    ///     Test that the rows that open a group are the first row and the first row of the copilot after a notice, so that the
+    ///     name of the copilot is shown once for a run of replies and tools.
+    /// </summary>
+    [Fact]
+    public void ChatPanelViewModel_Transcript_MarksTheRowsThatOpenAGroup()
+    {
+        // Arrange / Act: a reply and a tool, a notice, and a tool and a reply
+        var rows = new TranscriptRowViewModel[]
+        {
+            new AssistantReplyViewModel("First", AssistantReplyState.Completed),
+            new ToolActivityRowViewModel("render_image", "Rendered `a.svg`", succeeded: true),
+            new NoticeRowViewModel(NoticeSeverity.Information, "Something happened"),
+            new ToolActivityRowViewModel("render_image", "Rendered `b.svg`", succeeded: true),
+            new AssistantReplyViewModel("Second", AssistantReplyState.Completed),
+        };
+        foreach (var row in rows)
+        {
+            _panel.Transcript.Add(row);
+        }
+
+        // Assert: the group starts at the first row and at the tool after the notice
+        Assert.Equal([true, false, false, true, false], rows.Select(row => row.OpensGroup));
+    }
+
+    /// <summary>
+    ///     Test that a tool row shows a check or a cross once it has ended, the time it took when that is worth saying, and
+    ///     nothing of the sort while it is under way or when it was restored.
+    /// </summary>
+    [Fact]
+    public void ToolActivityRowViewModel_Finish_ShowsOutcomeAndElapsedTime()
+    {
+        // Arrange: a call that started on a clock that the test moves
+        var clock = new ManualTimeProvider();
+        var row = new ToolActivityRowViewModel("c1", "render_image", "path=a.svg", "Rendering", clock);
+        Assert.True(row.IsRunning);
+        Assert.False(row.ShowsSuccess);
+        Assert.False(row.ShowsFailure);
+        Assert.Equal(string.Empty, row.ElapsedText);
+
+        // Act: the result arrives after 0.8 seconds
+        clock.Advance(TimeSpan.FromMilliseconds(800));
+        row.Finish("Rendered `a.svg`", succeeded: true, hasImage: true);
+
+        // Assert
+        Assert.True(row.ShowsSuccess);
+        Assert.False(row.ShowsFailure);
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:0.0} s", 0.8), row.ElapsedText);
+
+        // Act / Assert: a quick failure shows a cross and no time, and a restored row shows no time either
+        var quick = new ToolActivityRowViewModel("c2", "render_image", string.Empty, "Rendering", clock);
+        quick.Finish("Could not render", succeeded: false, hasImage: false);
+        Assert.True(quick.ShowsFailure);
+        Assert.Equal(string.Empty, quick.ElapsedText);
+        Assert.Equal(string.Empty, new ToolActivityRowViewModel("render_image", "Rendered `a.svg`", succeeded: true).ElapsedText);
+    }
+    /// <summary>
+    ///     Test that a prompt is written in the message, that the follow-up prompts show only for a conversation, and that
+    ///     the collapse command raises its request.
+    /// </summary>
+    [Fact]
+    public void ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce()
+    {
+        // Arrange: a panel with a project open and nothing said
+        _composer.SetProject(Path.GetTempPath());
+        var changed = new List<string?>();
+        _panel.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var collapses = 0;
+        _panel.CollapseRequested += (_, _) => collapses++;
+        Assert.False(_panel.ShowSuggestions);
+
+        // Act
+        var written = _panel.UsePrompt(ChatPanelViewModel.ExamplePrompts[1]);
+        _panel.CollapseCommand.Execute(null);
+
+        // Assert: the prompt is the message, and the collapse was requested once
+        Assert.True(written);
+        Assert.Equal(ChatPanelViewModel.ExamplePrompts[1], _composer.Document.FlatText);
+        Assert.Equal(1, collapses);
+        Assert.Equal(4, ChatPanelViewModel.ExamplePrompts.Count);
+        Assert.NotEmpty(ChatPanelViewModel.SuggestedPrompts);
+        Assert.Throws<ArgumentNullException>(() => _panel.UsePrompt(null!));
+    }
     /// <summary>
     ///     Test that the label of the talk button says what the button is doing and that each change is announced.
     /// </summary>

@@ -63,6 +63,9 @@ network, or external services are required.
   Copilot, and the error line is visible only while the entry is invalid. The model list is shown only while there are
   models, the typed name is always shown, the capabilities, the warning, and the message are shown only when they have
   text, the reasoning level is enabled by the model, and Refresh models asks again and shows the new list.
+- The page is titled `AI Provider` with a non-empty sentence and an icon in the list of pages of the settings dialog.
+- In the accessibility sweep of the windows of the application, in both theme variants, every entry of the page has a
+  name, every button that shows no text has a name and a tooltip, and every enabled button can take the keyboard focus.
 
 #### Test Scenarios
 
@@ -293,3 +296,13 @@ context window is shown; the text boxes display those values. This scenario is t
 `IProviderCheck`, and that names no type of the `Agent` subsystem, checks settings with a context window of 8192 and
 settings with the default; the results are a not-usable result and a usable result that compare equal to the expected
 values. This scenario is tested by `ProviderCheck_CheckAsync_Implementation_ReturnsResultForTheSettingsGiven`.
+
+**SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner**: In the real settings dialog over this page and a
+second page, the heading says `AI Provider` and the sentence under it is not empty, and the list shows an icon for the
+page. This scenario is tested by `SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner`, which is described in
+the verification of the `SettingsDialog` unit.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The settings dialog of the real application is shown in
+both theme variants and each of its pages, this one among them, is chosen and every control of it is looked at; a text
+box, drop-down, and list has a name, a button that shows no text has a name and a tooltip, and every enabled button can
+take the keyboard focus. This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

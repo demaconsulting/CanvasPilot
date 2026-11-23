@@ -68,19 +68,25 @@ is logged and left, which a later read of the folder shows as an example again. 
 set and `CloseRequested` is raised. The kit is saved in the place that it was found in (the user or the project) and in
 a folder named as its id. `CancelCommand` raises `CloseRequested` and writes nothing.
 
-**View**: `StyleKitEditorView` is a window with a tab for each part of the kit: General (name, description, the id and
-the place), Palette (a `ColorEditorView` for each color with a Remove button that is off for a required color, Add
+**View**: `StyleKitEditorView` is a window (860 by 700, at least 680 by 500, on the pane surface) with a tab for each
+part of the kit (the tab headers are 14 pixel semibold, from the shared tab style): General (name, description, the id
+and the place), Palette (a `ColorEditorView` for each color with a Remove button that is off for a required color, Add
 color, and the contrast hint), Type and shape (the three font lists and numeric boxes for the three numbers), Mermaid
 and Vega-Lite (a check box for the theme, the list of themes, the variable rows, and a multi-line box for the
 configuration), Guidance (the notes and the two lists), Sizes (a row of boxes for each export size), and Examples (a row
-with the name of the file and a caption box for each example, Add files, and the reason a file was not added). Below the
-tabs are the errors in red, the warnings, the reason a save failed, and the Save and Cancel buttons; Save follows
-`CanSave`. The Remove buttons of the rows are handled in one place in the code of the window, which passes the row to
-the command that removes it. The window closes when `CloseRequested` is raised. `ColorEditorView` is the control of one
-color: the name of the role (editable only for a color that is not required), a swatch painted with the text of the
-color, the text box, the reason when the text is not a color, and a button that opens a flyout with sliders for red,
-green, and blue, which are bound to the channels of the row so that they and the text always agree. It uses only the
-controls that Avalonia has, so the editor needs no package for a color picker.
+with the name of the file and a caption box for each example, Add files, and the reason a file was not added). Every
+field has a label in the label look, hints use the hint look, errors the error look, and warnings the caution look, all
+of them from the shared text styles, so that no color is written in the window; every input has an automation name
+(for example `Name`, `Description`, `Headings font`, `Line width`). Below the tabs is a footer bar with the errors, the
+warnings, the reason a save failed, and the Save and Cancel buttons; Save has the primary look, Cancel the secondary
+look, and Save follows `CanSave`. The Remove buttons of the rows are handled in one place in the code of the window,
+which passes the row to the command that removes it. The window closes when `CloseRequested` is raised.
+`ColorEditorView` is the control of one color: the name of the role (editable only for a color that is not required;
+named `Color role`), a swatch painted with the text of the color and outlined with the control outline, the text box
+(named after the format of the text), the reason when the text is not a color in the error look, and a button (named
+for what it does) that opens a flyout with sliders for red, green, and blue, each with a name, which are bound to the
+channels of the row so that they and the text always agree. It uses only the controls that Avalonia has, so the editor
+needs no package for a color picker.
 
 #### Error Handling
 

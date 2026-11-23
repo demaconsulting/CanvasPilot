@@ -6,7 +6,9 @@
 # - The Composer subsystem holds the message that the user is composing for the chat and its attachments: the message
 #   as ordered segments, the undo and redo of the user's changes, the intake and staging of dropped and pasted
 #   content, and the view that shows the message in one editing surface with chips inline. The logic of the
-#   subsystem has no dependency on the user interface; only the editor view and its chip, preview, and drawing parts do
+#   subsystem has no dependency on the user interface; only the editor view and its chip, preview, and drawing parts do.
+#   The chat panel owns the buttons around the editor; the subsystem offers it the seam through which the attach button
+#   asks the window for files to attach
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -206,8 +208,8 @@ sections:
             title: >-
               The Composer subsystem shall show the message in one editing surface in which the user can type, delete,
               select, and copy, that always holds exactly what the message holds, that shows dictated words with a
-              distinct background, the live words of a dictation, and the sentence about the last action, and that
-              reports every change of the user as one action on the message.
+              distinct background, the live words of a dictation, the sentence about the last action, and, while the message
+              is empty, a hint of what to write, and that reports every change of the user as one action on the message.
             justification: |
               The editing surface is where the user sees and writes the message. If it could differ from the message, the
               user could send something other than what they see, so the surface only shows the message and reports what
@@ -220,8 +222,21 @@ sections:
               - CanvasPilot-ComposerEditor-CopyChipsAsReadableText
               - CanvasPilot-ComposerEditor-ShowDictatedTextDistinctly
               - CanvasPilot-ComposerEditor-ShowStatusAndLiveWords
+              - CanvasPilot-ComposerEditor-ShowPlaceholder
             tests:
               - ComposerSubsystem_EditMessageInEditor_MixedActions_SurfaceAlwaysEqualsMessage
+
+          - id: CanvasPilot-Composer-RemoveAllMarkChips
+            title: >-
+              The Composer subsystem shall remove the chips of all marks from the message on request, each as its own
+              undo step, and leave the rest of the message as it was.
+            justification: |
+              Starting the marks over must not cost one action for each mark, and what was removed must remain as easy
+              to take back as a single chip. The annotation layer draws what the message holds, so it follows.
+            children:
+              - CanvasPilot-ComposerViewModel-DeleteMarkChips
+            tests:
+              - AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage
 
           - id: CanvasPilot-Composer-ShowChipsInline
             title: >-
@@ -237,3 +252,15 @@ sections:
               - CanvasPilot-ComposerEditor-DeleteChipWithButtonOrKey
             tests:
               - ComposerSubsystem_ShowChipsInline_DropThenDeleteAndUndo_ChipsFollowTheMessage
+
+          - id: CanvasPilot-Composer-ExposeMessageToAssistiveTechnology
+            title: >-
+              The Composer subsystem shall present the message to assistive technology as a text field named "Message"
+              that tells the text of the message with its chips named and that can be set.
+            justification: |
+              The message is the main input of the application. A person who cannot see it, and a tool that drives the
+              window, must be able to find it, read it, and write it like any other text field.
+            children:
+              - CanvasPilot-ComposerEditor-ExposeMessageToAssistiveTechnology
+            tests:
+              - ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage

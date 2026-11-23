@@ -18,16 +18,20 @@ sections:
                 title: >-
                   The ImageRenderService shall draw an image source file on a background thread and return a
                   picture that holds the file's width, height, drawn format, and pixels as red, green, blue,
-                  alpha bytes with straight alpha, rows from the top with no padding.
+                  alpha bytes with straight alpha, rows from the top with no padding, and shall tell when none of the
+                  renders it started is still running.
                 justification: |
                   The preview and the exporter need the drawn picture as plain data that is independent of the
                   drawing library and can be shown, tested, and saved. Drawing on a background thread keeps the
                   window responsive while large or complex files render, and a copy of the pixels means no
-                  library object has to be kept alive or disposed by its users.
+                  library object has to be kept alive or disposed by its users. A background render writes to the log
+                  when it fails, so whoever shuts down must be able to wait until none is running, or the render can
+                  write to a log whose folder is already gone.
                 children:
                   - CanvasPilot-OTS-CanvasNet-RenderImageSources
                 tests:
                   - ImageRenderService_RenderAsync_SvgFile_ReturnsPixelsSizeAndFormat
+                  - ImageRenderService_WhenIdleAsync_RenderRunning_CompletesOnlyAfterItEnds
                   - RenderedImage_New_ValidArguments_KeepsValues
                   - RenderedImage_New_InvalidArguments_Throw
                   - RenderResult_Factories_ReportExactlyOneOutcome

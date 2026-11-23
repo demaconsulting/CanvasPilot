@@ -5,9 +5,11 @@
 ### Overview
 
 The `Chat` subsystem is the panel in which the user composes the messages for the AI copilot and follows its answers:
-above, the header with the button that clears the chat history and the transcript of the conversation in the open
-project; below, the composer's editing control; and under it the button that sends and the button that listens while it
-is held. It also joins the layer on which the user marks the picture to the message, so that every mark becomes a chip
+above, the header with the title, a menu of more actions (which holds the item that clears the chat history), and the
+button that hides the panel; below it the transcript of the conversation in the open project, which offers example
+prompts while it is empty; at the bottom the composer card with the composer's editing control, and under it the button
+that attaches files, the button that listens while it is held, and the button that sends. It also joins the layer on
+which the user marks the picture to the message, so that every mark becomes a chip
 in it, and it opens the window that shows exactly what the assistant would receive for a message. It keeps the words of
 the conversation of each project on the user's computer, outside the project, and shows them again when the project is
 opened. It holds no rule of editing, sending, dictation, marking, payload building, or of the AI provider; those belong
@@ -25,7 +27,8 @@ turn; never a provider, a tool, or a library), `Project` (the open project and t
 history), and `Logging`, and on nothing else of the application; in particular it does not depend on `AppShell` or
 `Settings`, and the `Agent` and `Knowledge` subsystems do not depend on it. `AppShell` depends on `Chat`: the
 composition root builds the panel and the store, and the main window shows the inspector, places the panel in the chat
-column of the workspace, and opens the settings when the panel asks. The Edit menu and the talk key of the main window
+column of the workspace, hides and shows that column when the panel asks, and opens the settings when the panel asks.
+The Edit menu and the talk key of the main window
 reach the composer and the panel through the seams that `Composer` owns.
 
 ### Interfaces
@@ -37,7 +40,8 @@ reach the composer and the panel through the seams that `Composer` owns.
   (`ChatPanelView`, `TranscriptEntryView`, `AssistantReplyView`, `ToolActivityRowView`, `NoticeRowView`), and
   `ChipThumbnailProvider`, which implements the composer's `IChipThumbnailProvider`.
 - *Role*: Provider to the host that places it, and consumer of the composer, the registry and the layer of marks, the
-  mark picture composer, dictation, and, through the turn runner, the AI copilot.
+  mark picture composer, dictation, the file picker that the host gives it (the `IAttachmentPicker` seam of `Composer`),
+  and, through the turn runner, the AI copilot.
 - *Contract*: The constructor takes the `ComposerViewModel`, the `MarkRegistry`, the `AnnotationOverlayViewModel`, an
   `IMarkImageComposer`, optionally the `IDictationService`, a logger, the `IAgentService` of the copilot, a
   `TimeProvider`, an `IChatHistoryStore`, and an `IProjectService`, and joins the layer to the composer. `Transcript`
@@ -46,7 +50,10 @@ reach the composer and the panel through the seams that `Composer` owns.
   text); `SendCommand`, `CanSend`, `CanTalk`, `IsTalking`, and `TalkText` are what the buttons bind to;
   `BeginPushToTalkAsync` and `EndPushToTalkAsync` implement `IPushToTalkTarget`, so that a talk key can be given the
   panel later; `PrepareDictationAsync` loads the speech engine ahead of time; `InspectorLauncher` is set by the host and
-  is what "View payload" asks. With a copilot, `IsCopilotBusy`, `StopCommand`, and `Stop` follow and stop the turn,
+  is what "View payload" asks, and `AttachmentPicker` is set by the host and is what the attach button (`AttachCommand`)
+  asks for files. `ExamplePrompts`, `SuggestedPrompts`, `ShowSuggestions`, and `UsePrompt` serve the empty
+  conversation and the follow-ups, and `CollapseCommand` raises `CollapseRequested`, which the host handles by hiding
+  the panel. With a copilot, `IsCopilotBusy`, `StopCommand`, and `Stop` follow and stop the turn,
   `WaitForTurnAsync` completes when it has ended, `RefreshReadinessAsync` and `CheckAgainCommand` check the provider and
   set `HasReadinessIssue` and `ReadinessMessage`, and `OpenSettingsCommand` raises `OpenSettingsRequested`, which the
   host handles. With a history store and a project service, the words of each turn are saved when it ends, a project
@@ -75,7 +82,8 @@ reach the composer and the panel through the seams that `Composer` owns.
 
 - *Type*: In-process .NET class (`ChatTurnRunner`) with the rows it keeps (`AssistantReplyViewModel`,
   `ToolActivityRowViewModel`, and `NoticeRowViewModel`, which belong to the `ChatPanel` unit like
-  `TranscriptEntryViewModel` and share the base `TranscriptRowViewModel`) and the result type `ChatTurnOutcome`.
+  `TranscriptEntryViewModel` and share the base `TranscriptRowViewModel` (with `Kind` and `OpensGroup`)) and the result
+  type `ChatTurnOutcome`.
 - *Role*: Consumer of `IAgentService` of the `Agent` subsystem and provider to the chat panel.
 - *Contract*: The constructor takes the `IAgentService`, the transcript collection that rows are added to, optionally a
   `TimeProvider`, a logger, and what opens the settings from an error notice. `RunTurnAsync` gives a sent message (or an
@@ -117,7 +125,8 @@ when a turn has ended (completed, stopped, or failed), shows the saved rows as t
 restored message has its words, the labels of its marks and attachments, and lines for the notes and paths, but no
 picture and no "View payload"), and gives the saved words to the copilot as `RestoredHistory`, which the `Agent`
 subsystem turns into one digest at the start of the first message of a new provider session, in memory only.
-`ClearHistoryCommand` deletes the folder of the project, empties the transcript, and resets the copilot's conversation,
+`ClearHistoryCommand`, which the item "Clear chat history" in the menu of more actions of the header runs, deletes the
+folder of the project, empties the transcript, and resets the copilot's conversation,
 with no question first. The audit of what else is written into a project folder is in the design of the
 `ChatHistoryStore`.
 
@@ -129,7 +138,9 @@ reply at most once every 50 milliseconds, so many small pieces do not keep the i
 was written and marks the reply as stopped; a failure keeps it and adds an error with what to do, and the offer to open
 the settings when they can help. The runner never throws for what the copilot does, and the panel only follows `IsBusy`:
 while a turn runs it blocks the composer (`ComposerViewModel.BlockSending`) so that the next message waits, shows the
-indicator "The copilot is working..." and the Stop button, and the composer stays editable. The chat knows the copilot
+indicator "The copilot is working..." (three pulsing dots) and the Stop button, and the composer stays editable. The
+chat
+knows the copilot
 only through the contract of the `Agent` subsystem, so no provider, tool, or library reaches the user interface and the
 logic is verified with a scripted copilot and a manual clock.
 
@@ -161,15 +172,38 @@ captures the pointer so that a release anywhere is seen, and ends it on the rele
 dialog opened, the window was deactivated), on the loss of the focus, on the release of the space or enter key, and when
 the panel leaves the window. One flag makes each hold start and end once. The rules of what listening does, the words
 shown while it listens, the one dictated block, and the reasons it cannot work belong to the composer and the dictation
-service; the panel's label (`Hold to talk`, `Starting... keep holding`, `Listening... let go to finish`, `Finishing...`)
-follows the composer's dictation state, and the reasons appear in the composer's status line, which is part of the
+service; the accessible name of the talk button, which shows only an icon (`Hold to talk`, `Starting... keep holding`,
+`Listening... let go to finish`, `Finishing...`), follows the composer's dictation state, the button turns red and
+pulses while it listens, and the reasons appear in the composer's status line, which is part of the
 panel.
+
+**Writing the message.** The message is written in a card that holds the composer's editing view and, under it, the
+attach button, the talk button, the hint "Enter to send", and the Send button. Enter on its own sends when the composer
+can send, and every other key, Shift+Enter included, goes to the editing view, so a line break is written. The attach
+button asks the `IAttachmentPicker` that the host gave the panel for files, starting in the project folder, and gives
+what it returns to the composer as a drop, so the rules of the intake apply to a picked file as to a dropped one; the
+panel decides nothing about the files. All buttons without text have an accessible name and a tooltip.
+
+**Beginning and going on.** While the transcript is empty the panel shows a question, four example prompts, and a tip
+instead of a blank list. Choosing a prompt writes it into the message at the caret and puts the focus there, and does
+not send it. Once there is a conversation, and while the copilot is idle, three follow-up prompts show above the
+message and work the same way. The header has a button that raises `CollapseRequested`; the panel does not hide itself,
+because the column and the way back belong to the workspace that holds it.
+
+**Rows that belong together.** The panel tells each row of the transcript whether it opens a group (the first row, and
+the first row of the copilot after a message or a notice), so that the name and the avatar of the copilot are shown
+once for a run of replies and tool lines, and the first row of a restored conversation carries the divider "Earlier".
+A sent message is a bubble at the right, at most 85 percent of the width, whose "View payload" button shows only while
+the pointer is over the message or the focus is in it; a restored message is the same bubble at 70 percent opacity.
+While a turn runs the panel shows three pulsing dots and the Stop button where there used to be a progress bar.
 
 **Marks are joined here.** The annotation layer and the composer do not know each other, because the composer already
 uses the annotation subsystem and a dependency back would be a cycle. The panel is the one place that knows both: when
 the layer reports a mark, it adds the chip with `ComposerViewModel.AddMark`, one undo step at the caret; after every
 change of the composer it tells the layer which mark chips the message holds and whether marks can be made. Undoing the
-chip therefore hides the mark and redoing shows it, with no undo of the marks' own.
+chip therefore hides the mark and redoing shows it, with no undo of the marks' own. When the layer asks for all marks to
+be cleared, the panel has the composer delete the chips of all marks, each as its own step, and the layer then shows
+none.
 
 **Pictures for chips.** `ChipThumbnailProvider` makes the small pictures of chips. A mark's picture is the area around
 the mark. For the message being written it is cut from the picture the mark was drawn on with `IMarkImageComposer`; for

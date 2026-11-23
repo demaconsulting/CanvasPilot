@@ -3,8 +3,8 @@
 #
 # The ComposerViewModel unit is the orchestration of the message being composed, without a window: it owns the document,
 # its undo history, the intake of dropped and pasted content, and push-to-talk dictation, connects the marks and the
-# attachments of the open project to the message, and sends the message. The editing control that shows the message
-# reports what the user does through it and shows what it holds.
+# attachments of the open project to the message (including the removal of the chips of all marks on request), and sends
+# the message. The editing control that shows the message reports what the user does through it and shows what it holds.
 
 sections:
   - title: CanvasPilot Requirements
@@ -42,6 +42,9 @@ sections:
                   - ComposerViewModel_HandleDrop_AtOffset_PutsItemsThere
                   - ComposerViewModel_HandlePaste_TextAndItems_AreOneStepAndReplaceSelection
                   - ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip
+                  - ComposerViewModel_AddMark_EmptyMessageAndSecondMark_KeepsOneRowAboveTheWords
+                  - ComposerViewModel_AttachFiles_GoToTheRowAboveTheWordsInOneStep
+                  - ComposerViewModel_NewText_CaretInTheChipRow_GoesBelowTheRow
                   - ComposerViewModel_AddMark_MarkOfAnotherRegistry_ThrowsArgumentException
                   - ComposerViewModel_DeleteChip_IsOneStepAndUndoRestoresItAtTheSameOffset
                   - ComposerViewModel_InsertTyped_AfterUndo_DiscardsRedo
@@ -213,3 +216,16 @@ sections:
                   - ComposerViewModel_SetProject_SameProject_KeepsDraft
                   - ComposerViewModel_SetProject_Null_ClosesTheProjectAndDropsTheDraft
                   - ComposerViewModel_SetProject_UnusableFolder_ExplainsAndHasNoProject
+
+              - id: CanvasPilot-ComposerViewModel-DeleteMarkChips
+                title: >-
+                  The ComposerViewModel shall delete the chips of all marks from the message on request, each as its own
+                  step that undo brings back at the same place, and leave every other part of the message as it was.
+                justification: |
+                  A user who has marked a picture several times and wants to start over should not have to delete the
+                  chips one by one, and what was deleted must still be as easy to take back as one chip is. Which marks
+                  are drawn is the business of the annotation layer; which chips the message holds is the composer's, so
+                  the composer removes them and the layer follows.
+                tests:
+                  - ComposerViewModel_DeleteChip_IsOneStepAndUndoRestoresItAtTheSameOffset
+                  - AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage

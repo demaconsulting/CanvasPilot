@@ -26,10 +26,19 @@ through a seam, as a window of its own that does not block the application.
 - `IKnowledgeClipboard`: the seam by which the view model puts text on the clipboard; `WindowKnowledgeClipboard` is the
   one that uses the clipboard of the window.
 - `IKnowledgeBrowserLauncher`: the seam by which the main window is asked to show the browser.
-- `KnowledgeBrowserView` (a `Window`): the search box above a tree or the list of hits, a splitter, and the card, then a
-  line of status and a Close button. `MarkdownBlocksPanel` is the control that draws the blocks that `KnowledgeMarkdown`
-  read: a text block for each block, with runs for bold, italic, and code text, a dot for a bullet, and a scrolling,
-  fixed-width block for code. All text can be selected.
+- `KnowledgeBrowserView` (a `Window`, 1000 by 700, at least 620 by 400, on the pane surface): the search box across the
+  top, below it a column of 300 pixels with the tree or the list of hits, a splitter (`KnowledgeSplitter`, the shared
+  splitter look, named `Resize the list of cards`), and the card, then a footer bar (the window surface with a line
+  above it) with the line of status and the Close button, which has the secondary look. The tree takes the look of the
+  project explorer (the `ExplorerTreeViewItem` theme, with the open state bound to the node) and has the name `Cards`;
+  the search box has the name `Search the cards`. A hit, a card below the shown card, and a related card are flat
+  buttons that tint under the pointer and show the focus ring of the keyboard; each shows its title and its summary in
+  the hint look. The shown card has its title at 20 pixels, its summary at 14, its tags and other names in the tertiary
+  text color, and the headings of its lists (`Cards below`, `See also`, and `Examples`) at 16. Each example is a raised
+  card with its header and a secondary Copy button on the first line, the description, and the text of the example in a
+  code well (the pane surface with a subtle outline and rounded corners, at most 300 pixels high, scrolling both ways)
+  in a fixed-width font. The colors and sizes come from the design tokens, with no literal color. The text of the card
+  is drawn by `MarkdownBlocksPanel`, which belongs to the `KnowledgeMarkdown` unit. All text can be selected.
 
 #### Key Methods
 
@@ -49,6 +58,11 @@ the failure to the log.
 **The window**: the view sets the clipboard of the view model to the clipboard of the window when it has none, closes
 when the view model asks, and draws the card with the controls above.
 
+**AutomationIds**: `KnowledgeSplitter` is new; the others (`KnowledgeSearchBox`, `KnowledgeCardTree`,
+`KnowledgeResults`, `KnowledgeCardTitle`, `KnowledgeCopyExampleButton`, `KnowledgeCloseButton`, and so on) are
+unchanged. Every button that shows words keeps them, the search box, tree, and splitter have names, and the sweep of
+the accessibility tests walks the window in both theme variants.
+
 #### Error Handling
 
 Programming errors throw: a missing catalog, search, node, or identifier (`ArgumentNullException`). Everything that can
@@ -60,7 +74,7 @@ changes nothing in the catalog and is owned by the user interface thread.
 
 - **KnowledgeCatalog** unit (through `IKnowledgeCatalog`): the cards, their children, related cards, and examples.
 - **KnowledgeSearch** unit: the hits of the search.
-- **KnowledgeMarkdown** unit: the blocks that the text of a card is drawn from.
+- **KnowledgeMarkdown** unit: the blocks that the text of a card is drawn from, and the control that draws them.
 - **Logging** subsystem: an optional logger for a clipboard failure.
 - **Avalonia** and **CommunityToolkit.Mvvm** (OTS): the window, controls, clipboard, and commands.
 

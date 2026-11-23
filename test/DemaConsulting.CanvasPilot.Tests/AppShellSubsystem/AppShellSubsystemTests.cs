@@ -227,7 +227,7 @@ public sealed class AppShellSubsystemTests : IDisposable
         await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
 
         // Assert: both pages are hosted
-        Assert.Equal(["AI Provider", "Speech", "Style Kits"], titles);
+        Assert.Equal(["AI Provider", "Speech", "Style Kits", "Appearance"], titles);
         Assert.Equal(typeof(SpeechSettingsPageViewModel), secondPageType);
         Assert.Equal(typeof(StyleSettingsPageViewModel), thirdPageType);
     }
@@ -248,7 +248,7 @@ public sealed class AppShellSubsystemTests : IDisposable
         var about = _dialogs.LastAbout!;
         Assert.Equal("CanvasPilot", about.Name);
         Assert.False(string.IsNullOrWhiteSpace(about.Version));
-        Assert.Equal(5, about.Dependencies.Count);
+        Assert.Equal(6, about.Dependencies.Count);
     }
 
     /// <summary>
@@ -284,6 +284,7 @@ public sealed class AppShellSubsystemTests : IDisposable
     {
         // Arrange: a composed application whose kits are read
         var composition = Compose();
+        await composition.StyleStartupRefresh;
         await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
 
         // Act: run Style Kits, and make a kit in the window that was shown
@@ -459,7 +460,6 @@ public sealed class AppShellSubsystemTests : IDisposable
         Assert.Equal("clean", composition.ActiveStyle.ActiveId);
         Assert.Equal("clean", composition.StylePicker.SelectedItem!.Id);
         Assert.True(composition.StylePicker.IsVisible);
-        Assert.True(composition.Shell.ShowStatusBar);
         Assert.Same(composition.StylePicker, composition.Shell.StylePicker);
         Assert.Equal(["style_get", "style_check"], composition.StyleToolDescriptors.Select(tool => tool.Name));
         Assert.Equal(1, _dialogs.PresetOfferCount);

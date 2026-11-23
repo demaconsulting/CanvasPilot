@@ -1,14 +1,17 @@
 ---
 # Software Unit Requirements for the ChatPanel Unit
 #
-# The ChatPanel unit is the panel in which the user converses: the conversation of the open project (the messages that
-# were sent, the answers of the AI copilot with the tools it called, and the notices), the composer's editing control
-# below it, the button that sends, the button that listens while it is held, and the button that stops the copilot, the
-# banner that says whether the copilot can be used, and the joining of the marks drawn on the picture to the message. It
+# The ChatPanel unit is the panel in which the user converses: a header with the title, a menu of more actions, and a
+# button that hides the panel; the conversation of the open project (the messages that were sent as bubbles, the
+# answers of the AI copilot with the tools it called, and the notices), which offers example and follow-up prompts; the
+# card in which the message is written, with the composer's editing control, the attach button, the button that
+# listens while it is held, and the button that sends; the indicator and the button that stop the copilot; the banner
+# that says whether the copilot can be used; and the joining of the marks drawn on the picture to the message. It
 # follows the composer, the annotation layer, and the turn runner and decides nothing that they decide: whether a message
 # can be sent, what dictation says, which marks are in the message, and what a turn does stay with the units that own
 # them. The panel keeps nothing in the project and writes nothing itself: the words of a conversation are kept on the
-# user's computer by the ChatHistoryStore unit, which the panel is given.
+# user's computer by the ChatHistoryStore unit, which the panel is given. The look of the panel (colors, spacing, icons,
+# and the animation of the dots and the talk button) comes from the ThemeResources unit and is described in the design.
 
 sections:
   - title: CanvasPilot Requirements
@@ -45,14 +48,15 @@ sections:
                   - ChatPanelView_Send_TypedText_AppearsInTranscriptAndEmptiesTheEditor
                   - ChatPanelView_Send_TwoMessages_AreListedInOrder
                   - ChatPanelView_Send_MessageWithMarkAndFile_ShowsChipsInTranscriptWithoutDeleteButtons
+                  - ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords
                   - ChatPanelView_Send_DictatedWords_AreShownWithTheDictatedBackground
 
               - id: CanvasPilot-ChatPanel-SendFromPanel
                 title: >-
-                  The ChatPanel shall offer a Send button that can be used exactly when the composer can send the
-                  message, shall add the message to the transcript when it was sent and the panel's editing control
-                  shall then be empty, and, when sending fails, shall leave the draft as it was, add nothing to the
-                  transcript, and show the reason that the composer gives.
+                  The ChatPanel shall offer a Send button, an icon button named Send, that can be used exactly when the
+                  composer can send the message, shall add the message to the transcript when it was sent and the panel's
+                  editing control shall then be empty, and, when sending fails, shall leave the draft as it was, add
+                  nothing to the transcript, and show the reason that the composer gives.
                 justification: |
                   Sending is one decision, and the composer owns it: a project is open, the message has words or chips,
                   nobody holds the talk button, and nothing is being sent. The panel must show that decision and not
@@ -63,6 +67,35 @@ sections:
                   - ChatPanelViewModel_Send_BuildFails_KeepsDraftAndTranscriptUnchangedAndSaysWhy
                   - ChatPanelView_NoProject_SaysSoAndDisablesSendAndTalk
                   - ChatPanelView_Send_TypedText_AppearsInTranscriptAndEmptiesTheEditor
+                  - ChatPanelView_ComposerCard_PlaceholderNamesAndHint
+
+              - id: CanvasPilot-ChatPanel-SendWithEnterKey
+                title: >-
+                  The ChatPanel shall send the message when the Enter key is pressed on its own in the editing control
+                  and the message can be sent, shall write a line break in the message when Enter is pressed with Shift
+                  and send nothing, and shall say beside the Send button that Enter sends.
+                justification: |
+                  Most people expect Enter to send a message in a conversation and Shift with Enter to start a new line,
+                  and the composer is also used to write longer messages with several lines, so the second way must
+                  remain. The hint saves the user from finding out by sending too early. Whether the message can be sent
+                  stays with the composer, so the key can never send what the button would refuse.
+                tests:
+                  - ChatPanelView_EnterKey_SendsTheMessageAndShiftEnterWritesALineBreak
+                  - ChatPanelView_ComposerCard_PlaceholderNamesAndHint
+
+              - id: CanvasPilot-ChatPanel-AttachFiles
+                title: >-
+                  The ChatPanel shall offer an Attach files button that, while a message can be written, asks the picker
+                  of files that the window gives it for files, starting in the folder of the open project, and adds the
+                  files that were chosen to the message as attachment chips, the same way as a drop of the files does.
+                justification: |
+                  Not everyone knows that files can be dropped on the message, and a drop is hard to do with the keyboard
+                  or on a small screen. A button that opens the file dialog of the system makes the same thing easy to
+                  find. The panel does not show the dialog itself, because a dialog needs the main window as its owner;
+                  it asks through a seam, so that the button can be used and tested without a window, and it adds the
+                  files the way a drop does so that the rules of the intake stay in one place.
+                tests:
+                  - ChatPanelView_AttachButton_AddsThePickedFilesAsChips
 
               - id: CanvasPilot-ChatPanel-LinkMarkChips
                 title: >-
@@ -81,19 +114,32 @@ sections:
                   - ChatPanelViewModel_Send_MessageWithMark_LayerShowsNoMarkAfterwards
                   - ChatPanelView_MarkDrawn_ChipAppearsInTheEditorAndUndoRemovesIt
 
+              - id: CanvasPilot-ChatPanel-ClearMarkChips
+                title: >-
+                  The ChatPanel shall take the chips of all marks out of the message when the annotation layer asks for
+                  its marks to be cleared, so that the picture then shows no mark and the message holds none.
+                justification: |
+                  A user who has marked a picture many times and wants to start over should not have to delete each chip.
+                  The annotation layer and the composer do not know each other, so the panel passes the request on and
+                  the composer removes the chips as it removes any chip, which keeps one undo system for the message.
+                tests:
+                  - AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage
+
               - id: CanvasPilot-ChatPanel-HoldToTalkButton
                 title: >-
                   The ChatPanel shall start listening when the pointer is pressed on the talk button, or the space or
                   enter key is pressed on it, and end it when the pointer is released wherever it is, the pointer
                   capture is lost, the button loses the focus, the key is released, or the panel is removed from the
-                  window, once for each hold; shall show the words recognized so far while it listens; shall label the
-                  button with what it is doing; and shall leave the button unusable while no message can be written.
+                  window, once for each hold; shall show the words recognized so far while it listens; shall give the
+                  button, which shows an icon, an accessible name that says what it is doing now; and shall leave the
+                  button unusable while no message can be written.
                 justification: |
                   Dictation must listen exactly as long as the user holds the button, and the microphone must never
                   stay open because a release was missed: a release outside the button, a window that loses the pointer
                   when a dialog opens, and a panel that goes away are all ways of letting go. The keyboard must be able
-                  to hold the button as well, so that dictation does not need a pointer. The label tells the user
-                  whether the application is starting, listening, or finishing, which can take a moment the first time.
+                  to hold the button as well, so that dictation does not need a pointer. The name tells the user, and a
+                  screen reader, whether the application is starting, listening, or finishing, which can take a moment
+                  the first time, although the button itself shows no text.
                 tests:
                   - ChatPanelViewModel_TalkText_FollowsDictationState
                   - ChatPanelViewModel_PushToTalk_PressSpeakRelease_AddsOneDictatedBlockAsOneStep
@@ -162,22 +208,42 @@ sections:
                   the view can show it in its own way; shall keep the sent message with its payload and its summary as
                   one of them; shall make a reply grow while it streams, make its text final only when it is completed,
                   and keep the text and mark the reply when it is stopped or failed, never changing a reply that has
-                  ended; shall make a tool row that says what is under way and then what was done, whether it worked, and
-                  whether it carried a picture; and shall make a notice that is immutable and holds its message, what to
-                  do about it, and whether the settings can help.
+                  ended; shall make a tool row that says what is under way and then what was done, whether it worked or
+                  failed, how long the call took when that was at least a tenth of a second, and whether it carried a
+                  picture; and shall make a notice that is immutable and holds its message, what to do about it, and
+                  whether the settings can help.
                 justification: |
                   A conversation with a copilot is more than the messages of the user: the answer arrives piece by piece,
                   the copilot works with tools, and things go wrong. One family of rows lets the panel show them in the
                   order they happened. A reply must not look final while it is still written, because the view shows
-                  final text with its formatting, and a reply that was cut short must not be shown as whole.
+                  final text with its formatting, and a reply that was cut short must not be shown as whole. A tool that
+                  failed must be told from one that worked by more than a color, and a call that took a noticeable time
+                  says so, while a call that took no time says nothing that would only be noise.
                 tests:
                   - AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted
                   - AssistantReplyViewModel_StopOrFail_KeepsTextAndNamesWhatBecameOfIt
                   - AssistantReplyViewModel_Restored_IsInTheGivenStateAndRefusesNoText
                   - ToolActivityRowViewModel_StartFileReportAndFinish_KeepTheReportOnlyWhenTheToolWorked
                   - ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked
+                  - ToolActivityRowViewModel_Finish_ShowsOutcomeAndElapsedTime
+                  - ToolActivityRowViewModel_DisplaySummary_ShowsNoBackticks
                   - NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven
                   - TranscriptRows_Kinds_TheEntryOfAMessageIsTheUserRow
+
+              - id: CanvasPilot-ChatPanel-GroupCopilotRows
+                title: >-
+                  The ChatPanel shall tell each row of the transcript whether it opens a group, which the first row of
+                  the transcript does and so does the first row of the copilot after a message of the user or a notice,
+                  and shall tell it again whenever the rows change, so that the name of the copilot is shown once for a
+                  run of replies and tool calls and the first row of a restored conversation can say that it is from
+                  earlier.
+                justification: |
+                  A conversation reads like a chat between two people: the name of the one who speaks is given when the
+                  speaker changes and not above every line, and the lines that were restored from an earlier session are
+                  set apart from the new ones. Which row begins a run depends on the rows around it, which only the
+                  transcript knows, so the panel decides it and the views only show it.
+                tests:
+                  - ChatPanelViewModel_Transcript_MarksTheRowsThatOpenAGroup
 
               - id: CanvasPilot-ChatPanel-ConverseWithCopilot
                 title: >-
@@ -276,20 +342,23 @@ sections:
                   - ChatHistoryMapper_ToHistoryRows_SentMessageAndRows_KeepsWordsLabelsNotesAndPathsOnly
                   - ChatHistoryMapper_ToTranscriptRowAndToAgentTurns_CoverEveryKind
                   - RestoredEntryViewModel_New_OnlyUserRows_AndSummaryCountsMarksAndAttachments
+                  - RestoredEntryViewModel_New_ChipLabelGluedToWords_GetsASpace
                   - ChatPanelView_RestoredHistory_ShowsTextRowsWithoutPayloadButtonOrPictures
 
               - id: CanvasPilot-ChatPanel-ClearChatHistory
                 title: >-
-                  The ChatPanel shall offer a Clear chat history button that, without asking first, deletes the saved
-                  history of the open project, empties the transcript except for a notice that says so (which is not
-                  saved), and makes the AI copilot forget the conversation, stopping a turn that runs and dropping what it
-                  still says, and shall say in an error notice when the saved history could not be deleted.
+                  The ChatPanel shall offer, in the menu of more actions in its header, a Clear chat history item that,
+                  without asking first, deletes the saved history of the open project, empties the transcript except
+                  for a notice that says so (which is not saved), and makes the AI copilot forget the conversation,
+                  stopping a turn that runs and dropping what it still says, and shall say in an error notice when the
+                  saved history could not be deleted.
                 justification: |
                   The words of a conversation are the user's own, and the user must be able to get rid of them from the
                   screen, from the computer, and from the provider's session in one step. The application has no
-                  confirmation dialog, and a button that is named for what it does and that sits in the header of the
-                  conversation is not pressed by accident; the notice tells what happened. A turn that runs belongs to
-                  the conversation that is cleared, so it must not write into the next one.
+                  confirmation dialog, and an item that is named for what it does and that sits in the menu of the
+                  header of the conversation, out of the way of the buttons that are used all the time, is not chosen
+                  by accident; the notice tells what happened. A turn that runs belongs to the conversation that is
+                  cleared, so it must not write into the next one.
                 tests:
                   - ChatPanelViewModel_ClearHistory_DeletesTheStoredHistoryEmptiesTheTranscriptAndResetsTheCopilot
                   - ChatPanelViewModel_ClearHistory_WhileTurnRuns_StopsItDropsItsRowsAndSavesNothing
@@ -297,3 +366,43 @@ sections:
                   - ChatPanelViewModel_ClearHistory_StoreCannotDelete_ShowsAnErrorNotice
                   - ChatPanelView_ClearChatHistoryButton_ClearsTranscriptDeletesHistoryAndSendStaysEnabled
                   - ChatPanelView_ClearChatHistoryButton_NothingSaid_ShowsOnlyTheNotice
+
+              - id: CanvasPilot-ChatPanel-OfferPrompts
+                title: >-
+                  The ChatPanel shall, while the conversation is empty, ask "What would you like to draw?", offer four
+                  example prompts and a tip, and write the prompt that the user chooses into the message, ready to be
+                  sent; and shall offer a few follow-up prompts, which work the same way, only once a conversation exists.
+                justification: |
+                  A blank panel does not tell a new user what the assistant can do. Examples that fill in the message
+                  show it and save typing, and because the prompt lands in the message and is not sent, the user can
+                  change it first. Follow-ups are only useful when there is something to follow up, so they wait for the
+                  first message.
+                tests:
+                  - ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation
+                  - ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce
+
+              - id: CanvasPilot-ChatPanel-HideConversation
+                title: >-
+                  The ChatPanel shall offer in its header a button that asks the host to hide the conversation, by
+                  raising a request each time it is used, and shall leave the hiding, and the way back, to the host.
+                justification: |
+                  The drawing is the point of the application, and the conversation takes a third of the window. The user
+                  must be able to give the space to the picture. The panel does not know the window around it, so it
+                  raises a request that the workspace handles, and it can be placed in any column.
+                tests:
+                  - ChatPanelView_CollapseButton_RaisesCollapseRequested
+                  - ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce
+
+              - id: CanvasPilot-ChatPanel-NameIconButtons
+                title: >-
+                  The ChatPanel shall give each of its buttons that shows an icon and no text, the menu of more actions,
+                  the button that hides the panel, the attach button, the talk button, and the Send button, an accessible
+                  name and a tooltip, a size of at least 28 by 28 pixels, and a place in the order of the keyboard, in
+                  the dark and the light theme.
+                justification: |
+                  A button with only a picture is of no use to someone who uses a screen reader, who cannot see the
+                  picture, or who has not met the symbol before, and a small target is hard to hit with a pointer or a
+                  finger. The tooltip and the name tell what each button does, and the keyboard must reach all of them.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+                  - ChatPanelView_ComposerCard_PlaceholderNamesAndHint

@@ -48,8 +48,8 @@ sections:
 
       - id: CanvasPilot-System-PersistUserSettings
         title: >-
-          The application shall remember the user's settings between runs and shall keep working when
-          the stored settings are damaged.
+          The application shall remember the user's settings between runs, including the layout of its window and its
+          theme, and shall keep working when the stored settings are damaged.
         tags: [system]
         justification: |
           Users expect to configure the application once. A settings file that is damaged, edited by
@@ -59,6 +59,7 @@ sections:
           - CanvasPilot-Settings-PersistUserSettings
           - CanvasPilot-Settings-ToleratePoorSettingsFiles
           - CanvasPilot-Settings-EditSettingsInDialog
+          - CanvasPilot-Settings-RememberLayoutAndAppearance
         tests:
           - CanvasPilot_PersistUserSettings_SaveAndReload_RestoresSettingsAndToleratesDamage
 
@@ -144,36 +145,48 @@ sections:
 
       - id: CanvasPilot-System-BrowseProjectImages
         title: >-
-          The application shall list the image source files of the open project so the user can choose
-          one to work on, keeping the list current as files change.
+          The application shall show the folders and the image source files of the open project as a tree, with a
+          small picture for each file it draws, so the user can choose one to work on, keeping the tree current as files
+          change.
         tags: [system]
         justification: |
           The user works on one image source file at a time, and needs to see which files the project
-          holds, including files added or changed by other tools, without leaving the application.
+          holds, including files added or changed by other tools, without leaving the application. Projects keep their
+          files in folders, and a small picture lets the user recognize a drawing before opening it.
         children:
           - CanvasPilot-Project-BrowseProjectImages
+          - CanvasPilot-Project-ShowProjectFilesClearly
+          - CanvasPilot-Project-ShowThumbnails
+          - CanvasPilot-Preview-MakeThumbnails
         tests:
           - CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles
 
       - id: CanvasPilot-System-ManageProjectFiles
         title: >-
-          The application shall let the user rename and delete the image source files of the open project
-          from the project explorer, ask for confirmation before deleting, and tell the user when a file
-          cannot be renamed or deleted.
+          The application shall let the user create files and folders in the open project, add pictures, PDF files, and
+          drawings to it by copying or dropping them without replacing any file, and rename and delete the image
+          source files of the project from the project explorer, ask for confirmation before deleting, and tell the user
+          when a file cannot be created, renamed, or deleted.
         tags: [system]
         justification: |
           Users reorganize their drawings while working on them, and doing so without leaving the application
-          keeps the project list correct. A deleted file cannot be recovered, so the user must confirm it, and
-          a name that cannot be used or a file that is in use must be explained rather than silently ignored.
+          keeps the project list correct. Starting a new drawing or bringing material into the project is part of that
+          work, and it must never replace a file that is there. A deleted file cannot be recovered, so the user must
+          confirm it, and a name that cannot be used or a file that is in use must be explained rather than silently
+          ignored.
         children:
           - CanvasPilot-Project-ManageImageFiles
           - CanvasPilot-AppShell-ManageProjectFiles
+          - CanvasPilot-Project-AddToTheProject
+          - CanvasPilot-Utilities-FreeFileNames
         tests:
           - CanvasPilot_ManageProjectFiles_RenameAndDelete_UpdateFilesAndReportProblems
+          - CanvasPilot_ManageProjectFiles_NewFileFolderAndAddedPicture_ShowInTheTreeAndReplaceNothing
 
       - id: CanvasPilot-System-PreviewImages
         title: >-
-          The application shall show the picture of the image source file the user selects, keep it matched to
+          The application shall show the picture of the image source file the user selects, fitted to the window or at a
+          zoom from 25 to 400 percent, keep it matched to
           the file as the file and the files it uses change, and explain files that cannot be drawn.
         tags: [system]
         justification: |
@@ -184,6 +197,7 @@ sections:
           - CanvasPilot-Preview-RenderSelectedImage
           - CanvasPilot-Preview-ExplainRenderProblems
           - CanvasPilot-Preview-KeepPreviewCurrent
+          - CanvasPilot-Preview-ZoomPicture
         tests:
           - CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError
 
@@ -245,7 +259,8 @@ sections:
         title: >-
           The application shall show the picture of the selected file with a layer over it, aligned with the
           picture's pixels at every zoom, on which the user draws numbered rectangle, ellipse, freehand, and arrow
-          marks with the pointer or the keyboard, each with an optional short note and a chip in the message, and shall
+          marks with the pointer or the keyboard, each with an optional short note and a chip in the message, clear all
+          of them with one button, and shall
           keep each mark with the exact picture it was made on, so that a mark never moves to another picture and
           the marks of an earlier picture are not drawn on a later one.
         tags: [system]
@@ -263,6 +278,8 @@ sections:
           - CanvasPilot-Annotation-DrawMarksOnPicture
           - CanvasPilot-Annotation-HideMarksOfOtherPictures
           - CanvasPilot-Chat-LinkMarksToChips
+          - CanvasPilot-Annotation-ClearMarks
+          - CanvasPilot-Composer-RemoveAllMarkChips
         tests:
           - CanvasPilot_MarkImage_ShownPicture_HasOverlayLayerThatSurvivesNewPictures
           - CanvasPilot_MarkImage_MarksOnShownPicture_AreNumberedAndStayOnTheirPicture
@@ -304,6 +321,7 @@ sections:
           - CanvasPilot-Composer-WorkInsideAnOpenProject
           - CanvasPilot-Composer-ShowEditableMessage
           - CanvasPilot-Composer-ShowChipsInline
+          - CanvasPilot-Composer-ExposeMessageToAssistiveTechnology
           - CanvasPilot-Chat-ShowTranscriptOfSentMessages
           - CanvasPilot-Chat-SendComposedMessage
           - CanvasPilot-AppShell-ChatColumn
@@ -350,8 +368,8 @@ sections:
 
       - id: CanvasPilot-System-AttachToMessage
         title: >-
-          The application shall let the user attach files, folders, and pictures to the message by dropping them or
-          pasting them, shall treat everything that is attached strictly as data that is never opened or run, shall
+          The application shall let the user attach files, folders, and pictures to the message by dropping them,
+          pasting them, or picking files with a button, shall treat everything that is attached strictly as data that is never opened or run, shall
           copy nothing into the project while the message is a draft, and shall copy the attachments into the project
           when the message is sent, within limits of size and number, without overwriting any file and without leaving
           a partial copy.
@@ -364,6 +382,7 @@ sections:
           - CanvasPilot-Composer-AcceptDroppedAndPastedContent
           - CanvasPilot-Composer-TreatContentAsData
           - CanvasPilot-Composer-StageAttachmentsAtSend
+          - CanvasPilot-Chat-AttachFilesToMessage
         tests:
           - CanvasPilot_AttachToMessage_DroppedAndPastedContent_IsCopiedIntoProjectAtSend
           - CanvasPilot_AttachToMessage_DropFileFolderImage_CopiedIntoProjectOnlyAtSend
@@ -413,20 +432,87 @@ sections:
 
       - id: CanvasPilot-System-DesktopShell
         title: >-
-          The application shall present a main window with menus from which the user creates and opens
-          projects, sees the project's image files, returns to recent projects, changes settings, and
-          learns about the application.
+          The application shall present a main window with a title bar that holds menus, the project name, and the style
+          and AI provider pills, a welcome screen while no project is open, a workspace and a status bar while one is,
+          and a window layout that it remembers, from which the user creates and opens projects, sees the project's
+          image files, returns to recent projects, changes settings, and learns about the application.
         tags: [system]
         justification: |
           The main window is what the user sees and uses. Bringing the project, settings, and application
           information together under familiar menus, with the open project named in the title, lets a
-          user work without knowing how the application is built.
+          user work without knowing how the application is built. A start screen that offers the next step, a status
+          bar that says what is shown, and a window that comes back as it was left make the first and every later
+          start predictable.
         children:
           - CanvasPilot-AppShell-ProvideMainWindow
           - CanvasPilot-AppShell-HostProjectWorkspace
           - CanvasPilot-AppShell-ShowApplicationInformation
+          - CanvasPilot-AppShell-ProvideTitleBar
+          - CanvasPilot-AppShell-ShowStatusBar
+          - CanvasPilot-AppShell-ShowWelcomeScreen
+          - CanvasPilot-AppShell-RememberWindowLayout
         tests:
           - CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip
+
+      - id: CanvasPilot-System-ThemedInterface
+        title: >-
+          The application shall present its windows in a dark or a light theme, as the operating system is unless the user
+          chooses one in the settings, with one accent color, line icons that
+          follow the text color, a visible mark of the keyboard focus, and text that is easy to read in both.
+        tags: [system]
+        justification: |
+          People use the application for long stretches in rooms of every brightness. A dark and a light look that
+          follow the system, with readable text and one consistent set of colors, make it comfortable to use and
+          accessible to people with low vision.
+        children:
+          - CanvasPilot-AppShell-ProvideThemes
+          - CanvasPilot-AppShell-ProvideIcons
+          - CanvasPilot-AppShell-ShowKeyboardFocus
+          - CanvasPilot-AppShell-ApplyThemeChoice
+          - CanvasPilot-Settings-ChooseAppearance
+          - CanvasPilot-Settings-ShowPagesWithHeadings
+        tests:
+          - CanvasPilot_Theme_ComposedWindowIsDarkInDarkAndLightInLight
+          - CanvasPilot_Theme_ChoiceInSettingsDialogChangesTheWindowAndIsRemembered
+
+      - id: CanvasPilot-System-AccessibleInterface
+        title: >-
+          The application shall be usable with the keyboard and a screen reader in every window: the menu has access
+          keys, a button that shows only an icon has a name, a tooltip, and a target of at least 28 by 28 pixels, every
+          field and list has a name, the shared button looks show the focus ring on the keyboard, and the text of
+          notices, the amber button, and the welcome screen is readable.
+        tags: [system]
+        justification: |
+          People who cannot use a pointer, or cannot see the screen or its colors well, must be able to reach, name,
+          and use every control of the application. The check walks the windows of the composed application, in both
+          theme variants, instead of trusting that each view was done with care.
+        children:
+          - CanvasPilot-AppShell-MakeWindowsAccessible
+          - CanvasPilot-Chat-NameControls
+          - CanvasPilot-Project-BeAccessible
+          - CanvasPilot-Settings-BeUsableWithAssistiveTechnology
+          - CanvasPilot-Speech-BeUsableWithAssistiveTechnology
+          - CanvasPilot-Style-BeUsableWithAssistiveTechnology
+          - CanvasPilot-Knowledge-BeUsableWithAssistiveTechnology
+        tests:
+          - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+          - Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey
+          - Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly
+          - Accessibility_Colors_NoticesAndWelcomeTextAreReadable
+
+      - id: CanvasPilot-System-ShipThirdPartyNotices
+        title: >-
+          The installed application shall carry the license notices of the third-party material that is part of it but
+          is not a library that the build restores.
+        tags: [system]
+        justification: |
+          Material of other parties, such as the icons of the windows, is used under licenses that require the notice to
+          go with every copy. Delivering the notice in the folder of the program meets that and lets the user see what
+          the application contains.
+        children:
+          - CanvasPilot-AppShell-ShipThirdPartyNotices
+        tests:
+          - windows@ThirdPartyNotices_Published
 
       - id: CanvasPilot-System-WindowsInstaller
         title: >-
@@ -514,6 +600,8 @@ sections:
           - CanvasPilot-Agent-MakeTheAgentOfTheProvider
           - CanvasPilot-Agent-ConverseInProjectConversations
           - CanvasPilot-Chat-ShowCopilotConversation
+          - CanvasPilot-Chat-GuideNewConversation
+          - CanvasPilot-Chat-HideConversation
           - CanvasPilot-AppShell-ComposeAiCopilot
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
@@ -595,6 +683,7 @@ sections:
           - CanvasPilot-Agent-CheckProviderReadiness
           - CanvasPilot-Agent-ExplainUnavailableCopilot
           - CanvasPilot-Chat-ShowCopilotReadiness
+          - CanvasPilot-AppShell-ShowProviderPill
         tests:
           - CanvasPilot_ReportProviderReadiness_CopilotAndOllamaMachines_GiveOneActionableSentenceEach
           - CanvasPilot_ReportProviderReadiness_CopilotNotSignedIn_BannerSaysHowToSignInAndSendDoesNotRunIt
@@ -703,7 +792,7 @@ sections:
           not silently look different.
         children:
           - CanvasPilot-Style-ChooseActiveKit
-          - CanvasPilot-AppShell-ChooseStyleInStatusBar
+          - CanvasPilot-AppShell-ChooseStyleInTitleBar
           - CanvasPilot-Project-KeepTheStyleChoice
           - CanvasPilot-Settings-KeepStyleSettings
         tests:

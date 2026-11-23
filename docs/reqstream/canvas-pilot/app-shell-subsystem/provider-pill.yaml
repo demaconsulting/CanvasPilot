@@ -1,0 +1,107 @@
+---
+# Software Unit Requirements for the ProviderPill Unit
+#
+# The ProviderPill unit is the pill in the title bar of the main window (ProviderPillViewModel.cs, ProviderPillView.axaml)
+# that says which AI provider and model the settings choose and whether the provider can be used, with words as well as a
+# colored dot, from the same check that the readiness banner of the chat panel shows. Using the pill opens the settings.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: ProviderPill Requirements
+            requirements:
+              - id: CanvasPilot-ProviderPill-ShowProviderAndModel
+                title: >-
+                  The ProviderPill shall show the name of the AI provider that the settings choose, Copilot or Ollama, in
+                  bold, and, while the provider can be used, the model that the settings choose or "default model" when
+                  they leave the model to the provider, and shall change both when the settings change.
+                justification: |
+                  The user must see at a glance which provider and which model will answer their request, because the two
+                  differ in cost, speed, and quality. A change in the settings must show at once, or the user would
+                  trust a pill that no longer tells the truth.
+                tests:
+                  - ProviderPill_CheckThenReady_ShowsCheckingThenProviderAndModel
+                  - ProviderPill_SettingsChooseOllama_ShowsTheOtherProviderAndTheDefaultModel
+
+              - id: CanvasPilot-ProviderPill-ShowTheStateWithWords
+                title: >-
+                  The ProviderPill shall say with words, and with a dot whose color and shape follow the state (green when
+                  the provider can be used, amber when it needs something from the user, red when it cannot be used, a
+                  hollow ring while it is being checked), whether the provider is being checked, can be used, needs
+                  attention, or cannot be used, and shall never tell the state by the color alone.
+                justification: |
+                  A color alone is lost on people who cannot tell the colors apart, and a bare "problem" does not tell
+                  the user what to do. A few words, such as "sign-in needed" or "Ollama not running", say what is wrong,
+                  and the dot gives the state a place to be seen at a glance.
+                tests:
+                  - ProviderPill_CheckThenReady_ShowsCheckingThenProviderAndModel
+                  - ProviderPill_CheckFindsAProblem_SaysItInWordsAndPicksTheState
+                  - ProviderPill_RecheckAndNoCopilot_CheckingAgainAndErrorWithoutCopilot
+
+              - id: CanvasPilot-ProviderPill-ExplainInTooltip
+                title: >-
+                  The ProviderPill shall show as its tooltip the same sentence that the readiness banner of the chat panel
+                  shows for the check, and a sentence that there is no AI provider in this application when there is none.
+                justification: |
+                  The few words in the pill cannot hold the remedy. The tooltip repeats the one sentence that the check
+                  produced, so that the pill and the banner never disagree and the user finds the same advice in both
+                  places.
+                tests:
+                  - ProviderPill_CheckThenReady_ShowsCheckingThenProviderAndModel
+                  - ProviderPill_CheckFindsAProblem_SaysItInWordsAndPicksTheState
+                  - ProviderPill_RecheckAndNoCopilot_CheckingAgainAndErrorWithoutCopilot
+
+              - id: CanvasPilot-ProviderPill-ReportMissingProvider
+                title: >-
+                  The ProviderPill shall show the state of an error when the application has no AI provider to check, and
+                  shall show that it is checking again, and then the new answer, each time the provider is checked again.
+                justification: |
+                  A pill that stays green for a provider that does not exist, or that keeps an old answer while a new
+                  check runs, would give false comfort. The user is better served by an honest error and by a pill that
+                  shows when the check is under way.
+                tests:
+                  - ProviderPill_RecheckAndNoCopilot_CheckingAgainAndErrorWithoutCopilot
+
+              - id: CanvasPilot-ProviderPill-OpenSettings
+                title: >-
+                  The ProviderPill shall open the settings on their first page, the AI provider, when the user uses it.
+                justification: |
+                  Whatever the pill reports, the next step is nearly always a change of the provider settings. Making the
+                  pill the way into them saves the user a search through the menus.
+                tests:
+                  - ProviderPill_RecheckAndNoCopilot_CheckingAgainAndErrorWithoutCopilot
+                  - MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage
+
+              - id: CanvasPilot-ProviderPill-ShowInTitleBar
+                title: >-
+                  The ProviderPill shall be shown in the title bar of the main window, at the right and inside its edge, as a
+                  control 26 pixels high.
+                justification: |
+                  The provider concerns the whole application and not one project, so it belongs in the bar that is always
+                  there. A fixed place and height let the user find it without looking.
+                tests:
+                  - MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage
+
+              - id: CanvasPilot-ProviderPill-AnnounceToScreenReader
+                title: >-
+                  The ProviderPill shall give a screen reader one sentence that names the provider, says in words how it is,
+                  and says that using the pill opens the settings.
+                justification: |
+                  A person who cannot see the dot and the words needs the same facts in a form that a screen reader reads,
+                  and needs to know what the control does before using it.
+                tests:
+                  - ProviderPill_CheckThenReady_ShowsCheckingThenProviderAndModel
+                  - ProviderPill_CheckFindsAProblem_SaysItInWordsAndPicksTheState
+                  - MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage
+
+              - id: CanvasPilot-ProviderPill-StopFollowingWhenDisposed
+                title: >-
+                  The ProviderPill shall stop following the check of the provider and the settings when it is disposed, and
+                  shall refuse to be created without the chat panel, the settings, or the command that opens the settings.
+                justification: |
+                  A pill that is no longer shown must not go on reacting to events, and a pill created without what it
+                  reports on would fail later, far from the cause.
+                tests:
+                  - ProviderPill_NullArgumentsAndDispose_RefusesNullAndStopsFollowing

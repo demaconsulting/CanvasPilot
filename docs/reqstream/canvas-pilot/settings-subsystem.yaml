@@ -4,8 +4,9 @@
 # PURPOSE:
 # - Define requirements for the CanvasPilot Settings subsystem
 # - The Settings subsystem spans SettingsService (SettingsService.cs, ISettingsService.cs, AppSettings.cs),
-#   SettingsDialog (SettingsDialogViewModel.cs, ISettingsPage.cs, SettingsDialogView.axaml), and
-#   AiProviderSettingsPage (AiProviderSettingsPageViewModel.cs, AiProviderSettingsPageView.axaml)
+#   SettingsDialog (SettingsDialogViewModel.cs, ISettingsPage.cs, SettingsDialogView.axaml, IconKeyConverter.cs),
+#   AiProviderSettingsPage (AiProviderSettingsPageViewModel.cs, AiProviderSettingsPageView.axaml), and
+#   AppearanceSettingsPage (AppearanceSettingsPageViewModel.cs, AppearanceSettingsPageView.axaml)
 # - Subsystem requirements describe the persistence and editing behavior that satisfies the system-level
 #   settings requirements
 
@@ -60,6 +61,62 @@ sections:
               - CanvasPilot-SettingsDialog-NotifyPagesOnClose
             tests:
               - SettingsSubsystem_EditSettings_DialogCancel_LeavesStoredSettingsUnchanged
+
+          - id: CanvasPilot-Settings-ShowPagesWithHeadings
+            title: >-
+              The Settings subsystem shall show the settings window as a rail of pages, each with an icon and a title, beside
+              the chosen page under its title and a sentence about it.
+            justification: |
+              The settings of the application are many and belong to several subsystems. A rail that names each page by an
+              icon and a title, and a heading over the page that says what it is for, let a person find the choice they
+              came for and know they are in the right place.
+            children:
+              - CanvasPilot-SettingsDialog-ShowPageRailAndHeading
+              - CanvasPilot-AiProviderSettingsPage-ShowPageHeading
+            tests:
+              - SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner
+
+          - id: CanvasPilot-Settings-BeUsableWithAssistiveTechnology
+            title: >-
+              The Settings subsystem shall give the settings window, its list of pages, and the entries of its pages names
+              that assistive technology can read, and let every button of the window be reached with the keyboard.
+            justification: |
+              Changing a setting must be possible for people who use a screen reader or only the keyboard. An entry that has
+              no name is read as nothing, and a button that cannot take the focus cannot be reached.
+            children:
+              - CanvasPilot-SettingsDialog-BeUsableWithAssistiveTechnology
+              - CanvasPilot-AiProviderSettingsPage-BeUsableWithAssistiveTechnology
+            tests:
+              - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+          - id: CanvasPilot-Settings-RememberLayoutAndAppearance
+            title: >-
+              The Settings subsystem shall remember the layout of the main window, the theme choice, the options of the
+              project explorer, and when each recent project was opened, together with the other settings, and keep them when
+              the user changes other settings in the dialog.
+            justification: |
+              A window that opens as it was left, in the theme the user chose, is part of remembering the user's settings.
+              The values share the one settings file with the choices of the other subsystems, so storing the choices of one
+              part must never lose the others.
+            children:
+              - CanvasPilot-SettingsService-KeepWindowLayout
+              - CanvasPilot-SettingsService-KeepAppearance
+              - CanvasPilot-SettingsService-KeepRecentProjectOpenTimes
+            tests:
+              - SettingsSubsystem_RememberLayoutAndAppearance_SavedWithOthers_SurviveRestartAndDialogChanges
+
+          - id: CanvasPilot-Settings-ChooseAppearance
+            title: >-
+              The Settings subsystem shall let the user choose the theme of the application and the options of the project
+              explorer on an Appearance page of the settings dialog, and store the choices with the other settings.
+            justification: |
+              Where people look for how the application looks is the settings dialog. The choices must be stored with
+              the other settings so that they are in effect the next time the application starts.
+            children:
+              - CanvasPilot-AppearanceSettingsPage-ChooseAppearance
+              - CanvasPilot-AppearanceSettingsPage-ShowPageInDialog
+            tests:
+              - SettingsSubsystem_Appearance_DialogOk_StoresThemeAndOptions
 
           - id: CanvasPilot-Settings-ConfigureAiProvider
             title: >-

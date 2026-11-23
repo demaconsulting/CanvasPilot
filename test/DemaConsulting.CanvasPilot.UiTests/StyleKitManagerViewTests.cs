@@ -376,6 +376,30 @@ public sealed class StyleKitManagerViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the chosen kit is marked with a check besides its accent outline, so the choice is not told by color alone,
+    ///     and that the other cards have no check.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task StyleKitManagerView_ChoosingAKit_MarksOnlyThatCardWithACheck()
+    {
+        // Arrange: a window over the kits that come with the program
+        var (window, _) = await ShowAsync();
+        var cards = Cards(window);
+
+        // Act: choose the second card
+        SettingsUiHelpers.Click(window, cards[1]);
+        Dispatcher.UIThread.RunJobs();
+
+        // Assert: only the chosen card shows its check
+        var checks = cards.Select(card => card.GetVisualDescendants().OfType<PathIcon>().Count(icon => icon.IsEffectivelyVisible && icon.Foreground is not null && icon.Parent is Grid)).ToArray();
+        Assert.Contains("selected", cards[1].Classes);
+        Assert.Equal(1, checks[1]);
+        Assert.All(checks.Where((_, index) => index != 1), count => Assert.Equal(0, count));
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Makes the window over the real catalog, with its kits read, and shows it.
     /// </summary>
     /// <returns>The window and its view model.</returns>

@@ -7,7 +7,8 @@
 #   the layer on which the user draws them with the pointer or the keyboard, which picture each mark belongs to, its
 #   number, its geometry in the picture's pixels, and its optional note, and it finds the parts of the picture's source
 #   file that lie under a mark. The registry and the resolver have no dependency on the user interface; the layer does,
-#   and reaches the composer only through the host that joins them
+#   and reaches the composer only through the host that joins them. The layer offers a floating bar of tool buttons and a
+#   button that clears the marks of the message
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -72,7 +73,8 @@ sections:
 
           - id: CanvasPilot-Annotation-DrawMarksOnPicture
             title: >-
-              The Annotation subsystem shall let the user draw a rectangle, an ellipse, a freehand line, or an arrow on
+              The Annotation subsystem shall let the user choose a rectangle, an ellipse, a freehand line, or an arrow tool
+              from a floating bar of icon buttons or by a key, and draw that shape on
               the shown picture with the pointer or the keyboard, each with an optional note of one short line, in the
               pixels of the picture at any zoom, make each finished shape a numbered mark that is pinned to that picture
               and handed to the message, let the user stop a shape with Escape, offer the tools only when a mark can be
@@ -91,6 +93,7 @@ sections:
               - CanvasPilot-AnnotationOverlay-ReportCommittedMarks
               - CanvasPilot-AnnotationOverlay-ToggleDragOutWithTool
               - CanvasPilot-AnnotationOverlay-OperateByKeyboard
+              - CanvasPilot-AnnotationOverlay-ChooseToolsFromBar
               - CanvasPilot-AnnotationOverlay-OfferToolsOnlyWithPictureAndMessage
             tests:
               - AnnotationSubsystem_DrawMarks_OverlayOnRenderedDiagram_MakesNumberedMarksPinnedToThePicture
@@ -108,3 +111,17 @@ sections:
               - CanvasPilot-AnnotationOverlay-ShowOnlyVisibleMarks
             tests:
               - AnnotationSubsystem_DrawMarks_FileChanged_OverlayShowsOnlyMarksOfTheShownPicture
+
+          - id: CanvasPilot-Annotation-ClearMarks
+            title: >-
+              The Annotation subsystem shall let the user clear the marks of the message with one button of the tool bar,
+              which is available only while the message holds a mark, and shall take every mark out of the message, those
+              shown on the picture and those drawn on another picture alike.
+            justification: |
+              A user who has marked a picture several times and changes their mind wants to start again in one step. Marks
+              that are hidden because the file changed are still part of what the user said, so clearing must remove them
+              too, or the message would still carry marks that the user can no longer see.
+            children:
+              - CanvasPilot-AnnotationOverlay-ClearMarks
+            tests:
+              - AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage

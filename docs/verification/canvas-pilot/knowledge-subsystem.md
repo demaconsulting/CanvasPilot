@@ -35,6 +35,9 @@ the project file of the application library from the repository; no network, dis
   them.
 - The browser over the catalog of the application shows the tree of its roots, finds a card by search, shows a card with
   its text and related cards, and copies an example to the clipboard that it was given.
+- In the accessibility sweep of the windows of the application, in both theme variants, the search box and the tree of
+  the Drawing Knowledge window have names, every button that shows no text has a name and a tooltip, and every enabled
+  button can take the keyboard focus.
 
 ### Test Scenarios
 
@@ -82,3 +85,9 @@ of the application has a node for each root, finds the card of the marks of a me
 search, shows the card of the marks with its text and its related cards as the catalog gives them, and puts the text of
 its first example on a clipboard that records, with a status that names the example. This scenario is tested by
 `KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: Headless UI test of the whole application. The Drawing
+Knowledge window and every other window of the application are shown in both theme variants and every control is looked
+at; the search box and the tree have names, a button that shows no text has a name and a tooltip, and every enabled
+button can take the keyboard focus. This scenario is tested by
+`Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

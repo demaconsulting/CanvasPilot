@@ -43,6 +43,70 @@ public sealed class SettingsSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the layout of the window, the look of the application, and the times of opening of projects are
+    ///     stored with the other settings, survive a restart, and are kept when the dialog stores its own choices.
+    /// </summary>
+    [Fact]
+    public void SettingsSubsystem_RememberLayoutAndAppearance_SavedWithOthers_SurviveRestartAndDialogChanges()
+    {
+        // Arrange: a stored layout, a pinned theme, a listed project with its time, and a dialog over the AI provider page
+        var opened = new DateTimeOffset(2026, 11, 20, 9, 15, 0, TimeSpan.Zero);
+        var service = new SettingsService(_tempRoot);
+        service.Save(new AppSettings
+        {
+            RecentProjects = ["C:\\a"],
+            RecentProjectOpened = new Dictionary<string, DateTimeOffset> { ["C:\\a"] = opened },
+            Appearance = new AppearanceSettings { Theme = ThemeChoice.Light, ComfortableRows = true },
+            Window = new WindowSettings { Width = 1200, Height = 760, ExplorerWidth = 280, ChatWidth = 480 }
+        });
+        var page = new AiProviderSettingsPageViewModel();
+        var dialog = new SettingsDialogViewModel(service, [page]);
+        page.ModelName = "llama3";
+
+        // Act: choose OK, then start a fresh service as after a restart
+        dialog.OkCommand.Execute(null);
+        var restarted = new SettingsService(_tempRoot).Load();
+
+        // Assert: the dialog's choice was stored, and the layout, the look, and the time are as they were
+        Assert.Equal("llama3", restarted.AiProvider.ModelName);
+        Assert.Equal(ThemeChoice.Light, restarted.Appearance.Theme);
+        Assert.True(restarted.Appearance.ComfortableRows);
+        Assert.Equal(1200, restarted.Window.Width);
+        Assert.Equal(760, restarted.Window.Height);
+        Assert.Equal(280, restarted.Window.ExplorerWidth);
+        Assert.Equal(480, restarted.Window.ChatWidth);
+        Assert.Equal(opened, restarted.RecentProjectOpened["C:\\a"]);
+    }
+
+    /// <summary>
+    ///     Test that the theme and the explorer options chosen on the Appearance page and accepted with OK are stored,
+    ///     are present after a restart, and leave the choices of the other pages as they were.
+    /// </summary>
+    [Fact]
+    public void SettingsSubsystem_Appearance_DialogOk_StoresThemeAndOptions()
+    {
+        // Arrange: stored AI provider settings, and a dialog over the AI provider page and the Appearance page
+        var service = new SettingsService(_tempRoot);
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "gpt-x" } });
+        var provider = new AiProviderSettingsPageViewModel();
+        var appearance = new AppearanceSettingsPageViewModel();
+        var dialog = new SettingsDialogViewModel(service, [provider, appearance]);
+
+        // Act: choose the dark theme without thumbnails on the Appearance page, choose OK, and restart
+        dialog.SelectedPage = appearance;
+        appearance.SelectedTheme = appearance.Themes[1];
+        appearance.ShowThumbnails = false;
+        dialog.OkCommand.Execute(null);
+        var restarted = new SettingsService(_tempRoot).Load();
+
+        // Assert: the appearance was stored and the model name of the other page is unchanged
+        Assert.Equal(ThemeChoice.Dark, restarted.Appearance.Theme);
+        Assert.False(restarted.Appearance.ShowThumbnails);
+        Assert.False(restarted.Appearance.ComfortableRows);
+        Assert.Equal("gpt-x", restarted.AiProvider.ModelName);
+    }
+
+    /// <summary>
     ///     Test that choices made in the dialog survive an application restart.
     /// </summary>
     [Fact]

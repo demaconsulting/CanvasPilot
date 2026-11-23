@@ -9,7 +9,10 @@ for the part that keeps the conversation on this computer (saving, restoring, th
 over the real `ChatHistoryStore` in a temporary folder), in `TranscriptRowTests.cs` of the same folder for the rows that
 the copilot's turn adds (reply, tool, and notice), and with headless Avalonia UI tests in
 `test/DemaConsulting.CanvasPilot.UiTests/ChatPanelViewTests.cs`, `ChatPanelCopilotViewTests.cs`, and
-`ChatPanelHistoryViewTests.cs` (with `ChatUiTestSupport.cs` for the harness and the scripted copilot) for the views.
+`ChatPanelHistoryViewTests.cs` (with `ChatUiTestSupport.cs` for the harness and the scripted copilot) for the views, in
+`AccessibilityViewTests.cs` for the names, tooltips, sizes, and keyboard focus of the buttons of the panel in the
+workspace of an open project, and in `AnnotationOverlayViewTests.cs` for the clearing of the marks through the real
+panel and annotation toolbar.
 Both use the real `ChatPanelViewModel`, `ComposerViewModel`, `ComposerDocument`, `ComposerHistory`, `AttachmentIntake`,
 `AttachmentStore`, `MarkRegistry`, and `AnnotationOverlayViewModel` over a temporary project folder, because the unit
 exists to connect them and the rule under test is how they agree. The UI tests also use the real `ChatPanelView`,
@@ -18,12 +21,15 @@ exists to connect them and the rule under test is how they agree. The UI tests a
 place in a panel test is replaced: the dictation service (a controllable fake in the unit tests, a scripted one in the
 UI tests, both with a session that says words and ends with a chosen text), the builder of sent messages (one that gives
 a text, or a ready-made payload), the source of the shown picture, the composer of mark pictures (a substitute, or a
-stub that gives a one-pixel PNG), the launcher of the payload inspector (a recording one), and the AI copilot (a
+stub that gives a one-pixel PNG), the launcher of the payload inspector (a recording one), the picker of files to attach
+(a fake that answers with the files the test names and records how it was asked), and the AI copilot (a
 controlled or scripted `IAgentService` that streams the events the test gives it when it gives them and reports the
-readiness the test chooses, with a manual clock in the unit tests). Input reaches the views as the platform delivers it:
+readiness the test chooses, with a manual clock in the unit tests, which times the tool rows too). Input reaches the
+views as the platform delivers it:
 pointer presses and releases on the talk button, move events away from it, the loss of the pointer capture, space key
-presses and releases on the focused button, text input and Ctrl+Z in the editing control, and clicks on the Send, Stop,
-"Open Settings", "Check again", and "View payload" buttons.
+presses and releases on the focused button, Enter and Shift+Enter key presses in the editing control, text input and
+Ctrl+Z in the editing control, and clicks on the Send, Stop, "Open Settings", "Check again", and "View payload"
+buttons and on the example prompts.
 
 #### Test Environment
 
@@ -35,7 +41,8 @@ system pointer and keyboard are not involved.
 
 The checks by hand before a release are listed in the verification of the `Chat` subsystem (real dictation, the Windows
 microphone privacy setting, the cases without model, microphone, or native files, the release outside the button, and
-the looks); they are not evidence for a requirement.
+the looks, such as the bubbles, the divider of earlier messages, the pulsing dots and talk button, and the "View
+payload" button that shows on hover); they are not evidence for a requirement.
 
 #### Acceptance Criteria
 
@@ -44,12 +51,24 @@ the looks); they are not evidence for a requirement.
   with dictated words shown differently from typed ones, and its chips in their places without delete buttons, with
   their names; the summary says how many marks and attachments it carried and is hidden when there are none.
 - The transcript is dropped when the project changes or closes, and a disposed panel no longer follows the composer.
-- The Send button can be used exactly when the composer can send; sending moves the message to the transcript and
-  empties the editing control; a failure keeps the draft, adds nothing, and shows the composer's reason.
-- A mark drawn on the picture becomes one chip at the caret as one undo step; undo removes the chip and hides the mark
-  and redo restores both; marks are allowed exactly while a message can be written; no mark remains after sending.
+- The Send button, an icon button named Send, can be used exactly when the composer can send; sending moves the message
+  to the transcript and empties the editing control; a failure keeps the draft, adds nothing, and shows the composer's
+  reason. Enter on its own sends and Shift+Enter writes a line break and sends nothing; the hint beside Send says that
+  Enter sends.
+- The Attach files button asks the picker once, starting in the project folder, and the files it returns become
+  attachment chips of the message.
+- The empty conversation shows the question, the four example prompts, and the tip, and choosing a prompt writes it into
+  the message so that it can be sent; the three follow-up prompts show only once there is a conversation; the button of
+  the header raises the request to hide the panel.
+- Every button that shows only an icon (overflow menu, hide, attach, talk, send) has an accessible name and a tooltip,
+  can take the focus, and is at least 28 by 28 pixels, in both theme variants; the empty message shows its placeholder
+  until text is typed.
+- A mark drawn on the picture becomes one chip in the row of chips above the words as one undo step; undo removes the
+  chip and hides the mark and redo restores both; marks are allowed exactly while a message can be written; no mark
+  remains after sending; clearing the marks on the picture takes the chips of all marks out of the message.
 - Pressing the pointer on the talk button listens and releasing it anywhere, losing the capture, removing the panel, or
-  (with the keyboard) releasing the space key ends it, once for each hold; the label follows the state; the words so far
+  (with the keyboard) releasing the space key ends it, once for each hold; the accessible name of the button follows
+  the state; the words so far
   are shown while it listens and one dictated block is added at the caret on release; a second press while held starts
   nothing.
 - When dictation cannot work, a press shows the reason in the panel, listens to nothing, and changes nothing; with no
@@ -63,10 +82,11 @@ the looks); they are not evidence for a requirement.
   and cannot run for a message without a payload.
 - The rows of the copilot form one family with the sent message: each row tells its kind; a reply grows while it
   streams, is final only when completed, keeps its text and is marked when stopped or failed, and never changes after it
-  has ended; a tool row says what is under way and then what was done, whether it worked, and whether it carried a
+  has ended; a tool row says what is under way and then what was done, whether it worked or failed, how long it took
+  when that was at least a tenth of a second, and whether it carried a
   picture, and keeps the report of a written file when the tool succeeded and shows the refusal when it did not; a
   notice holds its message, remedy, and whether the settings can help; the sent message keeps its payload and summary as
-  a row.
+  a row; the first row, and the first row of the copilot after a message or a notice, opens a group.
 - With a copilot, a sent message starts a turn with its payload and the rows of the answer follow the entry in order;
   the text of a reply is plain while it streams and Markdown only when it is complete (never for a stopped or failed
   one); the composer cannot send but can be written to while the turn runs, with an indicator and a Stop button shown
@@ -83,7 +103,8 @@ the looks); they are not evidence for a requirement.
   for notes and paths, but no picture, no payload, and no "View payload"); the saved words go to the copilot with the
   next message; each project has its own conversation; a failure to save is a notice and does not stop the
   conversation; and without a store or a project service nothing is saved or restored.
-- "Clear chat history" deletes the saved history of the open project, empties the transcript but for a notice that is
+- "Clear chat history", the item of the menu of the header, deletes the saved history of the open project, empties the
+  transcript but for a notice that is
   not saved, resets the copilot, stops a turn that runs and drops its rows, says in an error notice when the history
   could not be deleted, and works without a store or a copilot.
 
@@ -162,8 +183,8 @@ with the message, the remedy, and the "Open Settings" button; pressing it raises
 This scenario is tested by `ChatPanelView_ProviderFails_ShowsErrorRowWithRemedyAndOpenSettings`.
 
 **ChatPanelView_ToolCalls_ShowToolRowsInOrder**: Text, a written file, a rendered picture, and text again show two
-replies and two tool lines in order, the first saying that the file was created, and no line still shows the moving bar.
-This scenario is tested by `ChatPanelView_ToolCalls_ShowToolRowsInOrder`.
+replies and two tool lines in order, the first saying that the file was created, and every line shows the check and
+none still shows the spinner. This scenario is tested by `ChatPanelView_ToolCalls_ShowToolRowsInOrder`.
 
 **ChatPanelView_Readiness_ShowsTheSentenceOffersSettingsAndHidesWhenReady**: A panel with a Copilot that is not signed
 in shows the banner with the sign-in sentence when it is shown; "Open Settings" raises the request; after the copilot is
@@ -194,6 +215,19 @@ is not abandoned. This scenario is tested by
 **ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked**: A restored row has ended; a running
 row that is abandoned has failed; the arguments are checked. This scenario is tested by
 `ToolActivityRowViewModel_RestoredAndAbandoned_AreEndedAndArgumentsAreChecked`.
+
+**ToolActivityRowViewModel_Finish_ShowsOutcomeAndElapsedTime**: A call that started on a clock that the test moves
+shows neither the check nor the cross and no time while it runs; after 0.8 seconds it finishes with success and shows
+the check and `0.8 s`; a failure that was quicker than a tenth of a second shows the cross and no time; a restored row
+shows no time. This scenario is tested by `ToolActivityRowViewModel_Finish_ShowsOutcomeAndElapsedTime`.
+
+**ToolActivityRowViewModel_DisplaySummary_ShowsNoBackticks**: A row whose sentence names a file in markdown backticks
+shows the sentence without the backticks, tells the observers when it changes, and keeps the stored sentence as it was.
+This scenario is tested by `ToolActivityRowViewModel_DisplaySummary_ShowsNoBackticks`.
+
+**ChatPanelViewModel_Transcript_MarksTheRowsThatOpenAGroup**: A reply, a tool row, a notice, a tool row, and a reply are
+added; the first row and the tool row after the notice open a group and the others do not. This scenario is tested by
+`ChatPanelViewModel_Transcript_MarksTheRowsThatOpenAGroup`.
 
 **NoticeRowViewModel_ErrorWithRemedyAndInformation_HoldWhatTheyWereGiven**: An error with a remedy and an information
 notice hold what they were given, and an empty message is refused. This scenario is tested by
@@ -244,7 +278,8 @@ not after it is closed, and again in a project. This scenario is tested by
 **ChatPanelViewModel_Send_MessageWithMark_LayerShowsNoMarkAfterwards**: A message with a mark is sent; the registry and
 the layer hold no mark. This scenario is tested by `ChatPanelViewModel_Send_MessageWithMark_LayerShowsNoMarkAfterwards`.
 
-**ChatPanelViewModel_TalkText_FollowsDictationState**: The label is `Hold to talk`, becomes `Starting... keep holding`
+**ChatPanelViewModel_TalkText_FollowsDictationState**: The text that names the talk button is `Hold to talk`, becomes
+`Starting... keep holding`
 while the start waits, `Listening... let go to finish` once listening, and `Hold to talk` again after the release; the
 changes are announced. This scenario is tested by `ChatPanelViewModel_TalkText_FollowsDictationState`.
 
@@ -299,10 +334,44 @@ This scenario is tested by `TranscriptEntryViewModel_Items_AttachedPicture_AsksF
 mark without a picture, a mark whose function throws, and a folder chip give no picture and no failure. This scenario is
 tested by `ChipThumbnailProvider_GetThumbnail_NoPictureOrFailure_GivesNullAndDoesNotThrow`.
 
-**ChatPanelView_New_ShowsEmptyTranscriptHintComposerAndButtons**: A new panel shows the hint that messages appear there,
-no entries, the editing control bound to the composer with the panel's picture provider, a Send button that cannot be
-used, and a talk button that can, with its first label. This scenario is tested by
+**ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce**: In a panel with a project open and nothing said,
+the follow-ups are not offered; using an example prompt writes it as the message, and the collapse command raises its
+request once; four examples and some follow-ups exist, and a missing prompt is refused. This scenario is tested by
+`ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce`.
+
+**ChatPanelView_New_ShowsEmptyTranscriptHintComposerAndButtons**: A new panel shows the question of the empty
+conversation, no entries, the editing control bound to the composer with the panel's picture provider, a Send button
+that cannot be used, and a talk button that can, named with its first text. This scenario is tested by
 `ChatPanelView_New_ShowsEmptyTranscriptHintComposerAndButtons`.
+
+**ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation**: The empty conversation
+shows the four example prompts and none of the follow-ups; pressing the first example writes it as the message and
+enables Send; sending it hides the question and shows the follow-ups. This scenario is tested by
+`ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation`.
+
+**ChatPanelView_CollapseButton_RaisesCollapseRequested**: Using the button of the header raises the request to hide the
+panel once. This scenario is tested by `ChatPanelView_CollapseButton_RaisesCollapseRequested`.
+
+**ChatPanelView_ComposerCard_PlaceholderNamesAndHint**: A new panel in an open project shows the placeholder text over
+the empty message; the Send and attach buttons are named `Send` and `Attach files`, the talk button is named with the
+talk text and has a tooltip, and the hint says `Enter to send`; typing hides the placeholder. This scenario is tested by
+`ChatPanelView_ComposerCard_PlaceholderNamesAndHint`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: In the workspace of an open project, in the dark and
+the light theme, every button of the panel that shows no text has a name and a tooltip, takes the keyboard focus, and
+is at least 28 by 28 pixels. This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**ChatPanelView_EnterKey_SendsTheMessageAndShiftEnterWritesALineBreak**: With a message in the focused editing control,
+Shift+Enter writes a second line and sends nothing; Enter on its own then sends the message. This scenario is tested by
+`ChatPanelView_EnterKey_SendsTheMessageAndShiftEnterWritesALineBreak`.
+
+**ChatPanelView_AttachButton_AddsThePickedFilesAsChips**: A picker that chooses one file is set; using the attach button
+asks it once, from the project folder, and the message gets one file chip. This scenario is tested by
+`ChatPanelView_AttachButton_AddsThePickedFilesAsChips`.
+
+**AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage**: With two marks on a picture and two mark chips in
+the message, using the clear button of the annotation toolbar takes both chips out, shows no mark on the picture, and
+disables the button. This scenario is tested by `AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage`.
 
 **ChatPanelView_Shown_PreparesDictation**: Showing the panel prepares dictation once. This scenario is tested by
 `ChatPanelView_Shown_PreparesDictation`.
@@ -318,6 +387,16 @@ This scenario is tested by `ChatPanelView_Send_TypedText_AppearsInTranscriptAndE
 **ChatPanelView_Send_TwoMessages_AreListedInOrder**: Two messages are sent and shown in order. This scenario is tested
 by `ChatPanelView_Send_TwoMessages_AreListedInOrder`.
 
+**ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords**: A message with a mark chip and the words
+`Chart downloads by month` is sent. The bubble holds a row for the chip that is as high as the chip and a text block
+below it that is at least one line high, and the bubble is as high as the two with its padding, so that neither is cut
+off. This scenario is tested by `ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords`.
+
+**RestoredEntryViewModel_New_ChipLabelGluedToWords_GetsASpace**: A saved row whose chip label is followed at once by a
+word (`[Mark 1]Chart`), as an earlier version saved it, is shown with a space after the label; a label followed by a
+line feed, a space, or punctuation is not changed. This scenario is tested by
+`RestoredEntryViewModel_New_ChipLabelGluedToWords_GetsASpace`.
+
 **ChatPanelView_Send_MessageWithMarkAndFile_ShowsChipsInTranscriptWithoutDeleteButtons**: A message with a mark, text,
 and a dropped file is sent; the entry shows `Mark 1` and `notes.txt` as chips without delete buttons, the summary says
 `1 mark, 1 attachment`, and the file is in the project's attachments. This scenario is tested by
@@ -332,8 +411,8 @@ picture that the provider makes for it. This scenario is tested by
 `ChatPanelView_MarkChipInDraft_ShowsThePictureAroundTheMark`.
 
 **ChatPanelView_HoldToTalk_PressSpeakRelease_ListensShowsWordsAndAddsOneBlock**: The pointer is pressed on the talk
-button: it listens, the label says so, the words so far are shown, and Send cannot be used. Releasing the pointer on the
-button adds the final words to the message, restores the label, and enables Send. This scenario is tested by
+button: it listens, its name says so, the words so far are shown, and Send cannot be used. Releasing the pointer on the
+button adds the final words to the message, restores the name, and enables Send. This scenario is tested by
 `ChatPanelView_HoldToTalk_PressSpeakRelease_ListensShowsWordsAndAddsOneBlock`.
 
 **ChatPanelView_HoldToTalk_ReleaseOutsideTheButton_StillEndsListening**: After the pointer moved away, releasing it over
@@ -451,13 +530,14 @@ an error notice with its sentence, empties the transcript, and resets the copilo
 `ChatPanelViewModel_ClearHistory_StoreCannotDelete_ShowsAnErrorNotice`.
 
 **ChatPanelView_ClearChatHistoryButton_ClearsTranscriptDeletesHistoryAndSendStaysEnabled**: In a window, after an
-answered message that was saved, the "Clear chat history" button is shown; pressing it removes the message and the reply
+answered message that was saved, the overflow button is shown and its menu holds the "Clear chat history" item; using it
+removes the message and the reply
 from the view, shows one notice with the cleared text, deletes the folder of the history, resets the copilot, keeps the
 text typed meanwhile, and leaves Send enabled. This scenario is tested by
 `ChatPanelView_ClearChatHistoryButton_ClearsTranscriptDeletesHistoryAndSendStaysEnabled`.
 
 **ChatPanelView_ClearChatHistoryButton_NothingSaid_ShowsOnlyTheNotice**: In a panel with no store and no copilot,
-pressing the button shows only the notice. This scenario is tested by
+using the item shows only the notice. This scenario is tested by
 `ChatPanelView_ClearChatHistoryButton_NothingSaid_ShowsOnlyTheNotice`.
 
 **ChatPanelView_RestoredHistory_ShowsTextRowsWithoutPayloadButtonOrPictures**: A project with a saved conversation is

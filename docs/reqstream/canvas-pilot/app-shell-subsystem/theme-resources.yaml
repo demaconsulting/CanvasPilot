@@ -1,0 +1,162 @@
+---
+# Software Unit Requirements for the ThemeResources Unit
+#
+# The ThemeResources unit is the set of design tokens of the user interface (Styles/Tokens.axaml): the colors,
+# spacing, corner radii, type sizes, and shadows, for the dark and the light theme variant, from which every view
+# takes its look, the shared control themes and looks (Styles/Controls.axaml) for buttons, toggles, chips, splitters,
+# and the rows of the project tree, the line icons (Styles/Icons.axaml), and the palettes (in App.axaml) that make the
+# standard controls follow them. The tree row look is shown by the project explorer, so its tests are the explorer's
+# view tests.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: ThemeResources Requirements
+            requirements:
+              - id: CanvasPilot-ThemeResources-DefineDesignTokens
+                title: >-
+                  The ThemeResources shall provide, for both the dark and the light theme variant, one set of surface,
+                  line, text, accent, state, and mark colors, spacing steps, corner radii, type sizes with their line
+                  heights, and shadows from which the views of the application take their look.
+                justification: |
+                  One visual system keeps every window consistent and lets the look change in one place. Both variants
+                  must be complete, because the application follows the theme of the operating system and a missing
+                  value in one variant would show as a wrong color or a missing space.
+                tests:
+                  - ThemeResources_Tokens_ResolveInBothVariants
+                  - ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant
+
+              - id: CanvasPilot-ThemeResources-MeetContrast
+                title: >-
+                  The ThemeResources shall give text at least 4.5 to 1 contrast on each surface it is shown on, and
+                  give the focus ring, the outline of an input, and the marks on a picture at least 3 to 1 contrast on
+                  the pane and on raised surfaces, in both theme variants.
+                justification: |
+                  Text that cannot be read is of no use, and people with low vision or a bright room need the
+                  contrast that accessibility guidelines ask for. Lines and shapes that show where the focus is or
+                  where an input ends must also be seen, or the keyboard cannot be used with confidence.
+                tests:
+                  - ThemeResources_Tokens_TextColorsMeetContrastOnTheirSurfaces
+                  - ThemeResources_Tokens_NonTextColorsMeetContrast
+
+              - id: CanvasPilot-ThemeResources-FollowVariantSwitch
+                title: >-
+                  The ThemeResources shall change the colors of the windows and controls that are already shown when
+                  the theme variant changes, without the windows being opened again.
+                justification: |
+                  The user may change the theme of the operating system or the choice in the settings while the
+                  application is open, and expects what is on the screen to follow at once.
+                tests:
+                  - ThemeResources_DynamicResource_FollowsVariantSwitch
+
+              - id: CanvasPilot-ThemeResources-ApplyThemeChoice
+                title: >-
+                  The ThemeResources shall make the application dark, light, or the theme of the operating system as the
+                  settings choose, when the application starts and every time the choice is changed, also when it is
+                  changed on another thread, and stop doing so when it is disposed.
+                justification: |
+                  A choice in the settings must take effect in the windows that are open without a restart, and the choice
+                  to follow the system must give the control back to the operating system. The settings may be changed from
+                  a thread other than the one that owns the windows, and nothing may touch a window from there.
+                tests:
+                  - ThemeVariantApplier_ToVariant_EachChoice_IsTheVariantItNames
+                  - ThemeVariantApplier_New_StoredChoice_IsAppliedAtOnce
+                  - ThemeVariantApplier_SettingsChanged_FollowsTheChoice
+                  - ThemeVariantApplier_SettingsChangedOnAnotherThread_IsAppliedOnTheUserInterfaceThread
+                  - ThemeVariantApplier_Dispose_StopsFollowingTheSettings
+                  - ThemeVariantApplier_New_NullArguments_Throw
+
+              - id: CanvasPilot-ThemeResources-ProvideIcons
+                title: >-
+                  The ThemeResources shall provide the line icons that the views need, drawn 16 by 16 in the foreground
+                  color of the control that holds them, so that an icon follows the color and the theme of its button
+                  without a picture for each color.
+                justification: |
+                  Icons let a command take little room and be found at a glance. An icon that takes the color of its
+                  button stays readable in the dark and the light theme, on hover, and when the button is disabled,
+                  which a fixed picture cannot do.
+                tests:
+                  - ThemeResources_Icons_EveryIconResolvesToGeometryOnItsGrid
+                  - ThemeResources_Icons_PathIconIsDrawnInTheForegroundOfItsButton
+
+              - id: CanvasPilot-ThemeResources-ShipIconLicense
+                title: >-
+                  The ThemeResources shall ship the license notice of the third-party icons it contains with the
+                  installed application.
+                justification: |
+                  The icons are the work of another party who allows their use on condition that the copyright and
+                  license notice goes with every copy. The installed application is such a copy, so the notice must be
+                  in the folder of the program, which a test of the published folder and of the installer checks.
+                tests:
+                  - windows@ThirdPartyNotices_Published
+
+              - id: CanvasPilot-ThemeResources-ProvideControlThemes
+                title: >-
+                  The ThemeResources shall provide shared looks for icon buttons, tool toggles that are filled with the
+                  accent when they are checked, pill buttons, chips, and splitters that show a line with a grip and
+                  resize by the keyboard in steps of 16 pixels, with buttons that are at least 28 by 28 pixels.
+                justification: |
+                  The same few controls are used in many places. One look for each keeps the windows consistent, large
+                  enough targets make them easy to hit with a pointer or a finger, a checked tool must be told from an
+                  unchecked one by more than its color, and a splitter must be found and moved by someone who does not
+                  use a pointer.
+                tests:
+                  - ThemeResources_Controls_ButtonsHaveTargetsOfAtLeast28
+                  - ThemeResources_Controls_CheckedToolToggleIsFilledWithAccent
+                  - ThemeResources_Controls_ChipBorderIsARaisedPill
+                  - ThemeResources_Controls_SplitterGripResizesByKeyboardInStepsOf16
+
+              - id: CanvasPilot-ThemeResources-ShowKeyboardFocus
+                title: >-
+                  The ThemeResources shall show a 2 pixel ring in the focus color just outside an icon button, tool
+                  toggle, pill button, main button, quiet button, card button, or splitter when it has the focus by the
+                  keyboard, and show no ring when it has the focus by the pointer or on any other control.
+                justification: |
+                  People who use the keyboard, and people who cannot see well, must always know which control will act
+                  when they press a key. A ring that also appears after a mouse click is noise for the people who point,
+                  so it follows the keyboard only.
+                tests:
+                  - ThemeResources_Controls_FocusRingShowsForKeyboardFocusOnly
+                  - ThemeResources_Controls_FocusRingIsDrawnOutsideTheButton
+                  - Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly
+
+              - id: CanvasPilot-ThemeResources-ProvideButtonLooks
+                title: >-
+                  The ThemeResources shall provide a look for the one main action of a window or a card, filled with the
+                  accent or the brand gradient, or in amber with dark text for a notice, a quiet look for any other action,
+                  raised with an outline that turns to the accent under the pointer, and a look for a whole card that is one
+                  button, each with the ring that shows the keyboard focus.
+                justification: |
+                  A window that has one clear main action, quieter other actions, and cards that can be chosen as a whole is
+                  easier to use than one in which every button looks alike. One look for each keeps the windows consistent,
+                  and the ring keeps all of them usable without a pointer.
+                tests:
+                  - Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly
+                  - Accessibility_Colors_NoticesAndWelcomeTextAreReadable
+
+              - id: CanvasPilot-ThemeResources-ProvideTreeRowLook
+                title: >-
+                  The ThemeResources shall provide a look for the rows of the project tree that makes each row 26 pixels
+                  high, indents the children of a folder by 16 pixels for each level, tints a row under the pointer and the
+                  selected row, and marks the selected row with an accent bar at its left edge and a semibold name.
+                justification: |
+                  People find and keep their place in a list of files by the indent of the rows and by a mark on the chosen
+                  one that does not depend on color alone. One look for the tree keeps the explorer and the other trees of
+                  the application consistent.
+                tests:
+                  - ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent
+                  - ProjectExplorerView_SelectedRow_ShowsBarAndSemiboldName
+
+              - id: CanvasPilot-ThemeResources-ReadableNoticesAndWelcome
+                title: >-
+                  The ThemeResources shall give the text of a warning or an error banner, the dark text of the amber button,
+                  and the text on the backdrop of the welcome screen, including under its glows, at least 4.5 to 1 contrast,
+                  in both theme variants.
+                justification: |
+                  A notice that cannot be read does not tell the user what is wrong, and a tinted banner, an amber button, or
+                  a glowing backdrop make a text color that is readable on a plain surface hard to read. People with low
+                  vision, or in bright rooms, need the contrast that accessibility guidelines ask for on these as well.
+                tests:
+                  - Accessibility_Colors_NoticesAndWelcomeTextAreReadable

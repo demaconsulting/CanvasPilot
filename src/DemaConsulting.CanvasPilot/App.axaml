@@ -9,8 +9,36 @@
   </Application.DataTemplates>
 
   <Application.Styles>
-    <FluentTheme />
+    <!-- The stock controls follow the brand through the palettes of the theme (accent, the surface of the window,
+         the main text color, and the error text color) of each variant, instead of overriding single brushes.
+         The Cp tokens of Styles/Tokens.axaml are the single source of the colors of everything that is custom. -->
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark"
+                               Accent="#4f46e5"
+                               RegionColor="#131530"
+                               BaseHigh="#eef0ff"
+                               ErrorText="#f87171" />
+        <ColorPaletteResources x:Key="Light"
+                               Accent="#4f46e5"
+                               RegionColor="#f7f8fd"
+                               BaseHigh="#14162e"
+                               ErrorText="#b91c1c" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
     <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+    <!-- The icons: geometries and the style of a PathIcon of class icon -->
+    <StyleInclude Source="avares://DemaConsulting.CanvasPilot/AppShellSubsystem/Styles/Icons.axaml" />
+    <!-- The control themes (IconButton, ToolToggle, PillButton, ChipBorder, SplitterGrip) that views use by key -->
+    <StyleInclude Source="avares://DemaConsulting.CanvasPilot/AppShellSubsystem/Styles/Controls.axaml" />
   </Application.Styles>
+
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://DemaConsulting.CanvasPilot/AppShellSubsystem/Styles/Tokens.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
 
 </Application>

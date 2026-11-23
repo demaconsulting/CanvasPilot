@@ -9,7 +9,7 @@ which picture each mark belongs to, its number, where it is in that picture, and
 which parts of the picture's source file lie under a mark, and it offers the layer on which the user draws them. A mark
 is a rectangle, an ellipse, an arrow, or a freehand stroke. The registry and the resolver have no dependency on the user
 interface, so their rules are tested without a window; the layer, `AnnotationOverlay`, keeps its own rules in a view
-model that needs no window either, and has two thin views, the layer over the picture and a tool bar.
+model that needs no window either, and has two thin views, the layer over the picture and a floating tool bar.
 
 The subsystem contains three units: `MarkRegistry`, which makes and keeps the marks, `MarkSourceResolver`, which maps a
 mark to the parts of the source file under it, and `AnnotationOverlay`, which is the layer on which the marks are drawn
@@ -50,7 +50,9 @@ overlay reports.
 - *Contract*: `SelectTool`, `BeginStroke`, `ContinueStroke`, `EndStroke`, `CommitNote`, `SkipNote`, `Cancel`, `Escape`,
   and the keyboard methods `MoveCursor` and `ConfirmCursor` drive it; the points are in the pixels of the shown picture.
   `SetActiveMarkIds` tells which mark chips the message holds. `IsDrawingAllowed` is set by the host. The event
-  `MarkAdded` carries each finished mark, which is already in the registry. The constructor takes a switch that is
+  `MarkAdded` carries each finished mark, which is already in the registry. `ClearMarksCommand` raises
+  `ClearMarksRequested`, which the host answers by taking the marks out of the message; `HasMarks` tells whether the
+  message holds a mark. The constructor takes a switch that is
   called with `false` while a tool is chosen and `true` otherwise.
 - *Constraints*: Owned by the user interface thread; not safe for concurrent use. The views must be laid out in the
   pixels of the picture, as the overlay slot of `PreviewPane` does.
@@ -89,13 +91,14 @@ told that nothing lies under a mark when the picture simply cannot say.
 
 **The layer.** `AnnotationOverlay` lives in the overlay slot of the preview pane, which is laid out in the pixels of the
 picture and scaled with it, so the position of a pointer event on the layer is already a point of the picture and no
-conversion exists to get wrong. Its tools are in a second slot, in the top bar of the pane, which is not scaled. The
-overlay makes a mark only when its note is finished, since a mark never changes, and reports it through an event; the
-overlay and the composer do not know each other, because `Composer` already depends on `Annotation`. The chat panel
-joins them: it adds the chip of each reported mark with `ComposerViewModel.AddMark`, which is one undo step, and
+conversion exists to get wrong. Its tools are in a second slot, floating over the stage of the pane, which is not
+scaled. The overlay makes a mark only when its note is finished, since a mark never changes, and reports it through an
+event; the overlay and the composer do not know each other, because `Composer` already depends on `Annotation`. The chat
+panel joins them: it adds the chip of each reported mark with `ComposerViewModel.AddMark`, which is one undo step, and
 tells the overlay which chips the message holds each time the composer changes, so undo and redo of the chip hide and
-show the mark with no undo of its own. Because the pointer is also used to drag the picture out of the application, the
-overlay switches that off while a tool is chosen and handles the press only then, so with no tool the press goes on to
-the picture. A shape is cancelled by Escape from anywhere in the window, and the whole layer can be used with the
-keyboard. What a mark looks like on the screen is what `MarkImageComposer` draws in the annotated picture, so the user
-sees what the assistant gets.
+show the mark with no undo of its own. The tool bar has a button that clears the marks: the overlay only raises
+`ClearMarksRequested`, and the chat panel takes the chips of all marks, those hidden by a changed picture included, out
+of the composer. Because the pointer is also used to drag the picture out of the application, the overlay switches that
+off while a tool is chosen and handles the press only then, so with no tool the press goes on to the picture. A shape is
+cancelled by Escape from anywhere in the window, and the whole layer can be used with the keyboard. What a mark looks
+like on the screen is what `MarkImageComposer` draws in the annotated picture, so the user sees what the assistant gets.

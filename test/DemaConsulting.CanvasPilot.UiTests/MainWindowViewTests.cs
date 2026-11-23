@@ -118,6 +118,229 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the window has the default and the smallest size of the design and shows a 44 px title bar that holds
+    ///     the menu, and that the room kept for the buttons of the system is none while the window is not extended into its
+    ///     frame (as in the headless platform).
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes()
+    {
+        // Arrange: a shown main window
+        var (_, window) = CreateWindow();
+
+        // Act: show it and find the title bar
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var bar = SettingsUiHelpers.Find<Border>(window, "AppTitleBar");
+        var menu = SettingsUiHelpers.Find<Menu>(window, "MainMenu");
+
+        // Assert: the sizes of the design, a title bar 44 high over the width of the window, and the menu inside it
+        Assert.Equal(1440, window.Width);
+        Assert.Equal(900, window.Height);
+        Assert.Equal(960, window.MinWidth);
+        Assert.Equal(600, window.MinHeight);
+        Assert.Equal(44, bar.Bounds.Height);
+        Assert.Equal(window.Bounds.Width, bar.Bounds.Width);
+        Assert.Contains(bar, menu.GetVisualAncestors());
+        Assert.Equal(0, window.FindControl<Border>("TitleBarCaptionReserve")!.Bounds.Width);
+        Assert.Equal(0, window.FindControl<Border>("TitleBarLeadingReserve")!.Bounds.Width);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the room kept free in the title bar for the buttons of the system is on the right for Windows, on the
+    ///     left for macOS, and none elsewhere or when the window is not extended into its frame.
+    /// </summary>
+    /// <param name="isExtended">Whether the window extends into its frame.</param>
+    /// <param name="isWindows">Whether the platform is Windows.</param>
+    /// <param name="isMacOs">Whether the platform is macOS.</param>
+    /// <param name="left">The expected room on the left.</param>
+    /// <param name="right">The expected room on the right.</param>
+    [Theory]
+    [InlineData(false, true, false, 0, 0)]
+    [InlineData(false, false, true, 0, 0)]
+    [InlineData(true, true, false, 0, 138)]
+    [InlineData(true, false, true, 78, 0)]
+    [InlineData(true, false, false, 0, 0)]
+    public void MainWindowView_CaptionReserve_FollowsPlatformAndExtension(bool isExtended, bool isWindows, bool isMacOs, double left, double right)
+    {
+        // Act: ask for the room that is kept free
+        var reserve = MainWindowView.CaptionReserve(isExtended, isWindows, isMacOs);
+
+        // Assert: it is where the platform draws its buttons
+        Assert.Equal((left, right), reserve);
+    }
+
+    /// <summary>
+    ///     Test that setting the title bar reserves tolerates controls that do not exist yet (the state while the XAML
+    ///     loads on a real window) and sets the widths where the controls exist.
+    /// </summary>
+    [Fact]
+    public void MainWindowView_ApplyCaptionReserve_ToleratesMissingControls()
+    {
+        // Arrange: reserves of no width and a missing control
+        var leading = new Border();
+        var trailing = new Border();
+
+        // Act: apply with a missing control, then with Windows and macOS
+        MainWindowView.ApplyCaptionReserve(null, null, true, true, false);
+        MainWindowView.ApplyCaptionReserve(leading, trailing, true, true, false);
+        var windowsWidths = (leading.Width, trailing.Width);
+        MainWindowView.ApplyCaptionReserve(leading, trailing, true, false, true);
+        var macWidths = (leading.Width, trailing.Width);
+        MainWindowView.ApplyCaptionReserve(leading, null, false, true, false);
+
+        // Assert: nothing threw, the widths follow the platform, and a window that is not extended keeps none
+        Assert.Equal((0d, 138d), windowsWidths);
+        Assert.Equal((78d, 0d), macWidths);
+        Assert.Equal(0, leading.Width);
+    }
+
+    /// <summary>
+    ///     Test that the title bar shows the name of the open project in bold with the application name after it, the
+    ///     application name alone while no project is open, and that the window title of the system is unchanged.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_TitleBar_ShowsProjectNameThenApplicationName()
+    {
+        // Arrange: a remembered project and a shown main window
+        await CreateRememberedProjectAsync("Release Overview");
+        var (composition, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var text = SettingsUiHelpers.Find<TextBlock>(window, "AppTitleBarText");
+
+        // Act: read the title bar with no project, open the project, read it again, and close the project
+        string Read() => string.Concat(text.Inlines!.OfType<Avalonia.Controls.Documents.Run>().Select(run => run.Text));
+        var closedText = Read();
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        AppShellUiHelpers.Flush();
+        var openText = Read();
+        var openTitle = window.Title;
+        window.FindControl<MenuItem>("CloseProjectMenuItem")!.Command!.Execute(null);
+        AppShellUiHelpers.Flush();
+
+        // Assert: the name is bold with the application name after it while the project is open; the system title is unchanged
+        Assert.Equal("CanvasPilot", closedText);
+        Assert.Equal("Release Overview \u00B7 CanvasPilot", openText);
+        Assert.Equal("Release Overview - CanvasPilot", openTitle);
+        Assert.Equal("CanvasPilot", Read());
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the status bar is always at the bottom of the window with its fixed height, says that no project is open,
+    ///     and, once a project is open and a picture is selected, reports the file, its size, its format, and its render time
+    ///     with an icon and with words, and a render that failed with words.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_StatusBar_AlwaysShownAndReportsThePicture()
+    {
+        // Arrange: a shown main window and a project with a picture and a broken file
+        await CreateRememberedProjectAsync("Gallery");
+        var (composition, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var bar = SettingsUiHelpers.Find<Border>(window, "StatusBar");
+        var status = SettingsUiHelpers.Find<Panel>(window, "PreviewStatus");
+        var withoutProject = (bar.IsVisible, bar.Bounds.Height, AutomationProperties.GetName(status), SettingsUiHelpers.Find<TextBlock>(window, "StatusBarIdle").IsVisible);
+
+        // Act: open the project, select the picture, and wait for it to be drawn
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "red.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='#ff0000'/></svg>",
+            TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(folder, "broken.svg"), "<svg><not closed", TestContext.Current.CancellationToken);
+        composition.Shell.Workspace.Explorer.Refresh();
+        AppShellUiHelpers.Flush();
+        var noPicture = AutomationProperties.GetName(status);
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "red.svg"));
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var shown = (
+            SettingsUiHelpers.Find<StackPanel>(window, "StatusBarReady").IsVisible,
+            SettingsUiHelpers.Find<TextBlock>(window, "StatusBarFile").Text,
+            SettingsUiHelpers.Find<TextBlock>(window, "StatusBarSize").Text,
+            SettingsUiHelpers.Find<TextBlock>(window, "StatusBarFormat").Text,
+            SettingsUiHelpers.Find<TextBlock>(window, "StatusBarRenderTime").Text,
+            AutomationProperties.GetName(status));
+        var saved = SettingsUiHelpers.Find<TextBlock>(window, "StatusBarProjectSaved");
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "broken.svg"));
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var failed = (
+            SettingsUiHelpers.Find<StackPanel>(window, "StatusBarFailed").IsVisible,
+            SettingsUiHelpers.Find<StackPanel>(window, "StatusBarReady").IsVisible,
+            AutomationProperties.GetName(status));
+
+        // Assert: always shown at 26 high; idle words with no project and with no picture; the picture's facts; the failure
+        Assert.Equal((true, 26d, "No project open", true), withoutProject);
+        Assert.Equal("No picture selected", noPicture);
+        Assert.True(shown.Item1);
+        Assert.Equal("red.svg", shown.Item2);
+        Assert.Equal("40 \u00D7 20 px", shown.Item3);
+        Assert.Equal("SVG", shown.Item4);
+        Assert.StartsWith("Rendered in ", shown.Item5, StringComparison.Ordinal);
+        Assert.Equal("red.svg: 40 x 20 px, svg", shown.Item6);
+        Assert.True(saved.IsEffectivelyVisible);
+        Assert.Equal((true, false, "broken.svg: render failed"), failed);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the AI provider pill is in the title bar, names the provider and says in words how it is, and that using
+    ///     it opens the settings on the AI provider page.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage()
+    {
+        // Arrange: a shown main window
+        var (_, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var bar = SettingsUiHelpers.Find<Border>(window, "AppTitleBar");
+        var pill = SettingsUiHelpers.Find<Button>(window, "ProviderPill");
+        var name = AutomationProperties.GetName(pill);
+        var barRight = bar.TranslatePoint(new Point(bar.Bounds.Width, 0), window)!.Value.X;
+        var pillRight = pill.TranslatePoint(new Point(pill.Bounds.Width, 0), window)!.Value.X;
+        var gears = pill.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().ToList();
+        var providerName = SettingsUiHelpers.Find<TextBlock>(window, "ProviderPillName");
+        var detail = SettingsUiHelpers.Find<TextBlock>(window, "ProviderPillDetail");
+
+        // Act: use the pill with the pointer, and read the page that the settings show
+        SettingsUiHelpers.Click(window, pill);
+        var dialog = AppShellUiHelpers.FindDialog<SettingsDialogView>(window);
+        var page = Assert.IsAssignableFrom<ISettingsPage>(SettingsUiHelpers.Find<ListBox>(dialog, "SettingsPageList").SelectedItem);
+        SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "SettingsCancelButton"));
+        await Task.Yield();
+
+        // Assert: the pill is in the title bar inside its right edge, says what it is, and opened the AI provider page
+        Assert.Contains(bar, pill.GetVisualAncestors());
+        Assert.Equal(26, pill.Bounds.Height);
+        Assert.InRange(pillRight, 0, barRight);
+        Assert.StartsWith("AI provider: Copilot, ", name, StringComparison.Ordinal);
+        Assert.Equal("AI Provider", page.Title);
+
+        // Assert: the pill ends with one gear drawn as lines, which is inside the pill and right of the words, and not as a
+        // filled glyph that runs together at this size
+        var gear = Assert.Single(gears);
+        Assert.NotNull(gear.Stroke);
+        Assert.Null(gear.Fill);
+        var gearBounds = gear.TranslatePoint(new Point(0, 0), pill)!.Value;
+        var detailRight = detail.TranslatePoint(new Point(detail.Bounds.Width, 0), pill)!.Value.X;
+        Assert.True(gearBounds.X >= detailRight, "The gear must not overlap the words.");
+        Assert.True(gearBounds.X + gear.Bounds.Width <= pill.Bounds.Width);
+        Assert.False(string.IsNullOrEmpty(providerName.Text));
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the menus have the expected structure, and that every menu item has a name and an automation
     ///     identifier that are the same.
     /// </summary>
@@ -428,19 +651,19 @@ public sealed class MainWindowViewTests : IDisposable
         SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "AboutCloseButton"));
         await shown;
 
-        // Assert: the dialog showed the identity and the five libraries, and Close ended the command
+        // Assert: the dialog showed the identity and the six libraries, and Close ended the command
         Assert.Equal("CanvasPilot", name);
         Assert.Equal("AI-assisted drawing creation with CanvasNet", tagline);
         Assert.StartsWith("Version ", version, StringComparison.Ordinal);
         Assert.Equal("Copyright (c) DEMA Consulting", copyright);
-        Assert.Equal(5, dependencies);
+        Assert.Equal(6, dependencies);
         Assert.Empty(window.OwnedWindows);
 
         window.Close();
     }
 
     /// <summary>
-    ///     Test that the Settings menu item opens the settings dialog with the AI Provider, Speech, and Style Kits pages, and
+    ///     Test that the Settings menu item opens the settings dialog with the AI Provider, Speech, Style Kits, and Appearance pages, and
     ///     that Cancel closes it.
     /// </summary>
     [AvaloniaFact]
@@ -455,11 +678,15 @@ public sealed class MainWindowViewTests : IDisposable
         var dialog = AppShellUiHelpers.FindDialog<SettingsDialogView>(window);
         var list = SettingsUiHelpers.Find<ListBox>(dialog, "SettingsPageList");
         var titles = list.Items.OfType<ISettingsPage>().Select(page => page.Title).ToArray();
+        var announced = list.GetVisualDescendants().OfType<ListBoxItem>()
+            .Select(item => Avalonia.Automation.Peers.ControlAutomationPeer.CreatePeerForElement(item).GetName())
+            .ToArray();
         SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "SettingsCancelButton"));
         await shown;
 
-        // Assert: the dialog listed all three pages, and Cancel closed it
-        Assert.Equal(["AI Provider", "Speech", "Style Kits"], titles);
+        // Assert: the dialog listed all four pages, a screen reader is told their titles, and Cancel closed it
+        Assert.Equal(["AI Provider", "Speech", "Style Kits", "Appearance"], titles);
+        Assert.Equal(titles, announced);
         Assert.Empty(window.OwnedWindows);
 
         window.Close();
@@ -521,8 +748,8 @@ public sealed class MainWindowViewTests : IDisposable
         var item = Assert.IsType<RecentProjectItem>(recentMenu.Items.Cast<object>().Single());
         await item.OpenCommand.ExecuteAsync(null);
         AppShellUiHelpers.Flush();
-        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
-        var listed = list.Items.OfType<ProjectFileItem>().Select(file => file.Name).ToArray();
+        var list = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        var listed = list.Items.OfType<ProjectNodeViewModel>().Select(file => file.Name).ToArray();
         var titleWhileOpen = window.Title;
         window.FindControl<MenuItem>("CloseProjectMenuItem")!.Command!.Execute(null);
         AppShellUiHelpers.Flush();
@@ -535,6 +762,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal("CanvasPilot", window.Title);
         Assert.Equal(0, list.ItemCount);
         Assert.Equal("No project open", SettingsUiHelpers.Find<TextBlock>(window, "WorkspacePlaceholder").Text);
+        Assert.True(SettingsUiHelpers.Find<ContentControl>(window, "WelcomeHost").IsEffectivelyVisible);
         Assert.False(composition.Shell.HasProject);
 
         window.Close();
@@ -585,7 +813,7 @@ public sealed class MainWindowViewTests : IDisposable
         var withoutSelection = placeholder.Text;
 
         // Act: select the file, then supply preview content
-        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        SelectFirstExplorerNode(window);
         AppShellUiHelpers.Flush();
         var withSelection = placeholder.Text;
         composition.Shell.Workspace.Preview = "Rendered picture";
@@ -623,7 +851,7 @@ public sealed class MainWindowViewTests : IDisposable
         var disabledBefore = !IsUsable(export) && !IsUsable(copy);
 
         // Act: select the file in the explorer and wait for the render
-        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        SelectFirstExplorerNode(window);
         await composition.Preview.RenderCompletion;
         AppShellUiHelpers.Flush();
         var enabledWithPicture = IsUsable(export) && IsUsable(copy);
@@ -667,7 +895,7 @@ public sealed class MainWindowViewTests : IDisposable
         var disabledBefore = !IsUsable(item);
 
         // Act: show the picture, and run the item
-        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        SelectFirstExplorerNode(window);
         await composition.Preview.RenderCompletion;
         AppShellUiHelpers.Flush();
         var enabledWithPicture = IsUsable(item);
@@ -852,8 +1080,12 @@ public sealed class MainWindowViewTests : IDisposable
         window.Show();
         await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
         AppShellUiHelpers.Flush();
-        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        SelectFirstExplorerNode(window);
         AppShellUiHelpers.Flush();
+
+        // The selected file is drawn in the background; wait until that is done, so that the file is not deleted under a
+        // render that is still reading it, and so that no render is left to write to the log after the test is disposed
+        await composition.Preview.RenderCompletion;
 
         // Act: run Delete and confirm in the dialog
         var deleting = composition.Shell.Workspace.DeleteSelectedCommand.ExecuteAsync(null);
@@ -861,13 +1093,14 @@ public sealed class MainWindowViewTests : IDisposable
         var question = SettingsUiHelpers.Find<TextBlock>(dialog, "MessageDialogText").Text;
         SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "MessageDialogOkButton"));
         await deleting;
+        await composition.Preview.RenderCompletion;
         AppShellUiHelpers.Flush();
 
         // Assert: the dialog named the file, and the file is gone from disk and from the list
         Assert.Contains("a.svg", question, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(folder, "a.svg")));
         Assert.True(File.Exists(Path.Combine(folder, "b.svg")));
-        Assert.Equal(1, SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").ItemCount);
+        Assert.Equal(1, SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList").ItemCount);
 
         window.Close();
     }
@@ -885,15 +1118,19 @@ public sealed class MainWindowViewTests : IDisposable
         var (composition, window) = CreateWindow();
         window.Show();
         AppShellUiHelpers.Flush();
-        var chatHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspaceChatHost");
-        var chatSplitter = SettingsUiHelpers.Find<GridSplitter>(window, "WorkspaceChatSplitter");
-        var chatVisibleBefore = chatHost.IsVisible;
-        var chatWidthBefore = chatHost.Bounds.Width;
-        var splitterVisibleBefore = chatSplitter.IsVisible;
+        // The workspace is not even built while the welcome screen takes its place
+        var chatHostBefore = window.GetVisualDescendants().OfType<ContentControl>()
+            .FirstOrDefault(control => Avalonia.Automation.AutomationProperties.GetAutomationId(control) == "WorkspaceChatHost");
+        var chatSplitterBefore = window.GetVisualDescendants().OfType<GridSplitter>()
+            .FirstOrDefault(control => Avalonia.Automation.AutomationProperties.GetAutomationId(control) == "WorkspaceChatSplitter");
+        var chatVisibleBefore = chatHostBefore?.IsEffectivelyVisible ?? false;
+        var chatWidthBefore = chatHostBefore?.Bounds.Width ?? 0;
+        var splitterVisibleBefore = chatSplitterBefore?.IsEffectivelyVisible ?? false;
 
         // Act: open the project, then close it
         await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
         LayOut(window);
+        var chatHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspaceChatHost");
         var explorerHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspaceExplorerHost");
         var previewHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspacePreviewHost");
         var chatVisibleWith = chatHost.IsVisible;
@@ -909,15 +1146,15 @@ public sealed class MainWindowViewTests : IDisposable
         LayOut(window);
         var chatVisibleAfter = chatHost.IsVisible;
 
-        // Assert: the chat column is 380 wide on the right of the preview only while a project is open
+        // Assert: the chat column is 400 wide on the right of the preview only while a project is open
         Assert.False(chatVisibleBefore);
         Assert.Equal(0, chatWidthBefore);
         Assert.False(splitterVisibleBefore);
         Assert.True(chatVisibleWith);
         Assert.Equal(1, panels);
-        Assert.Equal(380, chatWidthWith, 1);
-        Assert.Equal(260, explorerWidth, 1);
-        Assert.True(previewWidth > 200);
+        Assert.Equal(400, chatWidthWith, 1);
+        Assert.Equal(264, explorerWidth, 1);
+        Assert.True(previewWidth >= 360);
         Assert.True(previewLeft > explorerRight);
         Assert.True(chatLeft > previewRight);
         Assert.False(chatVisibleAfter);
@@ -955,7 +1192,7 @@ public sealed class MainWindowViewTests : IDisposable
         redo.Command!.Execute(null);
         LayOut(window);
         var afterRedo = composition.Composer.Document.FlatText;
-        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
+        var list = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
         var focused = list.ContainerFromIndex(0)!.Focus();
         LayOut(window);
         var afterExplorerFocus = (Target: composition.Shell.EditTarget, Undo: IsUsable(undo), Redo: IsUsable(redo));
@@ -1129,6 +1366,21 @@ public sealed class MainWindowViewTests : IDisposable
     private static double LeftOf(Control control, Window window)
     {
         return control.TranslatePoint(new Point(0, 0), window)?.X ?? double.NaN;
+    }
+
+    /// <summary>
+    ///     Selects the first node of the explorer tree, as a click on the first row does, after the queued work of the window has
+    ///     run.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    private static void SelectFirstExplorerNode(Window window)
+    {
+        // The window follows the project and the explorer through work that is queued for the thread of the window (the
+        // workspace view is only made once the project is shown), so the queued work is run before the tree is looked for
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
+        var tree = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        tree.SelectedItem = tree.Items[0];
     }
 
     /// <summary>

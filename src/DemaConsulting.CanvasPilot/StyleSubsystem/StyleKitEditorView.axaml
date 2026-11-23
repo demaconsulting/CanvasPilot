@@ -9,73 +9,33 @@
         Height="700"
         MinWidth="680"
         MinHeight="500"
+        Background="{DynamicResource CpSurfacePane}"
         WindowStartupLocation="CenterOwner">
 
-  <DockPanel Margin="12">
+  <Grid RowDefinitions="*,Auto">
 
-    <!-- What is wrong, what to look at, and the buttons that save or leave. Save is off while there is an error. -->
-    <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0" Spacing="6">
-
-      <ItemsControl AutomationProperties.AutomationId="StyleEditorErrors"
-                    ItemsSource="{Binding Errors}"
-                    IsVisible="{Binding HasErrors}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="x:String">
-            <TextBlock Foreground="Firebrick" TextWrapping="Wrap" Text="{Binding}" />
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-
-      <ItemsControl AutomationProperties.AutomationId="StyleEditorWarnings"
-                    ItemsSource="{Binding Warnings}"
-                    IsVisible="{Binding HasWarnings}">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="x:String">
-            <TextBlock Foreground="DarkGoldenrod" TextWrapping="Wrap" Text="{Binding}" />
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-
-      <TextBlock AutomationProperties.AutomationId="StyleEditorSaveError"
-                 Foreground="Firebrick"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding HasSaveError}"
-                 Text="{Binding SaveError}" />
-
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
-        <Button AutomationProperties.AutomationId="StyleEditorSaveButton"
-                Content="Save"
-                IsDefault="True"
-                Command="{Binding SaveCommand}" />
-        <Button AutomationProperties.AutomationId="StyleEditorCancelButton"
-                Content="Cancel"
-                IsCancel="True"
-                Command="{Binding CancelCommand}" />
-      </StackPanel>
-
-    </StackPanel>
-
-    <TabControl AutomationProperties.AutomationId="StyleEditorTabs">
+    <TabControl Grid.Row="0"
+                Margin="24,16,24,8"
+                AutomationProperties.AutomationId="StyleEditorTabs">
 
       <TabItem Header="General">
         <ScrollViewer>
-          <StackPanel Margin="0,8,12,8" Spacing="6">
-            <TextBlock Text="Name" FontWeight="SemiBold" />
-            <TextBox AutomationProperties.AutomationId="StyleEditorNameBox" Text="{Binding Name}" />
-            <TextBlock Text="Description" FontWeight="SemiBold" Margin="0,8,0,0" />
+          <StackPanel Margin="0,12,12,8" Spacing="6">
+            <TextBlock Classes="label" Text="Name" />
+            <TextBox AutomationProperties.AutomationId="StyleEditorNameBox" AutomationProperties.Name="Name" Text="{Binding Name}" />
+            <TextBlock Classes="label" Text="Description" Margin="0,8,0,0" />
             <TextBox AutomationProperties.AutomationId="StyleEditorDescriptionBox"
+                     AutomationProperties.Name="Description"
                      AcceptsReturn="True"
                      TextWrapping="Wrap"
                      MinHeight="70"
                      Text="{Binding Description}" />
-            <TextBlock Text="Id" FontWeight="SemiBold" Margin="0,8,0,0" />
-            <TextBlock AutomationProperties.AutomationId="StyleEditorIdText" Text="{Binding Id}" />
-            <TextBlock Opacity="0.7"
-                       TextWrapping="Wrap"
+            <TextBlock Classes="label" Text="Id" Margin="0,8,0,0" />
+            <TextBlock AutomationProperties.AutomationId="StyleEditorIdText" Foreground="{DynamicResource CpTextPrimary}" Text="{Binding Id}" />
+            <TextBlock Classes="hint"
                        Text="The id names the folder of the kit and cannot be changed. Duplicate the kit to give a copy another id." />
-            <TextBlock AutomationProperties.AutomationId="StyleEditorLocationText"
-                       Opacity="0.7"
-                       TextWrapping="Wrap"
+            <TextBlock Classes="hint"
+                       AutomationProperties.AutomationId="StyleEditorLocationText"
                        Text="{Binding LocationText}" />
           </StackPanel>
         </ScrollViewer>
@@ -83,9 +43,8 @@
 
       <TabItem Header="Palette">
         <ScrollViewer>
-          <StackPanel Margin="0,8,12,8" Spacing="6">
-            <TextBlock Opacity="0.7"
-                       TextWrapping="Wrap"
+          <StackPanel Margin="0,12,12,8" Spacing="6">
+            <TextBlock Classes="hint"
                        Text="Every kit needs a background, a text, and a primary color. Add any other colors that pictures should use. Type a color as #RRGGBB or use the RGB button." />
             <ItemsControl AutomationProperties.AutomationId="StyleEditorPalette" ItemsSource="{Binding PaletteRows}">
               <ItemsControl.ItemTemplate>
@@ -93,6 +52,7 @@
                   <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,3">
                     <vm:ColorEditorView />
                     <Button AutomationProperties.AutomationId="StyleEditorRemoveRowButton"
+                            Theme="{DynamicResource SecondaryButton}"
                             VerticalAlignment="Top"
                             Content="Remove"
                             IsEnabled="{Binding IsRoleEditable}"
@@ -102,12 +62,12 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <Button AutomationProperties.AutomationId="StyleEditorAddColorButton"
+                    Theme="{DynamicResource SecondaryButton}"
                     HorizontalAlignment="Left"
                     Content="Add color"
                     Command="{Binding AddColorCommand}" />
-            <TextBlock AutomationProperties.AutomationId="StyleEditorContrast"
-                       Opacity="0.7"
-                       TextWrapping="Wrap"
+            <TextBlock Classes="hint"
+                       AutomationProperties.AutomationId="StyleEditorContrast"
                        Text="{Binding ContrastText}" />
           </StackPanel>
         </ScrollViewer>
@@ -115,31 +75,33 @@
 
       <TabItem Header="Type and shape">
         <ScrollViewer>
-          <StackPanel Margin="0,8,12,8" Spacing="6">
-            <TextBlock Opacity="0.7"
-                       TextWrapping="Wrap"
+          <StackPanel Margin="0,12,12,8" Spacing="6">
+            <TextBlock Classes="hint"
                        Text="Fonts are lists of families as in CSS. CanvasNet draws the generic families, such as sans-serif and monospace, and the common names, such as Arial, with its bundled fonts everywhere; a font that is not bundled is drawn only by SVG and OpenSCAD, and only on a machine that has it." />
-            <TextBlock Text="Headings" FontWeight="SemiBold" />
-            <TextBox AutomationProperties.AutomationId="StyleEditorHeadingFont" Text="{Binding HeadingFont}" />
-            <TextBlock Text="Body text" FontWeight="SemiBold" Margin="0,8,0,0" />
-            <TextBox AutomationProperties.AutomationId="StyleEditorBodyFont" Text="{Binding BodyFont}" />
-            <TextBlock Text="Monospaced text" FontWeight="SemiBold" Margin="0,8,0,0" />
-            <TextBox AutomationProperties.AutomationId="StyleEditorMonospaceFont" Text="{Binding MonospaceFont}" />
+            <TextBlock Classes="label" Text="Headings" />
+            <TextBox AutomationProperties.AutomationId="StyleEditorHeadingFont" AutomationProperties.Name="Headings font" Text="{Binding HeadingFont}" />
+            <TextBlock Classes="label" Text="Body text" Margin="0,8,0,0" />
+            <TextBox AutomationProperties.AutomationId="StyleEditorBodyFont" AutomationProperties.Name="Body text font" Text="{Binding BodyFont}" />
+            <TextBlock Classes="label" Text="Monospaced text" Margin="0,8,0,0" />
+            <TextBox AutomationProperties.AutomationId="StyleEditorMonospaceFont" AutomationProperties.Name="Monospaced text font" Text="{Binding MonospaceFont}" />
 
             <Grid ColumnDefinitions="Auto,140" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="6" Margin="0,12,0,0">
-              <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Line width (px)" />
+              <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" VerticalAlignment="Center" Text="Line width (px)" />
               <NumericUpDown Grid.Row="0" Grid.Column="1"
                              AutomationProperties.AutomationId="StyleEditorStrokeBox"
+                             AutomationProperties.Name="Line width"
                              Minimum="0" Maximum="32" Increment="0.5" FormatString="0.##"
                              Value="{Binding StrokeWidth}" />
-              <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Corner radius (px)" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" VerticalAlignment="Center" Text="Corner radius (px)" />
               <NumericUpDown Grid.Row="1" Grid.Column="1"
                              AutomationProperties.AutomationId="StyleEditorRadiusBox"
+                             AutomationProperties.Name="Corner radius"
                              Minimum="0" Maximum="64" Increment="1" FormatString="0.##"
                              Value="{Binding CornerRadius}" />
-              <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Spacing (px)" />
+              <TextBlock Grid.Row="2" Grid.Column="0" Classes="label" VerticalAlignment="Center" Text="Spacing (px)" />
               <NumericUpDown Grid.Row="2" Grid.Column="1"
                              AutomationProperties.AutomationId="StyleEditorSpacingBox"
+                             AutomationProperties.Name="Spacing"
                              Minimum="0" Maximum="128" Increment="1" FormatString="0.##"
                              Value="{Binding Spacing}" />
             </Grid>
@@ -149,32 +111,35 @@
 
       <TabItem Header="Mermaid and Vega-Lite">
         <ScrollViewer>
-          <StackPanel Margin="0,8,12,8" Spacing="6">
-            <TextBlock Opacity="0.7"
-                       TextWrapping="Wrap"
+          <StackPanel Margin="0,12,12,8" Spacing="6">
+            <TextBlock Classes="hint"
                        Text="These parts are advice and starting points for the files that are written: CanvasPilot cannot give a Mermaid theme or a Vega-Lite configuration to a render, so each goes into the file." />
             <CheckBox AutomationProperties.AutomationId="StyleEditorUseMermaid"
                       Content="This kit has a Mermaid theme"
                       IsChecked="{Binding UseMermaid}" />
             <StackPanel Spacing="6" IsVisible="{Binding UseMermaid}">
               <ComboBox AutomationProperties.AutomationId="StyleEditorMermaidTheme"
+                        AutomationProperties.Name="Mermaid theme"
                         MinWidth="180"
                         ItemsSource="{x:Static vm:StyleKitEditorViewModel.MermaidThemes}"
                         SelectedItem="{Binding MermaidTheme}" />
-              <TextBlock Text="Theme variables" FontWeight="SemiBold" />
+              <TextBlock Classes="label" Text="Theme variables" />
               <ItemsControl AutomationProperties.AutomationId="StyleEditorMermaidVariables" ItemsSource="{Binding MermaidVariables}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="vm:StyleNameValueRowViewModel">
                     <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
                       <TextBox AutomationProperties.AutomationId="StyleEditorVariableNameBox"
+                               AutomationProperties.Name="Variable name"
                                Width="200"
                                PlaceholderText="primaryColor"
                                Text="{Binding Name}" />
                       <TextBox AutomationProperties.AutomationId="StyleEditorVariableValueBox"
+                               AutomationProperties.Name="Variable value"
                                Width="200"
                                PlaceholderText="#2563EB"
                                Text="{Binding Value}" />
                       <Button AutomationProperties.AutomationId="StyleEditorRemoveRowButton"
+                              Theme="{DynamicResource SecondaryButton}"
                               Content="Remove"
                               Click="OnRemoveRowClick" />
                     </StackPanel>
@@ -182,13 +147,15 @@
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
               <Button AutomationProperties.AutomationId="StyleEditorAddMermaidVariableButton"
+                      Theme="{DynamicResource SecondaryButton}"
                       HorizontalAlignment="Left"
                       Content="Add variable"
                       Command="{Binding AddMermaidVariableCommand}" />
             </StackPanel>
 
-            <TextBlock Text="Vega-Lite configuration (a JSON object, or empty for none)" FontWeight="SemiBold" Margin="0,12,0,0" />
+            <TextBlock Classes="label" Text="Vega-Lite configuration (a JSON object, or empty for none)" Margin="0,12,0,0" />
             <TextBox AutomationProperties.AutomationId="StyleEditorVegaLiteBox"
+                     AutomationProperties.Name="Vega-Lite configuration"
                      AcceptsReturn="True"
                      TextWrapping="NoWrap"
                      MinHeight="160"
@@ -200,42 +167,45 @@
 
       <TabItem Header="Guidance">
         <ScrollViewer>
-          <StackPanel Margin="0,8,12,8" Spacing="6">
-            <TextBlock Text="Notes" FontWeight="SemiBold" />
+          <StackPanel Margin="0,12,12,8" Spacing="6">
+            <TextBlock Classes="label" Text="Notes" />
             <TextBox AutomationProperties.AutomationId="StyleEditorNotesBox"
+                     AutomationProperties.Name="Notes"
                      AcceptsReturn="True"
                      TextWrapping="Wrap"
                      MinHeight="100"
                      Text="{Binding Notes}" />
 
-            <TextBlock Text="Do" FontWeight="SemiBold" Margin="0,8,0,0" />
+            <TextBlock Classes="label" Text="Do" Margin="0,8,0,0" />
             <ItemsControl AutomationProperties.AutomationId="StyleEditorDoItems" ItemsSource="{Binding DoItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:StyleTextRowViewModel">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,2">
-                    <TextBox Grid.Column="0" AutomationProperties.AutomationId="StyleEditorGuidanceItemBox" Text="{Binding Text}" />
-                    <Button Grid.Column="1" AutomationProperties.AutomationId="StyleEditorRemoveRowButton" Content="Remove" Click="OnRemoveRowClick" />
+                    <TextBox Grid.Column="0" AutomationProperties.AutomationId="StyleEditorGuidanceItemBox" AutomationProperties.Name="Do" Text="{Binding Text}" />
+                    <Button Grid.Column="1" AutomationProperties.AutomationId="StyleEditorRemoveRowButton" Theme="{DynamicResource SecondaryButton}" Content="Remove" Click="OnRemoveRowClick" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <Button AutomationProperties.AutomationId="StyleEditorAddDoButton"
+                    Theme="{DynamicResource SecondaryButton}"
                     HorizontalAlignment="Left"
                     Content="Add"
                     Command="{Binding AddDoCommand}" />
 
-            <TextBlock Text="Don't" FontWeight="SemiBold" Margin="0,8,0,0" />
+            <TextBlock Classes="label" Text="Don't" Margin="0,8,0,0" />
             <ItemsControl AutomationProperties.AutomationId="StyleEditorDontItems" ItemsSource="{Binding DontItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:StyleTextRowViewModel">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,2">
-                    <TextBox Grid.Column="0" AutomationProperties.AutomationId="StyleEditorGuidanceItemBox" Text="{Binding Text}" />
-                    <Button Grid.Column="1" AutomationProperties.AutomationId="StyleEditorRemoveRowButton" Content="Remove" Click="OnRemoveRowClick" />
+                    <TextBox Grid.Column="0" AutomationProperties.AutomationId="StyleEditorGuidanceItemBox" AutomationProperties.Name="Don't" Text="{Binding Text}" />
+                    <Button Grid.Column="1" AutomationProperties.AutomationId="StyleEditorRemoveRowButton" Theme="{DynamicResource SecondaryButton}" Content="Remove" Click="OnRemoveRowClick" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <Button AutomationProperties.AutomationId="StyleEditorAddDontButton"
+                    Theme="{DynamicResource SecondaryButton}"
                     HorizontalAlignment="Left"
                     Content="Add"
                     Command="{Binding AddDontCommand}" />
@@ -245,25 +215,25 @@
 
       <TabItem Header="Sizes">
         <ScrollViewer>
-          <StackPanel Margin="0,8,12,8" Spacing="6">
-            <TextBlock Opacity="0.7"
-                       TextWrapping="Wrap"
+          <StackPanel Margin="0,12,12,8" Spacing="6">
+            <TextBlock Classes="hint"
                        Text="Sizes that the picture can be exported at. Give a width, a height, or both (both fit the picture inside the box); the resolution is written into the PNG file. A transparent size keeps the margin transparent." />
             <ItemsControl AutomationProperties.AutomationId="StyleEditorPresets" ItemsSource="{Binding Presets}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:StylePresetRowViewModel">
                   <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,3">
-                    <TextBox AutomationProperties.AutomationId="StyleEditorPresetNameBox" Width="170" PlaceholderText="Name" Text="{Binding Name}" />
-                    <TextBox AutomationProperties.AutomationId="StyleEditorPresetWidthBox" Width="80" PlaceholderText="Width" Text="{Binding WidthText}" />
-                    <TextBox AutomationProperties.AutomationId="StyleEditorPresetHeightBox" Width="80" PlaceholderText="Height" Text="{Binding HeightText}" />
-                    <TextBox AutomationProperties.AutomationId="StyleEditorPresetDpiBox" Width="80" PlaceholderText="DPI" Text="{Binding DpiText}" />
+                    <TextBox AutomationProperties.AutomationId="StyleEditorPresetNameBox" AutomationProperties.Name="Size name" Width="170" PlaceholderText="Name" Text="{Binding Name}" />
+                    <TextBox AutomationProperties.AutomationId="StyleEditorPresetWidthBox" AutomationProperties.Name="Width" Width="80" PlaceholderText="Width" Text="{Binding WidthText}" />
+                    <TextBox AutomationProperties.AutomationId="StyleEditorPresetHeightBox" AutomationProperties.Name="Height" Width="80" PlaceholderText="Height" Text="{Binding HeightText}" />
+                    <TextBox AutomationProperties.AutomationId="StyleEditorPresetDpiBox" AutomationProperties.Name="Resolution in DPI" Width="80" PlaceholderText="DPI" Text="{Binding DpiText}" />
                     <CheckBox AutomationProperties.AutomationId="StyleEditorPresetTransparentBox" Content="Transparent" IsChecked="{Binding Transparent}" />
-                    <Button AutomationProperties.AutomationId="StyleEditorRemoveRowButton" Content="Remove" Click="OnRemoveRowClick" />
+                    <Button AutomationProperties.AutomationId="StyleEditorRemoveRowButton" Theme="{DynamicResource SecondaryButton}" Content="Remove" Click="OnRemoveRowClick" />
                   </StackPanel>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <Button AutomationProperties.AutomationId="StyleEditorAddPresetButton"
+                    Theme="{DynamicResource SecondaryButton}"
                     HorizontalAlignment="Left"
                     Content="Add size"
                     Command="{Binding AddPresetCommand}" />
@@ -273,9 +243,8 @@
 
       <TabItem Header="Examples">
         <ScrollViewer>
-          <StackPanel Margin="0,8,12,8" Spacing="6">
-            <TextBlock Opacity="0.7"
-                       TextWrapping="Wrap"
+          <StackPanel Margin="0,12,12,8" Spacing="6">
+            <TextBlock Classes="hint"
                        Text="Example images show the style in use. The files are copied into the kit when it is saved, and a file that is removed here is deleted from the kit then." />
             <ItemsControl AutomationProperties.AutomationId="StyleEditorExamples" ItemsSource="{Binding Examples}">
               <ItemsControl.ItemTemplate>
@@ -284,24 +253,26 @@
                     <TextBlock Grid.Column="0"
                                AutomationProperties.AutomationId="StyleEditorExampleName"
                                VerticalAlignment="Center"
+                               Foreground="{DynamicResource CpTextPrimary}"
                                TextTrimming="CharacterEllipsis"
                                Text="{Binding DisplayText}" />
                     <TextBox Grid.Column="1"
                              AutomationProperties.AutomationId="StyleEditorExampleCaptionBox"
+                             AutomationProperties.Name="Caption"
                              PlaceholderText="Caption"
                              Text="{Binding Caption}" />
-                    <Button Grid.Column="2" AutomationProperties.AutomationId="StyleEditorRemoveRowButton" Content="Remove" Click="OnRemoveRowClick" />
+                    <Button Grid.Column="2" AutomationProperties.AutomationId="StyleEditorRemoveRowButton" Theme="{DynamicResource SecondaryButton}" Content="Remove" Click="OnRemoveRowClick" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
             <Button AutomationProperties.AutomationId="StyleEditorAddExamplesButton"
+                    Theme="{DynamicResource SecondaryButton}"
                     HorizontalAlignment="Left"
                     Content="Add files..."
                     Command="{Binding AddExamplesCommand}" />
-            <TextBlock AutomationProperties.AutomationId="StyleEditorExampleMessage"
-                       Foreground="Firebrick"
-                       TextWrapping="Wrap"
+            <TextBlock Classes="error"
+                       AutomationProperties.AutomationId="StyleEditorExampleMessage"
                        IsVisible="{Binding HasExampleMessage}"
                        Text="{Binding ExampleMessage}" />
           </StackPanel>
@@ -310,6 +281,57 @@
 
     </TabControl>
 
-  </DockPanel>
+    <!-- What is wrong, what to look at, and the buttons that save or leave. Save is off while there is an error. -->
+    <Border Grid.Row="1"
+            Padding="24,12"
+            Background="{DynamicResource CpSurfaceWindow}"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="0,1,0,0">
+      <StackPanel Spacing="8">
+
+        <ItemsControl AutomationProperties.AutomationId="StyleEditorErrors"
+                      ItemsSource="{Binding Errors}"
+                      IsVisible="{Binding HasErrors}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Classes="error" Text="{Binding}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <ItemsControl AutomationProperties.AutomationId="StyleEditorWarnings"
+                      ItemsSource="{Binding Warnings}"
+                      IsVisible="{Binding HasWarnings}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <TextBlock Classes="caution" Text="{Binding}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Classes="error"
+                   AutomationProperties.AutomationId="StyleEditorSaveError"
+                   IsVisible="{Binding HasSaveError}"
+                   Text="{Binding SaveError}" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+          <Button AutomationProperties.AutomationId="StyleEditorSaveButton"
+                  Theme="{DynamicResource PrimaryButton}"
+                  MinWidth="88"
+                  Content="Save"
+                  IsDefault="True"
+                  Command="{Binding SaveCommand}" />
+          <Button AutomationProperties.AutomationId="StyleEditorCancelButton"
+                  Theme="{DynamicResource SecondaryButton}"
+                  MinWidth="88"
+                  Content="Cancel"
+                  IsCancel="True"
+                  Command="{Binding CancelCommand}" />
+        </StackPanel>
+
+      </StackPanel>
+    </Border>
+
+  </Grid>
 
 </Window>

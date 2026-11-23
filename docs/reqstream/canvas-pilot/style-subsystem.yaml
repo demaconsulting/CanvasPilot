@@ -5,8 +5,9 @@
 # - Define requirements for the CanvasPilot Style subsystem
 # - The Style subsystem holds the look that pictures should have: style kits as files and folders that a person can
 #   read and edit, found in the places that ship with the program, that the user keeps, that a project holds, and that
-#   a team shares, with the kit that the project uses, the export sizes and the guidance and tools that belong to it, a
-#   check of a picture against it, and the window and the editor in which kits are managed. It is kept apart from every
+#   a team shares, with the kit that the project uses (shown as a pill with its name and colors), the export sizes and the
+#   guidance and tools that belong to it, a check of a picture against it, and the window and the editor in which kits are
+#   managed, with names for the entries of those windows. It is kept apart from every
 #   provider of a language model
 # - Subsystem requirements describe the behavior of the units working together
 
@@ -77,15 +78,20 @@ sections:
             title: >-
               The Style subsystem shall resolve the kit that the open project uses from the id kept in the project file,
               change it on request and keep the change in the project file, start a new project with the default kit of the
-              user, and report a kit that cannot be found.
+              user, report a kit that cannot be found, and show the kit that the project uses as a pill with its name and
+              main colors from which the kit is chosen and the window that manages kits is reached.
             justification: |
               The style belongs to the project, so the project file says which kit it uses, and a project that names a kit
-              that is not here must say so and not look different without a word.
+              that is not here must say so and not look different without a word. The kit is the look of every picture, so
+              it is shown where it is always in view, by its name and its colors, and the way to the window that manages
+              kits is where kits are chosen.
             children:
               - CanvasPilot-StyleSelection-ResolveTheActiveKit
               - CanvasPilot-StyleSelection-KeepChoiceInTheProjectFile
               - CanvasPilot-StyleSelection-StartNewProjectsWithTheDefault
               - CanvasPilot-StylePicker-ShowAndChangeTheActiveKit
+              - CanvasPilot-StylePicker-ShowKitAsPill
+              - CanvasPilot-StylePicker-ManageKitsFromTheList
               - CanvasPilot-StyleSettingsPage-EditSharedFoldersAndDefaultKit
             tests:
               - StyleSubsystem_ChooseActiveKit_DefaultAndChoice_AreKeptInTheProjectFileAndSurviveReopening
@@ -162,6 +168,21 @@ sections:
               - CanvasPilot-StyleKitEditor-EditExamplesAndPresets
               - CanvasPilot-StyleKitManager-ListKitsWithPreview
               - CanvasPilot-StyleKitManager-ManageKits
+              - CanvasPilot-StyleKitManager-MarkChosenAndInUseKits
               - CanvasPilot-StyleKitManager-ProtectBuiltInAndSharedKits
             tests:
               - StyleSubsystem_ManageKitsInWindow_ManagerAndEditor_CreateEditExportImportAndDeleteAKit
+
+          - id: CanvasPilot-Style-BeUsableWithAssistiveTechnology
+            title: >-
+              The Style subsystem shall give the window that manages style kits and the Style Kits page of the settings
+              dialog names for their entries and tooltips for the buttons that show no text, and let every button be reached
+              with the keyboard.
+            justification: |
+              Choosing and managing a style must be possible for people who use a screen reader or only the keyboard. An
+              entry without a name is read as nothing, and a button that cannot take the focus cannot be reached.
+            children:
+              - CanvasPilot-StyleKitManager-BeUsableWithAssistiveTechnology
+              - CanvasPilot-StyleSettingsPage-BeUsableWithAssistiveTechnology
+            tests:
+              - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

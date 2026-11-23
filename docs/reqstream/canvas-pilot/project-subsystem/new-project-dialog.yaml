@@ -4,7 +4,8 @@
 # The NewProjectDialog unit is the modal New Project window and its view model. It collects a project name and
 # the folder that will contain the project folder, validates them through IProjectService, and delegates
 # browsing for a folder to an IFolderPicker supplied by the application. The caller creates the project when
-# the dialog was accepted.
+# the dialog was accepted. The window is drawn with the design tokens of the application (a footer bar with the main
+# action OK and the quiet actions Cancel and Browse, label, hint, and error text styles), and its entries have names.
 
 sections:
   - title: CanvasPilot Requirements
@@ -71,3 +72,14 @@ sections:
                   - NewProjectDialogViewModel_Cancel_RequestsCloseWithoutAcceptance
                   - NewProjectDialogView_OkButton_ClosesWindowAndAccepts
                   - NewProjectDialogView_CancelButton_ClosesWindowWithoutAccepting
+
+              - id: CanvasPilot-NewProjectDialog-NameTheEntries
+                title: >-
+                  The NewProjectDialog shall give its project name entry and its location entry an accessible name, and
+                  let every button take the keyboard focus and be at least 28 by 28 pixels, in the dark and the light theme.
+                justification: |
+                  A person who uses a screen reader needs to know what each entry asks for, and a person who uses the
+                  keyboard must be able to reach every button. Targets that are too small are hard to hit with a pointer
+                  or a finger, and the dialog is used in both theme variants.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

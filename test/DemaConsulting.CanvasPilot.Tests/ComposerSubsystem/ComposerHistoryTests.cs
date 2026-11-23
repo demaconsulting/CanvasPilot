@@ -203,6 +203,56 @@ public sealed class ComposerHistoryTests
     }
 
     /// <summary>
+    ///     Test that adding chips to the row at the start is one step that puts them after the chips that are already there
+    ///     and a line feed below the row, keeps the words after the line feed, and is undone and redone as one.
+    /// </summary>
+    [Fact]
+    public void ComposerHistory_AddLeadingChips_PutsChipsInTheRowAboveTheWordsInOneStep()
+    {
+        // Arrange: a message with a chip in the row, a line feed, and words, and the caret at the end of the words
+        var first = new MarkChip(Guid.NewGuid(), 1);
+        var second = new MarkChip(Guid.NewGuid(), 2);
+        _history.Execute(ComposerEdit.AddLeadingChips(_document, [first], 0));
+        _history.Execute(ComposerEdit.TypeText(_document, 2, "words"));
+        var undoCount = _history.UndoCount;
+
+        // Act: add another chip with the caret at the end of the words
+        var edit = ComposerEdit.AddLeadingChips(_document, [second], _document.Length);
+        _history.Execute(edit);
+
+        // Assert: the chip is next to the first one, no second line feed was added, the caret moved with the words, and
+        // it is one step
+        Assert.Equal(Chip + Chip + "\nwords", _document.FlatText);
+        Assert.Equal([first, second], _document.Chips);
+        Assert.Equal(_document.Length, edit.CaretAfter);
+        Assert.Equal(undoCount + 1, _history.UndoCount);
+        _history.Undo();
+        Assert.Equal(Chip + "\nwords", _document.FlatText);
+        _history.Redo();
+        Assert.Equal(Chip + Chip + "\nwords", _document.FlatText);
+    }
+
+    /// <summary>
+    ///     Test that chips added to an empty message are followed by a line feed and that the caret goes below the row,
+    ///     where the words are typed.
+    /// </summary>
+    [Fact]
+    public void ComposerHistory_AddLeadingChips_EmptyMessage_AddsTheLineFeedAndPutsTheCaretBelowTheRow()
+    {
+        // Arrange: an empty message and two chips
+        var chips = new ChipSegment[] { new MarkChip(Guid.NewGuid(), 1), new MarkChip(Guid.NewGuid(), 2) };
+
+        // Act: add them
+        var edit = ComposerEdit.AddLeadingChips(_document, chips, 0);
+        _history.Execute(edit);
+
+        // Assert: the row, the line feed, and the caret on the line below
+        Assert.Equal(Chip + Chip + "\n", _document.FlatText);
+        Assert.Equal(3, edit.CaretAfter);
+        Assert.True(ComposerEdit.AddLeadingChips(_document, [], 3).IsEmpty);
+    }
+
+    /// <summary>
     ///     Test that adding a mark is one step that removes the mark's chip when undone.
     /// </summary>
     [Fact]
