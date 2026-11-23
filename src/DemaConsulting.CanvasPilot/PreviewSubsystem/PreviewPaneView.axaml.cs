@@ -26,6 +26,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.VisualTree;
 
 namespace DemaConsulting.CanvasPilot.PreviewSubsystem;
 
@@ -64,6 +65,16 @@ public sealed partial class PreviewPaneView : UserControl
     private Point _dragOrigin;
 
     /// <summary>
+    ///     Where the pointer was pressed with the middle button to move the zoomed picture, or null.
+    /// </summary>
+    private Point? _panOrigin;
+
+    /// <summary>
+    ///     How far the zoomed picture was scrolled when the move started.
+    /// </summary>
+    private Vector _panStartOffset;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="PreviewPaneView" /> class.
     /// </summary>
     public PreviewPaneView()
@@ -73,6 +84,13 @@ public sealed partial class PreviewPaneView : UserControl
         PreviewSurface.PointerMoved += OnSurfacePointerMoved;
         PreviewSurface.PointerReleased += OnSurfacePointerEnded;
         PreviewSurface.PointerCaptureLost += OnSurfacePointerEnded;
+        ImageScroller.AddHandler(PointerWheelChangedEvent, OnScrollerWheel, RoutingStrategies.Tunnel);
+        ImageScroller.AddHandler(PointerPressedEvent, OnScrollerPointerPressed, RoutingStrategies.Tunnel);
+        ImageScroller.AddHandler(PointerMovedEvent, OnScrollerPointerMoved, RoutingStrategies.Tunnel);
+        ImageScroller.AddHandler(PointerReleasedEvent, OnScrollerPointerReleased, RoutingStrategies.Tunnel);
+
+        // The picture is scaled to the pane while it is fitted, so the zoom in effect follows the size of the Viewbox.
+        PreviewViewbox.SizeChanged += (_, _) => ReportFitPercent();
     }
 
     /// <summary>
@@ -149,6 +167,7 @@ public sealed partial class PreviewPaneView : UserControl
                 break;
 
             case nameof(PreviewPaneViewModel.FitToWindow):
+            case nameof(PreviewPaneViewModel.ZoomPercent):
                 ApplyFit();
                 break;
         }
@@ -272,26 +291,143 @@ public sealed partial class PreviewPaneView : UserControl
     }
 
     /// <summary>
-    ///     Applies the fit mode: scaled down to the pane without scroll bars, or at its own size with scroll
-    ///     bars when it is larger than the pane. The picture itself is never stretched; the Viewbox around the
-    ///     picture and its overlay scales both together.
+    ///     Applies the zoom: scaled down to the pane without scroll bars while fitted, otherwise at the chosen
+    ///     percentage, with scroll bars when the picture is larger than the pane. The picture itself is never
+    ///     stretched; the Viewbox around the picture and its overlay scales both together.
     /// </summary>
     private void ApplyFit()
     {
         var fit = _viewModel?.FitToWindow ?? true;
         if (fit)
         {
+            PreviewViewbox.Width = double.NaN;
+            PreviewViewbox.Height = double.NaN;
             PreviewViewbox.Stretch = Stretch.Uniform;
             PreviewViewbox.StretchDirection = StretchDirection.DownOnly;
             ImageScroller.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
             ImageScroller.VerticalScrollBarVisibility = ScrollBarVisibility.Disabled;
+            ReportFitPercent();
         }
         else
         {
-            PreviewViewbox.Stretch = Stretch.None;
-            PreviewViewbox.StretchDirection = StretchDirection.Both;
+            var percent = _viewModel?.ZoomPercent ?? PreviewPaneViewModel.ActualSizePercent;
+            if (percent == PreviewPaneViewModel.ActualSizePercent || _viewModel?.Image is not { } image)
+            {
+                PreviewViewbox.Width = double.NaN;
+                PreviewViewbox.Height = double.NaN;
+                PreviewViewbox.Stretch = Stretch.None;
+                PreviewViewbox.StretchDirection = StretchDirection.Both;
+            }
+            else
+            {
+                // The Viewbox is as large as the zoomed picture, and scales the surface to that size.
+                PreviewViewbox.Width = image.Width * percent / 100.0;
+                PreviewViewbox.Height = image.Height * percent / 100.0;
+                PreviewViewbox.Stretch = Stretch.Uniform;
+                PreviewViewbox.StretchDirection = StretchDirection.Both;
+            }
+
             ImageScroller.HorizontalScrollBarVisibility = ScrollBarVisibility.Auto;
             ImageScroller.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         }
+    }
+
+    /// <summary>
+    ///     Tells the view model at which zoom the fitted picture is shown, which only the laid out view knows.
+    /// </summary>
+    private void ReportFitPercent()
+    {
+        if (_viewModel is not { FitToWindow: true, Image: { Width: > 0 } image } viewModel)
+        {
+            return;
+        }
+
+        var width = PreviewViewbox.Bounds.Width;
+        if (width <= 0)
+        {
+            return;
+        }
+
+        viewModel.FitPercent = Math.Clamp((int)Math.Round(width * 100.0 / image.Width), 1, PreviewPaneViewModel.ActualSizePercent);
+    }
+
+    /// <summary>
+    ///     Zooms with the wheel while Control is held, and lets the wheel scroll otherwise.
+    /// </summary>
+    /// <param name="sender">The scroller.</param>
+    /// <param name="e">The wheel turn.</param>
+    private void OnScrollerWheel(object? sender, PointerWheelEventArgs e)
+    {
+        if (_viewModel is null || !e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.Delta.Y == 0)
+        {
+            return;
+        }
+
+        if (e.Delta.Y > 0)
+        {
+            _viewModel.ZoomIn();
+        }
+        else
+        {
+            _viewModel.ZoomOut();
+        }
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    ///     Starts moving the zoomed picture with the middle button, and focuses the stage so that the zoom keys work.
+    /// </summary>
+    /// <param name="sender">The scroller.</param>
+    /// <param name="e">The press.</param>
+    private void OnScrollerPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Focus the stage when the empty stage is pressed, so that the zoom keys work; a press on the picture belongs
+        // to the picture's own tools and must not move the scroll position.
+        if (e.Source is Visual source && !source.GetSelfAndVisualAncestors().Contains(PreviewSurface))
+        {
+            ImageScroller.Focus();
+        }
+        if (e.GetCurrentPoint(ImageScroller).Properties.IsMiddleButtonPressed)
+        {
+            _panOrigin = e.GetPosition(ImageScroller);
+            _panStartOffset = ImageScroller.Offset;
+            e.Pointer.Capture(ImageScroller);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    ///     Moves the zoomed picture while the middle button is held.
+    /// </summary>
+    /// <param name="sender">The scroller.</param>
+    /// <param name="e">The move.</param>
+    private void OnScrollerPointerMoved(object? sender, PointerEventArgs e)
+    {
+        if (_panOrigin is not { } origin)
+        {
+            return;
+        }
+
+        var moved = e.GetPosition(ImageScroller) - origin;
+        ImageScroller.Offset = new Vector(Math.Max(0, _panStartOffset.X - moved.X), Math.Max(0, _panStartOffset.Y - moved.Y));
+        e.Handled = true;
+    }
+
+    /// <summary>
+    ///     Ends moving the picture.
+    /// </summary>
+    /// <param name="sender">The scroller.</param>
+    /// <param name="e">The event data.</param>
+    private void OnScrollerPointerReleased(object? sender, PointerReleasedEventArgs e)
+    {
+        if (_panOrigin is null)
+        {
+            return;
+        }
+
+        _panOrigin = null;
+        e.Pointer.Capture(null);
+        e.Handled = true;
     }
 }

@@ -281,8 +281,8 @@ public sealed class PreviewPaneViewTests : IDisposable
         var scroller = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
         var fitted = (viewbox.Stretch, viewbox.StretchDirection, scroller.HorizontalScrollBarVisibility);
 
-        // Act: turn fitting off with the check box, then on again
-        var check = SettingsUiHelpers.Find<CheckBox>(window, "PreviewFitToWindow");
+        // Act: turn fitting off with the Fit toggle, then on again
+        var check = SettingsUiHelpers.Find<ToggleButton>(window, "PreviewFitToWindow");
         check.IsChecked = false;
         AppShellUiHelpers.Flush();
         var actual = (viewbox.Stretch, viewbox.StretchDirection, scroller.HorizontalScrollBarVisibility, pane.FitToWindow);
@@ -321,6 +321,45 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.Equal(new Size(800, 400), image.Bounds.Size);
         Assert.Equal(new Size(800, 400), overlayExtent.Size);
         Assert.Equal(imageExtent, overlayExtent);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the zoom pill zooms the picture and the overlay together: the buttons change the zoom to the
+    ///     next step, the label says it, the overlay keeps the picture's pixel size and covers the picture exactly,
+    ///     and clicking the label fits the picture again.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether()
+    {
+        // Arrange: a pane over a picture of 800 x 400 pixels, fitted to the pane, with an overlay
+        var (window, pane, overlay) = await ShowLargePictureWithOverlayAsync();
+        var image = SettingsUiHelpers.Find<Image>(window, "PreviewImage");
+        var label = Assert.IsType<TextBlock>(SettingsUiHelpers.Find<Button>(window, "PreviewZoomLabel").Content);
+        var fitLabel = label.Text;
+
+        // Act: go to actual size, then out to 50 percent, then fit again through the label
+        SettingsUiHelpers.Click(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomActual"));
+        AppShellUiHelpers.Flush();
+        var actual = (label.Text, ScreenExtent(window, image).Width, pane.FitToWindow);
+        SettingsUiHelpers.Click(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomOut"));
+        SettingsUiHelpers.Click(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomOut"));
+        AppShellUiHelpers.Flush();
+        var half = (label.Text, ScreenExtent(window, image), ScreenExtent(window, overlay));
+        SettingsUiHelpers.Click(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomLabel"));
+        AppShellUiHelpers.Flush();
+
+        // Assert
+        Assert.EndsWith("%", fitLabel);
+        Assert.Equal(("100%", 800.0, false), actual);
+        Assert.Equal("50%", half.Item1);
+        Assert.Equal(400.0, half.Item2.Width, 3);
+        Assert.Equal(200.0, half.Item2.Height, 3);
+        Assert.Equal(half.Item2, half.Item3);
+        Assert.Equal(new Size(800, 400), overlay.Bounds.Size);
+        Assert.True(pane.FitToWindow);
+        Assert.Equal(fitLabel, label.Text);
 
         window.Close();
     }

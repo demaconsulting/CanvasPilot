@@ -4,41 +4,58 @@
              x:Class="DemaConsulting.CanvasPilot.PreviewSubsystem.PreviewPaneView"
              x:DataType="vm:PreviewPaneViewModel">
 
-  <Grid RowDefinitions="Auto,*,Auto">
+  <UserControl.KeyBindings>
+    <KeyBinding Gesture="Ctrl+D0" Command="{Binding ZoomToFitCommand}" />
+    <KeyBinding Gesture="Ctrl+D1" Command="{Binding ZoomActualSizeCommand}" />
+    <KeyBinding Gesture="Ctrl+OemPlus" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Gesture="Ctrl+Add" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Gesture="Ctrl+OemMinus" Command="{Binding ZoomOutCommand}" />
+    <KeyBinding Gesture="Ctrl+Subtract" Command="{Binding ZoomOutCommand}" />
+  </UserControl.KeyBindings>
 
-    <DockPanel Grid.Row="0" Margin="6,4" LastChildFill="False">
-      <CheckBox Name="FitToWindowCheckBox"
-                AutomationProperties.AutomationId="PreviewFitToWindow"
-                DockPanel.Dock="Left"
-                Content="Fit to window"
-                IsChecked="{Binding FitToWindow}" />
-      <ProgressBar Name="BusyIndicator"
-                   AutomationProperties.AutomationId="PreviewBusy"
-                   DockPanel.Dock="Right"
-                   Width="120"
-                   IsIndeterminate="True"
-                   IsVisible="{Binding IsBusy}" />
-      <!-- The slot for the host's controls is outside the scaled picture, so they keep their size at every zoom. -->
-      <ContentControl Name="PreviewToolbar"
-                      AutomationProperties.AutomationId="PreviewToolbar"
-                      DockPanel.Dock="Left"
-                      Margin="12,0,0,0"
-                      VerticalAlignment="Center"
-                      IsVisible="{Binding HasToolbar}"
-                      Content="{Binding Toolbar}" />
-    </DockPanel>
+  <UserControl.Styles>
+    <!-- The Fit toggle of the zoom pill shows its state as a tint, not as a filled button -->
+    <Style Selector="ToggleButton.zoomfit:checked">
+      <Setter Property="Foreground" Value="{DynamicResource CpAccentText}" />
+    </Style>
+    <Style Selector="ToggleButton.zoomfit:checked /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+    </Style>
+  </UserControl.Styles>
 
-    <Grid Grid.Row="1">
+  <Grid RowDefinitions="*,Auto">
+
+    <!-- The stage: the picture sits on a quiet surface with a dot grid, with the tools floating over it -->
+    <Grid Grid.Row="0" Name="Stage" ClipToBounds="True" Background="{DynamicResource CpSurfaceStage}">
+
+      <Border Name="StageDots"
+              IsHitTestVisible="False"
+              Opacity="0.2">
+        <Border.Background>
+          <DrawingBrush TileMode="Tile" DestinationRect="0,0,20,20" Stretch="None">
+            <DrawingBrush.Drawing>
+              <GeometryDrawing Brush="{DynamicResource CpTextTertiary}">
+                <GeometryDrawing.Geometry>
+                  <EllipseGeometry Center="10,10" RadiusX="1" RadiusY="1" />
+                </GeometryDrawing.Geometry>
+              </GeometryDrawing>
+            </DrawingBrush.Drawing>
+          </DrawingBrush>
+        </Border.Background>
+      </Border>
 
       <ScrollViewer Name="ImageScroller"
                     AutomationProperties.AutomationId="PreviewScroller"
+                    Focusable="True"
                     HorizontalScrollBarVisibility="Disabled"
                     VerticalScrollBarVisibility="Disabled"
                     IsVisible="{Binding HasImage}">
         <!-- The Viewbox scales the whole surface, so everything on it, picture and overlay alike, is laid out in
-             picture pixels whatever the zoom is. -->
+             picture pixels whatever the zoom is. The margin leaves room for the shadow and keeps the picture clear of
+             the floating tools. -->
         <Viewbox Name="PreviewViewbox"
                  AutomationProperties.AutomationId="PreviewViewbox"
+                 Margin="32,64"
                  HorizontalAlignment="Center"
                  VerticalAlignment="Center"
                  Stretch="Uniform"
@@ -46,6 +63,7 @@
           <Grid Name="PreviewSurface"
                 AutomationProperties.AutomationId="PreviewSurface"
                 Background="Transparent">
+            <Border BoxShadow="{DynamicResource CpShadowPicture}" IsHitTestVisible="False" />
             <Image Name="PreviewImage"
                    AutomationProperties.AutomationId="PreviewImage"
                    Stretch="None" />
@@ -91,9 +109,93 @@
                  IsVisible="{Binding ShowPlaceholder}"
                  Text="{Binding PlaceholderText}" />
 
+      <ProgressBar Name="BusyIndicator"
+                   AutomationProperties.AutomationId="PreviewBusy"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Top"
+                   Margin="12"
+                   Width="120"
+                   IsIndeterminate="True"
+                   IsVisible="{Binding IsBusy}" />
+
+      <!-- The slot for the host's controls floats over the stage and is outside the scaled picture, so they keep
+           their size at every zoom. -->
+      <ContentControl Name="PreviewToolbar"
+                      AutomationProperties.AutomationId="PreviewToolbar"
+                      Margin="12"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Top"
+                      IsVisible="{Binding HasToolbar}"
+                      Content="{Binding Toolbar}" />
+
+      <!-- The zoom pill: Fit, actual size, smaller, the zoom in effect, and larger -->
+      <Border Name="ZoomPill"
+              AutomationProperties.AutomationId="PreviewZoomPill"
+              HorizontalAlignment="Right"
+              VerticalAlignment="Bottom"
+              Margin="16"
+              Padding="4"
+              Height="36"
+              CornerRadius="{DynamicResource CpRadiusPill}"
+              Background="{DynamicResource CpSurfaceOverlay}"
+              BorderBrush="{DynamicResource CpBorderSubtle}"
+              BorderThickness="1"
+              BoxShadow="{DynamicResource CpShadowFloating}"
+              IsVisible="{Binding HasImage}">
+        <StackPanel Orientation="Horizontal" Spacing="2">
+          <ToggleButton Name="FitToWindowButton"
+                        Classes="zoomfit"
+                        Theme="{DynamicResource ToolToggle}"
+                        AutomationProperties.AutomationId="PreviewFitToWindow"
+                        AutomationProperties.Name="Fit to window"
+                        ToolTip.Tip="Fit to window  Ctrl+0"
+                        IsChecked="{Binding FitToWindow}">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconFullScreenMaximize}" />
+          </ToggleButton>
+          <Button Name="ZoomActualButton"
+                  Theme="{DynamicResource IconButton}"
+                  MinWidth="32"
+                  AutomationProperties.AutomationId="PreviewZoomActual"
+                  AutomationProperties.Name="Actual size"
+                  ToolTip.Tip="Actual size  Ctrl+1"
+                  Command="{Binding ZoomActualSizeCommand}">
+            <TextBlock FontSize="{DynamicResource CpFontSmall}" Text="1:1" />
+          </Button>
+          <Button Name="ZoomOutButton"
+                  Theme="{DynamicResource IconButton}"
+                  AutomationProperties.AutomationId="PreviewZoomOut"
+                  AutomationProperties.Name="Zoom out"
+                  ToolTip.Tip="Zoom out  Ctrl+Minus"
+                  IsEnabled="{Binding IsZoomOutPossible}"
+                  Command="{Binding ZoomOutCommand}">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconSubtract}" />
+          </Button>
+          <Button Name="ZoomLabelButton"
+                  Theme="{DynamicResource IconButton}"
+                  MinWidth="48"
+                  AutomationProperties.AutomationId="PreviewZoomLabel"
+                  AutomationProperties.Name="Zoom, click to fit to window"
+                  ToolTip.Tip="Click to fit to window"
+                  Command="{Binding ZoomToFitCommand}">
+            <TextBlock FontSize="{DynamicResource CpFontSmall}"
+                       Foreground="{DynamicResource CpTextPrimary}"
+                       Text="{Binding ZoomLabel}" />
+          </Button>
+          <Button Name="ZoomInButton"
+                  Theme="{DynamicResource IconButton}"
+                  AutomationProperties.AutomationId="PreviewZoomIn"
+                  AutomationProperties.Name="Zoom in"
+                  ToolTip.Tip="Zoom in  Ctrl+Plus"
+                  IsEnabled="{Binding IsZoomInPossible}"
+                  Command="{Binding ZoomInCommand}">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconAdd}" />
+          </Button>
+        </StackPanel>
+      </Border>
+
     </Grid>
 
-    <StackPanel Grid.Row="2" Margin="6,4" Spacing="2">
+    <StackPanel Grid.Row="1" Margin="6,4" Spacing="2">
       <!-- The status line of the picture is in the status bar of the main window, which follows this pane. -->
       <Expander AutomationProperties.AutomationId="PreviewDiagnosticsExpander"
                 Header="{Binding DiagnosticsHeader}"
