@@ -105,13 +105,15 @@
                   VerticalAlignment="Center"
                   IsVisible="{Binding HasProject}">
 
-        <StackPanel Orientation="Horizontal" Spacing="6">
+        <StackPanel Orientation="Horizontal"
+                    Spacing="6"
+                    IsVisible="{Binding HasSavedText}">
           <PathIcon Classes="icon"
                     Width="14"
                     Height="14"
                     Foreground="{DynamicResource CpSuccess}"
                     Data="{DynamicResource CpIconCheckmark}" />
-          <TextBlock AutomationProperties.AutomationId="StatusBarProjectSaved" Text="{x:Static vm:StatusBarViewModel.ProjectSavedText}" />
+          <TextBlock AutomationProperties.AutomationId="StatusBarProjectSaved" Text="{Binding SavedText}" />
         </StackPanel>
 
         <StackPanel AutomationProperties.AutomationId="StatusBarTalkHint"

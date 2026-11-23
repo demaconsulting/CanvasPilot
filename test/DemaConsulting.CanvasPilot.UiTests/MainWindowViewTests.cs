@@ -286,8 +286,17 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal("SVG", shown.Item4);
         Assert.StartsWith("Rendered in ", shown.Item5, StringComparison.Ordinal);
         Assert.Equal("red.svg: 40 x 20 px, svg", shown.Item6);
-        Assert.True(saved.IsEffectivelyVisible);
         Assert.Equal((true, false, "broken.svg: render failed"), failed);
+
+        // Act: the project was only opened, so nothing is claimed about saving; then the user saves it
+        var beforeSave = saved.IsEffectivelyVisible;
+        await composition.Shell.SaveProjectCommand.ExecuteAsync(null);
+        AppShellUiHelpers.Flush();
+
+        // Assert: after the save the bar says when the project file was saved
+        Assert.False(beforeSave);
+        Assert.True(saved.IsEffectivelyVisible);
+        Assert.StartsWith(StatusBarViewModel.SavedPrefix, saved.Text, StringComparison.Ordinal);
 
         window.Close();
     }

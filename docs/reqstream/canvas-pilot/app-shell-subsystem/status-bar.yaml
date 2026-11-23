@@ -76,15 +76,24 @@ sections:
 
               - id: CanvasPilot-StatusBar-ShowProjectHints
                 title: >-
-                  The StatusBar shall show, while a project is open and not otherwise, the words "Project saved" and the hint
-                  that the talk key (F9 until the user chooses another) is held to talk, naming the key that is in effect.
+                  The StatusBar shall show, while a project is open and not otherwise, the hint that the talk key (F9 until
+                  the user chooses another) is held to talk, naming the key that is in effect, and, only while the project
+                  file has a saved time, the words "Project file saved" with that time (the time of day for today,
+                  otherwise the date and the time), updated when the project is saved and hidden when no project is open
+                  or the file has no time.
                 justification: |
-                  The user is told that their work is kept and how to speak a request without searching the menus. Neither
-                  statement means anything while no project is open, so neither is shown then. The hint must name the key
-                  that really works, so it follows the choice on the Speech page.
+                  The user is told when the project file was really saved, from the modified time of the file, and how to
+                  speak a request without searching the menus. The application cannot tell whether the drawings or the
+                  chat have unsaved changes, so it must not claim that the work is saved; a fixed "Project saved" said so
+                  even for a project that had never been saved. Neither statement means anything while no project is open,
+                  so neither is shown then. The hint must name the key that really works, so it follows the choice on the
+                  Speech page.
                 tests:
                   - StatusBar_NoProject_IsIdleAndSaysNoProjectIsOpen
                   - StatusBar_ProjectOpenNoSelection_SaysNoPictureSelected
+                  - StatusBar_SavedText_FollowsTheModifiedTimeOfTheOpenProject
+                  - StatusBar_FormatSavedTime_TimeOfDayForTodayAndDateOtherwise
+                  - StatusBar_WithoutProjectService_SaysNothingAboutSaving
                   - PushToTalkHints_StatusBarAndWelcome_FollowTheSettings
                   - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
 

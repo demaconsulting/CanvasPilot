@@ -29,7 +29,7 @@ public interface IProjectService
 {
     /// <summary>
     ///     Raised after <see cref="Current" /> changed because a project was created, opened, or closed, or because the
-    ///     open project was saved with a change that others need to know (the style kit it uses).
+    ///     open project was saved (its modified time changed, as did, when it was the cause, the style kit it uses).
     /// </summary>
     event EventHandler? CurrentChanged;
 

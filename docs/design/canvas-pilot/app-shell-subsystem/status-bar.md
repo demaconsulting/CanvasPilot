@@ -5,8 +5,9 @@
 #### Purpose
 
 `StatusBar` is the bar at the bottom of the main window. It follows the workspace and its preview pane and says what
-picture is shown and in what state it is, with words as well as with an icon, and, while a project is open, that the
-project is saved and which key is held to talk. The bar is always there; with no project open it says so.
+picture is shown and in what state it is, with words as well as with an icon, and, while a project is open, when its
+project file was last saved (when that is known) and which key is held to talk. The bar is always there; with no project
+open it says so.
 
 #### Data Model
 
@@ -25,16 +26,24 @@ the workspace.
   (such as `SVG`), and `RenderTimeText` (such as `Rendered in 84 ms`) are read from the pane only while the state is
   `Ready` and are empty otherwise. `NotesText` is the header of the diagnostics of the pane (such as `1 note`) while the
   state is `Ready` and the render has notes; `HasNotes` tells whether it is not empty.
-- *Project*: `HasProject` mirrors the workspace. `ProjectSavedText` is the constant "Project saved" and `TalkKeyText` is
-  the text of the push-to-talk key in effect (`F9` by default), which follows the `PushToTalkSetting` of the shell.
+- *Project*: `HasProject` mirrors the workspace. `SavedText` is "Project file saved" followed by the time of the last
+  save of the project file (`ModifiedUtc` of the document of the open project, read from the `IProjectService` that
+  the shell gives the bar): the time of day when it was today, and otherwise the date and the time, in the culture and
+  the time zone of the user. `HasSavedText` is false, and nothing is shown, while no project is open or the file has no
+  saved time (a new project, or a file of an earlier build). `TalkKeyText` is the text of the push-to-talk key in effect
+  (`F9` by default), which follows the `PushToTalkSetting` of the shell.
 
 The inputs of the facts are the view model properties `FileName`, `ImageSizeText`, `FormatText`, `RenderTimeText`,
 `RenderMilliseconds`, `StatusText`, `HasDiagnostics`, and `DiagnosticsHeader` of the preview pane, which the
 *PreviewPane* unit documents.
 
-**"Project saved" is static text.** The application has no dirty tracking: no state of the project says that there are
-unsaved changes. The words are therefore shown whenever a project is open and are not bound to any state of the project.
-If dirty tracking is ever added, the words are to be bound to it.
+**The saved text says only what is true.** The application has no dirty tracking, so the bar does not claim that the
+work is saved. The project file holds only the metadata of the project (and is written when the project is created or
+the style kit changes, and by File ▸ Save), the drawings are files that the copilot writes, and the chat history is
+saved apart; none of those is claimed. The time is the `ModifiedUtc` of the document, and the bar follows
+`CurrentChanged` of the project service, which the service raises after every save, so a save updates the time. The
+service may raise the event on another thread, so the bar announces the change on the synchronization context that it
+was made on.
 
 **StatusBarView** (`AppShellSubsystem/StatusBarView.axaml` and `.axaml.cs`): a user control whose data context is the
 view model. Its only code is the call that loads the XAML.
@@ -49,8 +58,9 @@ view model. Its only code is the call that loads the XAML.
   progress bar, the word "Rendering...", and the file name), `StatusBarFailed` (a red error icon, the words "Render
   failed", and the file name), and `StatusBarIdle` (the summary sentence in the tertiary text color). The state is told
   by words and by an icon or a progress bar, never by color alone.
-- *Right side*: shown only while `HasProject`; the check icon with the "Project saved" words (`StatusBarProjectSaved`)
-  and the hint "Hold F9 to talk" (`StatusBarTalkHint`), in which the key name is drawn as a key cap.
+- *Right side*: shown only while `HasProject`; the check icon with the "Project file saved 14:32" words
+  (`StatusBarProjectSaved`, shown only while `HasSavedText`) and the hint "Hold F9 to talk" (`StatusBarTalkHint`), in
+  which the key name is drawn as a key cap.
 - *Screen reader*: the `PreviewStatus` panel has the `Summary` sentence as its automation name and the live setting
   `Polite`, so a screen reader is told when the sentence changes without being interrupted.
 
@@ -82,9 +92,9 @@ The view model has no operation that can fail. A missing workspace is refused wi
 that fails is not an error of the bar: it is one of its states, shown with the words "Render failed" and the danger
 color, and the sentence of the pane is passed to the screen reader.
 
-**Known limitations**: The text "Project saved" is fixed while a project is open. The application keeps no record of
-unsaved changes, so the bar cannot tell when the project has some. The sentence of the marking tools is not part of the
-bar; it is read out from the overlay of the picture.
+**Known limitations**: The time is that of the last save of the project file, which holds only the metadata of the
+project; the bar cannot tell whether the drawings or the chat have unsaved changes, and says nothing about them. The
+sentence of the marking tools is not part of the bar; it is read out from the overlay of the picture.
 
 #### Dependencies
 

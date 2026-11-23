@@ -245,7 +245,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _recentThumbnails = recentThumbnails is null ? null : new RecentThumbnailLoader(recentThumbnails, RunOnOwnerThread, logger);
         Workspace = workspace;
         TalkKey = new PushToTalkSetting(settingsService);
-        StatusBar = new StatusBarViewModel(workspace, TalkKey);
+        StatusBar = new StatusBarViewModel(workspace, TalkKey, projectService);
         ImageExporter = imageExporter ?? new NullImageExporter();
         RecentProjects = new ReadOnlyObservableCollection<RecentProjectItem>(_recentItems);
         Welcome = new WelcomeViewModel(this);
