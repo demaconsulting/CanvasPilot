@@ -45,8 +45,10 @@ secondary button that puts the default back (`SpeechPushToTalkResetButton`), and
 (`SpeechPushToTalkProblem`, in the caution look, visible only while there is one). The code behind of the view adds one
 handler to the box, for the key-down event on the tunneling route, so that the box sees every key before it would edit
 its text or move the focus; the handler gives the key and the modifiers to `TryCapturePushToTalk` and marks the event
-handled whatever the answer, so that Space, the arrow keys, and Tab do not act as keys of the page while the box has the
-focus (the box is left by clicking elsewhere). The look of the part views is the shared look of the settings pages: a
+handled whatever the answer, so that Space and the arrow keys do not act as keys of the page while the box has the
+focus. Tab and Shift+Tab (without Ctrl, Alt, or the Windows key) are the exception: the handler returns without
+capturing or handling them, so that they move the focus out of the box and a keyboard-only user is never trapped in it;
+Tab is refused as a talk key anyway. The look of the part views is the shared look of the settings pages: a
 section title, labels, hints, and error lines from the shared text styles, secondary buttons, and no color written in a
 view. The part views only gained names for their entries and these styles, and no behavior: the list of microphones is
 named `Microphone`, the list of speakers `Speakers`, and the two lists of models `Speech to text models` and
@@ -91,9 +93,6 @@ model units, and the stored choices survive them. A talk key that cannot be used
 sentence of `PushToTalkBinding` is shown next to the box and the key that was chosen before stays. A stored key that is
 not safe shows as F9 and is stored as the default by the next Apply. Missing arguments are refused with
 `ArgumentNullException`.
-
-**Known limitation**: the box takes every key, Tab included, so a keyboard-only user who has put the focus in it leaves
-it by clicking elsewhere; a refused key never changes the chosen key.
 
 #### Dependencies
 

@@ -38,7 +38,7 @@ public sealed partial class SpeechSettingsPageView : UserControl
         InitializeComponent();
 
         // The box captures the key that is pressed in it, before the box itself would use the key to edit its text or to
-        // move the focus; the tunnel route is used so that Tab, Space, and the arrows reach the page model as well
+        // move the focus; the tunnel route is used so that Space and the arrows reach the page model as well
         PushToTalkKeyBox.AddHandler(KeyDownEvent, OnPushToTalkKeyDown, RoutingStrategies.Tunnel);
     }
 
@@ -50,6 +50,12 @@ public sealed partial class SpeechSettingsPageView : UserControl
     private void OnPushToTalkKeyDown(object? sender, KeyEventArgs e)
     {
         if (DataContext is not SpeechSettingsPageViewModel page)
+        {
+            return;
+        }
+
+        // Tab and Shift+Tab are left alone so that the keyboard user can leave the box; Tab is refused as a talk key anyway
+        if (e.Key == Key.Tab && (e.KeyModifiers & (KeyModifiers.Control | KeyModifiers.Alt | KeyModifiers.Meta)) == 0)
         {
             return;
         }

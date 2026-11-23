@@ -25,8 +25,8 @@ hardware, model store, or display is required, and nothing is downloaded.
 - The page shows the stored talk key (F9 when none is stored or the stored key is not safe), takes a safe key or chord
   that is pressed in the box, refuses an unsafe one with a sentence and keeps the key, waits out a modifier alone,
   cancels the capture on Esc, stores F9 as nothing and any other key in its text form, and puts F9 back with the reset
-  button, which is usable only while the key is not F9; the rules themselves are verified in *PushToTalkBinding
-  Verification*.
+  button, which is usable only while the key is not F9; Tab and Shift+Tab leave the box and change nothing; the rules
+  themselves are verified in *PushToTalkBinding Verification*.
 - Choosing another model shows its parameters, edits to the first model are remembered, and a new load shows the
   stored values, not an earlier session's edits.
 - Closing the page, or closing the dialog window by any route, cancels a running download.
@@ -103,6 +103,12 @@ and OK is clicked; the settings file holds the microphone name and the model ide
 the sentence, enables the reset button, and applying stores `Ctrl+Shift+T`; Esc and a lone Ctrl change nothing; clicking
 the reset button shows `F9` and disables it again. This scenario is tested by
 `SpeechSettingsPageView_PushToTalkKeyBox_CapturesValidatesAndResets`.
+
+**SpeechSettingsPageView_PushToTalkKeyBox_TabMovesTheFocusOutAndOtherKeysAreCaptured**: On a shown page the chord
+`Ctrl+Shift+T` is captured, which enables the reset button. With the focus in the box, Tab moves the focus to the reset
+button and Shift+Tab moves it off the box, and neither changes the key or shows a sentence. With the focus in the box
+again, `A` is still captured (the sentence is shown and the key stays) and `F9` is still captured (the box shows `F9`).
+This scenario is tested by `SpeechSettingsPageView_PushToTalkKeyBox_TabMovesTheFocusOutAndOtherKeysAreCaptured`.
 
 **MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses**: The Settings menu item of the main window
 opens a dialog that lists the AI Provider and Speech pages, and Cancel closes it. This scenario is tested by

@@ -1275,8 +1275,8 @@ choices are stored but not used yet.
 - **Push-to-talk key** is the key that you hold to talk, F9 by default (see *Choosing the Talk Key*). Click the box and
   press the key, or the keys, that you want; Esc cancels, and a modifier alone is waited out until you add the key. If
   the key is not safe, a sentence under the box says why and the key stays as it was. **Reset to default (F9)** puts F9
-  back. The key is used when you choose OK or Apply. While the box has the focus it takes every key that you press,
-  Tab included, so leave it with the pointer.
+  back. The key is used when you choose OK or Apply. While the box has the focus it takes every key that you press
+  except Tab and Shift+Tab, which leave the box as they do everywhere else.
 - **Audio devices** shows the microphone (capture) and speakers (playback) that the computer has, and the buttons
   **Refresh devices** to look again. A computer without audio hardware shows a message instead of devices, and the
   rest of the page still works.
@@ -1377,8 +1377,6 @@ These parts of the redesigned window are not built yet:
   holding the Space key and dragging.
 - The sentence about the marks is the tooltip of the marking toolbar and is read out by a screen reader, but it is not
   shown in the status bar.
-- On the Speech page, the box for the talk key takes every key that is pressed while it has the focus, Tab included, so
-  a person who uses only the keyboard cannot leave it with the keyboard; use the pointer.
 - The size of a file that the copilot is writing is shown only when the library that connects CanvasPilot to Copilot
   passes on the pieces of the drawing, and not for models that send the drawing whole; the elapsed time is always shown
   (see *Following a Turn*).

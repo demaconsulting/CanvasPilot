@@ -86,15 +86,17 @@ sections:
                   The SpeechSettingsPage shall let the user choose the key, or the chord of Ctrl, Alt, or Shift and a key,
                   that is held to talk, by pressing it in a box (a modifier alone is waited out and Esc cancels), show it in
                   words, store it with the speech settings (nothing for the default F9), and put the default back with a
-                  reset button.
+                  reset button. Tab and Shift+Tab still move the focus out of the box.
                 justification: |
                   No key is free on every keyboard: F8, the first default, is swallowed by the function keys of many
                   laptops, and other keys belong to the system or to other tools. The user must be able to choose a key
-                  that works for them without editing a file.
+                  that works for them without editing a file, and a person who uses only the keyboard must not be trapped
+                  in the box.
                 tests:
                   - SpeechSettingsPageViewModel_PushToTalkKey_CaptureValidateResetAndStore
                   - SpeechSettingsPageViewModel_LoadApply_PushToTalkKey_RoundTripsAndUnsafeShowsDefault
                   - SpeechSettingsPageView_PushToTalkKeyBox_CapturesValidatesAndResets
+                  - SpeechSettingsPageView_PushToTalkKeyBox_TabMovesTheFocusOutAndOtherKeysAreCaptured
 
               - id: CanvasPilot-SpeechSettingsPage-RefuseUnsafeTalkKeys
                 title: >-

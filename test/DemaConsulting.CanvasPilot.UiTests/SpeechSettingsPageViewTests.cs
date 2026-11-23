@@ -143,6 +143,57 @@ public sealed class SpeechSettingsPageViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that Tab and Shift+Tab move the focus out of the box of the talk key and leave the key as it was, while
+    ///     other keys, such as a letter and F9, are still captured.
+    /// </summary>
+    [AvaloniaFact]
+    public void SpeechSettingsPageView_PushToTalkKeyBox_TabMovesTheFocusOutAndOtherKeysAreCaptured()
+    {
+        // Arrange: a shown page with a chosen chord, so that the reset button can take the focus
+        var page = new SpeechSettingsPageViewModel(_audio, _models);
+        var window = ShowPage(page, new AppSettings());
+        var box = SettingsUiHelpers.Find<TextBox>(window, "SpeechPushToTalkKeyBox");
+        var problem = SettingsUiHelpers.Find<TextBlock>(window, "SpeechPushToTalkProblem");
+        var reset = SettingsUiHelpers.Find<Button>(window, "SpeechPushToTalkResetButton");
+        box.Focus();
+        Dispatcher.UIThread.RunJobs();
+        window.KeyPressQwerty(PhysicalKey.T, RawInputModifiers.Control | RawInputModifiers.Shift);
+        Dispatcher.UIThread.RunJobs();
+        var focusManager = TopLevel.GetTopLevel(box)!.FocusManager;
+
+        // Act: Tab out of the box, back into it, Shift+Tab out of it, back into it, then a letter and F9
+        window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        var afterTab = (Focused: focusManager.GetFocusedElement(), box.Text, problem.IsVisible);
+        box.Focus();
+        Dispatcher.UIThread.RunJobs();
+        window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.Shift);
+        Dispatcher.UIThread.RunJobs();
+        var afterShiftTab = (Focused: focusManager.GetFocusedElement(), box.Text, problem.IsVisible);
+        box.Focus();
+        Dispatcher.UIThread.RunJobs();
+        window.KeyPressQwerty(PhysicalKey.A, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        var afterLetter = (box.Text, problem.IsVisible);
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        var afterF9 = (box.Text, problem.IsVisible);
+
+        // Assert: Tab moved the focus to the reset button, Shift+Tab moved it away from the box, the chord stayed, and the
+        // letter and F9 were still captured
+        Assert.Same(reset, afterTab.Focused);
+        Assert.Equal("Ctrl+Shift+T", afterTab.Text);
+        Assert.False(afterTab.IsVisible);
+        Assert.NotSame(box, afterShiftTab.Focused);
+        Assert.Equal("Ctrl+Shift+T", afterShiftTab.Text);
+        Assert.False(afterShiftTab.IsVisible);
+        Assert.Equal(("Ctrl+Shift+T", true), afterLetter);
+        Assert.Equal(("F9", false), afterF9);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that a machine without devices or models is explained in the page rather than shown as blank lists.
     /// </summary>
     [AvaloniaFact]
