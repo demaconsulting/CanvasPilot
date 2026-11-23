@@ -187,6 +187,9 @@ File problems while reading, deleting, renaming, creating, and copying are retur
 `ErrorMessage`, and logged, never thrown. A failing thumbnail source is logged and leaves the row without a picture.
 Failures to write a log entry are ignored.
 
+**Known limitations**: The expansion memory lives only as long as the explorer. The expanded folders are not saved per
+project, so a project opens with its folders closed after a restart.
+
 #### Dependencies
 
 - **ProjectService** — the project file extension constant, the data folder name, and the file name rules.

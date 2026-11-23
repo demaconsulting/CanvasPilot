@@ -281,6 +281,9 @@ list of every id of the unit is not kept here.
 - Unchanged: the other ids of the transcript rows (`TranscriptEntry`, `Restored...`, `Notice...`, `AssistantReply...`,
   `ToolActivity...`), the banner, the busy indicator, and the Stop button.
 
+**Known limitations**: The transcript has no day dividers and no "Jump to latest" chip. The typing dots, the spinner of
+a tool chip, and the busy line do not stop when the system asks for reduced motion.
+
 #### Dependencies
 
 - **ComposerViewModel**, **ComposerEditorView**, **ChipView**, **IChipThumbnailProvider**,

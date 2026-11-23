@@ -12,16 +12,16 @@ changes](workflow.svg)
 ## Purpose
 
 CanvasPilot is an AI-powered desktop application that helps users create drawings and diagrams with the CanvasNet
-library. You manage projects, browse and preview their image files, and export pictures. In the chat panel you compose
-messages: you type or dictate text, attach files, folders, and pictures, and mark places on the picture that you are
-talking about. When you send a message, the AI copilot answers it: it looks up how to draw, writes or changes the files
-of the project, draws them, looks at the result, and fixes what it finds. The copilot works with a local Ollama server
-or with your installed GitHub Copilot CLI (see *Setting Up an AI Provider*). The copilot can only use CanvasPilot's own
-tools, which are confined to the project folder, and it overwrites files directly, with no backup, so keep your
-projects under source control. The Help menu opens the drawing
-knowledge, a guide to the image formats and to CanvasPilot that you can read card by card and that the copilot uses as
-well. Style kits let you keep a look (colors, fonts, sizes, and example images) for a project or a team, export
-pictures at sizes that fit slides, email, and paper, and check a picture against the colors of the style.
+library. You manage projects, browse and preview their image files, and export pictures. In the conversation pane you
+compose messages: you type or dictate text, attach files, folders, and pictures, and mark places on the picture that you
+are talking about. When you send a message, the AI copilot answers it: it looks up how to draw, writes or changes the
+files of the project, draws them, looks at the result, and fixes what it finds. The copilot works with a local Ollama
+server or with your installed GitHub Copilot CLI (see *Setting Up an AI Provider*). The copilot can only use
+CanvasPilot's own tools, which are confined to the project folder, and it overwrites files directly, with no backup, so
+keep your projects under source control. The Help menu opens the drawing knowledge, a guide to the image formats and to
+CanvasPilot that you can read card by card and that the copilot uses as well. Style kits let you keep a look (colors,
+fonts, sizes, and example images) for a project or a team, export pictures at sizes that fit slides, email, and paper,
+and check a picture against the colors of the style.
 
 ## Scope
 
@@ -128,7 +128,8 @@ name of the file, its size in pixels (for example `900 × 500 px`), its format, 
 `Rendered in 84 ms`), and the number of notes when the drawing reported some. While a file is drawn it says
 "Rendering..." with a spinner, and when a file cannot be drawn it says "Render failed" with an error icon. With no
 project it says "No project open", and with a project and no file chosen it says "No picture selected". At the right,
-while a project is open, it says "Project saved" and reminds you to "Hold F8 to talk" (see *Dictating a Message*). The
+while a project is open, it shows the fixed text "Project saved", which does not check for unsaved changes, and
+reminds you to "Hold F8 to talk" (see *Dictating a Message*). The
 status bar speaks its sentence to screen readers when it changes.
 
 ## Window Size and Layout
@@ -201,7 +202,8 @@ the tool of your choice, so saving updates only the project file. **File > Close
 clears the explorer and the stage and shows the welcome screen. **File > Exit** closes CanvasPilot.
 
 The title bar shows the name of the open project followed by CanvasPilot. The project file is written when you choose
-Save, and the status bar says "Project saved" while a project is open.
+Save. While a project is open, the status bar always shows the text "Project saved"; it does not check whether there are
+unsaved changes.
 
 # Working with Images
 
@@ -334,13 +336,13 @@ the file, the image data, or both is not confirmed. If a program does not take t
 
 # Chatting
 
-The chat panel is where you talk with the AI copilot about your drawing. A message can hold text that you type or
+The conversation pane is where you talk with the AI copilot about your drawing. A message can hold text that you type or
 dictate, files, folders, and pictures that you attach, and numbered marks that point at places on the picture. When you
 send the message, the copilot answers it (see *Working with the copilot*), and you can see exactly what the message
 contains. Until you have set up an AI provider that works (see *Setting Up an AI Provider*), the panel says so in a
 banner, and a sent message stays in the panel with an explanation.
 
-## The Chat Panel
+## The Conversation Pane
 
 The conversation is the column at the right of the window, beside the stage. It is shown while a project is open and
 hidden when there is none. Drag the splitter between the stage and the conversation to change its width, or hide it with
@@ -531,8 +533,8 @@ program it was.
 The copilot needs an AI provider. CanvasPilot supports two: a local **Ollama** server, which is covered by automated
 tests (live checks against a running server are pending), and **GitHub Copilot**, which runs through the GitHub Copilot
 CLI that you installed. Choose one in **Tools > Settings... > AI Provider** (see *Settings*), then choose **Check
-connection**. The same check runs in the background when the chat panel is shown, and the chat panel shows its result in
-the banner, so you see a problem before you send a message.
+connection**. The same check runs in the background when the conversation pane is shown, and the conversation pane shows
+its result in the banner, so you see a problem before you send a message.
 
 ## Setting Up Ollama
 
@@ -673,10 +675,10 @@ which starts the conversation again, as a change of the model does.
 
 ### Models That Cannot Work
 
-The banner of the chat panel, and **Check connection**, tell you before the first message when the choice cannot work: a
-model that cannot call tools, that is not offered to your account, or that does not offer the chosen level is refused
-with the explanation of the AI library, which names what is supported, and the copilot does not start. A model that
-cannot see pictures only warns. Choose another model or level in Settings, then **Check connection**.
+The banner of the conversation pane, and **Check connection**, tell you before the first message when the choice cannot
+work: a model that cannot call tools, that is not offered to your account, or that does not offer the chosen level is
+refused with the explanation of the AI library, which names what is supported, and the copilot does not start. A model
+that cannot see pictures only warns. Choose another model or level in Settings, then **Check connection**.
 
 ### Which Copilot CLI Is Used
 
@@ -703,9 +705,9 @@ a picture. Other setups, such as other sign-in methods and other versions, have 
 
 **Check connection** is on the AI Provider page. It checks the entries as they are in the dialog, before you choose OK
 or Apply, and it always looks again: it does not reuse the earlier search for the Copilot CLI. The button is unavailable
-while an entry is invalid (the page marks it in red) or a check is running, and the result is removed when you change
-an entry. The chat panel shows the result of the check for the saved settings in its **banner**, with **Open Settings**
-and **Check again**. After you change the provider settings, the banner checks again by itself.
+while an entry is invalid (the page marks it in red) or a check is running, and the result is removed when you change an
+entry. The conversation pane shows the result of the check for the saved settings in its **banner**, with **Open
+Settings** and **Check again**. After you change the provider settings, the banner checks again by itself.
 
 # Working with the Copilot
 
@@ -1190,6 +1192,19 @@ stage, do not yet stop when your system asks for less motion. The window has not
 or at a display scale of 125 or 150 percent by a person; if something does not read or fit, please report it (see
 *Troubleshooting*).
 
+## Known Limitations
+
+These parts of the redesigned window are not built yet:
+
+- The folders that you expanded in the explorer, and whether you collapsed the conversation, are not remembered after
+  you close CanvasPilot; the window opens with the folders closed and the conversation shown.
+- The conversation has no day dividers and no **Jump to latest** chip.
+- A transparent picture is shown on the plain stage color, not on a checkerboard, and you cannot pan the picture by
+  holding the Space key and dragging.
+- The sentence about the marks is the tooltip of the marking toolbar and is read out by a screen reader, but it is not
+  shown in the status bar.
+- The text **Project saved** in the status bar is fixed; it does not follow unsaved changes.
+
 # About CanvasPilot
 
 Choose **Help > About CanvasPilot** to see the application name, the version, the copyright notice, and the
@@ -1268,9 +1283,9 @@ connection and choose Download again. Keep the Settings dialog open while a down
 **Copy Image does not paste.** Some programs accept only certain clipboard formats. Export the picture as a PNG file and
 insert the file instead.
 
-**The chat panel is not there.** The conversation is on the right of the stage and is shown only while a project is
-open. Open or create a project. If you hid it with the button in its header, choose the button at the right edge of the
-stage to bring it back.
+**The conversation pane is not there.** The conversation is on the right of the stage and is shown only while a project
+is open. Open or create a project. If you hid it with the button in its header, choose the button at the right edge of
+the stage to bring it back.
 
 **Send is not available.** Send works only while the message has some text or an attachment, no talk button is held,
 the previous message is not still being sent, and the copilot is not still working on the previous message. Enter sends
@@ -1363,8 +1378,8 @@ and choose it on the Speech page. Windows can also block desktop applications fr
 speech runtime is reported missing from the installation, reinstall CanvasPilot with the package from the releases page.
 
 **Dictation is slow to start the first time.** The speech model is loaded the first time it is needed, which takes a
-moment. CanvasPilot prepares it when the chat panel is shown. After you change the model on the Speech page the next
-dictation loads it again.
+moment. CanvasPilot prepares it when the conversation pane is shown. After you change the model on the Speech page the
+next dictation loads it again.
 
 **My marks are gone from the picture.** Marks belong to the picture that they were drawn on. When the file changes and
 the picture is drawn again, the marks are not shown on the new picture, and the marking bar says how many belong to

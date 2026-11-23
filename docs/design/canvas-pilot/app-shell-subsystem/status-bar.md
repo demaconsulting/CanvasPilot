@@ -82,6 +82,10 @@ The view model has no operation that can fail. A missing workspace is refused wi
 that fails is not an error of the bar: it is one of its states, shown with the words "Render failed" and the danger
 color, and the sentence of the pane is passed to the screen reader.
 
+**Known limitations**: The text "Project saved" is fixed while a project is open. The application keeps no record of
+unsaved changes, so the bar cannot tell when the project has some. The sentence of the marking tools is not part of the
+bar; it is read out from the overlay of the picture.
+
 #### Dependencies
 
 - **ProjectWorkspace** — `ProjectWorkspaceViewModel` supplies `HasProject`, the `Preview` pane, and their change

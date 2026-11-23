@@ -211,6 +211,11 @@ The constructor throws `ArgumentNullException` for a missing collaborator. `Conv
 a source or destination that is too small. Render problems are shown, never thrown. Failures to write a log
 entry are ignored.
 
+**Known limitations**: The busy line and the spinner do not stop when the system asks for reduced motion. The sentence
+of the marking tools (`StatusText` of the annotation overlay) is a tooltip and a hidden live text of the overlay; it is
+not part of the live region of the status bar. Transparent pictures are drawn on the plain stage color, without a
+checkerboard, and the picture cannot be panned by dragging with the Space key held.
+
 #### Dependencies
 
 - **ImageRenderService** (through `IImageRenderService`) — draws the files.

@@ -133,6 +133,9 @@ The constructor throws `ArgumentNullException` for a missing explorer, and `Wind
 layout or list of screens. Operation problems come back from the explorer as text and are shown to the user, not thrown.
 A width that is out of range is clamped, never refused.
 
+**Known limitations**: Whether the conversation is collapsed is not remembered. `WindowSettings` has no field for it, so
+the conversation is shown again every time a project is opened and after a restart.
+
 #### Dependencies
 
 - **ProjectExplorer** — lists, selects, renames, deletes, and creates the project's files and folders.
