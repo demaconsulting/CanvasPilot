@@ -1,0 +1,267 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1200 900" width="1200" height="900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1026"/>
+      <stop offset="1" stop-color="#151f45"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f59e0b" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="badge" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#fb923c"/>
+      <stop offset="1" stop-color="#c2410c"/>
+    </radialGradient>
+    <linearGradient id="hot" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fbbf24"/>
+      <stop offset="1" stop-color="#f97316"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#94a3b8"/>
+      <stop offset="1" stop-color="#64748b"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c2410c"/>
+      <stop offset="1" stop-color="#9a3412"/>
+    </linearGradient>
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M20 0 H0 V20" fill="none" stroke="#22d3ee" stroke-opacity="0.09" stroke-width="1"/>
+    </pattern>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#22d3ee"/>
+    </marker>
+    <polygon id="ray" points="0,0 -9,-110 9,-110" fill="#fbbf24" fill-opacity="0.10"/>
+
+    <symbol id="monkey" viewBox="0 0 100 100">
+      <circle cx="16" cy="50" r="13" fill="#7c3f12"/>
+      <circle cx="16" cy="50" r="7" fill="#f5c48f"/>
+      <circle cx="84" cy="50" r="13" fill="#7c3f12"/>
+      <circle cx="84" cy="50" r="7" fill="#f5c48f"/>
+      <circle cx="50" cy="48" r="33" fill="#8b4513"/>
+      <path d="M38 19 Q42 3 50 15 Q56 1 63 19 Z" fill="#8b4513"/>
+      <path d="M50 32 C40 24 24 30 27 46 C22 58 30 77 50 77 C70 77 78 58 73 46 C76 30 60 24 50 32 Z" fill="#f5c48f"/>
+      <ellipse cx="40" cy="45" rx="7" ry="8" fill="#ffffff"/>
+      <ellipse cx="61" cy="43" rx="8.5" ry="9.5" fill="#ffffff"/>
+      <circle cx="42" cy="46" r="3.6" fill="#111827"/>
+      <circle cx="59" cy="45" r="4.6" fill="#111827"/>
+      <circle cx="43" cy="44.6" r="1.2" fill="#ffffff"/>
+      <circle cx="60.5" cy="43.4" r="1.5" fill="#ffffff"/>
+      <circle cx="46" cy="58" r="1.7" fill="#5b2a0b"/>
+      <circle cx="54" cy="58" r="1.7" fill="#5b2a0b"/>
+      <path d="M35 63 Q50 79 65 63 Q50 70 35 63 Z" fill="#5b2a0b"/>
+      <path d="M47 69 Q52 77 57 69 Z" fill="#f43f5e"/>
+    </symbol>
+  </defs>
+
+  <style>
+    .brand { font: bold 14px sans-serif; letter-spacing: 3px; fill: #fbbf24; }
+    .meta { font: bold 13px sans-serif; letter-spacing: 2px; fill: #94a3b8; }
+    .headline { font: bold 50px sans-serif; fill: #ffffff; letter-spacing: 1px; }
+    .blurb { font: 19px sans-serif; fill: #cbd5e1; }
+    .fig { font: bold 13px monospace; fill: #22d3ee; letter-spacing: 1px; }
+    .joint { font: bold 13px monospace; fill: #22d3ee; }
+    .jname { font: 12px monospace; fill: #e2e8f0; }
+    .pill { font: bold 12px monospace; fill: #0b1026; letter-spacing: 1px; }
+    .tiny { font: bold 9px sans-serif; fill: #334155; }
+    .stat { font: bold 24px sans-serif; fill: #fbbf24; }
+    .statlbl { font: 13px sans-serif; fill: #94a3b8; }
+    .cta { font: bold 21px sans-serif; fill: #ffffff; letter-spacing: 2px; }
+    .lead { stroke: #22d3ee; stroke-width: 1.5; fill: none; }
+    .jdot { fill: #22d3ee; stroke: #0b1026; stroke-width: 2; }
+  </style>
+
+  <!-- page -->
+  <rect width="1200" height="900" fill="url(#bg)"/>
+  <ellipse cx="600" cy="120" rx="520" ry="170" fill="url(#halo)"/>
+
+  <!-- header -->
+  <text class="brand" x="40" y="48">CRAZYMONKEY ROBOTICS</text>
+  <text class="meta" x="1160" y="48" text-anchor="end">NEW · MODEL CM-6</text>
+
+  <!-- monkey icon -->
+  <g transform="translate(600 70)">
+    <use href="#ray"/>
+    <use href="#ray" transform="rotate(30)"/>
+    <use href="#ray" transform="rotate(60)"/>
+    <use href="#ray" transform="rotate(90)"/>
+    <use href="#ray" transform="rotate(120)"/>
+    <use href="#ray" transform="rotate(150)"/>
+    <use href="#ray" transform="rotate(180)"/>
+    <use href="#ray" transform="rotate(210)"/>
+    <use href="#ray" transform="rotate(240)"/>
+    <use href="#ray" transform="rotate(270)"/>
+    <use href="#ray" transform="rotate(300)"/>
+    <use href="#ray" transform="rotate(330)"/>
+  </g>
+  <circle cx="600" cy="70" r="48" fill="url(#badge)" stroke="#fbbf24" stroke-width="4" filter="url(#shadow)"/>
+  <use href="#monkey" x="561" y="29" width="78" height="78"/>
+  <g transform="translate(626 84) rotate(-14)">
+    <path d="M0 4 H10 L13 0 H24 V4 H30 V24 H0 Z" fill="#fbbf24" stroke="#b45309" stroke-width="1.5"/>
+    <rect x="3" y="7" width="22" height="3" fill="#ffffff"/>
+  </g>
+  <circle cx="630" cy="102" r="7" fill="#8b4513"/>
+
+  <!-- headline + blurb -->
+  <text class="headline" x="600" y="170" text-anchor="middle">FILING IS NOW <tspan fill="url(#hot) #f59e0b">MONKEY BUSINESS.</tspan></text>
+  <text class="blurb" x="600" y="208" text-anchor="middle">Meet the CM-6: a six-axis robot that grabs files off your desk and files them away, around the clock.</text>
+  <text class="blurb" x="600" y="236" text-anchor="middle">Primate agility. Machine precision. Zero paper cuts. Your paperwork finally has a handler.</text>
+
+  <!-- schematic panel -->
+  <rect x="40" y="262" width="1120" height="538" rx="16" fill="#0d1433"/>
+  <rect x="40" y="262" width="1120" height="538" rx="16" fill="url(#grid)" stroke="#22d3ee" stroke-opacity="0.35" stroke-width="1.5"/>
+  <text class="fig" x="64" y="290">FIG. 1 — CM-6 PICK-AND-FILE CELL</text>
+
+  <!-- floor -->
+  <line x1="64" y1="760" x2="1136" y2="760" stroke="#22d3ee" stroke-opacity="0.5" stroke-width="2"/>
+
+  <!-- desk -->
+  <g filter="url(#shadow)">
+    <rect x="105" y="606" width="14" height="154" fill="#7c2d12"/>
+    <rect x="392" y="606" width="14" height="154" fill="#7c2d12"/>
+    <rect x="290" y="606" width="104" height="90" fill="#9a3412" stroke="#7c2d12" stroke-width="2"/>
+    <rect x="322" y="630" width="40" height="7" rx="3.5" fill="#fbbf24"/>
+    <rect x="90" y="590" width="332" height="18" rx="3" fill="url(#wood)" stroke="#7c2d12" stroke-width="2"/>
+  </g>
+  <!-- file stack on desk -->
+  <rect x="148" y="580" width="150" height="10" rx="2" fill="#fbbf24" stroke="#0b1026"/>
+  <rect x="154" y="571" width="146" height="10" rx="2" fill="#22d3ee" stroke="#0b1026"/>
+  <rect x="146" y="562" width="150" height="10" rx="2" fill="#f472b6" stroke="#0b1026"/>
+  <rect x="152" y="553" width="148" height="10" rx="2" fill="#a3e635" stroke="#0b1026"/>
+  <rect x="150" y="544" width="150" height="10" rx="2" fill="#fbbf24" stroke="#0b1026"/>
+  <line x1="160" y1="567" x2="210" y2="567" stroke="#ffffff" stroke-width="2"/>
+  <line x1="236" y1="549" x2="290" y2="549" stroke="#ffffff" stroke-width="2"/>
+  <!-- banana -->
+  <path d="M332 575 Q364 602 396 572 Q365 589 332 575 Z" fill="#facc15" stroke="#a16207" stroke-width="2"/>
+  <path d="M396 572 l4 -4" stroke="#713f12" stroke-width="3" stroke-linecap="round"/>
+  <!-- pick target -->
+  <circle cx="225" cy="548" r="22" fill="none" stroke="#22d3ee" stroke-width="2" stroke-dasharray="5 4"/>
+  <line x1="225" y1="520" x2="225" y2="534" stroke="#22d3ee" stroke-width="2"/>
+  <line x1="197" y1="548" x2="207" y2="548" stroke="#22d3ee" stroke-width="2"/>
+  <line x1="243" y1="548" x2="253" y2="548" stroke="#22d3ee" stroke-width="2"/>
+
+  <!-- filing cabinet -->
+  <g filter="url(#shadow)">
+    <rect x="880" y="430" width="200" height="330" rx="6" fill="url(#steel)" stroke="#334155" stroke-width="3"/>
+    <rect x="874" y="422" width="212" height="12" rx="3" fill="#475569"/>
+  </g>
+  <rect x="892" y="444" width="176" height="66" rx="4" fill="#0b1026"/>
+  <g>
+    <rect x="892" y="598" width="176" height="74" rx="4" fill="#94a3b8" stroke="#475569" stroke-width="2"/>
+    <rect x="962" y="610" width="36" height="16" rx="2" fill="#ffffff"/>
+    <text class="tiny" x="980" y="621" text-anchor="middle">N–S</text>
+    <rect x="957" y="640" width="46" height="9" rx="4.5" fill="#334155"/>
+    <rect x="892" y="680" width="176" height="74" rx="4" fill="#94a3b8" stroke="#475569" stroke-width="2"/>
+    <rect x="962" y="692" width="36" height="16" rx="2" fill="#ffffff"/>
+    <text class="tiny" x="980" y="703" text-anchor="middle">T–Z</text>
+    <rect x="957" y="722" width="46" height="9" rx="4.5" fill="#334155"/>
+  </g>
+  <!-- open drawer interior -->
+  <polygon points="896,450 1064,450 1090,500 870,500" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+  <rect x="902" y="472" width="22" height="12" rx="2" fill="#22d3ee"/>
+  <rect x="1000" y="466" width="22" height="12" rx="2" fill="#f472b6"/>
+  <rect x="1034" y="474" width="22" height="12" rx="2" fill="#a3e635"/>
+
+  <!-- robot -->
+  <ellipse cx="640" cy="760" rx="80" ry="7" fill="#000000" fill-opacity="0.35"/>
+  <g filter="url(#shadow)">
+    <rect x="580" y="746" width="120" height="14" rx="3" fill="#1e293b"/>
+    <rect x="596" y="704" width="88" height="46" rx="6" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+    <use href="#monkey" x="626" y="711" width="28" height="28"/>
+    <rect x="603" y="672" width="74" height="36" rx="10" fill="#f97316" stroke="#9a3412" stroke-width="3"/>
+    <!-- upper arm -->
+    <line x1="640" y1="650" x2="600" y2="430" stroke="#9a3412" stroke-width="50" stroke-linecap="round"/>
+    <line x1="640" y1="650" x2="600" y2="430" stroke="#f97316" stroke-width="42" stroke-linecap="round"/>
+    <line x1="621" y1="628" x2="589" y2="456" stroke="#fdba74" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="640" cy="650" r="36" fill="#f97316" stroke="#9a3412" stroke-width="3"/>
+    <circle cx="640" cy="650" r="16" fill="#1e293b"/>
+    <circle cx="640" cy="650" r="6" fill="#94a3b8"/>
+    <!-- counterweight + forearm -->
+    <circle cx="570" cy="438" r="22" fill="#334155" stroke="#0f172a" stroke-width="2"/>
+    <line x1="600" y1="430" x2="950" y2="370" stroke="#9a3412" stroke-width="38" stroke-linecap="round"/>
+    <line x1="600" y1="430" x2="950" y2="370" stroke="#f97316" stroke-width="30" stroke-linecap="round"/>
+    <line x1="630" y1="416" x2="900" y2="370" stroke="#fdba74" stroke-width="5" stroke-linecap="round"/>
+    <rect x="-6" y="-21" width="12" height="42" fill="#1e293b" transform="translate(775 400) rotate(-9.7)"/>
+    <circle cx="600" cy="430" r="30" fill="#f97316" stroke="#9a3412" stroke-width="3"/>
+    <circle cx="600" cy="430" r="12" fill="#1e293b"/>
+    <!-- wrist + gripper -->
+    <rect x="941" y="384" width="18" height="18" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+    <circle cx="950" cy="370" r="20" fill="#1e293b" stroke="#f97316" stroke-width="3"/>
+    <circle cx="950" cy="370" r="7" fill="#f97316"/>
+    <rect x="926" y="400" width="48" height="12" rx="3" fill="#475569"/>
+  </g>
+  <!-- held folder (drops into drawer) -->
+  <path d="M915 424 H937 V414 H963 V424 H985 V506 H915 Z" fill="#fbbf24" stroke="#b45309" stroke-width="2"/>
+  <rect x="922" y="430" width="56" height="6" fill="#ffffff"/>
+  <text class="tiny" x="950" y="458" text-anchor="middle" fill="#7c2d12">INVOICES</text>
+  <rect x="929" y="408" width="8" height="24" rx="2" fill="#cbd5e1" stroke="#334155"/>
+  <rect x="963" y="408" width="8" height="24" rx="2" fill="#cbd5e1" stroke="#334155"/>
+  <!-- open drawer front (in front of folder) -->
+  <g filter="url(#shadow)">
+    <rect x="866" y="500" width="228" height="72" rx="5" fill="#cbd5e1" stroke="#475569" stroke-width="3"/>
+    <rect x="960" y="512" width="40" height="17" rx="2" fill="#ffffff" stroke="#94a3b8"/>
+    <rect x="954" y="542" width="52" height="10" rx="5" fill="#334155"/>
+  </g>
+  <text class="tiny" x="980" y="524" text-anchor="middle">A–M</text>
+
+  <!-- trajectory -->
+  <path d="M225 526 C300 255 800 245 922 352" fill="none" stroke="#22d3ee" stroke-width="3" stroke-dasharray="10 8" marker-end="url(#arrow)"/>
+  <rect x="122" y="492" width="64" height="22" rx="11" fill="#22d3ee"/>
+  <text class="pill" x="154" y="507" text-anchor="middle">PICK</text>
+  <rect x="1096" y="524" width="54" height="22" rx="11" fill="#22d3ee"/>
+  <text class="pill" x="1123" y="539" text-anchor="middle">FILE</text>
+  <rect x="518" y="330" width="144" height="24" rx="12" fill="#fbbf24"/>
+  <text class="pill" x="590" y="346" text-anchor="middle">CYCLE 1.8 s</text>
+
+  <!-- joint callouts -->
+  <line class="lead" x1="640" y1="690" x2="560" y2="716"/>
+  <circle class="jdot" cx="640" cy="690" r="5"/>
+  <text x="554" y="720" text-anchor="end"><tspan class="joint">J1 </tspan><tspan class="jname">BASE SWIVEL</tspan></text>
+
+  <line class="lead" x1="640" y1="650" x2="720" y2="640"/>
+  <circle class="jdot" cx="640" cy="650" r="5"/>
+  <text x="726" y="644"><tspan class="joint">J2 </tspan><tspan class="jname">SHOULDER</tspan></text>
+
+  <line class="lead" x1="600" y1="430" x2="522" y2="472"/>
+  <circle class="jdot" cx="600" cy="430" r="5"/>
+  <text x="516" y="476" text-anchor="end"><tspan class="joint">J3 </tspan><tspan class="jname">ELBOW</tspan></text>
+
+  <line class="lead" x1="775" y1="400" x2="762" y2="452"/>
+  <circle class="jdot" cx="775" cy="400" r="5"/>
+  <text x="706" y="468"><tspan class="joint">J4 </tspan><tspan class="jname">FOREARM ROLL</tspan></text>
+
+  <line class="lead" x1="950" y1="370" x2="1000" y2="342"/>
+  <circle class="jdot" cx="950" cy="370" r="5"/>
+  <text x="1005" y="346"><tspan class="joint">J5 </tspan><tspan class="jname">WRIST PITCH</tspan></text>
+
+  <line class="lead" x1="959" y1="393" x2="1000" y2="393"/>
+  <circle class="jdot" cx="959" cy="393" r="4"/>
+  <text x="1005" y="397"><tspan class="joint">J6 </tspan><tspan class="jname">TOOL FLANGE</tspan></text>
+
+  <!-- reach dimension -->
+  <line x1="640" y1="782" x2="950" y2="782" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="640" y1="774" x2="640" y2="790" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="950" y1="774" x2="950" y2="790" stroke="#94a3b8" stroke-width="1.5"/>
+  <rect x="740" y="773" width="110" height="18" fill="#0d1433"/>
+  <text class="jname" x="795" y="786" text-anchor="middle" fill="#94a3b8">REACH 1,400 mm</text>
+
+  <!-- stats + CTA -->
+  <g>
+    <rect x="40" y="822" width="190" height="58" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#334155"/>
+    <text class="stat" x="58" y="850">6-AXIS</text>
+    <text class="statlbl" x="58" y="870">full human-arm dexterity</text>
+    <rect x="245" y="822" width="190" height="58" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#334155"/>
+    <text class="stat" x="263" y="850">±0.02 mm</text>
+    <text class="statlbl" x="263" y="870">repeatability</text>
+    <rect x="450" y="822" width="190" height="58" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#334155"/>
+    <text class="stat" x="468" y="850">1,200 / hr</text>
+    <text class="statlbl" x="468" y="870">files picked and filed</text>
+    <rect x="655" y="822" width="190" height="58" rx="12" fill="#ffffff" fill-opacity="0.05" stroke="#334155"/>
+    <text class="stat" x="673" y="850">24 / 7</text>
+    <text class="statlbl" x="673" y="870">no bananas required</text>
+  </g>
+  <rect x="890" y="822" width="270" height="58" rx="29" fill="url(#hot)" filter="url(#shadow)"/>
+  <text class="cta" x="1025" y="859" text-anchor="middle">BOOK A DEMO  →</text>
+</svg>

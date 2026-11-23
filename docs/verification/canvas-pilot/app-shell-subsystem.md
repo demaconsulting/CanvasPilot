@@ -258,7 +258,11 @@ The pictures of the README and the user guide are drawn from the real applicatio
 project, so that they cannot drift from what the program shows. `ScreenshotSupport` shows a window at a fixed size and
 theme in the headless Avalonia platform with Skia and the embedded Inter font, lets it settle, and saves the drawn frame
 as a PNG. The screenshot tests carry the category `Screenshots` and skip themselves unless the environment variable
-`CANVASPILOT_SCREENSHOT_DIR` names an output folder, so the normal run of `build.ps1` writes nothing. The script
+`CANVASPILOT_SCREENSHOT_DIR` names an output folder, so the normal run of `build.ps1` writes nothing. The pictures are
+the main window in a conversation (dark and light), the main window with the marketing picture that the copilot drew in
+a real session (kept as the data `ScreenshotData/crazy-monkey-robot.svg` of the test assembly, with its tool rows and
+the cost line of the turn), the welcome screen, and the Style Kits manager; the card of a project on the welcome screen
+shows the picture that was changed last, so the demonstration writes the main picture after the plain ones. The script
 `docs/images/render-screenshots.ps1` sets the variable and runs only those tests; with `-Check` it compares fresh
 pictures with the committed ones using a tolerance, and it is not part of the continuous integration because text
 hinting is not bit-for-bit the same on every operating system. The tool is not linked to a requirement; two tests keep

@@ -21,10 +21,11 @@ standalone picture for email, presentations, and other media. There is no Markdo
 The workflow runs from a project folder to a picture you can export, copy, or drag into another program. When the
 picture is not right, you mark the problems on it or ask for changes, and go around again.
 
-![The main window of CanvasPilot in the dark theme, open on the project Release Overview: the explorer tree of the
-project's pictures at the left; in the middle the picture overview.svg on the stage with the floating marking tools,
-two numbered marks, and the zoom pill; and at the right the conversation with the copilot, with tool chips, suggested
-prompts, and the message box][main-window]
+![The main window of CanvasPilot in the dark theme, open on the project Crazy Monkey: the explorer lists
+crazy-monkey-robot.svg; on the stage is the picture the copilot made from one request, a marketing image of a six-axis
+robot arm filing papers under a cartoon monkey badge, with the headline "Filing is now monkey business"; and the
+conversation at the right shows the request, the tool rows of the copilot, its short answer, and a line with the tokens,
+the premium multiplier, and the time of the turn][main-window-robot]
 
 ![Workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in files,
 the AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the PNG; a
@@ -108,6 +109,10 @@ CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
 4. Choose **New project** on the welcome screen (or **File > New Project...**), then start describing a picture in the
    conversation pane.
 
+![The welcome screen of CanvasPilot in the dark theme: the New project and Open project buttons and the three steps
+Describe, Mark, and Share at the left, and at the right four recent projects, each with a small picture of its first
+drawing, its folder, when it was opened, and how many pictures it holds][welcome]
+
 ## Learn more
 
 - [User Guide][link-guide]: Installation, the window, projects, the explorer and the stage, the conversation, marking
@@ -124,7 +129,8 @@ Copyright (c) DEMA Consulting. Licensed under the MIT License. See [LICENSE][lin
 <!-- Image References -->
 [hero]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/hero.png
 [workflow]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/workflow.png
-[main-window]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/main-window.png
+[main-window-robot]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/main-window-robot.png
+[welcome]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/welcome.png
 
 <!-- Badge References -->
 [badge-forks]: https://img.shields.io/github/forks/demaconsulting/CanvasPilot?style=plastic

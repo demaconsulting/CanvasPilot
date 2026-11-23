@@ -27,6 +27,11 @@
     <ProjectReference Include="..\..\src\DemaConsulting.CanvasPilot\DemaConsulting.CanvasPilot.csproj" />
   </ItemGroup>
 
+  <!-- The picture that the copilot drew for the README screenshot of the main window: project content, shown by the opt-in screenshot tests -->
+  <ItemGroup>
+    <EmbeddedResource Include="ScreenshotData\crazy-monkey-robot.svg" LogicalName="ScreenshotData.crazy-monkey-robot.svg" />
+  </ItemGroup>
+
   <!-- Makes the test projects run one after the other when `dotnet test` starts their hosts together -->
   <ItemGroup>
     <Compile Include="..\SerializedTestRun.cs" Link="SerializedTestRun.cs" />

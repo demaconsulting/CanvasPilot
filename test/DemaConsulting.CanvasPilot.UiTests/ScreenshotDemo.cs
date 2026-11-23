@@ -23,6 +23,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -55,6 +56,22 @@ internal static class ScreenshotDemo
     ///     The picture of the main demonstration project that the main window shows.
     /// </summary>
     public const string MainPicture = "overview.svg";
+
+    /// <summary>
+    ///     The name of the project of the robot screenshot.
+    /// </summary>
+    public const string RobotProjectName = "Crazy Monkey";
+
+    /// <summary>
+    ///     The name of the model that the provider pill shows in the robot screenshot.
+    /// </summary>
+    public const string RobotModelName = "claude-opus-5.5";
+
+    /// <summary>
+    ///     The marketing picture of the robot project, which the copilot drew: a six-axis robot arm that files papers, with a
+    ///     cartoon monkey and a headline.
+    /// </summary>
+    public const string RobotPicture = "crazy-monkey-robot.svg";
 
     /// <summary>
     ///     The two marks of the main window, in the pixels of <see cref="MainPicture" />: the ellipse around the decision of
@@ -100,6 +117,19 @@ internal static class ScreenshotDemo
     }
 
     /// <summary>
+    ///     Writes the file of the robot project: the marketing picture that the copilot drew, read from the resources of the
+    ///     test assembly, where it is kept as the data of the screenshot.
+    /// </summary>
+    /// <param name="folder">The project folder.</param>
+    public static void WriteRobotProject(string folder)
+    {
+        using var resource = typeof(ScreenshotDemo).Assembly.GetManifestResourceStream("ScreenshotData." + RobotPicture)
+            ?? throw new InvalidOperationException($"The screenshot data {RobotPicture} is not in the test assembly.");
+        using var file = File.Create(Path.Combine(folder, RobotPicture));
+        resource.CopyTo(file);
+    }
+
+    /// <summary>
     ///     Writes a project for the welcome screen: one main picture, whose small picture the card shows, and enough small
     ///     pictures behind it for the number of pictures that the card tells.
     /// </summary>
@@ -140,12 +170,13 @@ internal static class ScreenshotDemo
     ///     that it is.
     /// </summary>
     /// <param name="composition">The application.</param>
+    /// <param name="modelName">The name of the model that the pill shows.</param>
     /// <returns>The things that the pill is built over, which the caller disposes when the window is closed.</returns>
-    public static async Task<IDisposable> ShowReadyProviderAsync(ApplicationComposition composition)
+    public static async Task<IDisposable> ShowReadyProviderAsync(ApplicationComposition composition, string modelName = ModelName)
     {
         composition.Settings.Update(settings => settings with
         {
-            AiProvider = settings.AiProvider with { Provider = AiProviderKind.GitHubCopilot, ModelName = ModelName },
+            AiProvider = settings.AiProvider with { Provider = AiProviderKind.GitHubCopilot, ModelName = modelName },
         });
 
         var marks = new MarkRegistry();
@@ -185,6 +216,39 @@ internal static class ScreenshotDemo
     }
 
     /// <summary>
+    ///     Puts the conversation of the robot screenshot into the transcript of the chat: one request for a marketing picture,
+    ///     the tools that the copilot used to make it, its short answer, and the line under the answer that says what the turn
+    ///     cost, made as the program makes it, from the figures that a provider reports.
+    /// </summary>
+    /// <param name="chat">The chat panel.</param>
+    /// <param name="projectFolder">The folder of the project.</param>
+    public static void FillRobotTranscript(ChatPanelViewModel chat, string projectFolder)
+    {
+        var clock = new ManualClock();
+
+        chat.Transcript.Add(UserRow(
+            "Make a flashy marketing image: a six-axis industrial robot arm filing papers, with a cartoon monkey icon, a bold headline and two lines of blurb",
+            DateTime.Today.AddHours(14).AddMinutes(12),
+            projectFolder));
+        chat.Transcript.Add(ToolRow("style_get", string.Empty, clock, TimeSpan.Zero));
+        chat.Transcript.Add(ToolRow("canvasnet_help", string.Empty, clock, TimeSpan.Zero));
+        var written = ToolRow("project_write", RobotPicture, clock, TimeSpan.Zero);
+        written.ReportFile(ToolActivityText.Written(RobotPicture, replaced: false));
+        chat.Transcript.Add(written);
+        chat.Transcript.Add(ToolRow("render_image", RobotPicture, clock, TimeSpan.Zero));
+        chat.Transcript.Add(ToolRow("style_check", string.Empty, clock, TimeSpan.Zero));
+
+        var reply = new AssistantReplyViewModel(
+            "I made crazy-monkey-robot.svg at 1200 x 900: a six-axis robot arm files papers into a cabinet, with a cartoon monkey badge "
+            + "above the headline \"Filing is now monkey business\" and two lines of blurb. Mark anything you want changed.",
+            AssistantReplyState.Completed);
+        var usage = new TurnUsage();
+        usage.Add(new AgentEvent.Usage(41_800, 6_300, Multiplier: 15, Model: RobotModelName));
+        reply.SetUsageCaption(usage.Format(TimeSpan.FromSeconds(98), stopped: false));
+        chat.Transcript.Add(reply);
+    }
+
+    /// <summary>
     ///     Makes the row of a message that the user sent.
     /// </summary>
     /// <param name="text">The words of the message.</param>
@@ -202,13 +266,13 @@ internal static class ScreenshotDemo
     ///     Makes the row of a tool that finished.
     /// </summary>
     /// <param name="tool">The name of the tool.</param>
-    /// <param name="file">The file that the tool worked on.</param>
+    /// <param name="file">The file that the tool worked on, or an empty text for a tool that works on no file.</param>
     /// <param name="clock">The clock that times the call.</param>
     /// <param name="took">How long the call took.</param>
     /// <returns>The row.</returns>
     private static ToolActivityRowViewModel ToolRow(string tool, string file, ManualClock clock, TimeSpan took)
     {
-        var argument = $"path={file}";
+        var argument = file.Length == 0 ? string.Empty : $"path={file}";
         var row = new ToolActivityRowViewModel(Guid.NewGuid().ToString("N"), tool, argument, ToolActivityText.Started(tool, argument), clock);
         clock.Advance(took);
         row.Finish(ToolActivityText.Finished(tool, argument, succeeded: true, string.Empty), succeeded: true, hasImage: tool == "render_image");
