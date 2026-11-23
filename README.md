@@ -21,6 +21,11 @@ standalone picture for email, presentations, and other media. There is no Markdo
 The workflow runs from a project folder to a picture you can export, copy, or drag into another program. When the
 picture is not right, you mark the problems on it or ask for changes, and go around again.
 
+![The main window of CanvasPilot in the dark theme, open on the project Release Overview: the explorer tree of the
+project's pictures at the left; in the middle the picture overview.svg on the stage with the floating marking tools,
+two numbered marks, and the zoom pill; and at the right the conversation with the copilot, with tool chips, suggested
+prompts, and the message box][main-window]
+
 ![Workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in files,
 the AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the PNG; a
 return arrow from the preview to the description step is for marking problems or asking for changes][workflow]
@@ -29,29 +34,36 @@ return arrow from the preview to the description step is for marking problems or
 
 Available now:
 
-- **Projects**: A project is a folder; create, open, save, and close projects, and return to recent ones
-- **Project explorer**: Lists the image files of the open project and follows changes made by other tools
-- **Live preview**: Draws the selected file with CanvasNet and redraws it when the file changes, with error codes,
-  hints, and diagnostics explained below the picture
+- **Projects**: A project is a folder; create, open, save, and close projects, and return to recent ones from a welcome
+  screen with a picture of each
+- **Modern interface**: A dark and a light theme that follow your system or stay as you choose, a title bar with the
+  menu and pills for the style kit and the AI provider, a status bar, and a window that remembers its size and layout;
+  every command is also reachable with the keyboard, and the controls have names for screen readers
+- **Project explorer**: A tree of the folders and pictures of the open project with thumbnails; add pictures by dropping
+  them on a folder, make files and folders, and see changes made by other tools
+- **Live preview**: Draws the selected file with CanvasNet on a stage and redraws it when the file changes, with zoom
+  (fit, 1:1, steps, and Ctrl+mouse wheel), and error codes, hints, and notes explained
 - **Export and share**: Export the picture as a PNG file, copy the image, or drag the picture into other applications
-- **Chat composer**: Write a message by typing or by push-to-talk dictation (hold F8), drag and drop or paste files,
-  folders, and images as inline chips, and undo and redo in fine-grained steps
-- **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows, numbered
-  and with notes; the marks are embedded in the message with crops and the source elements under each mark
+- **Chat composer**: Press Enter to send and Shift+Enter for a new line, write a message by typing or by push-to-talk
+  dictation (hold F8), attach files by drag and drop, paste, or the paperclip, with folders and images as inline chips,
+  and undo and redo in fine-grained steps
+- **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows from a
+  floating tool bar, numbered and with notes; the marks are embedded in the message with crops and the source elements
+  under each mark
 - **Drawing knowledge**: Browse CanvasNet's built-in cards and CanvasPilot's own project guide from the Help menu
 - **Style kits**: Reusable palettes, fonts, size presets, and example images from the program, your folder, the project,
   or a team folder; export at preset sizes and check a picture against the style
-- **AI copilot chat**: An AI copilot answers your messages in the chat panel. It writes, renders, looks at, and fixes
-  drawings in a self-checking loop, sees the pictures you attach and the marks you draw, and streams its answer, with a
-  row for each tool it uses and a Stop button. **Ollama** is supported and covered by automated tests (live checks
-  against a running server are pending); **GitHub Copilot** runs through your installed GitHub Copilot CLI (CanvasPilot
-  never bundles or downloads it). The text of the conversation is kept on your computer, outside the project, and you
-  can clear it
+- **AI copilot chat**: An AI copilot answers your messages in the conversation pane. It writes, renders, looks at, and
+  fixes drawings in a self-checking loop, sees the pictures you attach and the marks you draw, and streams its answer,
+  with a chip for each tool it uses and a Stop button, and suggests the next prompts. **Ollama** is supported and
+  covered by automated tests (live checks against a running server are pending); **GitHub Copilot** runs through your
+  installed GitHub Copilot CLI (CanvasPilot never bundles or downloads it). The text of the conversation is kept on your
+  computer, outside the project, and you can clear it from the conversation menu
 - **Safe by default**: The copilot has only CanvasPilot's own tools, confined to the project folder. It overwrites the
   files it changes directly, with no backup and no question, so keep your projects under source control
 - **Settings**: Choose the AI provider (with a connection check), pick its model from the list that the provider
-  offers, with what each model can do and a warning for what it lacks, and set the model's reasoning level; and the
-  speech devices and models, with model downloads
+  offers, with what each model can do and a warning for what it lacks, and set the model's reasoning level; the speech
+  devices and models, with model downloads; and the theme and explorer choices
 - **Windows installer**: One MSI package for 64-bit Windows
 
 Planned:
@@ -81,12 +93,13 @@ CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
      the model offers some.
 3. Optionally set up speech in **Tools > Settings... > Speech**: pick your microphone and speakers, and download the
    speech models.
-4. Choose **File > New Project...**, then start describing a picture in the chat panel.
+4. Choose **New project** on the welcome screen (or **File > New Project...**), then start describing a picture in the
+   conversation pane.
 
 ## Learn more
 
-- [User Guide][link-guide]: Installation, projects, the chat composer, marking pictures, working with the copilot, and
-  settings
+- [User Guide][link-guide]: Installation, the window, projects, the explorer and the stage, the conversation, marking
+  pictures, working with the copilot, and settings
 - [CanvasNet][link-canvasnet]: The library that draws the pictures
 - [Ollama][link-ollama]: The local model server that the copilot can work with
 - [Speech][link-speech]: The library behind dictation and spoken replies
@@ -99,6 +112,7 @@ Copyright (c) DEMA Consulting. Licensed under the MIT License. See [LICENSE][lin
 <!-- Image References -->
 [hero]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/hero.png
 [workflow]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/workflow.png
+[main-window]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/main-window.png
 
 <!-- Badge References -->
 [badge-forks]: https://img.shields.io/github/forks/demaconsulting/CanvasPilot?style=plastic
