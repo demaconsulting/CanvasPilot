@@ -12,6 +12,10 @@
 #   (GUI automation, integration) may be opt-in switches.
 #   Run with no arguments it must still build and run the standard test suite (agents rely
 #   on that), and never remove or weaken a test step to make it pass.
+#
+# LAUNCH SMOKE TEST:
+#   This script does not publish. To check that the published program starts (a crash at the start is
+#   invisible to the headless tests), publish win-x64 as the CI job does and run ./smoke.ps1 (see its header).
 
 $buildError = $false
 

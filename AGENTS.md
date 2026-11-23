@@ -78,6 +78,8 @@ yet cover something.
 - **`docs/sysml2/`** - SysML2 architecture model; authoritative source for software structure
 - **`fix.ps1`** - Applies all auto-fixers silently (dotnet format, LintMark, YAML). Always exits 0.
 - **`build.ps1`** - Builds the solution and runs all tests.
+- **`smoke.ps1`** - Starts the published win-x64 program and checks it runs with a main window and no errors (Windows
+  only; run after `dotnet publish` as in the CI build job).
 
 # Standards Application (ALL Agents Must Follow)
 
