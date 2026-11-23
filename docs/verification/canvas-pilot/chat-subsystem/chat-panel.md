@@ -392,6 +392,11 @@ by `ChatPanelView_Send_TwoMessages_AreListedInOrder`.
 below it that is at least one line high, and the bubble is as high as the two with its padding, so that neither is cut
 off. This scenario is tested by `ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords`.
 
+**RestoredEntryViewModel_New_ChipLabelGluedToWords_GetsASpace**: A saved row whose chip label is followed at once by a
+word (`[Mark 1]Chart`), as an earlier version saved it, is shown with a space after the label; a label followed by a
+line feed, a space, or punctuation is not changed. This scenario is tested by
+`RestoredEntryViewModel_New_ChipLabelGluedToWords_GetsASpace`.
+
 **ChatPanelView_Send_MessageWithMarkAndFile_ShowsChipsInTranscriptWithoutDeleteButtons**: A message with a mark, text,
 and a dropped file is sent; the entry shows `Mark 1` and `notes.txt` as chips without delete buttons, the summary says
 `1 mark, 1 attachment`, and the file is in the project's attachments. This scenario is tested by

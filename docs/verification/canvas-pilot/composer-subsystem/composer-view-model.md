@@ -111,6 +111,11 @@ chips in the row above the words, with the line feed, as one step that undo and 
 afterwards without a place goes to the caret in the text. This scenario is tested by
 `ComposerViewModel_AttachFiles_GoToTheRowAboveTheWordsInOneStep`.
 
+**ComposerViewModel_NewText_CaretInTheChipRow_GoesBelowTheRow**: With a mark chip and its line feed in the message and
+the caret at the end of the row, typed, dictated, and pasted words are put below the row, so the message is the chip,
+the line feed, and all the words; a caret in the words keeps its place. This scenario is tested by
+`ComposerViewModel_NewText_CaretInTheChipRow_GoesBelowTheRow`.
+
 **ComposerViewModel_AddMark_MarkOfAnotherRegistry_ThrowsArgumentException**: A mark of another registry and a missing
 mark are refused and the draft is unchanged. This scenario is tested by
 `ComposerViewModel_AddMark_MarkOfAnotherRegistry_ThrowsArgumentException`.

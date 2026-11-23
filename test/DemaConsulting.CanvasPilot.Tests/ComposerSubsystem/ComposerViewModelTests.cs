@@ -426,6 +426,34 @@ public sealed class ComposerViewModelTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that words typed, dictated, or pasted with the caret in or at the end of the row of chips go to the line
+    ///     below the row, and that a caret on the line of the words, or a selection, keeps its place.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_NewText_CaretInTheChipRow_GoesBelowTheRow()
+    {
+        // Arrange: a message that is one mark chip and a line feed, with the caret put at the end of the row, as a click does
+        _vm.AddMark(NewMark());
+        _vm.SetSelection(1);
+
+        // Act: type, dictate, and paste with the caret in the row, going back into the row each time
+        var offsetInRow = _vm.CaretForNewText();
+        _vm.InsertTyped("typed ");
+        _vm.SetSelection(0);
+        _vm.AddDictatedBlock("spoken ");
+        _vm.SetSelection(1);
+        _vm.HandlePaste(new DroppedContent { Text = "pasted " });
+        _vm.SetSelection(3);
+        var offsetInWords = _vm.CaretForNewText();
+
+        // Assert: the words are all below the row, each put at the start of the line of the words, one line feed separates
+        // them from the chip, and the caret in the words stays
+        Assert.Equal(2, offsetInRow);
+        Assert.Equal(Chip + "\npasted spoken typed ", _vm.Document.FlatText);
+        Assert.Equal(3, offsetInWords);
+    }
+
+    /// <summary>
     ///     Test that files chosen with the attach button go to the row of chips above the words as one step, wherever the
     ///     caret is, and that a drop at the caret still puts them in the text.
     /// </summary>

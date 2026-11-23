@@ -597,6 +597,24 @@ public sealed class ChatPanelHistoryTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a chip label that was saved with no separator before the words is shown with a space after it, and that
+    ///     labels that have a separator or are followed by punctuation are left as they are.
+    /// </summary>
+    [Fact]
+    public void RestoredEntryViewModel_New_ChipLabelGluedToWords_GetsASpace()
+    {
+        // Arrange and act: rows as an earlier version saved them, and rows that were fine
+        static string Shown(string text) => new RestoredEntryViewModel(new ChatHistoryRow { Kind = ChatHistoryRowKind.User, Text = text }).Text;
+
+        // Assert: a space after the glued label, and nothing else changed
+        Assert.Equal("[Mark 1] Chart downloads by month", Shown("[Mark 1]Chart downloads by month"));
+        Assert.Equal("[Attachment: a b.png] Use it", Shown("[Attachment: a b.png]Use it"));
+        Assert.Equal("[Mark 1]\nChart", Shown("[Mark 1]\nChart"));
+        Assert.Equal("Why is [Mark 1] red? Is [Mark 2], too?", Shown("Why is [Mark 1] red? Is [Mark 2], too?"));
+        Assert.Equal("[Mark 1][Mark 2] Both", Shown("[Mark 1][Mark 2]Both"));
+    }
+
+    /// <summary>
     ///     Makes the rows of a conversation that was saved: a message with a mark and an attachment, a reply, a tool that
     ///     failed, and a reply that was stopped.
     /// </summary>

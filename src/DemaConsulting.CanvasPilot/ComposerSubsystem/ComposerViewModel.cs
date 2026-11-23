@@ -484,7 +484,17 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     /// <param name="text">The typed text.</param>
     /// <returns><see langword="true" /> when the message changed.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="text" /> is <see langword="null" />.</exception>
-    public bool InsertTyped(string text) => ApplyTextChange(_caretOffset, _selectionLength, text);
+    public bool InsertTyped(string text) => ApplyTextChange(CaretForNewText(), _selectionLength, text);
+
+    /// <summary>
+    ///     Gets the offset where new words go: the caret, except that a caret in or at the end of the row of chips at the
+    ///     start of the message, which has a line feed below it, goes to the start of the line below, so that words never
+    ///     join the chips on their row. A selection keeps the caret.
+    /// </summary>
+    /// <returns>The offset for new text, dictated words, and pasted content.</returns>
+    public int CaretForNewText() => _selectionLength == 0 && ComposerEdit.FindChipRow(_document) is (var length, true) && _caretOffset <= length
+        ? length + 1
+        : _caretOffset;
 
     /// <summary>
     ///     Deletes a range of text and chips, as one step.
@@ -534,7 +544,7 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public bool AddDictatedBlock(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
-        return BeginEdit() && Execute(ComposerEdit.Dictate(_document, _caretOffset, text, _selectionLength));
+        return BeginEdit() && Execute(ComposerEdit.Dictate(_document, CaretForNewText(), text, _selectionLength));
     }
 
     /// <summary>
@@ -640,7 +650,7 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public bool HandlePaste(DroppedContent content)
     {
         ArgumentNullException.ThrowIfNull(content);
-        return AddContent(content, _caretOffset, _selectionLength);
+        return AddContent(content, CaretForNewText(), _selectionLength);
     }
 
     /// <inheritdoc />

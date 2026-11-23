@@ -235,18 +235,7 @@ public sealed class ComposerEdit
         }
 
         // Find the end of the row of chips at the start, and whether a line feed follows it
-        var rowLength = 0;
-        var hasBreak = false;
-        foreach (var segment in document.Segments)
-        {
-            if (segment is not ChipSegment)
-            {
-                hasBreak = segment is TextSegment { Text: ['\n', ..] };
-                break;
-            }
-
-            rowLength += segment.Length;
-        }
+        var (rowLength, hasBreak) = FindChipRow(document);
 
         List<ComposerSegment> inserted = [.. chips];
         if (!hasBreak)
@@ -258,6 +247,30 @@ public sealed class ComposerEdit
         var insertedLength = ComposerDocument.Normalize(inserted).Sum(segment => segment.Length);
         var caretAfter = caretOffset <= rowLength ? rowLength + chips.Count + 1 : caretOffset + insertedLength;
         return new ComposerEdit(rowLength, [], inserted, caretOffset, caretAfter);
+    }
+
+    /// <summary>
+    ///     Finds the row of chips at the start of a message: the chips that stand before any text, and whether a line feed
+    ///     follows them, which puts the words on the line below.
+    /// </summary>
+    /// <param name="document">The document.</param>
+    /// <returns>The number of chips in the row and whether a line feed follows the row.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="document" /> is <see langword="null" />.</exception>
+    public static (int Length, bool HasBreak) FindChipRow(ComposerDocument document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        var length = 0;
+        foreach (var segment in document.Segments)
+        {
+            if (segment is not ChipSegment)
+            {
+                return (length, segment is TextSegment { Text: ['\n', ..] });
+            }
+
+            length += segment.Length;
+        }
+
+        return (length, false);
     }
 
     /// <summary>

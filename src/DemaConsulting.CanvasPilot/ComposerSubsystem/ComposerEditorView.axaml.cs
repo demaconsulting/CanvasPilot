@@ -497,15 +497,29 @@ public sealed partial class ComposerEditorView : UserControl
     }
 
     /// <summary>
-    ///     Refuses typed or input-method text that holds a character that must not enter the message.
+    ///     Refuses typed or input-method text that holds a character that must not enter the message, and moves a caret that is
+    ///     in the row of chips to the line below before the text enters.
     /// </summary>
     /// <param name="sender">The text area.</param>
     /// <param name="e">The event data.</param>
-    private static void OnTextEntering(object? sender, TextInputEventArgs e)
+    private void OnTextEntering(object? sender, TextInputEventArgs e)
     {
-        if (e.Text is { } text && ContainsForbiddenCharacter(text))
+        if (e.Text is not { } text)
+        {
+            return;
+        }
+
+        if (ContainsForbiddenCharacter(text))
         {
             e.Handled = true;
+            return;
+        }
+
+        // Words typed with the caret in the row of chips (a click on the row puts it there) go to the line below, so that
+        // they never join the chips; the caret moves before the text enters
+        if (_viewModel is { } viewModel && Editor.SelectionLength == 0 && viewModel.CaretForNewText() is var offset && offset != Editor.CaretOffset)
+        {
+            Editor.CaretOffset = offset;
         }
     }
 

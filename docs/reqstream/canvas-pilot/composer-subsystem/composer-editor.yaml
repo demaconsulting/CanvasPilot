@@ -35,6 +35,7 @@ sections:
                   - ComposerEditorView_AddChip_IsDrawnInlineBetweenTexts
                   - ComposerEditorView_AddMark_ShowsMarkChipAndUndoCommandRemovesIt
                   - ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords
+                  - ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords
                   - ComposerEditorView_ChipReplacesChip_DrawsTheNewChip
                   - ComposerEditorView_ThumbnailProvider_PictureReplacesIcon
                   - ComposerEditorView_ManyChipsAndWrappedText_StayConsistentThroughUndoAll

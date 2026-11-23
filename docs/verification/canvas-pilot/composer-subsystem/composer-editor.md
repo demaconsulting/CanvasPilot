@@ -117,6 +117,13 @@ the view model. The message is the two chips, a line feed, and the words; both c
 first line, the caret, at the end of the words, is below the bottom of the chips, and the surface equals the message.
 This scenario is tested by `ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords`.
 
+**ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords**: With an empty message a
+rectangle is drawn and added with a note through the annotation layer; the message read by assistive technology is
+`[Mark 1]` and a line feed and the caret is on the line below. A click on the row of the chip puts the caret at the end
+of the row, and the words that are then typed are read as `[Mark 1]`, a line feed, and the words, and are drawn on a
+line below the chip. This scenario is tested by
+`ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords`.
+
 **ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage**: For a message with words and a mark chip
 the automation peer of the editing surface is an edit field named `Message` whose value is `[Mark 1]` and the words on
 the line below, that is not read-only; setting its value replaces the message and the surface follows; the text area has

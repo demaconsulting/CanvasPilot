@@ -20,11 +20,14 @@
 
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
@@ -342,6 +345,47 @@ public sealed class ChatPanelViewTests
         Assert.Equal(0, harness.Dictation.BeginCount);
         Assert.Equal("typed", harness.Editor.SurfaceText);
         Assert.Equal(ChatPanelViewModel.TalkIdleText, harness.TalkLabel);
+    }
+
+    /// <summary>
+    ///     Test the flow of a user: with an empty message a rectangle is drawn on the picture, a note is added with "Add mark",
+    ///     the user clicks into the message and types. The message that assistive technology reads is the chip, a line feed,
+    ///     and the words; the chip is on a line of its own above the words, and the words were typed on the line below.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords()
+    {
+        // Arrange: an empty message and the rectangle tool
+        using var harness = new ChatHarness();
+        harness.Annotation.SelectTool(AnnotationTool.Rectangle);
+
+        // Act: draw, give the mark a note and choose Add mark, click into the message, and type
+        harness.Annotation.BeginStroke(new RenderPoint(10, 10));
+        harness.Annotation.EndStroke(new RenderPoint(60, 40));
+        harness.Annotation.NoteText = "this one";
+        harness.Annotation.CommitNoteCommand.Execute(null);
+        harness.Layout();
+        var surface = harness.Editor.FindControl<ComposerTextEditor>("Editor")!;
+        var peer = ControlAutomationPeer.CreatePeerForElement(surface);
+        var valueBeforeTyping = Assert.IsAssignableFrom<IValueProvider>(peer).Value;
+        var caretAfterMark = harness.Composer.CaretOffset;
+        var chipRow = harness.Editor.GetVisualDescendants().OfType<ChipView>().Single();
+        var onChipRow = chipRow.TranslatePoint(new Point(chipRow.Bounds.Width + 30, chipRow.Bounds.Height / 2), harness.Window)!.Value;
+        harness.Window.MouseDown(onChipRow, MouseButton.Left);
+        harness.Window.MouseUp(onChipRow, MouseButton.Left);
+        var caretAfterClick = surface.CaretOffset;
+        harness.Type("Make this a green diamond.");
+        var value = Assert.IsAssignableFrom<IValueProvider>(peer).Value;
+
+        // Assert: the line feed is there before the typing, the caret was on the line below the chip, the words follow the
+        // line feed, and the chip is above the line of the words
+        Assert.Equal("[Mark 1]\n", valueBeforeTyping);
+        Assert.Equal(2, caretAfterMark);
+        Assert.Equal(1, caretAfterClick);
+        Assert.Equal("[Mark 1]\nMake this a green diamond.", value);
+        var chip = Assert.Single(harness.Editor.GetVisualDescendants().OfType<ChipView>());
+        var chipBottom = chip.TranslatePoint(new Point(0, chip.Bounds.Height), surface.TextArea.TextView)!.Value.Y;
+        Assert.True(surface.TextArea.Caret.CalculateCaretRectangle().Y >= chipBottom - 1, "The words must be below the chip.");
     }
 
     /// <summary>

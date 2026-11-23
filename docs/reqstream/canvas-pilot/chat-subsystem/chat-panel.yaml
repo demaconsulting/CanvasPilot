@@ -342,6 +342,7 @@ sections:
                   - ChatHistoryMapper_ToHistoryRows_SentMessageAndRows_KeepsWordsLabelsNotesAndPathsOnly
                   - ChatHistoryMapper_ToTranscriptRowAndToAgentTurns_CoverEveryKind
                   - RestoredEntryViewModel_New_OnlyUserRows_AndSummaryCountsMarksAndAttachments
+                  - RestoredEntryViewModel_New_ChipLabelGluedToWords_GetsASpace
                   - ChatPanelView_RestoredHistory_ShowsTextRowsWithoutPayloadButtonOrPictures
 
               - id: CanvasPilot-ChatPanel-ClearChatHistory

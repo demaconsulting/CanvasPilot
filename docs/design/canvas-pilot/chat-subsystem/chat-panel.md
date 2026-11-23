@@ -115,7 +115,8 @@ The unit is made of these parts, all in the user interface layer:
     the message, the remedy when there is one, and an "Open Settings" pill button when the settings can help.
   - `RestoredEntryViewModel` and `RestoredEntryView`: a message of the user that was restored from the saved chat
     history (a `User` row). It is made from a `ChatHistoryRow` and holds `Text` (the words with the labels `[Mark 1]`
-    and `[Attachment: name]` in their places), `SentText` (date and time), `Summary` (for example
+    and `[Attachment: name]` in their places, with a space put after a label that an earlier version saved glued to the
+    next word, as in `[Mark 1]Chart`), `SentText` (date and time), `Summary` (for example
     `1 mark, 1 attachment`), and `DetailsText` (one line for each mark, with its note, and each attachment, with its
     project-relative path). It has no payload, no pictures, and no "View payload" command, because the history keeps
     words only, and its view says so in a note. It is not one of `SentEntries`, because it was not sent in this session.
