@@ -252,6 +252,27 @@ internal sealed class AnnotationHarness : IDisposable
     }
 
     /// <summary>
+    ///     Finds a control by its name in the XAML.
+    /// </summary>
+    /// <typeparam name="T">The control type.</typeparam>
+    /// <param name="name">The name.</param>
+    /// <returns>The control.</returns>
+    public T FindNamed<T>(string name)
+        where T : Control => Window.GetVisualDescendants().OfType<T>().First(control => control.Name == name);
+
+    /// <summary>
+    ///     Gets where a control is in the window.
+    /// </summary>
+    /// <param name="control">The control.</param>
+    /// <returns>The rectangle the control covers in the window's coordinates.</returns>
+    public Rect ExtentOf(Control control)
+    {
+        var topLeft = control.TranslatePoint(new Point(0, 0), Window) ?? throw new InvalidOperationException("The control is not in the window.");
+        var bottomRight = control.TranslatePoint(new Point(control.Bounds.Width, control.Bounds.Height), Window) ?? throw new InvalidOperationException("The control is not in the window.");
+        return new Rect(topLeft, bottomRight);
+    }
+
+    /// <summary>
     ///     Presses and releases a key.
     /// </summary>
     /// <param name="key">The physical key.</param>
@@ -777,5 +798,83 @@ public sealed class AnnotationOverlayViewTests
         Assert.Equal(100 - badges[0].Width / 2, Canvas.GetLeft(badges[0]), 1);
         Assert.Equal(80 - badges[0].Height / 2, Canvas.GetTop(badges[0]), 1);
         Assert.Equal("Mark 2, rectangle", AutomationProperties.GetName(shapes[1]));
+    }
+
+    /// <summary>
+    ///     Test that the floating tool bar shows icon buttons whose names and tooltips tell the tool and its key, that the keys
+    ///     choose the tools, and that the bar and the note card stay inside a narrow stage.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationToolbarView_FloatingBar_HasTooltipsKeysAndStaysInsideNarrowStage()
+    {
+        // Arrange: a picture, on a stage that is 360 wide
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        harness.Window.Width = 360;
+        AnnotationHarness.Flush();
+        var rectangle = harness.Find<ToggleButton>("AnnotationToolRectangle");
+        var tips = new[]
+        {
+            ("AnnotationToolSelect", "Select", "Select  V"),
+            ("AnnotationToolRectangle", "Rectangle", "Rectangle  R"),
+            ("AnnotationToolEllipse", "Ellipse", "Ellipse  E"),
+            ("AnnotationToolFreehand", "Freehand", "Freehand  F"),
+            ("AnnotationToolArrow", "Arrow", "Arrow  A"),
+        };
+
+        // Act: press the key of the rectangle with the focus on the stage, then draw a mark so that its note card shows
+        harness.Find<ScrollViewer>("PreviewScroller").Focus();
+        harness.Key(PhysicalKey.R);
+        var chosenByKey = (harness.Overlay.CurrentTool, rectangle.IsChecked);
+        harness.Drag((120, 60), (260, 150));
+        var bar = harness.FindNamed<Border>("ToolBar");
+        var card = harness.FindNamed<Border>("NoteCard");
+        var width = harness.Window.ClientSize.Width;
+        var barExtent = harness.ExtentOf(bar);
+        var cardExtent = harness.ExtentOf(card);
+        harness.SkipNote();
+
+        // Assert: names and tooltips; the key chose the rectangle; the bar and the card lie inside the stage
+        foreach (var (id, name, tip) in tips)
+        {
+            var button = harness.Find<ToggleButton>(id);
+            Assert.Equal(name, AutomationProperties.GetName(button));
+            Assert.Equal(tip, ToolTip.GetTip(button));
+        }
+
+        Assert.Equal((AnnotationTool.Rectangle, true), chosenByKey);
+        Assert.True(barExtent.Left >= 0 && barExtent.Right <= width, $"bar {barExtent} in {width}");
+        Assert.True(cardExtent.Left >= 0 && cardExtent.Right <= width, $"card {cardExtent} in {width}");
+    }
+
+    /// <summary>
+    ///     Test that the clear button is off while the message holds no mark and that using it takes the chips of all marks
+    ///     out of the message.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage()
+    {
+        // Arrange: a picture with two marks in the message
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var clear = harness.Find<Button>("AnnotationClearMarks");
+        var offWithoutMarks = clear.IsEffectivelyEnabled;
+        harness.ChooseTool("AnnotationToolRectangle");
+        harness.Drag((100, 80), (300, 200));
+        harness.SkipNote();
+        harness.Drag((400, 80), (500, 200));
+        harness.SkipNote();
+        var chipsBefore = harness.Composition.Composer.MarkChipIds.Count;
+
+        // Act: use the clear button
+        SettingsUiHelpers.Click(harness.Window, clear);
+        AnnotationHarness.Flush();
+
+        // Assert
+        Assert.False(offWithoutMarks);
+        Assert.Equal(2, chipsBefore);
+        Assert.Empty(harness.Composition.Composer.MarkChipIds);
+        Assert.Empty(harness.Overlay.VisibleMarks);
+        Assert.False(clear.IsEffectivelyEnabled);
     }
 }

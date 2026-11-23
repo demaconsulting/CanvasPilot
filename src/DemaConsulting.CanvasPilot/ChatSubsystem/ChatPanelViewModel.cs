@@ -181,6 +181,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     private readonly EventHandler<MarkAddedEventArgs> _markAdded;
 
     /// <summary>
+    ///     The handler that takes the chips of all marks out of the message, kept so that it can be removed.
+    /// </summary>
+    private readonly EventHandler _clearMarks;
+
+    /// <summary>
     ///     The handler of the sent messages, kept so that it can be removed.
     /// </summary>
     private readonly EventHandler<MessageSentEventArgs> _messageSent;
@@ -289,10 +294,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _messageSent = (_, e) => OnMessageSent(e.Message);
         _composerChanged = (_, _) => JoinAnnotationToComposer();
         _markAdded = (_, e) => _composer.AddMark(e.Mark);
+        _clearMarks = (_, _) => _composer.DeleteMarkChips();
         _composer.PropertyChanged += _composerPropertyChanged;
         _composer.MessageSent += _messageSent;
         _composer.Changed += _composerChanged;
         _annotation.MarkAdded += _markAdded;
+        _annotation.ClearMarksRequested += _clearMarks;
         JoinAnnotationToComposer();
 
         // A project that is already open has a saved conversation
@@ -546,6 +553,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer.MessageSent -= _messageSent;
         _composer.Changed -= _composerChanged;
         _annotation.MarkAdded -= _markAdded;
+        _annotation.ClearMarksRequested -= _clearMarks;
         if (_runner is not null)
         {
             // Nothing is added to a transcript that is dropped, and a turn that is still running is stopped

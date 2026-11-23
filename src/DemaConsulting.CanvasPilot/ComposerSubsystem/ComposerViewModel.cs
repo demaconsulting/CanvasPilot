@@ -555,6 +555,41 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public bool DeleteChip(int offset) => BeginEdit() && Execute(ComposerEdit.DeleteChip(_document, offset));
 
     /// <summary>
+    ///     Deletes the chips of all marks from the message, one step for each chip, as the delete button of each chip does.
+    /// </summary>
+    /// <returns>How many chips were deleted.</returns>
+    public int DeleteMarkChips()
+    {
+        var deleted = 0;
+        while (FindMarkChipOffset() is { } offset && DeleteChip(offset))
+        {
+            deleted++;
+        }
+
+        return deleted;
+    }
+
+    /// <summary>
+    ///     Finds the offset of the first chip of a mark.
+    /// </summary>
+    /// <returns>The offset, or <see langword="null" /> when the message holds no mark chip.</returns>
+    private int? FindMarkChipOffset()
+    {
+        var offset = 0;
+        foreach (var segment in _document.Segments)
+        {
+            if (segment is MarkChip)
+            {
+                return offset;
+            }
+
+            offset += segment.Length;
+        }
+
+        return null;
+    }
+
+    /// <summary>
     ///     Handles content that was dropped on the message: its files, folders, pictures, and text become chips and text
     ///     at the place where it was dropped, as one step however many items there are. What could not be accepted is left
     ///     out and named in <see cref="StatusText" />; when nothing could be accepted there is no step.

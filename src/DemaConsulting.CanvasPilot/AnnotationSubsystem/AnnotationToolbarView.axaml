@@ -6,89 +6,177 @@
              AutomationProperties.AutomationId="AnnotationToolbar"
              AutomationProperties.Name="Marking tools">
 
-  <!-- The tool bar of the marks: one button per tool, then, while a finished shape waits for its note, the note and its
-       two buttons, then what is said to the user. It wraps when the pane is narrow. -->
-  <WrapPanel Orientation="Horizontal">
+  <UserControl.Styles>
+    <!-- The thin line that separates the tools from the clear button -->
+    <Style Selector="Border.divider">
+      <Setter Property="Width" Value="1" />
+      <Setter Property="Height" Value="20" />
+      <Setter Property="Margin" Value="4,0" />
+      <Setter Property="Background" Value="{DynamicResource CpBorderSubtle}" />
+    </Style>
 
-    <StackPanel Orientation="Horizontal"
-                Spacing="2"
-                Margin="0,0,8,0"
-                IsEnabled="{Binding Annotation.ToolsEnabled}">
-      <ToggleButton Name="PointerToolButton"
-                    AutomationProperties.AutomationId="AnnotationToolSelect"
-                    AutomationProperties.Name="Select (no marking tool)"
-                    ToolTip.Tip="Select: no marking tool, so the picture can be dragged out"
-                    Content="Select"
-                    IsChecked="{Binding Annotation.IsPointerSelected, Mode=TwoWay}" />
-      <ToggleButton Name="RectangleToolButton"
-                    AutomationProperties.AutomationId="AnnotationToolRectangle"
-                    AutomationProperties.Name="Rectangle mark"
-                    ToolTip.Tip="Draw a rectangle on the picture"
-                    Content="Rectangle"
-                    IsChecked="{Binding Annotation.IsRectangleSelected, Mode=TwoWay}" />
-      <ToggleButton Name="EllipseToolButton"
-                    AutomationProperties.AutomationId="AnnotationToolEllipse"
-                    AutomationProperties.Name="Ellipse mark"
-                    ToolTip.Tip="Draw an ellipse on the picture"
-                    Content="Ellipse"
-                    IsChecked="{Binding Annotation.IsEllipseSelected, Mode=TwoWay}" />
-      <ToggleButton Name="FreehandToolButton"
-                    AutomationProperties.AutomationId="AnnotationToolFreehand"
-                    AutomationProperties.Name="Freehand mark"
-                    ToolTip.Tip="Draw a line with the pointer on the picture"
-                    Content="Freehand"
-                    IsChecked="{Binding Annotation.IsFreehandSelected, Mode=TwoWay}" />
-      <ToggleButton Name="ArrowToolButton"
-                    AutomationProperties.AutomationId="AnnotationToolArrow"
-                    AutomationProperties.Name="Arrow mark"
-                    ToolTip.Tip="Draw an arrow on the picture"
-                    Content="Arrow"
-                    IsChecked="{Binding Annotation.IsArrowSelected, Mode=TwoWay}" />
-    </StackPanel>
+    <!-- The words for the screen reader that the sighted user gets from the tooltip or the note card: one pixel, clear -->
+    <Style Selector="TextBlock.reader">
+      <Setter Property="Width" Value="1" />
+      <Setter Property="Height" Value="1" />
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
+  </UserControl.Styles>
 
-    <StackPanel Name="NotePanel"
-                AutomationProperties.AutomationId="AnnotationNotePanel"
-                Orientation="Horizontal"
-                Spacing="4"
-                Margin="0,0,8,0"
-                IsVisible="{Binding Annotation.IsNoteEditing}">
-      <TextBlock VerticalAlignment="Center" Text="Note:" />
-      <TextBox Name="NoteBox"
-               AutomationProperties.AutomationId="AnnotationNoteBox"
-               AutomationProperties.Name="Note for the new mark (optional)"
-               Width="220"
-               PlaceholderText="Optional short note"
-               Text="{Binding Annotation.NoteText, Mode=TwoWay}" />
-      <Button AutomationProperties.AutomationId="AnnotationNoteAdd"
-              Content="Add mark"
-              Command="{Binding Annotation.CommitNoteCommand}" />
-      <Button AutomationProperties.AutomationId="AnnotationNoteSkip"
-              Content="Skip note"
-              Command="{Binding Annotation.SkipNoteCommand}" />
-    </StackPanel>
+  <!-- The floating tool bar of the marks: a rounded bar with one icon button per tool, a divider, and the clear button,
+       a warning chip beside it while marks are hidden, and, while a finished shape waits for its note, a card with the
+       note and its two buttons under it. The bar is as wide as its buttons, so it never clips: the stage is at least 360
+       wide and the bar is about 230. -->
+  <StackPanel Orientation="Vertical" Spacing="8" HorizontalAlignment="Center">
 
+    <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center">
+
+      <Border Name="ToolBar"
+              Margin="0,0,8,0"
+              Height="40"
+              Padding="4"
+              CornerRadius="12"
+              Background="{DynamicResource CpSurfaceOverlay}"
+              BorderBrush="{DynamicResource CpBorderSubtle}"
+              BorderThickness="1"
+              BoxShadow="{DynamicResource CpShadowFloating}"
+              ToolTip.Tip="{Binding Annotation.StatusText}">
+        <StackPanel Orientation="Horizontal" Spacing="2">
+
+          <StackPanel Orientation="Horizontal"
+                      Spacing="2"
+                      IsEnabled="{Binding Annotation.ToolsEnabled}">
+            <ToggleButton Name="PointerToolButton"
+                          Theme="{DynamicResource ToolToggle}"
+                          AutomationProperties.AutomationId="AnnotationToolSelect"
+                          AutomationProperties.Name="Select"
+                          ToolTip.Tip="Select  V"
+                          IsChecked="{Binding Annotation.IsPointerSelected, Mode=TwoWay}">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconCursor}" />
+            </ToggleButton>
+            <ToggleButton Name="RectangleToolButton"
+                          Theme="{DynamicResource ToolToggle}"
+                          AutomationProperties.AutomationId="AnnotationToolRectangle"
+                          AutomationProperties.Name="Rectangle"
+                          ToolTip.Tip="Rectangle  R"
+                          IsChecked="{Binding Annotation.IsRectangleSelected, Mode=TwoWay}">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconRectangleLandscape}" />
+            </ToggleButton>
+            <ToggleButton Name="EllipseToolButton"
+                          Theme="{DynamicResource ToolToggle}"
+                          AutomationProperties.AutomationId="AnnotationToolEllipse"
+                          AutomationProperties.Name="Ellipse"
+                          ToolTip.Tip="Ellipse  E"
+                          IsChecked="{Binding Annotation.IsEllipseSelected, Mode=TwoWay}">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconCircle}" />
+            </ToggleButton>
+            <ToggleButton Name="FreehandToolButton"
+                          Theme="{DynamicResource ToolToggle}"
+                          AutomationProperties.AutomationId="AnnotationToolFreehand"
+                          AutomationProperties.Name="Freehand"
+                          ToolTip.Tip="Freehand  F"
+                          IsChecked="{Binding Annotation.IsFreehandSelected, Mode=TwoWay}">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconPen}" />
+            </ToggleButton>
+            <ToggleButton Name="ArrowToolButton"
+                          Theme="{DynamicResource ToolToggle}"
+                          AutomationProperties.AutomationId="AnnotationToolArrow"
+                          AutomationProperties.Name="Arrow"
+                          ToolTip.Tip="Arrow  A"
+                          IsChecked="{Binding Annotation.IsArrowSelected, Mode=TwoWay}">
+              <PathIcon Classes="icon" Data="{DynamicResource CpIconArrowUpRight}" />
+            </ToggleButton>
+          </StackPanel>
+
+          <Border Classes="divider" VerticalAlignment="Center" />
+
+          <Button Name="ClearMarksButton"
+                  Theme="{DynamicResource IconButton}"
+                  AutomationProperties.AutomationId="AnnotationClearMarks"
+                  AutomationProperties.Name="Clear marks"
+                  ToolTip.Tip="Clear marks  removes every mark from the message"
+                  Command="{Binding Annotation.ClearMarksCommand}"
+                  IsEnabled="{Binding Annotation.HasMarks}">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconDelete}" />
+          </Button>
+
+        </StackPanel>
+      </Border>
+
+      <!-- The warning chip while marks of the message were made on another picture -->
+      <Border Name="HiddenMarksChip"
+              Height="28"
+              Padding="10,0"
+              VerticalAlignment="Center"
+              CornerRadius="{DynamicResource CpRadiusPill}"
+              Background="{DynamicResource CpSurfaceOverlay}"
+              BorderBrush="{DynamicResource CpWarning}"
+              BorderThickness="1"
+              ToolTip.Tip="{Binding Annotation.HiddenMarksText}"
+              IsVisible="{Binding Annotation.HasHiddenMarks}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Classes="icon" Foreground="{DynamicResource CpWarning}" Data="{DynamicResource CpIconWarning}" />
+          <TextBlock VerticalAlignment="Center"
+                     FontSize="{DynamicResource CpFontSmall}"
+                     Foreground="{DynamicResource CpTextPrimary}"
+                     Text="{Binding Annotation.HiddenMarkCount, StringFormat='{}{0} hidden'}" />
+        </StackPanel>
+      </Border>
+
+    </WrapPanel>
+
+    <!-- The note of a finished shape, in a card under the bar -->
+    <Border Name="NoteCard"
+            Padding="8"
+            HorizontalAlignment="Center"
+            CornerRadius="12"
+            Background="{DynamicResource CpSurfaceOverlay}"
+            BorderBrush="{DynamicResource CpBorderSubtle}"
+            BorderThickness="1"
+            BoxShadow="{DynamicResource CpShadowFloating}"
+            IsVisible="{Binding Annotation.IsNoteEditing}">
+      <StackPanel Name="NotePanel"
+                  AutomationProperties.AutomationId="AnnotationNotePanel"
+                  Orientation="Vertical"
+                  Spacing="8"
+                  IsVisible="{Binding Annotation.IsNoteEditing}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <TextBlock VerticalAlignment="Center"
+                     Foreground="{DynamicResource CpTextSecondary}"
+                     Text="Note:" />
+          <TextBox Name="NoteBox"
+                   AutomationProperties.AutomationId="AnnotationNoteBox"
+                   AutomationProperties.Name="Note for the new mark (optional)"
+                   Width="220"
+                   PlaceholderText="Optional short note"
+                   Text="{Binding Annotation.NoteText, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+          <Button AutomationProperties.AutomationId="AnnotationNoteAdd"
+                  Content="Add mark"
+                  Command="{Binding Annotation.CommitNoteCommand}" />
+          <Button AutomationProperties.AutomationId="AnnotationNoteSkip"
+                  Content="Skip note"
+                  Command="{Binding Annotation.SkipNoteCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <!-- What is said to the user as a live region for the screen reader; the sighted user gets it as the tooltip of the bar -->
     <TextBlock Name="StatusLine"
+               Classes="reader"
                AutomationProperties.AutomationId="AnnotationStatus"
                AutomationProperties.LiveSetting="Polite"
-               VerticalAlignment="Center"
-               Opacity="0.8"
-               MaxWidth="360"
-               TextTrimming="CharacterEllipsis"
-               ToolTip.Tip="{Binding Annotation.StatusText}"
                Text="{Binding Annotation.StatusText}" />
 
     <TextBlock Name="HiddenMarksLine"
+               Classes="reader"
                AutomationProperties.AutomationId="AnnotationHiddenMarks"
                AutomationProperties.LiveSetting="Polite"
-               Margin="8,0,0,0"
-               VerticalAlignment="Center"
-               Foreground="DarkOrange"
-               MaxWidth="360"
-               TextTrimming="CharacterEllipsis"
-               ToolTip.Tip="{Binding Annotation.HiddenMarksText}"
                IsVisible="{Binding Annotation.HasHiddenMarks}"
                Text="{Binding Annotation.HiddenMarksText}" />
 
-  </WrapPanel>
+  </StackPanel>
 
 </UserControl>

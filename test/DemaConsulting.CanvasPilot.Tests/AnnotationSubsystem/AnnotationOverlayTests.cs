@@ -534,6 +534,32 @@ public sealed class AnnotationOverlayTests
     }
 
     /// <summary>
+    ///     Test that the clear command can be used only while the message holds a mark, and then asks the host to clear them.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_ClearMarksCommand_OnlyWithMarks_AsksTheHost()
+    {
+        // Arrange: a mark with a chip, and a count of the requests
+        var overlay = CreateOverlay();
+        var requests = 0;
+        overlay.ClearMarksRequested += (_, _) => requests++;
+        var offWithoutMarks = overlay.HasMarks;
+        var mark = _marks.Add(_source.CurrentImage!, MarkKind.Rectangle, [new RenderPoint(10, 10), new RenderPoint(50, 40)]);
+
+        // Act: the chip is in the message, the command is used, then the chip is gone
+        overlay.SetActiveMarkIds([mark.Id]);
+        var onWithMark = (overlay.HasMarks, overlay.ClearMarksCommand.CanExecute(null));
+        overlay.ClearMarksCommand.Execute(null);
+        overlay.SetActiveMarkIds([]);
+
+        // Assert
+        Assert.False(offWithoutMarks);
+        Assert.Equal((true, true), onWithMark);
+        Assert.Equal(1, requests);
+        Assert.False(overlay.HasMarks);
+    }
+
+    /// <summary>
     ///     Test that the same pixels drawn again show the marks again, that marks are hidden while no picture is shown, and
     ///     that several hidden marks are counted with the plural text.
     /// </summary>

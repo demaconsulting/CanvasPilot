@@ -24,6 +24,8 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AnnotationSubsystem;
 
@@ -38,6 +40,11 @@ public sealed partial class AnnotationToolbarView : UserControl
     ///     The layer's view model the view is following, or null.
     /// </summary>
     private AnnotationOverlayViewModel? _annotation;
+
+    /// <summary>
+    ///     The pane that shows the tool bar, whose keys choose the tools, or null.
+    /// </summary>
+    private PreviewPaneView? _pane;
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="AnnotationToolbarView" /> class.
@@ -60,6 +67,12 @@ public sealed partial class AnnotationToolbarView : UserControl
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         Follow(null);
+        if (_pane is not null)
+        {
+            _pane.RemoveHandler(KeyDownEvent, OnPaneKeyDown);
+            _pane = null;
+        }
+
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -68,6 +81,38 @@ public sealed partial class AnnotationToolbarView : UserControl
     {
         base.OnAttachedToVisualTree(e);
         Follow((DataContext as AnnotationToolbarViewModel)?.Annotation);
+
+        // The tool keys work while the focus is anywhere in the pane that shows the tool bar, except in a box for text
+        _pane = this.FindAncestorOfType<PreviewPaneView>();
+        _pane?.AddHandler(KeyDownEvent, OnPaneKeyDown);
+    }
+
+    /// <summary>
+    ///     Chooses the tool of a key: V for Select, R for rectangle, E for ellipse, F for freehand, and A for arrow.
+    /// </summary>
+    /// <param name="sender">The pane.</param>
+    /// <param name="e">The key.</param>
+    private void OnPaneKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || e.KeyModifiers != KeyModifiers.None || _annotation is not { ToolsEnabled: true } || e.Source is TextBox)
+        {
+            return;
+        }
+
+        AnnotationTool? tool = e.Key switch
+        {
+            Key.V => AnnotationTool.None,
+            Key.R => AnnotationTool.Rectangle,
+            Key.E => AnnotationTool.Ellipse,
+            Key.F => AnnotationTool.Freehand,
+            Key.A => AnnotationTool.Arrow,
+            _ => null,
+        };
+        if (tool is { } chosen)
+        {
+            _annotation.SelectTool(chosen);
+            e.Handled = true;
+        }
     }
 
     /// <summary>
