@@ -289,7 +289,10 @@ reviews:
       - "docs/design/canvas-pilot/agent-subsystem/agent-event-mapper.md"
       - "docs/verification/canvas-pilot/agent-subsystem/agent-event-mapper.md"
       - "src/**/AgentSubsystem/AgentEventMapper.cs"
+      - "src/**/AgentSubsystem/CopilotUsageReader.cs"
       - "test/**/AgentSubsystem/AgentEventMapperTests.cs"
+      - "test/**/AgentSubsystem/AgentEventMapperProgressTests.cs"
+      - "test/**/AgentSubsystem/AgentEventMapperUsageTests.cs"
       - "test/**/AgentSubsystem/ScriptedChatClient.cs"
 
   - id: CanvasPilot-Agent-AgentProviderFactory
@@ -319,11 +322,17 @@ reviews:
       - "docs/reqstream/canvas-pilot/agent-subsystem/agent-service.yaml"
       - "docs/design/canvas-pilot/agent-subsystem/agent-service.md"
       - "docs/verification/canvas-pilot/agent-subsystem/agent-service.md"
+      - "src/**/AgentSubsystem/AgentEventCoalescer.cs"
       - "src/**/AgentSubsystem/AgentService.cs"
       - "src/**/AgentSubsystem/RestoredHistoryDigest.cs"
       - "src/**/AgentSubsystem/RuntimeLogAdapter.cs"
+      - "test/**/AgentSubsystem/AgentEventCoalescerTests.cs"
+      - "test/**/AgentSubsystem/AgentLoggingTests.cs"
+      - "test/**/AgentSubsystem/AgentServicePipelineTests.cs"
+      - "test/**/AgentSubsystem/AgentServiceStopTests.cs"
       - "test/**/AgentSubsystem/AgentServiceTestRig.cs"
       - "test/**/AgentSubsystem/AgentServiceTests.cs"
+      - "test/**/AgentSubsystem/LiveCopilotLongTurnTests.cs"
       - "test/**/AgentSubsystem/RestoredHistoryDigestTests.cs"
 
   # CanvasPilot - Annotation
@@ -428,6 +437,7 @@ reviews:
       - "docs/verification/canvas-pilot/app-shell-subsystem/main-window-shell.md"
       - "src/**/AppShellSubsystem/MainWindowShell.cs"
       - "src/**/AppShellSubsystem/IDialogService.cs"
+      - "src/**/AppShellSubsystem/IFolderLauncher.cs"
       - "src/**/AppShellSubsystem/MessageDialogViewModel.cs"
       - "src/**/AppShellSubsystem/MessageDialogView.axaml"
       - "src/**/AppShellSubsystem/MessageDialogView.axaml.cs"
@@ -437,6 +447,7 @@ reviews:
       - "test/**/AppShellSubsystem/MessageDialogTests.cs"
       - "test/**/AppShellSubsystem/AppShellSubsystemFakes.cs"
       - "test/**/MainWindowViewTests.cs"
+      - "test/**/MainWindowTitleBarLayoutTests.cs"
       - "test/**/AppShellUiTestSupport.cs"
 
   - id: CanvasPilot-AppShell-StatusBar
@@ -454,6 +465,8 @@ reviews:
       - "src/**/AppShellSubsystem/StatusBarView.axaml"
       - "src/**/AppShellSubsystem/StatusBarView.axaml.cs"
       - "test/**/AppShellSubsystem/StatusBarTests.cs"
+      - "test/**/AppShellSubsystem/StatusBarSavedTimeTests.cs"
+      - "test/**/AppShellSubsystem/PushToTalkHintsTests.cs"
 
   - id: CanvasPilot-AppShell-ProviderPill
     title: Review of CanvasPilot ProviderPill unit implementation
@@ -632,9 +645,27 @@ reviews:
       - "src/**/ChatSubsystem/ChatTurnOutcome.cs"
       - "src/**/ChatSubsystem/ChatTurnRunner.cs"
       - "src/**/ChatSubsystem/ToolActivityText.cs"
+      - "src/**/ChatSubsystem/TurnUsage.cs"
+      - "test/**/ChatSubsystem/ChatTurnRunnerStatusTests.cs"
       - "test/**/ChatSubsystem/ChatTurnRunnerTests.cs"
+      - "test/**/ChatSubsystem/ChatTurnRunnerUsageTests.cs"
       - "test/**/ChatSubsystem/ChatTurnTestSupport.cs"
       - "test/**/ChatSubsystem/ToolActivityTextTests.cs"
+
+  - id: CanvasPilot-Chat-FollowUpSuggestions
+    title: Review of CanvasPilot FollowUpSuggestions unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/follow-up-suggestions.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/follow-up-suggestions.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/follow-up-suggestions.md"
+      - "src/**/ChatSubsystem/FollowUpSuggestions.cs"
+      - "src/**/ChatSubsystem/ProjectDrawingProbe.cs"
+      - "test/**/ChatSubsystem/FollowUpSuggestionsTests.cs"
 
   - id: CanvasPilot-Chat-PayloadInspector
     title: Review of CanvasPilot PayloadInspector unit implementation
@@ -1433,6 +1464,21 @@ reviews:
       - "test/**/SpeechSubsystem/SpeechSubsystemFakes.cs"
       - "test/**/SpeechSettingsPageViewTests.cs"
       - "test/**/SpeechUiTestSupport.cs"
+
+  - id: CanvasPilot-Speech-PushToTalkBinding
+    title: Review of CanvasPilot PushToTalkBinding unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/speech-subsystem.md
+      - docs/reqstream/canvas-pilot/speech-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/speech-subsystem/push-to-talk-binding.yaml"
+      - "docs/design/canvas-pilot/speech-subsystem/push-to-talk-binding.md"
+      - "docs/verification/canvas-pilot/speech-subsystem/push-to-talk-binding.md"
+      - "src/**/SpeechSubsystem/PushToTalkBinding.cs"
+      - "src/**/SpeechSubsystem/PushToTalkSetting.cs"
+      - "test/**/SpeechSubsystem/PushToTalkBindingTests.cs"
 
   # CanvasPilot - Style
   - id: CanvasPilot-Style
