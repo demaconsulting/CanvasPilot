@@ -89,6 +89,11 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     private readonly int _maximumNodes;
 
     /// <summary>
+    ///     Makes the thumbnails, or null for none.
+    /// </summary>
+    private readonly IThumbnailSource? _thumbnails;
+
+    /// <summary>
     ///     The listed files that can be previewed.
     /// </summary>
     private readonly ObservableCollection<ProjectFileItem> _items = [];
@@ -188,6 +193,13 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     private bool _isTruncated;
 
     /// <summary>
+    ///     Whether the small pictures of the files that are drawn are shown at the right of their rows. They are made later,
+    ///     off the user interface thread, and only for rows that can be seen.
+    /// </summary>
+    [ObservableProperty]
+    private bool _showThumbnails = true;
+
+    /// <summary>
     ///     Creates an explorer that shows nothing until <see cref="Open" /> is called.
     /// </summary>
     /// <param name="filter">Decides which files are listed.</param>
@@ -195,12 +207,14 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     /// <param name="debounce">How long to wait after a change before refreshing; <see cref="DefaultDebounce" /> by default.</param>
     /// <param name="logger">Optional logger for diagnostics.</param>
     /// <param name="maximumNodes">The most nodes the tree holds; <see cref="MaximumNodes" /> by default.</param>
+    /// <param name="thumbnails">Makes the small pictures of the files that are drawn, or <see langword="null" /> for none.</param>
     public ProjectExplorerViewModel(
         IImageSourceFilter filter,
         IRefreshScheduler scheduler,
         TimeSpan? debounce = null,
         RollingFileLogger? logger = null,
-        int maximumNodes = MaximumNodes)
+        int maximumNodes = MaximumNodes,
+        IThumbnailSource? thumbnails = null)
     {
         ArgumentNullException.ThrowIfNull(filter);
         ArgumentNullException.ThrowIfNull(scheduler);
@@ -211,6 +225,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
         _debounce = debounce ?? DefaultDebounce;
         _logger = logger;
         _maximumNodes = maximumNodes;
+        _thumbnails = thumbnails;
         Items = new ReadOnlyObservableCollection<ProjectFileItem>(_items);
         Roots = new ReadOnlyObservableCollection<ProjectNodeViewModel>(_roots);
         RefreshCommand = new RelayCommand(Refresh, () => HasProject);
@@ -302,7 +317,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
         SelectedItem = null;
         SelectedNode = null;
         _items.Clear();
-        _roots.Clear();
+        ClearRoots();
         Refresh();
         StartWatching(folder);
     }
@@ -323,7 +338,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
         SelectedItem = null;
         SelectedNode = null;
         _items.Clear();
-        _roots.Clear();
+        ClearRoots();
         _expanded.Clear();
         IsTruncated = false;
         ErrorMessage = string.Empty;
@@ -354,7 +369,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
             Log(LogLevel.Error, $"The project folder '{folder}' could not be read.", ex);
             ErrorMessage = $"The project folder could not be read: {ex.Message}";
             files.Clear();
-            _roots.Clear();
+            ClearRoots();
         }
 
         SyncItems(files);
@@ -367,6 +382,8 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
         {
             SelectedNode = null;
         }
+
+        RequestThumbnails();
     }
 
     /// <summary>
@@ -515,6 +532,149 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
             _generation++;
             _active = false;
         }
+
+        ClearRoots();
+    }
+
+    /// <summary>
+    ///     Empties the tree and disposes the nodes, which frees their thumbnails.
+    /// </summary>
+    private void ClearRoots()
+    {
+        var nodes = _roots.ToList();
+        _roots.Clear();
+        foreach (var node in nodes)
+        {
+            node.Dispose();
+        }
+    }
+
+    /// <summary>
+    ///     Asks for the thumbnails of the files that are drawn and can be seen (all the folders above them are expanded) and
+    ///     do not have one yet, when thumbnails are shown. The work is done off the thread of the user interface.
+    /// </summary>
+    private void RequestThumbnails()
+    {
+        if (!ShowThumbnails || _thumbnails is null || FolderPath is not { } folder)
+        {
+            return;
+        }
+
+        int generation;
+        lock (_syncRoot)
+        {
+            generation = _generation;
+        }
+
+        foreach (var node in VisibleFiles(_roots))
+        {
+            if (node.IsPreviewable && !node.ThumbnailRequested && node.Thumbnail is null)
+            {
+                node.ThumbnailRequested = true;
+                _ = LoadThumbnailAsync(node, folder, generation);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Lists the file nodes that can be seen: those at the top and those in folders that are expanded, which are
+    ///     expanded all the way up.
+    /// </summary>
+    /// <param name="nodes">The nodes of a level.</param>
+    /// <returns>The file nodes.</returns>
+    private static IEnumerable<ProjectNodeViewModel> VisibleFiles(IEnumerable<ProjectNodeViewModel> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            if (!node.IsFolder)
+            {
+                yield return node;
+            }
+            else if (node.IsExpanded)
+            {
+                foreach (var inner in VisibleFiles(node.Children))
+                {
+                    yield return inner;
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Makes the thumbnail of a node and gives it to the node, unless the node, the project, or the setting changed while
+    ///     it was made, in which case the bitmap is thrown away.
+    /// </summary>
+    /// <param name="node">The node.</param>
+    /// <param name="folder">The project folder.</param>
+    /// <param name="generation">The generation of the project when the thumbnail was asked for.</param>
+    /// <returns>A task that completes when the node has its thumbnail or was found not to need one.</returns>
+    private async Task LoadThumbnailAsync(ProjectNodeViewModel node, string folder, int generation)
+    {
+        Avalonia.Media.Imaging.Bitmap? bitmap = null;
+        try
+        {
+            bitmap = await _thumbnails!.CreateAsync(node.FullPath, folder, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OperationCanceledException or InvalidOperationException)
+        {
+            Log(LogLevel.Warning, $"The thumbnail of '{node.FullPath}' could not be made.", ex);
+        }
+
+        int current;
+        lock (_syncRoot)
+        {
+            current = _generation;
+        }
+
+        if (node.IsDisposed || !ShowThumbnails || current != generation || _disposed)
+        {
+            bitmap?.Dispose();
+            return;
+        }
+
+        node.SetThumbnail(bitmap);
+    }
+
+    /// <summary>
+    ///     Takes the thumbnails away when they are turned off, and asks for them when they are turned on.
+    /// </summary>
+    /// <param name="value">Whether thumbnails are shown.</param>
+    partial void OnShowThumbnailsChanged(bool value)
+    {
+        if (value)
+        {
+            RequestThumbnails();
+            return;
+        }
+
+        foreach (var node in AllFiles(_roots))
+        {
+            node.SetThumbnail(null);
+            node.ThumbnailRequested = false;
+        }
+    }
+
+    /// <summary>
+    ///     Lists every file node of the tree, seen or not.
+    /// </summary>
+    /// <param name="nodes">The nodes of a level.</param>
+    /// <returns>The file nodes.</returns>
+    private static IEnumerable<ProjectNodeViewModel> AllFiles(IEnumerable<ProjectNodeViewModel> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            if (!node.IsFolder)
+            {
+                yield return node;
+            }
+            else
+            {
+                foreach (var inner in AllFiles(node.Children))
+                {
+                    yield return inner;
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -553,7 +713,9 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
         {
             if (!wanted.Contains(target[index].FullPath))
             {
+                var removed = target[index];
                 target.RemoveAt(index);
+                removed.Dispose();
             }
         }
 
@@ -595,9 +757,13 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
                     IsTruncated = true;
                 }
             }
-            else if (node.IsPreviewable)
+            else
             {
-                files.Add(new ProjectFileItem(node.Name, node.FullPath));
+                node.UpdateStamp(entry.Ticks, entry.Length);
+                if (node.IsPreviewable)
+                {
+                    files.Add(new ProjectFileItem(node.Name, node.FullPath));
+                }
             }
         }
     }
@@ -624,7 +790,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
                            && !string.Equals(file.Extension, ProjectDocument.FileExtension, StringComparison.OrdinalIgnoreCase)
                            && (_filter.IsImageSource(file.Name) || ProjectNodeViewModel.IsListedAsset(file.Name)))
             .OrderBy(file => file.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(file => new EntryInfo(file.Name, file.FullName, false));
+            .Select(file => new EntryInfo(file.Name, file.FullName, false, file.LastWriteTimeUtc.Ticks, file.Length));
         return [.. folders, .. files];
     }
 
@@ -662,6 +828,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
             if (node.IsExpanded)
             {
                 _expanded.Add(node.FullPath);
+                RequestThumbnails();
             }
             else
             {
@@ -1031,7 +1198,9 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     /// <param name="Name">The name of the file or folder.</param>
     /// <param name="FullPath">The full path.</param>
     /// <param name="IsFolder">Whether the entry is a folder.</param>
-    private sealed record EntryInfo(string Name, string FullPath, bool IsFolder);
+    /// <param name="Ticks">The time a file was written, in ticks, or zero for a folder.</param>
+    /// <param name="Length">The size of a file in bytes, or zero for a folder.</param>
+    private sealed record EntryInfo(string Name, string FullPath, bool IsFolder, long Ticks = 0, long Length = 0);
 
     /// <summary>
     ///     Changes the list to match a new list with the fewest changes, so the selection and scroll position of

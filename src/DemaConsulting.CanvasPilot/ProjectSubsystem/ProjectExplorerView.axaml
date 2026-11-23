@@ -136,7 +136,7 @@
       </TreeView.Styles>
       <TreeView.ItemTemplate>
         <TreeDataTemplate x:DataType="vm:ProjectNodeViewModel" ItemsSource="{Binding Children}">
-          <Grid ColumnDefinitions="Auto,*" ToolTip.Tip="{Binding FullPath}">
+          <Grid ColumnDefinitions="Auto,*,Auto" ToolTip.Tip="{Binding FullPath}">
             <Border Grid.Column="0"
                     Classes="badge"
                     Classes.open="{Binding IsExpanded}"
@@ -148,6 +148,20 @@
                        VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis"
                        Text="{Binding Name}" />
+            <!-- The small picture of a file that is drawn, 28 by 18, right aligned. It is decoration: the name says what the
+                 file is. -->
+            <Border Grid.Column="2"
+                    AutomationProperties.AutomationId="ExplorerThumbnail"
+                    Margin="8,0,0,0"
+                    Width="28"
+                    Height="18"
+                    CornerRadius="3"
+                    ClipToBounds="True"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource CpBorderSubtle}"
+                    IsVisible="{Binding HasThumbnail}">
+              <Image Source="{Binding Thumbnail}" Stretch="UniformToFill" />
+            </Border>
           </Grid>
         </TreeDataTemplate>
       </TreeView.ItemTemplate>

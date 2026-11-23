@@ -514,6 +514,102 @@ public sealed class ProjectExplorerTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that thumbnails are asked for only for files that are drawn and can be seen (every folder above them
+    ///     expanded), once for each, again for a file that changed, not at all while thumbnails are off, and again for the
+    ///     files that can be seen when they are turned on.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_Thumbnails_AskedOnlyForDrawnVisibleFilesAndAgainWhenTheFileChangesOrTheSettingIsOn()
+    {
+        // Arrange: a project with a picture at the top, a picture and a PDF in a collapsed folder, and a source that records
+        // what it is asked for
+        Touch("top.svg", "assets/inner.svg", "assets/plan.pdf");
+        var source = new RecordingThumbnailSource();
+        var explorer = new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg"), _scheduler, thumbnails: source);
+        _explorers.Add(explorer);
+
+        // Act: open the project, expand the folder, refresh with nothing changed, change a file, turn thumbnails off and on
+        explorer.Open(Folder);
+        var afterOpen = source.Requested.ToArray();
+        explorer.Roots[0].IsExpanded = true;
+        var afterExpand = source.Requested.ToArray();
+        explorer.Refresh();
+        var afterRefresh = source.Requested.Count;
+        File.WriteAllText(Path.Combine(Folder, "top.svg"), "<svg/>");
+        explorer.Refresh();
+        var afterChange = source.Requested.Count;
+        explorer.ShowThumbnails = false;
+        File.WriteAllText(Path.Combine(Folder, "top.svg"), "<svg xmlns='http://www.w3.org/2000/svg'/>");
+        explorer.Refresh();
+        var whileOff = source.Requested.Count;
+        explorer.ShowThumbnails = true;
+        var afterOn = source.Requested.Count;
+
+        // Assert: only the drawn file that could be seen was asked for at first, the inner one after the expansion, nothing again
+        // for an unchanged file, one more for the changed file, nothing while off, and both files again when turned on
+        Assert.Equal([Path.Combine(Folder, "top.svg")], afterOpen);
+        Assert.Equal([Path.Combine(Folder, "top.svg"), Path.Combine(Folder, "assets", "inner.svg")], afterExpand);
+        Assert.Equal(2, afterRefresh);
+        Assert.Equal(3, afterChange);
+        Assert.Equal(3, whileOff);
+        Assert.Equal(5, afterOn);
+        Assert.All(source.Folders, folder => Assert.Equal(Folder, folder));
+    }
+
+    /// <summary>
+    ///     Test that an explorer with no source of thumbnails asks for none and works as before, and that a source that fails
+    ///     leaves the node without a thumbnail and does not break the explorer.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_Thumbnails_NoSourceOrFailingSource_LeavesNodesWithoutThumbnail()
+    {
+        // Arrange: an explorer with no source, and one whose source throws a file problem
+        Touch("one.svg");
+        var plain = new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg"), _scheduler);
+        var failing = new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg"), _scheduler, thumbnails: new RecordingThumbnailSource { Failure = new IOException("gone") });
+        _explorers.Add(plain);
+        _explorers.Add(failing);
+
+        // Act: open the project in both
+        plain.Open(Folder);
+        failing.Open(Folder);
+
+        // Assert: the nodes have no thumbnail, and the failing source did not break the listing
+        Assert.False(plain.Roots[0].HasThumbnail);
+        Assert.False(failing.Roots[0].HasThumbnail);
+        Assert.Null(failing.Roots[0].Thumbnail);
+        Assert.Equal(["one.svg"], failing.Items.Select(item => item.Name));
+        Assert.True(failing.ShowThumbnails);
+    }
+
+    /// <summary>
+    ///     Test that the nodes that are removed from the tree or cleared with it are disposed, so that a thumbnail that arrives
+    ///     for them later is thrown away.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_Nodes_RemovedOrCleared_AreDisposed()
+    {
+        // Arrange: a project with a folder and a picture
+        Touch("assets/one.svg", "top.svg");
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+        var folder = explorer.Roots[0];
+        var inner = folder.Children[0];
+        var top = explorer.Roots[1];
+
+        // Act: the picture goes away from disk and the tree is refreshed, and then the project is closed
+        File.Delete(Path.Combine(Folder, "top.svg"));
+        explorer.Refresh();
+        var afterRemove = (top.IsDisposed, folder.IsDisposed);
+        explorer.Close();
+
+        // Assert: the removed node was disposed at once, and the rest when the project closed
+        Assert.Equal((true, false), afterRemove);
+        Assert.True(folder.IsDisposed);
+        Assert.True(inner.IsDisposed);
+    }
+
+    /// <summary>
     ///     Test that a file with the hidden attribute is not listed.
     /// </summary>
     [Fact]

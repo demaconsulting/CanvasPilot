@@ -361,8 +361,10 @@ public sealed class ApplicationComposition : IDisposable
 
         var projects = new ProjectService(logger);
         var recentProjects = new RecentProjects(settings);
-        var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), scheduler, logger: logger);
         var renderer = renderService ?? new ImageRenderService(logger);
+        var thumbnails = new ThumbnailProvider(renderer);
+        var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), scheduler, logger: logger, thumbnails: thumbnails);
+        explorer.ShowThumbnails = settings.Current.Appearance.ShowThumbnails;
         var dragSource = new ImageDragSource(
             renderer,
             dragFolder ?? Path.Combine(Path.GetTempPath(), "CanvasPilot", "drag"),
@@ -390,7 +392,7 @@ public sealed class ApplicationComposition : IDisposable
         // The speech services are shared by the Speech settings page and by dictation. They touch the model store
         // and the audio system only when they are first used, so creating them costs nothing at startup; the ones
         // created here are the composition's to dispose, the dictation service before the model service it uses.
-        var owned = new List<IDisposable>();
+        var owned = new List<IDisposable> { thumbnails };
         if (speechModels is null)
         {
             var modelService = new SpeechModelService(logger);

@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Collections.ObjectModel;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace DemaConsulting.CanvasPilot.ProjectSubsystem;
@@ -58,12 +59,27 @@ public enum ProjectNodeKind
 ///     A folder or a file in the explorer tree of the open project. A folder holds its children and can be expanded; a file
 ///     can be selected and, when CanvasNet draws it, previewed.
 /// </summary>
-public sealed partial class ProjectNodeViewModel : ObservableObject
+public sealed partial class ProjectNodeViewModel : ObservableObject, IDisposable
 {
     /// <summary>
     ///     The children of a folder, which a file does not have.
     /// </summary>
     private readonly ObservableCollection<ProjectNodeViewModel> _children = [];
+
+    /// <summary>
+    ///     The small picture of the file, or null.
+    /// </summary>
+    private Bitmap? _thumbnail;
+
+    /// <summary>
+    ///     The size and time of the file that the thumbnail was asked for, which change when the file changes.
+    /// </summary>
+    private (long Ticks, long Length)? _stamp;
+
+    /// <summary>
+    ///     Whether the node was disposed.
+    /// </summary>
+    private bool _disposed;
 
     /// <summary>
     ///     Whether a folder is expanded in the tree.
@@ -147,6 +163,88 @@ public sealed partial class ProjectNodeViewModel : ObservableObject
     ///     Gets the collection that the explorer changes to follow the folder on disk.
     /// </summary>
     internal ObservableCollection<ProjectNodeViewModel> MutableChildren => _children;
+
+    /// <summary>
+    ///     Gets the small picture of the file, drawn at the right of its row, or <see langword="null" /> while there is none: it
+    ///     is made later and off the user interface thread, only for a file that is drawn and only when thumbnails are shown.
+    ///     The node owns the bitmap and disposes it.
+    /// </summary>
+    public Bitmap? Thumbnail => _thumbnail;
+
+    /// <summary>
+    ///     Gets a value indicating whether the node has a thumbnail.
+    /// </summary>
+    public bool HasThumbnail => _thumbnail is not null;
+
+    /// <summary>
+    ///     Gets a value indicating whether a thumbnail was asked for and is being made or was made, so that it is not asked
+    ///     for again until the file changes.
+    /// </summary>
+    internal bool ThumbnailRequested { get; set; }
+
+    /// <summary>
+    ///     Gets a value indicating whether the node was disposed, after which a thumbnail that arrives late is dropped.
+    /// </summary>
+    internal bool IsDisposed => _disposed;
+
+    /// <summary>
+    ///     Gives the node a thumbnail, disposing the one it had. A node that was disposed disposes the new one at once.
+    /// </summary>
+    /// <param name="bitmap">The new thumbnail, owned by the node from now on, or <see langword="null" /> for none.</param>
+    internal void SetThumbnail(Bitmap? bitmap)
+    {
+        if (_disposed)
+        {
+            bitmap?.Dispose();
+            return;
+        }
+
+        var old = _thumbnail;
+        _thumbnail = bitmap;
+        if (!ReferenceEquals(old, bitmap))
+        {
+            OnPropertyChanged(nameof(Thumbnail));
+            OnPropertyChanged(nameof(HasThumbnail));
+            old?.Dispose();
+        }
+    }
+
+    /// <summary>
+    ///     Tells the node the size and time of its file. When they differ from the ones before, the file changed, so the
+    ///     thumbnail is dropped and may be asked for again.
+    /// </summary>
+    /// <param name="ticks">The time the file was written, in ticks.</param>
+    /// <param name="length">The size of the file in bytes.</param>
+    internal void UpdateStamp(long ticks, long length)
+    {
+        var stamp = (ticks, length);
+        if (_stamp is { } known && known != stamp)
+        {
+            SetThumbnail(null);
+            ThumbnailRequested = false;
+        }
+
+        _stamp = stamp;
+    }
+
+    /// <summary>
+    ///     Disposes the thumbnail of the node and of the nodes below it.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+        _thumbnail?.Dispose();
+        _thumbnail = null;
+        foreach (var child in _children)
+        {
+            child.Dispose();
+        }
+    }
 
     /// <summary>
     ///     Tells the kind of entry that a file with a name is.

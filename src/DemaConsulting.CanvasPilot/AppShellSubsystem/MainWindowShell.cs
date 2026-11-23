@@ -272,6 +272,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         Workspace.RestoreColumnWidths(_settingsService.Current.Window.ExplorerWidth, _settingsService.Current.Window.ChatWidth);
         Workspace.LayoutChanged += OnWorkspaceLayoutChanged;
 
+        // The explorer shows thumbnails as the Appearance page says, now and whenever the choice changes
+        Workspace.Explorer.ShowThumbnails = _settingsService.Current.Appearance.ShowThumbnails;
+        _settingsService.Changed += OnSettingsChanged;
+
         RefreshRecentProjects();
         SyncProjectState();
     }
@@ -381,6 +385,17 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     }
 
     /// <summary>
+    ///     Shows or hides the thumbnails of the explorer when the choice in the settings changed.
+    /// </summary>
+    /// <param name="sender">The settings service.</param>
+    /// <param name="e">The settings now in effect.</param>
+    private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
+    {
+        var show = e.Settings.Appearance.ShowThumbnails;
+        RunOnOwnerThread(() => Workspace.Explorer.ShowThumbnails = show);
+    }
+
+    /// <summary>
     ///     Saves the widths of the explorer and the chat column when the user chose other ones.
     /// </summary>
     /// <param name="sender">The workspace.</param>
@@ -479,6 +494,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
 
         StatusBar.Dispose();
         ProviderPill?.Dispose();
+        _settingsService.Changed -= OnSettingsChanged;
         Workspace.LayoutChanged -= OnWorkspaceLayoutChanged;
         Workspace.Dispose();
     }

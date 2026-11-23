@@ -1148,12 +1148,15 @@ reviews:
       - "src/**/ProjectSubsystem/IRefreshScheduler.cs"
       - "src/**/ProjectSubsystem/ProjectFileItem.cs"
       - "src/**/ProjectSubsystem/ProjectNodeViewModel.cs"
+      - "src/**/ProjectSubsystem/IThumbnailSource.cs"
+      - "src/**/PreviewSubsystem/ThumbnailProvider.cs"
       - "src/**/ProjectSubsystem/ProjectExplorerViewModel.cs"
       - "src/**/ProjectSubsystem/ProjectExplorerView.axaml"
       - "src/**/ProjectSubsystem/ProjectExplorerView.axaml.cs"
       - "test/**/ProjectSubsystem/ProjectExplorerTests.cs"
       - "test/**/ProjectSubsystem/ProjectSubsystemFakes.cs"
       - "test/**/ProjectExplorerViewTests.cs"
+      - "test/**/ThumbnailViewTests.cs"
 
   # CanvasPilot - Settings
   - id: CanvasPilot-Settings

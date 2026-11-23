@@ -18,6 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia.Media.Imaging;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
@@ -146,5 +147,35 @@ public sealed class FakeImageSourceFilter(params string[] extensions) : IImageSo
     public bool IsImageSource(string fileName)
     {
         return extensions.Contains(Path.GetExtension(fileName), StringComparer.OrdinalIgnoreCase);
+    }
+}
+
+/// <summary>
+///     Hand-written source of thumbnails for tests: it records which files it was asked for and gives no bitmap, or fails with
+///     the exception that a test gives it, so that the explorer can be tested without a platform that makes bitmaps.
+/// </summary>
+public sealed class RecordingThumbnailSource : IThumbnailSource
+{
+    /// <summary>
+    ///     Gets the full paths of the files that thumbnails were asked for, in order.
+    /// </summary>
+    public List<string> Requested { get; } = [];
+
+    /// <summary>
+    ///     Gets the project folders that came with the requests, in order.
+    /// </summary>
+    public List<string> Folders { get; } = [];
+
+    /// <summary>
+    ///     Gets or sets the exception that a request fails with, or <see langword="null" /> for none.
+    /// </summary>
+    public Exception? Failure { get; set; }
+
+    /// <inheritdoc />
+    public Task<Bitmap?> CreateAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
+    {
+        Requested.Add(filePath);
+        Folders.Add(projectFolder);
+        return Failure is null ? Task.FromResult<Bitmap?>(null) : Task.FromException<Bitmap?>(Failure);
     }
 }
