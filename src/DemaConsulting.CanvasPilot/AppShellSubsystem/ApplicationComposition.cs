@@ -492,7 +492,8 @@ public sealed class ApplicationComposition : IDisposable
             stylePicker,
             styleCheck,
             dialogs => new StyleKitManagerViewModel(styleCatalog, styleSelection, renderer, dialogs, projects, logger),
-            logger);
+            logger,
+            thumbnails);
         pickerOwner = shell;
 
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project

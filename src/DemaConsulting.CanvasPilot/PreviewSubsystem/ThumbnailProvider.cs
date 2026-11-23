@@ -134,10 +134,16 @@ public sealed class ThumbnailProvider : IThumbnailSource, IDisposable
     public int RenderCount { get; private set; }
 
     /// <inheritdoc />
-    public async Task<Bitmap?> CreateAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
+    public Task<Bitmap?> CreateAsync(string filePath, string projectFolder, CancellationToken cancellationToken) =>
+        CreateAsync(filePath, projectFolder, ThumbnailWidth, ThumbnailHeight, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<Bitmap?> CreateAsync(string filePath, string projectFolder, int width, int height, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
+        ArgumentOutOfRangeException.ThrowIfLessThan(width, 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(height, 1);
 
         var info = new FileInfo(filePath);
         if (!info.Exists)
@@ -145,14 +151,14 @@ public sealed class ThumbnailProvider : IThumbnailSource, IDisposable
             return null;
         }
 
-        var key = $"{info.FullName}|{info.LastWriteTimeUtc.Ticks}|{info.Length}";
+        var key = $"{info.FullName}|{info.LastWriteTimeUtc.Ticks}|{info.Length}|{width}x{height}";
         var image = TryGetCached(key);
         if (image is null)
         {
             await _gate.WaitAsync(cancellationToken);
             try
             {
-                image = TryGetCached(key) ?? await DrawAsync(key, info.FullName, projectFolder, cancellationToken);
+                image = TryGetCached(key) ?? await DrawAsync(key, info.FullName, projectFolder, width, height, cancellationToken);
             }
             finally
             {
@@ -194,11 +200,13 @@ public sealed class ThumbnailProvider : IThumbnailSource, IDisposable
     /// <param name="key">The key of the file.</param>
     /// <param name="filePath">The full path of the file.</param>
     /// <param name="projectFolder">The project folder.</param>
+    /// <param name="width">The width in pixels.</param>
+    /// <param name="height">The height in pixels.</param>
     /// <param name="cancellationToken">Cancels the render.</param>
     /// <returns>The thumbnail, or <see langword="null" /> when the file could not be drawn.</returns>
-    private async Task<RenderedImage?> DrawAsync(string key, string filePath, string projectFolder, CancellationToken cancellationToken)
+    private async Task<RenderedImage?> DrawAsync(string key, string filePath, string projectFolder, int width, int height, CancellationToken cancellationToken)
     {
-        var settings = new RenderSettings(ThumbnailWidth, ThumbnailHeight, BackgroundHex: BackgroundHex);
+        var settings = new RenderSettings(width, height, BackgroundHex: BackgroundHex);
         var result = await _renderer.RenderAsync(filePath, projectFolder, settings, cancellationToken);
         if (result.Image is not { } drawn)
         {

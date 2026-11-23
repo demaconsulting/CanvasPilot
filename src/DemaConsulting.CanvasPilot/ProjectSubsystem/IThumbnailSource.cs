@@ -36,4 +36,17 @@ public interface IThumbnailSource
     /// <param name="cancellationToken">Cancels the work.</param>
     /// <returns>A task with the bitmap, or <see langword="null" /> when the file could not be drawn.</returns>
     Task<Bitmap?> CreateAsync(string filePath, string projectFolder, CancellationToken cancellationToken);
+
+    /// <summary>
+    ///     Makes a larger picture of a file, as the welcome screen shows for a recent project. A source that draws only one
+    ///     size gives the thumbnail of the explorer.
+    /// </summary>
+    /// <param name="filePath">The full path of the file.</param>
+    /// <param name="projectFolder">The project folder, which is the only folder that the file may read from.</param>
+    /// <param name="width">The width of the picture in pixels.</param>
+    /// <param name="height">The height of the picture in pixels.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    /// <returns>A task with the bitmap, or <see langword="null" /> when the file could not be drawn.</returns>
+    Task<Bitmap?> CreateAsync(string filePath, string projectFolder, int width, int height, CancellationToken cancellationToken) =>
+        CreateAsync(filePath, projectFolder, cancellationToken);
 }

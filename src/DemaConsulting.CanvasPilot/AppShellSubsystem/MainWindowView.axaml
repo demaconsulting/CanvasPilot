@@ -221,9 +221,19 @@
     <vm:StatusBarView DockPanel.Dock="Bottom"
                       DataContext="{Binding StatusBar}" />
 
-    <ContentControl Name="WorkspaceHost"
-                    AutomationProperties.AutomationId="WorkspaceHost"
-                    Content="{Binding Workspace}" />
+    <!-- With no project open the welcome screen fills the body; the workspace takes its place once a project is open. -->
+    <Grid>
+      <ContentControl Name="WorkspaceHost"
+                      AutomationProperties.AutomationId="WorkspaceHost"
+                      IsVisible="{Binding HasProject}"
+                      Content="{Binding Workspace}" />
+      <ContentControl Name="WelcomeHost"
+                      AutomationProperties.AutomationId="WelcomeHost"
+                      HorizontalContentAlignment="Stretch"
+                      VerticalContentAlignment="Stretch"
+                      IsVisible="{Binding !HasProject}"
+                      Content="{Binding Welcome}" />
+    </Grid>
 
   </DockPanel>
 

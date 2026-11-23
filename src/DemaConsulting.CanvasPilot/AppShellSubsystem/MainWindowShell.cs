@@ -34,36 +34,6 @@ using DemaConsulting.CanvasPilot.StyleSubsystem;
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
 /// <summary>
-///     An entry of the Recent Projects menu.
-/// </summary>
-/// <param name="name">The project name shown in the menu.</param>
-/// <param name="filePath">The full path of the project file.</param>
-/// <param name="openCommand">The command that opens the project.</param>
-public sealed class RecentProjectItem(string name, string filePath, IAsyncRelayCommand openCommand)
-{
-    /// <summary>
-    ///     Gets the project name.
-    /// </summary>
-    public string Name { get; } = name;
-
-    /// <summary>
-    ///     Gets the menu header: the project name with underscores doubled so the menu shows them as typed
-    ///     instead of treating them as access keys.
-    /// </summary>
-    public string Header { get; } = name.Replace("_", "__", StringComparison.Ordinal);
-
-    /// <summary>
-    ///     Gets the full path of the project file.
-    /// </summary>
-    public string FilePath { get; } = filePath;
-
-    /// <summary>
-    ///     Gets the command that opens the project.
-    /// </summary>
-    public IAsyncRelayCommand OpenCommand { get; } = openCommand;
-}
-
-/// <summary>
 ///     View model of the application's main window: the File, Edit, Image, Tools, and Help menus, the open project, the
 ///     recent projects list, the window title, and the workspace. The Help menu shows the About dialog and the browser of
 ///     the drawing knowledge. The Edit menu undoes and redoes in the part of the window that has the focus
@@ -132,6 +102,16 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Optional logger for diagnostics.
     /// </summary>
     private readonly RollingFileLogger? _logger;
+
+    /// <summary>
+    ///     Draws the picture of the recent project cards of the welcome screen, or null for none.
+    /// </summary>
+    private readonly RecentThumbnailLoader? _recentThumbnails;
+
+    /// <summary>
+    ///     Tells which files of a project are pictures.
+    /// </summary>
+    private readonly IImageSourceFilter _pictureFilter = new CanvasNetImageSourceFilter();
 
     /// <summary>
     ///     The synchronization context of the thread that created the shell, which owns the user interface, or null.
@@ -220,6 +200,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     window disposes the view model it is given.
     /// </param>
     /// <param name="logger">Optional logger for diagnostics.</param>
+    /// <param name="recentThumbnails">
+    ///     Draws the pictures on the cards of the recent projects of the welcome screen, or <see langword="null" /> for none, which
+    ///     leaves the cards without a picture. The shell does not dispose it.
+    /// </param>
     public MainWindowShell(
         IProjectService projectService,
         IRecentProjects recentProjects,
@@ -232,7 +216,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         StylePickerViewModel? style = null,
         ICheckAgainstStyle? checkAgainstStyle = null,
         Func<IStyleKitDialogs, StyleKitManagerViewModel>? styleKits = null,
-        RollingFileLogger? logger = null)
+        RollingFileLogger? logger = null,
+        IThumbnailSource? recentThumbnails = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
         ArgumentNullException.ThrowIfNull(recentProjects);
@@ -250,10 +235,12 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _styleCheck = checkAgainstStyle;
         _styleKits = styleKits;
         _logger = logger;
+        _recentThumbnails = recentThumbnails is null ? null : new RecentThumbnailLoader(recentThumbnails, RunOnOwnerThread, logger);
         Workspace = workspace;
         StatusBar = new StatusBarViewModel(workspace);
         ImageExporter = imageExporter ?? new NullImageExporter();
         RecentProjects = new ReadOnlyObservableCollection<RecentProjectItem>(_recentItems);
+        Welcome = new WelcomeViewModel(this);
 
         _projectService.CurrentChanged += OnProjectChanged;
         _recentProjects.Changed += OnRecentProjectsChanged;
@@ -294,6 +281,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Gets the status bar at the bottom of the window, which is always there and reports on the shown picture.
     /// </summary>
     public StatusBarViewModel StatusBar { get; }
+
+    /// <summary>
+    ///     Gets the welcome screen, which is shown instead of the workspace while no project is open.
+    /// </summary>
+    public WelcomeViewModel Welcome { get; }
 
     /// <summary>
     ///     Gets what the Image menu exports and copies.
@@ -496,6 +488,13 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         ProviderPill?.Dispose();
         _settingsService.Changed -= OnSettingsChanged;
         Workspace.LayoutChanged -= OnWorkspaceLayoutChanged;
+        Welcome.Dispose();
+        _recentThumbnails?.Dispose();
+        foreach (var item in _recentItems)
+        {
+            item.Dispose();
+        }
+
         Workspace.Dispose();
     }
 
@@ -872,12 +871,41 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     {
         // Read the list first: reading drops missing files and may announce a change, which refreshes the menu.
         var files = _recentProjects.GetRecent();
+        var opened = _settingsService.Current.RecentProjectOpened;
+        var now = DateTimeOffset.Now;
+
+        // The pictures of the cards that are replaced are not wanted any more
+        _recentThumbnails?.Restart();
+        foreach (var old in _recentItems)
+        {
+            old.Dispose();
+        }
+
         _recentItems.Clear();
         foreach (var file in files)
         {
             var path = file;
             var name = Path.GetFileNameWithoutExtension(path);
-            _recentItems.Add(new RecentProjectItem(name, path, new AsyncRelayCommand(() => OpenProjectFileAsync(path))));
+            DateTimeOffset? lastOpened = opened.TryGetValue(path, out var time) ? time : null;
+
+            // Only the cards that the welcome screen shows need their pictures counted and drawn
+            var shown = _recentItems.Count < WelcomeViewModel.MaximumCards;
+            var (count, first) = shown && Path.GetDirectoryName(path) is { } folder
+                ? ProjectPictureCounter.Count(folder, _pictureFilter)
+                : (0, null);
+            var item = new RecentProjectItem(
+                name,
+                path,
+                new AsyncRelayCommand(() => OpenProjectFileAsync(path)),
+                lastOpened,
+                count,
+                new RelayCommand(() => _recentProjects.Remove(path)),
+                now);
+            _recentItems.Add(item);
+            if (first is not null && _recentThumbnails is not null && Path.GetDirectoryName(path) is { } projectFolder)
+            {
+                _recentThumbnails.Load(item, first, projectFolder);
+            }
         }
 
         OnPropertyChanged(nameof(HasRecentProjects));

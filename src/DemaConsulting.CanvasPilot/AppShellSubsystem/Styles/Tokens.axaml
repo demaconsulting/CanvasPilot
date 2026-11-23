@@ -51,6 +51,14 @@
       <BoxShadows x:Key="CpShadowDialog">0 12 32 0 #80000000</BoxShadows>
       <BoxShadows x:Key="CpShadowPicture">0 14 32 0 #66000000</BoxShadows>
       <BoxShadows x:Key="CpShadowFocus">0 0 0 4 #2e818cf8</BoxShadows>
+
+      <!-- The welcome screen: the dark look is the hero of the brand, a deep gradient with glows -->
+      <LinearGradientBrush x:Key="CpWelcomeBackdrop" StartPoint="0%,0%" EndPoint="100%,100%">
+        <GradientStop Color="#070b1f" Offset="0" />
+        <GradientStop Color="#130f3b" Offset="0.5" />
+        <GradientStop Color="#071a2e" Offset="1" />
+      </LinearGradientBrush>
+      <x:Double x:Key="CpWelcomeGlowOpacity">1</x:Double>
     </ResourceDictionary>
 
     <!-- Light variant -->
@@ -90,6 +98,10 @@
       <BoxShadows x:Key="CpShadowDialog">0 12 32 0 #401E1B4B</BoxShadows>
       <BoxShadows x:Key="CpShadowPicture">0 14 32 0 #331E1B4B</BoxShadows>
       <BoxShadows x:Key="CpShadowFocus">0 0 0 4 #2e4f46e5</BoxShadows>
+
+      <!-- The light welcome screen is the pane color with the same glows at 12 percent -->
+      <SolidColorBrush x:Key="CpWelcomeBackdrop" Color="#f7f8fd" />
+      <x:Double x:Key="CpWelcomeGlowOpacity">0.12</x:Double>
     </ResourceDictionary>
 
   </ResourceDictionary.ThemeDictionaries>
@@ -114,6 +126,27 @@
     <GradientStop Color="#4f46e5" Offset="0" />
     <GradientStop Color="#06b6d4" Offset="1" />
   </LinearGradientBrush>
+
+  <!-- The gradient of the "Pilot" in the name of the application on the welcome screen -->
+  <LinearGradientBrush x:Key="CpBrandTextGradient" StartPoint="0%,0%" EndPoint="100%,0%">
+    <GradientStop Color="#22d3ee" Offset="0" />
+    <GradientStop Color="#a78bfa" Offset="0.55" />
+    <GradientStop Color="#f472b6" Offset="1" />
+  </LinearGradientBrush>
+
+  <!-- The glows behind the welcome screen: violet, cyan, and pink, each fading to nothing at its edge -->
+  <RadialGradientBrush x:Key="CpWelcomeGlowViolet" Center="50%,50%" GradientOrigin="50%,50%" RadiusX="50%" RadiusY="50%">
+    <GradientStop Color="#997c3aed" Offset="0" />
+    <GradientStop Color="#007c3aed" Offset="1" />
+  </RadialGradientBrush>
+  <RadialGradientBrush x:Key="CpWelcomeGlowCyan" Center="50%,50%" GradientOrigin="50%,50%" RadiusX="50%" RadiusY="50%">
+    <GradientStop Color="#6606b6d4" Offset="0" />
+    <GradientStop Color="#0006b6d4" Offset="1" />
+  </RadialGradientBrush>
+  <RadialGradientBrush x:Key="CpWelcomeGlowPink" Center="50%,50%" GradientOrigin="50%,50%" RadiusX="50%" RadiusY="50%">
+    <GradientStop Color="#66ec4899" Offset="0" />
+    <GradientStop Color="#00ec4899" Offset="1" />
+  </RadialGradientBrush>
 
   <!-- Spacing scale -->
   <x:Double x:Key="CpSpace1">4</x:Double>

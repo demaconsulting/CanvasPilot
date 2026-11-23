@@ -1,0 +1,420 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:DemaConsulting.CanvasPilot.AppShellSubsystem"
+             x:Class="DemaConsulting.CanvasPilot.AppShellSubsystem.WelcomeView"
+             x:DataType="vm:WelcomeViewModel"
+             AutomationProperties.AutomationId="WelcomeView">
+
+  <!-- The welcome screen: it fills the window while no project is open. The left column says what the application is and
+       offers the two ways to start; the right column lists the recent projects as cards. Every color is a token; the
+       backdrop is the hero of the brand in the dark variant and the pane color with the same glows, faint, in the light one. -->
+  <Grid Background="{DynamicResource CpWelcomeBackdrop}" ClipToBounds="True">
+
+    <!-- Glows -->
+    <Ellipse Width="900"
+             Height="700"
+             Margin="-120,-60,0,0"
+             HorizontalAlignment="Left"
+             VerticalAlignment="Top"
+             IsHitTestVisible="False"
+             Opacity="{DynamicResource CpWelcomeGlowOpacity}"
+             Fill="{DynamicResource CpWelcomeGlowViolet}" />
+    <Ellipse Width="900"
+             Height="600"
+             Margin="0,-100,-100,0"
+             HorizontalAlignment="Right"
+             VerticalAlignment="Top"
+             IsHitTestVisible="False"
+             Opacity="{DynamicResource CpWelcomeGlowOpacity}"
+             Fill="{DynamicResource CpWelcomeGlowCyan}" />
+    <Ellipse Width="800"
+             Height="600"
+             Margin="0,0,-160,-160"
+             HorizontalAlignment="Right"
+             VerticalAlignment="Bottom"
+             IsHitTestVisible="False"
+             Opacity="{DynamicResource CpWelcomeGlowOpacity}"
+             Fill="{DynamicResource CpWelcomeGlowPink}" />
+
+    <!-- Dot grid -->
+    <Border IsHitTestVisible="False" Opacity="0.2">
+      <Border.Background>
+        <DrawingBrush TileMode="Tile" DestinationRect="0,0,20,20" Stretch="None">
+          <DrawingBrush.Drawing>
+            <GeometryDrawing Brush="{DynamicResource CpTextTertiary}">
+              <GeometryDrawing.Geometry>
+                <EllipseGeometry Center="10,10" RadiusX="1" RadiusY="1" />
+              </GeometryDrawing.Geometry>
+            </GeometryDrawing>
+          </DrawingBrush.Drawing>
+        </DrawingBrush>
+      </Border.Background>
+    </Border>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+      <Grid ColumnDefinitions="*,48,*"
+            Margin="48,32"
+            MaxWidth="1360"
+            VerticalAlignment="Center">
+
+        <!-- The left column -->
+        <StackPanel Grid.Column="0"
+                    MaxWidth="660"
+                    HorizontalAlignment="Left"
+                    Spacing="24">
+
+          <StackPanel Orientation="Horizontal" Spacing="20">
+            <Border Width="68"
+                    Height="68"
+                    CornerRadius="18"
+                    IsHitTestVisible="False"
+                    Background="{DynamicResource CpAccentGradient}">
+              <PathIcon Classes="icon"
+                        Width="40"
+                        Height="40"
+                        Foreground="White"
+                        Data="{DynamicResource CpIconSparkle}" />
+            </Border>
+            <TextBlock VerticalAlignment="Center"
+                       FontSize="52"
+                       FontWeight="Bold"
+                       Foreground="{DynamicResource CpTextPrimary}">
+              <Run Text="Canvas" /><Run Foreground="{DynamicResource CpBrandTextGradient}" Text="Pilot" />
+            </TextBlock>
+          </StackPanel>
+
+          <StackPanel Spacing="0">
+            <TextBlock AutomationProperties.AutomationId="WelcomeTagline"
+                       FontSize="{DynamicResource CpFontDisplay}"
+                       FontWeight="SemiBold"
+                       LineHeight="{DynamicResource CpLineDisplay}"
+                       Foreground="{DynamicResource CpTextPrimary}"
+                       TextWrapping="Wrap"
+                       Text="Describe a picture." />
+            <TextBlock FontSize="{DynamicResource CpFontDisplay}"
+                       FontWeight="SemiBold"
+                       LineHeight="{DynamicResource CpLineDisplay}"
+                       Foreground="{DynamicResource CpAccentText}"
+                       TextWrapping="Wrap"
+                       Text="Your copilot draws it." />
+          </StackPanel>
+
+          <TextBlock MaxWidth="500"
+                     HorizontalAlignment="Left"
+                     FontSize="{DynamicResource CpFontSubtitle}"
+                     LineHeight="{DynamicResource CpLineSubtitle}"
+                     Foreground="{DynamicResource CpTextSecondary}"
+                     TextWrapping="Wrap"
+                     Text="Type or speak what you need. An AI copilot composes it with CanvasNet: SVG, Mermaid, Vega-Lite, PlantUML, OpenSCAD, PDF pages, and images, into one picture ready to share." />
+
+          <StackPanel Spacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <Button Name="NewProjectButton"
+                      AutomationProperties.AutomationId="WelcomeNewProjectButton"
+                      Classes="gradient"
+                      Theme="{DynamicResource PrimaryButton}"
+                      Width="192"
+                      Height="50"
+                      FontSize="{DynamicResource CpFontBodyLarge}"
+                      Command="{Binding NewProjectCommand}"
+                      ToolTip.Tip="Create a new project">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <PathIcon Classes="icon" Data="{DynamicResource CpIconAdd}" />
+                  <TextBlock VerticalAlignment="Center" Text="New project" />
+                </StackPanel>
+              </Button>
+              <Button Name="OpenProjectButton"
+                      AutomationProperties.AutomationId="WelcomeOpenProjectButton"
+                      Theme="{DynamicResource SecondaryButton}"
+                      Width="192"
+                      Height="50"
+                      FontSize="{DynamicResource CpFontBodyLarge}"
+                      Command="{Binding OpenProjectCommand}"
+                      ToolTip.Tip="Open a project file">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <PathIcon Classes="icon" Data="{DynamicResource CpIconFolderOpen}" />
+                  <TextBlock VerticalAlignment="Center" Text="Open project" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+            <TextBlock AutomationProperties.AutomationId="WelcomeShortcutHint"
+                       FontSize="{DynamicResource CpFontSmall}"
+                       Foreground="{DynamicResource CpTextTertiary}"
+                       Text="{OnPlatform 'Ctrl+N new project  ·  Ctrl+O open project', macOS='Cmd+N new project  ·  Cmd+O open project'}" />
+          </StackPanel>
+
+          <!-- How it works -->
+          <StackPanel Spacing="12">
+            <TextBlock FontSize="{DynamicResource CpFontCaption}"
+                       FontWeight="Bold"
+                       LetterSpacing="1"
+                       Foreground="{DynamicResource CpTextTertiary}"
+                       Text="HOW IT WORKS" />
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+
+              <Border Grid.Column="0"
+                      AutomationProperties.AutomationId="WelcomeStepDescribe"
+                      Padding="16"
+                      CornerRadius="{DynamicResource CpRadiusCard}"
+                      Background="{DynamicResource CpSurfaceRaised}"
+                      BorderBrush="{DynamicResource CpBorderSubtle}"
+                      BorderThickness="1">
+                <StackPanel Spacing="10">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource CpAccentGradient}">
+                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="White" Data="{DynamicResource CpIconMic}" />
+                    </Border>
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="{DynamicResource CpFontBodyLarge}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource CpTextPrimary}"
+                               Text="1 Describe" />
+                  </StackPanel>
+                  <TextBlock FontSize="{DynamicResource CpFontSmall}"
+                             LineHeight="{DynamicResource CpLineBody}"
+                             Foreground="{DynamicResource CpTextSecondary}"
+                             TextWrapping="Wrap"
+                             Text="Type a request, or hold F8 and speak it. The copilot draws the picture." />
+                </StackPanel>
+              </Border>
+
+              <Border Grid.Column="1"
+                      AutomationProperties.AutomationId="WelcomeStepMark"
+                      Padding="16"
+                      CornerRadius="{DynamicResource CpRadiusCard}"
+                      Background="{DynamicResource CpSurfaceRaised}"
+                      BorderBrush="{DynamicResource CpBorderSubtle}"
+                      BorderThickness="1">
+                <StackPanel Spacing="10">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource CpAccentGradient}">
+                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="White" Data="{DynamicResource CpIconRectangleLandscape}" />
+                    </Border>
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="{DynamicResource CpFontBodyLarge}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource CpTextPrimary}"
+                               Text="2 Mark" />
+                  </StackPanel>
+                  <TextBlock FontSize="{DynamicResource CpFontSmall}"
+                             LineHeight="{DynamicResource CpLineBody}"
+                             Foreground="{DynamicResource CpTextSecondary}"
+                             TextWrapping="Wrap"
+                             Text="Draw on the picture to show what to change, then say what you want." />
+                </StackPanel>
+              </Border>
+
+              <Border Grid.Column="2"
+                      AutomationProperties.AutomationId="WelcomeStepShare"
+                      Padding="16"
+                      CornerRadius="{DynamicResource CpRadiusCard}"
+                      Background="{DynamicResource CpSurfaceRaised}"
+                      BorderBrush="{DynamicResource CpBorderSubtle}"
+                      BorderThickness="1">
+                <StackPanel Spacing="10">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource CpAccentGradient}">
+                      <PathIcon Classes="icon" Width="14" Height="14" Foreground="White" Data="{DynamicResource CpIconArrowUpload}" />
+                    </Border>
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="{DynamicResource CpFontBodyLarge}"
+                               FontWeight="SemiBold"
+                               Foreground="{DynamicResource CpTextPrimary}"
+                               Text="3 Share" />
+                  </StackPanel>
+                  <TextBlock FontSize="{DynamicResource CpFontSmall}"
+                             LineHeight="{DynamicResource CpLineBody}"
+                             Foreground="{DynamicResource CpTextSecondary}"
+                             TextWrapping="Wrap"
+                             Text="Export a PNG, or copy it straight into email and presentation slides." />
+                </StackPanel>
+              </Border>
+
+            </Grid>
+          </StackPanel>
+
+          <!-- The notice about the AI provider: shown when it cannot be used yet -->
+          <Border Name="ProviderBanner"
+                  AutomationProperties.AutomationId="WelcomeProviderBanner"
+                  Padding="16,12"
+                  CornerRadius="{DynamicResource CpRadiusCard}"
+                  Background="{DynamicResource CpWarningTint}"
+                  BorderBrush="{DynamicResource CpWarning}"
+                  BorderThickness="1"
+                  IsVisible="{Binding ShowProviderBanner}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+              <PathIcon Classes="icon"
+                        Grid.Column="0"
+                        VerticalAlignment="Center"
+                        Foreground="{DynamicResource CpWarning}"
+                        Data="{DynamicResource CpIconWarning}" />
+              <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                <TextBlock AutomationProperties.AutomationId="WelcomeProviderBannerTitle"
+                           FontSize="{DynamicResource CpFontBodyLarge}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource CpTextPrimary}"
+                           TextWrapping="Wrap"
+                           Text="{Binding ProviderBannerTitle}" />
+                <TextBlock AutomationProperties.AutomationId="WelcomeProviderBannerText"
+                           FontSize="{DynamicResource CpFontSmall}"
+                           Foreground="{DynamicResource CpTextSecondary}"
+                           TextWrapping="Wrap"
+                           Text="{Binding ProviderBannerText}" />
+              </StackPanel>
+              <Button Name="OpenSettingsButton"
+                      AutomationProperties.AutomationId="WelcomeOpenSettingsButton"
+                      Grid.Column="2"
+                      VerticalAlignment="Center"
+                      Classes="warning"
+                      Theme="{DynamicResource PrimaryButton}"
+                      Content="Open Settings"
+                      Command="{Binding OpenSettingsCommand}"
+                      ToolTip.Tip="Open the settings of the AI provider" />
+            </Grid>
+          </Border>
+
+        </StackPanel>
+
+        <!-- The right column: the recent projects -->
+        <StackPanel Grid.Column="2"
+                    MaxWidth="640"
+                    HorizontalAlignment="Left"
+                    Spacing="16">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0"
+                       AutomationProperties.AutomationId="WelcomeRecentTitle"
+                       FontSize="{DynamicResource CpFontTitle}"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource CpTextPrimary}"
+                       Text="Recent projects" />
+            <TextBlock Grid.Column="1"
+                       AutomationProperties.AutomationId="WelcomeRecentCount"
+                       VerticalAlignment="Bottom"
+                       FontSize="{DynamicResource CpFontSmall}"
+                       Foreground="{DynamicResource CpTextTertiary}"
+                       Text="{Binding CountText}" />
+          </Grid>
+
+          <ItemsControl Name="RecentList"
+                        AutomationProperties.AutomationId="WelcomeRecentList"
+                        ItemsSource="{Binding Cards}"
+                        IsVisible="{Binding HasRecent}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Margin="0,0,-20,0" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RecentProjectItem">
+                <Button AutomationProperties.AutomationId="WelcomeRecentCard"
+                        AutomationProperties.Name="{Binding AccessibleName}"
+                        Classes="recent-card"
+                        Theme="{DynamicResource CardButton}"
+                        Width="300"
+                        Margin="0,0,20,20"
+                        Command="{Binding OpenCommand}"
+                        ToolTip.Tip="{Binding FilePath}">
+                  <Button.KeyBindings>
+                    <KeyBinding Gesture="Delete" Command="{Binding RemoveCommand}" />
+                  </Button.KeyBindings>
+                  <Button.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem AutomationProperties.AutomationId="WelcomeRecentRemove"
+                                Header="_Remove from list"
+                                InputGesture="Delete"
+                                Command="{Binding RemoveCommand}" />
+                    </ContextMenu>
+                  </Button.ContextMenu>
+                  <StackPanel Margin="8" Spacing="8">
+                    <Border Height="160"
+                            CornerRadius="10"
+                            ClipToBounds="True"
+                            Background="{DynamicResource CpSurfaceStage}">
+                      <Panel>
+                        <Image Stretch="UniformToFill"
+                               IsVisible="{Binding HasThumbnail}"
+                               Source="{Binding Thumbnail}" />
+                        <StackPanel HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Spacing="6"
+                                    IsVisible="{Binding HasNoThumbnail}">
+                          <PathIcon Classes="icon"
+                                    Width="28"
+                                    Height="28"
+                                    HorizontalAlignment="Center"
+                                    Foreground="{DynamicResource CpTextTertiary}"
+                                    Data="{DynamicResource CpIconImage}" />
+                          <TextBlock HorizontalAlignment="Center"
+                                     FontSize="{DynamicResource CpFontSmall}"
+                                     Foreground="{DynamicResource CpTextTertiary}"
+                                     Text="{Binding PictureCountText}" />
+                        </StackPanel>
+                      </Panel>
+                    </Border>
+                    <StackPanel Margin="4,0,4,8" Spacing="2">
+                      <TextBlock FontSize="{DynamicResource CpFontBodyLarge}"
+                                 FontWeight="SemiBold"
+                                 Foreground="{DynamicResource CpTextPrimary}"
+                                 TextTrimming="CharacterEllipsis"
+                                 Text="{Binding Name}" />
+                      <TextBlock FontSize="{DynamicResource CpFontSmall}"
+                                 Foreground="{DynamicResource CpTextSecondary}"
+                                 TextTrimming="PrefixCharacterEllipsis"
+                                 Text="{Binding FolderPath}" />
+                      <TextBlock FontSize="{DynamicResource CpFontSmall}"
+                                 Foreground="{DynamicResource CpTextTertiary}"
+                                 TextTrimming="CharacterEllipsis"
+                                 Text="{Binding DetailText}" />
+                    </StackPanel>
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- No recent project yet: one card that starts the first -->
+          <Border Name="EmptyCard"
+                  AutomationProperties.AutomationId="WelcomeEmptyCard"
+                  Padding="32"
+                  CornerRadius="{DynamicResource CpRadiusWelcome}"
+                  Background="{DynamicResource CpSurfaceRaised}"
+                  BorderBrush="{DynamicResource CpBorderStrong}"
+                  BorderThickness="1"
+                  IsVisible="{Binding HasNoRecent}">
+            <StackPanel HorizontalAlignment="Center" Spacing="12">
+              <PathIcon Classes="icon"
+                        Width="32"
+                        Height="32"
+                        HorizontalAlignment="Center"
+                        Foreground="{DynamicResource CpAccentText}"
+                        Data="{DynamicResource CpIconFolderAdd}" />
+              <TextBlock HorizontalAlignment="Center"
+                         FontSize="{DynamicResource CpFontSubtitle}"
+                         FontWeight="SemiBold"
+                         Foreground="{DynamicResource CpTextPrimary}"
+                         Text="No recent projects yet" />
+              <TextBlock HorizontalAlignment="Center"
+                         FontSize="{DynamicResource CpFontBody}"
+                         Foreground="{DynamicResource CpTextSecondary}"
+                         TextAlignment="Center"
+                         TextWrapping="Wrap"
+                         Text="Projects you create or open are listed here." />
+              <Button Name="EmptyNewProjectButton"
+                      AutomationProperties.AutomationId="WelcomeEmptyNewProjectButton"
+                      HorizontalAlignment="Center"
+                      Theme="{DynamicResource PrimaryButton}"
+                      Content="New project"
+                      Command="{Binding NewProjectCommand}" />
+            </StackPanel>
+          </Border>
+
+        </StackPanel>
+
+      </Grid>
+    </ScrollViewer>
+
+  </Grid>
+
+</UserControl>

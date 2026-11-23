@@ -719,6 +719,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal("CanvasPilot", window.Title);
         Assert.Equal(0, list.ItemCount);
         Assert.Equal("No project open", SettingsUiHelpers.Find<TextBlock>(window, "WorkspacePlaceholder").Text);
+        Assert.True(SettingsUiHelpers.Find<ContentControl>(window, "WelcomeHost").IsEffectivelyVisible);
         Assert.False(composition.Shell.HasProject);
 
         window.Close();
@@ -1069,15 +1070,19 @@ public sealed class MainWindowViewTests : IDisposable
         var (composition, window) = CreateWindow();
         window.Show();
         AppShellUiHelpers.Flush();
-        var chatHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspaceChatHost");
-        var chatSplitter = SettingsUiHelpers.Find<GridSplitter>(window, "WorkspaceChatSplitter");
-        var chatVisibleBefore = chatHost.IsVisible;
-        var chatWidthBefore = chatHost.Bounds.Width;
-        var splitterVisibleBefore = chatSplitter.IsVisible;
+        // The workspace is not even built while the welcome screen takes its place
+        var chatHostBefore = window.GetVisualDescendants().OfType<ContentControl>()
+            .FirstOrDefault(control => Avalonia.Automation.AutomationProperties.GetAutomationId(control) == "WorkspaceChatHost");
+        var chatSplitterBefore = window.GetVisualDescendants().OfType<GridSplitter>()
+            .FirstOrDefault(control => Avalonia.Automation.AutomationProperties.GetAutomationId(control) == "WorkspaceChatSplitter");
+        var chatVisibleBefore = chatHostBefore?.IsEffectivelyVisible ?? false;
+        var chatWidthBefore = chatHostBefore?.Bounds.Width ?? 0;
+        var splitterVisibleBefore = chatSplitterBefore?.IsEffectivelyVisible ?? false;
 
         // Act: open the project, then close it
         await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
         LayOut(window);
+        var chatHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspaceChatHost");
         var explorerHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspaceExplorerHost");
         var previewHost = SettingsUiHelpers.Find<ContentControl>(window, "WorkspacePreviewHost");
         var chatVisibleWith = chatHost.IsVisible;

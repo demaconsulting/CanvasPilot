@@ -40,13 +40,20 @@ public sealed class RecentProjects : IRecentProjects
     private readonly ISettingsService _settings;
 
     /// <summary>
+    ///     Tells the time that a project is recorded as opened at.
+    /// </summary>
+    private readonly TimeProvider _time;
+
+    /// <summary>
     ///     Creates the list over the application settings.
     /// </summary>
     /// <param name="settings">The settings that hold the list.</param>
-    public RecentProjects(ISettingsService settings)
+    /// <param name="time">Tells the time of opening, or <see langword="null" /> for the system clock.</param>
+    public RecentProjects(ISettingsService settings, TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         _settings = settings;
+        _time = time ?? TimeProvider.System;
     }
 
     /// <inheritdoc />
@@ -60,7 +67,7 @@ public sealed class RecentProjects : IRecentProjects
         if (existing.Count != stored.Count)
         {
             // Drop the missing files from the stored list too; failing to store is not a problem for a read.
-            TryUpdate(list => list.Where(File.Exists).Take(MaxCount));
+            TryUpdateList(list => list.Where(File.Exists).Take(MaxCount));
         }
 
         return existing;
@@ -70,20 +77,36 @@ public sealed class RecentProjects : IRecentProjects
     public bool Add(string projectFile)
     {
         var path = Normalize(projectFile);
-        return path is not null && TryUpdate(list => new[] { path }
-            .Concat(list.Where(entry => !SamePath(entry, path)))
-            .Take(MaxCount));
+        if (path is null)
+        {
+            return false;
+        }
+
+        var now = _time.GetLocalNow();
+        return TryUpdate(settings => settings with
+        {
+            RecentProjects = new[] { path }
+                .Concat(settings.RecentProjects.Where(entry => !SamePath(entry, path)))
+                .Take(MaxCount)
+                .ToList(),
+
+            // The settings keep the time only for projects that are listed, so a project that fell off the list takes its time along
+            RecentProjectOpened = new Dictionary<string, DateTimeOffset>(settings.RecentProjectOpened, StringComparer.OrdinalIgnoreCase)
+            {
+                [path] = now,
+            },
+        });
     }
 
     /// <inheritdoc />
     public bool Remove(string projectFile)
     {
         var path = Normalize(projectFile);
-        return path is not null && TryUpdate(list => list.Where(entry => !SamePath(entry, path)));
+        return path is not null && TryUpdateList(list => list.Where(entry => !SamePath(entry, path)));
     }
 
     /// <inheritdoc />
-    public bool Clear() => TryUpdate(_ => []);
+    public bool Clear() => TryUpdateList(_ => []);
 
     /// <summary>
     ///     Compares two stored paths ignoring case.
@@ -120,11 +143,21 @@ public sealed class RecentProjects : IRecentProjects
     /// </summary>
     /// <param name="change">Builds the new list from the stored list.</param>
     /// <returns><see langword="true" /> when the list was stored.</returns>
-    private bool TryUpdate(Func<IReadOnlyList<string>, IEnumerable<string>> change)
+    private bool TryUpdateList(Func<IReadOnlyList<string>, IEnumerable<string>> change)
+    {
+        return TryUpdate(settings => settings with { RecentProjects = change(settings.RecentProjects).ToList() });
+    }
+
+    /// <summary>
+    ///     Stores settings built from the latest stored settings, and announces the change when they were stored.
+    /// </summary>
+    /// <param name="change">Builds the new settings from the stored settings.</param>
+    /// <returns><see langword="true" /> when the settings were stored.</returns>
+    private bool TryUpdate(Func<AppSettings, AppSettings> change)
     {
         try
         {
-            _settings.Update(settings => settings with { RecentProjects = change(settings.RecentProjects).ToList() });
+            _settings.Update(change);
         }
         catch (IOException)
         {
