@@ -47,6 +47,23 @@ public sealed class FakeDialogService : IDialogService
     public Action<SettingsDialogViewModel>? OnSettings { get; set; }
 
     /// <summary>
+    ///     Gets or sets the files the user picks to attach.
+    /// </summary>
+    public List<string> AttachmentsToPick { get; set; } = [];
+
+    /// <summary>
+    ///     Gets the number of times the user was asked to pick files to attach.
+    /// </summary>
+    public int AttachmentPickCount { get; private set; }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<string>> PickAttachmentsAsync(string? initialFolder)
+    {
+        AttachmentPickCount++;
+        return Task.FromResult<IReadOnlyList<string>>([.. AttachmentsToPick]);
+    }
+
+    /// <summary>
     ///     Gets or sets the project file the user picks, or null for cancel.
     /// </summary>
     public string? ProjectFileToPick { get; set; }

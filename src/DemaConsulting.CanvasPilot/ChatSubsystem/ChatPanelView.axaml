@@ -7,6 +7,39 @@
              AutomationProperties.AutomationId="ChatPanel">
 
   <UserControl.Styles>
+    <!-- The card of the message shows the focus ring and a glow while the editor has the focus -->
+    <Style Selector="Border.composer:focus-within">
+      <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+      <Setter Property="BoxShadow" Value="{DynamicResource CpShadowFocus}" />
+    </Style>
+
+    <!-- The talk button is red and pulses while it listens, and says so with words in its name and tooltip -->
+    <Style Selector="Button.talk.talking">
+      <Setter Property="Foreground" Value="{DynamicResource CpDanger}" />
+      <Setter Property="Background" Value="{DynamicResource CpDangerTint}" />
+      <Style.Animations>
+        <Animation Duration="0:0:1" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="50%">
+            <Setter Property="Opacity" Value="0.55" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+
+    <!-- Send keeps its gradient when the pointer is over it -->
+    <Style Selector="Button#SendButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource CpAccentGradient}" />
+    </Style>
+    <Style Selector="Button#SendButton:pointerover">
+      <Setter Property="Foreground" Value="{DynamicResource CpTextOnAccent}" />
+    </Style>
+
     <!-- The dots of the typing indicator pulse over 1.2 seconds, one after the other -->
     <Style Selector="Ellipse.dot">
       <Setter Property="Opacity" Value="0.3" />
@@ -65,7 +98,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto">
+  <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
 
     <!-- The header of the conversation: the sparkle, the title, the menu of more actions, and the button that hides the
          column. The menu holds the item that deletes the saved chat history of the project, empties the transcript, and
@@ -292,36 +325,88 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
-    <!-- The message being written, with the words that are being recognized and the status line of the composer -->
-    <Border Grid.Row="5"
-            Margin="16,8,16,0"
-            Padding="4"
+    <!-- The message being written: a card with the editing control (words and chips, with the words that are being recognized
+         above them), and under it the attach button, the talk button with its key, the hint, and Send. The card has the
+         focus ring and a soft glow while the editor has the focus. -->
+    <Border Name="ComposerCard"
+            Classes="composer"
+            Grid.Row="5"
+            Margin="16,8,16,16"
+            Padding="12,10,8,8"
             BorderThickness="1"
-            CornerRadius="4"
-            BorderBrush="{DynamicResource CpBorderSubtle}">
-      <composer:ComposerEditorView Name="ComposerView"
-                                   MaxHeight="240"
-                                   DataContext="{Binding Composer}" />
+            CornerRadius="{DynamicResource CpRadiusCard}"
+            Background="{DynamicResource CpSurfaceRaised}"
+            BorderBrush="{DynamicResource CpBorderStrong}">
+      <Grid RowDefinitions="*,Auto">
+        <composer:ComposerEditorView Name="ComposerView"
+                                     MaxHeight="240"
+                                     Margin="0,0,4,0"
+                                     DataContext="{Binding Composer}" />
+
+        <Grid Grid.Row="1"
+              Margin="0,6,0,0"
+              ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+          <Button Name="AttachButton"
+                  Grid.Column="0"
+                  AutomationProperties.AutomationId="ChatAttachButton"
+                  AutomationProperties.Name="Attach files"
+                  Theme="{DynamicResource IconButton}"
+                  Command="{Binding AttachCommand}"
+                  IsEnabled="{Binding CanTalk}"
+                  ToolTip.Tip="Attach files to the message">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconAttach}" />
+          </Button>
+
+          <!-- Hold to talk: the name and the tooltip say what the button does now, such as "Listening... let go to finish" -->
+          <Button Name="HoldToTalkButton"
+                  Classes="talk"
+                  Grid.Column="1"
+                  AutomationProperties.AutomationId="ChatHoldToTalkButton"
+                  AutomationProperties.Name="{Binding TalkText}"
+                  Theme="{DynamicResource IconButton}"
+                  Classes.talking="{Binding IsTalking}"
+                  IsEnabled="{Binding CanTalk}"
+                  ToolTip.Tip="Hold this button, speak, and let go to add what you said to the message">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconMic}" />
+          </Button>
+          <Border Grid.Column="2"
+                  Margin="4,0,0,0"
+                  Padding="6,1"
+                  VerticalAlignment="Center"
+                  CornerRadius="{DynamicResource CpRadiusKey}"
+                  Background="{DynamicResource CpSurfaceOverlay}"
+                  BorderThickness="1"
+                  BorderBrush="{DynamicResource CpBorderStrong}">
+            <TextBlock FontSize="{DynamicResource CpFontCaption}"
+                       Foreground="{DynamicResource CpTextSecondary}"
+                       Text="F8" />
+          </Border>
+
+          <TextBlock Name="SendHintText"
+                     Grid.Column="4"
+                     AutomationProperties.AutomationId="ChatSendHint"
+                     Margin="0,0,8,0"
+                     VerticalAlignment="Center"
+                     FontSize="{DynamicResource CpFontCaption}"
+                     Foreground="{DynamicResource CpTextTertiary}"
+                     Text="Enter to send" />
+          <Button Name="SendButton"
+                  Grid.Column="5"
+                  AutomationProperties.AutomationId="ChatSendButton"
+                  AutomationProperties.Name="Send"
+                  Theme="{DynamicResource IconButton}"
+                  MinWidth="36"
+                  Height="32"
+                  Background="{DynamicResource CpAccentGradient}"
+                  Foreground="{DynamicResource CpTextOnAccent}"
+                  Command="{Binding SendCommand}"
+                  ToolTip.Tip="Send the message">
+            <PathIcon Classes="icon" Data="{DynamicResource CpIconArrowUp}" />
+          </Button>
+        </Grid>
+      </Grid>
     </Border>
 
-    <!-- Hold to talk, and Send -->
-    <Grid Grid.Row="6" Margin="16,8,16,16" ColumnDefinitions="*,Auto,Auto">
-      <Button Name="HoldToTalkButton"
-              Grid.Column="1"
-              AutomationProperties.AutomationId="ChatHoldToTalkButton"
-              Margin="0,0,8,0"
-              MinWidth="150"
-              Content="{Binding TalkText}"
-              IsEnabled="{Binding CanTalk}"
-              ToolTip.Tip="Hold this button, speak, and let go to add what you said to the message" />
-      <Button Name="SendButton"
-              Grid.Column="2"
-              AutomationProperties.AutomationId="ChatSendButton"
-              MinWidth="80"
-              Content="Send"
-              Command="{Binding SendCommand}"
-              ToolTip.Tip="Send the message" />
-    </Grid>
 
   </Grid>
 

@@ -9,27 +9,47 @@
 
     <!-- The words recognized so far while the talk button or key is held -->
     <Border Grid.Row="0"
-            Margin="0,0,0,4"
-            Padding="6,2"
-            CornerRadius="4"
-            Background="#22808080"
+            Margin="0,0,0,6"
+            Padding="8,4"
+            CornerRadius="{DynamicResource CpRadiusInput}"
+            Background="{DynamicResource CpAccentTint}"
             IsVisible="{Binding IsDictating}">
       <TextBlock Name="PartialText"
                  AutomationProperties.AutomationId="ComposerPartialText"
+                 FontSize="{DynamicResource CpFontSmall}"
+                 Foreground="{DynamicResource CpTextPrimary}"
                  FontStyle="Italic"
                  TextWrapping="Wrap"
                  Text="{Binding LivePartialText}" />
     </Border>
 
-    <!-- The message: text, dictated text, and chips in one editing surface -->
+    <!-- The message: text, dictated text, and chips in one editing surface, which has no background and no border of its
+         own, because the card around it is the field -->
     <Grid Grid.Row="1">
       <ae:TextEditor Name="Editor"
                      AutomationProperties.AutomationId="ComposerTextEditor"
-                     MinHeight="60"
+                     MinHeight="48"
+                     Padding="0"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     Foreground="{DynamicResource CpTextPrimary}"
+                     FontFamily="{DynamicResource ContentControlThemeFontFamily}"
+                     FontSize="{DynamicResource CpFontBody}"
                      WordWrap="True"
                      ShowLineNumbers="False"
                      HorizontalScrollBarVisibility="Disabled"
                      VerticalScrollBarVisibility="Auto" />
+
+      <!-- Says what the message is for while it is empty; the editor is above it and still takes the pointer -->
+      <TextBlock Name="PlaceholderText"
+                 AutomationProperties.AutomationId="ComposerPlaceholder"
+                 VerticalAlignment="Top"
+                 IsHitTestVisible="False"
+                 FontSize="{DynamicResource CpFontBody}"
+                 Foreground="{DynamicResource CpTextTertiary}"
+                 TextWrapping="Wrap"
+                 Text="{x:Static vm:ComposerViewModel.PlaceholderText}"
+                 IsVisible="{Binding ShowsPlaceholder}" />
 
       <!-- Shown while a drag with something the message accepts is over the message -->
       <Border Name="DropHighlight"
@@ -37,15 +57,15 @@
               IsHitTestVisible="False"
               IsVisible="False"
               BorderThickness="2"
-              CornerRadius="4"
-              BorderBrush="#FF0078D7" />
+              CornerRadius="{DynamicResource CpRadiusInput}"
+              BorderBrush="{DynamicResource CpAccent}" />
 
       <!-- Says why the message cannot be written yet -->
       <TextBlock Name="NoProjectHint"
                  AutomationProperties.AutomationId="ComposerNoProjectHint"
-                 Margin="8,6"
                  IsHitTestVisible="False"
-                 Opacity="0.6"
+                 FontSize="{DynamicResource CpFontBody}"
+                 Foreground="{DynamicResource CpTextTertiary}"
                  TextWrapping="Wrap"
                  Text="{x:Static vm:ComposerViewModel.NoProjectText}"
                  IsVisible="{Binding !HasProject}" />
@@ -56,6 +76,8 @@
                Grid.Row="2"
                AutomationProperties.AutomationId="ComposerStatus"
                Margin="0,4,0,0"
+               FontSize="{DynamicResource CpFontSmall}"
+               Foreground="{DynamicResource CpTextSecondary}"
                TextWrapping="Wrap"
                Text="{Binding StatusText}"
                IsVisible="{Binding HasStatus}" />

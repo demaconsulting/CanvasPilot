@@ -502,6 +502,31 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public IPayloadInspectorLauncher? InspectorLauncher { get; set; }
 
     /// <summary>
+    ///     Gets or sets what shows the picker of files to attach. While it is <see langword="null" /> the attach command does
+    ///     nothing. The window sets it when the panel is placed in it.
+    /// </summary>
+    public IAttachmentPicker? AttachmentPicker { get; set; }
+
+    /// <summary>
+    ///     Asks the user for files and adds them to the message as attachments, the same way that a drop of the files does.
+    /// </summary>
+    /// <returns>A task that completes when the files were added, or the user cancelled.</returns>
+    [RelayCommand]
+    private async Task AttachAsync()
+    {
+        if (AttachmentPicker is not { } picker || !_composer.CanEdit)
+        {
+            return;
+        }
+
+        var paths = await picker.PickAttachmentsAsync(_composer.ProjectFolder);
+        if (paths.Count > 0 && _composer.CanEdit)
+        {
+            _composer.HandleDrop(new DroppedContent { Paths = paths });
+        }
+    }
+
+    /// <summary>
     ///     Stops the turn of the copilot that runs, if any. The text written so far is kept and marked as stopped, and the
     ///     composer can send again when the turn has ended, which is soon.
     /// </summary>

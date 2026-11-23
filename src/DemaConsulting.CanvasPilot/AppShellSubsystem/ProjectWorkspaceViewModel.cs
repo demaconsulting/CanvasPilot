@@ -263,6 +263,7 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
         if (_dialogs is not null && Chat is ChatPanelViewModel panel)
         {
             panel.InspectorLauncher = _dialogs;
+            panel.AttachmentPicker = _dialogs;
         }
     }
 

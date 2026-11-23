@@ -50,6 +50,7 @@
       <BoxShadows x:Key="CpShadowFloating">0 4 16 0 #66000000</BoxShadows>
       <BoxShadows x:Key="CpShadowDialog">0 12 32 0 #80000000</BoxShadows>
       <BoxShadows x:Key="CpShadowPicture">0 14 32 0 #66000000</BoxShadows>
+      <BoxShadows x:Key="CpShadowFocus">0 0 0 4 #2e818cf8</BoxShadows>
     </ResourceDictionary>
 
     <!-- Light variant -->
@@ -88,6 +89,7 @@
       <BoxShadows x:Key="CpShadowFloating">0 3 12 0 #331E1B4B</BoxShadows>
       <BoxShadows x:Key="CpShadowDialog">0 12 32 0 #401E1B4B</BoxShadows>
       <BoxShadows x:Key="CpShadowPicture">0 14 32 0 #331E1B4B</BoxShadows>
+      <BoxShadows x:Key="CpShadowFocus">0 0 0 4 #2e4f46e5</BoxShadows>
     </ResourceDictionary>
 
   </ResourceDictionary.ThemeDictionaries>

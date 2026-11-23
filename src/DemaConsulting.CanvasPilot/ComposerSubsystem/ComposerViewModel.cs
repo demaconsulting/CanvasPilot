@@ -93,6 +93,11 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     public const string NoProjectText = "Open a project to write a message.";
 
     /// <summary>
+    ///     The placeholder of the editing control while the message is empty.
+    /// </summary>
+    public const string PlaceholderText = "Describe a change, or mark the picture…";
+
+    /// <summary>
     ///     The reason that the chat gives for <see cref="BlockSending" /> while the AI copilot works on an earlier message.
     /// </summary>
     public const string CopilotWorkingText = "The copilot is still working. Press Stop to cancel.";
@@ -323,6 +328,12 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     ///     Gets a value indicating whether the message has anything to send: a word, or a chip.
     /// </summary>
     public bool HasContent => _document.FlatText.Any(character => !char.IsWhiteSpace(character));
+
+    /// <summary>
+    ///     Gets a value indicating whether the editing control shows its placeholder: a project is open and the message has
+    ///     neither text nor chips.
+    /// </summary>
+    public bool ShowsPlaceholder => HasProject && _document.FlatText.Length == 0;
 
     /// <summary>
     ///     Gets a value indicating whether the message can be sent now: it has content, can be edited, nobody is holding
@@ -1261,6 +1272,7 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
         OnPropertyChanged(nameof(Document));
         OnPropertyChanged(nameof(MarkChipIds));
         OnPropertyChanged(nameof(HasContent));
+        OnPropertyChanged(nameof(ShowsPlaceholder));
         OnPropertyChanged(nameof(CanEdit));
         OnPropertyChanged(nameof(CanSend));
         OnPropertyChanged(nameof(CanUndo));

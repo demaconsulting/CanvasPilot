@@ -483,6 +483,11 @@ internal sealed class ChatHarness : IDisposable
     public Button TalkButton => Find<Button>("ChatHoldToTalkButton");
 
     /// <summary>
+    ///     Gets what the talk button says it is doing now, which is its accessible name: an icon has no text.
+    /// </summary>
+    public string? TalkLabel => AutomationProperties.GetName(TalkButton);
+
+    /// <summary>
     ///     Gets the send button.
     /// </summary>
     public Button SendButton => Find<Button>("ChatSendButton");

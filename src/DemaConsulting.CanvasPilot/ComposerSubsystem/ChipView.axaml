@@ -4,42 +4,57 @@
              AutomationProperties.AutomationId="ComposerChip"
              Focusable="False">
 
-  <!-- The chip as it stands in a line of the message: an icon or picture, the name, and a button that deletes it.
-       Colors are neutral transparent grays so that the chip reads on a light and a dark theme alike. -->
+  <UserControl.Styles>
+    <!-- A mark chip is pink, like the mark on the picture -->
+    <Style Selector="Border#ChipBorder.mark">
+      <Setter Property="Background" Value="{DynamicResource CpMarkTint}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CpMark}" />
+    </Style>
+    <Style Selector="Border#ChipBorder.mark Path#IconPath">
+      <Setter Property="Fill" Value="{DynamicResource CpMark}" />
+    </Style>
+  </UserControl.Styles>
+
+  <!-- The chip as it stands in a line of the message: a pill with an icon or picture, the name, and a button that deletes
+       it. The colors are tokens, so the chip reads on a light and a dark theme alike. -->
   <Border Name="ChipBorder"
+          Theme="{DynamicResource ChipBorder}"
           Margin="1,0"
-          Padding="4,0,1,0"
-          CornerRadius="4"
-          BorderThickness="1"
-          BorderBrush="#55808080"
-          Background="#22808080">
+          Padding="6,0,2,0">
     <StackPanel Orientation="Horizontal" Spacing="4">
       <Panel Width="16" Height="16" VerticalAlignment="Center">
         <Path Name="IconPath"
-              Fill="#FF6B7B8C"
+              Fill="{DynamicResource CpTextSecondary}"
               Stretch="Uniform" />
-        <Image Name="ThumbnailImage"
-               AutomationProperties.AutomationId="ComposerChipThumbnail"
-               Stretch="UniformToFill"
-               IsVisible="False" />
+        <Border CornerRadius="4" ClipToBounds="True">
+          <Image Name="ThumbnailImage"
+                 AutomationProperties.AutomationId="ComposerChipThumbnail"
+                 Stretch="UniformToFill"
+                 IsVisible="False" />
+        </Border>
       </Panel>
       <TextBlock Name="LabelText"
                  AutomationProperties.AutomationId="ComposerChipLabel"
                  VerticalAlignment="Center"
+                 FontSize="{DynamicResource CpFontSmall}"
+                 Foreground="{DynamicResource CpTextPrimary}"
                  MaxWidth="180"
                  TextTrimming="CharacterEllipsis" />
       <Button Name="DeleteButton"
               AutomationProperties.AutomationId="ComposerChipDelete"
+              Theme="{DynamicResource IconButton}"
               VerticalAlignment="Center"
+              Width="18"
               Height="18"
-              MinHeight="0"
               MinWidth="0"
-              Padding="4,0"
-              FontSize="12"
-              Background="Transparent"
-              BorderThickness="0"
-              Focusable="False"
-              Content="×" />
+              MinHeight="0"
+              CornerRadius="9"
+              Focusable="False">
+        <PathIcon Classes="icon"
+                  Width="10"
+                  Height="10"
+                  Data="{DynamicResource CpIconDismiss}" />
+      </Button>
     </StackPanel>
   </Border>
 

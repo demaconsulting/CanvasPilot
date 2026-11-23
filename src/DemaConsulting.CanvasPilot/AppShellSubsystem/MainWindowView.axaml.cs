@@ -292,6 +292,21 @@ public sealed partial class MainWindowView : Window, IDialogService
     }
 
     /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> PickAttachmentsAsync(string? initialFolder)
+    {
+        var options = new FilePickerOpenOptions
+        {
+            Title = "Attach Files",
+            AllowMultiple = true,
+            FileTypeFilter = [FilePickerFileTypes.All],
+            SuggestedStartLocation = await TryGetFolderAsync(initialFolder)
+        };
+
+        var files = await StorageProvider.OpenFilePickerAsync(options);
+        return files.Select(file => file.TryGetLocalPath()).OfType<string>().ToList();
+    }
+
+    /// <inheritdoc />
     public async Task<string?> PickFolderAsync(string? initialFolder)
     {
         var options = new FolderPickerOpenOptions

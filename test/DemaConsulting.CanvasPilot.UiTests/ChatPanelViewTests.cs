@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -59,7 +60,7 @@ public sealed class ChatPanelViewTests
         Assert.Same(harness.Chat.Thumbnails, harness.Editor.ThumbnailProvider);
         Assert.False(harness.SendButton.IsEffectivelyEnabled);
         Assert.True(harness.TalkButton.IsEffectivelyEnabled);
-        Assert.Equal(ChatPanelViewModel.TalkIdleText, harness.TalkButton.Content);
+        Assert.Equal(ChatPanelViewModel.TalkIdleText, harness.TalkLabel);
     }
 
     /// <summary>
@@ -181,7 +182,7 @@ public sealed class ChatPanelViewTests
         // Assert: it is listening, the label says so, and the words so far are shown
         Assert.True(harness.View.IsTalkHeld);
         Assert.Equal(DictationState.Listening, harness.Composer.DictationState);
-        Assert.Equal("Listening... let go to finish", harness.TalkButton.Content);
+        Assert.Equal("Listening... let go to finish", harness.TalkLabel);
         Assert.Equal("draw a", harness.Find<TextBlock>("ComposerPartialText").Text);
         Assert.True(harness.Find<TextBlock>("ComposerPartialText").IsVisible);
         Assert.False(harness.SendButton.IsEffectivelyEnabled);
@@ -193,7 +194,7 @@ public sealed class ChatPanelViewTests
         Assert.True(harness.WaitFor(() => harness.Editor.SurfaceText == "draw a circle"));
         Assert.False(harness.View.IsTalkHeld);
         Assert.Equal(DictationState.Idle, harness.Composer.DictationState);
-        Assert.Equal(ChatPanelViewModel.TalkIdleText, harness.TalkButton.Content);
+        Assert.Equal(ChatPanelViewModel.TalkIdleText, harness.TalkLabel);
         Assert.Equal(1, harness.Dictation.Session.EndCount);
         Assert.True(harness.SendButton.IsEffectivelyEnabled);
     }
@@ -307,7 +308,7 @@ public sealed class ChatPanelViewTests
         Assert.True(harness.Find<TextBlock>("ComposerStatus").IsVisible);
         Assert.Equal(0, harness.Dictation.BeginCount);
         Assert.Equal("typed", harness.Editor.SurfaceText);
-        Assert.Equal(ChatPanelViewModel.TalkIdleText, harness.TalkButton.Content);
+        Assert.Equal(ChatPanelViewModel.TalkIdleText, harness.TalkLabel);
     }
 
     /// <summary>
@@ -454,5 +455,113 @@ public sealed class ChatPanelViewTests
 
         // Assert
         Assert.Equal(1, raised);
+    }
+
+    /// <summary>
+    ///     Test that the composer card shows its placeholder while the message is empty, that every button without text has an
+    ///     accessible name, and that the hint says what Enter does.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_ComposerCard_PlaceholderNamesAndHint()
+    {
+        // Arrange / Act: a new panel in an open project
+        using var harness = new ChatHarness();
+
+        // Assert: the placeholder shows, and the icon buttons have names and tips
+        var placeholder = harness.Find<TextBlock>("ComposerPlaceholder");
+        Assert.True(placeholder.IsEffectivelyVisible);
+        Assert.Equal(ComposerViewModel.PlaceholderText, placeholder.Text);
+        Assert.Equal("Send", AutomationProperties.GetName(harness.SendButton));
+        Assert.Equal("Attach files", AutomationProperties.GetName(harness.Find<Button>("ChatAttachButton")));
+        Assert.Equal(ChatPanelViewModel.TalkIdleText, harness.TalkLabel);
+        Assert.NotNull(ToolTip.GetTip(harness.TalkButton));
+        Assert.Equal("Enter to send", harness.Find<TextBlock>("ChatSendHint").Text);
+
+        // Act: type something
+        harness.Type("Make it blue");
+
+        // Assert: the placeholder is gone
+        Assert.False(placeholder.IsEffectivelyVisible);
+    }
+
+    /// <summary>
+    ///     Test that Enter on its own sends the message, and that Shift+Enter writes a line break instead.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_EnterKey_SendsTheMessageAndShiftEnterWritesALineBreak()
+    {
+        // Arrange: a message in the editing control that has the focus
+        using var harness = new ChatHarness();
+        harness.Type("Make it blue");
+        harness.Editor.FocusEditor();
+
+        // Act: Shift+Enter
+        harness.Window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.Shift);
+        harness.Window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.Shift);
+        harness.Layout();
+
+        // Assert: nothing was sent, and the message has a second line
+        Assert.Empty(harness.Entries);
+        Assert.Contains('\n', harness.Composer.Document.FlatText);
+
+        // Act: Enter on its own
+        harness.Window.KeyPressQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        harness.Window.KeyReleaseQwerty(PhysicalKey.Enter, RawInputModifiers.None);
+        harness.Layout();
+
+        // Assert: the message was sent
+        Assert.Single(harness.Entries);
+    }
+
+    /// <summary>
+    ///     Test that the attach button asks for files and adds them to the message as attachment chips.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_AttachButton_AddsThePickedFilesAsChips()
+    {
+        // Arrange: a file and a picker that chooses it
+        using var harness = new ChatHarness();
+        var file = Path.Combine(harness.Folder, "notes.txt");
+        File.WriteAllText(file, "notes");
+        var picker = new FakeAttachmentPicker { Files = [file] };
+        harness.Chat.AttachmentPicker = picker;
+
+        // Act: press the attach button
+        harness.Find<Button>("ChatAttachButton").Command!.Execute(null);
+
+        // Assert: the picker was asked once, from the project folder, and the message has the chip
+        Assert.True(harness.WaitFor(() => harness.Composer.Document.Chips.Count() == 1));
+        Assert.Equal(1, picker.Asked);
+        Assert.Equal(harness.Composer.ProjectFolder, picker.InitialFolder);
+        Assert.IsType<FileChip>(Assert.Single(harness.Composer.Document.Chips));
+    }
+
+    /// <summary>
+    ///     A picker of attachments that answers with the files that the test names.
+    /// </summary>
+    private sealed class FakeAttachmentPicker : IAttachmentPicker
+    {
+        /// <summary>
+        ///     Gets the files that the user picks.
+        /// </summary>
+        public required IReadOnlyList<string> Files { get; init; }
+
+        /// <summary>
+        ///     Gets how many times the user was asked.
+        /// </summary>
+        public int Asked { get; private set; }
+
+        /// <summary>
+        ///     Gets the folder that the picker was asked to start in.
+        /// </summary>
+        public string? InitialFolder { get; private set; }
+
+        /// <inheritdoc />
+        public Task<IReadOnlyList<string>> PickAttachmentsAsync(string? initialFolder)
+        {
+            Asked++;
+            InitialFolder = initialFolder;
+            return Task.FromResult(Files);
+        }
     }
 }

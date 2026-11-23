@@ -126,6 +126,9 @@ public sealed partial class ChipView : UserControl
         Chip = chip;
         _provider = provider;
         LabelText.Text = GetLabel(chip);
+        ChipBorder.Classes.Set("mark", chip is MarkChip);
+        Avalonia.Automation.AutomationProperties.SetName(DeleteButton, $"Remove {GetLabel(chip)}");
+        ToolTip.SetTip(DeleteButton, $"Remove {GetLabel(chip)}");
         IconPath.Data = Geometry.Parse(chip switch
         {
             FolderChip => FolderIcon,
