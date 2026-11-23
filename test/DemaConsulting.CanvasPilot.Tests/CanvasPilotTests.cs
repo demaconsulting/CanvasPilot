@@ -382,6 +382,295 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a turn that waits shows what the copilot is doing and how long the turn has lasted, with the tool that
+    ///     ran as a row, and that nothing of it is left when the turn has ended.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ShowCopilotProgress_TurnThatWaits_ShowsWhatTheCopilotDoesTheElapsedTimeAndTheToolThatRan()
+    {
+        // Arrange: a model that calls a tool and then waits, in the composed application
+        var token = TestContext.Current.CancellationToken;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var never = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var app = await ComposeCopilotAsync(new ProgrammableChatClient((number, ct) => number == 1
+            ? ProgrammableChatClient.CallTool("c1", "project_list")
+            : ProgrammableChatClient.Hang(entered, never.Task, "late", ct)));
+        var chat = app.Composition.Chat;
+
+        // Act: the user sends a message, and the turn waits for the model
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await chat.SendCommand.ExecuteAsync(null);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(20), token);
+        await AgentServiceRig.WaitUntilAsync(() => chat.Transcript.OfType<ToolActivityRowViewModel>().Any(), token);
+        var whileWaiting = (chat.IsCopilotBusy, chat.BusyText, chat.BusyElapsedText);
+        chat.StopCommand.Execute(null);
+        await chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+
+        // Assert: the row said what the copilot does and the time, the tool is a row, and the turn left nothing behind
+        Assert.True(whileWaiting.IsCopilotBusy);
+        Assert.NotEmpty(whileWaiting.BusyText);
+        Assert.Matches(@"^\d+:\d{2}$", whileWaiting.BusyElapsedText);
+        Assert.Single(chat.Transcript.OfType<ToolActivityRowViewModel>());
+        Assert.Equal((false, string.Empty, string.Empty), (chat.IsCopilotBusy, chat.BusyText, chat.BusyElapsedText));
+    }
+
+    /// <summary>
+    ///     Test that a Stop in the middle of a tool call ends the turn at once with the answer so far marked as stopped, and
+    ///     that the next message is answered on the same conversation, without starting a new one.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_StopCopilotSafely_StopInTheMiddleOfAToolCall_NextMessageIsAnsweredOnTheSameConversation()
+    {
+        // Arrange: a model that calls a tool and then waits, and answers the next message
+        var token = TestContext.Current.CancellationToken;
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var never = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var app = await ComposeCopilotAsync(new ProgrammableChatClient((number, ct) => number switch
+        {
+            1 => ProgrammableChatClient.CallTool("c1", "project_list"),
+            2 => ProgrammableChatClient.Hang(entered, never.Task, "late", ct),
+            _ => ProgrammableChatClient.Say("after"),
+        }));
+        var chat = app.Composition.Chat;
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await chat.SendCommand.ExecuteAsync(null);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(20), token);
+
+        // Act: Stop, and then send the next message
+        chat.StopCommand.Execute(null);
+        await chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        var idleAfterStop = !chat.IsCopilotBusy;
+        app.Composition.Composer.InsertTyped("Are you there?");
+        await chat.SendCommand.ExecuteAsync(null);
+        await chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+
+        // Assert: the stopped answer is marked, the next answer came, and the conversation was not made again
+        var replies = chat.Transcript.OfType<AssistantReplyViewModel>().ToArray();
+        Assert.True(idleAfterStop);
+        Assert.Equal(AssistantReplyState.Stopped, replies[0].State);
+        Assert.Equal("after", replies[^1].Text);
+        Assert.Equal(AssistantReplyState.Completed, replies[^1].State);
+        Assert.DoesNotContain(chat.Transcript, row => row is NoticeRowViewModel);
+        Assert.Single(app.Factory!.Requests);
+    }
+
+    /// <summary>
+    ///     Test that a turn that ended with its answer is recorded as completed and not as stopped (the chat stops reading at
+    ///     the completion), so that a failure of the next message is shown in the conversation and is not hidden by a silent
+    ///     replacement of the conversation.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_KeepCompletedTurnCompleted_NextMessageFails_FailureIsShownAndNothingIsReplaced()
+    {
+        // Arrange: a model that answers once and then loses the connection
+        var token = TestContext.Current.CancellationToken;
+        var model = new ProgrammableChatClient((number, _) => number == 1
+            ? ProgrammableChatClient.Say("answer")
+            : ProgrammableChatClient.Fail(new HttpRequestException("The connection was closed.")));
+        var app = await ComposeCopilotAsync(model);
+        var chat = app.Composition.Chat;
+
+        // Act: the first message completes, and the second one fails
+        app.Composition.Composer.InsertTyped("One");
+        await chat.SendCommand.ExecuteAsync(null);
+        await chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        await AgentServiceRig.WaitUntilAsync(() => ReadApplicationLog().Contains("Turn ended: turn=1", StringComparison.Ordinal), token);
+        app.Composition.Composer.InsertTyped("Two");
+        await chat.SendCommand.ExecuteAsync(null);
+        await chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+
+        // Assert: the failure is in the conversation, the first turn was logged as completed by nobody's cancel, and no
+        // new conversation was made
+        Assert.Single(chat.Transcript.OfType<NoticeRowViewModel>());
+        var log = ReadApplicationLog();
+        Assert.Contains("Turn ended: turn=1 outcome=Completed cancelSource=None", log, StringComparison.Ordinal);
+        Assert.DoesNotContain("Session recovered", log, StringComparison.Ordinal);
+        Assert.Single(app.Factory!.Requests);
+        Assert.Equal(2, model.Requests.Count);
+    }
+
+    /// <summary>
+    ///     Test that a turn that the provider reported usage for ends with a caption of the figures under the last reply, and
+    ///     that a provider that reports no model multiplier gets tokens and time only.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ShowCopilotCost_TurnWithReportedUsage_CaptionUnderTheLastReplyHasOnlyWhatWasReported()
+    {
+        // Arrange: a model that answers and reports the tokens of the call
+        var token = TestContext.Current.CancellationToken;
+        var app = await ComposeCopilotAsync(new ProgrammableChatClient((_, _) => AnswerWithUsage("Done.", 1200, 300)));
+        var chat = app.Composition.Chat;
+
+        // Act
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await chat.SendCommand.ExecuteAsync(null);
+        await chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+
+        // Assert: tokens and time, and no multiplier that the provider did not send
+        var caption = chat.Transcript.OfType<AssistantReplyViewModel>().Last().UsageCaption;
+        Assert.StartsWith("1.2k in, 300 out, ", caption, StringComparison.Ordinal);
+        Assert.DoesNotContain("premium", caption, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that the prompts that are offered follow what the project has: ways to start while it has no drawing, ways to
+    ///     refine once the copilot has written one, and none while the copilot works.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_SuggestNextPrompts_ProjectWithoutAndWithADrawing_PromptsFollowWhatTheProjectHas()
+    {
+        // Arrange: a model that answers with words only in the first turn, and then writes a drawing, in a new project
+        var token = TestContext.Current.CancellationToken;
+        const string drawing = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"20\"><rect width=\"40\" height=\"20\" fill=\"#0000ff\"/></svg>";
+        var model = new ProgrammableChatClient((number, _) => number switch
+        {
+            1 => ProgrammableChatClient.Say("What kind of drawing?"),
+            2 => WriteDrawing(drawing),
+            _ => ProgrammableChatClient.Say("The box is drawn."),
+        });
+        var app = await ComposeCopilotAsync(model);
+        var chat = app.Composition.Chat;
+        var emptyProject = chat.Suggestions.ToArray();
+
+        // Act: a conversation without a drawing
+        app.Composition.Composer.InsertTyped("Hello");
+        await chat.SendCommand.ExecuteAsync(null);
+        await chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        var afterWords = (chat.ShowSuggestions, chat.Suggestions.ToArray());
+
+        // Act: a turn in which the copilot writes a drawing
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await chat.SendCommand.ExecuteAsync(null);
+        await chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        await AgentServiceRig.WaitUntilAsync(() => chat.Suggestions.Contains("Add a legend"), token);
+
+        // Assert: starters before and after words, refinements after the drawing
+        Assert.Equal(FollowUpSuggestions.StarterPrompts, emptyProject);
+        Assert.True(afterWords.ShowSuggestions);
+        Assert.Equal(FollowUpSuggestions.StarterPrompts, afterWords.Item2);
+        Assert.True(chat.ShowSuggestions);
+        Assert.DoesNotContain(FollowUpSuggestions.StarterPrompts[0], chat.Suggestions);
+    }
+
+    /// <summary>
+    ///     Makes the answer of a model that writes a drawing with the project tool.
+    /// </summary>
+    /// <param name="content">The source of the drawing.</param>
+    /// <returns>The updates.</returns>
+    private static async IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate> WriteDrawing(string content)
+    {
+        await Task.Yield();
+        yield return new Microsoft.Extensions.AI.ChatResponseUpdate(
+            Microsoft.Extensions.AI.ChatRole.Assistant,
+            [new Microsoft.Extensions.AI.FunctionCallContent("w1", "project_write", new Dictionary<string, object?> { ["path"] = "box.svg", ["content"] = content })]);
+    }
+
+    /// <summary>
+    ///     Test that the key that is held to talk is F9 until the user chooses another, that every hint of the application
+    ///     names the key that is chosen, and that an unsafe stored key leaves F9.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ChooseTalkKey_DefaultAndChosenKey_EveryHintNamesTheKeyInUse()
+    {
+        // Arrange: the application with the default settings
+        var app = await ComposeCopilotAsync();
+        var chat = app.Composition.Chat;
+        var statusBar = app.Composition.Shell.StatusBar;
+        var atStart = (statusBar.TalkKeyText, chat.TalkKeyText);
+
+        // Act: the user chooses another key, and then an unsafe one is stored by hand
+        app.Composition.Settings.Update(settings => settings with { Speech = settings.Speech with { PushToTalkKey = "Ctrl+Shift+Space" } });
+        var chosen = (statusBar.TalkKeyText, chat.TalkKeyText, chat.EmptyTipText);
+        app.Composition.Settings.Update(settings => settings with { Speech = settings.Speech with { PushToTalkKey = "Ctrl+Space" } });
+        var unsafeKey = (statusBar.TalkKeyText, chat.TalkKeyText);
+
+        // Assert
+        Assert.Equal(("F9", "F9"), atStart);
+        Assert.Equal("Ctrl+Shift+Space", chosen.Item1);
+        Assert.Equal("Ctrl+Shift+Space", chosen.Item2);
+        Assert.Contains("Ctrl+Shift+Space", chosen.Item3, StringComparison.Ordinal);
+        Assert.Equal(("F9", "F9"), unsafeKey);
+    }
+
+    /// <summary>
+    ///     Test that the user can open the folder of the log files from the shell, and is told when it cannot be shown.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_DiagnoseCopilotTurns_OpenLogFolder_ShowsTheFolderThatHoldsTheLogOfTheTurns()
+    {
+        // Arrange: the application with a launcher that records the folder it is asked to show
+        var token = TestContext.Current.CancellationToken;
+        var launcher = new FakeFolderLauncher();
+        var app = await ComposeCopilotAsync(folderLauncher: launcher);
+        app.Composition.Composer.InsertTyped("Draw a blue box");
+        await app.Composition.Chat.SendCommand.ExecuteAsync(null);
+        await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        await AgentServiceRig.WaitUntilAsync(() => ReadApplicationLog().Contains("Turn ended: turn=1", StringComparison.Ordinal), token);
+
+        // Act
+        await app.Composition.Shell.OpenLogFolderCommand.ExecuteAsync(null);
+
+        // Assert: the folder that was shown holds the log with the lifecycle of the turn
+        var shown = Assert.Single(launcher.Opened);
+        var log = ReadApplicationLog();
+        Assert.Equal(PathHelpers.SafePathCombine(_tempRoot, "logs"), shown);
+        Assert.Contains("Turn started: turn=1", log, StringComparison.Ordinal);
+        Assert.Contains("Turn ended: turn=1 outcome=Completed", log, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that the status bar says nothing about saving for a project that has not been saved, says when the project
+    ///     file was saved after it was, and says nothing again when the project is closed.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ShowHonestStatus_ProjectSaved_StatusBarSaysWhenTheProjectFileWasSaved()
+    {
+        // Arrange: the application with a new project
+        var token = TestContext.Current.CancellationToken;
+        var app = await ComposeCopilotAsync();
+        var statusBar = app.Composition.Shell.StatusBar;
+        var newProject = (statusBar.SavedText, statusBar.HasSavedText);
+
+        // Act: save the project, and close it
+        var saved = await app.Composition.Projects.SaveAsync(token);
+        var afterSave = (statusBar.SavedText, statusBar.HasSavedText);
+        app.Composition.Projects.Close();
+        var afterClose = (statusBar.SavedText, statusBar.HasSavedText);
+
+        // Assert
+        Assert.True(saved.Succeeded);
+        Assert.Equal((string.Empty, false), newProject);
+        Assert.StartsWith(StatusBarViewModel.SavedPrefix, afterSave.SavedText, StringComparison.Ordinal);
+        Assert.True(afterSave.HasSavedText);
+        Assert.Equal((string.Empty, false), afterClose);
+    }
+
+    /// <summary>
+    ///     Test that a turn that ends is followed in the log by what the provider reported without any word of the message:
+    ///     the log of a turn has the number of the turn, its model, and its outcome, and not the words that were sent.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_DiagnoseCopilotTurns_TurnWithWords_LogHoldsTheLifecycleAndNotTheWords()
+    {
+        // Arrange: a turn with words that must not be logged
+        var token = TestContext.Current.CancellationToken;
+        var app = await ComposeCopilotAsync(DrawingModel());
+        app.Composition.Composer.InsertTyped("Draw a secret-word box");
+
+        // Act
+        await app.Composition.Chat.SendCommand.ExecuteAsync(null);
+        await app.Composition.Chat.WaitForTurnAsync().WaitAsync(TimeSpan.FromSeconds(20), token);
+        await AgentServiceRig.WaitUntilAsync(() => ReadApplicationLog().Contains("Turn ended: turn=1", StringComparison.Ordinal), token);
+
+        // Assert
+        var log = ReadApplicationLog();
+        Assert.Contains("Turn started: turn=1", log, StringComparison.Ordinal);
+        Assert.Contains("Tool finished", log, StringComparison.Ordinal);
+        Assert.DoesNotContain("secret-word", log, StringComparison.Ordinal);
+        Assert.DoesNotContain("I will draw a box", log, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that the words of the conversation are kept in the history folder that the composition was given and never in
     ///     the project, are shown again as text when the application is started again in the same project, and are
     ///     deleted, with the conversation of the copilot, by Clear chat history.
@@ -2083,6 +2372,46 @@ public sealed class CanvasPilotTests : IDisposable
         FakeCopilotRuntimeStarter Starter);
 
     /// <summary>
+    ///     Makes the answer of a model that says something and reports the tokens of the call, as a provider does.
+    /// </summary>
+    /// <param name="text">The text.</param>
+    /// <param name="input">The tokens sent.</param>
+    /// <param name="output">The tokens written.</param>
+    /// <returns>The updates.</returns>
+    private static async IAsyncEnumerable<Microsoft.Extensions.AI.ChatResponseUpdate> AnswerWithUsage(string text, long input, long output)
+    {
+        await Task.Yield();
+        yield return new Microsoft.Extensions.AI.ChatResponseUpdate(Microsoft.Extensions.AI.ChatRole.Assistant, text);
+        yield return new Microsoft.Extensions.AI.ChatResponseUpdate
+        {
+            Role = Microsoft.Extensions.AI.ChatRole.Assistant,
+            Contents = [new Microsoft.Extensions.AI.UsageContent(new Microsoft.Extensions.AI.UsageDetails { InputTokenCount = input, OutputTokenCount = output })],
+        };
+    }
+
+    /// <summary>
+    ///     Reads the application log of the test, as the logger wrote it so far.
+    /// </summary>
+    /// <returns>The text of every log file.</returns>
+    private string ReadApplicationLog()
+    {
+        RollingFileLogger.Flush();
+        var folder = PathHelpers.SafePathCombine(_tempRoot, "logs");
+        if (!Directory.Exists(folder))
+        {
+            return string.Empty;
+        }
+
+        // The log may be written at the same moment, so it is opened for sharing
+        return string.Concat(Directory.EnumerateFiles(folder, "*.log*").Select(path =>
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream);
+            return reader.ReadToEnd();
+        }));
+    }
+
+    /// <summary>
     ///     Makes a scripted model that says a word, writes a drawing of 40 by 20 with the project tool, and says that it is
     ///     drawn.
     /// </summary>
@@ -2116,12 +2445,14 @@ public sealed class CanvasPilotTests : IDisposable
     ///     What the stand-in starter of the Copilot runtime answers, which is a refusal when <see langword="null" />, so that
     ///     no test starts a Copilot runtime.
     /// </param>
+    /// <param name="folderLauncher">The launcher that shows a folder, or <see langword="null" /> for none.</param>
     /// <returns>The composition and what it is built over.</returns>
     private async Task<CopilotApp> ComposeCopilotAsync(
         Microsoft.Extensions.AI.IChatClient? model = null,
         bool scripted = true,
         string? openProject = null,
-        CopilotStartResult? starterResult = null)
+        CopilotStartResult? starterResult = null,
+        IFolderLauncher? folderLauncher = null)
     {
         var token = TestContext.Current.CancellationToken;
         var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
@@ -2153,6 +2484,7 @@ public sealed class CanvasPilotTests : IDisposable
             environment: environment,
             cliFileSystem: DevMachine.CreateFileSystem(),
             copilotStarter: starter,
+            folderLauncher: folderLauncher,
             ollamaCatalogs: new FakeOllamaCatalogs(ollamaCatalog));
         _disposables.Add(composition);
         composition.Shell.AttachDialogService(dialogs);
