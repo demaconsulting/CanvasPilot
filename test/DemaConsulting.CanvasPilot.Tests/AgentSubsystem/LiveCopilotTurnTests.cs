@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Text;
+using DemaConsulting.AgentKit.Agents.Copilot;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -32,8 +33,10 @@ namespace DemaConsulting.CanvasPilot.Tests;
 ///     the machine and the credentials that the machine has. It is skipped unless <c>CANVASPILOT_LIVE_COPILOT=1</c> is set,
 ///     so that no build needs a Copilot CLI, a sign-in, or the network. The model is the runtime default unless
 ///     <c>CANVASPILOT_LIVE_COPILOT_MODEL</c> names one (and <c>CANVASPILOT_LIVE_COPILOT_EFFORT</c> a reasoning level, for the
-///     test of the model settings). The test belongs to no requirement; the manual verification of the
-///     system records its result.
+///     test of the model settings). The sign-in check records how the runtime signed in (the kind, the login, and the host,
+///     never a token) and, when <c>CANVASPILOT_LIVE_COPILOT_EXPECT_SIGNIN</c> names a kind of sign-in, requires it; with
+///     <c>CANVASPILOT_LIVE_COPILOT_OUT</c> naming a file it also appends its record there. The test belongs to no
+///     requirement; the manual verification of the system records its result.
 /// </summary>
 public sealed class LiveCopilotTurnTests
 {
@@ -191,6 +194,7 @@ public sealed class LiveCopilotTurnTests
                 .AppendLine($"Model setting: {(model.Length == 0 ? "(runtime default)" : model)}")
                 .AppendLine($"Rows: {string.Join(" | ", composition.Chat.Transcript.Select(row => row.Kind.ToString()))}")
                 .AppendLine($"Starter asks: {starter.Asks}, distinct runtimes: {starter.Runtimes}")
+                .AppendLine($"SignIn: {DescribeSignIn(starter.SignIn)}")
                 .ToString();
             TestContext.Current.SendDiagnosticMessage(summary);
 
@@ -283,6 +287,7 @@ public sealed class LiveCopilotTurnTests
             summary.AppendLine($"Stored: model={stored.ModelName} effort={stored.ReasoningEffort}");
             summary.AppendLine($"Rows: {string.Join(" | ", composition.Chat.Transcript.Select(row => row.Kind.ToString()))}");
             summary.AppendLine($"Starter asks: {starter.Asks}, distinct runtimes: {starter.Runtimes}");
+            summary.AppendLine($"SignIn: {DescribeSignIn(starter.SignIn)}");
 
             // A reasoning effort that the model does not offer is refused by the catalog of the live runtime and told in the banner
             settings.Update(current => current with { AiProvider = current.AiProvider with { ReasoningEffort = "bogus" } });
@@ -306,6 +311,127 @@ public sealed class LiveCopilotTurnTests
         {
             composition.Dispose();
             Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that the real readiness check, on the Copilot CLI installed on the machine and over one real runtime, can be
+    ///     used and says how the runtime signed in (the account, the host, and the kind of sign-in), and that no token is in
+    ///     the sentence. What the machine offers is recorded as facts that hold no secret (the names of the token variables
+    ///     that are set, whether the GitHub CLI is on the <c>PATH</c>, whether <c>COPILOT_HOME</c> is set). When
+    ///     <c>CANVASPILOT_LIVE_COPILOT_EXPECT_SIGNIN</c> names a kind of sign-in (such as <c>CopilotCli</c>), the runtime
+    ///     must have used that kind. The record is also appended to the file that <c>CANVASPILOT_LIVE_COPILOT_OUT</c> names,
+    ///     so that it survives test runners that hide diagnostic messages.
+    /// </summary>
+    [Fact]
+    public async Task LiveCopilotTurn_Readiness_ReportsHowCopilotSignedIn()
+    {
+        // Arrange: skipped unless asked for; the real locator and readiness check over one counting starter of the real runtime
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT") == "1",
+            "Set CANVASPILOT_LIVE_COPILOT=1 to run a real GitHub Copilot turn on the installed Copilot CLI.");
+        var token = TestContext.Current.CancellationToken;
+        var root = Directory.CreateTempSubdirectory("canvaspilot-live-signin-").FullName;
+        var expected = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_EXPECT_SIGNIN")?.Trim() ?? string.Empty;
+        var model = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_MODEL")?.Trim() ?? string.Empty;
+        string[] tokenVariables = ["COPILOT_GITHUB_TOKEN", "GH_TOKEN", "GITHUB_TOKEN"];
+        try
+        {
+            await using var starter = new CountingStarter(new CopilotRuntimeStarter(AgentService.GetCopilotDataDirectory(root)));
+            var readiness = new AgentReadiness(starter: starter);
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+            timeout.CancelAfter(TurnTimeout);
+
+            // Act: check the provider the way that Check connection does
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            var result = await ((IProviderCheck)readiness).CheckAsync(
+                new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot, ModelName = model },
+                timeout.Token);
+            watch.Stop();
+
+            // Record what happened, as facts that hold no secret, so that a person can read it
+            var signIn = starter.SignIn;
+            var summary = new StringBuilder()
+                .AppendLine($"Check connection: usable={result.IsUsable}, {watch.Elapsed.TotalSeconds:F1} s")
+                .AppendLine($"Message: {result.Message}")
+                .AppendLine($"SignIn: {DescribeSignIn(signIn)}")
+                .AppendLine($"Token variables set (names only): [{string.Join(", ", tokenVariables.Where(name => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(name))))}]")
+                .AppendLine($"GitHub CLI on PATH: {IsOnPath("gh")}")
+                .AppendLine($"COPILOT_HOME set: {!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("COPILOT_HOME"))}")
+                .AppendLine($"Expected sign-in kind: {(expected.Length == 0 ? "(not set)" : expected)}")
+                .ToString();
+            Record(summary);
+
+            // Assert: usable, the account and the host named, no token text, and the expected kind when one is named
+            Assert.True(result.IsUsable, summary);
+            Assert.NotNull(signIn);
+            Assert.NotEqual(CopilotSignInSource.Unknown, signIn.Source);
+            if (!string.IsNullOrWhiteSpace(signIn.Login))
+            {
+                Assert.Contains(signIn.Login, result.Message, StringComparison.Ordinal);
+            }
+
+            Assert.Contains(signIn.Describe(), result.Message, StringComparison.Ordinal);
+            Assert.DoesNotMatch(@"gh[pousr]_|github_pat_", result.Message + summary);
+            foreach (var name in tokenVariables)
+            {
+                var value = Environment.GetEnvironmentVariable(name);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    Assert.DoesNotContain(value, result.Message + summary, StringComparison.Ordinal);
+                }
+            }
+
+            if (expected.Length > 0)
+            {
+                Assert.Equal(Enum.Parse<CopilotSignInSource>(expected, ignoreCase: true), signIn.Source);
+            }
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    ///     Words how a runtime signed in for the record: the kind, the login, and the host. It holds no token.
+    /// </summary>
+    /// <param name="signIn">How the runtime signed in, or <see langword="null" /> when not known.</param>
+    /// <returns>The words.</returns>
+    private static string DescribeSignIn(CopilotSignInInfo? signIn)
+    {
+        return signIn is null ? "(not reported)" : $"{signIn.Source} / {signIn.Login ?? "(no login)"}@{signIn.Host ?? "(no host)"}";
+    }
+
+    /// <summary>
+    ///     Tells whether a program is on the <c>PATH</c>, by its file name with or without the extension of the platform.
+    /// </summary>
+    /// <param name="name">The name of the program without an extension.</param>
+    /// <returns><see langword="true" /> when a folder of the <c>PATH</c> holds it.</returns>
+    private static bool IsOnPath(string name)
+    {
+        var folders = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return folders.Any(folder =>
+        {
+            var trimmed = folder.Trim('"');
+            return trimmed.Length > 0
+                && (File.Exists(Path.Combine(trimmed, name + ".exe")) || File.Exists(Path.Combine(trimmed, name)));
+        });
+    }
+
+    /// <summary>
+    ///     Records the summary of a live check as a diagnostic message and, when <c>CANVASPILOT_LIVE_COPILOT_OUT</c> names a
+    ///     file, appends it there, so that the record survives test runners that hide diagnostic messages.
+    /// </summary>
+    /// <param name="summary">The summary, which holds no token.</param>
+    private static void Record(string summary)
+    {
+        TestContext.Current.SendDiagnosticMessage(summary);
+        var path = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_OUT")?.Trim();
+        if (!string.IsNullOrEmpty(path))
+        {
+            File.AppendAllText(path, summary + Environment.NewLine);
         }
     }
 
@@ -362,6 +488,12 @@ public sealed class LiveCopilotTurnTests
         /// <summary>Gets how often the starter was asked.</summary>
         internal int Asks { get; private set; }
 
+        /// <summary>
+        ///     Gets how the last runtime that was handed out signed in (the kind, the login, and the host, never a token), or
+        ///     <see langword="null" /> when no runtime was handed out or it did not say.
+        /// </summary>
+        internal CopilotSignInInfo? SignIn { get; private set; }
+
         /// <summary>Gets how many different runtimes were handed out.</summary>
         internal int Runtimes
         {
@@ -384,6 +516,7 @@ public sealed class LiveCopilotTurnTests
                 if (result.Agents is not null)
                 {
                     _runtimes.Add(result.Agents);
+                    SignIn = result.Agents.SignIn;
                 }
             }
 
