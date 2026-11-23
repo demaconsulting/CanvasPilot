@@ -408,9 +408,12 @@ reviews:
       - "src/DemaConsulting.CanvasPilot.Desktop/Program.cs"
       - "test/**/AppShellSubsystem/AppShellSubsystemTests.cs"
       - "test/**/AppShellThemeTests.cs"
+      - "test/**/AccessibilityViewTests.cs"
       - "test/DemaConsulting.CanvasPilot.UiTests/TestAppBuilder.cs"
       - "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotSupport.cs"
       - "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotSmokeTests.cs"
+      - "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotDemo.cs"
+      - "test/DemaConsulting.CanvasPilot.UiTests/ScreenshotTests.cs"
 
   - id: CanvasPilot-AppShell-MainWindowShell
     title: Review of CanvasPilot MainWindowShell unit implementation
@@ -430,19 +433,63 @@ reviews:
       - "src/**/AppShellSubsystem/MessageDialogView.axaml.cs"
       - "src/**/AppShellSubsystem/MainWindowView.axaml"
       - "src/**/AppShellSubsystem/MainWindowView.axaml.cs"
-      - "src/**/AppShellSubsystem/StatusBarViewModel.cs"
-      - "src/**/AppShellSubsystem/StatusBarView.axaml"
-      - "src/**/AppShellSubsystem/StatusBarView.axaml.cs"
-      - "src/**/AppShellSubsystem/ProviderPillViewModel.cs"
-      - "src/**/AppShellSubsystem/ProviderPillView.axaml"
-      - "src/**/AppShellSubsystem/ProviderPillView.axaml.cs"
       - "test/**/AppShellSubsystem/MainWindowShellTests.cs"
-      - "test/**/AppShellSubsystem/StatusBarTests.cs"
-      - "test/**/AppShellSubsystem/ProviderPillTests.cs"
       - "test/**/AppShellSubsystem/MessageDialogTests.cs"
       - "test/**/AppShellSubsystem/AppShellSubsystemFakes.cs"
       - "test/**/MainWindowViewTests.cs"
       - "test/**/AppShellUiTestSupport.cs"
+
+  - id: CanvasPilot-AppShell-StatusBar
+    title: Review of CanvasPilot StatusBar unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/status-bar.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/status-bar.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/status-bar.md"
+      - "src/**/AppShellSubsystem/StatusBarViewModel.cs"
+      - "src/**/AppShellSubsystem/StatusBarView.axaml"
+      - "src/**/AppShellSubsystem/StatusBarView.axaml.cs"
+      - "test/**/AppShellSubsystem/StatusBarTests.cs"
+
+  - id: CanvasPilot-AppShell-ProviderPill
+    title: Review of CanvasPilot ProviderPill unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/provider-pill.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/provider-pill.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/provider-pill.md"
+      - "src/**/AppShellSubsystem/ProviderPillViewModel.cs"
+      - "src/**/AppShellSubsystem/ProviderPillView.axaml"
+      - "src/**/AppShellSubsystem/ProviderPillView.axaml.cs"
+      - "test/**/AppShellSubsystem/ProviderPillTests.cs"
+
+  - id: CanvasPilot-AppShell-Welcome
+    title: Review of CanvasPilot Welcome unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/app-shell-subsystem.md
+      - docs/reqstream/canvas-pilot/app-shell-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/app-shell-subsystem/welcome.yaml"
+      - "docs/design/canvas-pilot/app-shell-subsystem/welcome.md"
+      - "docs/verification/canvas-pilot/app-shell-subsystem/welcome.md"
+      - "src/**/AppShellSubsystem/WelcomeViewModel.cs"
+      - "src/**/AppShellSubsystem/WelcomeView.axaml"
+      - "src/**/AppShellSubsystem/WelcomeView.axaml.cs"
+      - "src/**/AppShellSubsystem/RecentProjectItem.cs"
+      - "src/**/AppShellSubsystem/ProjectPictureCounter.cs"
+      - "src/**/AppShellSubsystem/RecentThumbnailLoader.cs"
+      - "test/**/AppShellSubsystem/WelcomeTests.cs"
+      - "test/**/WelcomeViewTests.cs"
 
   - id: CanvasPilot-AppShell-ProjectWorkspace
     title: Review of CanvasPilot ProjectWorkspace unit implementation
@@ -696,6 +743,7 @@ reviews:
       - "docs/design/canvas-pilot/composer-subsystem/composer-view-model.md"
       - "docs/verification/canvas-pilot/composer-subsystem/composer-view-model.md"
       - "src/**/ComposerSubsystem/ComposerViewModel.cs"
+      - "src/**/ComposerSubsystem/IAttachmentPicker.cs"
       - "src/**/ComposerSubsystem/IMessageBuilder.cs"
       - "src/**/ComposerSubsystem/IPushToTalkTarget.cs"
       - "src/**/ComposerSubsystem/IUndoRedoTarget.cs"
@@ -839,6 +887,7 @@ reviews:
       - "src/**/KnowledgeSubsystem/CodeBlock.cs"
       - "src/**/KnowledgeSubsystem/MarkdownSpan.cs"
       - "src/**/KnowledgeSubsystem/MarkdownSpanStyle.cs"
+      - "src/**/KnowledgeSubsystem/MarkdownBlocksPanel.cs"
       - "test/**/KnowledgeSubsystem/KnowledgeMarkdownTests.cs"
 
   - id: CanvasPilot-Knowledge-KnowledgeBrowser
@@ -860,7 +909,6 @@ reviews:
       - "src/**/KnowledgeSubsystem/KnowledgeNodeViewModel.cs"
       - "src/**/KnowledgeSubsystem/KnowledgeLinkViewModel.cs"
       - "src/**/KnowledgeSubsystem/KnowledgeExampleViewModel.cs"
-      - "src/**/KnowledgeSubsystem/MarkdownBlocksPanel.cs"
       - "src/**/KnowledgeSubsystem/WindowKnowledgeClipboard.cs"
       - "test/**/KnowledgeSubsystem/KnowledgeBrowserTests.cs"
       - "test/**/KnowledgeSubsystem/RecordingKnowledgeClipboard.cs"
@@ -1021,6 +1069,20 @@ reviews:
       - "test/**/PreviewSubsystem/PreviewSubsystemFakes.cs"
       - "test/**/PreviewPaneViewTests.cs"
 
+  - id: CanvasPilot-Preview-ThumbnailProvider
+    title: Review of CanvasPilot ThumbnailProvider unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/preview-subsystem.md
+      - docs/reqstream/canvas-pilot/preview-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/preview-subsystem/thumbnail-provider.yaml"
+      - "docs/design/canvas-pilot/preview-subsystem/thumbnail-provider.md"
+      - "docs/verification/canvas-pilot/preview-subsystem/thumbnail-provider.md"
+      - "src/**/PreviewSubsystem/ThumbnailProvider.cs"
+      - "test/**/ThumbnailViewTests.cs"
+
   - id: CanvasPilot-Preview-ImageExporter
     title: Review of CanvasPilot ImageExporter unit implementation
     context:
@@ -1149,7 +1211,6 @@ reviews:
       - "src/**/ProjectSubsystem/ProjectFileItem.cs"
       - "src/**/ProjectSubsystem/ProjectNodeViewModel.cs"
       - "src/**/ProjectSubsystem/IThumbnailSource.cs"
-      - "src/**/PreviewSubsystem/ThumbnailProvider.cs"
       - "src/**/ProjectSubsystem/ProjectExplorerViewModel.cs"
       - "src/**/ProjectSubsystem/ProjectExplorerView.axaml"
       - "src/**/ProjectSubsystem/ProjectExplorerView.axaml.cs"
@@ -1198,6 +1259,7 @@ reviews:
       - "docs/design/canvas-pilot/settings-subsystem/settings-dialog.md"
       - "docs/verification/canvas-pilot/settings-subsystem/settings-dialog.md"
       - "src/**/SettingsSubsystem/ISettingsPage.cs"
+      - "src/**/SettingsSubsystem/IconKeyConverter.cs"
       - "src/**/SettingsSubsystem/SettingsChoice.cs"
       - "src/**/SettingsSubsystem/SettingsDialogViewModel.cs"
       - "src/**/SettingsSubsystem/SettingsDialogView.axaml"

@@ -13,7 +13,8 @@ package CanvasPilot_AppearanceSettingsPage {
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/SettingsSubsystem/AppearanceSettingsPageTests.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/AppearanceSettingsPageViewTests.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/AppearanceSettingsPageViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/settings-subsystem/appearance-settings-page.md");
             verificationFiles = ("docs/verification/canvas-pilot/settings-subsystem/appearance-settings-page.md");

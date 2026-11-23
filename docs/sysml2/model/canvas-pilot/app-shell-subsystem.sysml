@@ -3,10 +3,13 @@ package CanvasPilot_AppShellSubsystem {
     private import CanvasPilot_AboutDialog::*;
     private import CanvasPilot_MainWindowShell::*;
     private import CanvasPilot_ProjectWorkspace::*;
+    private import CanvasPilot_ProviderPill::*;
+    private import CanvasPilot_StatusBar::*;
     private import CanvasPilot_ThemeResources::*;
+    private import CanvasPilot_Welcome::*;
 
     part def AppShellSubsystem {
-        doc /* The main window with its menus, the project workspace, the About dialog, and the composition root that builds the application's units at startup, including the AI copilot with its history, and joins them to the chat panel, the settings page, and the project explorer. */
+        doc /* The main window with its title bar, menus, status bar, AI provider pill, and welcome screen, the project workspace with its saved layout, the About dialog, the design tokens and control themes of the user interface, and the composition root that builds the application's units at startup, including the AI copilot with its history, and joins them to the chat panel, the settings page, and the project explorer. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -31,5 +34,8 @@ package CanvasPilot_AppShellSubsystem {
         part projectWorkspace : ProjectWorkspace;
         part aboutDialog : AboutDialog;
         part themeResources : ThemeResources;
+        part statusBar : StatusBar;
+        part providerPill : ProviderPill;
+        part welcome : Welcome;
     }
 }

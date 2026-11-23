@@ -5,7 +5,7 @@ package CanvasPilot_ComposerEditor {
     private import OtsDependencies::*;
 
     part def ComposerEditor {
-        doc /* The view of the message being composed: one editing surface in which typed text, dictated text, and chips for attached files, folders, pictures, and marks stand in order. It shows what the view model holds and reports every change the user makes as one action of the view model, writes every other change of the message into the surface and keeps the surface equal to the message, takes undo, redo, paste, copy, cut, and drops over from the surface and handles dropped and pasted content as data, draws chips inline with their name, icon or picture, and delete button, shows dictated words with a background, and shows the live words of a dictation and the sentence about the last action. */
+        doc /* The view of the message being composed: one editing surface in which typed text, dictated text, and chips for attached files, folders, pictures, and marks stand in order. It shows what the view model holds and reports every change the user makes as one action of the view model, writes every other change of the message into the surface and keeps the surface equal to the message, takes undo, redo, paste, copy, cut, and drops over from the surface and handles dropped and pasted content as data, draws chips inline as pills with their name, icon or picture, and a named delete button (a mark chip is tinted in the mark color), shows dictated words with a background, shows the live words of a dictation and the sentence about the last action, and shows a placeholder over the empty message. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

@@ -10,7 +10,7 @@ package CanvasPilot_StyleKitManager {
     private import CanvasPilot_StyleSelection::*;
 
     part def StyleKitManager {
-        doc /* The window in which the user sees the style kits that were found, in groups by place with notes about places that cannot be read and kits that cannot be used, with a preview of the kit that is chosen (the colors with their roles, the fonts, the numbers, the advice, the export sizes, the warnings, the text that an assistant would be given, and small pictures of the example images that are drawn from the folder of the kit and kept in a cache), and the commands that apply to it: use it in the project, make a new kit or a copy, edit, delete, export and import as zip files, copy into the project, and read the places again, with the commands that would change a kit of the program or of a team unavailable. */
+        doc /* The window in which the user sees the style kits that were found, in groups by place with notes about places that cannot be read and kits that cannot be used, with a preview of the kit that is chosen (the colors with their roles, the fonts, the numbers, the advice, the export sizes, the warnings, the text that an assistant would be given, and small pictures of the example images that are drawn from the folder of the kit and kept in a cache), and the commands that apply to it: use it in the project, make a new kit or a copy, edit, delete, export and import as zip files, copy into the project, and read the places again, with the commands that would change a kit of the program or of a team unavailable, and the chosen kit marked by an outline and a check as well as a tint. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -28,7 +28,8 @@ package CanvasPilot_StyleKitManager {
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/StyleSubsystem/StyleKitManagerTests.cs",
                 "test/DemaConsulting.CanvasPilot.Tests/StyleSubsystem/StyleSubsystemFakes.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/StyleKitManagerViewTests.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/StyleKitManagerViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/style-subsystem/style-kit-manager.md");
             verificationFiles = ("docs/verification/canvas-pilot/style-subsystem/style-kit-manager.md");

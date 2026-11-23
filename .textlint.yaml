@@ -104,6 +104,12 @@ words:
   - Viewbox
   - Visio
   - yamlfix
+  - previewable
+  - droptarget
+  - newfolder
+  - noext
+  - nendobj
+  - nstartxref
 
 # Exclude common build artifacts, dependencies, and vendored third-party code
 ignorePaths:

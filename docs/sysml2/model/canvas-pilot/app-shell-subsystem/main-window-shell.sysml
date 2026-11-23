@@ -11,12 +11,17 @@ package CanvasPilot_MainWindowShell {
     private import CanvasPilot_ProjectWorkspace::*;
     private import CanvasPilot_RecentProjects::*;
     private import CanvasPilot_SettingsDialog::*;
+    private import CanvasPilot_SettingsService::*;
+    private import CanvasPilot_StatusBar::*;
     private import CanvasPilot_StyleChecker::*;
     private import CanvasPilot_StyleKitManager::*;
     private import CanvasPilot_StylePicker::*;
+    private import CanvasPilot_ThemeResources::*;
+    private import CanvasPilot_Welcome::*;
+    private import CanvasPilot_ProviderPill::*;
 
     part def MainWindowShell {
-        doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands (Help shows the About dialog and the browser of the drawing knowledge), the window title, the recent projects menu, Undo and Redo of the focused part, the talk key, and the dialog service the window implements. */
+        doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands (Help shows the About dialog and the browser of the drawing knowledge), the window title, the title bar that holds the compact menu, the name of the open project, the style list, and the AI provider pill, the body that shows the welcome screen or the workspace and the status bar below it, the recent projects menu, Undo and Redo of the focused part, the talk key, the saved size, place, and state of the window with the widths of its columns, the thumbnail setting of the explorer, and the dialog service the window implements. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -33,6 +38,7 @@ package CanvasPilot_MainWindowShell {
                 "test/DemaConsulting.CanvasPilot.Tests/AppShellSubsystem/MessageDialogTests.cs",
                 "test/DemaConsulting.CanvasPilot.Tests/AppShellSubsystem/AppShellSubsystemFakes.cs",
                 "test/DemaConsulting.CanvasPilot.UiTests/MainWindowViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs",
                 "test/DemaConsulting.CanvasPilot.UiTests/AppShellUiTestSupport.cs"
             );
             designFiles = ("docs/design/canvas-pilot/app-shell-subsystem/main-window-shell.md");
@@ -78,7 +84,8 @@ package CanvasPilot_MainWindowShell {
         // IPushToTalkTarget, both seams that the Composer subsystem owns (ComposerViewModel implements the first).
         dependency MainWindowShell to ComposerViewModel;
 
-        // Hosts the list that chooses the style kit in a status bar, and asks it to give a new project the default kit.
+        // Hosts the list that chooses the style kit in the title bar, and asks it to give a new project the default kit
+        // and to open the window that manages kits.
         dependency MainWindowShell to StylePicker;
 
         // Shows the window that manages style kits from the Tools menu, through the dialogs that the main window implements.
@@ -87,5 +94,21 @@ package CanvasPilot_MainWindowShell {
         // Runs the Check Against Style item of the Image menu through the interface (ICheckAgainstStyle) that the Style
         // subsystem owns and the check of the shown picture implements.
         dependency MainWindowShell to StyleChecker;
+
+        // Makes the status bar over the workspace and places it at the bottom of the window.
+        dependency MainWindowShell to StatusBar;
+
+        // Holds the pill that tells which AI provider is chosen, which the composition gives it, and shows it in the title bar.
+        dependency MainWindowShell to ProviderPill;
+
+        // Makes the welcome screen over itself and shows it in the body of the window while no project is open.
+        dependency MainWindowShell to Welcome;
+
+        // Reads the saved layout of the window, the time of each opening of a project, and the thumbnail setting, and
+        // writes the size, place, and state of the window and the widths of the columns.
+        dependency MainWindowShell to SettingsService;
+
+        // Takes every color, size, icon, and button look of the window and its dialogs from the tokens and control themes.
+        dependency MainWindowShell to ThemeResources;
     }
 }

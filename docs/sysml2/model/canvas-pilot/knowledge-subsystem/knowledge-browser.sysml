@@ -19,14 +19,14 @@ package CanvasPilot_KnowledgeBrowser {
                 "src/DemaConsulting.CanvasPilot/KnowledgeSubsystem/KnowledgeNodeViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/KnowledgeSubsystem/KnowledgeLinkViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/KnowledgeSubsystem/KnowledgeExampleViewModel.cs",
-                "src/DemaConsulting.CanvasPilot/KnowledgeSubsystem/MarkdownBlocksPanel.cs",
                 "src/DemaConsulting.CanvasPilot/KnowledgeSubsystem/WindowKnowledgeClipboard.cs"
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/KnowledgeSubsystem/KnowledgeBrowserTests.cs",
                 "test/DemaConsulting.CanvasPilot.Tests/KnowledgeSubsystem/RecordingKnowledgeClipboard.cs",
                 "test/DemaConsulting.CanvasPilot.Tests/KnowledgeSubsystem/FakeKnowledgeCatalog.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/KnowledgeBrowserViewTests.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/KnowledgeBrowserViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/knowledge-subsystem/knowledge-browser.md");
             verificationFiles = ("docs/verification/canvas-pilot/knowledge-subsystem/knowledge-browser.md");

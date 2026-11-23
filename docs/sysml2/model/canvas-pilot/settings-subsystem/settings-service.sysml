@@ -4,7 +4,7 @@ package CanvasPilot_SettingsService {
     private import CanvasPilot_RollingFileLogger::*;
 
     part def SettingsService {
-        doc /* Loads, validates, and atomically saves the versioned per-user settings file, including the reasoning effort of the AI provider as the text of the provider's own id and the read of the reasoning level of earlier files as that effort (without a new version of the file). */
+        doc /* Loads, validates, and atomically saves the versioned per-user settings file, including the reasoning effort of the AI provider as the text of the provider's own id and the read of the reasoning level of earlier files as that effort (without a new version of the file), the layout of the main window (size, place, state, and the widths of the explorer and the chat) kept within bounds, the theme choice and the options of the explorer, and the time at which each recent project was opened. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

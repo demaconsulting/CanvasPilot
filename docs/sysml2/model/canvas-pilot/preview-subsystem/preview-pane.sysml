@@ -7,7 +7,7 @@ package CanvasPilot_PreviewPane {
     private import CanvasPilot_RollingFileLogger::*;
 
     part def PreviewPane {
-        doc /* Follows the project explorer's selected file, renders it in the background, discards stale results, renders again when files change, shows the picture, busy state, errors, and notes, hosts a layer over the picture in the picture's own pixel coordinates and a place in its top bar for the controls of that layer, and starts the drag of the picture out of the application. */
+        doc /* Follows the project explorer's selected file, renders it in the background, discards stale results, renders again when files change, shows the picture on a stage fitted to the pane or at a zoom from 25 to 400 percent with zoom controls, the busy line, the error card, and the notes drawer, tells the facts of the shown picture (file name, size, format, render time), hosts a layer over the picture in the picture's own pixel coordinates and a place floating over the stage for the controls of that layer, and starts the drag of the picture out of the application. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

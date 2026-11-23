@@ -15,7 +15,8 @@ package CanvasPilot_NewProjectDialog {
             );
             testFiles = (
                 "test/DemaConsulting.CanvasPilot.Tests/ProjectSubsystem/NewProjectDialogTests.cs",
-                "test/DemaConsulting.CanvasPilot.UiTests/NewProjectDialogViewTests.cs"
+                "test/DemaConsulting.CanvasPilot.UiTests/NewProjectDialogViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs"
             );
             designFiles = ("docs/design/canvas-pilot/project-subsystem/new-project-dialog.md");
             verificationFiles = ("docs/verification/canvas-pilot/project-subsystem/new-project-dialog.md");

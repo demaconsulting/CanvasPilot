@@ -366,6 +366,12 @@ tests:
         xml:
           - query: "//*[local-name()='svg']"
             count: 1
+      - pattern: "docs/design/generated/AppShellSubsystemChromeView.svg"
+        count: 1
+        min-size: 100
+        xml:
+          - query: "//*[local-name()='svg']"
+            count: 1
       - pattern: "docs/design/generated/AppShellSubsystemActionsView.svg"
         count: 1
         min-size: 100
