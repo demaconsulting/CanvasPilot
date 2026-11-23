@@ -609,6 +609,66 @@ public sealed class PreviewPaneTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the zoom commands step between 25 and 400 percent from the fitted zoom, never leave that range,
+    ///     and that Fit returns to the fitted picture.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_Zoom_StepsClampAndFit_FollowTheStepList()
+    {
+        // Arrange: a fitted pane whose view reported that the picture is shown at 90 percent
+        var pane = CreatePane();
+        pane.FitPercent = 90;
+        var fitted = (pane.ZoomLabel, pane.FitToWindow);
+
+        // Act: zoom in from the fit, to the end of the list, then out to its start, then actual size and fit
+        pane.ZoomIn();
+        var firstIn = (pane.ZoomPercent, pane.FitToWindow, pane.ZoomLabel);
+        for (var i = 0; i < 10; i++)
+        {
+            pane.ZoomIn();
+        }
+
+        var top = (pane.ZoomPercent, pane.IsZoomInPossible, pane.IsZoomOutPossible);
+        for (var i = 0; i < 10; i++)
+        {
+            pane.ZoomOut();
+        }
+
+        var bottom = (pane.ZoomPercent, pane.IsZoomInPossible, pane.IsZoomOutPossible);
+        pane.ZoomActualSize();
+        var actual = (pane.ZoomPercent, pane.IsActualSize, pane.FitToWindow);
+        pane.ZoomToFit();
+
+        // Assert
+        Assert.Equal(("90%", true), fitted);
+        Assert.Equal((100, false, "100%"), firstIn);
+        Assert.Equal((400, false, true), top);
+        Assert.Equal((25, true, false), bottom);
+        Assert.Equal((100, true, false), actual);
+        Assert.True(pane.FitToWindow);
+        Assert.False(pane.IsActualSize);
+        Assert.Equal("90%", pane.ZoomLabel);
+    }
+
+    /// <summary>
+    ///     Test that zooming out from a fitted picture that is shown at 90 percent goes to the step below it.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_ZoomOut_FromFit_GoesToTheStepBelowTheFittedZoom()
+    {
+        // Arrange: a fitted pane shown at 90 percent
+        var pane = CreatePane();
+        pane.FitPercent = 90;
+
+        // Act
+        pane.ZoomOutCommand.Execute(null);
+
+        // Assert
+        Assert.Equal(75, pane.ZoomPercent);
+        Assert.False(pane.FitToWindow);
+    }
+
+    /// <summary>
     ///     Test the defaults of the pane: it fits the window and, with no project, explains that none is open.
     /// </summary>
     [Fact]
