@@ -330,6 +330,62 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the rows that open a group are the first row and the first row of the copilot after a notice, so that the
+    ///     name of the copilot is shown once for a run of replies and tools.
+    /// </summary>
+    [Fact]
+    public void ChatPanelViewModel_Transcript_MarksTheRowsThatOpenAGroup()
+    {
+        // Arrange / Act: a reply and a tool, a notice, and a tool and a reply
+        var rows = new TranscriptRowViewModel[]
+        {
+            new AssistantReplyViewModel("First", AssistantReplyState.Completed),
+            new ToolActivityRowViewModel("render_image", "Rendered `a.svg`", succeeded: true),
+            new NoticeRowViewModel(NoticeSeverity.Information, "Something happened"),
+            new ToolActivityRowViewModel("render_image", "Rendered `b.svg`", succeeded: true),
+            new AssistantReplyViewModel("Second", AssistantReplyState.Completed),
+        };
+        foreach (var row in rows)
+        {
+            _panel.Transcript.Add(row);
+        }
+
+        // Assert: the group starts at the first row and at the tool after the notice
+        Assert.Equal([true, false, false, true, false], rows.Select(row => row.OpensGroup));
+    }
+
+    /// <summary>
+    ///     Test that a tool row shows a check or a cross once it has ended, the time it took when that is worth saying, and
+    ///     nothing of the sort while it is under way or when it was restored.
+    /// </summary>
+    [Fact]
+    public void ToolActivityRowViewModel_Finish_ShowsOutcomeAndElapsedTime()
+    {
+        // Arrange: a call that started on a clock that the test moves
+        var clock = new ManualTimeProvider();
+        var row = new ToolActivityRowViewModel("c1", "render_image", "path=a.svg", "Rendering", clock);
+        Assert.True(row.IsRunning);
+        Assert.False(row.ShowsSuccess);
+        Assert.False(row.ShowsFailure);
+        Assert.Equal(string.Empty, row.ElapsedText);
+
+        // Act: the result arrives after 0.8 seconds
+        clock.Advance(TimeSpan.FromMilliseconds(800));
+        row.Finish("Rendered `a.svg`", succeeded: true, hasImage: true);
+
+        // Assert
+        Assert.True(row.ShowsSuccess);
+        Assert.False(row.ShowsFailure);
+        Assert.Equal(string.Format(System.Globalization.CultureInfo.CurrentCulture, "{0:0.0} s", 0.8), row.ElapsedText);
+
+        // Act / Assert: a quick failure shows a cross and no time, and a restored row shows no time either
+        var quick = new ToolActivityRowViewModel("c2", "render_image", string.Empty, "Rendering", clock);
+        quick.Finish("Could not render", succeeded: false, hasImage: false);
+        Assert.True(quick.ShowsFailure);
+        Assert.Equal(string.Empty, quick.ElapsedText);
+        Assert.Equal(string.Empty, new ToolActivityRowViewModel("render_image", "Rendered `a.svg`", succeeded: true).ElapsedText);
+    }
+    /// <summary>
     ///     Test that a prompt is written in the message, that the follow-up prompts show only for a conversation, and that
     ///     the collapse command raises its request.
     /// </summary>

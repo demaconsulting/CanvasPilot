@@ -52,9 +52,26 @@ public enum TranscriptRowKind
 public abstract class TranscriptRowViewModel : ObservableObject, IDisposable
 {
     /// <summary>
+    ///     Whether the row opens a group of the transcript.
+    /// </summary>
+    private bool _opensGroup;
+
+    /// <summary>
     ///     Gets what the row is.
     /// </summary>
     public abstract TranscriptRowKind Kind { get; }
+
+    /// <summary>
+    ///     Gets a value indicating whether the row opens a group in the transcript: the first row of the transcript, or the
+    ///     first row of the copilot after a message or a notice. The copilot's name is shown on the first row of its group,
+    ///     and the divider of what was said earlier on the first row of a restored conversation. The panel sets it whenever
+    ///     the rows change.
+    /// </summary>
+    public bool OpensGroup
+    {
+        get => _opensGroup;
+        internal set => SetProperty(ref _opensGroup, value);
+    }
 
     /// <summary>
     ///     Releases what the row holds.

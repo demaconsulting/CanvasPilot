@@ -5,44 +5,77 @@
              x:DataType="vm:TranscriptEntryViewModel"
              AutomationProperties.AutomationId="TranscriptEntry">
 
-  <!-- One message that was sent: when it was sent, its words with the chips of its attachments and marks in their
-       places, a statement of what it carried, and the button that shows exactly what the assistant would receive -->
-  <Border Margin="0,0,0,8"
-          Padding="8"
-          CornerRadius="6"
-          Background="#18808080">
-    <StackPanel Spacing="4">
+  <UserControl.Styles>
+    <!-- The text button that shows the payload is there for the keyboard and for the pointer that is over the message, and
+         out of the way otherwise -->
+    <Style Selector="Button#ViewPayloadButton">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource CpAccentText}" />
+      <Setter Property="FontSize" Value="{DynamicResource CpFontCaption}" />
+      <Setter Property="MinHeight" Value="20" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="Padding" Value="6,0" />
+    </Style>
+    <Style Selector="Grid.entry:pointerover Button#ViewPayloadButton, Grid.entry:focus-within Button#ViewPayloadButton">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </UserControl.Styles>
 
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-          <TextBlock FontWeight="SemiBold" Text="You" />
-          <TextBlock Name="SentTimeText"
-                     AutomationProperties.AutomationId="TranscriptSentTime"
-                     Opacity="0.7"
-                     Text="{Binding SentText}" />
-        </StackPanel>
-        <Button Name="ViewPayloadButton"
-                Grid.Column="1"
-                AutomationProperties.AutomationId="TranscriptViewPayloadButton"
-                Padding="8,2"
-                FontSize="12"
-                Content="View payload"
-                Command="{Binding ViewPayloadCommand}"
-                ToolTip.Tip="See exactly what the assistant would receive for this message" />
-      </Grid>
+  <!-- One message that was sent: a bubble at the right with its words and the chips of its attachments and marks in their
+       places, when it was sent below it with the button that shows exactly what the assistant would receive, and a
+       statement of what it carried. The bubble is at most 85 percent of the width. -->
+  <Grid Classes="entry"
+        Margin="0,0,0,16"
+        ColumnDefinitions="0.15*,0.85*"
+        RowDefinitions="Auto,Auto,Auto">
 
+    <Border Grid.Column="1"
+            HorizontalAlignment="Right"
+            Padding="12,8"
+            CornerRadius="14,14,4,14"
+            Background="{DynamicResource CpAccent}">
       <SelectableTextBlock Name="MessageText"
                            AutomationProperties.AutomationId="TranscriptMessageText"
+                           Foreground="{DynamicResource CpTextOnAccent}"
+                           FontSize="{DynamicResource CpFontBody}"
+                           LineHeight="{DynamicResource CpLineBody}"
                            TextWrapping="Wrap" />
+    </Border>
 
-      <TextBlock Name="SummaryText"
-                 AutomationProperties.AutomationId="TranscriptSummary"
-                 FontSize="12"
-                 Opacity="0.7"
-                 Text="{Binding Summary}"
-                 IsVisible="{Binding Summary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-
+    <StackPanel Grid.Row="1"
+                Grid.Column="1"
+                Margin="0,2,2,0"
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="4">
+      <Button Name="ViewPayloadButton"
+              AutomationProperties.AutomationId="TranscriptViewPayloadButton"
+              VerticalAlignment="Center"
+              Content="View payload"
+              Command="{Binding ViewPayloadCommand}"
+              ToolTip.Tip="See exactly what the assistant would receive for this message" />
+      <TextBlock Name="SentTimeText"
+                 AutomationProperties.AutomationId="TranscriptSentTime"
+                 VerticalAlignment="Center"
+                 FontSize="{DynamicResource CpFontCaption}"
+                 Foreground="{DynamicResource CpTextTertiary}"
+                 Text="{Binding SentText}" />
     </StackPanel>
-  </Border>
+
+    <TextBlock Name="SummaryText"
+               Grid.Row="2"
+               Grid.Column="1"
+               Margin="0,2,2,0"
+               HorizontalAlignment="Right"
+               TextAlignment="Right"
+               TextWrapping="Wrap"
+               AutomationProperties.AutomationId="TranscriptSummary"
+               FontSize="{DynamicResource CpFontSmall}"
+               Foreground="{DynamicResource CpTextSecondary}"
+               Text="{Binding Summary}"
+               IsVisible="{Binding Summary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+  </Grid>
 
 </UserControl>

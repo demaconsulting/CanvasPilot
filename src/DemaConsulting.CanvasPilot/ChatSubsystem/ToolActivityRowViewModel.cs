@@ -18,6 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Globalization;
+
 namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
@@ -31,6 +33,11 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 /// </remarks>
 public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
 {
+    /// <summary>
+    ///     The shortest time that is shown, because a call that took less says nothing.
+    /// </summary>
+    private static readonly TimeSpan MinimumShownElapsed = TimeSpan.FromMilliseconds(100);
+
     /// <summary>
     ///     The sentence about what the tool did.
     /// </summary>
@@ -52,15 +59,31 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
     private bool _hasImage;
 
     /// <summary>
+    ///     The clock that times the call, or <see langword="null" /> for a row that was restored.
+    /// </summary>
+    private readonly TimeProvider? _clock;
+
+    /// <summary>
+    ///     The time stamp of the start of the call.
+    /// </summary>
+    private readonly long _started;
+
+    /// <summary>
+    ///     How long the call took, or <see cref="TimeSpan.Zero" /> while it is not known.
+    /// </summary>
+    private TimeSpan _elapsed;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ToolActivityRowViewModel" /> class for a call that has started.
     /// </summary>
     /// <param name="callId">The id of the call, which ties the row to the result.</param>
     /// <param name="toolName">The name of the tool.</param>
     /// <param name="argumentSummary">The short description of the arguments that the call came with.</param>
     /// <param name="summary">The sentence about what is under way.</param>
+    /// <param name="clock">The clock that times the call, or <see langword="null" /> for the system clock.</param>
     /// <exception cref="ArgumentException">Thrown when the call id or the name is empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when an argument is <see langword="null" />.</exception>
-    public ToolActivityRowViewModel(string callId, string toolName, string argumentSummary, string summary)
+    public ToolActivityRowViewModel(string callId, string toolName, string argumentSummary, string summary, TimeProvider? clock = null)
     {
         ArgumentException.ThrowIfNullOrEmpty(callId);
         ArgumentException.ThrowIfNullOrEmpty(toolName);
@@ -73,6 +96,8 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
         _summary = summary;
         _isRunning = true;
         _succeeded = true;
+        _clock = clock ?? TimeProvider.System;
+        _started = _clock.GetTimestamp();
     }
 
     /// <summary>
@@ -131,9 +156,25 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
     public bool Succeeded => _succeeded;
 
     /// <summary>
+    ///     Gets a value indicating whether the call has ended and did what was asked, which the row shows as a check.
+    /// </summary>
+    public bool ShowsSuccess => !_isRunning && _succeeded;
+
+    /// <summary>
+    ///     Gets a value indicating whether the call has ended and did not do what was asked, which the row shows as a cross.
+    /// </summary>
+    public bool ShowsFailure => !_isRunning && !_succeeded;
+
+    /// <summary>
     ///     Gets a value indicating whether the result carried a picture.
     /// </summary>
     public bool HasImage => _hasImage;
+
+    /// <summary>
+    ///     Gets how long the call took in seconds with one decimal, such as <c>0.8 s</c>, or an empty string for a call that is
+    ///     under way, that was restored, that was abandoned, or that took less than a tenth of a second.
+    /// </summary>
+    public string ElapsedText => _elapsed >= MinimumShownElapsed ? string.Format(CultureInfo.CurrentCulture, "{0:0.0} s", _elapsed.TotalSeconds) : string.Empty;
 
     /// <summary>
     ///     Gets a value indicating whether the report that a file was written has been made for this call.
@@ -160,9 +201,12 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
         _hasImage = hasImage;
         _succeeded = succeeded;
         _isRunning = false;
+        _elapsed = _clock is null ? TimeSpan.Zero : _clock.GetElapsedTime(_started);
+        OnPropertyChanged(nameof(ElapsedText));
         OnPropertyChanged(nameof(HasImage));
         OnPropertyChanged(nameof(Succeeded));
         OnPropertyChanged(nameof(IsRunning));
+        OnShapeChanged();
     }
 
     /// <summary>
@@ -180,6 +224,7 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
         _succeeded = true;
         OnPropertyChanged(nameof(HasFileReport));
         OnPropertyChanged(nameof(Succeeded));
+        OnShapeChanged();
     }
 
     /// <summary>
@@ -201,6 +246,16 @@ public sealed class ToolActivityRowViewModel : TranscriptRowViewModel
         _isRunning = false;
         OnPropertyChanged(nameof(Succeeded));
         OnPropertyChanged(nameof(IsRunning));
+        OnShapeChanged();
+    }
+
+    /// <summary>
+    ///     Tells the observers that the check and the cross may have changed.
+    /// </summary>
+    private void OnShapeChanged()
+    {
+        OnPropertyChanged(nameof(ShowsSuccess));
+        OnPropertyChanged(nameof(ShowsFailure));
     }
 
     /// <summary>

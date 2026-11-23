@@ -428,7 +428,8 @@ public sealed class ChatTurnRunner : IDisposable
             started.CallId,
             started.Name,
             started.ArgumentSummary,
-            ToolActivityText.Started(started.Name, started.ArgumentSummary));
+            ToolActivityText.Started(started.Name, started.ArgumentSummary),
+            _clock);
         turn.Tools[started.CallId] = row;
         turn.ToolOrder.Add(row);
         Add(row);

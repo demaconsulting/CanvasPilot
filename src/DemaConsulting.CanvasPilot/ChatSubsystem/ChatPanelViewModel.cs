@@ -299,7 +299,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _clock = clock ?? TimeProvider.System;
         Transcript = [];
         _sink = new TranscriptSink(Transcript);
-        Transcript.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasTranscript));
+        Transcript.CollectionChanged += (_, _) =>
+        {
+            MarkGroupStarts();
+            OnPropertyChanged(nameof(HasTranscript));
+        };
         Thumbnails = new ChipThumbnailProvider(chip => CropOfDraftMark(marks, markImages, chip));
         _transcriptProject = composer.ProjectFolder;
         StopCommand = new RelayCommand(Stop, () => IsCopilotBusy);
@@ -883,6 +887,22 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Tells the shell that the user asked to open the settings.
     /// </summary>
     private void RaiseOpenSettings() => OpenSettingsRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    ///     Tells each row of the transcript whether it opens a group: the first row, and the first row of the copilot after a
+    ///     message or a notice.
+    /// </summary>
+    private void MarkGroupStarts()
+    {
+        TranscriptRowKind? previous = null;
+        foreach (var row in Transcript)
+        {
+            row.OpensGroup = previous is null
+                || (row.Kind is TranscriptRowKind.Assistant or TranscriptRowKind.Tool
+                    && previous is TranscriptRowKind.User or TranscriptRowKind.Notice);
+            previous = row.Kind;
+        }
+    }
 
     /// <summary>
     ///     Adds a sent message to the end of the transcript.

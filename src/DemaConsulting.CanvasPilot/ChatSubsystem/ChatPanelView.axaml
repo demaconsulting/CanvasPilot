@@ -6,6 +6,65 @@
              x:DataType="vm:ChatPanelViewModel"
              AutomationProperties.AutomationId="ChatPanel">
 
+  <UserControl.Styles>
+    <!-- The dots of the typing indicator pulse over 1.2 seconds, one after the other -->
+    <Style Selector="Ellipse.dot">
+      <Setter Property="Opacity" Value="0.3" />
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="40%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="80%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="Ellipse.dot.second">
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" Delay="0:0:0.2" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="40%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="80%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="Ellipse.dot.third">
+      <Style.Animations>
+        <Animation Duration="0:0:1.2" Delay="0:0:0.4" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="40%">
+            <Setter Property="Opacity" Value="1" />
+          </KeyFrame>
+          <KeyFrame Cue="80%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="Opacity" Value="0.3" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </UserControl.Styles>
+
   <Grid RowDefinitions="Auto,Auto,*,Auto,Auto,Auto,Auto">
 
     <!-- The header of the conversation: the sparkle, the title, the menu of more actions, and the button that hides the
@@ -179,28 +238,34 @@
       </StackPanel>
     </Grid>
 
-    <!-- While the copilot works: the indicator and the button that stops it -->
+    <!-- While the copilot works: three pulsing dots, what is going on, and the button that stops it -->
     <Grid Name="BusyRow"
           Grid.Row="3"
           AutomationProperties.AutomationId="ChatBusyIndicator"
           Margin="16,8,16,0"
           ColumnDefinitions="Auto,*,Auto"
           IsVisible="{Binding IsCopilotBusy}">
-      <ProgressBar Grid.Column="0"
-                   Width="60"
-                   Height="4"
-                   Margin="0,0,8,0"
-                   IsIndeterminate="True"
-                   VerticalAlignment="Center" />
+      <StackPanel Grid.Column="0"
+                  Margin="0,0,8,0"
+                  Orientation="Horizontal"
+                  Spacing="4"
+                  VerticalAlignment="Center">
+        <Ellipse Classes="dot" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
+        <Ellipse Classes="dot second" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
+        <Ellipse Classes="dot third" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
+      </StackPanel>
       <TextBlock Name="BusyText"
                  Grid.Column="1"
                  AutomationProperties.AutomationId="ChatBusyText"
                  VerticalAlignment="Center"
+                 FontSize="{DynamicResource CpFontSmall}"
+                 Foreground="{DynamicResource CpTextSecondary}"
                  Text="{x:Static vm:ChatPanelViewModel.WorkingText}" />
       <Button Name="StopButton"
               Grid.Column="2"
               AutomationProperties.AutomationId="ChatStopButton"
-              MinWidth="80"
+              Theme="{DynamicResource PillButton}"
+              MinHeight="26"
               Content="Stop"
               Command="{Binding StopCommand}"
               ToolTip.Tip="Stop the copilot; what it has written so far is kept" />

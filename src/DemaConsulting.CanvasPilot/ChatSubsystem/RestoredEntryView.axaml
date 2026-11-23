@@ -6,43 +6,84 @@
              AutomationProperties.AutomationId="RestoredEntry">
 
   <!-- One message of the user that was restored from the saved history: when it was sent, its words with the labels of
-       its marks and attachments, a line for each mark note and attachment, and a note that pictures are not kept. It has
-       no pictures and no button that shows a payload, because the history keeps words only -->
-  <Border Margin="0,0,0,8"
-          Padding="8"
-          CornerRadius="6"
-          Background="#10808080">
-    <StackPanel Spacing="4">
+       its marks and attachments, a line for each mark note and attachment, and a note that pictures are not kept. It looks
+       like a sent message at 70 percent, and the first of them has the divider that says it is from earlier. It has no
+       pictures and no button that shows a payload, because the history keeps words only. -->
+  <StackPanel Spacing="8"
+              Margin="0,0,0,16"
+              Opacity="0.7">
 
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <TextBlock FontWeight="SemiBold" Text="You" />
-        <TextBlock Name="SentTimeText"
-                   AutomationProperties.AutomationId="RestoredSentTime"
-                   Opacity="0.7"
-                   Text="{Binding SentText}" />
-      </StackPanel>
+    <Grid Name="EarlierDivider"
+          ColumnDefinitions="*,Auto,*"
+          IsVisible="{Binding OpensGroup}">
+      <Border Grid.Column="0"
+              Height="1"
+              VerticalAlignment="Center"
+              Background="{DynamicResource CpBorderSubtle}" />
+      <TextBlock Grid.Column="1"
+                 Margin="8,0"
+                 FontSize="{DynamicResource CpFontCaption}"
+                 Foreground="{DynamicResource CpTextTertiary}"
+                 Text="Earlier" />
+      <Border Grid.Column="2"
+              Height="1"
+              VerticalAlignment="Center"
+              Background="{DynamicResource CpBorderSubtle}" />
+    </Grid>
 
-      <SelectableTextBlock Name="MessageText"
-                           AutomationProperties.AutomationId="RestoredMessageText"
-                           TextWrapping="Wrap"
-                           Text="{Binding Text}" />
+    <Grid ColumnDefinitions="0.15*,0.85*"
+          RowDefinitions="Auto,Auto,Auto,Auto">
+
+      <Border Grid.Column="1"
+              HorizontalAlignment="Right"
+              Padding="12,8"
+              CornerRadius="14,14,4,14"
+              Background="{DynamicResource CpAccent}">
+        <SelectableTextBlock Name="MessageText"
+                             AutomationProperties.AutomationId="RestoredMessageText"
+                             Foreground="{DynamicResource CpTextOnAccent}"
+                             FontSize="{DynamicResource CpFontBody}"
+                             LineHeight="{DynamicResource CpLineBody}"
+                             TextWrapping="Wrap"
+                             Text="{Binding Text}" />
+      </Border>
+
+      <TextBlock Name="SentTimeText"
+                 Grid.Row="1"
+                 Grid.Column="1"
+                 Margin="0,2,2,0"
+                 HorizontalAlignment="Right"
+                 AutomationProperties.AutomationId="RestoredSentTime"
+                 FontSize="{DynamicResource CpFontCaption}"
+                 Foreground="{DynamicResource CpTextTertiary}"
+                 Text="{Binding SentText}" />
 
       <SelectableTextBlock Name="DetailsText"
+                           Grid.Row="2"
+                           Grid.Column="1"
+                           Margin="0,2,2,0"
+                           HorizontalAlignment="Right"
+                           TextAlignment="Right"
                            AutomationProperties.AutomationId="RestoredDetails"
-                           FontSize="12"
-                           Opacity="0.85"
+                           FontSize="{DynamicResource CpFontSmall}"
+                           Foreground="{DynamicResource CpTextSecondary}"
                            TextWrapping="Wrap"
                            Text="{Binding DetailsText}"
                            IsVisible="{Binding HasDetails}" />
 
       <TextBlock Name="RestoredNoteText"
+                 Grid.Row="3"
+                 Grid.Column="1"
+                 Margin="0,2,2,0"
+                 HorizontalAlignment="Right"
+                 TextAlignment="Right"
                  AutomationProperties.AutomationId="RestoredNote"
-                 FontSize="11"
-                 Opacity="0.6"
+                 FontSize="{DynamicResource CpFontCaption}"
+                 Foreground="{DynamicResource CpTextTertiary}"
                  TextWrapping="Wrap"
                  Text="{x:Static vm:RestoredEntryViewModel.RestoredNote}" />
 
-    </StackPanel>
-  </Border>
+    </Grid>
+  </StackPanel>
 
 </UserControl>

@@ -7,30 +7,120 @@
 
   <UserControl.Styles>
     <Style Selector="TextBlock.failed">
-      <Setter Property="Foreground" Value="#C0392B" />
+      <Setter Property="Foreground" Value="{DynamicResource CpDanger}" />
+    </Style>
+    <Style Selector="Border.failed">
+      <Setter Property="BorderBrush" Value="{DynamicResource CpDanger}" />
+    </Style>
+
+    <!-- The spinner of a call under way turns once a second -->
+    <Style Selector="PathIcon#RunningSpinner">
+      <Style.Animations>
+        <Animation Duration="0:0:1" IterationCount="Infinite">
+          <KeyFrame Cue="0%">
+            <Setter Property="RotateTransform.Angle" Value="0" />
+          </KeyFrame>
+          <KeyFrame Cue="100%">
+            <Setter Property="RotateTransform.Angle" Value="360" />
+          </KeyFrame>
+        </Animation>
+      </Style.Animations>
     </Style>
   </UserControl.Styles>
 
-  <!-- One line about a tool that the copilot called: what it did, or what is under way -->
-  <Border Margin="12,0,0,6"
-          Padding="8,3"
-          CornerRadius="4"
-          Background="#10808080">
-    <StackPanel Orientation="Horizontal" Spacing="8">
-      <ProgressBar Name="RunningBar"
-                   AutomationProperties.AutomationId="ToolActivityRunning"
-                   Width="40"
-                   Height="4"
-                   IsIndeterminate="True"
+  <!-- One chip about a tool that the copilot called: a check, a spinner, or a cross, what it did, and how long it took. The
+       first row of the copilot's group also says who is speaking, so the chips stand under the name like the text does. -->
+  <Grid Margin="0,0,0,6"
+        ColumnDefinitions="22,*"
+        RowDefinitions="Auto,Auto">
+
+    <Border Name="AvatarBadge"
+            Grid.Row="0"
+            Grid.Column="0"
+            Width="22"
+            Height="22"
+            CornerRadius="11"
+            VerticalAlignment="Center"
+            Background="{DynamicResource CpAccentGradient}"
+            IsVisible="{Binding OpensGroup}">
+      <PathIcon Classes="icon"
+                Width="12"
+                Height="12"
+                Foreground="{DynamicResource CpTextOnAccent}"
+                Data="{DynamicResource CpIconSparkle}" />
+    </Border>
+
+    <TextBlock Name="NameText"
+               Grid.Row="0"
+               Grid.Column="1"
+               Margin="8,0,0,6"
+               VerticalAlignment="Center"
+               FontSize="{DynamicResource CpFontSmall}"
+               FontWeight="SemiBold"
+               Foreground="{DynamicResource CpTextPrimary}"
+               Text="Copilot"
+               IsVisible="{Binding OpensGroup}" />
+
+    <Border Grid.Row="1"
+            Grid.Column="1"
+            Margin="8,0,0,0"
+            Padding="8,3"
+            HorizontalAlignment="Left"
+            Theme="{DynamicResource ChipBorder}"
+            Classes.failed="{Binding ShowsFailure}">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Panel Grid.Column="0" Margin="0,0,6,0" VerticalAlignment="Center">
+        <PathIcon Name="SuccessIcon"
+                  Classes="icon"
+                  Width="12"
+                  Height="12"
+                  VerticalAlignment="Center"
+                  Foreground="{DynamicResource CpSuccess}"
+                  Data="{DynamicResource CpIconCheckmark}"
+                  IsVisible="{Binding ShowsSuccess}" />
+        <PathIcon Name="RunningSpinner"
+                  Classes="icon"
+                  AutomationProperties.AutomationId="ToolActivityRunning"
+                  Width="12"
+                  Height="12"
+                  VerticalAlignment="Center"
+                  Foreground="{DynamicResource CpAccentText}"
+                  Data="{DynamicResource CpIconArrowClockwise}"
+                  IsVisible="{Binding IsRunning}">
+          <PathIcon.RenderTransform>
+            <RotateTransform />
+          </PathIcon.RenderTransform>
+        </PathIcon>
+        <PathIcon Name="FailureIcon"
+                  Classes="icon"
+                  Width="12"
+                  Height="12"
+                  VerticalAlignment="Center"
+                  Foreground="{DynamicResource CpDanger}"
+                  Data="{DynamicResource CpIconDismiss}"
+                  IsVisible="{Binding ShowsFailure}" />
+        </Panel>
+        <TextBlock Name="SummaryText"
+                   Grid.Column="1"
+                   AutomationProperties.AutomationId="ToolActivitySummary"
                    VerticalAlignment="Center"
-                   IsVisible="{Binding IsRunning}" />
-      <TextBlock Name="SummaryText"
-                 AutomationProperties.AutomationId="ToolActivitySummary"
-                 FontSize="12"
-                 TextWrapping="Wrap"
-                 Classes.failed="{Binding !Succeeded}"
-                 Text="{Binding Summary}" />
-    </StackPanel>
-  </Border>
+                   FontSize="{DynamicResource CpFontSmall}"
+                   Foreground="{DynamicResource CpTextSecondary}"
+                   TextWrapping="Wrap"
+                   Classes.failed="{Binding ShowsFailure}"
+                   Text="{Binding Summary}" />
+        <TextBlock Name="ElapsedText"
+                   Grid.Column="2"
+                   Margin="6,0,0,0"
+                   AutomationProperties.AutomationId="ToolActivityElapsed"
+                   VerticalAlignment="Center"
+                   FontSize="{DynamicResource CpFontSmall}"
+                   Foreground="{DynamicResource CpTextTertiary}"
+                   Text="{Binding ElapsedText, StringFormat='· {0}'}"
+                   IsVisible="{Binding ElapsedText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </Grid>
+    </Border>
+
+  </Grid>
 
 </UserControl>
