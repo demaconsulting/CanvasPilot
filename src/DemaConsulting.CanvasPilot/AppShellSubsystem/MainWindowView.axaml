@@ -26,6 +26,11 @@
   </Window.Resources>
 
   <Window.Styles>
+    <!-- The window draws its own title text at the left of the strip when the frame is extended (Avalonia 12 on Windows
+         and Linux), which would lie under the brand mark and the menu; the strip has its own centered title. -->
+    <Style Selector="WindowDrawnDecorations /template/ Panel#PART_TitleTextPanel > TextBlock">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
     <!-- The menu keeps all its items and keys; only its look is quiet: no fill, compact items, secondary text. -->
     <Style Selector="Menu#MainMenu">
       <Setter Property="Background" Value="Transparent" />

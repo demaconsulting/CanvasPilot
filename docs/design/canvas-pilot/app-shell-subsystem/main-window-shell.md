@@ -133,8 +133,12 @@ lights), and none elsewhere or when the window is not extended. The window appli
 `IsExtendedIntoWindowDecorations` changes, so the headless platform, which does not extend, keeps both at width 0. A
 real window raises that change while the XAML loads, when the window has no name scope and the reserve controls do not
 exist (a name lookup then throws and crashed the published program at the start). So the window ignores the change until
-the component is loaded (`_componentReady`), applies the value once at the end of the constructor, and sets the generated
-fields through `ApplyCaptionReserve`, which leaves a missing control alone.
+the component is loaded (`_componentReady`), applies the value once at the end of the constructor, and sets the
+generated fields through `ApplyCaptionReserve`, which leaves a missing control alone.
+
+**System title text**: on Windows and Linux, Avalonia 12 draws the title of the window at the left of the strip when the
+frame is extended, which would lie over the brand mark and the menu. A style in the window hides that text
+(WindowDrawnDecorations /template/ Panel#PART_TitleTextPanel > TextBlock); the strip shows its own centered title.
 
 **Body and status bar**: the body is a grid with two siblings that fill it: `WorkspaceHost` (visible while
 `HasProject`) with the workspace as content, and `WelcomeHost` (visible while there is no project) with `Welcome`. The
