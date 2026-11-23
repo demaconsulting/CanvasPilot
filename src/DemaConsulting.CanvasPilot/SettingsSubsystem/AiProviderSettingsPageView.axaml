@@ -84,6 +84,10 @@
                      AutomationProperties.AutomationId="AiReasoningEffortNote"
                      IsVisible="{Binding HasReasoningNote}"
                      Text="{Binding ReasoningNote}" />
+          <TextBlock Classes="caution"
+                     AutomationProperties.AutomationId="AiEffortCostWarning"
+                     IsVisible="{Binding HasEffortCostWarning}"
+                     Text="{Binding EffortCostWarning}" />
         </StackPanel>
       </Border>
 

@@ -310,7 +310,7 @@ public sealed class AgentEventMapper
                     events.Add(MapResult(result));
                     break;
                 case UsageContent usage:
-                    events.Add(new AgentEvent.Usage(usage.Details?.InputTokenCount, usage.Details?.OutputTokenCount));
+                    events.Add(MapUsage(usage));
                     break;
                 case ErrorContent error:
                     events.Add(FailureFromText(error.Message));
@@ -642,6 +642,23 @@ public sealed class AgentEventMapper
         var text = message ?? string.Empty;
         var kind = ClassifyText(text) ?? AgentFailureKind.Unexpected;
         return new AgentEvent.Failed(kind, Describe(kind, string.Empty, new InvalidOperationException(text)));
+    }
+
+    /// <summary>
+    ///     Maps the usage of one model call: the tokens that the AI library reports, and what only the raw event of the
+    ///     Copilot runtime carries (the model multiplier, the tokens of reasoning, the model).
+    /// </summary>
+    /// <param name="usage">The usage content.</param>
+    /// <returns>The event.</returns>
+    private static AgentEvent.Usage MapUsage(UsageContent usage)
+    {
+        var raw = CopilotUsageReader.Read(usage.RawRepresentation);
+        return new AgentEvent.Usage(
+            usage.Details?.InputTokenCount,
+            usage.Details?.OutputTokenCount,
+            raw.ReasoningTokens ?? usage.Details?.ReasoningTokenCount,
+            raw.Multiplier,
+            raw.Model);
     }
 
     /// <summary>

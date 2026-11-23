@@ -411,8 +411,9 @@ public sealed class ChatTurnRunner : IDisposable
                 Refresh(turn, AnsweringText, heard: true);
                 return null;
 
-            case AgentEvent.Usage:
-                // Counts of tokens are not shown
+            case AgentEvent.Usage usage:
+                // The counts are summed for the caption under the last reply; they are not shown while the turn runs
+                turn.Usage.Add(usage);
                 Refresh(turn, null, heard: true);
                 return null;
 
@@ -539,6 +540,7 @@ public sealed class ChatTurnRunner : IDisposable
         if (turn.Reply is null)
         {
             turn.Reply = new AssistantReplyViewModel();
+            turn.LastReply = turn.Reply;
             _transcript.Add(turn.Reply);
         }
 
@@ -747,7 +749,32 @@ public sealed class ChatTurnRunner : IDisposable
         FlushText(turn);
         EndReply(turn);
         AbandonTools(turn, stopped: false);
+        ShowUsage(turn, stopped: false);
         return ChatTurnOutcome.Completed;
+    }
+
+    /// <summary>
+    ///     Shows what the turn cost as a quiet line under the last reply of the turn, or as an information notice when the
+    ///     turn wrote no reply. Nothing is shown when the provider reported no figure and the turn was not stopped.
+    /// </summary>
+    /// <param name="turn">The turn.</param>
+    /// <param name="stopped"><see langword="true" /> when the user stopped the turn.</param>
+    private void ShowUsage(Turn turn, bool stopped)
+    {
+        var caption = turn.Usage.Format(_clock.GetElapsedTime(turn.Started), stopped);
+        if (caption.Length == 0)
+        {
+            return;
+        }
+
+        if (turn.LastReply is { } reply)
+        {
+            reply.SetUsageCaption(caption);
+        }
+        else
+        {
+            Add(new NoticeRowViewModel(NoticeSeverity.Information, caption));
+        }
     }
 
     /// <summary>
@@ -770,6 +797,7 @@ public sealed class ChatTurnRunner : IDisposable
 
         turn.Reply = null;
         AbandonTools(turn, stopped: true);
+        ShowUsage(turn, stopped: true);
         return ChatTurnOutcome.Stopped;
     }
 
@@ -786,6 +814,7 @@ public sealed class ChatTurnRunner : IDisposable
         turn.Reply?.Fail();
         turn.Reply = null;
         AbandonTools(turn, stopped: false);
+        ShowUsage(turn, stopped: false);
         Add(new NoticeRowViewModel(
             NoticeSeverity.Error,
             string.IsNullOrWhiteSpace(message) ? "The copilot failed." : message,
@@ -871,6 +900,12 @@ public sealed class ChatTurnRunner : IDisposable
 
         /// <summary>Gets or sets the reply that is being written, or <see langword="null" />.</summary>
         internal AssistantReplyViewModel? Reply { get; set; }
+
+        /// <summary>Gets or sets the latest reply that the turn wrote, even after it ended, or <see langword="null" />.</summary>
+        internal AssistantReplyViewModel? LastReply { get; set; }
+
+        /// <summary>Gets what the turn cost, summed from the usage that the provider reported.</summary>
+        internal TurnUsage Usage { get; } = new();
 
         /// <summary>Gets or sets the time of the last update of the reply, or <see langword="null" /> before the first.</summary>
         internal long? LastUpdate { get; set; }

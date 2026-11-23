@@ -311,6 +311,29 @@ public sealed class ChatPanelCopilotViewTests
     }
 
     /// <summary>
+    ///     Test that the last reply of a turn shows a quiet caption with what the turn cost once the turn has ended.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_CompletedTurn_ShowsTheUsageCaptionUnderTheLastReply()
+    {
+        // Arrange: a turn that answers and reports its usage
+        var agent = new ScriptedAgentService();
+        using var harness = new ChatHarness(agent: agent);
+        harness.Type("Draw a box");
+        harness.ClickSend();
+
+        // Act
+        agent.Emit(new AgentEvent.TextDelta("Done."), new AgentEvent.Usage(12_400, 7_200, null, 15, "model"), new AgentEvent.Completed());
+        Assert.True(harness.WaitFor(() => !harness.Chat.IsCopilotBusy));
+
+        // Assert: the caption is visible and says what was reported
+        var reply = Assert.Single(harness.Replies);
+        var caption = reply.FindControl<TextBlock>("UsageCaptionText")!;
+        Assert.True(caption.IsEffectivelyVisible);
+        Assert.StartsWith("12.4k in, 7.2k out, model x15 premium", caption.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that a panel with no copilot shows no banner, no indicator, and no Stop button.
     /// </summary>
     [AvaloniaFact]

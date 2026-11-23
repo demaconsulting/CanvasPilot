@@ -93,6 +93,21 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     public const string FixEntriesText = "Correct the entries marked in red first, then check the connection.";
 
     /// <summary>
+    ///     The billing multiplier from which a model counts as large for <see cref="EffortCostWarning" />.
+    /// </summary>
+    public const double LargeModelMultiplier = 3;
+
+    /// <summary>
+    ///     The reasoning levels that call for <see cref="EffortCostWarning" /> on a large model.
+    /// </summary>
+    private static readonly string[] HighEfforts = ["high", "xhigh", "max"];
+
+    /// <summary>
+    ///     The price bands of a provider that mark a large model.
+    /// </summary>
+    private static readonly string[] LargePriceCategories = ["high", "very_high", "premium"];
+
+    /// <summary>
     ///     Characters that cannot appear in a file path on this platform.
     /// </summary>
     private static readonly char[] InvalidPathCharacters = Path.GetInvalidPathChars();
@@ -244,6 +259,11 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     private string _reasoningNote = string.Empty;
 
     /// <summary>
+    ///     What the provider says about the chosen model, or <see langword="null" /> when the model is not in the list.
+    /// </summary>
+    private ProviderModelInfo? _modelInfo;
+
+    /// <summary>
     ///     Context window text as typed.
     /// </summary>
     [ObservableProperty]
@@ -356,6 +376,18 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     ///     Gets a value indicating whether there is a note about the reasoning effort to show.
     /// </summary>
     public bool HasReasoningNote => ReasoningNote.Length > 0;
+
+    /// <summary>
+    ///     Gets the warning that a high reasoning level on a large model is slow and costly, or an empty string when the
+    ///     chosen model and level do not call for it. It is for the model and level that are chosen now, and is shown for
+    ///     GitHub Copilot only, whose models are billed in premium requests.
+    /// </summary>
+    public string EffortCostWarning => IsCopilotSelected ? BuildEffortCostWarning(_modelInfo, _effortId) : string.Empty;
+
+    /// <summary>
+    ///     Gets a value indicating whether there is an <see cref="EffortCostWarning" /> to show.
+    /// </summary>
+    public bool HasEffortCostWarning => EffortCostWarning.Length > 0;
 
     /// <summary>
     ///     Gets a task that completes when the listing of models that was started last is over, which lets a test or a
@@ -595,6 +627,8 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
 
         _effortId = value.Value;
         ReasoningNote = string.Empty;
+        OnPropertyChanged(nameof(EffortCostWarning));
+        OnPropertyChanged(nameof(HasEffortCostWarning));
     }
 
     /// <summary>
@@ -778,7 +812,42 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
 
         ModelDetails = DescribeModel(info, choice, name);
         ModelWarning = WarnAbout(info);
+        _modelInfo = info;
         UpdateReasoningEfforts(info, name, reconcile);
+        OnPropertyChanged(nameof(EffortCostWarning));
+        OnPropertyChanged(nameof(HasEffortCostWarning));
+    }
+
+    /// <summary>
+    ///     Warns that a high reasoning effort on a large model is slow and costly, for the model and the effort that are
+    ///     chosen now.
+    /// </summary>
+    /// <param name="info">What the provider says about the model; <see langword="null" /> when nothing is known.</param>
+    /// <param name="effortId">The chosen effort; an empty string for the effort that the provider chooses.</param>
+    /// <returns>The sentence, or an empty string when the choice is not a large model with a high effort.</returns>
+    public static string BuildEffortCostWarning(ProviderModelInfo? info, string effortId)
+    {
+        if (info is null)
+        {
+            return string.Empty;
+        }
+
+        // The effort that the provider chooses is what counts when none was chosen
+        var effort = effortId.Length > 0 ? effortId : info.DefaultReasoningEffort ?? string.Empty;
+        var highEffort = HighEfforts.Contains(effort, StringComparer.OrdinalIgnoreCase);
+        var largeModel = info.BillingMultiplier >= LargeModelMultiplier
+            || string.Equals(info.Category, "powerful", StringComparison.OrdinalIgnoreCase)
+            || LargePriceCategories.Contains(info.PriceCategory ?? string.Empty, StringComparer.OrdinalIgnoreCase);
+        if (!highEffort || !largeModel)
+        {
+            return string.Empty;
+        }
+
+        var cost = info.BillingMultiplier is { } multiplier
+            ? $"each message counts {multiplier.ToString("0.##", CultureInfo.InvariantCulture)} premium requests"
+            : "each message counts several premium requests";
+        return $"A high reasoning level on a large model is slow (a big drawing can take minutes) and costly: {cost}, "
+            + "and stopping a turn does not give the request back. Choose a lower level for everyday work.";
     }
 
     /// <summary>

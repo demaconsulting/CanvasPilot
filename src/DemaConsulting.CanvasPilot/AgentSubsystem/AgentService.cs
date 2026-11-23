@@ -453,11 +453,13 @@ public sealed class AgentService : IAgentService
             LogSessionEvents(turn, stats);
             EndTurn(turn);
             var usage = stats.Usage;
+            var cost = stats.Cost;
             Write(
                 LogLevel.Info,
                 $"Turn ended: turn={turn.Number} outcome={stats.Outcome} cancelSource={turn.CancelSource} milliseconds={clock.ElapsedMilliseconds} "
                 + $"events={stats.Events} merged={stats.Merged} firstEventMs={stats.FirstEventMilliseconds} maxGapMs={stats.MaxGapMilliseconds} "
-                + $"textChars={stats.TextCharacters} reasoning={stats.SawReasoning} usageIn={usage.Input} usageOut={usage.Output}");
+                + $"textChars={stats.TextCharacters} reasoning={stats.SawReasoning} usageIn={usage.Input} usageOut={usage.Output} "
+                + $"reasoningTokens={cost.Reasoning} premiumMultiplier={cost.Multiplier}");
         }
     }
 
@@ -1335,6 +1337,12 @@ public sealed class AgentService : IAgentService
         /// <summary>The tokens that the model wrote, or <see langword="null" /> when none was reported.</summary>
         private long? _outputTokens;
 
+        /// <summary>The tokens that the model spent on reasoning, or <see langword="null" /> when none was reported.</summary>
+        private long? _reasoningTokens;
+
+        /// <summary>The model multiplier that the provider reported, or <see langword="null" /> when none was.</summary>
+        private double? _multiplier;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="TurnStats" /> class and starts the clock of the turn.
         /// </summary>
@@ -1424,6 +1432,20 @@ public sealed class AgentService : IAgentService
             }
         }
 
+        /// <summary>Gets the tokens of reasoning and the model multiplier that the provider reported, each <c>n/a</c> when it did not.</summary>
+        internal (string Reasoning, string Multiplier) Cost
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return (
+                        _reasoningTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "n/a",
+                        _multiplier?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) ?? "n/a");
+                }
+            }
+        }
+
         /// <summary>
         ///     Notes an event as it comes from the provider: when it came, how much text it carries, whether it is reasoning,
         ///     and the usage that it reports.
@@ -1455,6 +1477,8 @@ public sealed class AgentService : IAgentService
                     case AgentEvent.Usage usage:
                         _inputTokens = usage.InputTokens is { } input ? (_inputTokens ?? 0) + input : _inputTokens;
                         _outputTokens = usage.OutputTokens is { } output ? (_outputTokens ?? 0) + output : _outputTokens;
+                        _reasoningTokens = usage.ReasoningTokens is { } reasoning ? (_reasoningTokens ?? 0) + reasoning : _reasoningTokens;
+                        _multiplier = usage.Multiplier is { } multiplier ? Math.Max(_multiplier ?? 0, multiplier) : _multiplier;
                         break;
                 }
             }

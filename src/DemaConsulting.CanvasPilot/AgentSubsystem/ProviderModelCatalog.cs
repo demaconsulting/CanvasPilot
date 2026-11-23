@@ -148,7 +148,10 @@ public sealed class ProviderModelCatalog : IProviderModelSource
             model.DefaultReasoningEffort,
             model.IsUsable,
             model.UnusableReason,
-            warnings);
+            warnings,
+            model.BillingMultiplier,
+            model.Category,
+            model.PriceCategory);
     }
 
     /// <summary>

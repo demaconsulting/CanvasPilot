@@ -906,6 +906,51 @@ public sealed class AiProviderSettingsPageTests
     }
 
     /// <summary>
+    ///     Test that the page warns that a high reasoning level on a large model is slow and costly, with the multiplier of
+    ///     the model, and that a lower level, a small model, and another provider show no warning.
+    /// </summary>
+    [Fact]
+    public async Task AiProviderSettingsPageViewModel_EffortCostWarning_AppearsOnlyForHighEffortOnLargeModels()
+    {
+        // Arrange: a large model (15 premium requests per message) and a small one, both with levels
+        var large = Model("opus", efforts: ["low", "high"]) with { BillingMultiplier = 15, Category = "powerful" };
+        var small = Model("mini", efforts: ["low", "high"]) with { BillingMultiplier = 0.33, Category = "lightweight" };
+        var source = new FakeModelSource { Models = [large, small] };
+        var page = await LoadedPage(source, new AiProviderSettings { ModelName = "opus", ReasoningEffort = "low" });
+        var atLow = (page.HasEffortCostWarning, page.EffortCostWarning);
+
+        // Act: choose the high level, then the small model, then back to the large model with the default level
+        page.SelectedReasoningEffort = page.ReasoningEfforts.Single(choice => choice.Value == "high");
+        var atHigh = (page.HasEffortCostWarning, page.EffortCostWarning);
+        page.SelectedModel = page.Models.Single(choice => choice.Id == "mini");
+        var onSmall = page.HasEffortCostWarning;
+
+        // Assert
+        Assert.Equal((false, string.Empty), atLow);
+        Assert.True(atHigh.HasEffortCostWarning);
+        Assert.Contains("slow", atHigh.EffortCostWarning, StringComparison.Ordinal);
+        Assert.Contains("costly", atHigh.EffortCostWarning, StringComparison.Ordinal);
+        Assert.Contains("15 premium requests", atHigh.EffortCostWarning, StringComparison.Ordinal);
+        Assert.False(onSmall);
+    }
+
+    /// <summary>
+    ///     Test that the effort that the provider chooses counts when none was chosen, and that a model that the provider
+    ///     does not describe gets no warning.
+    /// </summary>
+    [Fact]
+    public void AiProviderSettingsPageViewModel_BuildEffortCostWarning_UsesTheDefaultEffortAndNeedsAModel()
+    {
+        // Arrange
+        var large = Model("opus", efforts: ["low", "high"]) with { BillingMultiplier = 10, DefaultReasoningEffort = "high" };
+
+        // Act and assert
+        Assert.NotEqual(string.Empty, AiProviderSettingsPageViewModel.BuildEffortCostWarning(large, string.Empty));
+        Assert.Equal(string.Empty, AiProviderSettingsPageViewModel.BuildEffortCostWarning(large, "low"));
+        Assert.Equal(string.Empty, AiProviderSettingsPageViewModel.BuildEffortCostWarning(null, "high"));
+    }
+
+    /// <summary>
     ///     Test that the stored reasoning level is kept as it is while the models cannot be listed, and that the choice is
     ///     disabled with a note, so that a server that is down does not erase a setting.
     /// </summary>

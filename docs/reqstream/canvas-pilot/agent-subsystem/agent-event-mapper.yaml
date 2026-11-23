@@ -154,3 +154,17 @@ sections:
                 tests:
                   - AgentEventMapper_Logging_Tools_HaveOutcomesAndSafePaths
                   - AgentService_Logging_ProviderSession_HasIdsRunKindsEventsFileAndReleaseReason
+
+              - id: CanvasPilot-AgentEventMapper-MapUsage
+                title: >-
+                  The AgentEventMapper shall map the usage of each model call to an event with the input, output, and
+                  reasoning tokens, and, when the provider is GitHub Copilot, the model multiplier and the model that the
+                  runtime reports on the raw event, reading the experimental multiplier of the Copilot SDK in one adapter
+                  only, and shall report no multiplier for a provider that sends none.
+                justification: |
+                  What a message costs depends on the model multiplier, which the AI library has no field for; it travels
+                  on the raw event of the runtime. Isolating the experimental member keeps a change of the SDK to one
+                  method.
+                tests:
+                  - AgentEventMapper_Map_UsageWithRawCopilotEvent_CarriesMultiplierReasoningAndModel
+                  - AgentEventMapper_Map_UsageWithoutRawEvent_CarriesTokensOnly

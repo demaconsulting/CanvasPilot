@@ -12,7 +12,7 @@
        plain, because it may end in the middle of a construct. -->
   <Grid Margin="0,0,0,16"
         ColumnDefinitions="22,*"
-        RowDefinitions="Auto,Auto,Auto">
+        RowDefinitions="Auto,Auto,Auto,Auto">
 
     <Border Name="AvatarBadge"
             Grid.Row="0"
@@ -72,6 +72,18 @@
                                      Blocks="{Binding Blocks}"
                                      IsVisible="{Binding IsComplete}" />
     </StackPanel>
+
+    <!-- What the turn cost, small and quiet, under the last reply of the turn -->
+    <TextBlock Name="UsageCaptionText"
+               Grid.Row="3"
+               Grid.Column="1"
+               Margin="8,4,0,0"
+               AutomationProperties.AutomationId="AssistantReplyUsage"
+               FontSize="{DynamicResource CpFontCaption}"
+               Foreground="{DynamicResource CpTextSecondary}"
+               TextWrapping="Wrap"
+               Text="{Binding UsageCaption}"
+               IsVisible="{Binding HasUsageCaption}" />
 
   </Grid>
 

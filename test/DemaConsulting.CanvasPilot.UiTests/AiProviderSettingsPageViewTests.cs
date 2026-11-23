@@ -190,6 +190,35 @@ public sealed class AiProviderSettingsPageViewTests
     }
 
     /// <summary>
+    ///     Test that the page shows the warning that a high reasoning level on a large model is slow and costly only while
+    ///     such a model and level are chosen.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AiProviderSettingsPageView_HighEffortOnLargeModel_ShowsTheCostWarning()
+    {
+        // Arrange: a shown page over a large model with levels
+        var large = Model("opus", efforts: ["low", "high"]) with { BillingMultiplier = 15, Category = "powerful" };
+        var viewModel = new AiProviderSettingsPageViewModel(null, new FixedModels(large), TimeSpan.Zero);
+        viewModel.Load(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "opus", ReasoningEffort = "low" } });
+        await viewModel.ModelListLoaded;
+        var window = new Window { Width = 520, Height = 1300, Content = new AiProviderSettingsPageView { DataContext = viewModel } };
+        window.Show();
+        var warning = SettingsUiHelpers.Find<TextBlock>(window, "AiEffortCostWarning");
+        var efforts = SettingsUiHelpers.Find<ComboBox>(window, "AiReasoningEffortComboBox");
+        var shownAtLow = warning.IsEffectivelyVisible;
+
+        // Act: choose the high level
+        efforts.SelectedItem = viewModel.ReasoningEfforts.Single(choice => choice.Value == "high");
+
+        // Assert: the warning appears with the cost of the model
+        Assert.False(shownAtLow);
+        Assert.True(warning.IsEffectivelyVisible);
+        Assert.Contains("15 premium requests", warning.Text, StringComparison.Ordinal);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that a model that cannot be used is shown disabled in the list, and that the typed model name and the message
     ///     stay available when the list could not be read, with the Refresh models button asking again.
     /// </summary>

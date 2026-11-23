@@ -213,7 +213,18 @@ public abstract record AgentEvent
     /// </summary>
     /// <param name="InputTokens">The tokens sent to the model, or <see langword="null" /> when not reported.</param>
     /// <param name="OutputTokens">The tokens the model wrote, or <see langword="null" /> when not reported.</param>
-    public sealed record Usage(long? InputTokens, long? OutputTokens) : AgentEvent;
+    /// <param name="ReasoningTokens">The tokens the model spent on reasoning, or <see langword="null" /> when not reported.</param>
+    /// <param name="Multiplier">
+    ///     The model multiplier that the provider bills a message with (the premium requests that it counts), or
+    ///     <see langword="null" /> when the provider does not report one.
+    /// </param>
+    /// <param name="Model">The model that served the call, or <see langword="null" /> when not reported.</param>
+    public sealed record Usage(
+        long? InputTokens,
+        long? OutputTokens,
+        long? ReasoningTokens = null,
+        double? Multiplier = null,
+        string? Model = null) : AgentEvent;
 
     /// <summary>
     ///     The model is thinking: the provider reports reasoning that is not shown. It says that the turn is alive and what
