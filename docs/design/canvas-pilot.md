@@ -204,8 +204,10 @@ can be used, for the chat banner and for the connection check of the settings di
 the server, the model, the model settings (the model can call tools and the window and level fit it), and the context
 window (a warning below 16,384 tokens), and for GitHub Copilot it checks in order
 that the Copilot CLI is found (`CopilotCliLocator`, which finds the real `copilot.exe`, never an editor's shim), that
-its version is 1.0.113 or later, that credentials exist, that the one shared Copilot runtime
-(`CopilotRuntimeStarter`) starts on that CLI and is signed in, and that the model settings are valid for it.
+its version is 1.0.113 or later, that the one shared Copilot runtime (`CopilotRuntimeStarter`) starts on that CLI and
+is signed in (the runtime start decides the sign-in, so there is no check of credentials of its own), and that the model
+settings are valid for it. The sentence of a provider that can be used also names the account that the runtime signed
+in as, the host, and the kind of sign-in, never a token.
 `ProviderModelCatalog` lists the models of the provider for the AI Provider page. `AgentService` never writes into a
 project except through
 `project_write`, keeps the data of the Copilot runtime in a folder of its own and the restored history in memory, and
@@ -345,34 +347,40 @@ the AI library runs at the explicit path that `CopilotCliLocator` found (the pat
 never bundles, copies, or downloads the Copilot runtime: `CopilotSkipCliDownload` is set for every project, the
 installed CLI is the only source that is ever chosen (the `Bundled` source is not), and the build asserts that neither
 the published output nor the installer holds a Copilot file. The readiness checks run in order: the real CLI is located
-by a rule that rejects the launchers (shims) of editors, its version must be 1.0.113 or later, credentials must exist
-(a signed-in GitHub CLI, or one of the variables `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN`; a token is
-never stored, shown, or logged), the shared runtime must start, and the model settings must be valid for it. The runtime
-start is the authoritative check of the CLI and the sign-in, and it goes through the single seam
-`ICopilotRuntimeStarter`.
+by a rule that rejects the launchers (shims) of editors, its version must be 1.0.113 or later, the shared runtime must
+start (which includes the sign-in; a token is never stored, shown, or logged), and the model settings must be valid for
+it. The readiness check looks for no credentials of its own and runs no `gh`: the runtime start is the authoritative
+check of the CLI and the sign-in, and it goes through the single seam `ICopilotRuntimeStarter`.
 
 - *One shared runtime.* The `CopilotRuntimeStarter` starts one runtime, and the readiness check ("Check connection"),
   the agent factory for every conversation, and the list of models all get that same running runtime. A start is
   single-flight and keyed by the CLI path and the data folder: the same key returns the running runtime, another key
   stops the old runtime and starts a new one (only one runtime may use one data folder), and a failed start is not
   remembered, so a fix is noticed by the next request. The application stops the runtime once when it ends.
-- *Sign-in.* The runtime signs in from a signed-in GitHub CLI (`gh auth login`, with `gh` on the `PATH`) or from the
-  variable `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`. CanvasPilot passes no token, has no token setting and
-  no sign-in page, and never reads, stores, or logs a credential. **Limitation:** the sign-in of the Copilot CLI itself
-  (`/login`) is not used, because the AI library gives the runtime a home of its own, so a user who is signed in only to
-  the CLI is "not signed in for CanvasPilot" and is told the working routes. This was verified with a CLI that was
-  signed in with `/login`: with the GitHub CLI off the `PATH` and no token variable the runtime started but was not
-  authenticated. It is a documented limitation and a request for the AI library (see the design of the AgentKit OTS
-  item), not something that the application works around.
+- *Sign-in.* The runtime start decides the sign-in, and the AI library tries the sources in order: a token variable
+  (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`), the sign-in of the Copilot CLI itself (the user runs
+  `copilot`, then types `/login`), a sign-in stored in the data folder, and last a signed-in GitHub CLI
+  (`gh auth login`, with `gh` on the `PATH`). CanvasPilot passes no token, no token provider, and no host, leaves the
+  Copilot CLI sign-in at its default of on, has no token setting and no sign-in page, and never reads, stores, or logs a
+  credential. The host follows the account that signed in, so an account on a GitHub Enterprise Cloud host works with no
+  setting. A token variable that holds a token that the host does not accept ends the search, so the sign-in of the CLI
+  is not tried then; the user clears the variable. The runtime reports the kind of sign-in, the login, and the host, and
+  the sentence of Check connection and the tooltip of the provider pill word them (for example, "Signed in as mnixon on
+  github.com (Copilot CLI sign-in)."). The runtime is shared, so an account that is changed in the CLI is seen after
+  CanvasPilot is restarted. A runtime that is not signed in is the sentence "Copilot is not signed in for CanvasPilot"
+  that says to run `copilot` and type `/login` (or to use `gh auth login` or a token variable instead), followed by a
+  one-line digest of what the library found at each place it looked. A setting for the GitHub host and a switch for the
+  sign-in of the CLI are possible future options of the AI library; CanvasPilot uses neither.
 - *Data folder.* The runtime keeps its home and its sessions in `%LOCALAPPDATA%\CanvasPilot\copilot`, chosen by the
   application and never inside a project; the factory deletes a session when its conversation is cleared.
 - *Failures are sentences.* A CLI that is too old, a runtime that is not signed in, a path in the settings that the
   library refuses, and any other failed start are each a typed readiness status with one sentence that says what to do;
   none is an exception.
 
-A later direction, user-selectable AgentKit tool packs, is possible now that the tools package of the AI library pins
-the same CanvasNet line as CanvasPilot, but the package is not referenced yet; spoken replies of the copilot are
-deferred.
+A later direction is user-selectable AgentKit tool packs. Neither the file and text tools package of the AI library nor
+its visual tools package (the image view tool and the diagram tools) is referenced yet, and a later change will compare
+that package with the help and render tools of CanvasPilot before any of it is adopted. Spoken replies of the copilot
+are deferred.
 
 **Where data lives.** Nothing the copilot needs is ever kept in the project folder except what the user or the copilot
 is asked to create.
@@ -531,9 +539,8 @@ made in the project when the message is sent.
   and tool calls come back); input and output for the Copilot CLI (the messages and tool calls go out through the AI
   library, the streamed answers come back).
 - *Type*: HTTP to the Ollama endpoint of the settings (the local address by default), through OllamaSharp; a short
-  `--no-auto-update --version` run of the installed `copilot.exe` and, for the credential check, of `gh auth token`,
-  whose output is never kept; and the installed `copilot.exe` run as a child process of the AI library, which speaks to
-  it over standard input and output.
+  `--no-auto-update --version` run of the installed `copilot.exe`, whose output is never kept; and the installed
+  `copilot.exe` run as a child process of the AI library, which speaks to it over standard input and output.
 - *Format*: One agent conversation per open project; the context window of the settings is sent with every Ollama
   request. For Copilot, the located path, the version, and the readiness sentence, and a conversation on the one shared
   runtime.
@@ -890,16 +897,15 @@ an example to the clipboard that the window supplies and says in the status line
 When a message has been sent, `ChatPanelViewModel` hands the `SentMessage` to `ChatTurnRunner`, which asks
 `IAgentService.RunTurnAsync` for the turn with the payload and the saved words of the conversation. On the first turn
 `AgentService` asks `AgentReadiness` whether the provider can be used (when it cannot, the turn is one `Failed` event
-with the sentence of the report, which for GitHub Copilot without credentials is the sign-in sentence), checks that the
-project
-does not contain the data folders of the application, and builds the tools of the project, the instructions, the agent,
-and one provider session. `PayloadMessageMapper` turns the payload into the message of the model, the agent streams its
-updates, and `AgentEventMapper` turns them into events that the runner shows as the streamed answer, one row for each
-tool call, and notices; a file that `project_write` creates or replaces also raises `FileWritten`, which the shell turns
-into a refresh and a selection of the file in the explorer. Stop cancels the token of the turn, which ends the stream
-without a failure and keeps what was written. After a completed, stopped, or failed turn the panel saves the words of
-the conversation with `ChatHistoryStore`; "Clear chat history" deletes them, empties the transcript, and has the service
-forget the conversation and delete the session of the provider.
+with the sentence of the report, which for GitHub Copilot that is not signed in is the sign-in sentence), checks that
+the project does not contain the data folders of the application, and builds the tools of the project, the instructions,
+the agent, and one provider session. `PayloadMessageMapper` turns the payload into the message of the model, the agent
+streams its updates, and `AgentEventMapper` turns them into events that the runner shows as the streamed answer, one row
+for each tool call, and notices; a file that `project_write` creates or replaces also raises `FileWritten`, which the
+shell turns into a refresh and a selection of the file in the explorer. Stop cancels the token of the turn, which ends
+the stream without a failure and keeps what was written. After a completed, stopped, or failed turn the panel saves the
+words of the conversation with `ChatHistoryStore`; "Clear chat history" deletes them, empties the transcript, and has
+the service forget the conversation and delete the session of the provider.
 
 ## Design Constraints
 

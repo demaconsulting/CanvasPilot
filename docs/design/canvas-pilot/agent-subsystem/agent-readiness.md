@@ -15,17 +15,17 @@ Copilot) or from `IOllamaModelCatalogs` (Ollama; see the `ProviderModelCatalog` 
 #### Data Model
 
 **AgentReadiness**: `sealed class`, implements `IProviderCheck`. The constructor takes `CopilotCliLocator`,
-`ICopilotRuntimeStarter`, `IProcessRunner`, `IEnvironmentReader`, `ICliFileSystem`, `IOllamaProbe`, and
-`IOllamaModelCatalogs`, each defaulting to the real implementation (the starter defaults to a `CopilotRuntimeStarter`;
-the application passes the one that it shares with the factory of the agents, and the one set of Ollama catalogs that it
-shares with them). Its fields are these collaborators only: it holds no text, no settings, and no logger. Constants:
-`TokenVariableNames` (`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN`), `CredentialProbeTimeout` (5 seconds),
-`OllamaProbeTimeout` (5 seconds), and `NotSignedInMessage`, which equals `CopilotRuntimeStarter.NotSignedInMessage`. The
+`ICopilotRuntimeStarter`, `IOllamaProbe`, and `IOllamaModelCatalogs`, each defaulting to the real implementation (the
+starter defaults to a `CopilotRuntimeStarter`; the application passes the one that it shares with the factory of the
+agents, and the one set of Ollama catalogs that it shares with them). The unit takes no process runner, environment
+reader, or file system of its own, because it looks for no credentials and runs no program: the locator has its own.
+Its fields are these collaborators only: it holds no text, no settings, and no logger. Constants:
+`OllamaProbeTimeout` (5 seconds) and `NotSignedInMessage`, which equals `CopilotRuntimeStarter.NotSignedInMessage`. The
 result is the `AgentReadinessReport` of the contract (a status and one sentence).
 
-**ICopilotRuntimeStarter**, with `CopilotStartRequest`, `CopilotStartResult`, and `CopilotStartStatus`, is described in
-the design of the `CopilotRuntimeStarter` unit. The check passes the path and the version that the locator found and no
-data folder, so the shared starter uses the folder that it was made with.
+**ICopilotRuntimeStarter**, with `CopilotStartRequest`, `CopilotStartResult`, `CopilotStartStatus`, and
+`CopilotSignInInfo`, is described in the design of the `CopilotRuntimeStarter` unit. The check passes the path and the
+version that the locator found and no data folder, so the shared starter uses the folder that it was made with.
 
 **IOllamaProbe**: `ListModelsAsync(endpoint, timeout, cancellationToken)` returns `OllamaModelList(Reachable, Models)`,
 and `GetContextLengthAsync(endpoint, model, timeout, cancellationToken)` returns the largest context window of a model
@@ -34,33 +34,29 @@ can stand in for the server.
 
 #### The Checks
 
-**GitHub Copilot**, in order; the first check that fails gives the answer, and the checks after it are not run.
+**GitHub Copilot**, in order; the first check that fails gives the answer, and the checks after it are not run. The
+check looks for no credentials of its own and runs no `gh`: the runtime start decides the sign-in, in the order that the
+AI library defines (explicit and environment tokens, then the sign-in of the Copilot CLI, then the GitHub CLI).
 
 1. *CLI.* `CopilotCliLocator.LocateAsync(settings.CopilotCliPath, refresh)` finds the installed CLI by its rule. A CLI
    that is not found, is not an `.exe`, or cannot report its version is `CopilotCliMissing`; one older than 1.0.113 is
    `CopilotCliTooOld`. The sentence is the one of the locator, so the user sees the same words in both places.
 2. *Version.* The locator already refuses a version below 1.0.113, so this check is the second half of step 1.
-3. *Credentials.* A non-empty (not white space) value of `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN`, read in
-   this order through the environment reader, is enough; the GitHub CLI is then not run. Otherwise the unit looks for
-   `gh.exe` in the folders of the `PATH` and then in `%ProgramFiles%\GitHub CLI`, and runs `gh auth token` with a limit
-   of 5 seconds. The result counts only when the program started, did not time out, ended with exit code 0, and printed
-   at least one character other than white space. Only the length of the output is examined; the text is a local value
-   that is not kept, shown, or logged. No other credential is looked for. This check is a quick answer that spares a
-   start of the runtime for a user who has no credentials at all; it does not prove that they work.
-4. *Runtime.* The shared starter is asked to start the runtime on the CLI that the locator found. This is the real,
-   authoritative check: the runtime is started, the library checks the version of the CLI again, and it refuses a
-   runtime that is not signed in. `Started` is `Ready` with the sentence "GitHub Copilot CLI {version} is ready.";
-   `CliTooOld`, `NotSignedIn`, and `Failed` are `CopilotCliTooOld`, `CopilotNotSignedIn`, and
+3. *Runtime.* The shared starter is asked to start the runtime on the CLI that the locator found. This is the real,
+   authoritative check, including the sign-in: the runtime is started, the library checks the version of the CLI again,
+   signs in from the first source that applies, and refuses a runtime that is not signed in. `Started` goes on to the
+   model settings; `CliTooOld`, `NotSignedIn`, and `Failed` are `CopilotCliTooOld`, `CopilotNotSignedIn`, and
    `CopilotRuntimeUnavailable`, each with the sentence of the starter. The check starts no second runtime: the runtime
    that it starts is the one that the conversations then use, so a ready check means that the first message finds a
    running runtime.
-5. *Model settings.* When the settings name a model, `ICopilotAgentSource.Models.SelectAsync` of the running runtime
+4. *Model settings.* When the settings name a model, `ICopilotAgentSource.Models.SelectAsync` of the running runtime
    validates it with the reasoning effort of the settings and the requirement that the model can call tools (the policy
    of `ModelRequirements`, see the design of `ProviderModelCatalog`). Settings that name no model use the default model
    of the runtime, and there is nothing to validate (an effort without a model is not used). A refusal of the catalog is
    `ModelSettingsInvalid` with the sentence of the AI library, which names what is supported; a catalog that cannot be
    read (the runtime is not connected, or was stopped) is `CopilotRuntimeUnavailable` with its message; a model that
-   cannot take pictures is the usable `ModelLacksVision`.
+   cannot take pictures is the usable `ModelLacksVision`. A provider that can be used (`Ready` and `ModelLacksVision`)
+   gets the sentence that `ICopilotAgentSource.SignIn` words appended (see below).
 
 The sentences (exact text; the design and the tests are the same words):
 
@@ -69,25 +65,30 @@ The sentences (exact text; the design and the tests are the same words):
   was found at {path}."; a path in the settings that fails gives the sentence of the locator about that path.
 - `CopilotCliTooOld`: "Copilot CLI {version} is older than 1.0.113. Run `winget upgrade GitHub.Copilot`." (the
   locator's sentence), or the message of the AI library when the starter found the CLI too old.
-- `CopilotNotSignedIn`: "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the
-  COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to the
-  Copilot CLI with /login does not apply to CanvasPilot." (the sentence of the starter).
+- `CopilotNotSignedIn`: "Copilot is not signed in for CanvasPilot. Run `copilot`, then type `/login` to sign in (or
+  sign in with `gh auth login`, or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then
+  choose Check connection." followed by " What was found: " and the digest of what the AI library found (the sentence of
+  the starter, see its design).
 - `CopilotRuntimeUnavailable`: the sentence of the starter for a start that failed for another reason (the message of
   the AI library, or "The Copilot runtime could not be started. Choose Check connection to try again.").
 - `Ready` (Copilot): "GitHub Copilot CLI {version} is ready." (no model named), or "GitHub Copilot CLI {version} is
-  ready with the model {id}."
+  ready with the model {id}.", each followed by the sign-in sentence when the runtime reports one.
 - `ModelSettingsInvalid`: the sentence of the AI library, for example "Model 'x' does not support tool calling, which
   this application requires." or "Model 'claude-haiku-5.5' does not support reasoning effort 'bogus'. Supported: low,
   medium, high, xhigh, max." or "Model 'x' is not available from provider 'copilot'. It may have been removed or you may
   no longer have access." (problems are joined with a space).
 - `ModelLacksVision`: "The model {id} does not accept pictures, so it cannot see the drawings and marks; choose a model
-  with vision for the best results." The status is usable.
+  with vision for the best results." followed by the sign-in sentence when the runtime reports one. The status is
+  usable.
 
-**Why the sign-in sentence says what it says.** The AI library starts its own Copilot runtime with a home of its own and
-signs in with a GitHub token, from the variables above or from a signed-in GitHub CLI. The sign-in that the Copilot CLI
-keeps for itself (its `/login`) is not used by that runtime, so a user who is signed in to the CLI is still not signed
-in for CanvasPilot. This is a documented limitation and a request for the AI library (see the design of the AgentKit
-item): a way to use the CLI's own session.
+**The sign-in sentence.** The runtime reports the kind of sign-in, the login, and the host, and
+`CopilotSignInInfo.Describe` words them, for example "Signed in as mnixon on github.com (Copilot CLI sign-in)." The
+unit appends the sentence after a space, so Check connection and the tooltip of the provider pill (which shows the
+sentence of the report) tell the user which account the copilot uses, because a machine may offer several. The unit
+appends nothing when the runtime does not say how it signed in, so the sentence of a ready provider is then exactly the
+one above. The sentence holds no token, because the runtime reports none. The check does not look at the CLI account
+itself: the library reads that account only inside the runtime start, so the runtime start is also the only proof that
+the sign-in works.
 
 **Ollama**, in order.
 
@@ -141,21 +142,24 @@ words; returns the sentence of step 4 or `null`.
 
 Every expected problem is a report. In the probe, a refused connection, an error status, an answer that is not what
 Ollama sends, and a time out are an unreachable server (for the list) and an unknown length (for the window); only a
-cancellation by the caller is thrown, from both providers' checks. A program that cannot be started, times out, or exits
-with an error is "no credentials". The shape of the `/api/show` answer (the key that ends in `.context_length`, a whole
-number) is an assumption that a real server must confirm; until then it is checked only against a stand-in server, and
-an answer in another shape means "not known", which is the same as a server that does not tell.
+cancellation by the caller is thrown, from both providers' checks. A runtime that fails to start is a status of the
+starter that the check passes on as a report. The shape of the `/api/show` answer (the key that ends in
+`.context_length`, a whole number) is an assumption that a real server must confirm; until then it is checked only
+against a stand-in server, and an answer in another shape means "not known", which is the same as a server that does not
+tell.
 
 #### Security
 
-A token is a secret. The unit looks only at whether a variable or the output of `gh auth token` is empty. It stores
-nothing (its fields are its collaborators), writes no log, puts no program output into a sentence, and the sentences are
-fixed text with the CLI version, a path, an address, or a model name as the only variable parts.
+A token is a secret. The unit never sees one: it looks for no credentials, runs no program, and the sign-in sentence
+that it appends holds only the kind of sign-in, the login, and the host. It stores nothing (its fields are its
+collaborators), writes no log, puts no program output into a sentence, and the sentences are fixed text with the CLI
+version, a path, an address, a model name, or the sign-in sentence as the only variable parts.
 
 #### Dependencies
 
-`CopilotCliLocator` (the CLI and its version, and the process runner, file system reader, and environment reader that
-the locator and the credential check share), `AiProviderSettings` and `IProviderCheck` of the Settings subsystem, the
+`CopilotCliLocator` (the CLI and its version, with the process runner, file system reader, and environment reader that
+it uses itself), `ICopilotRuntimeStarter` and `CopilotSignInInfo`, `AiProviderSettings` and `IProviderCheck` of the
+Settings subsystem, the
 `AgentReadinessReport` of the contract, `ModelRequirements` (the policy of what the application needs of a model, of the
 `ProviderModelCatalog` unit), the model types and catalogs of DemaConsulting.AgentKit.Core (`ModelSelection`,
 `ModelSettingsException`, `SelectAsync`), and the OllamaSharp library (`OllamaApiClient`) in `OllamaProbe` only. The

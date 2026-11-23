@@ -9,8 +9,8 @@ shares that one runtime among everyone who asks for it, and turns every way that
 for the user. The readiness check ("Check connection"), the factory of the agents (for every conversation), and the list
 of models of the settings page all get the same running runtime, because the runtime keeps its data in one folder that
 two runtimes must not use. The unit also holds its supporting types: `ICopilotRuntimeStarter` with
-`CopilotStartRequest`, `CopilotStartResult`, and `CopilotStartStatus`, and `ICopilotAgentSource` with
-`CopilotAgentRequest` and `CopilotRuntimeAgentSource`, the running runtime as the factory uses it.
+`CopilotStartRequest`, `CopilotStartResult`, `CopilotStartStatus`, and `CopilotSignInInfo`, and `ICopilotAgentSource`
+with `CopilotAgentRequest` and `CopilotRuntimeAgentSource`, the running runtime as the factory uses it.
 
 #### Data Model
 
@@ -35,10 +35,21 @@ when the status is `Started`, otherwise `null`. `ReadinessStatus` maps `Started`
 `CopilotCliTooOld`, `NotSignedIn` to `CopilotNotSignedIn`, and `Failed` to `CopilotRuntimeUnavailable`.
 
 **ICopilotAgentSource**: the started runtime as the factory uses it: `Models` (the `IModelCatalog` of the runtime),
+`SignIn` (the `CopilotSignInInfo` of how the runtime signed in, or `null` when not known),
 `CreateAgent(CopilotAgentRequest)`, `DeleteSessionAsync(sessionId, cancellationToken)`, and `DisposeAsync`.
+
+**CopilotSignInInfo**: `record(Source, Login, Host)` with `Source` a `CopilotSignInSource` of the AI library (unknown,
+GitHub token, token provider, environment variable, Copilot CLI, data folder, or GitHub CLI), `Login` the GitHub login,
+and `Host` the host as the runtime reports it (for example `https://github.com`). The record has no field for a token.
+`Describe()` words it as one sentence that ends with a full stop: "Signed in as {login} on {host} ({source})." The host
+is shown without its scheme and a closing slash. The source words are "GitHub token" (token or token provider), "token
+variable", "Copilot CLI sign-in", "stored sign-in" (the data folder), and "GitHub CLI sign-in". A part that is not
+known (an unknown source, a blank login or host) is left out, and when all three are unknown the sentence is empty, so
+the sentence never claims more than the runtime reported. The method never throws.
 **CopilotAgentRequest** carries the tools, the instructions, the name, the working directory, and the `ModelSelection`
 (`null` for the default model of the runtime) that the catalog validated for the settings. **CopilotRuntimeAgentSource**
-is the implementation on a real `CopilotRuntime`; it makes one `CopilotModelCatalog` for the runtime when it is made
+is the implementation on a real `CopilotRuntime`; it builds its `SignIn` from `SignInSource`, `GitHubLogin`, and
+`GitHubHost` of the runtime, and it makes one `CopilotModelCatalog` for the runtime when it is made
 (the catalog keeps what it read for five minutes, and `RefreshAsync` reads again), so the one catalog is shared by the
 factory, the readiness check, and the model list. It holds the one call of `CopilotAgentFactory.Create` of the
 application, which takes the model and the reasoning effort from the selection, and passes no permission handler
@@ -49,13 +60,15 @@ live runtime (check 10 of the manual verification in the verification of the sys
 
 #### How the Runtime Is Started
 
-The options are `CopilotRuntimeOptions(dataDirectory, gitHubToken: null, logger, CopilotRuntimeSource.InstalledCli,
-cliPath)`. The installed CLI is the source, so nothing is bundled or downloaded, and the `Bundled` source is never
-chosen. `cliPath` is the path that the locator found. The data folder is, in this order, the folder of the request, the
-folder that the starter was made with, and the default of `AgentService.GetCopilotDataDirectory()`; it is always below
-the local data of the user and never inside a project. No token is read, stored, logged, or passed: the field is `null`,
-and the application has no token setting and no sign-in page. The runtime signs in by itself, from the environment of
-the application or from a signed-in GitHub CLI (see *Sign-in*).
+The options are
+`CopilotRuntimeOptions(dataDirectory, gitHubToken: null, logger, CopilotRuntimeSource.InstalledCli, cliPath)`. The
+installed CLI is the source, so nothing is bundled or downloaded, and the `Bundled` source is never chosen. `cliPath` is
+the path that the locator found. The data folder is, in this order, the folder of the request, the folder that the
+starter was made with, and the default of `AgentService.GetCopilotDataDirectory()`; it is always below the local data of
+the user and never inside a project. No token is read, stored, logged, or passed: the field is `null`, and the
+application has no token setting and no sign-in page. The token provider and the GitHub host are not given either, and
+the switch for the sign-in of the Copilot CLI is left at its default of on (see *Sign-in*). The runtime signs in by
+itself.
 
 The library refuses some paths while the options are built (a relative path, a `.cmd` or `.bat` file, and so on). That
 `ArgumentException` is answered before anything is stopped or started.
@@ -88,14 +101,16 @@ used, which the factory tolerates when it deletes a session.
 
 #### Sign-in
 
-The AI library gives its runtime a home of its own (the data folder) and switches the keychain off, so the sign-in that
-the Copilot CLI keeps for itself (`copilot`, then `/login`) is **not** used. This was verified on a machine where the
-CLI was signed in with `/login` and the GitHub CLI was signed in: with `gh` on the `PATH` and no token variable the
-runtime started and was authenticated; with `gh` removed from the `PATH` and no token variable it started but reported
-that it was not authenticated, and the library refused it; with `COPILOT_GITHUB_TOKEN` set and no `gh` it started. The
-credentials that work are therefore a signed-in GitHub CLI (`gh auth login`, with `gh` on the `PATH`) and the variables
-`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN`. This is a documented limitation, not hidden, and a request to
-the AI library (see the design of the AgentKit item): to be able to use the session of the Copilot CLI.
+The runtime start decides the sign-in, and the starter does not look for one first. The AI library takes the first
+source that applies, in this order: a token that the host passes (the starter passes none), the variables
+`COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN`, the sign-in of the Copilot CLI itself (the user runs `copilot`
+and types `/login`), a sign-in stored in the data folder, and last a signed-in GitHub CLI (`gh auth login`, with `gh` on
+the `PATH`). The host follows the account that signed in, so no host is passed. A token variable that holds a token that
+the host does not accept ends the search, so the user clears it. The runtime reports the source, the login, and the
+host, and the started result carries them as `CopilotSignInInfo` on the source, so the readiness check can show which
+account is in use. A runtime that is changed to another account in the CLI is seen only after the starter has stopped
+the runtime, because the runtime that runs is returned for the same key. A setting for the GitHub host and a switch for
+the sign-in of the CLI are possible future options of the AI library; the starter uses neither.
 
 #### Key Methods
 
@@ -127,13 +142,21 @@ check of the live runtime confirms them with a real CLI.
 
 | The message of the library holds | Status | Sentence |
 | --- | --- | --- |
-| "is not signed in" | `NotSignedIn` | `NotSignedInMessage`, below |
+| "is not signed in" | `NotSignedIn` | `NotSignedInMessage` and the digest of what was found, below |
 | "too old" or "protocol version" | `CliTooOld` | the message of the library, which has the upgrade commands |
 | anything else (any of the four exception types) | `Failed` | the library's message, or `StartFailedMessage` if blank |
 
-- `NotSignedInMessage`: "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the
-  COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose Check connection. Signing in to the
-  Copilot CLI with /login does not apply to CanvasPilot."
+- `NotSignedInMessage`: "Copilot is not signed in for CanvasPilot. Run `copilot`, then type `/login` to sign in (or sign
+  in with `gh auth login`, or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose
+  Check connection."
+- The digest: the message of the library for a runtime that is not signed in is several lines. After a line that says
+  that the library tried these sign-in sources in order, it has one indented numbered line for each source, "1. ..." to
+  "4. ...", with what it found there (token redacted), and ends with its own advice on how to sign in. The starter
+  recognizes the numbered lines by their shape (a number, a full stop, and text), drops line 1 (the token that a host
+  passes, which this application never uses), and joins the others with semicolons after the words " What was found: ",
+  ending with a full stop, so the message is one line that ends with a full stop, as every report message is. The advice
+  of the library is left out because the sentence of the starter gives it. When no numbered line is found, the message
+  is `NotSignedInMessage` alone.
 - `StartFailedMessage`: "The Copilot runtime could not be started. Choose Check connection to try again."
 - Started: "GitHub Copilot CLI {version} is running."
 
@@ -143,7 +166,8 @@ of the caller, and a start after the starter was disposed. A log that cannot be 
 #### Security
 
 The unit passes no token and reads none, so it cannot log or store one. The messages that it returns are the sentence of
-this unit or the message of the AI library, which holds an explanation and no credential. The CLI is run only at the
+this unit or the message of the AI library (which holds an explanation with every token redacted, and no credential),
+and `CopilotSignInInfo` has no field that could hold a token. The CLI is run only at the
 path that the locator accepted by its rule (an `.exe` that reports a new enough version). The runtime has no tool of the
 application except the supplied ones, because the factory passes no permission handler (see the factory design). The
 data folder of the runtime is below the local data of the user, so the files of the runtime never go into a project.
@@ -157,6 +181,7 @@ Framework (`AIAgent`), and Microsoft.Extensions.AI (`AIFunction`) with its logge
 
 #### Callers
 
-The `AgentReadiness` unit (the last checks of GitHub Copilot), the `AgentProviderFactory` unit (every Copilot
-conversation), and the `ProviderModelCatalog` unit (the list of models), all through `ICopilotRuntimeStarter`. The
-`AppShell` subsystem builds the one starter that all three share and stops it when the application ends.
+The `AgentReadiness` unit (the third check of GitHub Copilot, and the sign-in sentence of a provider that can be used),
+the `AgentProviderFactory` unit (every Copilot conversation), and the `ProviderModelCatalog` unit (the list of models),
+all through `ICopilotRuntimeStarter`. The `AppShell` subsystem builds the one starter that all three share and stops it
+when the application ends.

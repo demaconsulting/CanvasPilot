@@ -34,4 +34,5 @@ the CLI path is read from the connection's own environment and not from the proc
 is started in the application through AgentKit, which runs the CLI that the user installed at the path that the locator
 found; no Copilot runtime is bundled or downloaded, which is guarded by `CopilotSkipCliDownload` in
 `Directory.Build.props`. The connection settings (the path and the environment) are those of AgentKit's runtime options,
-not of the application; the sign-in limits that follow from them are recorded in the AgentKit design.
+not of the application; the order in which the runtime signs in and the account that it reports are recorded in the
+AgentKit design.

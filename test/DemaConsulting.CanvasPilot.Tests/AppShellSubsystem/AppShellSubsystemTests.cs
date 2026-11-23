@@ -741,9 +741,9 @@ public sealed class AppShellSubsystemTests : IDisposable
             environment: DevMachine.CreateEnvironment(),
             cliFileSystem: DevMachine.CreateFileSystem(),
             copilotStarter: new FakeCopilotRuntimeStarter(new CopilotStartResult(CopilotStartStatus.NotSignedIn, CopilotRuntimeStarter.NotSignedInMessage)));
-         composition.Shell.AttachDialogService(_dialogs);
-         _compositions.Add(composition);
-         return new CopilotRig(composition, factory, probe);
+        composition.Shell.AttachDialogService(_dialogs);
+        _compositions.Add(composition);
+        return new CopilotRig(composition, factory, probe);
     }
 
     /// <summary>

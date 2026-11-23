@@ -57,9 +57,11 @@ The causes and their sentences:
   status, so the model of the settings is named). For Copilot it is "The model 'm' is not available to your Copilot
   account. Clear the model name in Settings to use the default model, or choose another one."
 - **Status 401 or 403**, or the words *oauth token, hmac key, not authenticated, unauthorized, authentication, bad
-  credentials, not signed in, login required*, is `Authentication`. For Copilot the sentence is the one of the readiness
-  check, "Copilot is not signed in for CanvasPilot. Sign in with `gh auth login` (or set the COPILOT_GITHUB_TOKEN
-  environment variable) ...". For Ollama it is "The Ollama server refused the request. Check the address in Settings and
+  credentials, not signed in, login required*, is `Authentication`. For Copilot the sentence is the short one of the
+  readiness check, "Copilot is not signed in for CanvasPilot. Run `copilot`, then type `/login` to sign in (or sign in
+  with `gh auth login`, or set the COPILOT_GITHUB_TOKEN, GH_TOKEN, or GITHUB_TOKEN environment variable), then choose
+  Check connection." (it has no digest of what the library found, because it is shown in the middle of a turn). For
+  Ollama it is "The Ollama server refused the request. Check the address in Settings and
   any gateway or proxy in front of the server, then send the message again."
 - **The words** *protocol version* or *protocol mismatch* (the SDK says "SDK protocol version mismatch: SDK supports
   versions 4-4, but server reports version 3") are `ProtocolMismatch`, with the sentence "The Copilot CLI and

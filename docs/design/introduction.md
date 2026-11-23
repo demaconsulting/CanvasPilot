@@ -3,20 +3,20 @@
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. It provides
 folder-based projects, an explorer tree of the project's folders and image source files with small pictures, a preview
-of the selected file that is drawn by
-CanvasNet on a stage with zoom, PNG export, copy to the clipboard, and drag-out of the shown picture, a welcome screen,
-a title bar with the style and AI provider pills, a status bar, a window layout that is remembered, a dark and a light
-theme with one set of design tokens and line icons, persisted settings with AI provider and
-speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders, and pictures,
-and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload inspector, the drawing
-knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the Help menu), style kits
-(palettes, fonts, sizes, and example images that a project, a user, or a team keeps, with a window to manage them,
-export at their sizes, and a check of a picture against the palette), and the installer. Messages are answered by an AI
-copilot that runs through a local Ollama server (the provider that is covered by automated tests in this release; live
-checks are pending) or through GitHub Copilot (which runs on the Copilot CLI that the user installed, signed in through
-the GitHub CLI or a token variable). The copilot draws with locked-down tools that are confined
-to the project, and the chat keeps the text of the conversation on the user's computer, outside the project. The
-document covers local software items (systems, subsystems, and units) and the OTS software items they consume.
+of the selected file that is drawn by CanvasNet on a stage with zoom, PNG export, copy to the clipboard, and drag-out of
+the shown picture, a welcome screen, a title bar with the style and AI provider pills, a status bar, a window layout
+that is remembered, a dark and a light theme with one set of design tokens and line icons, persisted settings with AI
+provider and speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders, and
+pictures, and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload inspector,
+the drawing knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the Help menu),
+style kits (palettes, fonts, sizes, and example images that a project, a user, or a team keeps, with a window to manage
+them, export at their sizes, and a check of a picture against the palette), and the installer. Messages are answered by
+an AI copilot that runs through a local Ollama server (the provider that is covered by automated tests in this release;
+live checks are pending) or through GitHub Copilot (which runs on the Copilot CLI that the user installed, signed in
+with a token variable, with the sign-in of the Copilot CLI itself, or through the GitHub CLI). The copilot draws with
+locked-down tools that are confined to the project, and the chat keeps the text of the conversation on the user's
+computer, outside the project. The document covers local software items (systems, subsystems, and units) and the OTS
+software items they consume.
 
 ## Purpose
 
@@ -94,13 +94,16 @@ The following topics are out of scope:
 
 - Design documents are not produced for the test projects, the executable project that starts the application, the
   installer project (which is covered by the WiX Toolset OTS design), or the build pipeline CI configuration
-- Signing in to GitHub Copilot with the sign-in of the Copilot CLI itself (`/login`) is not supported: the AI library
-  runs the CLI with a home of its own, so CanvasPilot signs in through the GitHub CLI (`gh auth login`) or a token
-  variable (see the *Running the Installed Copilot CLI* section of the system design), and the application never
-  bundles or downloads a CLI
-- User-selectable tool packs of the AI library (the tools package of the library is not referenced in this release) and
-  spoken replies of the copilot are future work; the copilot has only the fixed, locked-down set of
-  tools that the *Agent* subsystem design describes
+- A setting for the GitHub host (for a GitHub Enterprise Cloud account that signs in on a host of its own) and a switch
+  that turns the sign-in of the Copilot CLI off are possible future options of the AI library that CanvasPilot does
+  not use: the runtime signs in from the first source that applies and follows the host of that account (see the
+  *Running the Installed Copilot CLI* section of the system design), and the application never bundles or downloads a
+  CLI
+- User-selectable tool packs of the AI library (neither its file and text tools package nor its visual tools package,
+  which holds the image view tool and the diagram tools, is referenced in this release) and spoken replies of the
+  copilot are future work; the copilot has only the fixed, locked-down set of tools that the *Agent* subsystem design
+  describes, and a later change will compare the visual tools of the library with the help and render tools of
+  CanvasPilot before any of them is adopted
 - The internal design of OTS software items is excluded; only integration and usage design is documented
 
 ## Software Structure

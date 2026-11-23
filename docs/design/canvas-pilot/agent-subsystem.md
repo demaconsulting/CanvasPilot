@@ -16,34 +16,35 @@ history records, the event records, and the readiness report, all free of any AI
 GitHub Copilot CLI that the user installed, tells it from the launchers that editors put on the `PATH`, and checks its
 version; it comes with the seams that make it testable (a process runner, a file system, and an environment reader).
 `AgentReadiness` checks whether the chosen provider can be used and implements the `IProviderCheck` of the `Settings`
-subsystem; it comes with the probe of the Ollama server, for Copilot it asks the shared runtime to start, and for both
-providers it validates the model settings against the catalog of the provider. `CopilotRuntimeStarter` starts the GitHub
-Copilot runtime of the AI library on the CLI that the user installed, shares that one runtime among the readiness check,
-the list of models, and every conversation, and words every way that the start can fail; it holds the supporting types
-of the starter and of the source of Copilot agents (which also gives the catalog of the models of the runtime).
-`ProviderModelCatalog` lists the models of the chosen provider with what each can do, as the `IProviderModelSource` of
-the `Settings` subsystem, and holds the policy of what the application needs of a model. copilot may use for one
-project: it confines them to the project folder with a path policy, offers the drawing knowledge and the style tools as
-functions of the AI library, adds the packs that the application supplies for the project and the optional packs that
-the user chose (the catalog is empty in this version), and refuses a set that a provider could not be given.
-`ProjectTools` is the copilot's hands on the project: the tools that list, read, and write the files of the project and
-the tool that draws a picture, all confined to the project folder and refusing links themselves; a write replaces a file
-directly (the user decided that the application keeps no backup and asks nothing, so the change is made visible
-instead). `AgentInstructions` writes the instructions that the copilot is given: a role prompt, the index of the drawing
-knowledge, the facts of the project, and the style of the project, in a full form or a compact form depending on the
-context window of the model, with sizes that its tests measure. `PayloadMessageMapper` turns the message that the user
-sent (the `MessagePayload`) into the user message that a model is given: the words, a compact description of the
-attachments, pictures, and marks, and the pictures as PNG images, annotated pictures first and then the close-ups of the
-marks, at most ten. `AgentEventMapper` turns the stream of updates that an agent produces for a turn into the events of
-the contract, the same for both providers, and turns the exception of a failed turn into a failure with a sentence that
-says what to do. `AgentProviderFactory` makes the agent of a conversation for the chosen provider: for Ollama an agent
-on an Ollama client that is told the context window on every request, and for GitHub Copilot an agent on the shared
-runtime that the starter of the runtime gives, with only the supplied tools and the default-deny permission handler of
-the AI library. `AgentService` implements `IAgentService`: it makes nothing until the first message is sent, then builds
-the tools, the instructions, the agent, and one provider session for the open project, runs one turn at a time on them,
-rebuilds them when the project or a setting that decides the agent changes, deletes what the provider kept when a
-conversation ends, gives the Copilot runtime a data folder that is never inside a project, and writes metadata only to
-the log.
+subsystem; it comes with the probe of the Ollama server, for Copilot it asks the shared runtime to start (the runtime
+start decides the sign-in) and appends the account that the runtime signed in as to the sentence of a provider that can
+be used, and for both providers it validates the model settings against the catalog of the provider.
+`CopilotRuntimeStarter` starts the GitHub Copilot runtime of the AI library on the CLI that the user installed, shares
+that one runtime among the readiness check, the list of models, and every conversation, and words every way that the
+start can fail; it holds the supporting types of the starter and of the source of Copilot agents (which also gives the
+catalog of the models of the runtime). `ProviderModelCatalog` lists the models of the chosen provider with what each can
+do, as the `IProviderModelSource` of the `Settings` subsystem, and holds the policy of what the application needs of a
+model. copilot may use for one project: it confines them to the project folder with a path policy, offers the drawing
+knowledge and the style tools as functions of the AI library, adds the packs that the application supplies for the
+project and the optional packs that the user chose (the catalog is empty in this version), and refuses a set that a
+provider could not be given. `ProjectTools` is the copilot's hands on the project: the tools that list, read, and write
+the files of the project and the tool that draws a picture, all confined to the project folder and refusing links
+themselves; a write replaces a file directly (the user decided that the application keeps no backup and asks nothing, so
+the change is made visible instead). `AgentInstructions` writes the instructions that the copilot is given: a role
+prompt, the index of the drawing knowledge, the facts of the project, and the style of the project, in a full form or a
+compact form depending on the context window of the model, with sizes that its tests measure. `PayloadMessageMapper`
+turns the message that the user sent (the `MessagePayload`) into the user message that a model is given: the words, a
+compact description of the attachments, pictures, and marks, and the pictures as PNG images, annotated pictures first
+and then the close-ups of the marks, at most ten. `AgentEventMapper` turns the stream of updates that an agent produces
+for a turn into the events of the contract, the same for both providers, and turns the exception of a failed turn into a
+failure with a sentence that says what to do. `AgentProviderFactory` makes the agent of a conversation for the chosen
+provider: for Ollama an agent on an Ollama client that is told the context window on every request, and for GitHub
+Copilot an agent on the shared runtime that the starter of the runtime gives, with only the supplied tools and the
+default-deny permission handler of the AI library. `AgentService` implements `IAgentService`: it makes nothing until the
+first message is sent, then builds the tools, the instructions, the agent, and one provider session for the open
+project, runs one turn at a time on them, rebuilds them when the project or a setting that decides the agent changes,
+deletes what the provider kept when a conversation ends, gives the Copilot runtime a data folder that is never inside a
+project, and writes metadata only to the log.
 
 The subsystem depends on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
 message), `Knowledge`, `Style`, and `Preview` (the content and the rendering that its tools give the copilot),
@@ -94,29 +95,35 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   in the design of the `AgentReadiness` unit.
 - *Role*: Provider (the service, the chat banner, and the connection check of the settings dialog are consumers).
 - *Contract*: `GetReportAsync(settings, refresh, cancellationToken)` returns an `AgentReadinessReport`; `CheckAsync` is
-  the settings dialog's connection check, which always searches again. For Copilot the checks run in order (CLI,
-  version, credentials, the shared runtime, the model settings) and the first failure gives the sentence; for Ollama
-  they are the settings, the server, the model, the model settings, and the window.
+  the settings dialog's connection check, which always searches again. For Copilot the checks run in order (CLI found,
+  version, the shared runtime, the model settings) and the first failure gives the sentence; the runtime start decides
+  the sign-in, so there is no check of credentials of its own and no run of the GitHub CLI. A provider that can be used
+  also says how the runtime signed in (the login, the host, and the kind of sign-in). For Ollama they are the settings,
+  the server, the model, the model settings, and the window.
 - *Constraints*: Copilot is reported ready only when the shared runtime was started on the installed CLI and signed in
   (the Copilot runtime is neither bundled nor downloaded) and the model settings are valid for it; a model that cannot
   call tools is not usable and one that cannot take pictures is a usable warning; a token is never stored, shown, or
-  logged; every problem is a report and only cancellation is thrown.
+  logged (only the kind of sign-in, the login, and the host are shown); every problem is a report and only cancellation
+  is thrown.
 
 **CopilotRuntimeStarter**: The one Copilot runtime, on the CLI that the user installed.
 
 - *Type*: In-process .NET class that implements `ICopilotRuntimeStarter` and `IAsyncDisposable`, with
-  `CopilotStartRequest`, `CopilotStartResult`, `CopilotStartStatus`, `ICopilotAgentSource`, `CopilotAgentRequest`, and
-  `CopilotRuntimeAgentSource`, documented in the design of the `CopilotRuntimeStarter` unit.
+  `CopilotStartRequest`, `CopilotStartResult`, `CopilotStartStatus`, `CopilotSignInInfo`, `ICopilotAgentSource`,
+  `CopilotAgentRequest`, and `CopilotRuntimeAgentSource`, documented in the design of the `CopilotRuntimeStarter` unit.
 - *Role*: Provider (the readiness check, the model list, and the agent factory are consumers); it consumes the runtime
   of the AI library.
 - *Contract*: `StartAsync(request, cancellationToken)` returns a `CopilotStartResult` with the status `Started`,
   `CliTooOld`, `NotSignedIn`, or `Failed`, one sentence, and, when started, the running runtime as an
-  `ICopilotAgentSource` (which makes agents and gives the `IModelCatalog` of the runtime); every caller gets the same
-  running runtime for the same CLI and data folder. Disposing the
-  starter stops the runtime once.
+  `ICopilotAgentSource` (which makes agents, gives the `IModelCatalog` of the runtime, and says how the runtime signed
+  in); every caller gets the same running runtime for the same CLI and data folder. Disposing the
+  starter stops the runtime once. A runtime that is not signed in gives the sentence that says to run `copilot` and type
+  `/login` (the GitHub CLI and the token variables are the alternatives) and a one-line digest of what the AI library
+  found at each place it looked for a sign-in.
 - *Constraints*: The CLI is the installed one at the path that the locator found and nothing is bundled or downloaded;
   only one runtime uses the data folder, which is below the local data of the user and never in a project; no token is
-  read, stored, logged, or passed; a failed start is a result and is not remembered; a cancelled start is thrown.
+  read, stored, logged, or passed, and no host and no switch for the sign-in of the CLI is passed; a failed start is a
+  result and is not remembered; a cancelled start is thrown.
 
 **ProviderModelCatalog**: The models that the chosen provider offers.
 
@@ -259,35 +266,35 @@ usable before any provider is written against it. The Copilot CLI is found by a 
 `CopilotCliLocator` unit; the subsystem test reproduces the layout of a real machine that has both the CLI and the VS
 Code shim, and checks that the CLI is found, that a machine with only the shim is told so, and that a path chosen in the
 settings is used. The readiness checks are tested through `IProviderCheck`, as the settings dialog uses them: GitHub
-Copilot on a machine with a signed-in GitHub CLI is ready when a stand-in starter starts, is not usable with the
-sentence of the starter when the starter says that it is not signed in, is not usable with the sentence of the AI
-library when the catalog of the stand-in runtime does not offer the model, cannot call tools, or does not offer the
-reasoning effort, and is a usable warning for a model that cannot take pictures; and Ollama with a small window is
-usable with a warning. The models of the provider are listed from stand-in catalogs and, for Ollama, through the real
-catalog of the AI library over a stand-in server. The tools are tested the same way: the registry is built over the real
-drawing knowledge and a pack that keeps the policy it receives, and the test shows that only the application's own tools
-are offered and that the policy permits a picture file of the project and refuses the data folder, a project file, and
-every place outside the project. The project tools are tested on a real project folder: a drawing is written, listed,
-read, replaced, and drawn by the real render service, and the test shows that nothing but the drawing is added to the
-project and that paths that leave the project or reach the project file are refused. The instructions are tested with
-the real cards and the real kits: their sizes are measured for the full and the compact tier and for the tools, and a
-test builds the instructions and the tools of one project together and shows that the tools that the role prompt names
-are exactly the tools that are offered. The mapper of the message is tested with golden text for each rule, and with a
-real payload that the real builder made from a real picture and real marks, which shows the text and the images that a
-model would receive. The mapper of the updates is tested with scripted streams for every kind of content, every cause of
-failure, and the rules for a canceled turn, and with a real agent, on a scripted model, that writes a drawing, looks at
-it, and tries to write outside the project with the real project tools, which shows the events that the chat will get.
-The factory is tested against a stand-in Ollama server with the real tools of a project, which shows a conversation from
-the settings to the drawing in the project (the model, the window, and the thinking level reach the wire), and for
-Copilot with stand-in starters, which shows the typed answer without an agent for each way that a start fails and an
-agent that is made with exactly the tools, the folder, and the validated model selection of the project. The service is
-tested with a scripted model on the real tools, instructions, and mappers, a stand-in for the open project and for the
-settings that raise the events of the real services, and a log file: the tests run whole turns, change the project and
-the settings, stop, reset, and dispose, and show that nothing is written into the project and that no word of a message,
-an answer, a tool, or a file reaches the log. Two subsystem tests run it as the application will, once over the stand-in
-Ollama server with the real factory and once for Copilot with a stand-in starter. The starter itself is tested over a
-stand-in function that starts the runtime, because the runtime is a sealed class that needs a real CLI: sharing,
-replacement, failure mapping, and disposal are shown there.
+Copilot is ready when a stand-in starter starts (with no check of credentials of the machine), names the account that
+the stand-in runtime reports in its sentence, is not usable with the sentence of the starter when the starter says that
+it is not signed in, is not usable with the sentence of the AI library when the catalog of the stand-in runtime does not
+offer the model, cannot call tools, or does not offer the reasoning effort, and is a usable warning for a model that
+cannot take pictures; and Ollama with a small window is usable with a warning. The models of the provider are listed
+from stand-in catalogs and, for Ollama, through the real catalog of the AI library over a stand-in server. The tools are
+tested the same way: the registry is built over the real drawing knowledge and a pack that keeps the policy it receives,
+and the test shows that only the application's own tools are offered and that the policy permits a picture file of the
+project and refuses the data folder, a project file, and every place outside the project. The project tools are tested
+on a real project folder: a drawing is written, listed, read, replaced, and drawn by the real render service, and the
+test shows that nothing but the drawing is added to the project and that paths that leave the project or reach the
+project file are refused. The instructions are tested with the real cards and the real kits: their sizes are measured
+for the full and the compact tier and for the tools, and a test builds the instructions and the tools of one project
+together and shows that the tools that the role prompt names are exactly the tools that are offered. The mapper of the
+message is tested with golden text for each rule, and with a real payload that the real builder made from a real picture
+and real marks, which shows the text and the images that a model would receive. The mapper of the updates is tested with
+scripted streams for every kind of content, every cause of failure, and the rules for a canceled turn, and with a real
+agent, on a scripted model, that writes a drawing, looks at it, and tries to write outside the project with the real
+project tools, which shows the events that the chat will get. The factory is tested against a stand-in Ollama server
+with the real tools of a project, which shows a conversation from the settings to the drawing in the project (the model,
+the window, and the thinking level reach the wire), and for Copilot with stand-in starters, which shows the typed answer
+without an agent for each way that a start fails and an agent that is made with exactly the tools, the folder, and the
+validated model selection of the project. The service is tested with a scripted model on the real tools, instructions,
+and mappers, a stand-in for the open project and for the settings that raise the events of the real services, and a log
+file: the tests run whole turns, change the project and the settings, stop, reset, and dispose, and show that nothing is
+written into the project and that no word of a message, an answer, a tool, or a file reaches the log. Two subsystem
+tests run it as the application will, once over the stand-in Ollama server with the real factory and once for Copilot
+with a stand-in starter. The starter itself is tested over a stand-in function that starts the runtime, because the
+runtime is a sealed class that needs a real CLI: sharing, replacement, failure mapping, and disposal are shown there.
 
 **Where the data of the copilot lives.** The copilot's own data never goes into the project folder. The folder of a
 project receives only files that the user or the copilot is asked to create.
