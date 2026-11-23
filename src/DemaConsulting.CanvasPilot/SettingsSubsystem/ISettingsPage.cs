@@ -35,6 +35,16 @@ public interface ISettingsPage : INotifyPropertyChanged
     string Title { get; }
 
     /// <summary>
+    ///     Gets the sentence under the title of the page that says what the page is for. A page that has none shows no sentence.
+    /// </summary>
+    string Description => string.Empty;
+
+    /// <summary>
+    ///     Gets the resource key of the icon that the page list shows beside the title, such as <c>CpIconSettings</c>.
+    /// </summary>
+    string IconKey => "CpIconSettings";
+
+    /// <summary>
     ///     Gets a value indicating whether the page's current entries can be applied. A change of this value is
     ///     reported through <see cref="INotifyPropertyChanged.PropertyChanged" />.
     /// </summary>

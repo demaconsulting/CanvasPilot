@@ -5,74 +5,87 @@
              x:DataType="vm:StyleSettingsPageViewModel">
 
   <ScrollViewer>
-    <StackPanel Spacing="6" Margin="0,0,12,0">
+    <StackPanel Spacing="16" Margin="0,0,12,24">
 
-      <TextBlock Text="Shared kit folders" FontWeight="SemiBold" />
-      <TextBlock TextWrapping="Wrap"
-                 Opacity="0.7"
-                 Text="Folders in which a team keeps style kits. When the same kit is in more than one folder, the one that is higher in the list is used. The kits in these folders are read only." />
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="sectionTitle" Text="Shared kit folders" Margin="0,0,0,6" />
+          <TextBlock Classes="hint"
+                     Text="Folders in which a team keeps style kits. When the same kit is in more than one folder, the one that is higher in the list is used. The kits in these folders are read only." />
 
-      <ListBox AutomationProperties.AutomationId="StyleSharedFolders"
-               MinHeight="90"
-               MaxHeight="180"
-               ItemsSource="{Binding Folders}"
-               SelectedItem="{Binding SelectedFolder}">
-        <ListBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:StyleFolderItem">
-            <StackPanel Margin="4,2" Spacing="2">
-              <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" />
-              <TextBlock Text="{Binding StatusText}" Opacity="0.7" TextWrapping="Wrap" />
-            </StackPanel>
-          </DataTemplate>
-        </ListBox.ItemTemplate>
-      </ListBox>
+          <ListBox AutomationProperties.AutomationId="StyleSharedFolders"
+                   AutomationProperties.Name="Shared kit folders"
+                   MinHeight="90"
+                   MaxHeight="180"
+                   ItemsSource="{Binding Folders}"
+                   SelectedItem="{Binding SelectedFolder}">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:StyleFolderItem">
+                <StackPanel Margin="4,2" Spacing="2">
+                  <TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="hint" Text="{Binding StatusText}" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
 
-      <StackPanel Orientation="Horizontal" Spacing="6">
-        <Button AutomationProperties.AutomationId="StyleFolderUpButton"
-                Content="Move up"
-                Command="{Binding MoveFolderUpCommand}" />
-        <Button AutomationProperties.AutomationId="StyleFolderDownButton"
-                Content="Move down"
-                Command="{Binding MoveFolderDownCommand}" />
-        <Button AutomationProperties.AutomationId="StyleFolderRemoveButton"
-                Content="Remove"
-                Command="{Binding RemoveFolderCommand}" />
-      </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <Button AutomationProperties.AutomationId="StyleFolderUpButton"
+                    Theme="{DynamicResource SecondaryButton}"
+                    Content="Move up"
+                    Command="{Binding MoveFolderUpCommand}" />
+            <Button AutomationProperties.AutomationId="StyleFolderDownButton"
+                    Theme="{DynamicResource SecondaryButton}"
+                    Content="Move down"
+                    Command="{Binding MoveFolderDownCommand}" />
+            <Button AutomationProperties.AutomationId="StyleFolderRemoveButton"
+                    Theme="{DynamicResource SecondaryButton}"
+                    Content="Remove"
+                    Command="{Binding RemoveFolderCommand}" />
+          </StackPanel>
 
-      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" Margin="0,6,0,0">
-        <TextBox Grid.Column="0"
-                 AutomationProperties.AutomationId="StyleNewFolderTextBox"
-                 PlaceholderText="Type or paste a full folder path, such as \\server\share\kits"
-                 Text="{Binding NewFolderText}" />
-        <Button Grid.Column="1"
-                AutomationProperties.AutomationId="StyleFolderAddButton"
-                Content="Add"
-                Command="{Binding AddTypedFolderCommand}" />
-        <Button Grid.Column="2"
-                AutomationProperties.AutomationId="StyleFolderBrowseButton"
-                Content="Browse..."
-                Command="{Binding BrowseFolderCommand}" />
-      </Grid>
-      <TextBlock AutomationProperties.AutomationId="StyleFolderError"
-                 Foreground="Firebrick"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding HasFolderError}"
-                 Text="{Binding FolderError}" />
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6" Margin="0,6,0,0">
+            <TextBox Grid.Column="0"
+                     AutomationProperties.AutomationId="StyleNewFolderTextBox"
+                     AutomationProperties.Name="New shared folder path"
+                     PlaceholderText="Type or paste a full folder path, such as \\server\share\kits"
+                     Text="{Binding NewFolderText}" />
+            <Button Grid.Column="1"
+                    AutomationProperties.AutomationId="StyleFolderAddButton"
+                    Theme="{DynamicResource SecondaryButton}"
+                    Content="Add"
+                    Command="{Binding AddTypedFolderCommand}" />
+            <Button Grid.Column="2"
+                    AutomationProperties.AutomationId="StyleFolderBrowseButton"
+                    Theme="{DynamicResource SecondaryButton}"
+                    Content="Browse..."
+                    Command="{Binding BrowseFolderCommand}" />
+          </Grid>
+          <TextBlock Classes="error"
+                     AutomationProperties.AutomationId="StyleFolderError"
+                     IsVisible="{Binding HasFolderError}"
+                     Text="{Binding FolderError}" />
+        </StackPanel>
+      </Border>
 
-      <TextBlock Text="Default kit for new projects" FontWeight="SemiBold" Margin="0,12,0,0" />
-      <ComboBox AutomationProperties.AutomationId="StyleDefaultKitComboBox"
-                HorizontalAlignment="Stretch"
-                ItemsSource="{Binding DefaultKitChoices}"
-                SelectedItem="{Binding SelectedDefaultKit}">
-        <ComboBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:StyleKitChoice">
-            <TextBlock Text="{Binding Label}" />
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-      </ComboBox>
-      <TextBlock TextWrapping="Wrap"
-                 Opacity="0.7"
-                 Text="A new project starts with this kit as its style. Projects that exist keep the kit they have." />
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="sectionTitle" Text="Default kit for new projects" Margin="0,0,0,6" />
+          <ComboBox AutomationProperties.AutomationId="StyleDefaultKitComboBox"
+                    AutomationProperties.Name="Default kit for new projects"
+                    HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding DefaultKitChoices}"
+                    SelectedItem="{Binding SelectedDefaultKit}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:StyleKitChoice">
+                <TextBlock Text="{Binding Label}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="hint"
+                     Text="A new project starts with this kit as its style. Projects that exist keep the kit they have." />
+        </StackPanel>
+      </Border>
 
     </StackPanel>
   </ScrollViewer>

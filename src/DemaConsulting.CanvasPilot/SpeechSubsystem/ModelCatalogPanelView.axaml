@@ -8,28 +8,31 @@
     <!-- One model row: name, state, progress while downloading, the last failure, and the download buttons. -->
     <DataTemplate DataType="vm:ModelListItemViewModel">
       <StackPanel Spacing="2" Margin="0,4">
-        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-        <TextBlock AutomationProperties.AutomationId="SpeechModelStatus"
-                   Text="{Binding StatusText}"
-                   Opacity="0.7" />
+        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource CpTextPrimary}" />
+        <TextBlock Classes="hint"
+                   AutomationProperties.AutomationId="SpeechModelStatus"
+                   Text="{Binding StatusText}" />
         <ProgressBar AutomationProperties.AutomationId="SpeechModelProgress"
                      Minimum="0"
                      Maximum="1"
                      IsIndeterminate="{Binding ProgressFraction, Converter={x:Static ObjectConverters.IsNull}}"
                      Value="{Binding ProgressFraction}"
                      IsVisible="{Binding IsDownloading}" />
-        <TextBlock AutomationProperties.AutomationId="SpeechModelFailure"
-                   Foreground="Firebrick"
-                   TextWrapping="Wrap"
+        <TextBlock Classes="error"
+                   AutomationProperties.AutomationId="SpeechModelFailure"
                    IsVisible="{Binding HasFailureMessage}"
                    Text="{Binding FailureMessage}" />
-        <StackPanel Orientation="Horizontal" Spacing="8">
+        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
           <Button AutomationProperties.AutomationId="SpeechModelDownloadButton"
+                  Theme="{DynamicResource SecondaryButton}"
+                  MinHeight="28"
                   Content="Download"
                   IsEnabled="{Binding CanDownload}"
                   Command="{Binding $parent[ListBox].((vm:ModelCatalogPanelViewModel)DataContext).DownloadCommand}"
                   CommandParameter="{Binding}" />
           <Button AutomationProperties.AutomationId="SpeechModelCancelButton"
+                  Theme="{DynamicResource SecondaryButton}"
+                  MinHeight="28"
                   Content="Cancel"
                   IsVisible="{Binding IsDownloading}"
                   Command="{Binding $parent[ListBox].((vm:ModelCatalogPanelViewModel)DataContext).CancelDownloadCommand}"
@@ -41,32 +44,34 @@
 
   <StackPanel Spacing="6">
 
-    <TextBlock Text="Speech models" FontWeight="SemiBold" />
-    <TextBlock TextWrapping="Wrap"
-               Opacity="0.7"
+    <TextBlock Classes="sectionTitle" Text="Speech models" Margin="0,0,0,6" />
+    <TextBlock Classes="hint"
                Text="Choose the model for each direction. A model must be downloaded before it can be used. Downloads start at once, are not undone by Cancel, and stop when this dialog closes." />
 
-    <TextBlock AutomationProperties.AutomationId="SpeechModelsMessage"
-               TextWrapping="Wrap"
-               Foreground="Firebrick"
+    <TextBlock Classes="error"
+               AutomationProperties.AutomationId="SpeechModelsMessage"
                IsVisible="{Binding HasMessage}"
                Text="{Binding Message}" />
 
-    <TextBlock Text="Speech to text" Margin="0,4,0,0" />
+    <TextBlock Classes="label" Text="Speech to text" Margin="0,8,0,0" />
     <ListBox AutomationProperties.AutomationId="SpeechSttModelList"
+             AutomationProperties.Name="Speech to text models"
              MaxHeight="200"
              ItemsSource="{Binding SttModels}"
              SelectedItem="{Binding SelectedSttModel}" />
 
-    <TextBlock Text="Text to speech" Margin="0,4,0,0" />
+    <TextBlock Classes="label" Text="Text to speech" Margin="0,8,0,0" />
     <ListBox AutomationProperties.AutomationId="SpeechTtsModelList"
+             AutomationProperties.Name="Text to speech models"
              MaxHeight="200"
              ItemsSource="{Binding TtsModels}"
              SelectedItem="{Binding SelectedTtsModel}" />
 
     <Button AutomationProperties.AutomationId="SpeechRefreshModelsButton"
+            Theme="{DynamicResource SecondaryButton}"
             Content="Refresh models"
             HorizontalAlignment="Left"
+            Margin="0,4,0,0"
             Command="{Binding RefreshCommand}" />
 
   </StackPanel>

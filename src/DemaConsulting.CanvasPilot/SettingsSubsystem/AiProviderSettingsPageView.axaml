@@ -6,134 +6,153 @@
 
   <UserControl.Styles>
     <Style Selector="TextBlock.failed">
-      <Setter Property="Foreground" Value="Firebrick" />
+      <Setter Property="Foreground" Value="{DynamicResource CpDanger}" />
     </Style>
   </UserControl.Styles>
 
   <ScrollViewer>
-    <StackPanel Spacing="6" Margin="0,0,12,0">
+    <StackPanel Spacing="16" Margin="0,0,12,24">
 
-      <TextBlock Text="Provider" />
-      <ComboBox AutomationProperties.AutomationId="AiProviderComboBox"
-                HorizontalAlignment="Stretch"
-                ItemsSource="{Binding Providers}"
-                SelectedItem="{Binding SelectedProvider}" />
+      <!-- Which provider and model the copilot uses -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="sectionTitle" Text="Provider and model" Margin="0,0,0,6" />
 
-      <TextBlock Text="Model" Margin="0,8,0,0" />
-      <ComboBox x:Name="ModelList"
-                AutomationProperties.AutomationId="AiModelComboBox"
-                HorizontalAlignment="Stretch"
-                IsVisible="{Binding HasModelList}"
-                ItemsSource="{Binding Models}"
-                SelectedItem="{Binding SelectedModel}">
-        <ComboBox.ItemTemplate>
-          <DataTemplate x:DataType="vm:ModelChoice">
-            <TextBlock Text="{Binding Label}" />
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-        <ComboBox.Styles>
-          <Style Selector="ComboBoxItem" x:DataType="vm:ModelChoice">
-            <Setter Property="IsEnabled" Value="{Binding IsSelectable}" />
-          </Style>
-        </ComboBox.Styles>
-      </ComboBox>
-      <TextBlock Text="Model name (type one that is not listed)" Margin="0,4,0,0" Opacity="0.7"
-                 IsVisible="{Binding HasModelList}" />
-      <TextBox AutomationProperties.AutomationId="AiModelNameTextBox"
-               PlaceholderText="Leave empty to use the provider's default model"
-               Text="{Binding ModelName}" />
-      <StackPanel Orientation="Horizontal" Spacing="8">
-        <Button AutomationProperties.AutomationId="AiRefreshModelsButton"
-                Content="Refresh models"
-                IsVisible="{Binding HasModelSource}"
-                IsEnabled="{Binding !IsLoadingModels}"
-                Command="{Binding RefreshModelsCommand}" />
-        <TextBlock AutomationProperties.AutomationId="AiModelListMessage"
-                   VerticalAlignment="Center"
-                   TextWrapping="Wrap"
-                   Opacity="0.7"
-                   IsVisible="{Binding HasModelListMessage}"
-                   Text="{Binding ModelListMessage}" />
-      </StackPanel>
-      <TextBlock AutomationProperties.AutomationId="AiModelDetails"
-                 Opacity="0.85"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding ModelDetails, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                 Text="{Binding ModelDetails}" />
-      <TextBlock AutomationProperties.AutomationId="AiModelWarning"
-                 Foreground="DarkOrange"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding ModelWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                 Text="{Binding ModelWarning}" />
+          <TextBlock Classes="label" Text="Provider" />
+          <ComboBox AutomationProperties.AutomationId="AiProviderComboBox"
+                    AutomationProperties.Name="Provider"
+                    HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding Providers}"
+                    SelectedItem="{Binding SelectedProvider}" />
 
-      <TextBlock Text="Context window (tokens, Ollama only)" Margin="0,8,0,0" />
-      <TextBox AutomationProperties.AutomationId="AiContextWindowTextBox"
-               Text="{Binding ContextWindowText}" />
-      <TextBlock AutomationProperties.AutomationId="AiContextWindowError"
-                 Foreground="Firebrick"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding ContextWindowError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                 Text="{Binding ContextWindowError}" />
-      <TextBlock AutomationProperties.AutomationId="AiContextWindowWarning"
-                 Foreground="DarkOrange"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding ContextWindowWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                 Text="{Binding ContextWindowWarning}" />
-      <TextBlock AutomationProperties.AutomationId="AiContextWindowNote"
-                 Opacity="0.7"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding ContextWindowNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                 Text="{Binding ContextWindowNote}" />
+          <TextBlock Classes="label" Text="Model" Margin="0,8,0,0" />
+          <ComboBox x:Name="ModelList"
+                    AutomationProperties.AutomationId="AiModelComboBox"
+                    AutomationProperties.Name="Model"
+                    HorizontalAlignment="Stretch"
+                    IsVisible="{Binding HasModelList}"
+                    ItemsSource="{Binding Models}"
+                    SelectedItem="{Binding SelectedModel}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:ModelChoice">
+                <TextBlock Text="{Binding Label}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+            <ComboBox.Styles>
+              <Style Selector="ComboBoxItem" x:DataType="vm:ModelChoice">
+                <Setter Property="IsEnabled" Value="{Binding IsSelectable}" />
+              </Style>
+            </ComboBox.Styles>
+          </ComboBox>
+          <TextBlock Classes="hint"
+                     Text="Model name (type one that is not listed)"
+                     IsVisible="{Binding HasModelList}" />
+          <TextBox AutomationProperties.AutomationId="AiModelNameTextBox"
+                   AutomationProperties.Name="Model name"
+                   PlaceholderText="Leave empty to use the provider's default model"
+                   Text="{Binding ModelName}" />
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button AutomationProperties.AutomationId="AiRefreshModelsButton"
+                    Theme="{DynamicResource SecondaryButton}"
+                    Content="Refresh models"
+                    IsVisible="{Binding HasModelSource}"
+                    IsEnabled="{Binding !IsLoadingModels}"
+                    Command="{Binding RefreshModelsCommand}" />
+            <TextBlock Classes="hint"
+                       AutomationProperties.AutomationId="AiModelListMessage"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding HasModelListMessage}"
+                       Text="{Binding ModelListMessage}" />
+          </StackPanel>
+          <TextBlock Classes="hint"
+                     AutomationProperties.AutomationId="AiModelDetails"
+                     IsVisible="{Binding ModelDetails, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding ModelDetails}" />
+          <TextBlock Classes="caution"
+                     AutomationProperties.AutomationId="AiModelWarning"
+                     IsVisible="{Binding ModelWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding ModelWarning}" />
 
-      <TextBlock Text="Reasoning level" Margin="0,8,0,0" />
-      <ComboBox AutomationProperties.AutomationId="AiReasoningEffortComboBox"
-                HorizontalAlignment="Stretch"
-                IsEnabled="{Binding IsReasoningEffortEnabled}"
-                ItemsSource="{Binding ReasoningEfforts}"
-                SelectedItem="{Binding SelectedReasoningEffort}" />
-      <TextBlock AutomationProperties.AutomationId="AiReasoningEffortNote"
-                 Opacity="0.7"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding HasReasoningNote}"
-                 Text="{Binding ReasoningNote}" />
+          <TextBlock Classes="label" Text="Reasoning level" Margin="0,8,0,0" />
+          <ComboBox AutomationProperties.AutomationId="AiReasoningEffortComboBox"
+                    AutomationProperties.Name="Reasoning level"
+                    HorizontalAlignment="Stretch"
+                    IsEnabled="{Binding IsReasoningEffortEnabled}"
+                    ItemsSource="{Binding ReasoningEfforts}"
+                    SelectedItem="{Binding SelectedReasoningEffort}" />
+          <TextBlock Classes="hint"
+                     AutomationProperties.AutomationId="AiReasoningEffortNote"
+                     IsVisible="{Binding HasReasoningNote}"
+                     Text="{Binding ReasoningNote}" />
+        </StackPanel>
+      </Border>
 
-      <TextBlock Text="Ollama endpoint" Margin="0,8,0,0" />
-      <TextBox AutomationProperties.AutomationId="AiOllamaEndpointTextBox"
-               IsEnabled="{Binding IsOllamaSelected}"
-               Text="{Binding OllamaEndpoint}" />
-      <TextBlock AutomationProperties.AutomationId="AiOllamaEndpointError"
-                 Foreground="Firebrick"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding OllamaEndpointError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                 Text="{Binding OllamaEndpointError}" />
+      <!-- Where the provider is -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="sectionTitle" Text="Connection" Margin="0,0,0,6" />
 
-      <TextBlock Text="GitHub Copilot command-line tool path" Margin="0,8,0,0" />
-      <TextBox AutomationProperties.AutomationId="AiCopilotCliPathTextBox"
-               IsEnabled="{Binding IsCopilotSelected}"
-               PlaceholderText="Leave empty to locate the tool automatically"
-               Text="{Binding CopilotCliPath}" />
-      <TextBlock AutomationProperties.AutomationId="AiCopilotCliPathError"
-                 Foreground="Firebrick"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding CopilotCliPathError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                 Text="{Binding CopilotCliPathError}" />
+          <TextBlock Classes="label" Text="Context window (tokens, Ollama only)" />
+          <TextBox AutomationProperties.AutomationId="AiContextWindowTextBox"
+                   AutomationProperties.Name="Context window in tokens"
+                   Text="{Binding ContextWindowText}" />
+          <TextBlock Classes="error"
+                     AutomationProperties.AutomationId="AiContextWindowError"
+                     IsVisible="{Binding ContextWindowError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding ContextWindowError}" />
+          <TextBlock Classes="caution"
+                     AutomationProperties.AutomationId="AiContextWindowWarning"
+                     IsVisible="{Binding ContextWindowWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding ContextWindowWarning}" />
+          <TextBlock Classes="hint"
+                     AutomationProperties.AutomationId="AiContextWindowNote"
+                     IsVisible="{Binding ContextWindowNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding ContextWindowNote}" />
 
-      <TextBlock AutomationProperties.AutomationId="AiCopilotCliPathNote"
-                 Opacity="0.7"
-                 TextWrapping="Wrap"
-                 Text="{x:Static vm:AiProviderSettingsPageViewModel.CopilotCliPathNoteText}" />
+          <TextBlock Classes="label" Text="Ollama endpoint" Margin="0,8,0,0" />
+          <TextBox AutomationProperties.AutomationId="AiOllamaEndpointTextBox"
+                   AutomationProperties.Name="Ollama endpoint"
+                   IsEnabled="{Binding IsOllamaSelected}"
+                   Text="{Binding OllamaEndpoint}" />
+          <TextBlock Classes="error"
+                     AutomationProperties.AutomationId="AiOllamaEndpointError"
+                     IsVisible="{Binding OllamaEndpointError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding OllamaEndpointError}" />
 
-      <Button AutomationProperties.AutomationId="AiCheckConnectionButton"
-              Margin="0,12,0,0"
-              HorizontalAlignment="Left"
-              Content="Check connection"
-              IsVisible="{Binding HasConnectionCheck}"
-              Command="{Binding CheckConnectionCommand}" />
-      <TextBlock AutomationProperties.AutomationId="AiCheckConnectionResult"
-                 Classes.failed="{Binding IsCheckConnectionFailed}"
-                 TextWrapping="Wrap"
-                 IsVisible="{Binding HasCheckConnectionResult}"
-                 Text="{Binding CheckConnectionResult}" />
+          <TextBlock Classes="label" Text="GitHub Copilot command-line tool path" Margin="0,8,0,0" />
+          <TextBox AutomationProperties.AutomationId="AiCopilotCliPathTextBox"
+                   AutomationProperties.Name="GitHub Copilot command-line tool path"
+                   IsEnabled="{Binding IsCopilotSelected}"
+                   PlaceholderText="Leave empty to locate the tool automatically"
+                   Text="{Binding CopilotCliPath}" />
+          <TextBlock Classes="error"
+                     AutomationProperties.AutomationId="AiCopilotCliPathError"
+                     IsVisible="{Binding CopilotCliPathError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding CopilotCliPathError}" />
+          <TextBlock Classes="hint"
+                     AutomationProperties.AutomationId="AiCopilotCliPathNote"
+                     Text="{x:Static vm:AiProviderSettingsPageViewModel.CopilotCliPathNoteText}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Whether the provider can be used -->
+      <Border Classes="card"
+              IsVisible="{Binding HasConnectionCheck}">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="sectionTitle" Text="Check" />
+          <Button AutomationProperties.AutomationId="AiCheckConnectionButton"
+                  HorizontalAlignment="Left"
+                  Theme="{DynamicResource SecondaryButton}"
+                  Content="Check connection"
+                  IsVisible="{Binding HasConnectionCheck}"
+                  Command="{Binding CheckConnectionCommand}" />
+          <TextBlock AutomationProperties.AutomationId="AiCheckConnectionResult"
+                     Classes.failed="{Binding IsCheckConnectionFailed}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding HasCheckConnectionResult}"
+                     Text="{Binding CheckConnectionResult}" />
+        </StackPanel>
+      </Border>
 
     </StackPanel>
   </ScrollViewer>

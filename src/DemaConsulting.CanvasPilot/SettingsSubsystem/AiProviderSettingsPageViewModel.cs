@@ -326,6 +326,12 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     /// <inheritdoc />
     public string Title => "AI Provider";
 
+    /// <inheritdoc />
+    public string Description => "Choose which AI provider and model the copilot uses, and check that it can be reached.";
+
+    /// <inheritdoc />
+    public string IconKey => "CpIconSparkle";
+
     /// <summary>
     ///     Gets the providers that can be chosen.
     /// </summary>

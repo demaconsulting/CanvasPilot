@@ -6,26 +6,32 @@
              AutomationProperties.AutomationId="SettingsAppearancePage">
 
   <ScrollViewer>
-    <StackPanel Spacing="6" Margin="0,0,12,0">
+    <StackPanel Spacing="16" Margin="0,0,12,24">
 
-      <TextBlock Text="Theme" />
-      <ComboBox AutomationProperties.AutomationId="AppearanceThemeComboBox"
-                AutomationProperties.Name="Theme"
-                HorizontalAlignment="Stretch"
-                ItemsSource="{Binding Themes}"
-                SelectedItem="{Binding SelectedTheme}" />
-      <TextBlock Text="Follow system uses the dark or the light theme of the operating system and changes with it."
-                 Foreground="{DynamicResource CpTextSecondary}"
-                 FontSize="{DynamicResource CpFontSmall}"
-                 TextWrapping="Wrap" />
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="sectionTitle" Text="Theme" Margin="0,0,0,6" />
+          <ComboBox AutomationProperties.AutomationId="AppearanceThemeComboBox"
+                    AutomationProperties.Name="Theme"
+                    HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding Themes}"
+                    SelectedItem="{Binding SelectedTheme}" />
+          <TextBlock Classes="hint"
+                     Text="Follow system uses the dark or the light theme of the operating system and changes with it." />
+        </StackPanel>
+      </Border>
 
-      <TextBlock Text="Project explorer" Margin="0,16,0,0" />
-      <CheckBox AutomationProperties.AutomationId="AppearanceShowThumbnailsCheckBox"
-                Content="Show a small picture beside each file"
-                IsChecked="{Binding ShowThumbnails}" />
-      <CheckBox AutomationProperties.AutomationId="AppearanceComfortableRowsCheckBox"
-                Content="Comfortable rows (taller, with more room between files)"
-                IsChecked="{Binding ComfortableRows}" />
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="sectionTitle" Text="Project explorer" Margin="0,0,0,6" />
+          <CheckBox AutomationProperties.AutomationId="AppearanceShowThumbnailsCheckBox"
+                    Content="Show a small picture beside each file"
+                    IsChecked="{Binding ShowThumbnails}" />
+          <CheckBox AutomationProperties.AutomationId="AppearanceComfortableRowsCheckBox"
+                    Content="Comfortable rows (taller, with more room between files)"
+                    IsChecked="{Binding ComfortableRows}" />
+        </StackPanel>
+      </Border>
 
     </StackPanel>
   </ScrollViewer>

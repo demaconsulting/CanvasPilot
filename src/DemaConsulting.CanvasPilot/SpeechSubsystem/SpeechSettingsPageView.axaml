@@ -5,19 +5,27 @@
              x:DataType="vm:SpeechSettingsPageViewModel">
 
   <ScrollViewer>
-    <StackPanel Spacing="16" Margin="0,0,12,0">
+    <StackPanel Spacing="16" Margin="0,0,12,24">
 
-      <ContentControl AutomationProperties.AutomationId="SpeechDevices"
-                      Content="{Binding Devices}" />
+      <Border Classes="card">
+        <ContentControl AutomationProperties.AutomationId="SpeechDevices"
+                        Content="{Binding Devices}" />
+      </Border>
 
-      <ContentControl AutomationProperties.AutomationId="SpeechModels"
-                      Content="{Binding Models}" />
+      <Border Classes="card">
+        <ContentControl AutomationProperties.AutomationId="SpeechModels"
+                        Content="{Binding Models}" />
+      </Border>
 
-      <ContentControl AutomationProperties.AutomationId="SpeechSttParameters"
-                      Content="{Binding SttParameters}" />
+      <Border Classes="card">
+        <ContentControl AutomationProperties.AutomationId="SpeechSttParameters"
+                        Content="{Binding SttParameters}" />
+      </Border>
 
-      <ContentControl AutomationProperties.AutomationId="SpeechTtsParameters"
-                      Content="{Binding TtsParameters}" />
+      <Border Classes="card">
+        <ContentControl AutomationProperties.AutomationId="SpeechTtsParameters"
+                        Content="{Binding TtsParameters}" />
+      </Border>
 
     </StackPanel>
   </ScrollViewer>

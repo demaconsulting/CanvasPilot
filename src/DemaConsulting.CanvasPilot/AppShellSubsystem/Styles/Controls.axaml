@@ -539,4 +539,92 @@
     </ResourceDictionary>
   </Styles.Resources>
 
+  <!-- Shared looks of the windows and dialogs, chosen with a class: a raised card, the headings and hints of a page, the
+       colors of an error and a caution (always with words beside them), and the banner that reports a problem -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource CpSurfaceRaised}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CpBorderSubtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusCard}" />
+    <Setter Property="Padding" Value="16" />
+  </Style>
+  <Style Selector="TextBlock.pageTitle">
+    <Setter Property="FontSize" Value="{DynamicResource CpFontTitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+  </Style>
+  <Style Selector="TextBlock.sectionTitle">
+    <Setter Property="FontSize" Value="{DynamicResource CpFontSubtitle}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+  </Style>
+  <Style Selector="TextBlock.label">
+    <Setter Property="FontSize" Value="{DynamicResource CpFontSmall}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource CpTextSecondary}" />
+  </Style>
+  <Style Selector="TextBlock.hint">
+    <Setter Property="FontSize" Value="{DynamicResource CpFontSmall}" />
+    <Setter Property="Foreground" Value="{DynamicResource CpTextSecondary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.error">
+    <Setter Property="Foreground" Value="{DynamicResource CpDanger}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.caution">
+    <Setter Property="Foreground" Value="{DynamicResource CpWarning}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.success">
+    <Setter Property="Foreground" Value="{DynamicResource CpSuccess}" />
+  </Style>
+  <Style Selector="Border.bannerDanger">
+    <Setter Property="Background" Value="{DynamicResource CpDangerTint}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CpDanger}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusInput}" />
+    <Setter Property="Padding" Value="12,8" />
+  </Style>
+
+  <!-- Lists inside a card or a window are inset: the pane color with a quiet outline -->
+  <Style Selector="ListBox">
+    <Setter Property="Background" Value="{DynamicResource CpSurfacePane}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource CpBorderSubtle}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusInput}" />
+  </Style>
+
+  <!-- The page rail of a dialog: a list of pages, each an icon and a title; the chosen page has a tint and an accent bar -->
+  <Style Selector="ListBox.rail">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.rail > ListBoxItem">
+    <Setter Property="Padding" Value="10,8" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Margin" Value="0,0,0,2" />
+    <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusRow}" />
+    <Setter Property="Foreground" Value="{DynamicResource CpTextSecondary}" />
+  </Style>
+  <Style Selector="ListBox.rail > ListBoxItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource CpAccentTintHover}" />
+    <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+  </Style>
+  <Style Selector="ListBox.rail > ListBoxItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+    <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+  </Style>
+  <Style Selector="ListBox.rail > ListBoxItem:selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+  </Style>
+  <Style Selector="ListBox.rail > ListBoxItem:selected TextBlock">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ListBox.rail > ListBoxItem:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
 </Styles>

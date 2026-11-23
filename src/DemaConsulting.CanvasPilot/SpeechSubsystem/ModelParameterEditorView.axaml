@@ -9,8 +9,8 @@
     <!-- Numeric: a slider, or a whole-number box for an integer parameter, bound to the clamped value. -->
     <DataTemplate DataType="vm:NumericParameterViewModel">
       <StackPanel Spacing="2" Margin="0,4">
-        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource CpTextPrimary}" />
+        <TextBlock Classes="hint" Text="{Binding Description}" />
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Slider AutomationProperties.AutomationId="SpeechParameterSlider"
                   IsVisible="{Binding !IsInteger}"
@@ -35,8 +35,8 @@
     <!-- Choice: a drop-down list of the declared options. -->
     <DataTemplate DataType="vm:ChoiceParameterViewModel">
       <StackPanel Spacing="2" Margin="0,4">
-        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource CpTextPrimary}" />
+        <TextBlock Classes="hint" Text="{Binding Description}" />
         <ComboBox AutomationProperties.AutomationId="SpeechParameterComboBox"
                   ItemsSource="{Binding Options}"
                   SelectedItem="{Binding SelectedOption}"
@@ -53,8 +53,8 @@
     <!-- Boolean: a check box. -->
     <DataTemplate DataType="vm:BooleanParameterViewModel">
       <StackPanel Spacing="2" Margin="0,4">
-        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Foreground="{DynamicResource CpTextPrimary}" />
+        <TextBlock Classes="hint" Text="{Binding Description}" />
         <CheckBox AutomationProperties.AutomationId="SpeechParameterCheckBox"
                   Content="Enabled"
                   IsChecked="{Binding Value}" />
@@ -64,10 +64,9 @@
   </UserControl.DataTemplates>
 
   <StackPanel Spacing="4">
-    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-    <TextBlock AutomationProperties.AutomationId="SpeechParametersEmptyMessage"
-               TextWrapping="Wrap"
-               Opacity="0.7"
+    <TextBlock Classes="sectionTitle" Text="{Binding Title}" Margin="0,0,0,6" />
+    <TextBlock Classes="hint"
+               AutomationProperties.AutomationId="SpeechParametersEmptyMessage"
                IsVisible="{Binding !HasParameters}"
                Text="{Binding EmptyMessage}" />
     <ItemsControl AutomationProperties.AutomationId="SpeechParameterList"

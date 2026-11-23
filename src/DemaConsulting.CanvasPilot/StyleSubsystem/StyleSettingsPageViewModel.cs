@@ -146,6 +146,12 @@ public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISett
     /// <inheritdoc />
     public string Title => "Style Kits";
 
+    /// <inheritdoc />
+    public string Description => "Where shared style kits are kept, and which kit a new project starts with.";
+
+    /// <inheritdoc />
+    public string IconKey => "CpIconBraces";
+
     /// <summary>
     ///     Gets the shared folders, in the order in which they win, each with what is known about it.
     /// </summary>

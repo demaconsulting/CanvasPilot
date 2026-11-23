@@ -103,6 +103,42 @@ public sealed class SettingsDialogViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the heading over the page shows the title and the sentence of the chosen page, that every page in the rail
+    ///     has an icon, and that a problem is shown in the banner of the footer with an icon and words.
+    /// </summary>
+    [AvaloniaFact]
+    public void SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner()
+    {
+        // Arrange: a shown dialog on its first page
+        var (window, _, _) = CreateDialog();
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var list = SettingsUiHelpers.Find<ListBox>(window, "SettingsPageList");
+        var title = SettingsUiHelpers.Find<TextBlock>(window, "SettingsPageTitle");
+        var description = SettingsUiHelpers.Find<TextBlock>(window, "SettingsPageDescription");
+        var error = SettingsUiHelpers.Find<TextBlock>(window, "SettingsErrorMessage");
+        var firstTitle = title.Text;
+        var firstDescription = description.Text;
+        var bannerBefore = error.IsEffectivelyVisible;
+
+        // Act: choose the second page and report a problem
+        list.SelectedIndex = 1;
+        ((SettingsDialogViewModel)window.DataContext!).ErrorMessage = "The value cannot be saved.";
+        Dispatcher.UIThread.RunJobs();
+
+        // Assert: the heading followed the page, each item has an icon with a shape, and the banner shows with its words
+        Assert.Equal("AI Provider", firstTitle);
+        Assert.False(string.IsNullOrEmpty(firstDescription));
+        Assert.Equal("Other", title.Text);
+        Assert.False(description.IsEffectivelyVisible);
+        Assert.Equal(2, list.GetVisualDescendants().OfType<PathIcon>().Count(icon => icon.Data is not null));
+        Assert.False(bannerBefore);
+        Assert.True(error.IsEffectivelyVisible);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the OK button saves the page entries and closes the window.
     /// </summary>
     [AvaloniaFact]

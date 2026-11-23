@@ -69,6 +69,12 @@ public sealed partial class AppearanceSettingsPageViewModel : ObservableObject, 
     /// <inheritdoc />
     public string Title => "Appearance";
 
+    /// <inheritdoc />
+    public string Description => "The theme of the window and how the project explorer looks.";
+
+    /// <inheritdoc />
+    public string IconKey => "CpIconImage";
+
     /// <summary>
     ///     Gets the choices of the theme, in the order in which they are listed.
     /// </summary>
