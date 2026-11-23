@@ -305,6 +305,7 @@ sections:
                 tests:
                   - ProjectExplorerViewModel_Thumbnails_AskedOnlyForDrawnVisibleFilesAndAgainWhenTheFileChangesOrTheSettingIsOn
                   - ProjectExplorerViewModel_Nodes_RemovedOrCleared_AreDisposed
+                  - ProjectExplorerViewModel_Dispose_ThumbnailBeingMade_IsCancelled
                   - ProjectExplorerView_Thumbnails_ShownOnRowsOfDrawnFilesAndFollowTheSetting
 
               - id: CanvasPilot-ProjectExplorer-ComfortableRows

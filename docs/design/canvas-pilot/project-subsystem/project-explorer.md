@@ -169,9 +169,11 @@ paths of the files.
 on. While `ShowThumbnails` is on and a source is set, it walks the nodes that can be seen (those at the top and those
 below folders that are all expanded) and, for each drawn file that has no thumbnail and has not been asked for,
 marks it requested and starts `LoadThumbnailAsync`, which awaits `IThumbnailSource.CreateAsync` off the user interface
-thread and gives the bitmap to the node, unless the node was disposed, the setting was turned off, or another project
-was opened meanwhile, when the bitmap is disposed. A failure of the source (an I/O problem, a cancellation, or an
-invalid operation) is logged and leaves the node without a picture. Turning `ShowThumbnails` off removes and disposes
+thread and gives the bitmap to the node, unless the node was disposed, the setting was turned off, another project
+was opened meanwhile, or the explorer was disposed, when the bitmap is disposed. The calls of the source carry a token
+that is cancelled when the explorer is disposed. A failure of the source (an I/O problem, a cancellation, or an
+invalid operation) is logged and leaves the node without a picture, unless the thumbnail was no longer wanted by then,
+because the log may be gone. Turning `ShowThumbnails` off removes and disposes
 every thumbnail and clears the requested flags. Folders and assets are never asked for.
 
 **Folder watcher**: A `FileSystemWatcher` that includes sub-folders, watching file names, directory names, write times,

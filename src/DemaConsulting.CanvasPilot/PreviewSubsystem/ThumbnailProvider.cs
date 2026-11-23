@@ -191,7 +191,10 @@ public sealed class ThumbnailProvider : IThumbnailSource, IDisposable
 
         _disposed = true;
         Clear();
-        _gate.Dispose();
+
+        // The gate is not disposed: it never makes a wait handle, so it holds nothing to free, and a call that is still
+        // running releases it when it ends, which would fail on a disposed gate
+        // (the explorer cancels its calls when it is disposed, but the provider may outlive it)
     }
 
     /// <summary>

@@ -46,8 +46,9 @@ entry never takes a bitmap from under a row that shows it. The render runs on th
 thread, so the work is off the user interface thread; the task completes on whatever thread finishes it and the caller
 marshals the bitmap to its owner thread.
 
-**Clear**: forgets every cached thumbnail; the bitmaps already given out are the callers'. **Dispose**: clears the cache
-and disposes the gate; it is safe to call twice.
+**Clear**: forgets every cached thumbnail; the bitmaps already given out are the callers'. **Dispose**: clears the
+cache; it is safe to call twice. It does not dispose the gate, which holds no unmanaged resource, because a call that is
+still running releases it when it ends and must not fail on a disposed gate.
 
 #### Error Handling
 

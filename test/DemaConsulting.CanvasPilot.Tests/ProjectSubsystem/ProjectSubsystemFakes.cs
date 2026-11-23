@@ -179,3 +179,39 @@ public sealed class RecordingThumbnailSource : IThumbnailSource
         return Failure is null ? Task.FromResult<Bitmap?>(null) : Task.FromException<Bitmap?>(Failure);
     }
 }
+
+/// <summary>
+///     Hand-written source of thumbnails for tests that does not answer until the test says so: it tells when a request
+///     started, with the token of the request, and when it ended.
+/// </summary>
+public sealed class PendingThumbnailSource : IThumbnailSource
+{
+    /// <summary>
+    ///     Gets the task that completes with the token of the first request when it starts.
+    /// </summary>
+    public TaskCompletionSource<CancellationToken> Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    ///     Gets the answer to the requests, which the test completes or fails.
+    /// </summary>
+    public TaskCompletionSource<Bitmap?> Answer { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    ///     Gets the task that completes when the first request has ended.
+    /// </summary>
+    public TaskCompletionSource Finished { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <inheritdoc />
+    public async Task<Bitmap?> CreateAsync(string filePath, string projectFolder, CancellationToken cancellationToken)
+    {
+        Started.TrySetResult(cancellationToken);
+        try
+        {
+            return await Answer.Task;
+        }
+        finally
+        {
+            Finished.TrySetResult();
+        }
+    }
+}

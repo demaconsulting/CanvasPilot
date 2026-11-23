@@ -603,6 +603,34 @@ public sealed class ProjectExplorerTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a thumbnail that is still being made when the explorer is disposed is told to stop, and that the answer
+    ///     that comes afterwards, even a failure, is thrown away.
+    /// </summary>
+    [Fact]
+    public async Task ProjectExplorerViewModel_Dispose_ThumbnailBeingMade_IsCancelled()
+    {
+        // Arrange: an explorer over a source that does not answer until the test lets it, and a project with a picture
+        Touch("one.svg");
+        var source = new PendingThumbnailSource();
+        var explorer = new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg"), _scheduler, thumbnails: source);
+        explorer.Open(Folder);
+        var picture = explorer.Roots[0];
+        var token = await source.Started.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+        var cancelledBefore = token.IsCancellationRequested;
+
+        // Act: dispose the explorer while the thumbnail is being made, and then the source fails
+        explorer.Dispose();
+        var cancelledAfter = token.IsCancellationRequested;
+        source.Answer.SetException(new InvalidOperationException("The source failed after the explorer was gone."));
+        await source.Finished.Task.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        // Assert: the call was told to stop by the disposal, and the node has no thumbnail
+        Assert.False(cancelledBefore);
+        Assert.True(cancelledAfter);
+        Assert.False(picture.HasThumbnail);
+    }
+
+    /// <summary>
     ///     Test that an explorer with no source of thumbnails asks for none and works as before, and that a source that fails
     ///     leaves the node without a thumbnail and does not break the explorer.
     /// </summary>

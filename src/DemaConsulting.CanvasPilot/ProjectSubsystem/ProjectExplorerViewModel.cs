@@ -200,6 +200,11 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     private bool _showThumbnails = true;
 
     /// <summary>
+    ///     Cancelled when the explorer is disposed, so that the thumbnails that are being made stop.
+    /// </summary>
+    private readonly CancellationTokenSource _thumbnailCancellation = new();
+
+    /// <summary>
     ///     Whether the rows of the tree are taller, 32 px instead of 26 px. The view takes the row height from this value.
     /// </summary>
     [ObservableProperty]
@@ -531,12 +536,21 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     /// </summary>
     public void Dispose()
     {
+        bool first;
         lock (_syncRoot)
         {
+            first = !_disposed;
             _disposed = true;
             StopWatching();
             _generation++;
             _active = false;
+        }
+
+        // The thumbnails that are being made are of no use any more
+        if (first)
+        {
+            _thumbnailCancellation.Cancel();
+            _thumbnailCancellation.Dispose();
         }
 
         ClearRoots();
@@ -619,26 +633,43 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
         Avalonia.Media.Imaging.Bitmap? bitmap = null;
         try
         {
-            bitmap = await _thumbnails!.CreateAsync(node.FullPath, folder, CancellationToken.None);
+            bitmap = await _thumbnails!.CreateAsync(node.FullPath, folder, _thumbnailCancellation.Token);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or OperationCanceledException or InvalidOperationException)
         {
-            Log(LogLevel.Warning, $"The thumbnail of '{node.FullPath}' could not be made.", ex);
+            // A thumbnail that fails after the node, the project, or the explorer is gone is of no interest, and the log may be
+            // gone with them
+            if (!IsThumbnailStale(node, generation))
+            {
+                Log(LogLevel.Warning, $"The thumbnail of '{node.FullPath}' could not be made.", ex);
+            }
         }
 
-        int current;
-        lock (_syncRoot)
-        {
-            current = _generation;
-        }
-
-        if (node.IsDisposed || !ShowThumbnails || current != generation || _disposed)
+        if (IsThumbnailStale(node, generation))
         {
             bitmap?.Dispose();
             return;
         }
 
         node.SetThumbnail(bitmap);
+    }
+
+    /// <summary>
+    ///     Tells whether a thumbnail that was asked for is no longer wanted: the node was disposed, thumbnails are off, the
+    ///     project changed, or the explorer was disposed.
+    /// </summary>
+    /// <param name="node">The node that the thumbnail was asked for.</param>
+    /// <param name="generation">The generation of the project when the thumbnail was asked for.</param>
+    /// <returns><see langword="true" /> when the thumbnail is to be thrown away.</returns>
+    private bool IsThumbnailStale(ProjectNodeViewModel node, int generation)
+    {
+        int current;
+        lock (_syncRoot)
+        {
+            current = _generation;
+        }
+
+        return node.IsDisposed || !ShowThumbnails || current != generation || _disposed;
     }
 
     /// <summary>

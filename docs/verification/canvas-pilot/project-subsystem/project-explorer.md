@@ -235,6 +235,10 @@ again for a file that changed, not at all while thumbnails are off, and again fo
 are turned on. This scenario is tested by
 `ProjectExplorerViewModel_Thumbnails_AskedOnlyForDrawnVisibleFilesAndAgainWhenTheFileChangesOrTheSettingIsOn`.
 
+**ProjectExplorerViewModel_Dispose_ThumbnailBeingMade_IsCancelled**: A thumbnail that is being made when the explorer is
+disposed is told to stop through the token of the request, and the failure that the source reports afterwards leaves the
+node without a thumbnail. This scenario is tested by `ProjectExplorerViewModel_Dispose_ThumbnailBeingMade_IsCancelled`.
+
 **ProjectExplorerViewModel_Thumbnails_NoSourceOrFailingSource_LeavesNodesWithoutThumbnail**: An explorer with no source
 of thumbnails asks for none and works as before, and a source that fails leaves the node without a thumbnail and does
 not break the explorer. This scenario is tested by
