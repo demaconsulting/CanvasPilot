@@ -221,6 +221,8 @@ public sealed class PreviewPaneViewTests : IDisposable
         // Assert: idle shows the placeholder, running shows the busy indicator and status, done shows neither
         Assert.Equal((false, true), idle);
         Assert.Equal((true, false, "Rendering slow.svg..."), running);
+        Assert.Equal(2.0, busy.Bounds.Height);
+        Assert.Equal(0.0, ScreenExtent(window, busy).Y - ScreenExtent(window, SettingsUiHelpers.Find<Grid>(window, "PreviewStage")).Y);
         Assert.False(busy.IsVisible);
         Assert.Equal(1, gate.Requested);
 
@@ -251,10 +253,13 @@ public sealed class PreviewPaneViewTests : IDisposable
         expander.IsExpanded = true;
         AppShellUiHelpers.Flush();
 
-        // Assert: the expander appeared with a one-note header and the list holds the note
+        // Assert: the expander appeared with a one-note header and the list holds the note, in a drawer inside the stage
         Assert.True(hiddenBefore);
         Assert.True(expander.IsVisible);
         Assert.Equal("1 note", expander.Header);
+        var stage = SettingsUiHelpers.Find<Grid>(window, "PreviewStage");
+        Assert.True(ScreenExtent(window, stage).Contains(ScreenExtent(window, expander).TopLeft));
+        Assert.True(ScreenExtent(window, stage).Contains(ScreenExtent(window, expander).BottomRight));
         var list = SettingsUiHelpers.Find<ItemsControl>(window, "PreviewDiagnostics");
         var note = Assert.IsType<RenderDiagnostic>(Assert.Single(list.Items));
         Assert.Equal("image-access-denied", note.Code);

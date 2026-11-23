@@ -23,10 +23,13 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="*,Auto">
+  <Grid>
 
     <!-- The stage: the picture sits on a quiet surface with a dot grid, with the tools floating over it -->
-    <Grid Grid.Row="0" Name="Stage" ClipToBounds="True" Background="{DynamicResource CpSurfaceStage}">
+    <Grid Name="Stage"
+          AutomationProperties.AutomationId="PreviewStage"
+          ClipToBounds="True"
+          Background="{DynamicResource CpSurfaceStage}">
 
       <Border Name="StageDots"
               IsHitTestVisible="False"
@@ -77,29 +80,51 @@
         </Viewbox>
       </ScrollViewer>
 
-      <StackPanel Name="ErrorPanel"
-                  AutomationProperties.AutomationId="PreviewErrorPanel"
-                  Margin="16"
-                  HorizontalAlignment="Center"
-                  VerticalAlignment="Center"
-                  MaxWidth="640"
-                  Spacing="6"
-                  IsVisible="{Binding HasError}">
-        <TextBlock AutomationProperties.AutomationId="PreviewErrorTitle"
-                   FontSize="18"
-                   FontWeight="SemiBold"
-                   Foreground="Firebrick"
-                   TextWrapping="Wrap"
-                   Text="{Binding ErrorTitle}" />
-        <TextBlock AutomationProperties.AutomationId="PreviewErrorMessage"
-                   TextWrapping="Wrap"
-                   Text="{Binding ErrorMessage}" />
-        <TextBlock AutomationProperties.AutomationId="PreviewErrorHint"
-                   Opacity="0.8"
-                   TextWrapping="Wrap"
-                   IsVisible="{Binding HasErrorHint}"
-                   Text="{Binding ErrorHint}" />
-      </StackPanel>
+      <!-- The render error: a card in the middle of the stage -->
+      <Border Name="ErrorCard"
+              Margin="24"
+              Padding="20"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              MaxWidth="560"
+              CornerRadius="{DynamicResource CpRadiusCard}"
+              Background="{DynamicResource CpSurfaceRaised}"
+              BorderBrush="{DynamicResource CpDanger}"
+              BorderThickness="1"
+              BoxShadow="{DynamicResource CpShadowFloating}"
+              IsVisible="{Binding HasError}">
+        <Grid ColumnDefinitions="Auto,*">
+          <PathIcon Grid.Column="0"
+                    Classes="icon"
+                    Width="24"
+                    Height="24"
+                    Margin="0,0,14,0"
+                    VerticalAlignment="Top"
+                    Foreground="{DynamicResource CpDanger}"
+                    Data="{DynamicResource CpIconErrorCircle}" />
+          <StackPanel Grid.Column="1"
+                      Name="ErrorPanel"
+                      AutomationProperties.AutomationId="PreviewErrorPanel"
+                      Spacing="6"
+                      IsVisible="{Binding HasError}">
+            <TextBlock AutomationProperties.AutomationId="PreviewErrorTitle"
+                       FontSize="{DynamicResource CpFontSubtitle}"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource CpDanger}"
+                       TextWrapping="Wrap"
+                       Text="{Binding ErrorTitle}" />
+            <TextBlock AutomationProperties.AutomationId="PreviewErrorMessage"
+                       Foreground="{DynamicResource CpTextPrimary}"
+                       TextWrapping="Wrap"
+                       Text="{Binding ErrorMessage}" />
+            <TextBlock AutomationProperties.AutomationId="PreviewErrorHint"
+                       Foreground="{DynamicResource CpTextSecondary}"
+                       TextWrapping="Wrap"
+                       IsVisible="{Binding HasErrorHint}"
+                       Text="{Binding ErrorHint}" />
+          </StackPanel>
+        </Grid>
+      </Border>
 
       <TextBlock AutomationProperties.AutomationId="PreviewPlaceholder"
                  HorizontalAlignment="Center"
@@ -109,12 +134,16 @@
                  IsVisible="{Binding ShowPlaceholder}"
                  Text="{Binding PlaceholderText}" />
 
+      <!-- Busy: a thin line of the accent gradient along the top of the stage -->
       <ProgressBar Name="BusyIndicator"
                    AutomationProperties.AutomationId="PreviewBusy"
-                   HorizontalAlignment="Right"
+                   AutomationProperties.Name="Rendering"
+                   HorizontalAlignment="Stretch"
                    VerticalAlignment="Top"
-                   Margin="12"
-                   Width="120"
+                   Height="2"
+                   MinHeight="0"
+                   Background="Transparent"
+                   Foreground="{DynamicResource CpAccentGradient}"
                    IsIndeterminate="True"
                    IsVisible="{Binding IsBusy}" />
 
@@ -193,20 +222,43 @@
         </StackPanel>
       </Border>
 
-    </Grid>
-
-    <StackPanel Grid.Row="1" Margin="6,4" Spacing="2">
-      <!-- The status line of the picture is in the status bar of the main window, which follows this pane. -->
-      <Expander AutomationProperties.AutomationId="PreviewDiagnosticsExpander"
+      <!-- Notes of the render: a drawer over the bottom left of the stage, closed to a warning chip. The status line of
+           the picture is in the status bar of the main window, which follows this pane. -->
+      <Expander Name="DiagnosticsDrawer"
+                AutomationProperties.AutomationId="PreviewDiagnosticsExpander"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Margin="16"
+                MaxWidth="480"
+                Padding="0"
+                ExpandDirection="Up"
+                CornerRadius="{DynamicResource CpRadiusInput}"
+                Background="{DynamicResource CpSurfaceOverlay}"
+                BorderBrush="{DynamicResource CpBorderSubtle}"
+                BorderThickness="1"
                 Header="{Binding DiagnosticsHeader}"
                 IsExpanded="{Binding AreDiagnosticsExpanded, Mode=TwoWay}"
                 IsVisible="{Binding HasDiagnostics}">
-        <ScrollViewer MaxHeight="120">
-          <ItemsControl AutomationProperties.AutomationId="PreviewDiagnostics"
+        <Expander.HeaderTemplate>
+          <DataTemplate x:DataType="x:String">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon Classes="icon" Foreground="{DynamicResource CpWarning}" Data="{DynamicResource CpIconWarning}" />
+              <TextBlock FontSize="{DynamicResource CpFontSmall}"
+                         Foreground="{DynamicResource CpTextPrimary}"
+                         VerticalAlignment="Center"
+                         Text="{Binding}" />
+            </StackPanel>
+          </DataTemplate>
+        </Expander.HeaderTemplate>
+        <ScrollViewer MaxHeight="160">
+          <ItemsControl Margin="8,4"
+                        AutomationProperties.AutomationId="PreviewDiagnostics"
                         ItemsSource="{Binding Diagnostics}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:RenderDiagnostic">
                 <TextBlock Margin="0,1"
+                           FontSize="{DynamicResource CpFontSmall}"
+                           Foreground="{DynamicResource CpTextSecondary}"
                            TextWrapping="Wrap"
                            Text="{Binding DisplayText}" />
               </DataTemplate>
@@ -214,7 +266,8 @@
           </ItemsControl>
         </ScrollViewer>
       </Expander>
-    </StackPanel>
+
+    </Grid>
 
   </Grid>
 
