@@ -78,7 +78,8 @@ public sealed partial class ProjectWorkspaceView : UserControl
     {
         base.OnPropertyChanged(change);
 
-        // The widths are made to fit again when the window changes its width
+        // The widths are made to fit again when the window changes its width (safe while the XAML loads: ApplyLayout
+        // returns at once until the view model is set, and that happens only after the load)
         if (change.Property == BoundsProperty)
         {
             ApplyLayout();
