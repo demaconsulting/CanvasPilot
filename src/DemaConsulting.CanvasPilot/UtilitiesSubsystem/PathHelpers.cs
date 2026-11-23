@@ -67,4 +67,48 @@ internal static class PathHelpers
 
         return combinedPath;
     }
+
+    /// <summary>
+    ///     Finds a file name that is not used in a folder: the wanted name when it is free, and otherwise the name with a
+    ///     number in parentheses before the extension, such as <c>photo (2).png</c>.
+    /// </summary>
+    /// <param name="folder">The full path of the folder.</param>
+    /// <param name="fileName">The wanted file name, with its extension.</param>
+    /// <returns>The first name that no file or folder in the folder has.</returns>
+    /// <exception cref="IOException">Thrown when thousands of names are taken, which means something is wrong.</exception>
+    internal static string UniqueFileName(string folder, string fileName)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        ArgumentException.ThrowIfNullOrWhiteSpace(fileName);
+
+        if (!NameIsTaken(folder, fileName))
+        {
+            return fileName;
+        }
+
+        var extension = Path.GetExtension(fileName);
+        var stem = fileName[..^extension.Length];
+        for (var number = 2; number < 10000; number++)
+        {
+            var candidate = $"{stem} ({number}){extension}";
+            if (!NameIsTaken(folder, candidate))
+            {
+                return candidate;
+            }
+        }
+
+        throw new IOException($"No free name was found for '{fileName}'.");
+    }
+
+    /// <summary>
+    ///     Tells whether a file or a folder with a name exists in a folder.
+    /// </summary>
+    /// <param name="folder">The full path of the folder.</param>
+    /// <param name="name">The name.</param>
+    /// <returns><see langword="true" /> when the name is taken.</returns>
+    private static bool NameIsTaken(string folder, string name)
+    {
+        var path = Path.Combine(folder, name);
+        return File.Exists(path) || Directory.Exists(path);
+    }
 }

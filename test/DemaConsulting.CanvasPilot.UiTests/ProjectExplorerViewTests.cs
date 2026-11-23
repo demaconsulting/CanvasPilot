@@ -19,10 +19,15 @@
 // SOFTWARE.
 
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
+using Avalonia.Input.Raw;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
@@ -291,6 +296,201 @@ public sealed class ProjectExplorerViewTests : IDisposable
         Assert.Equal(0, SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList").ItemCount);
 
         window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the header shows the label of the pane in capitals and three icon buttons with names and tooltips, that the
+    ///     buttons run the commands of the explorer, and that the refresh button reads the folder again.
+    /// </summary>
+    [AvaloniaFact]
+    public void ProjectExplorerView_Header_ShowsLabelAndButtonsThatRunTheCommands()
+    {
+        // Arrange: a shown explorer over a project, whose New File and New Folder commands count their runs
+        Touch("a.svg");
+        var (window, viewModel) = ShowExplorer(project: true);
+        var fileRuns = 0;
+        var folderRuns = 0;
+        viewModel.NewFileCommand = new RelayCommand(() => fileRuns++);
+        viewModel.NewFolderCommand = new RelayCommand(() => folderRuns++);
+        window.UpdateLayout();
+        var newFile = SettingsUiHelpers.Find<Button>(window, "ExplorerNewFileButton");
+        var newFolder = SettingsUiHelpers.Find<Button>(window, "ExplorerNewFolderButton");
+        var refresh = SettingsUiHelpers.Find<Button>(window, "ExplorerRefreshButton");
+        var label = window.GetVisualDescendants().OfType<TextBlock>().First(text => text.Text == "EXPLORER");
+        var names = new[] { newFile, newFolder, refresh }.Select(button => (AutomationProperties.GetName(button), ToolTip.GetTip(button))).ToArray();
+
+        // Act: use the three buttons, with a file that appeared behind the explorer's back
+        Touch("b.svg");
+        SettingsUiHelpers.Click(window, newFile);
+        SettingsUiHelpers.Click(window, newFolder);
+        SettingsUiHelpers.Click(window, refresh);
+
+        // Assert: the label and the names, the commands that ran, and the refreshed list
+        Assert.True(label.IsEffectivelyVisible);
+        Assert.Equal([("New file", (object?)"New file"), ("New folder", "New folder"), ("Refresh", "Refresh")], names);
+        Assert.Equal((1, 1), (fileRuns, folderRuns));
+        Assert.Equal(["a.svg", "b.svg"], viewModel.Items.Select(item => item.Name));
+        Assert.All(new[] { newFile, newFolder, refresh }, button => Assert.True(button.Bounds.Width >= 28 && button.Bounds.Height >= 28));
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the buttons that need a command are not usable without one, and that the drop zone is shown only while a
+    ///     project is open.
+    /// </summary>
+    [AvaloniaFact]
+    public void ProjectExplorerView_NoCommandsNoProject_ButtonsOffAndDropZoneHidden()
+    {
+        // Arrange: a shown explorer with no project and no commands
+        var (window, viewModel) = ShowExplorer(project: false);
+        var newFile = SettingsUiHelpers.Find<Button>(window, "ExplorerNewFileButton");
+        var refresh = SettingsUiHelpers.Find<Button>(window, "ExplorerRefreshButton");
+        var zone = SettingsUiHelpers.Find<Panel>(window, "ExplorerDropZone");
+        var before = (newFile.IsEffectivelyEnabled, refresh.IsEffectivelyEnabled, zone.IsVisible);
+
+        // Act: open a project
+        viewModel.Open(_folder);
+        var after = (refresh.IsEffectivelyEnabled, zone.IsVisible);
+
+        // Assert: without a project or a command the buttons are off and the zone is hidden; a project turns the refresh and the zone on
+        Assert.Equal((false, false, false), before);
+        Assert.Equal((true, true), after);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that files dropped on the drop zone are copied into the attachments folder while the zone is lit during the
+    ///     drag, that files dropped on a folder row are copied into that folder, and that the highlight goes away afterwards.
+    /// </summary>
+    [AvaloniaFact]
+    public void ProjectExplorerView_DropFiles_OnZoneAndOnFolderRow_CopiesAndHighlights()
+    {
+        // Arrange: a project with a folder, and two pictures outside it
+        Touch("assets/one.svg");
+        var outside = Directory.CreateTempSubdirectory("canvaspilot-ui-drop-").FullName;
+        var first = Path.Combine(outside, "logo.png");
+        var second = Path.Combine(outside, "chart.png");
+        File.WriteAllText(first, "png");
+        File.WriteAllText(second, "png");
+        var (window, viewModel) = ShowExplorer(project: true);
+        var zone = SettingsUiHelpers.Find<Panel>(window, "ExplorerDropZone");
+        var folderRow = Assert.IsType<TreeViewItem>(SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList").ContainerFromIndex(0));
+
+        try
+        {
+            // Act: drag a file over the zone, look, and drop it; then drag a file over the folder row, look, and drop it
+            var onZone = CenterOf(zone, window);
+            var data = FilesTransfer(window, first);
+            window.DragDrop(onZone, RawDragEventType.DragEnter, data, DragDropEffects.Copy);
+            window.DragDrop(onZone, RawDragEventType.DragOver, data, DragDropEffects.Copy);
+            var zoneLit = zone.Classes.Contains("drag-active");
+            window.DragDrop(onZone, RawDragEventType.Drop, data, DragDropEffects.Copy);
+            var zoneAfter = zone.Classes.Contains("drag-active");
+            AppShellUiHelpers.Flush();
+            var onRow = CenterOf(folderRow.GetVisualDescendants().OfType<Border>().First(border => border.Name == "PART_LayoutRoot"), window);
+            var rowData = FilesTransfer(window, second);
+            window.DragDrop(onRow, RawDragEventType.DragEnter, rowData, DragDropEffects.Copy);
+            window.DragDrop(onRow, RawDragEventType.DragOver, rowData, DragDropEffects.Copy);
+            var rowLit = folderRow.Classes.Contains("droptarget");
+            window.DragDrop(onRow, RawDragEventType.Drop, rowData, DragDropEffects.Copy);
+            var rowAfter = folderRow.Classes.Contains("droptarget");
+
+            // Assert: each file went where it was dropped, and the highlights lit up during the drag and went after the drop
+            Assert.True(zoneLit);
+            Assert.False(zoneAfter);
+            Assert.True(rowLit);
+            Assert.False(rowAfter);
+            Assert.True(File.Exists(Path.Combine(_folder, "attachments", "logo.png")));
+            Assert.True(File.Exists(Path.Combine(_folder, "assets", "chart.png")));
+            Assert.True(File.Exists(first));
+            Assert.Equal(string.Empty, viewModel.ErrorMessage);
+        }
+        finally
+        {
+            Directory.Delete(outside, recursive: true);
+        }
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that a drop of something that is not a file changes nothing, and that a file that is not a picture, a PDF, or a
+    ///     drawing is refused with a message.
+    /// </summary>
+    [AvaloniaFact]
+    public void ProjectExplorerView_DropTextOrOtherFile_ChangesNothingOrExplains()
+    {
+        // Arrange: a project and a text file outside it
+        Touch("a.svg");
+        var outside = Directory.CreateTempSubdirectory("canvaspilot-ui-drop-").FullName;
+        var notes = Path.Combine(outside, "notes.txt");
+        File.WriteAllText(notes, "text");
+        var (window, viewModel) = ShowExplorer(project: true);
+        var zone = SettingsUiHelpers.Find<Panel>(window, "ExplorerDropZone");
+        var onZone = CenterOf(zone, window);
+
+        try
+        {
+            // Act: drop text, and then drop the text file
+            var text = new DataTransfer();
+            var entry = new DataTransferItem();
+            entry.SetText("hello");
+            text.Add(entry);
+            window.DragDrop(onZone, RawDragEventType.DragEnter, text, DragDropEffects.Copy);
+            window.DragDrop(onZone, RawDragEventType.DragOver, text, DragDropEffects.Copy);
+            var litByText = zone.Classes.Contains("drag-active");
+            window.DragDrop(onZone, RawDragEventType.Drop, text, DragDropEffects.Copy);
+            var afterText = (Directory.Exists(Path.Combine(_folder, "attachments")), viewModel.ErrorMessage);
+            var fileData = FilesTransfer(window, notes);
+            window.DragDrop(onZone, RawDragEventType.DragEnter, fileData, DragDropEffects.Copy);
+            window.DragDrop(onZone, RawDragEventType.DragOver, fileData, DragDropEffects.Copy);
+            window.DragDrop(onZone, RawDragEventType.Drop, fileData, DragDropEffects.Copy);
+
+            // Assert: text lit nothing and added nothing; the text file was refused with a message and not copied
+            Assert.False(litByText);
+            Assert.Equal((false, string.Empty), afterText);
+            Assert.Contains("'notes.txt' was not added", viewModel.ErrorMessage, StringComparison.Ordinal);
+            Assert.False(File.Exists(Path.Combine(_folder, "attachments", "notes.txt")));
+        }
+        finally
+        {
+            Directory.Delete(outside, recursive: true);
+        }
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Makes a data transfer that carries files, one item for each, as a file manager does.
+    /// </summary>
+    /// <param name="window">The window, which makes the storage items.</param>
+    /// <param name="paths">The full paths of the files.</param>
+    /// <returns>The data transfer.</returns>
+    private static DataTransfer FilesTransfer(Window window, params string[] paths)
+    {
+        var data = new DataTransfer();
+        foreach (var path in paths)
+        {
+            var item = window.StorageProvider.TryGetFileFromPathAsync(new Uri(path)).GetAwaiter().GetResult();
+            var entry = new DataTransferItem();
+            entry.SetFile(item!);
+            data.Add(entry);
+        }
+
+        return data;
+    }
+
+    /// <summary>
+    ///     Finds the middle of a control in the coordinates of a window.
+    /// </summary>
+    /// <param name="control">The control.</param>
+    /// <param name="window">The window.</param>
+    /// <returns>The point.</returns>
+    private static Point CenterOf(Control control, Window window)
+    {
+        return control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
     }
 
     /// <summary>

@@ -66,6 +66,8 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
 
         Explorer = explorer;
         Explorer.PropertyChanged += OnExplorerPropertyChanged;
+        Explorer.NewFileCommand = NewFileCommand;
+        Explorer.NewFolderCommand = NewFolderCommand;
     }
 
     /// <summary>
@@ -312,6 +314,62 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
     }
 
     /// <summary>
+    ///     Asks the user for the name of a new file and creates it, with an empty drawing of its kind, in the selected folder
+    ///     of the explorer, reporting a problem if it could not be created.
+    /// </summary>
+    /// <returns>A task that completes when the operation has finished.</returns>
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task NewFileAsync()
+    {
+        if (_dialogs is null || Explorer.TargetFolder is null)
+        {
+            return;
+        }
+
+        var name = await _dialogs.PromptAsync(
+            "New File",
+            "Name of the new file, with its extension (for example drawing.svg, flow.mmd, or chart.vl.json):",
+            "untitled.svg",
+            "Create");
+        if (name is null)
+        {
+            return;
+        }
+
+        var problem = Explorer.CreateFile(name);
+        if (problem.Length > 0)
+        {
+            await _dialogs.ShowMessageAsync("New File", problem);
+        }
+    }
+
+    /// <summary>
+    ///     Asks the user for the name of a new folder and creates it in the selected folder of the explorer, reporting a
+    ///     problem if it could not be created.
+    /// </summary>
+    /// <returns>A task that completes when the operation has finished.</returns>
+    [RelayCommand(CanExecute = nameof(HasProject))]
+    private async Task NewFolderAsync()
+    {
+        if (_dialogs is null || Explorer.TargetFolder is null)
+        {
+            return;
+        }
+
+        var name = await _dialogs.PromptAsync("New Folder", "Name of the new folder:", "New folder", "Create");
+        if (name is null)
+        {
+            return;
+        }
+
+        var problem = Explorer.CreateFolder(name);
+        if (problem.Length > 0)
+        {
+            await _dialogs.ShowMessageAsync("New Folder", problem);
+        }
+    }
+
+    /// <summary>
     ///     Forwards the explorer's changes that affect the workspace's own state.
     /// </summary>
     /// <param name="sender">The explorer.</param>
@@ -333,6 +391,8 @@ public sealed partial class ProjectWorkspaceViewModel : ObservableObject, IDispo
                 OnPropertyChanged(nameof(IsChatVisible));
                 OnPropertyChanged(nameof(PlaceholderText));
                 OnPropertyChanged(nameof(HintText));
+                NewFileCommand.NotifyCanExecuteChanged();
+                NewFolderCommand.NotifyCanExecuteChanged();
                 break;
         }
     }

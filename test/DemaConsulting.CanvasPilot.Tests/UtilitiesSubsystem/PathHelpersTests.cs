@@ -189,6 +189,39 @@ public class PathHelpersTests
         Assert.Throws<ArgumentNullException>(() =>
             PathHelpers.SafePathCombine("/home/user", null!));
     }
+
+    /// <summary>
+    ///     Test that UniqueFileName gives the wanted name when it is free, and numbers it before the extension when a file or a
+    ///     folder has it, and refuses a folder that is missing as an argument and a blank name.
+    /// </summary>
+    [Fact]
+    public void PathHelpers_UniqueFileName_FreeAndTakenNames_NumbersBeforeTheExtension()
+    {
+        // Arrange: a folder that holds a file and a folder that take names
+        var folder = Directory.CreateTempSubdirectory("canvaspilot-unique-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(folder, "photo.png"), string.Empty);
+            File.WriteAllText(Path.Combine(folder, "photo (2).png"), string.Empty);
+            Directory.CreateDirectory(Path.Combine(folder, "plans"));
+
+            // Act: ask for names that are free and taken
+            var free = PathHelpers.UniqueFileName(folder, "chart.png");
+            var taken = PathHelpers.UniqueFileName(folder, "photo.png");
+            var byFolder = PathHelpers.UniqueFileName(folder, "plans");
+
+            // Assert: the free name is kept; the taken ones get the first free number
+            Assert.Equal("chart.png", free);
+            Assert.Equal("photo (3).png", taken);
+            Assert.Equal("plans (2)", byFolder);
+            Assert.Throws<ArgumentNullException>(() => PathHelpers.UniqueFileName(null!, "a.png"));
+            Assert.Throws<ArgumentException>(() => PathHelpers.UniqueFileName(folder, " "));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
 }
 
 

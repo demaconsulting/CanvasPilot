@@ -20,7 +20,9 @@
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.UtilitiesSubsystem;
 
@@ -55,6 +57,11 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     ///     How many folders deep the tree goes.
     /// </summary>
     public const int MaximumDepth = 12;
+
+    /// <summary>
+    ///     The name of the folder that receives the files that are dropped on the explorer.
+    /// </summary>
+    public const string AttachmentsFolderName = "attachments";
 
     /// <summary>
     ///     Decides which files are listed.
@@ -149,8 +156,23 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     ///     The project folder shown, or null.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasProject), nameof(EmptyMessage))]
+    [NotifyPropertyChangedFor(nameof(HasProject), nameof(EmptyMessage), nameof(TargetFolder))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
     private string? _folderPath;
+
+    /// <summary>
+    ///     What the New File button does, which is to ask for a name and create the file, or null for none. The workspace sets
+    ///     it, because it is the one that talks to the user.
+    /// </summary>
+    [ObservableProperty]
+    private ICommand? _newFileCommand;
+
+    /// <summary>
+    ///     What the New Folder button does, which is to ask for a name and create the folder, or null for none. The workspace
+    ///     sets it, because it is the one that talks to the user.
+    /// </summary>
+    [ObservableProperty]
+    private ICommand? _newFolderCommand;
 
     /// <summary>
     ///     The last problem, or an empty string.
@@ -191,6 +213,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
         _maximumNodes = maximumNodes;
         Items = new ReadOnlyObservableCollection<ProjectFileItem>(_items);
         Roots = new ReadOnlyObservableCollection<ProjectNodeViewModel>(_roots);
+        RefreshCommand = new RelayCommand(Refresh, () => HasProject);
         _items.CollectionChanged += (_, _) => OnPropertyChanged(nameof(EmptyMessage));
         _roots.CollectionChanged += (_, _) => OnPropertyChanged(nameof(EmptyMessage));
     }
@@ -204,6 +227,12 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     ///     Gets the nodes at the top of the tree: the folders of the project folder, then its files.
     /// </summary>
     public ReadOnlyObservableCollection<ProjectNodeViewModel> Roots { get; }
+
+    /// <summary>
+    ///     Gets the command of the Refresh button, which reads the project folder again at once. It can be used while a project
+    ///     is open.
+    /// </summary>
+    public IRelayCommand RefreshCommand { get; }
 
     /// <summary>
     ///     Gets the full path of the selected file, or <see langword="null" /> when nothing is selected.
@@ -689,6 +718,266 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     }
 
     /// <summary>
+    ///     Gets the folder where a new file or folder goes: the selected folder, the folder of the selected file, or the
+    ///     project folder when nothing is selected. It is <see langword="null" /> while no project is open.
+    /// </summary>
+    public string? TargetFolder
+    {
+        get
+        {
+            if (FolderPath is not { } root)
+            {
+                return null;
+            }
+
+            return SelectedNode switch
+            {
+                null => root,
+                { IsFolder: true } folder => folder.FullPath,
+                var file => Path.GetDirectoryName(file.FullPath) ?? root
+            };
+        }
+    }
+
+    /// <summary>
+    ///     Creates a new file in <see cref="TargetFolder" /> with an empty drawing of its kind, so that the file can be drawn
+    ///     at once, then lists it and selects it. An existing file is never replaced.
+    /// </summary>
+    /// <param name="name">The file name, with the extension of a supported image source file.</param>
+    /// <returns>A user-readable problem, or an empty string when the file was created.</returns>
+    public string CreateFile(string? name)
+    {
+        if (TargetFolder is not { } folder)
+        {
+            return ReportProblem("Open a project first.");
+        }
+
+        var trimmed = name?.Trim() ?? string.Empty;
+        var invalid = ProjectNameRules.Validate(trimmed, "file name");
+        if (invalid is null && !_filter.IsImageSource(trimmed))
+        {
+            invalid = "The file name must end with an extension of a supported image source file.";
+        }
+
+        if (invalid is not null)
+        {
+            return ReportProblem(invalid);
+        }
+
+        if (!TryCombine(folder, trimmed, out var target))
+        {
+            return ReportProblem($"'{trimmed}' is not a valid file name.");
+        }
+
+        if (File.Exists(target) || Directory.Exists(target))
+        {
+            return ReportProblem($"A file or folder named '{trimmed}' already exists in the folder.");
+        }
+
+        try
+        {
+            File.WriteAllText(target, EmptyDrawingFor(trimmed));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log(LogLevel.Error, $"File '{target}' could not be created.", ex);
+            return ReportProblem($"'{trimmed}' could not be created: {ex.Message}");
+        }
+
+        Log(LogLevel.Info, $"Created '{target}'.");
+        Refresh();
+        SelectFile(target);
+        return string.Empty;
+    }
+
+    /// <summary>
+    ///     Creates a new folder in <see cref="TargetFolder" />, then selects it and expands the folders above it. An existing
+    ///     file or folder is never replaced.
+    /// </summary>
+    /// <param name="name">The folder name, which must not start with a dot.</param>
+    /// <returns>A user-readable problem, or an empty string when the folder was created.</returns>
+    public string CreateFolder(string? name)
+    {
+        if (TargetFolder is not { } folder)
+        {
+            return ReportProblem("Open a project first.");
+        }
+
+        var trimmed = name?.Trim() ?? string.Empty;
+        var invalid = ProjectNameRules.Validate(trimmed, "folder name");
+        if (invalid is not null)
+        {
+            return ReportProblem(invalid);
+        }
+
+        if (!TryCombine(folder, trimmed, out var target))
+        {
+            return ReportProblem($"'{trimmed}' is not a valid folder name.");
+        }
+
+        if (File.Exists(target) || Directory.Exists(target))
+        {
+            return ReportProblem($"A file or folder named '{trimmed}' already exists in the folder.");
+        }
+
+        try
+        {
+            Directory.CreateDirectory(target);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log(LogLevel.Error, $"Folder '{target}' could not be created.", ex);
+            return ReportProblem($"'{trimmed}' could not be created: {ex.Message}");
+        }
+
+        Log(LogLevel.Info, $"Created folder '{target}'.");
+        Refresh();
+        SelectedNode = FindNode(target);
+        ExpandAncestorsOf(target);
+        return string.Empty;
+    }
+
+    /// <summary>
+    ///     Copies files into the project: pictures, PDF files, and drawings that the explorer lists, into the
+    ///     <c>attachments</c> folder or into a folder of the project, giving a copy another name when the name is taken. The
+    ///     files stay where they were. Folders and files of other kinds are left out and named in the problem.
+    /// </summary>
+    /// <param name="sourcePaths">The full paths of the files, for example the ones that were dropped.</param>
+    /// <param name="targetFolder">The folder of the project to copy into, or <see langword="null" /> for <c>attachments</c>.</param>
+    /// <returns>A user-readable problem for what was left out or could not be copied, or an empty string when all were added.</returns>
+    public string AddFiles(IEnumerable<string> sourcePaths, string? targetFolder = null)
+    {
+        ArgumentNullException.ThrowIfNull(sourcePaths);
+
+        if (FolderPath is not { } root)
+        {
+            return ReportProblem("Open a project first.");
+        }
+
+        var destination = targetFolder is null
+            ? Path.Combine(root, AttachmentsFolderName)
+            : Path.GetFullPath(targetFolder);
+        if (!IsInside(root, destination))
+        {
+            return ReportProblem("Files can only be added to a folder of the project.");
+        }
+
+        var problems = new List<string>();
+        string? lastAdded = null;
+        foreach (var source in sourcePaths)
+        {
+            var name = Path.GetFileName(source);
+            if (Directory.Exists(source))
+            {
+                problems.Add($"'{name}' is a folder; only files can be added.");
+            }
+            else if (!File.Exists(source))
+            {
+                problems.Add($"'{name}' was not found.");
+            }
+            else if (!_filter.IsImageSource(name) && !ProjectNodeViewModel.IsListedAsset(name))
+            {
+                problems.Add($"'{name}' was not added: only pictures, PDF files, and drawings can be added.");
+            }
+            else if (CopyInto(destination, source, problems) is { } copied)
+            {
+                lastAdded = copied;
+            }
+        }
+
+        Refresh();
+        if (lastAdded is not null)
+        {
+            ExpandAncestorsOf(lastAdded);
+            if (FindNode(lastAdded) is { } node)
+            {
+                SelectedNode = node;
+            }
+        }
+
+        return problems.Count == 0 ? string.Empty : ReportProblem(string.Join(' ', problems));
+    }
+
+    /// <summary>
+    ///     Combines a folder and a name that came from the user, refusing a name that leaves the folder.
+    /// </summary>
+    /// <param name="folder">The full path of the folder.</param>
+    /// <param name="name">The name.</param>
+    /// <param name="path">The combined path.</param>
+    /// <returns><see langword="true" /> when the name stays in the folder.</returns>
+    private static bool TryCombine(string folder, string name, out string path)
+    {
+        try
+        {
+            path = PathHelpers.SafePathCombine(folder, name);
+            return true;
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            path = string.Empty;
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     Tells whether a path is a folder of the project or the project folder itself.
+    /// </summary>
+    /// <param name="root">The full path of the project folder.</param>
+    /// <param name="path">The full path.</param>
+    /// <returns><see langword="true" /> when the path is the project folder or lies inside it.</returns>
+    private static bool IsInside(string root, string path)
+    {
+        var relative = Path.GetRelativePath(root, path);
+        return relative != ".."
+               && !relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal)
+               && !Path.IsPathRooted(relative)
+               && !relative.Split(Path.DirectorySeparatorChar).Any(part => part == ProjectDocument.DataFolderName);
+    }
+
+    /// <summary>
+    ///     Copies a file into a folder under a free name, creating the folder when needed.
+    /// </summary>
+    /// <param name="destination">The full path of the folder.</param>
+    /// <param name="source">The full path of the file.</param>
+    /// <param name="problems">Gets the reason when the file could not be copied.</param>
+    /// <returns>The full path of the copy, or <see langword="null" /> when the file could not be copied.</returns>
+    private string? CopyInto(string destination, string source, List<string> problems)
+    {
+        var name = Path.GetFileName(source);
+        try
+        {
+            Directory.CreateDirectory(destination);
+            var target = Path.Combine(destination, PathHelpers.UniqueFileName(destination, name));
+            File.Copy(source, target, overwrite: false);
+            Log(LogLevel.Info, $"Added '{source}' as '{target}'.");
+            return target;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log(LogLevel.Error, $"File '{source}' could not be added.", ex);
+            problems.Add($"'{name}' could not be added: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    ///     Gives the text of an empty drawing for a new file, so that it can be drawn at once: a blank SVG picture, a
+    ///     Mermaid diagram with two boxes, or a Vega-Lite chart with no data; other kinds start empty.
+    /// </summary>
+    /// <param name="fileName">The name of the new file.</param>
+    /// <returns>The text of the file.</returns>
+    private static string EmptyDrawingFor(string fileName)
+    {
+        return ProjectNodeViewModel.KindOf(fileName) switch
+        {
+            ProjectNodeKind.Svg => "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"450\" viewBox=\"0 0 800 450\">\n</svg>\n",
+            ProjectNodeKind.Mermaid => "flowchart LR\n    A[Start] --> B[End]\n",
+            ProjectNodeKind.VegaLite => "{\n  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",\n  \"data\": { \"values\": [] },\n  \"mark\": \"bar\"\n}\n",
+            _ => string.Empty
+        };
+    }
+
+    /// <summary>
     ///     Brings the selected file and the selected node in line when the selected file was set.
     /// </summary>
     /// <param name="value">The selected file.</param>
@@ -717,6 +1006,7 @@ public sealed partial class ProjectExplorerViewModel : ObservableObject, IDispos
     /// <param name="value">The selected node.</param>
     partial void OnSelectedNodeChanged(ProjectNodeViewModel? value)
     {
+        OnPropertyChanged(nameof(TargetFolder));
         if (_syncingSelection)
         {
             return;

@@ -322,6 +322,14 @@
                         BorderBrush="Transparent"
                         CornerRadius="{TemplateBinding CornerRadius}"
                         IsHitTestVisible="False" />
+                <Rectangle Name="PART_DropRing"
+                           RadiusX="6"
+                           RadiusY="6"
+                           Stroke="{DynamicResource CpAccent}"
+                           StrokeThickness="1"
+                           StrokeDashArray="3,2"
+                           IsVisible="False"
+                           IsHitTestVisible="False" />
               </Panel>
               <ItemsPresenter Name="PART_ItemsPresenter"
                               IsVisible="{TemplateBinding IsExpanded}"
@@ -340,6 +348,12 @@
         </Style>
         <Style Selector="^:selected">
           <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="^.droptarget /template/ Rectangle#PART_DropRing">
+          <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="^.droptarget /template/ Border#PART_LayoutRoot">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTintHover}" />
         </Style>
         <Style Selector="^:empty /template/ ToggleButton#PART_ExpandCollapseChevron">
           <Setter Property="IsHitTestVisible" Value="False" />

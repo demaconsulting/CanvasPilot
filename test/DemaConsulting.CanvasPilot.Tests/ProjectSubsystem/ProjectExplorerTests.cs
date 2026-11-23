@@ -338,6 +338,182 @@ public sealed class ProjectExplorerTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a new file goes into the selected folder, the folder of the selected file, or the project folder, gets an
+    ///     empty drawing of its kind, is listed and selected, and that a bad, unsupported, or existing name is refused.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_CreateFile_TargetFolderAndNames_CreatesOrRefuses()
+    {
+        // Arrange: a project with a folder that holds a picture
+        Touch("assets/one.svg");
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+        var atRoot = explorer.TargetFolder;
+        explorer.SelectedNode = explorer.Roots[0];
+        var inFolder = explorer.TargetFolder;
+        explorer.SelectFile(Path.Combine(Folder, "assets", "one.svg"));
+        var besideFile = explorer.TargetFolder;
+
+        // Act: create a file beside the selected picture, then try names that are refused
+        var created = explorer.CreateFile("  two.svg ");
+        var content = File.ReadAllText(Path.Combine(Folder, "assets", "two.svg"));
+        var selected = explorer.SelectedFile;
+        var existing = explorer.CreateFile("two.svg");
+        var noExtension = explorer.CreateFile("notes.txt");
+        var withPath = explorer.CreateFile("sub/x.svg");
+        var blank = explorer.CreateFile(" ");
+
+        // Assert: the target followed the selection, the file has a blank drawing and is selected, and bad names are explained
+        Assert.Equal((Folder, Path.Combine(Folder, "assets"), Path.Combine(Folder, "assets")), (atRoot, inFolder, besideFile));
+        Assert.Equal(string.Empty, created);
+        Assert.StartsWith("<svg", content, StringComparison.Ordinal);
+        Assert.Equal(Path.Combine(Folder, "assets", "two.svg"), selected);
+        Assert.Contains("already exists", existing, StringComparison.Ordinal);
+        Assert.Contains("supported image source", noExtension, StringComparison.Ordinal);
+        Assert.False(string.IsNullOrEmpty(withPath));
+        Assert.False(string.IsNullOrEmpty(blank));
+        Assert.Equal(blank, explorer.ErrorMessage);
+        Assert.False(File.Exists(Path.Combine(Folder, "assets", "sub", "x.svg")));
+    }
+
+    /// <summary>
+    ///     Test that the templates of new files fit their kinds, and that nothing can be created while no project is open.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_CreateFile_KindsAndNoProject_GetTemplatesOrAreRefused()
+    {
+        // Arrange: an explorer with no project, and one with an open project that draws Mermaid and Vega-Lite sources
+        var closed = CreateExplorer();
+        var closedFile = closed.CreateFile("a.svg");
+        var closedFolder = closed.CreateFolder("x");
+        var closedAdd = closed.AddFiles([]);
+        var explorer = new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg", ".mmd", ".json"), _scheduler);
+        _explorers.Add(explorer);
+        Directory.CreateDirectory(Folder);
+        explorer.Open(Folder);
+
+        // Act: create a Mermaid file and a file with a kind that has no template
+        var mermaid = explorer.CreateFile("flow.mmd");
+        var other = explorer.CreateFile("data.json");
+
+        // Assert: the Mermaid file holds a diagram, the other starts empty, and a closed explorer refuses
+        Assert.Equal(string.Empty, mermaid);
+        Assert.StartsWith("flowchart", File.ReadAllText(Path.Combine(Folder, "flow.mmd")), StringComparison.Ordinal);
+        Assert.Equal(string.Empty, other);
+        Assert.Equal(string.Empty, File.ReadAllText(Path.Combine(Folder, "data.json")));
+        Assert.Contains("Open a project", closedFile, StringComparison.Ordinal);
+        Assert.Contains("Open a project", closedFolder, StringComparison.Ordinal);
+        Assert.Contains("Open a project", closedAdd, StringComparison.Ordinal);
+        Assert.Null(closed.TargetFolder);
+    }
+
+    /// <summary>
+    ///     Test that a new folder is created in the target folder, is selected and has the folders above it expanded, and that
+    ///     names that are bad, hidden by a leading dot, or existing are refused.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_CreateFolder_NamesAndTarget_CreatesOrRefuses()
+    {
+        // Arrange: a project with a folder, selected
+        Touch("assets/one.svg");
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+        explorer.SelectedNode = explorer.Roots[0];
+
+        // Act: create a folder in it, then try names that are refused
+        var created = explorer.CreateFolder(" photos ");
+        var createdFolder = explorer.SelectedNode?.FullPath;
+        explorer.SelectedNode = explorer.Roots[0];
+        var exists = explorer.CreateFolder("photos");
+        var hidden = explorer.CreateFolder(".secret");
+        var withPath = explorer.CreateFolder("a/b");
+        var blank = explorer.CreateFolder("");
+
+        // Assert: the folder exists in the selected folder and is selected under an expanded parent, and the others are explained
+        Assert.Equal(string.Empty, created);
+        Assert.True(Directory.Exists(Path.Combine(Folder, "assets", "photos")));
+        Assert.Equal(Path.Combine(Folder, "assets", "photos"), createdFolder);
+        Assert.True(explorer.Roots[0].IsExpanded);
+        Assert.Contains("already exists", exists, StringComparison.Ordinal);
+        Assert.Contains("must not start with a period", hidden, StringComparison.Ordinal);
+        Assert.False(string.IsNullOrEmpty(withPath));
+        Assert.False(string.IsNullOrEmpty(blank));
+        Assert.False(Directory.Exists(Path.Combine(Folder, "assets", ".secret")));
+    }
+
+    /// <summary>
+    ///     Test that added files are copied into the attachments folder (or a chosen folder of the project) under free names,
+    ///     that the sources stay, that folders and other kinds of files are left out and named, and that a folder outside
+    ///     the project is refused.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_AddFiles_PicturesAndOthers_CopiesAndExplains()
+    {
+        // Arrange: a project, and files outside it: a bitmap, a PDF, a text file, and a folder
+        Touch("top.svg");
+        var outside = Directory.CreateDirectory(Path.Combine(_tempRoot, "outside")).FullName;
+        var picture = Path.Combine(outside, "logo.png");
+        var plan = Path.Combine(outside, "plan.pdf");
+        var text = Path.Combine(outside, "notes.txt");
+        File.WriteAllText(picture, "png");
+        File.WriteAllText(plan, "pdf");
+        File.WriteAllText(text, "text");
+        var folder = Directory.CreateDirectory(Path.Combine(outside, "photos")).FullName;
+        var explorer = CreateExplorer();
+        explorer.Open(Folder);
+
+        // Act: add all of them, add the picture again, and add one into a folder of the project and one outside the project
+        var problem = explorer.AddFiles([picture, plan, text, folder, Path.Combine(outside, "missing.png")]);
+        var again = explorer.AddFiles([picture]);
+        var attachments = Path.Combine(Folder, "attachments");
+        var names = Directory.GetFiles(attachments).Select(path => Path.GetFileName(path)).Order(StringComparer.Ordinal).ToArray();
+        var elsewhere = explorer.AddFiles([picture], Path.Combine(_tempRoot, "elsewhere"));
+        var dataFolder = explorer.AddFiles([picture], Path.Combine(Folder, ".canvaspilot"));
+
+        // Assert: the pictures were copied with a number for the second copy, the others are named, the sources stay, and the
+        // attachments folder shows in the tree
+        Assert.Equal(["logo (2).png", "logo.png", "plan.pdf"], names);
+        Assert.Equal(string.Empty, again);
+        Assert.Contains("'notes.txt' was not added", problem, StringComparison.Ordinal);
+        Assert.Contains("'photos' is a folder", problem, StringComparison.Ordinal);
+        Assert.Contains("'missing.png' was not found", problem, StringComparison.Ordinal);
+        Assert.Contains("only be added to a folder of the project", elsewhere, StringComparison.Ordinal);
+        Assert.Contains("only be added to a folder of the project", dataFolder, StringComparison.Ordinal);
+        Assert.True(File.Exists(picture));
+        Assert.Equal(["attachments", "top.svg"], explorer.Roots.Select(node => node.Name));
+        Assert.Throws<ArgumentNullException>(() => explorer.AddFiles(null!));
+    }
+
+    /// <summary>
+    ///     Test that a file can be added to a folder of the project, which then shows it, and that the refresh command reads
+    ///     the folder again at once and can only be used while a project is open.
+    /// </summary>
+    [Fact]
+    public void ProjectExplorerViewModel_AddFilesToFolderAndRefreshCommand_ShowTheNewFiles()
+    {
+        // Arrange: a project with a folder, and a closed explorer's refresh command
+        Touch("assets/one.svg");
+        var outside = Path.Combine(_tempRoot, "outside.png");
+        File.WriteAllText(outside, "png");
+        var explorer = CreateExplorer();
+        var canWhileClosed = explorer.RefreshCommand.CanExecute(null);
+        explorer.Open(Folder);
+        var canWhileOpen = explorer.RefreshCommand.CanExecute(null);
+
+        // Act: add a file to the folder, create a file behind the explorer's back, and refresh with the command
+        var problem = explorer.AddFiles([outside], Path.Combine(Folder, "assets"));
+        Touch("late.svg");
+        explorer.RefreshCommand.Execute(null);
+
+        // Assert: the folder holds the copy, the late file is listed, and the command was usable only with a project
+        Assert.Equal(string.Empty, problem);
+        Assert.Equal(["one.svg", "outside.png"], explorer.Roots[0].Children.Select(node => node.Name));
+        Assert.Equal(["late.svg", "one.svg", "outside.png"], explorer.Items.Select(item => item.Name).Order(StringComparer.Ordinal));
+        Assert.False(canWhileClosed);
+        Assert.True(canWhileOpen);
+    }
+
+    /// <summary>
     ///     Test that a file with the hidden attribute is not listed.
     /// </summary>
     [Fact]

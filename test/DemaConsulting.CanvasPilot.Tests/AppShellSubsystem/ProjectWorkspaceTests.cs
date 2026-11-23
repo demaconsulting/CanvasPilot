@@ -365,6 +365,43 @@ public sealed class ProjectWorkspaceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the New File and New Folder commands are usable only while a project is open, ask for a name with the
+    ///     name that is suggested, create what was named in the selected folder, do nothing when the user cancels, and
+    ///     report a refused name in a message; and that the explorer holds the same commands for its buttons.
+    /// </summary>
+    [Fact]
+    public async Task ProjectWorkspace_NewFileAndNewFolder_AskForNameCreateOrReport()
+    {
+        // Arrange: a workspace with no project yet, and the commands that the explorer holds for its buttons
+        var workspace = CreateWorkspace();
+        var canWhileClosed = (workspace.NewFileCommand.CanExecute(null), workspace.NewFolderCommand.CanExecute(null));
+        workspace.ShowProject(Project());
+        var canWhileOpen = (workspace.NewFileCommand.CanExecute(null), workspace.NewFolderCommand.CanExecute(null));
+
+        // Act: name a file, name a folder, cancel a prompt, and name a file badly
+        _dialogs.PromptResult = "drawing.svg";
+        await workspace.NewFileCommand.ExecuteAsync(null);
+        _dialogs.PromptResult = "Photos";
+        await workspace.NewFolderCommand.ExecuteAsync(null);
+        _dialogs.PromptResult = null;
+        await workspace.NewFileCommand.ExecuteAsync(null);
+        var messagesBefore = _dialogs.Messages.Count;
+        _dialogs.PromptResult = "notes.txt";
+        await workspace.NewFileCommand.ExecuteAsync(null);
+
+        // Assert: the commands are the explorer's, the file and folder exist, the prompts suggested names, and the bad name was reported
+        Assert.Equal((false, false), canWhileClosed);
+        Assert.Equal((true, true), canWhileOpen);
+        Assert.Same(workspace.NewFileCommand, workspace.Explorer.NewFileCommand);
+        Assert.Same(workspace.NewFolderCommand, workspace.Explorer.NewFolderCommand);
+        Assert.True(File.Exists(Path.Combine(_folder, "drawing.svg")));
+        Assert.True(Directory.Exists(Path.Combine(_folder, "Photos")));
+        Assert.Equal(["untitled.svg", "New folder", "untitled.svg", "untitled.svg"], _dialogs.Prompts.Select(prompt => prompt.InitialText));
+        Assert.Equal(0, messagesBefore);
+        Assert.Equal("New File", Assert.Single(_dialogs.Messages).Title);
+    }
+
+    /// <summary>
     ///     Test that a workspace with no chat content never shows the chat column, even with a project open.
     /// </summary>
     [Fact]
