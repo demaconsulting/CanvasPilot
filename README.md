@@ -68,9 +68,11 @@ Available now:
   files it changes directly, with no backup and no question, so keep your projects under source control
 - **Honest status**: The status bar says when the project file was saved, and only after it was, and the window has no
   full-screen mode, so the title bar and the window buttons are always there
-- **Settings**: Choose the AI provider (with a connection check), pick its model from the list that the provider
-  offers, with what each model can do and a warning for what it lacks, and set the model's reasoning level; the speech
-  devices and models, with model downloads; and the theme and explorer choices
+- **Settings**: Choose the AI provider (with a connection check), pick its model from the list that the provider offers,
+  with what each model can do and a warning for what it lacks, and set the model's reasoning level and, for a Copilot
+  model that offers one (such as the 1M-token size of Claude Opus 5.5), its context size; the page shows only the
+  options of the chosen provider; the speech devices and models, with model downloads; and the theme and explorer
+  choices
 - **Windows installer**: One MSI package for 64-bit Windows
 
 Planned:

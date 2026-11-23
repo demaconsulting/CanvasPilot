@@ -219,12 +219,18 @@ public abstract record AgentEvent
     ///     <see langword="null" /> when the provider does not report one.
     /// </param>
     /// <param name="Model">The model that served the call, or <see langword="null" /> when not reported.</param>
+    /// <param name="ContextSize">
+    ///     The words for the context size (tier) that the settings chose for the turn, for example <c>long context</c>, or
+    ///     <see langword="null" /> when none was chosen (the provider's own size applies). It comes from the settings, not
+    ///     from the provider's report, which does not name the size.
+    /// </param>
     public sealed record Usage(
         long? InputTokens,
         long? OutputTokens,
         long? ReasoningTokens = null,
         double? Multiplier = null,
-        string? Model = null) : AgentEvent;
+        string? Model = null,
+        string? ContextSize = null) : AgentEvent;
 
     /// <summary>
     ///     The model is thinking: the provider reports reasoning that is not shown. It says that the turn is alive and what

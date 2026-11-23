@@ -120,6 +120,7 @@ internal static class TestModels
     /// <param name="windowTokens">The largest context window of the model, or <see langword="null" /> when not known.</param>
     /// <param name="usable">Whether the model can be used.</param>
     /// <param name="displayName">The name to show; the id when <see langword="null" />.</param>
+    /// <param name="tiers">The context sizes (id, name, window) that the model offers, standard first; none when <see langword="null" />.</param>
     /// <returns>The model.</returns>
     internal static ModelInfo Make(
         string provider,
@@ -129,7 +130,8 @@ internal static class TestModels
         string[]? efforts = null,
         int? windowTokens = 256_000,
         bool usable = true,
-        string? displayName = null)
+        string? displayName = null,
+        (string Id, string Name, int? Window)[]? tiers = null)
     {
         var offered = efforts ?? [];
         var capabilities = ModelCapabilities.None;
@@ -154,6 +156,11 @@ internal static class TestModels
             adjustments |= ModelAdjustments.ReasoningEffort;
         }
 
+        if (tiers is { Length: > 0 })
+        {
+            adjustments |= ModelAdjustments.ContextTier;
+        }
+
         return new ModelInfo
         {
             Provider = provider,
@@ -165,6 +172,8 @@ internal static class TestModels
             UnusableReason = usable ? null : "The model is disabled by your organization.",
             ContextWindowTokens = windowTokens,
             ReasoningEfforts = [.. offered.Select(effort => new ModelReasoningEffort(effort, char.ToUpperInvariant(effort[0]) + effort[1..], null))],
+            ContextTiers = [.. (tiers ?? []).Select(tier => new ModelContextTier(tier.Id, tier.Name, tier.Window))],
+            DefaultContextTier = tiers is { Length: > 0 } && tiers.Any(tier => tier.Id == "default") ? "default" : null,
         };
     }
 }

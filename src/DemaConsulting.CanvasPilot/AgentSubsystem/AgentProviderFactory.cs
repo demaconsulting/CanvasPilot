@@ -401,7 +401,8 @@ public sealed class AgentProviderFactory : IAgentFactory
         _copilotDataDirectory = request.CopilotDataDirectory ?? AgentService.GetCopilotDataDirectory();
         var agent = started.Agents.CreateAgent(new CopilotAgentRequest(request.Tools, request.Instructions, AgentName, request.ProjectFolder, selection));
         var effort = selection?.Settings.ReasoningEffort ?? "(default)";
-        Write($"Agent created: provider=GitHubCopilot model={selection?.Model.Id ?? "(default)"} effort={effort} tools={request.Tools.Count}");
+        var contextTier = selection?.Settings.ContextTier ?? "(default)";
+        Write($"Agent created: provider=GitHubCopilot model={selection?.Model.Id ?? "(default)"} effort={effort} contextTier={contextTier} tools={request.Tools.Count}");
 
         // The runtime belongs to the starter and is shared by the agents, so the result owns nothing
         return AgentCreationResult.Created(agent);

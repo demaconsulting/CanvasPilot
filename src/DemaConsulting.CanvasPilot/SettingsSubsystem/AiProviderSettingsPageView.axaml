@@ -88,6 +88,27 @@
                      AutomationProperties.AutomationId="AiEffortCostWarning"
                      IsVisible="{Binding HasEffortCostWarning}"
                      Text="{Binding EffortCostWarning}" />
+
+          <!-- GitHub Copilot only, and only for a model that offers more than one size -->
+          <TextBlock Classes="label"
+                     AutomationProperties.AutomationId="AiContextTierLabel"
+                     Text="Context size"
+                     Margin="0,8,0,0"
+                     IsVisible="{Binding HasContextTierChoice}" />
+          <ComboBox AutomationProperties.AutomationId="AiContextTierComboBox"
+                    AutomationProperties.Name="Context size"
+                    HorizontalAlignment="Stretch"
+                    IsVisible="{Binding HasContextTierChoice}"
+                    ItemsSource="{Binding ContextTiers}"
+                    SelectedItem="{Binding SelectedContextTier}" />
+          <TextBlock Classes="hint"
+                     AutomationProperties.AutomationId="AiContextTierNote"
+                     IsVisible="{Binding HasContextTierNote}"
+                     Text="{Binding ContextTierNote}" />
+          <TextBlock Classes="caution"
+                     AutomationProperties.AutomationId="AiContextTierCostNote"
+                     IsVisible="{Binding HasContextTierCostNote}"
+                     Text="{Binding ContextTierCostNote}" />
         </StackPanel>
       </Border>
 

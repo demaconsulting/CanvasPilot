@@ -170,9 +170,10 @@ and a turn. This scenario is tested by
 **AgentService_ProjectClosed_DropsTheConversationAndTheNextTurnNeedsAProject**: A turn, the project closes, and a turn.
 This scenario is tested by `AgentService_ProjectClosed_DropsTheConversationAndTheNextTurnNeedsAProject`.
 
-**AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent**: Eight changes of the settings,
-five that rebuild and three that do not. This scenario is tested by
-`AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent`.
+**AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent**: Nine changes of the settings,
+seven that rebuild (the provider, the model, the Ollama address, the context window, the Copilot path, the reasoning
+effort, and the context size) and two that do not (the unrestricted-tools flag, and no change). This scenario is tested
+by `AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent`.
 
 **AgentService_RunTurn_RequestsWhileATurnRuns_FailBusyAndTheRunningTurnCompletes**: A turn held open, five more
 requests, the release, and a next turn. This scenario is tested by
@@ -326,6 +327,18 @@ run, by closing the project. Neither gives a failed or a completed event, and th
 a sentinel as its content, and answers, with a usage of 120 and 30. The log has the lines of the criteria for the start
 of the turn, the call, and the end, and neither sentinel. This scenario is tested by
 `AgentService_Logging_Turn_CarriesIdsToolFactsAndAnswerFactsWithoutContent`.
+
+**AgentService_RunTurn_CopilotContextTier_IsOnTheUsageAndInTheLog**: A scripted GitHub Copilot conversation on
+`claude-opus-5.5` that reports usage, with the context size `long_context` chosen, then `default`, then none (each
+change rebuilds the conversation). The `Usage` event of the three turns carries `long context`, `standard context`, and
+`null`; the start line of the first turn is
+`Turn started: turn=1 provider=GitHubCopilot model=claude-opus-5.5 effort=(default) contextTier=long_context` and a
+later one has `contextTier=(default)`. This scenario is tested by
+`AgentService_RunTurn_CopilotContextTier_IsOnTheUsageAndInTheLog`.
+
+**AgentService_RunTurn_ContextTierOfAnotherProviderOrNoModel_IsNotOnTheUsage**: A stored size with Ollama, and a stored
+size with GitHub Copilot on the default model: the `Usage` event carries no context size in either. This scenario is
+tested by `AgentService_RunTurn_ContextTierOfAnotherProviderOrNoModel_IsNotOnTheUsage`.
 
 **AgentService_Logging_TurnNumbers_CountUpForTheLifeOfTheService**: Three turns one after the other. The lines carry
 `turn=1`, `turn=2`, and `turn=3`, and no `turn=4`. This scenario is tested by

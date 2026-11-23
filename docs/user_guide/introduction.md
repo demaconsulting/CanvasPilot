@@ -713,9 +713,10 @@ running; send the message again. If you cancel the dialog, the next message uses
   (switched off for your account, or an embedding model) is shown dimmed and cannot be chosen; the warning under the
   list says why.
 - **What the chosen model can do.** Under the list you see, for the chosen model: **Tool calling**, **Pictures**,
-  **Reasoning levels**, and the largest **Context window**. The copilot needs tool calling for every drawing, so a model
-  without it is warned about, and the check refuses it. Pictures are wanted but not required: without them the copilot
-  cannot see your marks or its own drawings, and works from your words and the files.
+  **Reasoning levels**, **Context sizes** when there are several, and the largest **Context window**. The copilot needs
+  tool calling for every drawing, so a model without it is warned about, and the check refuses it. Pictures are wanted
+  but not required: without them the copilot cannot see your marks or its own drawings, and works from your words and
+  the files.
 - **The default model.** The first entry, "Provider default model", leaves the choice to the provider (GitHub Copilot
   uses the default model of its runtime). Ollama needs a model.
 - **Typing a model.** The **Model name** box below the list always works. Type the id of a model that is not in the list
@@ -743,6 +744,26 @@ lower level for everyday work. Nothing is shown for other models or levels, so t
 
 If you choose another model and the level that you had is not offered by it, the level goes back to "Provider default"
 and the page says so. The level you choose is saved with the other settings and takes effect with the next message,
+which starts the conversation again, as a change of the model does.
+
+### The Context Size
+
+Some GitHub Copilot models can run with more than one **context size**, which is how much of the conversation (your
+messages, the pictures, the files that the copilot read, and its own answers) the model can hold at once. For example
+Claude Opus 5.5 offers a standard size (the list shows "Standard (328K tokens)") and a long one ("Long context (1M
+tokens)", one million tokens). When you choose such a model, a **Context size** box appears under the reasoning level,
+with the sizes that the model offers and their windows as GitHub Copilot lists them. Choose **Long context** to give the
+model the one-million-token window. The box is not shown for a model that has only one size, for a model that is typed
+but not in the list (the page cannot know its sizes; a size that you saved is kept), or for Ollama (whose window is the
+**Context window** entry).
+
+A larger size is **billed and served separately** by GitHub Copilot, so a message can cost more premium requests and
+take longer, and a long conversation can use much more of it; the page says so while a size other than the standard one
+is chosen. CanvasPilot cannot tell you the price, so look at the line under each answer (see *What a Turn Costs*), which
+names the size, for example "..., model x15 premium, long context, 3:16". The tooltip of the provider pill in the title
+bar names the model and the size that are in use ("... ready with the model claude-opus-5.5 at the Long context size
+(1,000,000 tokens)"). If you choose another model and the size that you had is not offered by it, the size goes back to
+the standard one and the page says so. The size is saved with the other settings and takes effect with the next message,
 which starts the conversation again, as a change of the model does.
 
 ### Models That Cannot Work
@@ -838,11 +859,12 @@ choose a smaller model or a lower reasoning level (see *Choosing a Model*).
 When a turn ends, one quiet line of small text under the last answer says what it used, and only what the provider
 reported, for example "180.3k in, 22.8k out, 5.9k reasoning, model x15 premium, 3:16": the tokens that were sent to the
 model, the tokens that it wrote, the tokens that it spent on thinking, the multiplier of the model, and how long the
-turn took. **GitHub Copilot counts each message that you send as a number of premium requests equal to the multiplier of
-the model** (a model that is marked x15 costs fifteen), however many steps the turn needed. Ollama reports tokens and no
-multiplier, so its line has tokens and the time only. A turn that you stopped says "stopped, the request may still
-count", because the provider counts a request when the model starts and **a Stop does not give it back**. When a turn
-produced no figures and was not stopped, there is no line.
+turn took. When you chose a context size for a Copilot model, the line names it (for example "long context"), because a
+larger size is billed and served separately (see *The Context Size*). **GitHub Copilot counts each message that you send
+as a number of premium requests equal to the multiplier of the model** (a model that is marked x15 costs fifteen),
+however many steps the turn needed. Ollama reports tokens and no multiplier, so its line has tokens and the time only. A
+turn that you stopped says "stopped, the request may still count", because the provider counts a request when the model
+starts and **a Stop does not give it back**. When a turn produced no figures and was not stopped, there is no line.
 
 The AI Provider page warns you before you spend it: when a large model is chosen with the reasoning level `high`,
 `xhigh`, or `max`, the page says that the choice is slow and costly (see *The Reasoning Level*).
@@ -1220,6 +1242,8 @@ Shown for both providers:
 
 Shown only while **GitHub Copilot** is chosen:
 
+- **Context size**: Shown only when the chosen model offers more than one size, for example the one-million-token size
+  of Claude Opus 5.5 (see *The Context Size*).
 - **GitHub Copilot command-line tool path**: The full path of the installed `copilot.exe`. Leave it empty to locate the
   tool automatically. A path that you enter wins over the search, and launcher shims, such as the one that VS Code puts
   on the `PATH`, are ignored by the automatic search (see *Which Copilot CLI Is Used*).

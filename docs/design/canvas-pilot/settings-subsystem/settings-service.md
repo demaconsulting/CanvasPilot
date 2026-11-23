@@ -23,9 +23,11 @@ the id of the model as the provider names it; empty for the provider default), `
 the 8192 that an earlier build used as its default, is kept; `AiProviderSettings.RecommendedMinimumContextTokens`,
 16384, is the smallest value that is recommended and is not enforced here), `ReasoningEffort` (`string`, the id of the
 reasoning effort as the provider spells it, such as `none`, `low`, `medium`, `high`, `xhigh`, or `max`; empty to leave
-the choice to the provider; it is text because the efforts that exist depend on the model), `OllamaEndpoint` (`string`,
-default `http://localhost:11434`), `UnrestrictedAgentTools` (`bool`, default `false`), and `CopilotCliPath` (`string`,
-empty for automatic discovery).
+the choice to the provider; it is text because the efforts that exist depend on the model), `ContextTier` (`string`, the
+id of the context size (tier) that a GitHub Copilot model runs with as the provider spells it, such as `long_context`;
+empty for the provider's own, standard size; additive, so a file without it loads with none, and trimmed on load; Ollama
+ignores it), `OllamaEndpoint` (`string`, default `http://localhost:11434`), `UnrestrictedAgentTools` (`bool`, default
+`false`), and `CopilotCliPath` (`string`, empty for automatic discovery).
 
 **SpeechSettings**: `record` — `CaptureDevice`, `PlaybackDevice`, `SttModelId`, and `TtsModelId` (`string`,
 empty for the default), `PushToTalkKey` (`string`, the key or chord that is held to dictate, written as `F9` or

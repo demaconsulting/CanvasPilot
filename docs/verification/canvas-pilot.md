@@ -384,7 +384,8 @@ steps are in the verification of the unit or subsystem named at each check.
        the window asks for and the reserve that it keeps; the real frame of the system is not drawn headless, so only
        this check shows the result on a display.
 12. *Live agent turns (done once on the machine on which this version was built; the record is below).* The opt-in tests
-    in `LiveCopilotLongTurnTests.cs` run a long turn, a Stop, and two refinement turns through the composed application
+    in `LiveCopilotLongTurnTests.cs` run a long turn, a Stop, two refinement turns, and a turn with the larger context
+    size of the model through the composed application
     on the real Copilot runtime. They belong to no requirement, cost real premium requests, and are repeated before a
     release that changes the agent. (Verification of the `Agent` and `Chat` subsystems.)
 
@@ -393,7 +394,8 @@ steps are in the verification of the unit or subsystem named at each check.
 **Date and environment.** 2026-11-23. A real Copilot turn through the composed application (real `AgentService`,
 `AgentProviderFactory`, and Copilot runtime, with the renderer, the preview, and the chat panel). Copilot CLI 1.0.114,
 AgentKit 0.1.0-beta.5, Copilot SDK 2.0.1. Sign-in was the existing Copilot CLI login on a ghe.com data-residency account
-(GitHub Enterprise Cloud). Model `claude-opus-5.5`, reasoning effort `high`. One run of each scenario; all three passed.
+(GitHub Enterprise Cloud). Model `claude-opus-5.5`, reasoning effort `high`. One run of each scenario (a) to (c); all
+three passed. Scenario (d) is recorded after them.
 
 **(a) Long first turn, empty project.** A 1200 by 900 marketing SVG (a robot with a monkey). Test time 3 min 20 s, turn
 196.9 s.
@@ -432,6 +434,33 @@ AgentKit 0.1.0-beta.5, Copilot SDK 2.0.1. Sign-in was the existing Copilot CLI l
 `claude-sonnet-5.5` at low effort passed in 23 s and cost 2 more (x1 per message). The model `claude-haiku-5.5` is not
 available to the account; the readiness check said so before any request was spent.
 
+**(d) The larger context size of the model (1M tokens of Claude Opus 5.5).** 2026-11-23, the same machine, account, CLI,
+library, and SDK as above, in the test `LiveCopilotLongTurn_LargerContextSizeOfTheModel_RunsATurnWithIt`; run twice (the
+first run found a wrong assertion about the readiness sentence in the test itself, after the turn had run; the second
+run passed), 15 premium requests each. Model `claude-opus-5.5`, reasoning effort `low`, one message that asks for one
+word.
+
+- *What the catalog said.* The runtime's catalog, read through the application's own `ProviderModelCatalog`, lists
+  `claude-opus-5.5` with a largest window of 1,000,000 tokens, the default size `default` at 328,000 tokens, and
+  `long_context` at 1,000,000. (The figure for the standard size is the prompt budget of the size plus the output limit
+  of the model, as AgentKit derives it; it is not 200K.) The test chose the larger size from that list, as the settings
+  page stores it (`long_context`), and did not name the size itself.
+- *What the application did.* The readiness sentence, which is the tooltip of the provider pill, read "GitHub Copilot
+  CLI 1.0.114 is ready with the model claude-opus-5.5 at the Long context size (1,000,000 tokens). Signed in as ...
+  (Copilot CLI sign-in)." The log said `Agent created: ... model=claude-opus-5.5 effort=low contextTier=long_context`
+  and `Turn started: ... contextTier=long_context`.
+- *The turn.* It completed in 1.7 s and 3.1 s (wall time of the two runs; the first byte of text after 1.5 s and 2.7 s)
+  with the answer of two characters, on one new provider session. The caption said "10.3k in, 4 out, model x15 premium,
+  long context, 0:03", and the runtime counted 15 premium requests for the message. No error notice, no recovery.
+- *Does the runtime confirm the size?* Yes, in its own record: the events file of the session (read only for the names
+  and short values of the properties that mention a tier, a token limit, or the model, never for any text) has
+  `session.start` with `contextTier = long_context` and `selectedModel = claude-opus-5.5`, so the session was created
+  with the larger size that the application asked for. The log of the runtime (the application relays it) had no line
+  that mentions a tier, so the events file is the only confirmation. A baseline session without a size was not run (it
+  would cost another 15 requests), so the events file of a session that asked for none was not compared; the run shows
+  that the choice reaches the session and the runtime accepts it, not that the model answered with a window above the
+  standard one (10.3k tokens of input is far below both).
+
 **Findings.**
 
 - **A Claude model buffers its answer on this runtime.** It is silent for 45 to 125 s and then sends everything in a
@@ -464,10 +493,11 @@ available to the account; the readiness check said so before any request was spe
   1 and resumed by turn 2, no recovery, release, or drop, `cancelSource=None` for both turns, and one runtime.
 
 **How to repeat it.** The tests are skipped unless `CANVASPILOT_LIVE_COPILOT` is `1`. Optional variables are
-`CANVASPILOT_LIVE_COPILOT_MODEL` (default `claude-opus-5.5`), `CANVASPILOT_LIVE_COPILOT_EFFORT` (default `high`), and
-`CANVASPILOT_LIVE_COPILOT_OUT` (a file that receives the record of the run: timings, event counts, longest gaps, and
-usage; never a token, a prompt, or a word of an answer). A full run needs the installed CLI and a sign-in and costs real
-premium requests, about 75 on Opus 5.5 at high effort; `claude-sonnet-5.5` costs one per message.
+`CANVASPILOT_LIVE_COPILOT_MODEL` (default `claude-opus-5.5`), `CANVASPILOT_LIVE_COPILOT_EFFORT` (default `high`; `low`
+for scenario (d)), and `CANVASPILOT_LIVE_COPILOT_OUT` (a file that receives the record of the run: timings, event
+counts, longest gaps, and usage; never a token, a prompt, or a word of an answer). A full run needs the installed CLI
+and a sign-in and costs real premium requests, about 75 on Opus 5.5 at high effort, and 15 for scenario (d);
+`claude-sonnet-5.5` costs one per message (scenario (d) is skipped for a model that offers no second context size).
 
 ## Test Scenarios
 

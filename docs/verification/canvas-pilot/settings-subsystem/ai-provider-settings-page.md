@@ -57,6 +57,14 @@ network, or external services are required.
   when none is chosen), the page shows a warning that the choice is slow and costly with the premium requests that a
   message counts (for example 15); a lower level, a small model, a model that the provider does not describe, and
   another provider show none, and the warning never makes the page invalid.
+- While GitHub Copilot is selected and the chosen model, as the provider lists it, offers more than one context size,
+  the page offers a Context size choice with the sizes and windows of the catalog (for example "Standard (328K tokens)"
+  and "Long context (1M tokens)"), lists them among the details of the model, stores the id of the chosen size and
+  nothing for the standard one, and shows the note about the cost of a larger size only while one is chosen; a stored
+  size that the known model does not offer is reset to the standard one with a note, a stored size is kept (no choice
+  shown) while nothing is known about the model, the standard size stored by its id counts as no choice, and the choice,
+  its label, and its notes are hidden for a model with one size, a model that is not listed, a page without a source,
+  and Ollama.
 - The context window belongs to Ollama: while Ollama is selected a valid value below 16,384 shows a warning that
   recommends 32,768 and leaves the page valid, and 16,384 and an invalid entry show none; while GitHub Copilot is
   selected the window is hidden, shows neither a warning nor an error, never makes the page invalid, and keeps its
@@ -251,6 +259,21 @@ multiplier of 10 whose default level is `high`, an empty choice (the provider ch
 none; for no model information the answer is empty whatever the level. This scenario is tested by
 `AiProviderSettingsPageViewModel_BuildEffortCostWarning_UsesTheDefaultEffortAndNeedsAModel`.
 
+**AiProviderSettingsPageViewModel_ContextTier_OfferedForAModelWithSeveralSizes_IsChosenAndApplied**: A source lists
+`opus` with the sizes Standard (328,000 tokens, the default) and Long context (1,000,000) and `plain` with none; the
+page is loaded with `opus` and `long_context`. The choice is offered with the entries "Standard (328K tokens)" and "Long
+context (1M tokens)" and the larger one chosen, the details have the line "Context sizes: ...", applying stores
+`long_context` and the cost note is the documented sentence. Choosing the standard size stores nothing and hides the
+note; choosing the larger one again stores `long_context`; choosing `plain` hides the choice and stores nothing; the
+change of `HasContextTierChoice` was announced. This scenario is tested by
+`AiProviderSettingsPageViewModel_ContextTier_OfferedForAModelWithSeveralSizes_IsChosenAndApplied`.
+
+**AiProviderSettingsPageViewModel_ContextTier_StoredSizeTheModelDoesNotOffer_FallsBackWithANote**: `opus` with the
+stored size `huge` is applied as no size, with the note "does not offer the context size huge" and the standard size
+chosen; the stored `default` is applied as no size; a typed model that is not listed, and a page without a source, keep
+the stored `long_context` and show no choice; choosing Ollama shows no choice and applies no size. This scenario is
+tested by `AiProviderSettingsPageViewModel_ContextTier_StoredSizeTheModelDoesNotOffer_FallsBackWithANote`.
+
 **AiProviderSettingsPageViewModel_CheckConnection_NoProviderCheck_IsNotOffered**: A page without a check has no
 connection check and its command cannot run. This scenario is tested by
 `AiProviderSettingsPageViewModel_CheckConnection_NoProviderCheck_IsNotOffered`.
@@ -287,6 +310,13 @@ the cost warning and the error of an invalid tool path is switched to Ollama and
 five Copilot controls (`AiCopilotCliPathLabel`, `...TextBox`, `...Error`, `...Note`, `AiEffortCostWarning`) is visible
 or effectively visible; the Ollama labels and entries and the endpoint error are effectively visible, and the page is
 invalid. This scenario is tested by `AiProviderSettingsPageView_OllamaSelected_ShowsOnlyOllamaControls`.
+
+**AiProviderSettingsPageView_ContextSize_IsShownOnlyForACopilotModelWithSeveralSizes**: A shown page over `opus`
+(Standard and Long context) and `plain` (one size), with `opus` chosen: the label, the combo box (two entries), and no
+cost note are visible; choosing Long context stores `long_context` and shows the documented cost note; choosing `plain`
+hides the label, the combo box, and both notes (`IsVisible` and `IsEffectivelyVisible` false); choosing `opus` shows the
+choice again; choosing Ollama hides all four controls. This scenario is tested by
+`AiProviderSettingsPageView_ContextSize_IsShownOnlyForACopilotModelWithSeveralSizes`.
 
 **AiProviderSettingsPageView_ProviderSelected_ShowsNoLabelOfTheOtherProvidersEntries**: The effectively visible texts of
 the page with GitHub Copilot selected include the label of the tool path and none of the endpoint or the context window;

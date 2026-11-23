@@ -207,6 +207,11 @@ is stopped with its text. This scenario is tested by `ChatTurnRunner_Stop_ShowsS
 model x15 premium, 3:25" for a turn of 205 seconds. This scenario is tested by
 `TurnUsage_Format_SumsTokensKeepsTheLargestMultiplier`.
 
+**TurnUsage_Format_ContextSize_IsNamedAfterTheMultiplier**: Two usage reports that carry `long context` make the caption
+"12.4k in, 7.2k out, model x15 premium, long context, 3:25" and `ContextSize` `long context`; a report without a size
+leaves the caption as before and `ContextSize` `null`. This scenario is tested by
+`TurnUsage_Format_ContextSize_IsNamedAfterTheMultiplier`.
+
 **TurnUsage_Format_LeavesOutWhatWasNotReportedAndNotesAStop**: Nothing reported gives no caption; nothing reported with
 a stop gives the time and the note that the request may still count; a report with only 500 tokens out and a multiplier
 of zero gives "500 out, no premium requests, 0:05". This scenario is tested by

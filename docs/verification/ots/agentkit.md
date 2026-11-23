@@ -149,7 +149,9 @@ catalog then selects the settings for `gemma3` with the effort `low`, and a mode
 the cause (the efforts that the model offers, the largest window, tool calling, and the reason that the model is
 disabled); the selection has the catalog's id `gemma3:latest`, the effort `low`, and the standard effort low; the
 missing model is a refusal with a problem that names the provider; binding the bad effort is refused, and a blank model
-id is refused.
+id is refused. A model that offers the context sizes `default` and `long_context` accepts the settings that choose
+`long_context` (no problem) and the selection that binds them keeps the size; a size `huge` has exactly one problem that
+names it, and the size for a model that offers none has exactly one problem.
 
 **Requirement coverage**: `CanvasPilot-OTS-AgentKit-ValidateModelSettings`.
 

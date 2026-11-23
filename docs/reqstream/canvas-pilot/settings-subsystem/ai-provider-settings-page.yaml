@@ -183,6 +183,27 @@ sections:
                   - AiProviderSettingsPageView_ReasoningEffort_IsDisabledWhileTheModelIsNotKnown
                   - AiProviderSettingsPageView_ModelList_ShowsCapabilitiesWarningsAndReasoningLevels
 
+              - id: CanvasPilot-AiProviderSettingsPage-ChooseContextSize
+                title: >-
+                  The AiProviderSettingsPage shall, while GitHub Copilot is the provider and the chosen model offers more
+                  than one context size, offer a Context size choice with the sizes that the model lists, named and with
+                  their windows as the provider gives them (for example Standard and Long context of 1M tokens), list them
+                  among the details of the model, store the id of the chosen size (nothing for the standard size), reset a
+                  stored size that the known model does not offer to the provider's own size with a note, keep a stored
+                  size while nothing is known about the model, show a note that a larger size is billed and served
+                  separately while one is chosen, and hide the choice, its label, and its notes for a model with one size
+                  and for Ollama.
+                justification: |
+                  A user who wants the one-million-token window of a model such as Claude Opus 5.5 could not find where to
+                  choose it. The sizes differ by model, so they come from the catalog and are not a fixed list. A size that
+                  the model does not offer would be refused only when the conversation starts, so the page resets it where
+                  the user can see why; and a larger size is billed and served separately, so the choice says so where it is
+                  made, as the choice of a high reasoning level does.
+                tests:
+                  - AiProviderSettingsPageViewModel_ContextTier_OfferedForAModelWithSeveralSizes_IsChosenAndApplied
+                  - AiProviderSettingsPageViewModel_ContextTier_StoredSizeTheModelDoesNotOffer_FallsBackWithANote
+                  - AiProviderSettingsPageView_ContextSize_IsShownOnlyForACopilotModelWithSeveralSizes
+
               - id: CanvasPilot-AiProviderSettingsPage-WarnBelowRecommendedContext
                 title: >-
                   The AiProviderSettingsPage shall, while Ollama is selected and the context window is a valid number below

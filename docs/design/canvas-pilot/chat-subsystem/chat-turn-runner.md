@@ -38,7 +38,9 @@ manual clock and no display.
 - `TurnUsage` (public, sealed): the helper of the runner that holds what a turn cost, summed from the `AgentEvent.Usage`
   events of the turn, and writes it as one caption. It holds the tokens sent (`InputTokens`), written (`OutputTokens`),
   and spent on reasoning (`ReasoningTokens`), each `null` until the provider reports it, and the model multiplier
-  (`Multiplier`, also `null` until reported). `Add` takes one usage event; `Format(elapsed, stopped)` writes the
+  (`Multiplier`, also `null` until reported) and the words for the context size that the settings asked for
+  (`ContextSize`, `null` when none was chosen, taken from the `Usage` events, which the service stamps with it). `Add`
+  takes one usage event; `Format(elapsed, stopped)` writes the
   caption; `FormatTokens` writes a count of tokens for a person; `StoppedNote` is the words that end the caption of a
   stopped turn. The runner makes one for each turn and nothing else uses it; it belongs to this unit and has no unit of
   its own.
@@ -123,7 +125,8 @@ model calls the message needed, so the largest multiplier that was reported is k
 stays unknown and is left out. When the turn ends, in any way, `Format` writes one caption from the figures that were
 reported, for example `12.4k in, 7.2k out, 400 reasoning, model x15 premium, 3:25`: the tokens sent and written (a
 thousand is `k`, a million `M`), the reasoning tokens when there are any, `model x{multiplier} premium` for a multiplier
-above zero or `no premium requests` for zero, and then the time the turn took. A turn that the user stopped adds
+above zero or `no premium requests` for zero, the context size when one was chosen (for example `long context`, which is
+billed and served separately by the provider), and then the time the turn took. A turn that the user stopped adds
 `stopped, the request may still count`, because a provider counts a request when it starts the model and a stop does not
 give it back. The caption goes on the last reply that the turn made (also when a tool row follows it), where the view
 shows it small and quiet under the reply; a turn that made no reply gets an information notice with the caption instead.

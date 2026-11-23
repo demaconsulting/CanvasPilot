@@ -81,13 +81,16 @@ sentence of the starter; a `Started` answer without a source gives `CopilotRunti
 The next request asks the starter again, so a fix is noticed.
 
 The model is then validated with the catalog of the running runtime (`ICopilotAgentSource.Models`): when the settings
-name a model, `SelectAsync(ModelSettings(model){ReasoningEffort}, ToolCalls)` gives the selection, and a model that is
-not offered to the account, cannot be used, cannot call tools, or does not offer the chosen effort is the result
-`ModelSettingsInvalid` with the problems of the library and no agent. No context window is stated, because the runtime
-sets its own and the library refuses one for a plain Copilot agent. A catalog that cannot be read (the runtime is not
-connected, or was stopped) is `CopilotRuntimeUnavailable` with its message. Settings that name no model make no
-selection, and the runtime uses its default model; a reasoning effort without a model is not used, because it cannot be
-checked.
+name a model, `SelectAsync(ModelSettings(model){ReasoningEffort, ContextTier}, ToolCalls)` gives the selection, and a
+model that is not offered to the account, cannot be used, cannot call tools, or does not offer the chosen effort or
+context size is the result `ModelSettingsInvalid` with the problems of the library and no agent. No context window is
+stated, because the runtime sets its own and the library refuses one for a plain Copilot agent; the context size (tier)
+is the Copilot way to choose a larger window, and AgentKit sends it to the session as `config.Inference.ContextTier`,
+with the catalog's own spelling of the id, on every create and resume of the session. A catalog that cannot be read (the
+runtime is not connected, or was stopped) is `CopilotRuntimeUnavailable` with its message. Settings that name no model
+make no selection, and the runtime uses its default model; a reasoning effort or a context size without a model is not
+used, because it cannot be checked. The log line `Agent created: provider=GitHubCopilot model effort contextTier tools`
+names the validated model, effort, and size, each `(default)` when none was chosen.
 
 An agent is made with `CopilotAgentRequest(Tools, Instructions, "CanvasPilot", WorkingDirectory, Selection)`: exactly
 the supplied tools, instructions, and name, the project folder as the working directory (it grants nothing; the tools

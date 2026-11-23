@@ -958,6 +958,104 @@ public sealed class AiProviderSettingsPageTests
     }
 
     /// <summary>
+    ///     Makes a model that offers the standard context size and a larger one.
+    /// </summary>
+    /// <param name="id">The id of the model.</param>
+    /// <returns>The model.</returns>
+    private static ProviderModelInfo TieredModel(string id)
+    {
+        return Model(id, efforts: ["low", "high"]) with
+        {
+            ContextTiers = [new ProviderContextTier("default", "Standard", 328_000), new ProviderContextTier("long_context", "Long context", 1_000_000)],
+            DefaultContextTier = "default",
+        };
+    }
+
+    /// <summary>
+    ///     Test that the context size is offered only while GitHub Copilot is selected and the chosen model offers more than
+    ///     one, with the sizes of the catalog and their windows; that the standard size is stored as no choice and another
+    ///     size by its id; that the sizes are listed with the model; and that a size other than the standard one shows the
+    ///     note about its cost.
+    /// </summary>
+    [Fact]
+    public async Task AiProviderSettingsPageViewModel_ContextTier_OfferedForAModelWithSeveralSizes_IsChosenAndApplied()
+    {
+        // Arrange: a model with two sizes and a model with none, with the larger size stored for the first
+        var source = new FakeModelSource { Models = [TieredModel("opus"), Model("plain")] };
+        var page = await LoadedPage(source, new AiProviderSettings { ModelName = "opus", ContextTier = "long_context" });
+        var names = new List<string?>();
+        page.PropertyChanged += (_, e) => names.Add(e.PropertyName);
+        var offered = (page.HasContextTierChoice, page.ContextTiers.Select(tier => tier.Label).ToArray(), page.SelectedContextTier?.Value);
+        var appliedLarger = page.Apply(new AppSettings()).AiProvider.ContextTier;
+        var costNoteAtLarger = page.ContextTierCostNote;
+        var details = page.ModelDetails;
+
+        // Act: choose the standard size, then the larger one again, then a model with a single size
+        page.SelectedContextTier = page.ContextTiers[0];
+        var appliedStandard = page.Apply(new AppSettings()).AiProvider.ContextTier;
+        var costNoteAtStandard = page.HasContextTierCostNote;
+        page.SelectedContextTier = page.ContextTiers[1];
+        var appliedAgain = page.Apply(new AppSettings()).AiProvider.ContextTier;
+        page.SelectedModel = page.Models.Single(choice => choice.Id == "plain");
+        var onPlain = (page.HasContextTierChoice, page.Apply(new AppSettings()).AiProvider.ContextTier);
+
+        // Assert: the sizes of the catalog are offered with their windows and the stored one is chosen
+        Assert.True(offered.HasContextTierChoice);
+        Assert.Equal(["Standard (328K tokens)", "Long context (1M tokens)"], offered.Item2);
+        Assert.Equal("long_context", offered.Item3);
+        Assert.Contains("Context sizes: Standard (328K tokens), Long context (1M tokens)", details, StringComparison.Ordinal);
+
+        // Assert: the id is stored for the larger size and nothing for the standard one, and only the larger one has the note
+        Assert.Equal("long_context", appliedLarger);
+        Assert.Equal(AiProviderSettingsPageViewModel.ContextTierCostNoteText, costNoteAtLarger);
+        Assert.Equal(string.Empty, appliedStandard);
+        Assert.False(costNoteAtStandard);
+        Assert.Equal("long_context", appliedAgain);
+
+        // Assert: a model with a single size has no choice and no stored size, and the change was announced
+        Assert.Equal((false, string.Empty), onPlain);
+        Assert.Contains(nameof(AiProviderSettingsPageViewModel.HasContextTierChoice), names);
+    }
+
+    /// <summary>
+    ///     Test that a stored context size that the known model does not offer falls back to the provider's own size with a
+    ///     note, that the standard size stored by its id is the same as no choice, that a size that is stored while nothing is
+    ///     known about the model is kept without a choice being shown, and that choosing another provider starts again.
+    /// </summary>
+    [Fact]
+    public async Task AiProviderSettingsPageViewModel_ContextTier_StoredSizeTheModelDoesNotOffer_FallsBackWithANote()
+    {
+        // Arrange: a model with two sizes, and a size that it does not offer stored for it
+        var source = new FakeModelSource { Models = [TieredModel("opus")] };
+        var page = await LoadedPage(source, new AiProviderSettings { ModelName = "opus", ContextTier = "huge" });
+        var reset = (page.Apply(new AppSettings()).AiProvider.ContextTier, page.ContextTierNote, page.HasContextTierNote, page.SelectedContextTier?.Value);
+
+        // Act: the standard size stored by its id, a typed model that is not listed, a page without a source, and Ollama
+        var byId = await LoadedPage(source, new AiProviderSettings { ModelName = "opus", ContextTier = "default" });
+        var byIdApplied = byId.Apply(new AppSettings()).AiProvider.ContextTier;
+        var unknown = await LoadedPage(source, new AiProviderSettings { ModelName = "typed-model", ContextTier = "long_context" });
+        var unknownState = (unknown.HasContextTierChoice, unknown.Apply(new AppSettings()).AiProvider.ContextTier);
+        var withoutSource = new AiProviderSettingsPageViewModel();
+        withoutSource.Load(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "opus", ContextTier = "long_context" } });
+        var withoutSourceState = (withoutSource.HasContextTierChoice, withoutSource.Apply(new AppSettings()).AiProvider.ContextTier);
+        page.SelectedProvider = page.Providers[1];
+        await page.ModelListLoaded;
+
+        // Assert: the size fell back to the provider's own with the note, and the standard size by id is no choice
+        Assert.Equal((string.Empty, true, string.Empty), (reset.Item1, reset.HasContextTierNote, reset.Item4));
+        Assert.Contains("does not offer the context size huge", reset.ContextTierNote, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, byIdApplied);
+
+        // Assert: nothing is known about a model that is not listed, so its stored size is kept and no choice is shown
+        Assert.Equal((false, "long_context"), unknownState);
+        Assert.Equal((false, "long_context"), withoutSourceState);
+
+        // Assert: another provider has no choice and starts without a size
+        Assert.False(page.HasContextTierChoice);
+        Assert.Equal(string.Empty, page.Apply(new AppSettings()).AiProvider.ContextTier);
+    }
+
+    /// <summary>
     ///     Test that the effort that the provider chooses counts when none was chosen, and that a model that the provider
     ///     does not describe gets no warning.
     /// </summary>

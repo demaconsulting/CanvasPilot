@@ -142,6 +142,18 @@ whose request carries a selection with that model, that effort, and no window; s
 an agent with no selection. This scenario is tested by
 `AgentProviderFactory_Create_Copilot_ModelAndEffort_ReachTheAgentAsTheSelection`.
 
+**AgentProviderFactory_Create_Copilot_ContextTier_ReachesTheAgentAsTheSelectionAndIsValidated**: A runtime whose catalog
+offers `claude-opus-5.5` with the sizes `default` (Standard, 328,000 tokens) and `long_context` (Long context,
+1,000,000) and a model `single` with none. Settings with the Opus model and `long_context` make an agent whose selection
+carries that size; `huge` (not offered by the model) and `long_context` for the model with none are each
+`ModelSettingsInvalid` with a sentence of the library and no agent; the Opus model with no size makes a selection with
+no size. This scenario is tested by
+`AgentProviderFactory_Create_Copilot_ContextTier_ReachesTheAgentAsTheSelectionAndIsValidated`.
+
+**ModelRequirements_ToModelSettings_ContextTier_IsStatedForCopilotOnly**: The same choices (a model and `long_context`)
+for GitHub Copilot give a context size of `long_context` (trimmed), for Ollama none, and with no model named the result
+is `null`. This scenario is tested by `ModelRequirements_ToModelSettings_ContextTier_IsStatedForCopilotOnly`.
+
 **AgentProviderFactory_Create_Copilot_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid**: Five settings against a
 catalog of four models: a model without tool calling, a model that the catalog does not have, an effort `bogus` (the
 sentence names `low, medium`), an effort for a model that offers none, and a model that cannot be used. Each gives

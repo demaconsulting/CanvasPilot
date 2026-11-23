@@ -220,6 +220,7 @@ public sealed class AgentServiceTests
     [InlineData("context", true)]
     [InlineData("cli", true)]
     [InlineData("reasoning", true)]
+    [InlineData("tier", true)]
     [InlineData("unrestricted", false)]
     [InlineData("same", false)]
     public async Task AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent(string change, bool rebuilds)
@@ -239,6 +240,7 @@ public sealed class AgentServiceTests
             "context" => settings with { ContextWindowTokens = 16384 },
             "cli" => settings with { CopilotCliPath = @"C:\tools\copilot.exe" },
             "reasoning" => settings with { ReasoningEffort = "high" },
+            "tier" => settings with { ContextTier = "long_context" },
             "unrestricted" => settings with { UnrestrictedAgentTools = true },
             _ => settings,
         });
@@ -252,6 +254,65 @@ public sealed class AgentServiceTests
         // Assert: a second agent for the setting that matters, the same agent otherwise
         Assert.Equal(rebuilds ? 2 : 1, rig.Factory.Requests.Count);
         Assert.Equal(rebuilds ? 1 : 0, rig.Factory.DeletedSessions.Count);
+    }
+
+    /// <summary>
+    ///     Test that the context size that the settings choose for a Copilot model is put on the usage of the turn (the
+    ///     provider does not name the size) and written to the log with the model and the effort, that no size chosen puts
+    ///     none, and that a stored size is never put on the usage of another provider.
+    /// </summary>
+    [Fact]
+    public async Task AgentService_RunTurn_CopilotContextTier_IsOnTheUsageAndInTheLog()
+    {
+        // Arrange: a scripted Copilot conversation that reports usage, with the larger size chosen
+        var token = TestContext.Current.CancellationToken;
+        var usage = new ChatResponseUpdate(ChatRole.Assistant, [new UsageContent(new UsageDetails { InputTokenCount = 100, OutputTokenCount = 5 })]);
+        using var rig = new AgentServiceRig(
+            new ScriptedChatClient([usage], [usage], [usage]),
+            settings: new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot, ModelName = "claude-opus-5.5", ContextTier = "long_context" });
+
+        // Act: a turn with the larger size, one with the standard size by name, and one with no size
+        var larger = await AgentServiceRig.CollectAsync(rig.Service.RunTurnAsync(new AgentTurnRequest(AgentSubsystemTests.CreatePayload("One")), token), token);
+        rig.ChangeAiSettings(settings => settings with { ContextTier = "default" });
+        await AgentServiceRig.WaitUntilAsync(() => rig.Factory.DeletedSessions.Count == 1, token);
+        var standard = await AgentServiceRig.CollectAsync(rig.Service.RunTurnAsync(new AgentTurnRequest(AgentSubsystemTests.CreatePayload("Two")), token), token);
+        rig.ChangeAiSettings(settings => settings with { ContextTier = string.Empty });
+        await AgentServiceRig.WaitUntilAsync(() => rig.Factory.DeletedSessions.Count == 2, token);
+        var none = await AgentServiceRig.CollectAsync(rig.Service.RunTurnAsync(new AgentTurnRequest(AgentSubsystemTests.CreatePayload("Three")), token), token);
+        var log = rig.ReadLog();
+
+        // Assert: the usage names the size that was asked for, and none when none was chosen; the log names the tier
+        Assert.Equal("long context", larger.OfType<AgentEvent.Usage>().Single().ContextSize);
+        Assert.Equal("standard context", standard.OfType<AgentEvent.Usage>().Single().ContextSize);
+        Assert.Null(none.OfType<AgentEvent.Usage>().Single().ContextSize);
+        Assert.Contains("Turn started: turn=1 provider=GitHubCopilot model=claude-opus-5.5 effort=(default) contextTier=long_context", log, StringComparison.Ordinal);
+        Assert.Contains("contextTier=(default)", log, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a context size that is stored but belongs to no chosen model or to another provider is not put on the
+    ///     usage of a turn.
+    /// </summary>
+    [Fact]
+    public async Task AgentService_RunTurn_ContextTierOfAnotherProviderOrNoModel_IsNotOnTheUsage()
+    {
+        // Arrange: a stored size with Ollama, and a Copilot conversation on the default model
+        var token = TestContext.Current.CancellationToken;
+        var usage = new ChatResponseUpdate(ChatRole.Assistant, [new UsageContent(new UsageDetails { InputTokenCount = 100, OutputTokenCount = 5 })]);
+        using var ollama = new AgentServiceRig(
+            new ScriptedChatClient([usage]),
+            settings: new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = "gemma3:12b", ContextTier = "long_context" });
+        using var defaultModel = new AgentServiceRig(
+            new ScriptedChatClient([usage]),
+            settings: new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot, ContextTier = "long_context" });
+
+        // Act
+        var forOllama = await AgentServiceRig.CollectAsync(ollama.Service.RunTurnAsync(new AgentTurnRequest(AgentSubsystemTests.CreatePayload("One")), token), token);
+        var forDefault = await AgentServiceRig.CollectAsync(defaultModel.Service.RunTurnAsync(new AgentTurnRequest(AgentSubsystemTests.CreatePayload("One")), token), token);
+
+        // Assert
+        Assert.Null(forOllama.OfType<AgentEvent.Usage>().Single().ContextSize);
+        Assert.Null(forDefault.OfType<AgentEvent.Usage>().Single().ContextSize);
     }
 
     /// <summary>
@@ -726,7 +787,7 @@ public sealed class AgentServiceTests
         Assert.Equal(SentinelFile, await File.ReadAllTextAsync(Path.Combine(rig.ProjectFolder, "note.txt"), token));
         Assert.IsType<AgentEvent.Completed>(events[^1]);
         Assert.Contains("Conversation started: provider=Ollama", log, StringComparison.Ordinal);
-        Assert.Contains("Turn started: turn=1 provider=Ollama model=gemma3:12b effort=(default) historyTurns=1 digestAdded=True", log, StringComparison.Ordinal);
+        Assert.Contains("Turn started: turn=1 provider=Ollama model=gemma3:12b effort=(default) contextTier=(default) historyTurns=1 digestAdded=True", log, StringComparison.Ordinal);
         Assert.Contains("Turn ended: turn=1 outcome=Completed", log, StringComparison.Ordinal);
         Assert.Contains("Conversation released: provider=Ollama reason=reset", log, StringComparison.Ordinal);
         Assert.Contains("note.txt", log, StringComparison.Ordinal);

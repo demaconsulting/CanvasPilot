@@ -44,7 +44,8 @@ namespace DemaConsulting.CanvasPilot.SettingsSubsystem;
 ///         model offers some; the stored value is the id that the provider uses. The unrestricted agent tools flag is not
 ///         offered at all because the copilot has no such tools; the value is loaded and applied unchanged. Every entry that
 ///         belongs to one provider is shown only while that provider is selected: the context window and the endpoint
-///         belong to Ollama, and the command-line tool path and the cost warning belong to GitHub
+///         belong to Ollama, and the command-line tool path, the cost warning, and the context size (shown only for a model
+///         that offers more than one) belong to GitHub
 ///         Copilot. The context window warning (a window below
 ///         <see cref="AiProviderSettings.RecommendedMinimumContextTokens" />) and every problem of such an entry are given
 ///         only while that provider is selected, so a hidden entry can neither warn nor block the page.
@@ -94,6 +95,19 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     ///     The billing multiplier from which a model counts as large for <see cref="EffortCostWarning" />.
     /// </summary>
     public const double LargeModelMultiplier = 3;
+
+    /// <summary>
+    ///     The text of the note under the context size when the size is not the provider's own.
+    /// </summary>
+    public const string ContextTierCostNoteText =
+        "A larger context size is billed and served separately by GitHub Copilot, so a message can cost more premium requests "
+        + "and take longer, and a long conversation can use much more of it. CanvasPilot cannot tell the price; the line "
+        + "under each answer shows what the turn counted.";
+
+    /// <summary>
+    ///     The id of the context size that the provider uses when none is chosen, which the page stores as an empty string.
+    /// </summary>
+    private const string StandardContextTierId = "default";
 
     /// <summary>
     ///     The reasoning levels that call for <see cref="EffortCostWarning" /> on a large model.
@@ -171,6 +185,11 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     private string _effortId = string.Empty;
 
     /// <summary>
+    ///     The id of the chosen context size; an empty string for the size that the provider uses (the standard one).
+    /// </summary>
+    private string _tierId = string.Empty;
+
+    /// <summary>
     ///     Selected provider.
     /// </summary>
     [ObservableProperty]
@@ -181,6 +200,10 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
         nameof(CopilotCliPathError),
         nameof(ContextWindowError),
         nameof(ContextWindowWarning),
+        nameof(HasContextTierChoice),
+        nameof(HasContextTierNote),
+        nameof(ContextTierCostNote),
+        nameof(HasContextTierCostNote),
         nameof(IsValid))]
     private SettingsChoice<AiProviderKind> _selectedProvider;
 
@@ -255,6 +278,33 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasReasoningNote))]
     private string _reasoningNote = string.Empty;
+
+    /// <summary>
+    ///     The context sizes that can be chosen for the chosen model, standard first; the standard one is the entry with
+    ///     the empty id.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasContextTierChoice),
+        nameof(HasContextTierNote),
+        nameof(ContextTierCostNote),
+        nameof(HasContextTierCostNote))]
+    private IReadOnlyList<SettingsChoice<string>> _contextTiers = [];
+
+    /// <summary>
+    ///     The chosen context size.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ContextTierCostNote), nameof(HasContextTierCostNote))]
+    private SettingsChoice<string>? _selectedContextTier;
+
+    /// <summary>
+    ///     The sentence that says that the stored context size was reset because the chosen model does not offer it; an
+    ///     empty string when there is nothing to say.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasContextTierNote))]
+    private string _contextTierNote = string.Empty;
 
     /// <summary>
     ///     What the provider says about the chosen model, or <see langword="null" /> when the model is not in the list.
@@ -376,6 +426,29 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     public bool HasReasoningNote => ReasoningNote.Length > 0;
 
     /// <summary>
+    ///     Gets a value indicating whether the context size can be chosen: GitHub Copilot is selected and the chosen model,
+    ///     as the provider listed it, offers more than one size. The entry is hidden otherwise.
+    /// </summary>
+    public bool HasContextTierChoice => IsCopilotSelected && ContextTiers.Count > 1;
+
+    /// <summary>
+    ///     Gets a value indicating whether there is a note about the context size to show.
+    /// </summary>
+    public bool HasContextTierNote => HasContextTierChoice && ContextTierNote.Length > 0;
+
+    /// <summary>
+    ///     Gets the note that a context size other than the standard one is billed and served separately, or an empty string
+    ///     while the standard size, or no choice, is shown.
+    /// </summary>
+    public string ContextTierCostNote =>
+        HasContextTierChoice && SelectedContextTier is { Value.Length: > 0 } ? ContextTierCostNoteText : string.Empty;
+
+    /// <summary>
+    ///     Gets a value indicating whether there is a <see cref="ContextTierCostNote" /> to show.
+    /// </summary>
+    public bool HasContextTierCostNote => ContextTierCostNote.Length > 0;
+
+    /// <summary>
     ///     Gets the warning that a high reasoning level on a large model is slow and costly, or an empty string when the
     ///     chosen model and level do not call for it. It is for the model and level that are chosen now, and is shown for
     ///     GitHub Copilot only, whose models are billed in premium requests.
@@ -485,6 +558,7 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
             SelectedProvider = Providers.First(choice => choice.Value == ai.Provider);
             ModelName = ai.ModelName;
             _effortId = ai.ReasoningEffort ?? string.Empty;
+            _tierId = NormalizeTierId(ai.ContextTier);
             ContextWindowText = ai.ContextWindowTokens.ToString(CultureInfo.InvariantCulture);
             OllamaEndpoint = ai.OllamaEndpoint;
             UnrestrictedAgentTools = ai.UnrestrictedAgentTools;
@@ -526,6 +600,7 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
                 ModelName = ModelName.Trim(),
                 ContextWindowTokens = contextWindow,
                 ReasoningEffort = _effortId,
+                ContextTier = _tierId,
                 OllamaEndpoint = endpoint,
                 UnrestrictedAgentTools = UnrestrictedAgentTools,
                 CopilotCliPath = cliPath,
@@ -557,7 +632,8 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
 
         // An answer about other entries is not an answer about these
         if (e.PropertyName is nameof(SelectedProvider) or nameof(ModelName) or nameof(ContextWindowText)
-            or nameof(OllamaEndpoint) or nameof(CopilotCliPath) or nameof(SelectedReasoningEffort))
+            or nameof(OllamaEndpoint) or nameof(CopilotCliPath) or nameof(SelectedReasoningEffort)
+            or nameof(SelectedContextTier))
         {
             ForgetCheck();
         }
@@ -569,6 +645,7 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
             {
                 // A model id of one provider means nothing to the other, so the choice starts again
                 _effortId = string.Empty;
+                _tierId = string.Empty;
                 ModelName = string.Empty;
                 Models = [];
                 ModelListMessage = string.Empty;
@@ -624,6 +701,21 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
         ReasoningNote = string.Empty;
         OnPropertyChanged(nameof(EffortCostWarning));
         OnPropertyChanged(nameof(HasEffortCostWarning));
+    }
+
+    /// <summary>
+    ///     Takes the context size that the user chose as the size to store.
+    /// </summary>
+    /// <param name="value">The chosen entry; <see langword="null" /> when the list was replaced, which is not a choice.</param>
+    partial void OnSelectedContextTierChanged(SettingsChoice<string>? value)
+    {
+        if (_syncing || value is null)
+        {
+            return;
+        }
+
+        _tierId = value.Value;
+        ContextTierNote = string.Empty;
     }
 
     /// <summary>
@@ -809,6 +901,7 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
         ModelWarning = WarnAbout(info);
         _modelInfo = info;
         UpdateReasoningEfforts(info, name, reconcile);
+        UpdateContextTiers(info, reconcile);
         OnPropertyChanged(nameof(EffortCostWarning));
         OnPropertyChanged(nameof(HasEffortCostWarning));
     }
@@ -885,6 +978,11 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
         if (info.ContextWindowTokens is { } window)
         {
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"Context window: up to {window:N0} tokens"));
+        }
+
+        if (info.ContextTiers is { Count: > 1 } tiers)
+        {
+            lines.Add($"Context sizes: {string.Join(", ", tiers.Select(LabelOfTier))}");
         }
 
         return string.Join('\n', lines);
@@ -989,6 +1087,97 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
 
         IsReasoningEffortEnabled = enabled;
         ReasoningNote = note;
+    }
+
+    /// <summary>
+    ///     Offers the context sizes that the chosen model offers (only a model with more than one has a choice), and resets a
+    ///     stored size that the known model does not offer.
+    /// </summary>
+    /// <param name="info">What the provider says about the model; <see langword="null" /> when nothing is known.</param>
+    /// <param name="reconcile">Whether to reset a stored size that the known model does not offer.</param>
+    private void UpdateContextTiers(ProviderModelInfo? info, bool reconcile)
+    {
+        var choices = new List<SettingsChoice<string>>();
+        var note = string.Empty;
+
+        if (info?.ContextTiers is { Count: > 1 } tiers)
+        {
+            // The standard size is the provider's own, which the settings store as no choice at all
+            var standardId = info.DefaultContextTier ?? tiers[0].Id;
+            foreach (var tier in tiers)
+            {
+                var value = string.Equals(tier.Id, standardId, StringComparison.OrdinalIgnoreCase) ? string.Empty : tier.Id;
+                choices.Add(new SettingsChoice<string>(value, LabelOfTier(tier)));
+            }
+
+            if (_tierId.Length > 0 && !choices.Any(choice => string.Equals(choice.Value, _tierId, StringComparison.OrdinalIgnoreCase)))
+            {
+                if (reconcile)
+                {
+                    note = $"{info.DisplayName} does not offer the context size {_tierId}; the standard size is used instead.";
+                    _tierId = string.Empty;
+                }
+                else
+                {
+                    // A stored size that is not offered is still shown, so that the page does not hide what is stored
+                    choices.Add(new SettingsChoice<string>(_tierId, _tierId));
+                }
+            }
+        }
+        else if (reconcile && (info is not null || string.IsNullOrWhiteSpace(ModelName)))
+        {
+            // A listed model that offers one size or none, and the default model of the provider, have no size to keep; while
+            // nothing is known about a typed model the stored size stays as it is
+            _tierId = string.Empty;
+        }
+
+        var selected = choices.FirstOrDefault(choice => string.Equals(choice.Value, _tierId, StringComparison.OrdinalIgnoreCase)) ?? choices.FirstOrDefault();
+        _syncing = true;
+        try
+        {
+            ContextTiers = choices;
+            SelectedContextTier = selected;
+        }
+        finally
+        {
+            _syncing = false;
+        }
+
+        ContextTierNote = note;
+    }
+
+    /// <summary>
+    ///     Words the entry of the list of context sizes: the name of the size and, when the provider says it, its window.
+    /// </summary>
+    /// <param name="tier">The size.</param>
+    /// <returns>The text, for example <c>Long context (1M tokens)</c>.</returns>
+    private static string LabelOfTier(ProviderContextTier tier)
+    {
+        var name = string.IsNullOrWhiteSpace(tier.DisplayName) ? tier.Id : tier.DisplayName;
+        return tier.WindowTokens is { } window ? $"{name} ({FormatWindow(window)})" : name;
+    }
+
+    /// <summary>
+    ///     Writes a context window for a person: whole thousands, or millions.
+    /// </summary>
+    /// <param name="tokens">The window in tokens.</param>
+    /// <returns>The text, for example <c>228K tokens</c> or <c>1M tokens</c>.</returns>
+    private static string FormatWindow(int tokens)
+    {
+        return tokens >= 1_000_000
+            ? string.Create(CultureInfo.InvariantCulture, $"{tokens / 1_000_000.0:0.##}M tokens")
+            : string.Create(CultureInfo.InvariantCulture, $"{Math.Round(tokens / 1000.0):0}K tokens");
+    }
+
+    /// <summary>
+    ///     Normalizes a stored context size: trimmed, and the standard size, which is the provider's own, as no choice.
+    /// </summary>
+    /// <param name="stored">The stored id; may be <see langword="null" />.</param>
+    /// <returns>The id to edit.</returns>
+    private static string NormalizeTierId(string? stored)
+    {
+        var id = stored?.Trim() ?? string.Empty;
+        return string.Equals(id, StandardContextTierId, StringComparison.OrdinalIgnoreCase) ? string.Empty : id;
     }
 
     /// <summary>

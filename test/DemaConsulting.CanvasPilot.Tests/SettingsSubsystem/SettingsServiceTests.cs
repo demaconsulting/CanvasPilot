@@ -483,6 +483,30 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a file without the context size loads with the size that leaves the choice to the provider, that a size
+    ///     survives a save and a load, and that a size is trimmed when it is loaded.
+    /// </summary>
+    [Fact]
+    public void SettingsService_SaveLoad_ContextTier_RoundTripsDefaultsToEmptyAndIsTrimmed()
+    {
+        // Arrange: a file without the key, loaded first
+        WriteSettingsFile("""{ "aiProvider": { "modelName": "m" } }""");
+        var service = new SettingsService(SettingsFolder);
+        var withoutKey = service.Load().AiProvider.ContextTier;
+
+        // Act: save a size, load it with a new service, and load a file with a padded size
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "m", ContextTier = "long_context" } });
+        var reloaded = new SettingsService(SettingsFolder).Load();
+        WriteSettingsFile("""{ "aiProvider": { "modelName": "m", "contextTier": "  long_context  " } }""");
+        var trimmed = new SettingsService(SettingsFolder).Load();
+
+        // Assert: nothing was invented, the size came back, and the padded one was trimmed
+        Assert.Equal(string.Empty, withoutKey);
+        Assert.Equal("long_context", reloaded.AiProvider.ContextTier);
+        Assert.Equal("long_context", trimmed.AiProvider.ContextTier);
+    }
+
+    /// <summary>
     ///     Test that saving over an existing file replaces its content and leaves no temporary file.
     /// </summary>
     [Fact]

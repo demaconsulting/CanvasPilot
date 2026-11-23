@@ -537,6 +537,7 @@ public sealed class AgentService : IAgentService
             stats.Conversation = conversation;
             sessionBefore = _factory.DescribeSession(conversation.Session).Id;
             var model = _settings.Current.AiProvider.ModelName;
+            var contextSize = ContextSizeOf(conversation.Provider, _settings.Current.AiProvider);
             var mapper = new AgentEventMapper(conversation.Provider, model, _logger, turn.Token, _time, turn.Number);
             var updates = conversation.Agent.RunStreamingAsync(prepared.Message!, conversation.Session, cancellationToken: turn.Token);
 
@@ -566,6 +567,12 @@ public sealed class AgentService : IAgentService
                 }
 
                 var mapped = reader.Current;
+
+                // The provider does not name the context size, so the usage of the turn carries the one that was asked for
+                if (contextSize is not null && mapped is AgentEvent.Usage usage)
+                {
+                    mapped = usage with { ContextSize = contextSize };
+                }
                 if (canRecover && stats.Events == 0 && conversation.Interrupted && mapped is AgentEvent.Failed { Kind: AgentFailureKind.ConnectionLost or AgentFailureKind.Unexpected } failure)
                 {
                     stats.RecoveryReason = failure.Kind;
@@ -682,6 +689,31 @@ public sealed class AgentService : IAgentService
     private static string Describe(string? value)
     {
         return string.IsNullOrWhiteSpace(value) ? "(default)" : value.Trim();
+    }
+
+    /// <summary>
+    ///     Words the context size (tier) that the settings ask GitHub Copilot for, for the usage line of a turn.
+    /// </summary>
+    /// <param name="provider">The provider of the conversation.</param>
+    /// <param name="settings">The provider settings.</param>
+    /// <returns>
+    ///     The words, for example <c>long context</c>; <see langword="null" /> for another provider, for no model named (the
+    ///     size belongs to a chosen model), and for no size chosen (the provider's own size applies).
+    /// </returns>
+    private static string? ContextSizeOf(AiProviderKind provider, AiProviderSettings settings)
+    {
+        var tier = settings.ContextTier?.Trim();
+        if (provider != AiProviderKind.GitHubCopilot || string.IsNullOrEmpty(tier) || string.IsNullOrWhiteSpace(settings.ModelName))
+        {
+            return null;
+        }
+
+        return tier.ToLowerInvariant() switch
+        {
+            "default" => "standard context",
+            "long_context" => "long context",
+            _ => $"{tier.Replace('_', ' ')} context",
+        };
     }
 
     /// <summary>
@@ -828,6 +860,7 @@ public sealed class AgentService : IAgentService
             settings.Provider,
             settings.ModelName?.Trim() ?? string.Empty,
             settings.ReasoningEffort?.Trim() ?? string.Empty,
+            settings.ContextTier?.Trim() ?? string.Empty,
             settings.OllamaEndpoint?.Trim() ?? string.Empty,
             settings.ContextWindowTokens,
             settings.CopilotCliPath?.Trim() ?? string.Empty);
@@ -1000,7 +1033,7 @@ public sealed class AgentService : IAgentService
             Write(
                 LogLevel.Info,
                 $"Turn started: turn={turn.Number} provider={conversation.Provider} model={Describe(settings.ModelName)} effort={Describe(settings.ReasoningEffort)} "
-                + $"historyTurns={request.RestoredHistory.Count} digestAdded={digestAdded}");
+                + $"contextTier={Describe(settings.ContextTier)} historyTurns={request.RestoredHistory.Count} digestAdded={digestAdded}");
             return new PreparedTurn(conversation, message, digestAdded, null);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)

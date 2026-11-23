@@ -42,7 +42,8 @@ namespace DemaConsulting.CanvasPilot.Tests;
 ///     Live tests of long turns of GitHub Copilot through the composed application: the real agent service, the real
 ///     Copilot CLI with the sign-in of the machine, and the real renderer and preview. They check what a person sees
 ///     during a long drawing turn (live status), that Stop leaves the conversation usable, and that consecutive turns share
-///     one provider session. They are skipped unless <c>CANVASPILOT_LIVE_COPILOT=1</c> is set, so that no build needs a
+///     one provider session, and that the larger context size of a model that offers one is chosen from the catalog and
+///     runs a turn. They are skipped unless <c>CANVASPILOT_LIVE_COPILOT=1</c> is set, so that no build needs a
 ///     Copilot CLI, a sign-in, the network, or premium requests. The model is <c>CANVASPILOT_LIVE_COPILOT_MODEL</c>
 ///     (default <c>claude-opus-5.5</c>) at the reasoning level <c>CANVASPILOT_LIVE_COPILOT_EFFORT</c> (default
 ///     <c>high</c>); a full run costs several dozen premium requests on such a model, so a cheaper model may be named for
@@ -253,6 +254,63 @@ public sealed class LiveCopilotLongTurnTests
             Assert.Equal(0, rig.LogCount("its session is dropped"));
             Assert.Equal(2, rig.LogCount("outcome=Completed cancelSource=None"));
             Assert.Equal(1, rig.StarterRuntimes);
+        }
+        finally
+        {
+            LiveCopilotTurnTests.Record(report.ToString());
+        }
+    }
+
+    /// <summary>
+    ///     Test that a Copilot model that offers a larger context size (the 1M-token tier of Claude Opus 5.5) can be chosen
+    ///     from the catalog and runs a real turn with it: the sizes come from the runtime's catalog, the choice is stored in
+    ///     the settings and validated by the library, the readiness sentence names the size, the turn completes, and the
+    ///     usage line under the answer names the size. The record also says whether the runtime's own files confirm the
+    ///     tier. It costs the premium requests of one short message of the model (about 15 for Opus 5.5), so it uses the low
+    ///     reasoning level and a one-word answer; the model is <c>CANVASPILOT_LIVE_COPILOT_MODEL</c> (default
+    ///     <c>claude-opus-5.5</c>) and the level <c>CANVASPILOT_LIVE_COPILOT_EFFORT</c> (default <c>low</c> for this test).
+    /// </summary>
+    [Fact(Timeout = TestTimeoutMilliseconds)]
+    public async Task LiveCopilotLongTurn_LargerContextSizeOfTheModel_RunsATurnWithIt()
+    {
+        // Arrange: skipped unless asked for; the application with the model of the record at a low level
+        SkipUnlessLive();
+        var token = TestContext.Current.CancellationToken;
+        await using var rig = await LiveRig.CreateAsync(token, defaultEffort: "low");
+        var report = new StringBuilder().AppendLine($"== Scenario (d): the larger context size of the model ({rig.Header})");
+        try
+        {
+            // Read the catalog: the model must offer a size other than the standard one
+            var model = await rig.ReadCatalogModelAsync(token);
+            Assert.NotNull(model);
+            var tiers = model.ContextTiers ?? [];
+            report.AppendLine($"Catalog: model={model.Id} multiplier={model.BillingMultiplier} window={model.ContextWindowTokens} defaultTier={model.DefaultContextTier ?? "(none)"} tiers=[{string.Join(", ", tiers.Select(tier => $"{tier.Id}:{tier.WindowTokens?.ToString(CultureInfo.InvariantCulture) ?? "?"}"))}]");
+            var larger = tiers.Where(tier => !string.Equals(tier.Id, model.DefaultContextTier ?? "default", StringComparison.OrdinalIgnoreCase)).OrderByDescending(tier => tier.WindowTokens ?? 0).FirstOrDefault();
+            Assert.SkipWhen(larger is null, $"The model {model.Id} offers no context size other than the standard one.");
+
+            // Act: choose the larger size as the settings page stores it, and ask a question that needs no tool
+            rig.ChooseContextTier(larger.Id);
+            await rig.AssertReadyAsync();
+            report.AppendLine($"Readiness (the tooltip of the provider pill): {rig.Chat.Readiness?.Message}");
+            var window = await rig.RunTurnAsync("Reply with the single word OK. Do not draw, write, or read anything.", TimeSpan.FromMinutes(5), token);
+            report.Append(rig.Summarize("Turn 1 (larger context size)", window));
+            report.Append(rig.SessionReport());
+            report.Append(rig.RuntimeEvents("Runtime events"));
+            report.AppendLine($"Application log: {string.Join(" || ", rig.LogLinesContaining("Agent created:", "contextTier=").Select(line => line.Length <= 300 ? line : line[..300]))}");
+            report.AppendLine($"Runtime log lines that mention a tier or the model catalog: {string.Join(" || ", rig.LogLinesContaining("Copilot runtime:").Where(line => line.Contains("tier", StringComparison.OrdinalIgnoreCase) || line.Contains("long_context", StringComparison.OrdinalIgnoreCase) || line.Contains("falling back", StringComparison.OrdinalIgnoreCase)).Select(line => line.Length <= 300 ? line : line[..300]))}");
+
+            // Assert: the choice was accepted by the library and the sentence of the readiness check names the size
+            Assert.Contains($"at the {larger.DisplayName} size", rig.Chat.Readiness?.Message ?? string.Empty, StringComparison.Ordinal);
+
+            // Assert: the turn completed without an error, on one session, with the size that was asked for
+            Assert.Equal("Completed", rig.OutcomeOf(1));
+            Assert.Empty(rig.ErrorNotices());
+            Assert.True(rig.LogContains($"contextTier={larger.Id}"), report.ToString());
+            var reply = Assert.IsType<AssistantReplyViewModel>(rig.Chat.Transcript[^1]);
+            Assert.Equal(AssistantReplyState.Completed, reply.State);
+            Assert.False(string.IsNullOrWhiteSpace(reply.Text), report.ToString());
+            Assert.True(reply.HasUsageCaption, report.ToString());
+            Assert.Contains("context", reply.UsageCaption, StringComparison.Ordinal);
         }
         finally
         {
@@ -517,6 +575,9 @@ public sealed class LiveCopilotLongTurnTests
         /// <summary>The reasoning level of the record.</summary>
         private readonly string _effort;
 
+        /// <summary>The settings of the application.</summary>
+        private readonly SettingsService _settings;
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="LiveRig" /> class.
         /// </summary>
@@ -529,6 +590,7 @@ public sealed class LiveCopilotLongTurnTests
         /// <param name="projectFolder">The folder of the open project.</param>
         /// <param name="model">The model.</param>
         /// <param name="effort">The reasoning level.</param>
+        /// <param name="settings">The settings of the application.</param>
         private LiveRig(
             string root,
             RollingFileLogger logger,
@@ -538,7 +600,8 @@ public sealed class LiveCopilotLongTurnTests
             LiveRecorder recorder,
             string projectFolder,
             string model,
-            string effort)
+            string effort,
+            SettingsService settings)
         {
             _root = root;
             _logger = logger;
@@ -549,6 +612,7 @@ public sealed class LiveCopilotLongTurnTests
             ProjectFolder = projectFolder;
             _model = model;
             _effort = effort;
+            _settings = settings;
         }
 
         /// <summary>Gets the composed application.</summary>
@@ -574,14 +638,15 @@ public sealed class LiveCopilotLongTurnTests
         ///     empty project.
         /// </summary>
         /// <param name="token">The token of the test.</param>
+        /// <param name="defaultEffort">The reasoning level when <c>CANVASPILOT_LIVE_COPILOT_EFFORT</c> names none.</param>
         /// <returns>The rig.</returns>
-        internal static async Task<LiveRig> CreateAsync(CancellationToken token)
+        internal static async Task<LiveRig> CreateAsync(CancellationToken token, string defaultEffort = "high")
         {
             var root = Directory.CreateTempSubdirectory("canvaspilot-live-long-").FullName;
             var model = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_MODEL")?.Trim();
             var effort = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_EFFORT")?.Trim();
             model = string.IsNullOrEmpty(model) ? "claude-opus-5.5" : model;
-            effort = string.IsNullOrEmpty(effort) ? "high" : effort;
+            effort = string.IsNullOrEmpty(effort) ? defaultEffort : effort;
             var logger = new RollingFileLogger(Path.Combine(root, "logs"));
             var localData = Path.Combine(root, "local");
             var runtimeData = AgentService.GetCopilotDataDirectory(localData);
@@ -596,9 +661,31 @@ public sealed class LiveCopilotLongTurnTests
             var composition = LiveCopilotTurnTests.ComposeLiveApplication(root, logger, localData, starter, settings, factory);
             composition.Shell.AttachDialogService(new FakeDialogService());
             var opened = await composition.Projects.CreateAsync(Path.Combine(root, "Documents"), "Demo", token);
-            var rig = new LiveRig(root, logger, runtimeData, starter, composition, recorder, opened.Project!.FolderPath, model, effort);
+            var rig = new LiveRig(root, logger, runtimeData, starter, composition, recorder, opened.Project!.FolderPath, model, effort, settings);
             rig.Observe();
             return rig;
+        }
+
+        /// <summary>
+        ///     Chooses the context size (tier) in the settings, as the settings page would store it.
+        /// </summary>
+        /// <param name="tier">The id of the tier; an empty string for the provider's own size.</param>
+        internal void ChooseContextTier(string tier)
+        {
+            _settings.Update(current => current with { AiProvider = current.AiProvider with { ContextTier = tier } });
+        }
+
+        /// <summary>
+        ///     Reads what the runtime's catalog says about the model of the record, through the same catalog unit that the
+        ///     settings page uses, so that the context sizes come from the catalog and not from the test.
+        /// </summary>
+        /// <param name="token">The token of the test.</param>
+        /// <returns>The model, or <see langword="null" /> when the catalog does not list it.</returns>
+        internal async Task<ProviderModelInfo?> ReadCatalogModelAsync(CancellationToken token)
+        {
+            var catalog = new ProviderModelCatalog(starter: _starter);
+            var list = await catalog.ListModelsAsync(_settings.Current.AiProvider, refresh: false, token);
+            return list.Models.FirstOrDefault(model => string.Equals(model.Id, _model, StringComparison.OrdinalIgnoreCase));
         }
 
         /// <summary>
@@ -764,6 +851,13 @@ public sealed class LiveCopilotLongTurnTests
         /// <returns>The number of lines.</returns>
         internal int LogCount(string text) => LogLines(text).Count;
 
+        /// <summary>
+        ///     Reads the lines of the application log that hold any of the texts.
+        /// </summary>
+        /// <param name="texts">The texts.</param>
+        /// <returns>The lines.</returns>
+        internal IReadOnlyList<string> LogLinesContaining(params string[] texts) => LogLines(texts);
+
         /// <inheritdoc />
         public async ValueTask DisposeAsync()
         {
@@ -872,6 +966,7 @@ public sealed class LiveCopilotLongTurnTests
                 var types = new SortedDictionary<string, int>(StringComparer.Ordinal);
                 var times = new List<DateTimeOffset>();
                 var premium = new List<double>();
+                var facts = new SortedSet<string>(StringComparer.Ordinal);
                 using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
                 using var reader = new StreamReader(stream);
                 while (reader.ReadLine() is { Length: > 0 } line)
@@ -886,16 +981,64 @@ public sealed class LiveCopilotLongTurnTests
                     }
 
                     CollectPremium(root, premium);
+                    CollectContextFacts(root, type, facts);
                 }
 
                 var maxGap = times.Count < 2 ? 0 : times.Zip(times.Skip(1), (first, second) => (second - first).TotalSeconds).Max();
                 var span = times.Count < 2 ? 0 : (times[^1] - times[0]).TotalSeconds;
                 var counts = string.Join(", ", types.Select(pair => $"{pair.Key}={pair.Value}"));
-                return $"{times.Count} events over {span:F1} s, longest gap between events {maxGap:F1} s; premium requests counted: [{string.Join(", ", premium.Distinct())}]; types: {counts}";
+                return $"{times.Count} events over {span:F1} s, longest gap between events {maxGap:F1} s; premium requests counted: [{string.Join(", ", premium.Distinct())}]; context facts: [{string.Join(", ", facts)}]; types: {counts}";
             }
             catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
             {
                 return $"(not readable: {ex.GetType().Name})";
+            }
+        }
+
+        /// <summary>
+        ///     Collects the short scalar values of the properties of an event that name a context tier or a token limit (the
+        ///     model, the tier, and the limits of a session), which shows what the runtime made of the choice. It reads only
+        ///     the names that are listed and only short numbers and words, never text of a message.
+        /// </summary>
+        /// <param name="element">The element.</param>
+        /// <param name="type">The type of the event that the element is in.</param>
+        /// <param name="found">Receives the facts as <c>type.name=value</c>.</param>
+        private static void CollectContextFacts(JsonElement element, string type, SortedSet<string> found)
+        {
+            switch (element.ValueKind)
+            {
+                case JsonValueKind.Object:
+                    foreach (var property in element.EnumerateObject())
+                    {
+                        var name = property.Name;
+                        var interesting = name.Contains("tier", StringComparison.OrdinalIgnoreCase)
+                            || name.Contains("tokenLimit", StringComparison.OrdinalIgnoreCase)
+                            || name.Contains("contextWindow", StringComparison.OrdinalIgnoreCase)
+                            || name.Equals("selectedModel", StringComparison.OrdinalIgnoreCase)
+                            || name.Equals("newModel", StringComparison.OrdinalIgnoreCase)
+                            || name.Equals("currentTokens", StringComparison.OrdinalIgnoreCase);
+                        if (interesting && property.Value.ValueKind is JsonValueKind.Number or JsonValueKind.String or JsonValueKind.True or JsonValueKind.False)
+                        {
+                            var text = property.Value.ToString();
+                            if (text.Length <= 40)
+                            {
+                                found.Add($"{type}.{name}={text}");
+                            }
+                        }
+                        else
+                        {
+                            CollectContextFacts(property.Value, type, found);
+                        }
+                    }
+
+                    break;
+                case JsonValueKind.Array:
+                    foreach (var item in element.EnumerateArray())
+                    {
+                        CollectContextFacts(item, type, found);
+                    }
+
+                    break;
             }
         }
 

@@ -53,10 +53,9 @@ definition of its own.
   runtime is shared by the whole application and not owned by the conversation.
 - **One conversation per open project.** The conversation is kept for the next turns. It is dropped, and made again by
   the next turn, when the open project changes or closes (the event of the project service), when a setting that the
-  agent was made from changes (the *signature*: the provider, the model, the reasoning effort, the Ollama address, the
-  context window, and the
-  path of the Copilot CLI; the other settings are not part of it), and when `ResetConversation`
-  is called.
+  agent was made from changes (the *signature*: the provider, the model, the reasoning effort, the context size (tier),
+  the Ollama address, the context window, and the path of the Copilot CLI; the other settings are not part of it), and
+  when `ResetConversation` is called.
 - **Release.** Dropping a conversation never blocks the caller. A background task waits (at most ten seconds) for the
   turn that runs on the conversation, deletes the session that the provider kept through
   `IAgentFactory.DeleteSessionAsync` (for Copilot the runtime would otherwise keep every conversation in its data
@@ -86,10 +85,13 @@ definition of its own.
 4. **Streaming.** The agent runs on the message and the provider session with the token of the turn, and one
    `AgentEventMapper` (made for the turn with the same token, the clock of the service, and the number of the turn)
    turns the updates into events. The provider is read on a thread of the pool and the events wait in an
-   `AgentEventCoalescer` that the caller reads (see *The Event Pipeline*). Each file that a project
-   tool wrote during the turn is put into the queue immediately before the event that follows it, which places it before
-   the `ToolFinished` of the call that wrote it. The restored history counts as given as soon as the provider answered
-   with anything but a failure, so a first turn that failed before an answer leaves it pending.
+   `AgentEventCoalescer` that the caller reads (see *The Event Pipeline*). Each file that a project tool wrote during
+   the turn is put into the queue immediately before the event that follows it, which places it before the
+   `ToolFinished` of the call that wrote it. The restored history counts as given as soon as the provider answered with
+   anything but a failure, so a first turn that failed before an answer leaves it pending. The provider does not say
+   which context size (tier) a Copilot turn ran with, so the service stamps the `Usage` events of the turn with the size
+   that the settings chose (`ContextSize`, as words such as `long context`), only for GitHub Copilot with a named model
+   and a chosen size; the chat shows it in the caption of the turn.
 5. **The token of the turn** is linked to the token of the caller, to the end of the service, and, through the turn
    state, to a reset or a change of the project. A cancelled turn ends the stream with neither `Completed` nor `Failed`,
    because the mapper treats an exception after cancellation as a stop (see *Stop*).
@@ -174,9 +176,14 @@ whether the turn ended or was stopped, so the chat tells the user that a stopped
 
 For GitHub Copilot, AgentKit opens or resumes the runtime session for each run of the agent and releases the handle
 when the run ends (it cancels the run and disposes the channel); the session, with its events file, stays until the
-service deletes it. This is by design and has visible traces that are not faults: after every turn, completed or
-stopped, the runtime logs the shutdown of the session and a resume before the next turn (about a tenth of a second, no
-replay), and `received response for unknown request id`, a benign race of the SDK. The service keeps one conversation,
+service deletes it. This is by design and has visible traces that are not faults. After every turn, completed or
+stopped, the runtime logs `session.shutdown` (in its events file) and `Closing session` / `Cleaning up session ...:
+Session closed after last owner detached` (in its own log), and a `Resumed session` before the next turn (about a tenth
+of a second, no replay of the history), because the handle of the session was released when the run ended and is
+opened again by the next run; the session itself is one *logical* session, with one identifier, for the whole
+conversation of the open project (`run=created` once, then `run=resumed`), and the service creates a new one only when
+it drops the conversation. `received response for unknown request id`, which the SDK logs after every turn, also after a
+short one, is a benign race of the SDK and not a lost request. The service keeps one conversation,
 one agent and one provider session object, for the open project. After each attempt it writes
 `Provider session: turn=N id=<id> run=<created|resumed> handleReleased=<true|false>` through
 `IAgentFactory.DescribeSession`: `created` when the session had no identifier before the run, `resumed` when it had, and
@@ -214,11 +221,15 @@ carries `turn=N`, counted from one for the life of the service. The lines are:
 
 - `Conversation started: provider, tier, tools, files` and `Conversation released: provider, reason, session` (the
   reason and the provider session identifier, or `none`).
-- `Turn started: turn, provider, model, effort, historyTurns, digestAdded`. The model and the effort are the settings,
-  or `(default)`. `historyTurns` is the number of earlier turns that the caller handed over, which is its whole saved
-  conversation and not what is sent (an earlier version of the log called it `restoredTurns`, which read as if all of
-  them were sent for every message); `digestAdded` is true only for the first message of a new provider session, which
-  is the only time that the provider gets the digest.
+- `Turn started: turn, provider, model, effort, contextTier, historyTurns, digestAdded`. The model, the effort, and the
+  context size (tier) are the settings, or `(default)`. `historyTurns` is the number of earlier turns that the caller
+  handed over, which is its whole saved conversation and not what is sent (an earlier version of the log called it
+  `restoredTurns`, which read as if all of them were sent for every message). What is sent from it is one bounded digest
+  (the newest turns that fit in 6,000 characters, see *The Restored History*), and only when the provider session is new
+  or was dropped: `digestAdded` is true only for the first message of a new provider session (the first message after
+  the application started or the project was opened, a reset, a changed setting, or a recovery), which is the only time
+  that the provider gets the digest; every later message of the same session has `digestAdded=False` whatever
+  `historyTurns` says.
 - `Provider session: turn, id, run (created or resumed), handleReleased` (see *The Provider Session per Run*), and, for
   a turn that failed or was canceled, `Provider session events: turn, id, file`, the full path of the file where the
   provider recorded the events of the session, which exists until the conversation is dropped (the path is under the

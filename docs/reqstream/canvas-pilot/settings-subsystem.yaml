@@ -144,6 +144,7 @@ sections:
             title: >-
               The Settings subsystem shall let the user choose and store the AI provider, the model from the list that the
               provider offers (or typed when it cannot be listed), the reasoning level that the model offers, the context
+              size that a Copilot model offers, the context
               window of Ollama, the endpoint, and the Copilot tool path, show only the entries of the selected provider, show what each model can do and warn about what it
               lacks, not offer the unrestricted agent tools but keep the stored value, warn about a small context window,
               and check the connection to the provider that the entries describe.
@@ -164,6 +165,7 @@ sections:
               - CanvasPilot-AiProviderSettingsPage-ListModels
               - CanvasPilot-AiProviderSettingsPage-FallBackToTypingTheModel
               - CanvasPilot-AiProviderSettingsPage-ChooseReasoningEffort
+              - CanvasPilot-AiProviderSettingsPage-ChooseContextSize
               - CanvasPilot-AiProviderSettingsPage-WarnBelowRecommendedContext
               - CanvasPilot-AiProviderSettingsPage-CheckConnection
               - CanvasPilot-SettingsService-DefaultContextWindow32768

@@ -227,6 +227,7 @@ public sealed class SettingsService : ISettingsService
             {
                 ModelName = ai.ModelName?.Trim() ?? string.Empty,
                 ReasoningEffort = ai.ReasoningEffort?.Trim() ?? string.Empty,
+                ContextTier = ai.ContextTier?.Trim() ?? string.Empty,
                 ContextWindowTokens = AiProviderSettings.IsValidContextWindow(ai.ContextWindowTokens)
                     ? ai.ContextWindowTokens
                     : AiProviderSettings.DefaultContextWindowTokens,

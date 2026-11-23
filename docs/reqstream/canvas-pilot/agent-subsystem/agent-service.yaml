@@ -21,8 +21,9 @@ sections:
                   The AgentService shall make nothing before the first turn, then make for the open project one agent
                   (with the tools of the project, the instructions that describe it, and its folder) and one provider
                   session through the factory, keep them for the next turns, and make them again when the open project
-                  changes or closes or when the provider, the model, the Ollama address, the context window, or the
-                  path of the Copilot CLI changes, and not when any other setting changes.
+                  changes or closes or when the provider, the model, the reasoning effort, the context size, the Ollama
+                  address, the context window, or the path of the Copilot CLI changes, and not when any other setting
+                  changes.
                 justification: |
                   Starting a provider is slow and may start a process, so it waits until the user asks for something, and
                   a conversation that is kept remembers what was said. The agent is built for one project folder, so
@@ -35,6 +36,8 @@ sections:
                   - AgentService_RunTurn_ProjectChanges_MakesAgentPerProjectAndDeletesTheOldSession
                   - AgentService_ProjectClosed_DropsTheConversationAndTheNextTurnNeedsAProject
                   - AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent
+                  - AgentService_RunTurn_CopilotContextTier_IsOnTheUsageAndInTheLog
+                  - AgentService_RunTurn_ContextTierOfAnotherProviderOrNoModel_IsNotOnTheUsage
                   - AgentService_RunTurn_FactoryHasNoAgent_FailsNotReadyWithTheSentenceAndAsksAgain
                   - AgentService_RunTurn_NoProjectOpen_FailsNotReady
                   - AgentService_GetReadiness_OllamaSettings_ReportsWhatTheProbeSees
@@ -180,7 +183,7 @@ sections:
               - id: CanvasPilot-AgentService-LogTurnLifecycle
                 title: >-
                   The AgentService shall number each turn and give every line of its log the number, shall log for the start
-                  of a turn the provider, the model, the reasoning effort, the count of earlier turns that the caller handed
+                  of a turn the provider, the model, the reasoning effort, the context size, the count of earlier turns that the caller handed
                   over (historyTurns) and whether the digest of them was added, shall log the lifecycle of the provider
                   session with its identifier (whether the run created or resumed it, and whether its handle was released
                   after the run), shall log for the end of a turn the outcome, the cancel source, the times (the whole turn,
@@ -194,6 +197,7 @@ sections:
                   and where the provider's own record is. The words belong to the user and stay out of the log.
                 tests:
                   - AgentService_Logging_Turn_CarriesIdsToolFactsAndAnswerFactsWithoutContent
+                  - AgentService_RunTurn_CopilotContextTier_IsOnTheUsageAndInTheLog
                   - AgentService_Logging_TurnNumbers_CountUpForTheLifeOfTheService
                   - AgentService_Logging_Reasoning_IsAFlagWithoutWords
                   - AgentService_Logging_ProviderSession_HasIdsRunKindsEventsFileAndReleaseReason

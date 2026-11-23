@@ -50,13 +50,13 @@ AI library defines (explicit and environment tokens, then the sign-in of the Cop
    that it starts is the one that the conversations then use, so a ready check means that the first message finds a
    running runtime.
 4. *Model settings.* When the settings name a model, `ICopilotAgentSource.Models.SelectAsync` of the running runtime
-   validates it with the reasoning effort of the settings and the requirement that the model can call tools (the policy
-   of `ModelRequirements`, see the design of `ProviderModelCatalog`). Settings that name no model use the default model
-   of the runtime, and there is nothing to validate (an effort without a model is not used). A refusal of the catalog is
-   `ModelSettingsInvalid` with the sentence of the AI library, which names what is supported; a catalog that cannot be
-   read (the runtime is not connected, or was stopped) is `CopilotRuntimeUnavailable` with its message; a model that
-   cannot take pictures is the usable `ModelLacksVision`. A provider that can be used (`Ready` and `ModelLacksVision`)
-   gets the sentence that `ICopilotAgentSource.SignIn` words appended (see below).
+   validates it with the reasoning effort and the context size of the settings and the requirement that the model can
+   call tools (the policy of `ModelRequirements`, see the design of `ProviderModelCatalog`). Settings that name no model
+   use the default model of the runtime, and there is nothing to validate (an effort without a model is not used). A
+   refusal of the catalog is `ModelSettingsInvalid` with the sentence of the AI library, which names what is supported;
+   a catalog that cannot be read (the runtime is not connected, or was stopped) is `CopilotRuntimeUnavailable` with its
+   message; a model that cannot take pictures is the usable `ModelLacksVision`. A provider that can be used (`Ready` and
+   `ModelLacksVision`) gets the sentence that `ICopilotAgentSource.SignIn` words appended (see below).
 
 The sentences (exact text; the design and the tests are the same words):
 
@@ -72,7 +72,11 @@ The sentences (exact text; the design and the tests are the same words):
 - `CopilotRuntimeUnavailable`: the sentence of the starter for a start that failed for another reason (the message of
   the AI library, or "The Copilot runtime could not be started. Choose Check connection to try again.").
 - `Ready` (Copilot): "GitHub Copilot CLI {version} is ready." (no model named), or "GitHub Copilot CLI {version} is
-  ready with the model {id}.", each followed by the sign-in sentence when the runtime reports one.
+  ready with the model {id}.", or, when the settings chose a context size, "GitHub Copilot CLI {version} is ready with
+  the model {id} at the {size name} size ({window} tokens)." (for example "at the Long context size (1,000,000
+  tokens)"; the name and window are the catalog's, the window is left out when it is not known), each followed by the
+  sign-in sentence when the runtime reports one. This sentence is the tooltip of the provider pill, which is where the
+  user reads which context size the model runs with.
 - `ModelSettingsInvalid`: the sentence of the AI library, for example "Model 'x' does not support tool calling, which
   this application requires." or "Model 'claude-haiku-5.5' does not support reasoning effort 'bogus'. Supported: low,
   medium, high, xhigh, max." or "Model 'x' is not available from provider 'copilot'. It may have been removed or you may

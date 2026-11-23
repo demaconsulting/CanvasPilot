@@ -67,6 +67,11 @@ public sealed class TurnUsage
     private double? _multiplier;
 
     /// <summary>
+    ///     The words for the context size that was asked for, or <see langword="null" /> when none was chosen.
+    /// </summary>
+    private string? _contextSize;
+
+    /// <summary>
     ///     Gets the tokens sent to the model, or <see langword="null" /> when none were reported.
     /// </summary>
     public long? InputTokens => _input;
@@ -88,6 +93,12 @@ public sealed class TurnUsage
     public double? Multiplier => _multiplier;
 
     /// <summary>
+    ///     Gets the words for the context size (tier) that the settings asked for, for example <c>long context</c>, or
+    ///     <see langword="null" /> when none was chosen.
+    /// </summary>
+    public string? ContextSize => _contextSize;
+
+    /// <summary>
     ///     Adds the usage that the provider reported for one model call.
     /// </summary>
     /// <param name="usage">The usage.</param>
@@ -102,6 +113,11 @@ public sealed class TurnUsage
         if (usage.Multiplier is { } multiplier)
         {
             _multiplier = Math.Max(_multiplier ?? 0, multiplier);
+        }
+
+        if (!string.IsNullOrWhiteSpace(usage.ContextSize))
+        {
+            _contextSize = usage.ContextSize.Trim();
         }
     }
 
@@ -132,6 +148,11 @@ public sealed class TurnUsage
         if (_multiplier is { } multiplier)
         {
             parts.Add(multiplier <= 0 ? "no premium requests" : $"model x{FormatMultiplier(multiplier)} premium");
+        }
+
+        if (_contextSize is not null)
+        {
+            parts.Add(_contextSize);
         }
 
         if (parts.Count == 0 && !stopped)

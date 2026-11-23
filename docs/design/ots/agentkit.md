@@ -123,10 +123,27 @@ verified on 2026-11-22 against a Copilot CLI 1.0.114 that was signed in through 
   `InvalidOperationException`, to be caught first) with those problems. A plain Copilot agent refuses a selection that
   carries a window, so the application states a window for Ollama only.
 - A selection reaches the provider through the agent factory: `CopilotAgentFactory.Create(..., selection:)` takes the
-  model and the effort, and `ChatClientAgentFactory.Create(..., selection:)` installs `ModelSettingsChatClient`, which
-  sets the model, the standard reasoning effort, and nothing that the caller already set. An effort with no
-  provider-neutral equivalent (`xhigh`, `max`) cannot be applied through a chat client, and the library refuses it when
-  the client is built; Ollama offers only `none`, `low`, `medium`, and `high`, which have one.
+  model, the effort, and the context size (tier), and `ChatClientAgentFactory.Create(..., selection:)` installs
+  `ModelSettingsChatClient`, which sets the model, the standard reasoning effort, and nothing that the caller already
+  set. An effort with no provider-neutral equivalent (`xhigh`, `max`) cannot be applied through a chat client, and the
+  library refuses it when the client is built; Ollama offers only `none`, `low`, `medium`, and `high`, which have one.
+
+- **Context sizes (tiers).** `ModelInfo.ContextTiers` lists the sizes that a model offers
+  (`ModelContextTier(Id, DisplayName, WindowTokens)`), `DefaultContextTier` the one that applies when none is chosen,
+  and `ModelAdjustments.ContextTier` says that one can be chosen; `ModelSettings.ContextTier` states the choice,
+  validated like the effort (a size that the model does not offer is a sentence), and the Copilot agent factory sends it
+  to the session as `config.Inference.ContextTier` (the SDK's `Model.SupportedContextTiers` and
+  `ModelSwitchToRequest.ContextTier` are the same idea). `CopilotModelCatalog` derives the sizes from the billing of the
+  model (`default`, named "Standard", and `long_context`, named "Long context", when the model has token prices for a
+  long-context tier) and from the tiers that the model declares. Verified on 2026-11-23 against the Copilot CLI 1.0.114
+  of the machine: `claude-opus-5.5` lists `default` at a window of 328,000 tokens and `long_context` at 1,000,000 (the
+  window of a size is its prompt budget plus the output limit of the model, capped at the maximum of the model), and the
+  events file of a session that was created with the larger size records `session.start` with
+  `contextTier: long_context`, which is the runtime's own confirmation. The library publishes no price for a size, only
+  that the larger one is billed separately. A usage event of the provider does not name the size, so CanvasPilot shows
+  the size that it asked for.
+- A plain Copilot agent refuses a selection that carries a window (`ContextWindowTokens`), so the application states no
+  window for Copilot; the context size is the way to choose a larger window there.
 
 The OTS tests `AgentKit_ModelSettings_Validate_RefusesWhatTheModelCannotDoAndBindsWhatFits`,
 `AgentKit_ModelSettingsChatClient_GetResponse_AddsTheModelAndEffortWithoutChangingCallersOptions`, and
@@ -181,9 +198,19 @@ the library is used through its public API only.
   succeeds and passing `gitHubTokenProvider`+`gitHubHost` changes nothing. For Claude models the response is then
   buffered (7 deltas, ≈ 45 s silence, ≈ 4500 deltas in 0.4 s) and the runtime logs `Session event stream lagged …
   skipped:N`. Ask: (a) find why the session-level model-list fetch fails (GHE host? token routing?) and whether
-  github.com accounts are affected; (b) let AgentKit pass the catalog's capabilities to the session
-  (`ModelSwitchToRequest.ModelCapabilitiesOverride`) if (a) cannot be fixed; (c) confirm that Claude streams
-  incrementally once the model is in the picker. The probe is in `%TEMP%\ck-probe\Program.cs` (not committed anywhere).
+  github.com accounts are affected; (b) let AgentKit pass the catalog's capabilities to the session if (a) cannot be
+  fixed: the SDK 2.0.1 has the member for it (`SessionOptionsBase.Inference.Capabilities`, a
+  `ModelCapabilitiesOverride` with `Supports{ToolCalls, Vision, ReasoningEffort, AdaptiveThinking}` and
+  `Limits{MaxContextWindowTokens, MaxOutputTokens, MaxPromptTokens, Vision}`, and the same type as
+  `ModelSwitchToRequest.ModelCapabilities`), but AgentKit 0.1.0-beta.5 sets only `Inference.ReasoningEffort` and
+  `Inference.ContextTier` in `CopilotAgentFactory.CreateSessionConfig` (internal), has no option or callback that lets a
+  host add to the session options, and does not set `Capabilities`; so the ask is that `CreateSessionConfig` and
+  `BuildResumeSessionConfig` copy the capabilities and limits of the `ModelInfo` of a `ModelSelection` into
+  `Inference.Capabilities` (or that `CopilotAgentRequest` accepts an `Action<SessionOptionsBase>` hook). Whether this
+  also stops the fall-back to the chat-completions wire is not known (UNVERIFIED: the runtime message says the model is
+  in neither the picker nor the unfiltered catalog, which the override may not change), so CanvasPilot does not wire an
+  override that cannot be reached and cannot be shown to help; (c) confirm that Claude streams incrementally once the
+  model is in the picker. The probe is in `%TEMP%\ck-probe\Program.cs` (not committed anywhere).
 
 **Not an issue.** Three things in the logs of the runtime look like faults and are not; the application's own log names
 the provider session so that they can be told apart from real problems:

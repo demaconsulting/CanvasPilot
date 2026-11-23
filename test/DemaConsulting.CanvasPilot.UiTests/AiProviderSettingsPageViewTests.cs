@@ -454,6 +454,65 @@ public sealed class AiProviderSettingsPageViewTests
     }
 
     /// <summary>
+    ///     The automation ids of the context size entry, its label, and its notes, which belong to GitHub Copilot and are shown
+    ///     only for a model that offers more than one size.
+    /// </summary>
+    private static readonly string[] ContextTierIds =
+    [
+        "AiContextTierLabel",
+        "AiContextTierComboBox",
+        "AiContextTierNote",
+        "AiContextTierCostNote",
+    ];
+
+    /// <summary>
+    ///     Test that the context size is shown, with the sizes of the catalog, only while GitHub Copilot is selected and the
+    ///     chosen model offers more than one; that choosing the larger size stores it and shows the note about its cost; and
+    ///     that a model with a single size, and Ollama, show none of it.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AiProviderSettingsPageView_ContextSize_IsShownOnlyForACopilotModelWithSeveralSizes()
+    {
+        // Arrange: a page over a model with two sizes and one with a single size, with the model with two sizes chosen
+        var tiered = Model("opus", efforts: ["low", "high"]) with
+        {
+            ContextTiers = [new ProviderContextTier("default", "Standard", 328_000), new ProviderContextTier("long_context", "Long context", 1_000_000)],
+            DefaultContextTier = "default",
+        };
+        var viewModel = new AiProviderSettingsPageViewModel(null, new FixedModels(tiered, Model("plain")), TimeSpan.Zero);
+        viewModel.Load(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "opus" } });
+        await viewModel.ModelListLoaded;
+        var window = new Window { Width = 520, Height = 1400, Content = new AiProviderSettingsPageView { DataContext = viewModel } };
+        window.Show();
+        var label = SettingsUiHelpers.Find<TextBlock>(window, "AiContextTierLabel");
+        var combo = SettingsUiHelpers.Find<ComboBox>(window, "AiContextTierComboBox");
+        var costNote = SettingsUiHelpers.Find<TextBlock>(window, "AiContextTierCostNote");
+        var shownForTiered = (label.IsEffectivelyVisible, combo.IsEffectivelyVisible, combo.ItemCount, costNote.IsVisible);
+
+        // Act: choose the larger size, then the model with a single size, then Ollama on a page whose model has two sizes
+        combo.SelectedItem = viewModel.ContextTiers.Single(choice => choice.Value == "long_context");
+        var chosen = (costNote.IsEffectivelyVisible, viewModel.Apply(new AppSettings()).AiProvider.ContextTier, costNote.Text);
+        viewModel.SelectedModel = viewModel.Models.Single(choice => choice.Id == "plain");
+        var hiddenForPlain = ContextTierIds.Select(id => SettingsUiHelpers.Find<Control>(window, id)).All(control => !control.IsVisible && !control.IsEffectivelyVisible);
+        viewModel.SelectedModel = viewModel.Models.Single(choice => choice.Id == "opus");
+        var shownAgain = combo.IsEffectivelyVisible;
+        viewModel.SelectedProvider = viewModel.Providers[1];
+        var hiddenForOllama = ContextTierIds.Select(id => SettingsUiHelpers.Find<Control>(window, id)).All(control => !control.IsVisible && !control.IsEffectivelyVisible);
+
+        // Assert: the sizes of the catalog were offered and the note was hidden for the standard size
+        Assert.Equal((true, true, 2, false), shownForTiered);
+        Assert.Equal("Context size", label.Text);
+
+        // Assert: the larger size was stored and its note shown; none of it is shown for a single size or for Ollama
+        Assert.Equal((true, "long_context", AiProviderSettingsPageViewModel.ContextTierCostNoteText), chosen);
+        Assert.True(hiddenForPlain);
+        Assert.True(shownAgain);
+        Assert.True(hiddenForOllama);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that no text of the page names the other provider's entry while a provider is selected: the labels of the
     ///     hidden entries are not shown at all.
     /// </summary>

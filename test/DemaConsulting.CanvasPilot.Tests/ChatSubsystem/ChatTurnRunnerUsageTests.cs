@@ -72,6 +72,27 @@ public sealed class ChatTurnRunnerUsageTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the context size that was asked for is named in the caption of the turn, after the multiplier, and that a
+    ///     turn without a chosen size says nothing about it.
+    /// </summary>
+    [Fact]
+    public void TurnUsage_Format_ContextSize_IsNamedAfterTheMultiplier()
+    {
+        // Arrange: a turn with the larger size on both calls, and one without a size
+        var sized = new TurnUsage();
+        sized.Add(new AgentEvent.Usage(8000, 1200, null, 15, "claude-opus-5.5", "long context"));
+        sized.Add(new AgentEvent.Usage(4400, 6000, null, 15, "claude-opus-5.5", "long context"));
+        var plain = new TurnUsage();
+        plain.Add(new AgentEvent.Usage(8000, 1200, null, 15, "claude-opus-5.5"));
+
+        // Act and assert
+        Assert.Equal("long context", sized.ContextSize);
+        Assert.Equal("12.4k in, 7.2k out, model x15 premium, long context, 3:25", sized.Format(TimeSpan.FromSeconds(205), stopped: false));
+        Assert.Null(plain.ContextSize);
+        Assert.Equal("8k in, 1.2k out, model x15 premium, 0:05", plain.Format(TimeSpan.FromSeconds(5), stopped: false));
+    }
+
+    /// <summary>
     ///     Test that a figure that was not reported is left out, that nothing reported means no caption, that a model that
     ///     costs no premium requests says so, and that a stopped turn always says that the request may still count.
     /// </summary>

@@ -31,10 +31,13 @@ library can derive from it and the family is closed. `MaxSummaryLength` is 200. 
 - `ToolFinished(CallId, Name, Succeeded, Summary, HasImage)` — the call ended; the `CallId` is that of its
   `ToolStarted`.
 - `FileWritten(RelativePath, Replaced)` — the copilot created (`Replaced` is false) or replaced a project file.
-- `Usage(InputTokens, OutputTokens, ReasoningTokens, Multiplier, Model)` — what the provider counted for one model
-  call; each member is `null` when the provider does not report it. `Multiplier` is the model multiplier that a
-  provider bills a message with (the premium requests that it counts; only GitHub Copilot reports one) and is per call,
-  not a total for the message; `ReasoningTokens`, `Multiplier`, and `Model` are optional and default to `null`.
+- `Usage(InputTokens, OutputTokens, ReasoningTokens, Multiplier, Model, ContextSize)` — what the provider counted for
+  one model call; each member is `null` when the provider does not report it. `Multiplier` is the model multiplier that
+  a provider bills a message with (the premium requests that it counts; only GitHub Copilot reports one) and is per
+  call, not a total for the message; `ReasoningTokens`, `Multiplier`, `Model`, and `ContextSize` are optional and
+  default to `null`. `ContextSize` is not reported by the provider: the service stamps it on the usage of a turn from
+  the settings, as words (`long context`, `standard context`), only for GitHub Copilot with a named model and a chosen
+  context size.
 - `Thinking` — the model is thinking: the provider reports reasoning that is not shown. It says that the turn is alive
   and in what phase; it carries no text.
 - `ToolProgress(CallId, Name, ArgumentBytes, Path)` — the model is still writing the arguments of a tool call that the

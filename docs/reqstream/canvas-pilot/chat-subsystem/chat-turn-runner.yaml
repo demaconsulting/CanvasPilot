@@ -153,16 +153,19 @@ sections:
               - id: CanvasPilot-ChatTurnRunner-ShowTurnUsage
                 title: >-
                   The ChatTurnRunner shall sum the tokens that the provider reported for the model calls of a turn, keep the
-                  largest model multiplier (a message is billed once, whatever the number of calls), and, when the turn has
+                  largest model multiplier (a message is billed once, whatever the number of calls), name in the caption the
+                  context size that the settings chose for the turn (when one was chosen), and, when the turn has
                   ended, show one quiet caption with only the figures that were reported and the time under the last reply
                   of the turn (or as an information notice when the turn wrote no reply), say in it that a stopped turn
                   may still be counted, and show nothing when no figure was reported and the turn was not stopped.
                 justification: |
                   A model such as Claude Opus counts many premium requests for one message, and a stopped turn is not given
                   back, so the user needs to see what a turn cost without being nagged during it. Nothing is made up: a
-                  provider that reports no multiplier (Ollama) gets tokens only.
+                  provider that reports no multiplier (Ollama) gets tokens only. A larger context size is billed and
+                  served separately, so the caption says which size the turn ran with.
                 tests:
                   - TurnUsage_Format_SumsTokensKeepsTheLargestMultiplier
+                  - TurnUsage_Format_ContextSize_IsNamedAfterTheMultiplier
                   - TurnUsage_Format_LeavesOutWhatWasNotReportedAndNotesAStop
                   - ChatTurnRunner_Completed_PutsTheUsageCaptionOnTheLastReply
                   - ChatTurnRunner_Stopped_SaysThatTheRequestMayStillCount

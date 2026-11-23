@@ -91,7 +91,7 @@ public sealed class AgentLoggingTests
 
         // Assert: the turn line, with the model, the effort, and the history count
         Assert.IsType<AgentEvent.Completed>(events[^1]);
-        Assert.Contains("Turn started: turn=1 provider=Ollama model=gemma3:12b effort=high historyTurns=1 digestAdded=True", log, StringComparison.Ordinal);
+        Assert.Contains("Turn started: turn=1 provider=Ollama model=gemma3:12b effort=high contextTier=(default) historyTurns=1 digestAdded=True", log, StringComparison.Ordinal);
 
         // Assert: the start and the end of the call, with the name, the path, the bytes, and the time
         var argBytes = Encoding.UTF8.GetByteCount("art/flow.txt") + Encoding.UTF8.GetByteCount(SentinelContent);

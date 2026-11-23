@@ -231,9 +231,33 @@ public sealed class AgentReadiness : IProviderCheck
         }
 
         var warning = ModelRequirements.VisionWarning(selection.Model);
+        var size = DescribeContextSize(selection);
         return warning is null
-            ? new AgentReadinessReport(AgentReadinessStatus.Ready, WithSignIn($"GitHub Copilot CLI {version} is ready with the model {selection.Model.Id}.", agents))
+            ? new AgentReadinessReport(AgentReadinessStatus.Ready, WithSignIn($"GitHub Copilot CLI {version} is ready with the model {selection.Model.Id}{size}.", agents))
             : new AgentReadinessReport(AgentReadinessStatus.ModelLacksVision, WithSignIn(warning, agents));
+    }
+
+    /// <summary>
+    ///     Words the context size that the settings chose, for the sentence that says that the provider is ready and for
+    ///     the tooltip of the provider pill.
+    /// </summary>
+    /// <param name="selection">The validated selection.</param>
+    /// <returns>
+    ///     For example <c> at the Long context size (1,000,000 tokens)</c>; an empty string when no size was chosen.
+    /// </returns>
+    private static string DescribeContextSize(ModelSelection selection)
+    {
+        var chosen = selection.Settings.ContextTier;
+        if (string.IsNullOrEmpty(chosen))
+        {
+            return string.Empty;
+        }
+
+        var tier = selection.Model.ContextTiers.FirstOrDefault(candidate => string.Equals(candidate.Id, chosen, StringComparison.OrdinalIgnoreCase));
+        var name = tier is null || string.IsNullOrWhiteSpace(tier.DisplayName) ? chosen : tier.DisplayName;
+        return tier?.WindowTokens is { } window
+            ? string.Create(CultureInfo.InvariantCulture, $" at the {name} size ({window:N0} tokens)")
+            : $" at the {name} size";
     }
 
     /// <summary>

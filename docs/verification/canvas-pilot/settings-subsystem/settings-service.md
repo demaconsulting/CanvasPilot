@@ -125,6 +125,11 @@ around `xhigh`) and the old `reasoningLevel` of `low`; load gives the trimmed `x
 effort; saving the effort `max` and loading it with a new service gives `max`. This scenario is tested by
 `SettingsService_SaveLoad_ReasoningEffort_RoundTripsAndDefaultsToEmpty`.
 
+**SettingsService_SaveLoad_ContextTier_RoundTripsDefaultsToEmptyAndIsTrimmed**: A file without the key loads with no
+context size; saving `long_context` and loading it with a new service gives `long_context`; a file with a padded
+`  long_context  ` loads trimmed. This scenario is tested by
+`SettingsService_SaveLoad_ContextTier_RoundTripsDefaultsToEmptyAndIsTrimmed`.
+
 **SettingsService_Save_ExistingFile_ReplacesContentAndLeavesNoTemporaryFile**: Settings are saved over an
 existing file; a fresh service loads the new content and the folder holds only `settings.json`. This scenario
 is tested by `SettingsService_Save_ExistingFile_ReplacesContentAndLeavesNoTemporaryFile`.
