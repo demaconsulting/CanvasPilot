@@ -398,7 +398,7 @@ public sealed class LiveCopilotTurnTests
     /// </summary>
     /// <param name="signIn">How the runtime signed in, or <see langword="null" /> when not known.</param>
     /// <returns>The words.</returns>
-    private static string DescribeSignIn(CopilotSignInInfo? signIn)
+    internal static string DescribeSignIn(CopilotSignInInfo? signIn)
     {
         return signIn is null ? "(not reported)" : $"{signIn.Source} / {signIn.Login ?? "(no login)"}@{signIn.Host ?? "(no host)"}";
     }
@@ -425,7 +425,7 @@ public sealed class LiveCopilotTurnTests
     ///     file, appends it there, so that the record survives test runners that hide diagnostic messages.
     /// </summary>
     /// <param name="summary">The summary, which holds no token.</param>
-    private static void Record(string summary)
+    internal static void Record(string summary)
     {
         TestContext.Current.SendDiagnosticMessage(summary);
         var path = Environment.GetEnvironmentVariable("CANVASPILOT_LIVE_COPILOT_OUT")?.Trim();
@@ -444,13 +444,15 @@ public sealed class LiveCopilotTurnTests
     /// <param name="localData">The root of the local data.</param>
     /// <param name="starter">The starter of the Copilot runtime.</param>
     /// <param name="settings">The settings service.</param>
+    /// <param name="agentFactory">The factory of the agents, or <see langword="null" /> for the real one over the starter.</param>
     /// <returns>The composition.</returns>
-    private static ApplicationComposition ComposeLiveApplication(
+    internal static ApplicationComposition ComposeLiveApplication(
         string root,
         RollingFileLogger logger,
         string localData,
         ICopilotRuntimeStarter starter,
-        SettingsService settings)
+        SettingsService settings,
+        IAgentFactory? agentFactory = null)
     {
         return ApplicationComposition.Create(
             logger,
@@ -462,13 +464,14 @@ public sealed class LiveCopilotTurnTests
             dragFolder: Path.Combine(root, "drag"),
             styleUserFolder: Path.Combine(root, "styles"),
             localDataRoot: localData,
+            agentFactory: agentFactory,
             copilotStarter: starter);
     }
 
     /// <summary>
     ///     A starter that passes on to a real one and counts how often it was asked and for how many different runtimes.
     /// </summary>
-    private sealed class CountingStarter : ICopilotRuntimeStarter, IAsyncDisposable
+    internal sealed class CountingStarter : ICopilotRuntimeStarter, IAsyncDisposable
     {
         /// <summary>The starter that does the work.</summary>
         private readonly CopilotRuntimeStarter _inner;
