@@ -43,7 +43,9 @@ view model holds.
   `ToolsEnabled` is false; a divider; and the icon button *Clear marks* (`AnnotationClearMarks`, enabled by `HasMarks`,
   tooltip `Clear marks  removes every mark from the message`). The chip (`HiddenMarksChip`, a warning icon and the text
   `N hidden`, with the full sentence as its tooltip) is visible while `HasHiddenMarks` holds. The note card (`NoteCard`,
-  with the panel `AnnotationNotePanel`: a text box limited to 200 characters, *Add mark*, *Skip note*) lies under the
+  with the id `AnnotationNoteCard`, a radius of 14 like the other cards, and the panel `AnnotationNotePanel`: the label
+  *Note:*, a text box limited to 200 characters, *Skip note* in the secondary button look, and *Add mark* in the primary
+  button look, which fills with the accent color) lies under the
   bar and is visible only while a note is asked for. `AnnotationStatus` and `AnnotationHiddenMarks` are text blocks one
   pixel in size and fully transparent, with a polite live setting, so that a screen reader reads the status sentence and
   the hidden-marks sentence that a sighted user gets from the tooltip and the chip.

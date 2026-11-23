@@ -25,6 +25,8 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
+using Avalonia.VisualTree;
 using DemaConsulting.CanvasNet.Viewer;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
@@ -178,7 +180,26 @@ public sealed partial class MainWindowView : Window, IDialogService
         if (change.Property == IsExtendedIntoWindowDecorationsProperty && _componentReady)
         {
             UpdateCaptionReserve();
+            RequestCaptionReserveUpdate();
         }
+        else if (change.Property == WindowStateProperty)
+        {
+            RequestCaptionReserveUpdate();
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        RequestCaptionReserveUpdate();
+    }
+
+    /// <inheritdoc />
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        RequestCaptionReserveUpdate();
     }
 
     /// <inheritdoc />
@@ -619,6 +640,39 @@ public sealed partial class MainWindowView : Window, IDialogService
     private void UpdateCaptionReserve()
     {
         ApplyCaptionReserve(TitleBarLeadingReserve, TitleBarCaptionReserve, IsExtendedIntoWindowDecorations, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
+
+        // The window draws its own buttons, whose number, size, and margin (the shadow and the frame) are the theme's, so
+        // the room is taken from where they really are as soon as there is a layout; the constant is the fallback
+        if (IsExtendedIntoWindowDecorations && OperatingSystem.IsWindows() && MeasureCaptionButtonsReserve() is { } measured)
+        {
+            TitleBarCaptionReserve.Width = measured;
+        }
+    }
+
+    /// <summary>
+    ///     Measures how much of the right end of the window the buttons that the window draws over its title bar cover,
+    ///     from their left edge to the edge of the window, so that the pill next to them is never under a button.
+    /// </summary>
+    /// <returns>The width in device-independent pixels, or <see langword="null" /> when the buttons are not laid out.</returns>
+    private double? MeasureCaptionButtonsReserve()
+    {
+        var buttons = this.GetVisualDescendants()
+            .OfType<StackPanel>()
+            .FirstOrDefault(panel => panel.Name == "PART_OverlayPanel" && panel.IsEffectivelyVisible && panel.Bounds.Width > 0);
+        return buttons?.TranslatePoint(new Point(0, 0), this) is { } origin
+            ? Math.Max(0, Bounds.Width - origin.X)
+            : null;
+    }
+
+    /// <summary>
+    ///     Asks for the room that the window buttons need to be worked out again once the window has been laid out.
+    /// </summary>
+    private void RequestCaptionReserveUpdate()
+    {
+        if (_componentReady)
+        {
+            Dispatcher.UIThread.Post(UpdateCaptionReserve, DispatcherPriority.Loaded);
+        }
     }
 
     /// <summary>

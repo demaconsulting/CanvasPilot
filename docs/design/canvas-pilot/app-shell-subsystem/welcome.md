@@ -53,12 +53,15 @@ is put in the offset of the present and the span to the present decides: under a
 `1 picture`, and more `N pictures`.
 
 **ProjectPictureCounter** (`AppShellSubsystem/ProjectPictureCounter.cs`, internal): `Count(projectFolder, filter)` walks
-the project folder and returns the number of pictures and the path of the first. A picture is a file that the explorer's
-image filter accepts. Files are visited in a folder in file name order (ignoring case), then the folders below it in the
-same order. A folder that starts with a dot is skipped, and at the top of the project the folders `attachments` and
-`styles` are skipped, because they hold the files that the application keeps and not the pictures of the user. The walk
-goes at most four folders deep and stops counting at 999, so a large project cannot make the screen slow. The first
-picture is therefore the first by name in the first folder that has one.
+the project folder and returns the number of pictures and the path of the main picture. A picture is a file that the
+explorer's image filter accepts. Files are visited in a folder in file name order (ignoring case), then the folders
+below it in the same order. A folder that starts with a dot is skipped, and at the top of the project the folders
+`attachments` and `styles` are skipped, because they hold the files that the application keeps and not the pictures of
+the user. The walk goes at most four folders deep and stops counting at 999, so a large project cannot make the screen
+slow. The main picture, which the card shows, is the picture that was changed last (by its last write time, the first by
+name when the times are equal) among the pictures at the top of the project folder, because the main picture of a
+project is the one drawn last and it composes the pictures of the parts, which are written before it. A project with no
+picture at the top shows the picture that was changed last in its folders.
 
 **RecentThumbnailLoader** (`AppShellSubsystem/RecentThumbnailLoader.cs`, internal): draws the picture of each card in
 the background and gives it to the card on the user interface thread. `Load(item, picture, projectFolder)` asks the
@@ -115,8 +118,8 @@ visible, so no explorer, preview, or chat view exists before the first project i
 `WelcomeEmptyCard`, `WelcomeEmptyNewProjectButton`, `WelcomeProviderBanner`, `WelcomeProviderBannerTitle`,
 `WelcomeProviderBannerText`, and `WelcomeOpenSettingsButton`.
 
-**Not done**: the status bar does not tell a user with no project to open or create one; the picture of a card is the
-first picture by name and not the last one drawn.
+**Not done**: the status bar does not tell a user with no project to open or create one; the project file does not
+record which picture was shown last, so the card cannot show it.
 
 #### Key Methods
 

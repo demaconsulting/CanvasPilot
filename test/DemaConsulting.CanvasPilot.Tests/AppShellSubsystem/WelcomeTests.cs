@@ -137,30 +137,57 @@ public sealed class WelcomeTests : IDisposable
 
     /// <summary>
     ///     Test that the pictures of a project are counted in its folders, that the attachments, the style kits, and the hidden
-    ///     folders are left out, and that the first picture is the first by name.
+    ///     folders are left out, and that the main picture is the one at the top that was changed last, whatever its name.
     /// </summary>
     [Fact]
     public void ProjectPictureCounter_Count_CountsPicturesAndLeavesOutAttachmentsStylesAndHiddenFolders()
     {
-        // Arrange: pictures at the top and in a folder, and files that are not pictures or are in folders that are left out
+        // Arrange: pictures at the top and in a folder, and files that are not pictures or are in folders that are left out;
+        // the picture of the folder is the newest of all, and b.svg is the newest at the top
         var folder = Directory.CreateDirectory(Path.Combine(_root, "Gallery")).FullName;
         var nested = Directory.CreateDirectory(Path.Combine(folder, "more")).FullName;
         File.WriteAllText(Path.Combine(folder, "b.svg"), "<svg/>");
         File.WriteAllText(Path.Combine(folder, "a.svg"), "<svg/>");
         File.WriteAllText(Path.Combine(folder, "notes.txt"), "text");
         File.WriteAllText(Path.Combine(nested, "c.svg"), "<svg/>");
+        File.SetLastWriteTimeUtc(Path.Combine(folder, "a.svg"), new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        File.SetLastWriteTimeUtc(Path.Combine(folder, "b.svg"), new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc));
+        File.SetLastWriteTimeUtc(Path.Combine(nested, "c.svg"), new DateTime(2026, 1, 3, 0, 0, 0, DateTimeKind.Utc));
         foreach (var skipped in new[] { "attachments", "styles", ".hidden" })
         {
             var skippedFolder = Directory.CreateDirectory(Path.Combine(folder, skipped)).FullName;
             File.WriteAllText(Path.Combine(skippedFolder, "x.svg"), "<svg/>");
+            File.SetLastWriteTimeUtc(Path.Combine(skippedFolder, "x.svg"), new DateTime(2026, 1, 4, 0, 0, 0, DateTimeKind.Utc));
         }
 
         // Act: count
-        var (count, first) = ProjectPictureCounter.Count(folder, new FakeImageSourceFilter(".svg"));
+        var (count, main) = ProjectPictureCounter.Count(folder, new FakeImageSourceFilter(".svg"));
 
-        // Assert: three pictures, the first by name
+        // Assert: three pictures, and the main one is the newest at the top, not the first by name
         Assert.Equal(3, count);
-        Assert.Equal(Path.Combine(folder, "a.svg"), first);
+        Assert.Equal(Path.Combine(folder, "b.svg"), main);
+    }
+
+    /// <summary>
+    ///     Test that a project without a picture at the top shows the newest picture of its folders.
+    /// </summary>
+    [Fact]
+    public void ProjectPictureCounter_Count_NoPictureAtTheTop_UsesTheNewestOfTheFolders()
+    {
+        // Arrange: two pictures in a folder and none at the top
+        var folder = Directory.CreateDirectory(Path.Combine(_root, "Nested")).FullName;
+        var inner = Directory.CreateDirectory(Path.Combine(folder, "drawings")).FullName;
+        File.WriteAllText(Path.Combine(inner, "a.svg"), "<svg/>");
+        File.WriteAllText(Path.Combine(inner, "b.svg"), "<svg/>");
+        File.SetLastWriteTimeUtc(Path.Combine(inner, "a.svg"), new DateTime(2026, 2, 2, 0, 0, 0, DateTimeKind.Utc));
+        File.SetLastWriteTimeUtc(Path.Combine(inner, "b.svg"), new DateTime(2026, 2, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        // Act: count
+        var (count, main) = ProjectPictureCounter.Count(folder, new FakeImageSourceFilter(".svg"));
+
+        // Assert: the newest, which is the first by name here
+        Assert.Equal(2, count);
+        Assert.Equal(Path.Combine(inner, "a.svg"), main);
     }
 
     /// <summary>
@@ -173,11 +200,11 @@ public sealed class WelcomeTests : IDisposable
         var missing = Path.Combine(_root, "missing");
 
         // Act: count its pictures
-        var (count, first) = ProjectPictureCounter.Count(missing, new FakeImageSourceFilter(".svg"));
+        var (count, main) = ProjectPictureCounter.Count(missing, new FakeImageSourceFilter(".svg"));
 
         // Assert: none
         Assert.Equal(0, count);
-        Assert.Null(first);
+        Assert.Null(main);
     }
 
     /// <summary>

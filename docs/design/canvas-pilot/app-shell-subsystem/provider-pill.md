@@ -64,7 +64,10 @@ window. In the button, left to right:
   say the same, so the color is never the only sign.
 - *The words*: the provider name in bold (`ProviderPillName`) and the separated detail (`ProviderPillDetail`), which is
   trimmed to 200 pixels and is amber or red in the two states that need it.
-- *A gear icon* that shows that the pill leads to the settings.
+- *A gear icon* that shows that the pill leads to the settings: one `Path` of 14 pixels drawn as lines (the outline of
+  the gear and a circle for its hub, `CpIconSettingsOutline`, stroke 1.3 in the secondary text color), not the filled
+  glyph of `CpIconSettings`, whose two thin rings run together at this size. The pill is a grid (the dot, the words, the
+  gear) and not a stack, so a long model name is trimmed with an ellipsis and the gear keeps its place at the right end.
 
 **Placement**: `MainWindowView` puts the pill in a `ContentControl` (`ProviderPillHost`) in the right of the title bar,
 with a 16 pixel margin, so that it stays inside the edge of the bar and clear of the system buttons.

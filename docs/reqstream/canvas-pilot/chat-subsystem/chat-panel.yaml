@@ -48,6 +48,7 @@ sections:
                   - ChatPanelView_Send_TypedText_AppearsInTranscriptAndEmptiesTheEditor
                   - ChatPanelView_Send_TwoMessages_AreListedInOrder
                   - ChatPanelView_Send_MessageWithMarkAndFile_ShowsChipsInTranscriptWithoutDeleteButtons
+                  - ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords
                   - ChatPanelView_Send_DictatedWords_AreShownWithTheDictatedBackground
 
               - id: CanvasPilot-ChatPanel-SendFromPanel

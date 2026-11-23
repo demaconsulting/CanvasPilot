@@ -101,11 +101,13 @@ back to front, are:
    a transparent track and the `CpAccentGradient` brush, named "Rendering" for screen readers, visible while `IsBusy`.
 6. The slot of the host's controls (`PreviewToolbar`), top center, margin 12.
 7. The zoom pill (`PreviewZoomPill`): a rounded pill 36 high at the bottom right (margin 16), visible while a picture is
-   shown, holding in order a Fit `ToggleButton` (`PreviewFitToWindow`, two-way bound to `FitToWindow`, tinted with the
-   accent while checked), the actual size button `1:1` (`PreviewZoomActual`), zoom out (`PreviewZoomOut`), the zoom
-   label (`PreviewZoomLabel`, a `Button` that runs `ZoomToFit`), and zoom in (`PreviewZoomIn`). Zoom out and zoom in are
-   enabled by `IsZoomOutPossible` and `IsZoomInPossible`. Every button has an `AutomationProperties.Name` and a tooltip
-   with its key (`Fit to window  Ctrl+0`, `Actual size  Ctrl+1`, `Zoom out  Ctrl+Minus`, `Zoom in  Ctrl+Plus`, and
+   shown, holding in order a Fit `ToggleButton` (`PreviewFitToWindow`, two-way bound to `FitToWindow`; while checked it
+   has the accent tint as its fill, a one pixel outline and the icon in the accent text color, which keep showing while
+   the pointer is over it after the click, because the tint alone is faint on the raised pill), the actual size button
+   `1:1` (`PreviewZoomActual`), zoom out (`PreviewZoomOut`), the zoom label (`PreviewZoomLabel`, a `Button` that runs
+   `ZoomToFit`), and zoom in (`PreviewZoomIn`). Zoom out and zoom in are enabled by `IsZoomOutPossible` and
+   `IsZoomInPossible`. Every button has an `AutomationProperties.Name` and a tooltip with its key
+   (`Fit to window  Ctrl+0`, `Actual size  Ctrl+1`, `Zoom out  Ctrl+Minus`, `Zoom in  Ctrl+Plus`, and
    `Click to fit to window` for the label).
 8. The notes drawer (`PreviewDiagnosticsExpander`): an `Expander` that opens upward, at the bottom left (margin 16 at
    the left, the right, and the top, and 60 at the bottom, which is the 16 pixel margin and the 36 pixel height of the

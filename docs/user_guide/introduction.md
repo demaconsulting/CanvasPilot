@@ -187,7 +187,8 @@ project, its name and folder, when it was opened, and how many pictures it holds
 pill, and the status bar says "No project open".](welcome.png)
 
 At the right the welcome screen shows up to six **recent projects** as cards, most recent first. A card has a small
-picture of the first drawing of the project, the name and folder of the project, when you opened it, and how many
+picture of the main drawing of the project (the picture at the top of the project folder that was changed last, which is
+usually the one that puts the others together), the name and folder of the project, when you opened it, and how many
 pictures it holds. Click a card, or move to it with the arrow keys and press Enter, to open the project. To take a
 project off the list, focus its card and press Delete, or right-click it and choose **Remove from list**; the project
 itself is not touched. With no recent project the screen shows a card that invites you to make one.
@@ -268,7 +269,7 @@ folder. A file outside it is left out of the picture and reported as a note.
 The **zoom pill**, at the bottom right of the stage, has these controls, from the left:
 
 - **Fit to window** (a toggle) scales the picture to the stage, so that all of it is visible. It is on when you open a
-  picture.
+  picture, and while it is on the button has a tinted background, an outline, and a colored icon.
 - **1:1** shows the picture at its own size.
 - **Zoom out** (the minus) and **Zoom in** (the plus) step through 25, 50, 75, 100, 150, 200, 300, and 400 percent. From
   the fitted size they go to the next step below or above it.
@@ -370,14 +371,15 @@ The transcript of a project is kept as text on your computer, so it comes back w
 ### The Transcript
 
 The transcript reads like a conversation. Your messages are bubbles at the right, with the time under them, and the
-chips of your marks and attachments inside. Pause the pointer on a message, or move the focus to it, to show **View
-payload** under it (see *Sending a Message and Viewing the Payload*). The copilot's answers are plain text under its
-name and a round mark, without a border; the answer appears as it is written, as plain text first and as formatted text
-once it is whole, and a label such as *Stopped* or *Failed* shows when an answer did not end. For each tool that the
-copilot uses, a small rounded **chip** appears under its name, with a spinner while it works, then a green check, and
-the time it took when that was a tenth of a second or more, for example "Rendered overview.svg · 0.8 s". A tool that did
-not work shows a red cross and the reason. A notice in the middle says what went wrong, with **Open Settings** when the
-settings can fix it. The messages from an earlier session are shown a little paler under a divider that says "Earlier".
+chips of your marks and attachments inside: the chips are in rows, and your words are in the lines below or between
+them. Pause the pointer on a message, or move the focus to it, to show **View payload** under it (see *Sending a Message
+and Viewing the Payload*). The copilot's answers are plain text under its name and a round mark, without a border; the
+answer appears as it is written, as plain text first and as formatted text once it is whole, and a label such as
+*Stopped* or *Failed* shows when an answer did not end. For each tool that the copilot uses, a small rounded **chip**
+appears under its name, with a spinner while it works, then a green check, and the time it took when that was a tenth of
+a second or more, for example "Rendered overview.svg · 0.8 s". A tool that did not work shows a red cross and the
+reason. A notice in the middle says what went wrong, with **Open Settings** when the settings can fix it. The messages
+from an earlier session are shown a little paler under a divider that says "Earlier".
 
 ### The Example Prompts and the Suggestions
 
@@ -441,12 +443,14 @@ also block desktop applications from using the microphone; if the panel says tha
 
 You can add things to a message by dropping them into the message box (for example from Windows Explorer or a web
 browser), by choosing the **Attach files** paperclip below the message box and picking files, or by pasting them with
-Ctrl+V, including a screenshot that you copied. Each file, folder, or picture becomes a small **chip** in the text, at
-the place where you dropped it or at the caret when you paste, and the files that you pick with the button come first in
-the message. A picture shows a small preview. Delete a chip with its cross, which is named "Remove" and the label of the
-chip, or put the caret next to it and press Backspace or Delete; Ctrl+Z brings it back. Text that you drop or paste
-becomes ordinary text. Dropping on the message box is different from dropping on the explorer, which adds the files to
-the project without a message (see *The Project Explorer*).
+Ctrl+V, including a screenshot that you copied. Each file, folder, or picture becomes a small **chip**. The chips of the
+files that you pick with the button, like the chips of your marks, go to a row of their own at the top of the message
+box, above your words, and the row wraps when there are many; a chip that you drop at a place in the text stays in the
+text, at the place where you dropped it, and a chip that you paste is put at the caret. A picture shows a small preview.
+Delete a chip with its cross, which is named "Remove" and the label of the chip, or put the caret next to it and press
+Backspace or Delete; Ctrl+Z brings it back. Text that you drop or paste becomes ordinary text. Dropping on the message
+box is different from dropping on the explorer, which adds the files to the project without a message (see *The Project
+Explorer*).
 
 What you attach is only ever treated as data. CanvasPilot looks at what a path is and how large a file is, but it never
 opens or runs a file, so even a program or a script is simply attached like any other file. Paths that are not safe to
@@ -481,10 +485,10 @@ picture layer the focus, move the cursor with the arrow keys, and press Enter or
 
 When you finish a shape, a small card with an optional **Note** box appears under the bar: type a short note (up to 200
 characters) and choose **Add mark**, or choose **Skip note**. The mark gets the next number, 1, 2, 3, and so on in the
-order you make them, and is drawn with its number. At the same time a chip, for example "Mark 1", is added to the
-message at the caret, so you can write "the arrow in Mark 1 should point to the other box" and the reader knows which
-mark you mean. The mark is part of the message exactly as long as its chip is in it: deleting the chip hides the mark,
-and undoing the deletion shows it again. Marks are never made by voice.
+order you make them, and is drawn with its number. At the same time a chip, for example "Mark 1", is added to the row of
+chips at the top of the message box, above your words, so you can write "the arrow in Mark 1 should point to the other
+box" and the reader knows which mark you mean. The mark is part of the message exactly as long as its chip is in it:
+deleting the chip hides the mark, and undoing the deletion shows it again. Marks are never made by voice.
 
 A mark belongs to the exact picture that it was drawn on. When you change the file and the picture is drawn again, the
 marks are not drawn on the new picture, because they might no longer point at the right place, but they stay in the
@@ -1185,7 +1189,10 @@ CanvasPilot is built to be usable without color and with a screen reader:
   and the focus ring and what is around them at least 3 to 1, in both themes.
 - The status bar, the sentence about the marks, and each new row of the conversation are set up to be announced politely
   by a screen reader when they change.
-- The tree of the explorer, the lists, the text boxes, and the splitters have names.
+- The tree of the explorer, the lists, the text boxes, and the splitters have names. The message box is named "Message"
+  and tells a screen reader the text of the message, with each chip as its label in brackets; the pages of the settings
+  are named by their titles ("AI Provider", "Speech", and so on), and the style pill by the name of the chosen kit or
+  "(No style)".
 
 Pulsing and moving parts of the window, such as the dots while the copilot works and the busy line at the top of the
 stage, do not yet stop when your system asks for less motion. The window has not yet been checked with a screen reader

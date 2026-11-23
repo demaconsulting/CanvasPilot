@@ -42,6 +42,8 @@ sections:
                   - ComposerViewModel_HandleDrop_AtOffset_PutsItemsThere
                   - ComposerViewModel_HandlePaste_TextAndItems_AreOneStepAndReplaceSelection
                   - ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip
+                  - ComposerViewModel_AddMark_EmptyMessageAndSecondMark_KeepsOneRowAboveTheWords
+                  - ComposerViewModel_AttachFiles_GoToTheRowAboveTheWordsInOneStep
                   - ComposerViewModel_AddMark_MarkOfAnotherRegistry_ThrowsArgumentException
                   - ComposerViewModel_DeleteChip_IsOneStepAndUndoRestoresItAtTheSameOffset
                   - ComposerViewModel_InsertTyped_AfterUndo_DiscardsRedo

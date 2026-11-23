@@ -29,7 +29,8 @@ with the Skia renderer, serialized with test parallelization disabled; no displa
 - A card has the detail line `Opened 2 hours ago · 3 pictures`, the name for a screen reader
   `Release, opened 2 hours ago, 3 pictures`, the folder of its project, and no picture until it is given one.
 - The pictures of a project are counted in its folders without the attachments, the style kits, the hidden folders, and
-  the files that are not pictures; the first is the first by name; a missing folder has none.
+  the files that are not pictures; the main picture, which the card shows, is the one at the top that was changed last,
+  or the one changed last in the folders when there is none at the top; a missing folder has none.
 - With eight recent projects the screen shows the six most recent in order and says `6 of 8`; with none it has no card
   and asks for a first project.
 - Removing a card takes the project off the list and leaves its files.
@@ -57,10 +58,15 @@ pictures has the detail line, the accessible name, and the folder, and no pictur
 
 **ProjectPictureCounter_Count_CountsPicturesAndLeavesOutAttachmentsStylesAndHiddenFolders**: A project with two pictures
 at the top, one in a folder, a text file, and pictures in `attachments`, `styles`, and a hidden folder is counted as
-three, with `a.svg` first. This scenario is tested by
+three, with `b.svg`, the one at the top that was changed last, as the main picture and not `a.svg`, the first by name,
+nor `c.svg`, the newest of all. This scenario is tested by
 `ProjectPictureCounter_Count_CountsPicturesAndLeavesOutAttachmentsStylesAndHiddenFolders`.
 
-**ProjectPictureCounter_Count_MissingFolder_HasNoPictures**: A folder that does not exist has no pictures and no first
+**ProjectPictureCounter_Count_NoPictureAtTheTop_UsesTheNewestOfTheFolders**: A project with two pictures in a folder and
+none at the top has the one that was changed last in the folder as its main picture. This scenario is tested by
+`ProjectPictureCounter_Count_NoPictureAtTheTop_UsesTheNewestOfTheFolders`.
+
+**ProjectPictureCounter_Count_MissingFolder_HasNoPictures**: A folder that does not exist has no pictures and no main
 picture, and does not fail. This scenario is tested by `ProjectPictureCounter_Count_MissingFolder_HasNoPictures`.
 
 **WelcomeViewModel_Cards_ShowTheSixMostRecentAndCountTheRest**: A shell with no recent project has no card and has

@@ -26,8 +26,9 @@
     <!-- The message: text, dictated text, and chips in one editing surface, which has no background and no border of its
          own, because the card around it is the field -->
     <Grid Grid.Row="1">
-      <ae:TextEditor Name="Editor"
+      <vm:ComposerTextEditor Name="Editor"
                      AutomationProperties.AutomationId="ComposerTextEditor"
+                     AutomationProperties.Name="Message"
                      MinHeight="48"
                      Padding="0"
                      BorderThickness="0"

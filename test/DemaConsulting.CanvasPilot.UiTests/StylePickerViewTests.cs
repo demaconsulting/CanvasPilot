@@ -20,6 +20,8 @@
 
 using System.Text.Json;
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
@@ -131,6 +133,42 @@ public sealed class StylePickerViewTests : IDisposable
         Assert.InRange(dots.Length, 1, 3);
         Assert.DoesNotContain(dots, dot => dot.Fill is null);
         Assert.False(SettingsUiHelpers.Find<TextBlock>(window, "StylePickerError").IsVisible);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that a screen reader is told the name of the chosen kit, or "(No style)", as the value of the pill and as the
+    ///     name of each choice, and not the text of the record that stands behind the choice.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task StylePickerView_Pill_AnnouncesTheNameOfTheChoiceAndNotTheRecord()
+    {
+        // Arrange: a shown main window with a project open and the kits read
+        var (composition, window) = CreateWindow();
+        window.Show();
+        await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
+        await OpenProjectAsync(composition);
+        window.UpdateLayout();
+        var picker = SettingsUiHelpers.Find<ComboBox>(window, "StylePicker");
+        var peer = ControlAutomationPeer.CreatePeerForElement(picker);
+        var value = Assert.IsAssignableFrom<IValueProvider>(peer);
+        var noStyle = value.Value;
+
+        // Act: choose the DEMA kit
+        picker.SelectedIndex = picker.Items.OfType<StylePickerItem>().ToList().FindIndex(item => item.Id == "dema");
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
+        var dema = value.Value;
+
+        // Assert: the value is the name of the choice in both cases, and so is the text of every choice
+        Assert.Equal(StylePickerViewModel.NoStyleLabel, noStyle);
+        Assert.Equal("DEMA", dema);
+        Assert.All(picker.Items.OfType<StylePickerItem>(), item =>
+        {
+            Assert.Equal(item.DisplayName, item.ToString());
+            Assert.DoesNotContain("StylePickerItem", item.ToString(), StringComparison.Ordinal);
+        });
 
         window.Close();
     }

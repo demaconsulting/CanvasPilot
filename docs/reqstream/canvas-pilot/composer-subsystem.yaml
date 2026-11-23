@@ -252,3 +252,15 @@ sections:
               - CanvasPilot-ComposerEditor-DeleteChipWithButtonOrKey
             tests:
               - ComposerSubsystem_ShowChipsInline_DropThenDeleteAndUndo_ChipsFollowTheMessage
+
+          - id: CanvasPilot-Composer-ExposeMessageToAssistiveTechnology
+            title: >-
+              The Composer subsystem shall present the message to assistive technology as a text field named "Message"
+              that tells the text of the message with its chips named and that can be set.
+            justification: |
+              The message is the main input of the application. A person who cannot see it, and a tool that drives the
+              window, must be able to find it, read it, and write it like any other text field.
+            children:
+              - CanvasPilot-ComposerEditor-ExposeMessageToAssistiveTechnology
+            tests:
+              - ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage

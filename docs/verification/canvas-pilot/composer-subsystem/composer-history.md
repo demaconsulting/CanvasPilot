@@ -49,6 +49,16 @@ cleaned. This scenario is tested by `ComposerHistory_TextPaste_IsOneStep`.
 **ComposerHistory_AddMark_IsOneStep**: A mark chip is added in text; undo removes it and redo brings it back. This
 scenario is tested by `ComposerHistory_AddMark_IsOneStep`.
 
+**ComposerHistory_AddLeadingChips_PutsChipsInTheRowAboveTheWordsInOneStep**: A message has a chip, a line feed, and
+words. A second chip is added with the caret at the end of the words; it stands next to the first chip, no second line
+feed is added, the caret moves with the words, it is one step, and undo and redo take it away and bring it back. This
+scenario is tested by `ComposerHistory_AddLeadingChips_PutsChipsInTheRowAboveTheWordsInOneStep`.
+
+**ComposerHistory_AddLeadingChips_EmptyMessage_AddsTheLineFeedAndPutsTheCaretBelowTheRow**: Two chips are added to an
+empty message; the message is the two chips and a line feed, the caret is below the row, and adding no chip is an empty
+edit. This scenario is tested by
+`ComposerHistory_AddLeadingChips_EmptyMessage_AddsTheLineFeedAndPutsTheCaretBelowTheRow`.
+
 **ComposerHistory_DeleteChip_IsOneStep**: A chip is deleted; one undo puts the same chip back at the same place. This
 scenario is tested by `ComposerHistory_DeleteChip_IsOneStep`.
 

@@ -20,6 +20,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -340,6 +341,49 @@ public sealed class PreviewPaneViewTests : IDisposable
         Assert.Equal((Stretch.None, StretchDirection.Both, ScrollBarVisibility.Auto, false), actual);
         Assert.Equal(Stretch.Uniform, viewbox.Stretch);
         Assert.Equal(Stretch.None, image.Stretch);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the Fit toggle shows when it is on: a tinted background, an outline, and an accent colored icon, and none
+    ///     of them when it is off.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_FitToggle_ShowsItsOnStateWithTintOutlineAndAccentIcon()
+    {
+        // Arrange: a shown dark pane that shows a picture, with Fit on, which is how a picture opens
+        await File.WriteAllTextAsync(Path.Combine(_folder, "red.svg"), HalfRedSvg, TestContext.Current.CancellationToken);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        window.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
+        explorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var fit = SettingsUiHelpers.Find<ToggleButton>(window, "PreviewFitToWindow");
+        var presenter = fit.GetVisualDescendants().OfType<ContentPresenter>().First(item => item.Name == "PART_ContentPresenter");
+        var tint = ThemeUiHelpers.ColorOf("CpAccentTint", Avalonia.Styling.ThemeVariant.Dark);
+        var accent = ThemeUiHelpers.ColorOf("CpAccentText", Avalonia.Styling.ThemeVariant.Dark);
+
+        // Act: read how it looks with Fit on, then turn Fit off and read it again
+        var onBackground = Assert.IsAssignableFrom<ISolidColorBrush>(presenter.Background).Color;
+        var onOutline = Assert.IsAssignableFrom<ISolidColorBrush>(presenter.BorderBrush).Color;
+        var onThickness = presenter.BorderThickness;
+        var onIcon = Assert.IsAssignableFrom<ISolidColorBrush>(fit.Foreground).Color;
+        fit.IsChecked = false;
+        AppShellUiHelpers.Flush();
+        var offBackground = presenter.Background is ISolidColorBrush brush ? brush.Color : Colors.Transparent;
+        var offThickness = presenter.BorderThickness;
+        var offIcon = Assert.IsAssignableFrom<ISolidColorBrush>(fit.Foreground).Color;
+
+        // Assert: on, it has the accent tint, an accent outline of one pixel, and the accent icon; off, it has none of them
+        Assert.False(pane.FitToWindow);
+        Assert.Equal(tint, onBackground);
+        Assert.Equal(accent, onOutline);
+        Assert.Equal(new Thickness(1), onThickness);
+        Assert.Equal(accent, onIcon);
+        Assert.Equal(0, offBackground.A);
+        Assert.Equal(new Thickness(0), offThickness);
+        Assert.NotEqual(accent, offIcon);
 
         window.Close();
     }

@@ -97,9 +97,19 @@ back. This scenario is tested by `ComposerViewModel_HandleDrop_ThreeFilesAndTwoP
 replaces it as one step, and a pasted file is a second step at the caret; undo takes them back one at a time. This
 scenario is tested by `ComposerViewModel_HandlePaste_TextAndItems_AreOneStepAndReplaceSelection`.
 
-**ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip**: The chip of a mark is added at the caret as one step with
-the mark's number; undo removes it and redo brings it back; the mark stays in the registry. This scenario is tested by
+**ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip**: The chip of a mark is added to the row of chips above the
+words, with a line feed below the row, as one step with the mark's number; the caret stays after the words; undo removes
+the chip and the line feed and redo brings them back; the mark stays in the registry. This scenario is tested by
 `ComposerViewModel_AddMark_IsOneStepAndUndoRemovesTheChip`.
+
+**ComposerViewModel_AddMark_EmptyMessageAndSecondMark_KeepsOneRowAboveTheWords**: Two marks added to an empty message
+make two chips and one line feed, the caret is below the row, and the words typed next follow the line feed. This
+scenario is tested by `ComposerViewModel_AddMark_EmptyMessageAndSecondMark_KeepsOneRowAboveTheWords`.
+
+**ComposerViewModel_AttachFiles_GoToTheRowAboveTheWordsInOneStep**: Two files chosen with the attach button become two
+chips in the row above the words, with the line feed, as one step that undo and redo take and bring back; a file dropped
+afterwards without a place goes to the caret in the text. This scenario is tested by
+`ComposerViewModel_AttachFiles_GoToTheRowAboveTheWordsInOneStep`.
 
 **ComposerViewModel_AddMark_MarkOfAnotherRegistry_ThrowsArgumentException**: A mark of another registry and a missing
 mark are refused and the draft is unchanged. This scenario is tested by

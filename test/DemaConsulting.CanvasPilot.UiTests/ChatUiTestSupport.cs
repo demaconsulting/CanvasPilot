@@ -570,7 +570,7 @@ internal sealed class ChatHarness : IDisposable
     /// <param name="entry">The entry.</param>
     /// <returns>The words.</returns>
     public static string TextOf(TranscriptEntryView entry) =>
-        string.Concat(entry.FindControl<SelectableTextBlock>("MessageText")!.Inlines!.OfType<Avalonia.Controls.Documents.Run>().Select(run => run.Text));
+        string.Concat(entry.TextBlocks.SelectMany(block => block.Inlines!.OfType<Avalonia.Controls.Documents.Run>()).Select(run => run.Text));
 
     /// <summary>
     ///     Finds a control by its automation identifier.

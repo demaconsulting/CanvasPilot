@@ -87,13 +87,16 @@ sections:
                 title: >-
                   The Welcome shall tell how many pictures a project holds, counting the image files in the folder of the
                   project and in the folders below it but not those of the attachments, the style kits, or the folders
-                  whose names start with a dot, and shall say "no pictures yet", "1 picture", or "N pictures".
+                  whose names start with a dot, and shall say "no pictures yet", "1 picture", or "N pictures". The picture
+                  of the card shall be the one at the top of the project folder that was changed last, or the one changed
+                  last in its folders when there is none at the top.
                 justification: |
                   The number tells a finished project from an empty one. Files that the application keeps for its own use
                   are not pictures of the user, and a folder that cannot be read must not stop the project from opening.
                 tests:
                   - RecentProjectItem_PictureCountTextFor_UsesThePlural
                   - ProjectPictureCounter_Count_CountsPicturesAndLeavesOutAttachmentsStylesAndHiddenFolders
+                  - ProjectPictureCounter_Count_NoPictureAtTheTop_UsesTheNewestOfTheFolders
                   - ProjectPictureCounter_Count_MissingFolder_HasNoPictures
 
               - id: CanvasPilot-Welcome-OpenProjectFromCard

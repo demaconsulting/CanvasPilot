@@ -20,27 +20,35 @@
     <Style Selector="Grid.entry:pointerover Button#ViewPayloadButton, Grid.entry:focus-within Button#ViewPayloadButton">
       <Setter Property="Opacity" Value="1" />
     </Style>
+    <!-- The words in the bubble -->
+    <Style Selector="StackPanel#MessageBlocks > SelectableTextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource CpTextOnAccent}" />
+      <Setter Property="FontSize" Value="{DynamicResource CpFontBody}" />
+      <Setter Property="LineHeight" Value="{DynamicResource CpLineBody}" />
+    </Style>
   </UserControl.Styles>
 
-  <!-- One message that was sent: a bubble at the right with its words and the chips of its attachments and marks in their
-       places, when it was sent below it with the button that shows exactly what the assistant would receive, and a
-       statement of what it carried. The bubble is at most 85 percent of the width. -->
+  <!-- One message that was sent: a bubble at the right with its words and the chips of its attachments and marks in rows
+       and blocks in the order of the message, when it was sent below it with the button that shows exactly what the
+       assistant would receive, and a statement of what it carried. The bubble is as big as its content and at most 85
+       percent of the width. -->
   <Grid Classes="entry"
         Margin="0,0,0,16"
         ColumnDefinitions="0.15*,0.85*"
         RowDefinitions="Auto,Auto,Auto">
 
-    <Border Grid.Column="1"
+    <Border Name="MessageBubble"
+            Grid.Column="1"
             HorizontalAlignment="Right"
             Padding="12,8"
             CornerRadius="14,14,4,14"
             Background="{DynamicResource CpAccent}">
-      <SelectableTextBlock Name="MessageText"
-                           AutomationProperties.AutomationId="TranscriptMessageText"
-                           Foreground="{DynamicResource CpTextOnAccent}"
-                           FontSize="{DynamicResource CpFontBody}"
-                           LineHeight="{DynamicResource CpLineBody}"
-                           TextWrapping="Wrap" />
+      <!-- The blocks of the message in order: a wrapping row for each run of chips and a text block for each run of words.
+           They are laid out by the code of the view. A chip does not stand inside a line of words, because a line is as
+           high as its words and would cut the chip off. -->
+      <StackPanel Name="MessageBlocks"
+                  AutomationProperties.AutomationId="TranscriptMessage"
+                  Spacing="4" />
     </Border>
 
     <StackPanel Grid.Row="1"

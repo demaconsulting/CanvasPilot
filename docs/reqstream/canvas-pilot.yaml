@@ -321,6 +321,7 @@ sections:
           - CanvasPilot-Composer-WorkInsideAnOpenProject
           - CanvasPilot-Composer-ShowEditableMessage
           - CanvasPilot-Composer-ShowChipsInline
+          - CanvasPilot-Composer-ExposeMessageToAssistiveTechnology
           - CanvasPilot-Chat-ShowTranscriptOfSentMessages
           - CanvasPilot-Chat-SendComposedMessage
           - CanvasPilot-AppShell-ChatColumn

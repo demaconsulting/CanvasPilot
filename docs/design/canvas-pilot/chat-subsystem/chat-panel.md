@@ -67,11 +67,13 @@ The unit is made of these parts, all in the user interface layer:
   `Dispose`. `TranscriptItem` is one run of text or one chip, with the chip to ask for the picture.
 - `TranscriptEntryView` (a `UserControl`): the entry as a bubble at the right in the accent color (radius 14 with a 4
   pixel bottom-right corner, at most 85 percent of the width because the entry's grid gives it the right 0.85 of the
-  width), holding the words in a selectable text block whose inline containers hold the composer's `ChipView` without
-  its delete button. Below the bubble, at the right, are the "View payload" text button (`TranscriptViewPayloadButton`)
-  and the sent time (`TranscriptSentTime`); the button has opacity 0 and takes opacity 1 only while the pointer
-  is over the entry or the focus is inside it (the style `Grid.entry:pointerover` and `:focus-within`), so that it is
-  out of the way but can be reached by the keyboard. Below them is the summary of what the message carried.
+  width), holding the blocks of the message in order (`MessageBlocks`): a selectable text block
+  (`TranscriptMessageText`) for each run of words and a wrapping row for each run of chips, which hold the composer's
+  `ChipView` without its delete button. The bubble sizes to its content. Below the bubble, at the right, are the "View
+  payload" text button (`TranscriptViewPayloadButton`) and the sent time (`TranscriptSentTime`); the button has opacity
+  0 and takes opacity 1 only while the pointer is over the entry or the focus is inside it (the style
+  `Grid.entry:pointerover` and `:focus-within`), so that it is out of the way but can be reached by the keyboard. Below
+  them is the summary of what the message carried.
 - `ChipThumbnailProvider`: implements the composer's `IChipThumbnailProvider`. It is given a function from a mark chip
   to the PNG bytes of the area around the mark, and the composer's `ImageChipThumbnailProvider` (by default) for picture
   files.
@@ -140,9 +142,10 @@ and the view model it follows.
 **Joining the layer to the composer.** The constructor, and then every `ComposerViewModel.Changed`, sets
 `IsDrawingAllowed` of the layer to `CanEdit` of the composer and calls `SetActiveMarkIds` with the composer's mark chip
 identities. The panel subscribes to `MarkAdded` of the layer and calls `ComposerViewModel.AddMark`, which makes one edit
-at the caret, and to `ClearMarksRequested` of the layer and calls `ComposerViewModel.DeleteMarkChips`, which deletes the
-chips of all marks one step each; the `Changed` that each deletion raises makes the layer show only the marks that are
-left. Both handlers are removed when the panel is disposed. Nothing else about marks is known here.
+that puts the chip in the row of chips above the words, and to `ClearMarksRequested` of the layer and calls
+`ComposerViewModel.DeleteMarkChips`, which deletes the chips of all marks one step each; the `Changed` that each
+deletion raises makes the layer show only the marks that are left. Both handlers are removed when the panel is disposed.
+Nothing else about marks is known here.
 
 **Prompts and collapse.** `UsePrompt` writes a prompt with `ComposerViewModel.InsertTyped` at the caret (over the
 selection) when the composer `CanEdit`, and returns whether it did; it throws for a null prompt. The view calls it from
@@ -246,8 +249,12 @@ attachment chip is paired with the staged attachment at the same position in the
 asked for from `SafePathCombine(projectFolder, relativePath)`; a mark chip stands for itself. The summary counts the
 mark chips and the attachment chips. `ViewPayloadCommand` can run only when the payload is a `MessagePayload`; it makes
 a `PayloadInspectorViewModel` for it and gives that to the launcher the panel has at that moment, and does nothing when
-there is none. The view lays the items out as inlines; a chip is a `ChipView` with its delete button hidden, whose
-picture is asked for through a small adapter that passes the chip of the project copy to the provider.
+there is none. The view lays the items out as blocks one below the other: consecutive chips share one `WrapPanel` row,
+and consecutive runs of words are the runs of one selectable text block; the line feed that the composer puts after its
+row of chips (see `AddLeadingChips`) is the break between a row and the block that follows it and is not shown again. A
+chip is not put inside a line of words, because a text line with a fixed line height is only as high as its words and
+cuts a taller inline chip off, which is what the bubble did before. A chip is a `ChipView` with its delete button
+hidden, whose picture is asked for through a small adapter that passes the chip of the project copy to the provider.
 
 **Pictures.** `ChipThumbnailProvider.GetThumbnailAsync` passes every chip that is not a mark to the file provider. For a
 mark it makes the picture on a thread-pool thread: it calls the function, decodes the PNG to 64 pixels wide, keeps the

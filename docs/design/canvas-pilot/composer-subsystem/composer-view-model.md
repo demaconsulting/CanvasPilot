@@ -51,17 +51,17 @@ or a `ComposerEdit.Delete` when no text was inserted, and executes it through th
 selection, or one position, as one step. `AddDictatedBlock` makes a `Dictate` edit at the caret, over the selection.
 `HandleDrop(content, offset)` and `HandlePaste(content)` give the content to the intake and execute one `Drop` edit of
 everything it accepted, at the place of the drop or at the caret over the selection; a paste of plain text is the same
-path with a text segment. `AddMark(mark)` checks that the registry holds that very mark and executes an `AddMark` edit
-at the caret; there is no way to make a mark from text, so dictated text that looks like a chip stays text.
-`DeleteChip(offset)` executes a `DeleteChip` edit. `DeleteMarkChips()` deletes the chips of all marks: it finds the
-offset
-of the first mark chip in the document and calls `DeleteChip` for it, again and again until no mark chip is left or a
-deletion is refused, so each chip is its own step and one undo brings back the last one; it returns how many it
-deleted and touches no other segment. The chat panel calls it when the annotation layer asks for the marks to be
+path with a text segment. `AddMark(mark)` checks that the registry holds that very mark and executes an
+`AddLeadingChips` edit, which puts the chip in the row of chips at the start of the message; `AttachFiles(content)` (the
+attach button) does the same for files, folders, and pictures when the content holds nothing else, where `HandleDrop`
+with no offset uses the caret; there is no way to make a mark from text, so dictated text that looks like a chip stays
+text. `DeleteChip(offset)` executes a `DeleteChip` edit. `DeleteMarkChips()` deletes the chips of all marks: it finds
+the offset of the first mark chip in the document and calls `DeleteChip` for it, again and again until no mark chip is
+left or a deletion is refused, so each chip is its own step and one undo brings back the last one; it returns how many
+it deleted and touches no other segment. The chat panel calls it when the annotation layer asks for the marks to be
 cleared, and the `Changed` of each deletion makes the layer follow. An action that changes nothing is not a step (the
-history ignores
-empty edits), and an action that is refused (no project, or a message being sent) changes nothing. After each executed
-edit the view model sets the caret from the edit and raises its notifications once.
+history ignores empty edits), and an action that is refused (no project, or a message being sent) changes nothing. After
+each executed edit the view model sets the caret from the edit and raises its notifications once.
 
 **Undo and redo.** `Undo` and `Redo` do nothing when the history has no step. Otherwise they ask the history, clear the
 status text, set the caret to the returned offset, and notify once. `CanUndo` and `CanRedo` are false while no project

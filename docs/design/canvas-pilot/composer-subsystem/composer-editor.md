@@ -27,6 +27,12 @@ The unit is made of these parts, all in the user interface layer:
   `SurfaceText` and `IsConsistent` expose the rule that the surface equals the message; `FocusEditor` puts the focus in
   the surface; `PasteAsync(clipboard)` and `HandleDrop(data, point)` are the entry points that the paste command and the
   drop handler call.
+- `ComposerTextEditor`: the editing surface (a `TextEditor`) with an automation peer, because the library's control has
+  none and the platform reports it as an unnamed scroll area. The peer is an edit field (`AutomationControlType.Edit`)
+  with a value pattern: `Value` is the message with each chip named in brackets (`ValueProvider`, set by the view to
+  `DescribeForClipboard` of the message), `SetValue` replaces the whole message as one step through `ValueSetter` (chips
+  are not kept) and is read-only while the message cannot be edited, and a change of the text is reported as a change of
+  the value. The surface and its text area are named "Message", and the peer takes the focus into the text area.
 - `ChipElementGenerator`: the library's inline element generator, which turns each placeholder character of the surface
   into an inline control.
 - `ChipView` (a `UserControl`): one chip, a pill at least 24 pixels high (the shared `ChipBorder` theme: a raised

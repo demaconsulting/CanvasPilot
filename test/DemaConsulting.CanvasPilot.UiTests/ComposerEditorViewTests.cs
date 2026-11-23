@@ -19,6 +19,9 @@
 // SOFTWARE.
 
 using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -388,6 +391,73 @@ public sealed class ComposerEditorViewTests
         Assert.Equal("Mark 1", label);
         Assert.Equal(string.Empty, harness.Editor.Text);
         Assert.Empty(harness.Chips);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that the chips of marks are in a row of their own above the words: the chip is drawn on a line above the
+    ///     line of the caret, and the words typed afterwards go on the line below.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords()
+    {
+        // Arrange: a mark on a picture and some typed words
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var first = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        var second = harness.Marks.Add(picture, MarkKind.Ellipse, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        harness.TypeEach("words");
+
+        // Act: add two marks, which go to the row above the words
+        harness.ViewModel.AddMark(first);
+        harness.ViewModel.AddMark(second);
+        harness.Layout();
+
+        // Assert: both chips are on the first line, the words are below them, and the caret is at the end of the words
+        Assert.Equal("##\nwords", harness.ReadableMessage);
+        Assert.Equal(2, harness.Chips.Count);
+        var textView = harness.Editor.TextArea.TextView;
+        var chipBottoms = harness.Chips.Select(chip => chip.TranslatePoint(new Point(0, chip.Bounds.Height), textView)!.Value.Y).ToList();
+        var chipTops = harness.Chips.Select(chip => chip.TranslatePoint(new Point(0, 0), textView)!.Value.Y).ToList();
+        var wordsTop = harness.Editor.TextArea.Caret.CalculateCaretRectangle().Y;
+        Assert.Equal(chipTops[0], chipTops[1], 1);
+        Assert.True(wordsTop >= chipBottoms.Max() - 1, $"The words start at {wordsTop}, the chips end at {chipBottoms.Max()}.");
+        Assert.Equal(harness.Message.Length, harness.Editor.CaretOffset);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that the editing surface is a named text field for assistive technology that reads the message with its
+    ///     chips named, and that setting its value replaces the message.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage()
+    {
+        // Arrange: a message with a chip and words
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        harness.TypeEach("hello");
+        harness.ViewModel.AddMark(mark);
+        harness.Layout();
+
+        // Act: ask for what a screen reader or an automation tool sees of the surface
+        var surface = harness.View.FindControl<ComposerTextEditor>("Editor")!;
+        var peer = ControlAutomationPeer.CreatePeerForElement(surface);
+        var value = Assert.IsAssignableFrom<IValueProvider>(peer);
+        var readText = value.Value;
+        var readOnly = value.IsReadOnly;
+        value.SetValue("replaced by automation");
+        harness.Layout();
+
+        // Assert: an edit field named "Message" that tells the message with the chip named, which can be set, and whose
+        // text area has the name too
+        Assert.Equal("Message", peer.GetName());
+        Assert.Equal(AutomationControlType.Edit, peer.GetAutomationControlType());
+        Assert.Equal("[Mark 1]\nhello", readText);
+        Assert.False(readOnly);
+        Assert.Equal("Message", AutomationProperties.GetName(surface.TextArea));
+        Assert.Equal("replaced by automation", harness.Message);
         harness.AssertConsistent();
     }
 

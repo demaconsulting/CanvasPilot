@@ -204,6 +204,11 @@ picture with a note, both the drawer and the zoom pill are shown, and the drawer
 and does not cover it. This scenario is tested by
 `PreviewPaneView_DiagnosticsDrawerOnNarrowStage_DoesNotOverlapTheZoomPill`.
 
+**PreviewPaneView_FitToggle_ShowsItsOnStateWithTintOutlineAndAccentIcon**: In the dark theme the Fit toggle, which is on
+when a picture opens, has the accent tint as its fill, a one pixel outline and an icon in the accent text color; after
+it is turned off it has no fill, no outline, and the icon of the other buttons. This scenario is tested by
+`PreviewPaneView_FitToggle_ShowsItsOnStateWithTintOutlineAndAccentIcon`.
+
 **PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars**: Fitting scales down without scroll bars (the
 `Viewbox` stretches uniformly, down only); clearing the Fit toggle shows the actual size (no scaling) with automatic
 scroll bars and `FitToWindow` off; checking it again restores fitting; the `Image` itself is never stretched. This

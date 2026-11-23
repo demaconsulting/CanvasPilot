@@ -308,6 +308,9 @@ public sealed class MainWindowViewTests : IDisposable
         var name = AutomationProperties.GetName(pill);
         var barRight = bar.TranslatePoint(new Point(bar.Bounds.Width, 0), window)!.Value.X;
         var pillRight = pill.TranslatePoint(new Point(pill.Bounds.Width, 0), window)!.Value.X;
+        var gears = pill.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Path>().ToList();
+        var providerName = SettingsUiHelpers.Find<TextBlock>(window, "ProviderPillName");
+        var detail = SettingsUiHelpers.Find<TextBlock>(window, "ProviderPillDetail");
 
         // Act: use the pill with the pointer, and read the page that the settings show
         SettingsUiHelpers.Click(window, pill);
@@ -322,6 +325,17 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.InRange(pillRight, 0, barRight);
         Assert.StartsWith("AI provider: Copilot, ", name, StringComparison.Ordinal);
         Assert.Equal("AI Provider", page.Title);
+
+        // Assert: the pill ends with one gear drawn as lines, which is inside the pill and right of the words, and not as a
+        // filled glyph that runs together at this size
+        var gear = Assert.Single(gears);
+        Assert.NotNull(gear.Stroke);
+        Assert.Null(gear.Fill);
+        var gearBounds = gear.TranslatePoint(new Point(0, 0), pill)!.Value;
+        var detailRight = detail.TranslatePoint(new Point(detail.Bounds.Width, 0), pill)!.Value.X;
+        Assert.True(gearBounds.X >= detailRight, "The gear must not overlap the words.");
+        Assert.True(gearBounds.X + gear.Bounds.Width <= pill.Bounds.Width);
+        Assert.False(string.IsNullOrEmpty(providerName.Text));
 
         window.Close();
     }
@@ -664,11 +678,15 @@ public sealed class MainWindowViewTests : IDisposable
         var dialog = AppShellUiHelpers.FindDialog<SettingsDialogView>(window);
         var list = SettingsUiHelpers.Find<ListBox>(dialog, "SettingsPageList");
         var titles = list.Items.OfType<ISettingsPage>().Select(page => page.Title).ToArray();
+        var announced = list.GetVisualDescendants().OfType<ListBoxItem>()
+            .Select(item => Avalonia.Automation.Peers.ControlAutomationPeer.CreatePeerForElement(item).GetName())
+            .ToArray();
         SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "SettingsCancelButton"));
         await shown;
 
-        // Assert: the dialog listed all four pages, and Cancel closed it
+        // Assert: the dialog listed all four pages, a screen reader is told their titles, and Cancel closed it
         Assert.Equal(["AI Provider", "Speech", "Style Kits", "Appearance"], titles);
+        Assert.Equal(titles, announced);
         Assert.Empty(window.OwnedWindows);
 
         window.Close();

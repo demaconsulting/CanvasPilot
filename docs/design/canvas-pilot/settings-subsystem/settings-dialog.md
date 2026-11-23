@@ -47,7 +47,9 @@ The upper row has two columns:
 
 - *Rail* (200 wide, on the window surface with a line at its right): a `ListBox` of the rail look (`SettingsPageList`,
   named `Settings pages`) bound to `Pages` and `SelectedPage`. Each entry has an icon (a `PathIcon` whose data is the
-  `IconKey` of the page through the converter), the title, and, for the chosen entry, a short accent bar at the left.
+  `IconKey` of the page through the converter), the title, and, for the chosen entry, a short accent bar at the left. A
+  style of the list gives each row the accessible name of the title of its page (`AutomationProperties.Name`), because a
+  screen reader would otherwise read the content of the row as the type name of the view model of the page.
 - *Page*: a heading with the title of the chosen page (`SettingsPageTitle`, the page title look) and the sentence
   (`SettingsPageDescription`, the hint look, hidden when the sentence is empty), then a `ContentControl`
   (`SettingsPageContent`) that shows the selected page through the view locator.

@@ -59,6 +59,7 @@ sections:
                   - StylePicker_Items_KitPalette_GivesNameAndUpToThreeMainColors
                   - StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits
                   - StylePickerView_Pill_ShowsNameAndSwatchesOfTheChosenKit
+                  - StylePickerView_Pill_AnnouncesTheNameOfTheChoiceAndNotTheRecord
 
               - id: CanvasPilot-StylePicker-ManageKitsFromTheList
                 title: >-

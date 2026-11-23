@@ -28,6 +28,12 @@
                  AutomationProperties.Name="Settings pages"
                  ItemsSource="{Binding Pages}"
                  SelectedItem="{Binding SelectedPage}">
+          <ListBox.Styles>
+            <!-- A row is announced by the title of its page, not by the type name of the page's view model -->
+            <Style Selector="ListBoxItem" x:DataType="vm:ISettingsPage">
+              <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
+            </Style>
+          </ListBox.Styles>
           <ListBox.ItemTemplate>
             <DataTemplate x:DataType="vm:ISettingsPage">
               <Grid ColumnDefinitions="3,Auto,*" ColumnSpacing="10">

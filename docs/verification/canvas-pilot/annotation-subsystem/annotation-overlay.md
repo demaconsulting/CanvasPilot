@@ -39,9 +39,9 @@ removed afterwards. No window is shown on a screen, no real input device, input 
    for example, `Mark 2, rectangle, note: ...`.
 4. *Drag out.* Drag the picture into the file manager with no tool chosen: the file is dropped. Choose a tool and drag
    on the picture: a mark is drawn and nothing is dragged out.
-5. *With the chat.* When the chat panel is shown, drawing a mark inserts `Mark n` in the message at the caret, Ctrl+Z
-   removes the chip and the mark, and Ctrl+Y brings both back. Using *Clear marks* with marks hidden by a changed
-   picture removes their chips too.
+5. *With the chat.* When the chat panel is shown, drawing a mark inserts `Mark n` in the row of chips above the words of
+   the message, Ctrl+Z removes the chip and the mark, and Ctrl+Y brings both back. Using *Clear marks* with marks hidden
+   by a changed picture removes their chips too.
 6. *Scrolling.* At a zoom where the picture is larger than the pane, choosing a tool and pressing a key on the layer
    does not scroll the picture.
 
@@ -213,6 +213,11 @@ is at scale one and the same drag gives the same pixels. This scenario is tested
 text input and Enter make the mark with the note, the note panel goes away, the box limits the length to 200, and the
 mark's name for a screen reader holds the note. This scenario is tested by
 `AnnotationOverlayView_NoteTyped_EnterMakesMarkWithNoteAndFocusIsInNote`.
+
+**AnnotationOverlayView_NoteCard_UsesThePrimaryAndSecondaryButtonsAndTheCardRadius**: While a finished shape waits for
+its note in the dark theme, *Add mark* is filled with the accent color with the text on the accent, *Skip note* has the
+raised fill and the strong outline, both are at least 32 high, and the card has the corner radius of the other cards
+(14). This scenario is tested by `AnnotationOverlayView_NoteCard_UsesThePrimaryAndSecondaryButtonsAndTheCardRadius`.
 
 **AnnotationOverlayView_NoteButtons_AddMarkOrSkipNote**: *Add mark* keeps a typed note and *Skip note* drops one. This
 scenario is tested by `AnnotationOverlayView_NoteButtons_AddMarkOrSkipNote`.

@@ -897,7 +897,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
 
             // Only the cards that the welcome screen shows need their pictures counted and drawn
             var shown = _recentItems.Count < WelcomeViewModel.MaximumCards;
-            var (count, first) = shown && Path.GetDirectoryName(path) is { } folder
+            var (count, main) = shown && Path.GetDirectoryName(path) is { } folder
                 ? ProjectPictureCounter.Count(folder, _pictureFilter)
                 : (0, null);
             var item = new RecentProjectItem(
@@ -909,9 +909,9 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
                 new RelayCommand(() => _recentProjects.Remove(path)),
                 now);
             _recentItems.Add(item);
-            if (first is not null && _recentThumbnails is not null && Path.GetDirectoryName(path) is { } projectFolder)
+            if (main is not null && _recentThumbnails is not null && Path.GetDirectoryName(path) is { } projectFolder)
             {
-                _recentThumbnails.Load(item, first, projectFolder);
+                _recentThumbnails.Load(item, main, projectFolder);
             }
         }
 

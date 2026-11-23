@@ -767,6 +767,7 @@ reviews:
       - "src/**/ComposerSubsystem/ChipView.axaml.cs"
       - "src/**/ComposerSubsystem/ComposerEditorView.axaml"
       - "src/**/ComposerSubsystem/ComposerEditorView.axaml.cs"
+      - "src/**/ComposerSubsystem/ComposerTextEditor.cs"
       - "src/**/ComposerSubsystem/DataTransferReader.cs"
       - "src/**/ComposerSubsystem/DictatedTextBackgroundRenderer.cs"
       - "src/**/ComposerSubsystem/IChipThumbnailProvider.cs"

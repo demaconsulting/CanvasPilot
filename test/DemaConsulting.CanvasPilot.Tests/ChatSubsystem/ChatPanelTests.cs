@@ -219,7 +219,7 @@ public sealed class ChatPanelTests : IDisposable
     [Fact]
     public async Task ChatPanelViewModel_Send_TypedDictatedAndMark_EntryKeepsOrderOriginsAndSummary()
     {
-        // Arrange: "Hello " typed, "box" dictated, and a mark added at the end
+        // Arrange: "Hello " typed, "box" dictated, and a mark added after them
         _composer.InsertTyped("Hello ");
         _dictation.Session.FinalText = "box";
         await _panel.BeginPushToTalkAsync();
@@ -230,12 +230,13 @@ public sealed class ChatPanelTests : IDisposable
         // Act: send it
         await _panel.SendCommand.ExecuteAsync(null);
 
-        // Assert: typed, dictated, and the mark chip, in that order, with a summary naming the mark
+        // Assert: the mark chip first, in the row above the words, then the typed and the dictated words in the order they were
+        // written, with a summary naming the mark
         var entry = Assert.Single(_panel.SentEntries);
         Assert.Equal(3, entry.Items.Count);
-        Assert.Equal(("Hello ", TextOrigin.Typed), (entry.Items[0].Text, entry.Items[0].Origin));
-        Assert.Equal(("box", TextOrigin.Dictated), (entry.Items[1].Text, entry.Items[1].Origin));
-        var chip = Assert.IsType<MarkChip>(entry.Items[2].Chip);
+        var chip = Assert.IsType<MarkChip>(entry.Items[0].Chip);
+        Assert.Equal(("\nHello ", TextOrigin.Typed), (entry.Items[1].Text, entry.Items[1].Origin));
+        Assert.Equal(("box", TextOrigin.Dictated), (entry.Items[2].Text, entry.Items[2].Origin));
         Assert.Equal(1, chip.Number);
         Assert.Equal("1 mark", entry.Summary);
     }
@@ -261,7 +262,7 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a mark drawn on the picture becomes one chip of the message at the caret as one undo step, that the
+    ///     Test that a mark drawn on the picture becomes one chip in the row of chips of the message as one undo step, that the
     ///     layer shows it while the chip is in the message, and that undo removes the chip and hides the mark and redo brings
     ///     both back.
     /// </summary>
@@ -278,8 +279,8 @@ public sealed class ChatPanelTests : IDisposable
         _annotation.EndStroke(new RenderPoint(50, 40));
         _annotation.SkipNote();
 
-        // Assert: one mark chip is at the caret after the text and the layer shows the mark
-        Assert.Equal("see \uFFFC", _composer.Document.FlatText);
+        // Assert: one mark chip is in the row above the text and the layer shows the mark
+        Assert.Equal("\uFFFC\nsee ", _composer.Document.FlatText);
         var chip = Assert.Single(_composer.Document.Chips.OfType<MarkChip>());
         Assert.Equal(1, chip.Number);
         Assert.Single(_annotation.VisibleMarks);

@@ -208,6 +208,59 @@ public sealed class ComposerEdit
     }
 
     /// <summary>
+    ///     Makes the edit for adding chips that the user did not place in the text, such as the chip of a new mark or an
+    ///     attached file: the chips go to the end of the row of chips at the start of the message, and a line feed after
+    ///     the row, when the message does not have one there already, puts the words on the line below. The caret keeps
+    ///     its place in the words, so that typing goes on where it was; when it was in or before the row it goes to the
+    ///     start of the words.
+    /// </summary>
+    /// <param name="document">The document the edit is going to change.</param>
+    /// <param name="chips">The chips to add, in order.</param>
+    /// <param name="caretOffset">The caret offset before the edit.</param>
+    /// <returns>The edit, which is empty when there are no chips.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when an argument is <see langword="null" />.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="chips" /> holds <see langword="null" />.</exception>
+    public static ComposerEdit AddLeadingChips(ComposerDocument document, IReadOnlyList<ChipSegment> chips, int caretOffset)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(chips);
+        if (chips.Any(chip => chip is null))
+        {
+            throw new ArgumentException("A chip must not be null.", nameof(chips));
+        }
+
+        if (chips.Count == 0)
+        {
+            return Create(document, 0, 0, [], caretOffset);
+        }
+
+        // Find the end of the row of chips at the start, and whether a line feed follows it
+        var rowLength = 0;
+        var hasBreak = false;
+        foreach (var segment in document.Segments)
+        {
+            if (segment is not ChipSegment)
+            {
+                hasBreak = segment is TextSegment { Text: ['\n', ..] };
+                break;
+            }
+
+            rowLength += segment.Length;
+        }
+
+        List<ComposerSegment> inserted = [.. chips];
+        if (!hasBreak)
+        {
+            inserted.Add(new TextSegment("\n", TextOrigin.Typed));
+        }
+
+        // The words move down by what is inserted; a caret in or before the row goes to the start of the words
+        var insertedLength = ComposerDocument.Normalize(inserted).Sum(segment => segment.Length);
+        var caretAfter = caretOffset <= rowLength ? rowLength + chips.Count + 1 : caretOffset + insertedLength;
+        return new ComposerEdit(rowLength, [], inserted, caretOffset, caretAfter);
+    }
+
+    /// <summary>
     ///     Makes the edit for deleting a range of text or chips with the Backspace or Delete key, or by deleting the
     ///     selection. Deleting one character is one edit and deleting a selection is one edit.
     /// </summary>

@@ -14,10 +14,12 @@ was clicked and refused. The unit is a view model (`StylePickerViewModel`) with 
 
 - `StylePickerItem(Id, Label, ToolTip, IsMissing, Name, SwatchList)`: one choice. `Id` is the id of the kit, or `null`
   for no style; `Label` is the text in the list; `ToolTip` explains the choice; `IsMissing` is true for the one choice
-  that stands for a kit that the project names and that cannot be found; `Name` is the name of the kit without its
-  place (`null` for no style and for a missing kit); `SwatchList` is up to three colors of the palette as `#RRGGBB`
-  separated by semicolons. Three derived values serve the view: `DisplayName` (the `Name`, or the `Label` when there is
-  no name, which is what the pill shows), `Swatches` (the colors as a list), and `HasNoSwatches`.
+  that stands for a kit that the project names and that cannot be found; `Name` is the name of the kit without its place
+  (`null` for no style and for a missing kit); `SwatchList` is up to three colors of the palette as `#RRGGBB` separated
+  by semicolons. Three derived values serve the view: `DisplayName` (the `Name`, or the `Label` when there is no name,
+  which is what the pill shows), `Swatches` (the colors as a list), and `HasNoSwatches`. `ToString` is `DisplayName`,
+  which is the text that a screen reader is given as the value of the pill and as the name of a choice, instead of the
+  text of the record with all its values.
 - *Swatch rule*: the colors are chosen from the palette of the kit in this order: `primary`, `secondary`, `accent`, then
   the other roles in the order of the palette, never `background` or `text`, each color once (ignoring case), at most
   three. A kit that has none of these has no swatches, which the view draws like no style.

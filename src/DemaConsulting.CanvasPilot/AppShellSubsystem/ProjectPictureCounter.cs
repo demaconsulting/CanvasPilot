@@ -45,17 +45,21 @@ internal static class ProjectPictureCounter
     private static readonly string[] SkippedTopFolders = ["attachments", "styles"];
 
     /// <summary>
-    ///     Counts the pictures of a project.
+    ///     Counts the pictures of a project and finds the one that its card shows: the picture that was changed last among
+    ///     those at the top of the project folder, because a project's main picture is the one that was drawn last and
+    ///     composes the others (the files of the parts are written before it). A project that has no picture at the top
+    ///     shows the picture that was changed last in its folders.
     /// </summary>
     /// <param name="projectFolder">The folder of the project.</param>
     /// <param name="filter">Tells which files are pictures.</param>
-    /// <returns>The number of pictures and the path of the first one, which is <see langword="null" /> when there is none.</returns>
-    public static (int Count, string? First) Count(string projectFolder, IImageSourceFilter filter)
+    /// <returns>The number of pictures and the path of the main one, which is <see langword="null" /> when there is none.</returns>
+    public static (int Count, string? Main) Count(string projectFolder, IImageSourceFilter filter)
     {
         var count = 0;
-        string? first = null;
+        (string File, DateTime Time)? top = null;
+        (string File, DateTime Time)? nested = null;
         Walk(projectFolder, 0);
-        return (count, first);
+        return (count, (top ?? nested)?.File);
 
         void Walk(string folder, int depth)
         {
@@ -65,7 +69,17 @@ internal static class ProjectPictureCounter
                 foreach (var file in pictures.Take(MaximumCount - count))
                 {
                     count++;
-                    first ??= file;
+
+                    // Names are in order, so the first of equal times wins, which keeps the choice the same from run to run
+                    var time = ChangedAt(file);
+                    if (depth == 0)
+                    {
+                        top = top is { } current && current.Time >= time ? current : (file, time);
+                    }
+                    else
+                    {
+                        nested = nested is { } current && current.Time >= time ? current : (file, time);
+                    }
                 }
 
                 if (depth >= MaximumDepth)
@@ -83,6 +97,23 @@ internal static class ProjectPictureCounter
             {
                 // A folder that cannot be read has no pictures to count; the card still opens the project
             }
+        }
+    }
+
+    /// <summary>
+    ///     Gets when a file was last changed, which is the oldest time for a file that cannot be read.
+    /// </summary>
+    /// <param name="file">The path of the file.</param>
+    /// <returns>The time of the last change, in UTC.</returns>
+    private static DateTime ChangedAt(string file)
+    {
+        try
+        {
+            return File.GetLastWriteTimeUtc(file);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return DateTime.MinValue;
         }
     }
 

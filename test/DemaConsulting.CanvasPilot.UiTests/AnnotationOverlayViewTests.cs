@@ -21,11 +21,13 @@
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Shapes;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Media;
 using Avalonia.VisualTree;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
@@ -457,6 +459,48 @@ public sealed class AnnotationOverlayViewTests
         // Assert: the first mark has its note and the second none
         Assert.Equal(["kept", null], harness.Overlay.VisibleMarks.Select(mark => mark.Note));
     }
+
+    /// <summary>
+    ///     Test that the note card of a new mark is drawn with the design of the application: "Add mark" is the primary button
+    ///     filled with the accent, "Skip note" is the secondary button with a quiet outline, and the card is rounded like the
+    ///     other cards.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_NoteCard_UsesThePrimaryAndSecondaryButtonsAndTheCardRadius()
+    {
+        // Arrange: a finished shape that waits for its note, in the dark theme
+        using var harness = await AnnotationHarness.CreateAsync();
+        harness.Window.RequestedThemeVariant = Avalonia.Styling.ThemeVariant.Dark;
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        harness.ChooseTool("AnnotationToolRectangle");
+        harness.Drag((100, 80), (300, 200));
+        AnnotationHarness.Flush();
+        var add = harness.Find<Button>("AnnotationNoteAdd");
+        var skip = harness.Find<Button>("AnnotationNoteSkip");
+        var card = harness.Find<Border>("AnnotationNoteCard");
+
+        // Act: read how the buttons and the card are drawn
+        var addColor = Assert.IsAssignableFrom<ISolidColorBrush>(Face(add).Background).Color;
+        var skipFace = Face(skip);
+        var skipColor = Assert.IsAssignableFrom<ISolidColorBrush>(skipFace.Background).Color;
+        var skipOutline = Assert.IsAssignableFrom<ISolidColorBrush>(skipFace.BorderBrush).Color;
+
+        // Assert: the accent fill with the text on the accent, the raised fill with the strong outline, and the card radius
+        Assert.Equal(ThemeUiHelpers.ColorOf("CpAccent", Avalonia.Styling.ThemeVariant.Dark), addColor);
+        Assert.Equal(ThemeUiHelpers.ColorOf("CpTextOnAccent", Avalonia.Styling.ThemeVariant.Dark), Assert.IsAssignableFrom<ISolidColorBrush>(add.Foreground).Color);
+        Assert.Equal(ThemeUiHelpers.ColorOf("CpSurfaceRaised", Avalonia.Styling.ThemeVariant.Dark), skipColor);
+        Assert.Equal(ThemeUiHelpers.ColorOf("CpBorderStrong", Avalonia.Styling.ThemeVariant.Dark), skipOutline);
+        Assert.Equal(new CornerRadius(14), card.CornerRadius);
+        Assert.True(add.Bounds.Height >= 32 && skip.Bounds.Height >= 32);
+    }
+
+    /// <summary>
+    ///     Finds the part of a button that draws its fill and outline.
+    /// </summary>
+    /// <param name="button">The button.</param>
+    /// <returns>The content presenter of the button's template.</returns>
+    private static ContentPresenter Face(Button button) =>
+        button.GetVisualDescendants().OfType<ContentPresenter>().First(item => item.Name == "PART_ContentPresenter");
 
     /// <summary>
     ///     Test that Escape throws away a shape while the button is down and a finished shape that waits for its note, and

@@ -106,6 +106,12 @@ buttons are disabled and Cancel is enabled. This scenario is tested by
 **SettingsDialogView_CloseWindow_NotifiesPages**: The window is closed directly; the second page was told once.
 This scenario is tested by `SettingsDialogView_CloseWindow_NotifiesPages`.
 
+**SettingsDialogView_PageRows_AreNamedByThePageTitle**: In the shown dialog the automation name of each row of the list
+of pages is the title of its page, and none holds the name of a type. The real dialog is checked for the titles
+`AI Provider`, `Speech`, `Style Kits`, and `Appearance` by
+`MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses`. This scenario is tested by
+`SettingsDialogView_PageRows_AreNamedByThePageTitle`.
+
 **SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner**: The window is shown over the AI provider page and a
 second page that has no sentence and no icon of its own. The heading says `AI Provider` with a sentence, the banner is
 not shown, and the list has an icon with a shape for each of its two entries (the second has the default icon). After

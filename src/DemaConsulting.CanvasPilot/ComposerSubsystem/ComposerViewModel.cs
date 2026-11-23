@@ -538,7 +538,8 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     }
 
     /// <summary>
-    ///     Adds the chip of a mark at the caret as one step. The mark must have been made in this composer's registry;
+    ///     Adds the chip of a mark to the row of chips at the start of the message as one step, with the line break below
+    ///     the row that puts the words on their own line. The mark must have been made in this composer's registry;
     ///     marks are made by pointing at the picture, never by voice.
     /// </summary>
     /// <param name="mark">The mark that was made.</param>
@@ -553,7 +554,7 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
             throw new ArgumentException("The mark was not made in this composer's registry.", nameof(mark));
         }
 
-        return BeginEdit() && Execute(ComposerEdit.AddMark(_document, _caretOffset, new MarkChip(mark.Id, mark.Number)));
+        return BeginEdit() && Execute(ComposerEdit.AddLeadingChips(_document, [new MarkChip(mark.Id, mark.Number)], _caretOffset));
     }
 
     /// <summary>
@@ -613,6 +614,20 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     {
         ArgumentNullException.ThrowIfNull(content);
         return AddContent(content, Math.Clamp(offset ?? _caretOffset, 0, _document.Length), 0);
+    }
+
+    /// <summary>
+    ///     Handles files that the user chose with the attach button: like a drop, but the chips go to the row of chips at
+    ///     the start of the message, as the chip of a mark does, and not to the caret, when the content holds nothing but
+    ///     files, folders, and pictures. It is one step.
+    /// </summary>
+    /// <param name="content">The files that were chosen.</param>
+    /// <returns><see langword="true" /> when something was added.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="content" /> is <see langword="null" />.</exception>
+    public bool AttachFiles(DroppedContent content)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        return AddContent(content, Math.Clamp(_caretOffset, 0, _document.Length), 0, toChipRow: true);
     }
 
     /// <summary>
@@ -980,8 +995,12 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     /// <param name="content">What was dropped or pasted.</param>
     /// <param name="offset">The offset at which the items are put.</param>
     /// <param name="replaceLength">The length of the selection that the items replace.</param>
+    /// <param name="toChipRow">
+    ///     Whether chips go to the row of chips at the start of the message instead of the offset; it only applies when
+    ///     the content holds nothing but chips.
+    /// </param>
     /// <returns><see langword="true" /> when something was added.</returns>
-    private bool AddContent(DroppedContent content, int offset, int replaceLength)
+    private bool AddContent(DroppedContent content, int offset, int replaceLength, bool toChipRow = false)
     {
         if (!BeginEdit())
         {
@@ -990,8 +1009,11 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
 
         // The intake only looks at the content and saves pasted pictures; nothing is copied while drafting
         var result = _intake!.Accept(content);
+        var chipsOnly = !result.Segments.IsEmpty && result.Segments.All(segment => segment is ChipSegment);
         var added = !result.Segments.IsEmpty &&
-                    Execute(ComposerEdit.Drop(_document, offset, result.Segments, replaceLength));
+                    Execute(toChipRow && chipsOnly
+                        ? ComposerEdit.AddLeadingChips(_document, [.. result.Segments.Cast<ChipSegment>()], _caretOffset)
+                        : ComposerEdit.Drop(_document, offset, result.Segments, replaceLength));
 
         // Say what was left out and what to check, so that no item disappears without a word
         StatusText = Summarize(result);

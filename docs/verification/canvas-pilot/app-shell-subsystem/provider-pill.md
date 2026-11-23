@@ -59,7 +59,8 @@ panel checks or the settings change, and each missing argument is refused. This 
 
 **MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage**: In the shown window the pill is a
 descendant of the title bar, 26 pixels high, inside its right edge, with a name that starts with "AI provider: Copilot,
-"; using it opens the settings dialog on the page titled "AI Provider". This scenario is tested by
+"; it ends with one gear drawn as lines, which is inside the pill and to the right of the words, not a filled glyph;
+using it opens the settings dialog on the page titled "AI Provider". This scenario is tested by
 `MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage`.
 
 The requirements are verified by these scenarios as follows: *ShowProviderAndModel* by the ready and the Ollama

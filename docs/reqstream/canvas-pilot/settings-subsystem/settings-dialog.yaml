@@ -33,7 +33,7 @@ sections:
                   The SettingsDialog shall list the pages in a rail on the left, each with its icon and its title and the
                   chosen page marked, and shall show above the chosen page its title and a sentence that says what the page
                   is for, leaving out the sentence for a page that has none and giving a page that names no icon a
-                  default icon.
+                  default icon, and shall announce each page in the rail to a screen reader by its title.
                 justification: |
                   A person who opens the settings looks for one thing, so each page is found by its icon and its title, and
                   the heading and the sentence confirm that the page that is shown is the one that was meant. A page that
@@ -41,6 +41,7 @@ sections:
                   list, so that a page that is added later cannot break the window.
                 tests:
                   - SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner
+                  - SettingsDialogView_PageRows_AreNamedByThePageTitle
                   - SettingsDialogView_Show_ListsPagesAndShowsFirstPageContent
                   - SettingsDialogView_SelectOtherPage_ShowsItsContent
 

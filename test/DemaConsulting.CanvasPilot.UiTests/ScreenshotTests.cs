@@ -130,7 +130,7 @@ public sealed class ScreenshotTests : IDisposable
 
     /// <summary>
     ///     Draws the main window in the middle of a conversation: a picture with two marks on it, the explorer, the answers of
-    ///     the copilot with the tools it used, and a message that holds the two marks. It writes the dark picture that the
+    ///     the copilot with the tools it used, and a message that holds the two marks in a row of chips above its words. It writes the dark picture that the
     ///     README shows and the light one beside it.
     /// </summary>
     /// <returns>A task that completes when the pictures are written.</returns>
@@ -162,7 +162,7 @@ public sealed class ScreenshotTests : IDisposable
         Draw(composition, AnnotationTool.Ellipse, ScreenshotDemo.EllipseMark);
         Draw(composition, AnnotationTool.Rectangle, ScreenshotDemo.RectangleMark);
         ScreenshotDemo.FillTranscript(composition.Chat, project.FolderPath);
-        composition.Composer.InsertTyped(" Make mark 1 red, and label the tallest bar in mark 2 with its value.");
+        composition.Composer.InsertTyped("Make mark 1 red, and label the tallest bar in mark 2 with its value.");
         window.GetVisualDescendants().OfType<ComposerSubsystem.ComposerEditorView>().First().FocusEditor();
         await SettleAsync(() =>
             AllNodes(explorer.Roots).Where(node => node.IsPreviewable).All(node => node.HasThumbnail)

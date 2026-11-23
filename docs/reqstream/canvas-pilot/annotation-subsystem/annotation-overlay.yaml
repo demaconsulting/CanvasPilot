@@ -67,6 +67,7 @@ sections:
                   - AnnotationOverlayViewModel_CancelCommand_OnlyWhileShapeUnderConstruction
                   - AnnotationOverlayView_NoteTyped_EnterMakesMarkWithNoteAndFocusIsInNote
                   - AnnotationOverlayView_NoteButtons_AddMarkOrSkipNote
+                  - AnnotationOverlayView_NoteCard_UsesThePrimaryAndSecondaryButtonsAndTheCardRadius
 
               - id: CanvasPilot-AnnotationOverlay-CancelWithEscape
                 title: >-

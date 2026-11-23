@@ -147,6 +147,39 @@ public sealed class ChatPanelViewTests
     }
 
     /// <summary>
+    ///     Test that the bubble of a sent message that holds a chip is as big as its content: the chip has a row of its own
+    ///     that is as high as the chip, the words are below the row and as high as their lines, and the bubble is as high as
+    ///     the two with its padding, so nothing is cut off.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords()
+    {
+        // Arrange: a message with a mark chip and words
+        using var harness = new ChatHarness();
+        var mark = harness.Marks.Add(harness.Picture, MarkKind.Rectangle, [new RenderPoint(5, 5), new RenderPoint(40, 30)]);
+        harness.Composer.AddMark(mark);
+        harness.Composer.InsertTyped("Chart downloads by month");
+
+        // Act: send it and lay out the transcript
+        harness.ClickSend();
+        harness.Layout();
+
+        // Assert: the chip row holds the chip, the words are below it with their full lines, and the bubble fits both
+        var entry = harness.Entries.Single();
+        var bubble = entry.FindControl<Border>("MessageBubble")!;
+        var blocks = entry.FindControl<StackPanel>("MessageBlocks")!;
+        var row = Assert.Single(blocks.Children.OfType<WrapPanel>());
+        var chip = Assert.Single(entry.Chips);
+        var words = Assert.Single(entry.TextBlocks);
+        Assert.Equal("Chart downloads by month", ChatHarness.TextOf(entry));
+        Assert.True(row.Bounds.Height >= chip.Bounds.Height - 0.5, $"The row is {row.Bounds.Height} high, the chip {chip.Bounds.Height}.");
+        Assert.True(words.Bounds.Top >= row.Bounds.Bottom, "The words must be below the row of chips.");
+        Assert.True(words.Bounds.Height >= words.LineHeight - 0.5, $"The words are {words.Bounds.Height} high, a line is {words.LineHeight}.");
+        Assert.Equal(bubble.Padding.Top + blocks.Bounds.Height + bubble.Padding.Bottom, bubble.Bounds.Height, 0.5);
+        Assert.True(blocks.Bounds.Height >= row.Bounds.Height + words.Bounds.Height - 0.5);
+    }
+
+    /// <summary>
     ///     Test that the chip of a mark in the message being written shows the picture of the area around the mark.
     /// </summary>
     [AvaloniaFact]
@@ -329,8 +362,8 @@ public sealed class ChatPanelViewTests
         harness.Annotation.SkipNote();
         harness.Layout();
 
-        // Assert: the chip is in the message after the text and the mark is shown
-        Assert.Equal("see \uFFFC", harness.Editor.SurfaceText);
+        // Assert: the chip is in the row above the text and the mark is shown
+        Assert.Equal("\uFFFC\nsee ", harness.Editor.SurfaceText);
         Assert.Single(harness.Annotation.VisibleMarks);
 
         // Act: undo with the keyboard in the editing control
@@ -404,7 +437,7 @@ public sealed class ChatPanelViewTests
         harness.ClickSend();
 
         // Assert: the transcript text has a typed run without a background and a dictated run with one
-        var runs = harness.Entries.Single().FindControl<SelectableTextBlock>("MessageText")!.Inlines!.OfType<Avalonia.Controls.Documents.Run>().ToList();
+        var runs = harness.Entries.Single().TextBlocks.Single().Inlines!.OfType<Avalonia.Controls.Documents.Run>().ToList();
         Assert.Equal(2, runs.Count);
         Assert.Null(runs[0].Background);
         var dictated = Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(runs[1].Background);

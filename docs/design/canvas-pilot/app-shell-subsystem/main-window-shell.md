@@ -129,7 +129,13 @@ items with 8 by 4 padding and secondary text, but all its items, keys, and acces
 **Caption reserve**: the system draws its window buttons over the strip when the client area is extended, so the strip
 keeps room for them. `MainWindowView.CaptionReserve(isExtended, isWindows, isMacOs)` is a pure function that returns the
 room on the left and on the right: 138 pixels on the right on Windows, 78 pixels on the left on macOS (the traffic
-lights), and none elsewhere or when the window is not extended. The window applies it to the two reserve borders when
+lights), and none elsewhere or when the window is not extended. These are the fallback: on Windows the window then
+measures the real room, because the buttons that Avalonia draws over the strip are 45 pixels wide with a gap, and the
+theme insets them by the frame and the shadow of the window, so they cover more than 138 pixels at the right edge (and
+the full-screen button can add more). `MeasureCaptionButtonsReserve` finds the overlay panel of the drawn window
+decorations (`PART_OverlayPanel`) and takes the distance from its left edge to the right edge of the window; the window
+sets the trailing reserve to it after it opens, when its size or its state changes, so the pill is never under a
+button. The window applies the fallback to the two reserve borders when
 `IsExtendedIntoWindowDecorations` changes, so the headless platform, which does not extend, keeps both at width 0. A
 real window raises that change while the XAML loads, when the window has no name scope and the reserve controls do not
 exist (a name lookup then throws and crashed the published program at the start). So the window ignores the change until

@@ -14,12 +14,15 @@
   </UserControl.KeyBindings>
 
   <UserControl.Styles>
-    <!-- The Fit toggle of the zoom pill shows its state as a tint, not as a filled button -->
+    <!-- The Fit toggle of the zoom pill shows its state as an accent tint with an accent outline and accent icon, which
+         also holds while the pointer is over it right after the click, so it is never unclear whether Fit is on -->
     <Style Selector="ToggleButton.zoomfit:checked">
       <Setter Property="Foreground" Value="{DynamicResource CpAccentText}" />
     </Style>
     <Style Selector="ToggleButton.zoomfit:checked /template/ ContentPresenter#PART_ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CpAccentText}" />
+      <Setter Property="BorderThickness" Value="1" />
     </Style>
   </UserControl.Styles>
 

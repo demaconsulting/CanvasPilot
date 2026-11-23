@@ -51,4 +51,11 @@ public sealed record StylePickerItem(
     ///     Gets a value indicating whether the choice has no colors to show, which is drawn as an empty dashed swatch.
     /// </summary>
     public bool HasNoSwatches => SwatchList.Length == 0;
+
+    /// <summary>
+    ///     Gets the name of the choice as the pill and its screen reader announce it: the name of the kit, or the label.
+    ///     Without this the text of a record with all its values would be announced.
+    /// </summary>
+    /// <returns>The display name.</returns>
+    public override string ToString() => DisplayName;
 }

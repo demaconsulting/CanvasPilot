@@ -112,6 +112,17 @@ each remove one chip as one step, and pressing Ctrl+Z twice brings them back. Th
 surface does not change, and the chip that is drawn is the new one. This scenario is tested by
 `ComposerEditorView_ChipReplacesChip_DrawsTheNewChip`.
 
+**ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords**: With words typed, two marks are added through
+the view model. The message is the two chips, a line feed, and the words; both chips are drawn at the same height on the
+first line, the caret, at the end of the words, is below the bottom of the chips, and the surface equals the message.
+This scenario is tested by `ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords`.
+
+**ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage**: For a message with words and a mark chip
+the automation peer of the editing surface is an edit field named `Message` whose value is `[Mark 1]` and the words on
+the line below, that is not read-only; setting its value replaces the message and the surface follows; the text area has
+the name `Message` too. This scenario is tested by
+`ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage`.
+
 **ComposerEditorView_AddMark_ShowsMarkChipAndUndoCommandRemovesIt**: A mark added through the view model is drawn as a
 chip named `Mark 1`, and the undo command of the view model removes it from the surface. This scenario is tested by
 `ComposerEditorView_AddMark_ShowsMarkChipAndUndoCommandRemovesIt`.

@@ -1280,9 +1280,9 @@ public sealed class CanvasPilotTests : IDisposable
         // Assert: the message was sendable, the transcript shows its words and chip, the inspector shows the payload as
         // the describer writes it, with the place of the mark and the node under it, and two pictures
         Assert.True(canSend);
-        Assert.Equal(["Make ", "#", " green"], entry.Items.Select(item => item.Text ?? "#"));
+        Assert.Equal(["#", "\nMake  green"], entry.Items.Select(item => item.Text ?? "#"));
         Assert.NotNull(payload);
-        Assert.Equal("Make [Mark 1] green", payload.Text);
+        Assert.Equal("[Mark 1]\nMake  green", payload.Text);
         Assert.Equal(PayloadDescriber.Describe(payload), description);
         Assert.Contains("\"text\": \"Start\"", description);
         Assert.Equal(2, pictures);
@@ -1561,11 +1561,11 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.False(emptyBefore);
         Assert.True(canSend);
         Assert.False(attachmentsWhileDrafting);
-        Assert.Equal(["Make ", "#", " like ", "#"], items);
-        Assert.IsType<MarkChip>(chips[1]);
-        Assert.IsType<FileChip>(chips[3]);
+        Assert.Equal(["#", "\nMake  like ", "#"], items);
+        Assert.IsType<MarkChip>(chips[0]);
+        Assert.IsType<FileChip>(chips[2]);
         Assert.Equal("1 mark, 1 attachment", summary);
-        Assert.Equal("Make [Mark 1] like [Attachment 1: brief.txt]", payload.Text);
+        Assert.Equal("[Mark 1]\nMake  like [Attachment 1: brief.txt]", payload.Text);
         Assert.Equal("attachments/brief.txt", Assert.Single(payload.Attachments).ProjectRelativePath);
         var mark = Assert.Single(Assert.Single(payload.Images).Marks);
         Assert.Equal("bigger", mark.Note);
@@ -1613,7 +1613,7 @@ public sealed class CanvasPilotTests : IDisposable
         states.Add(State());
         DrawRectangleAround(composition, NodeBox(picture, "Start"));
         states.Add(State());
-        composer.DeleteChip(composer.Document.FlatText.IndexOf('\uFFFC', StringComparison.Ordinal));
+        composer.DeleteChip(composer.Document.FlatText.LastIndexOf('\uFFFC'));
         states.Add(State());
         var entriesAfterDrafting = ProjectEntries();
         var undone = new List<(string Text, int Chips, int Marks)>();
@@ -1883,7 +1883,7 @@ public sealed class CanvasPilotTests : IDisposable
 
     /// <summary>
     ///     Test that a user who draws on the shown picture with the pointer and with the keyboard gets numbered marks, each
-    ///     with its chip in the message at the place where the user was writing, and that each mark holds the exact
+    ///     with its chip in the row of chips above the words of the message, and that each mark holds the exact
     ///     picture that was shown when it was drawn: the same picture, with its file and pixel fingerprints.
     /// </summary>
     [Fact]
@@ -1910,7 +1910,7 @@ public sealed class CanvasPilotTests : IDisposable
 
         // Assert: two marks numbered in order, the rectangle with its note around the node and the ellipse from the
         // keyboard; each holds the very picture that was shown, with its fingerprints; the message holds their chips in
-        // the order the user wrote them, and the layer shows both
+        // the row above the words in the order the user made them, and the layer shows both
         Assert.Equal([1, 2], marks.Select(mark => mark.Number));
         Assert.Equal([MarkKind.Rectangle, MarkKind.Ellipse], marks.Select(mark => mark.Kind));
         Assert.Equal("this one", marks[0].Note);
@@ -1925,10 +1925,9 @@ public sealed class CanvasPilotTests : IDisposable
         Assert.True(marks[0].Geometry.Points[0].X < start.X && marks[0].Geometry.Points[1].X > start.X + start.Width);
         Assert.Collection(
             segments,
-            segment => Assert.Equal(new TextSegment("Look: ", TextOrigin.Typed), segment),
             segment => Assert.Equal(new MarkChip(marks[0].Id, 1), segment),
-            segment => Assert.Equal(new TextSegment(" and ", TextOrigin.Typed), segment),
-            segment => Assert.Equal(new MarkChip(marks[1].Id, 2), segment));
+            segment => Assert.Equal(new MarkChip(marks[1].Id, 2), segment),
+            segment => Assert.Equal(new TextSegment("\nLook:  and ", TextOrigin.Typed), segment));
         Assert.Equal([1, 2], visible);
     }
 

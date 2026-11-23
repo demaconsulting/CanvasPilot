@@ -63,9 +63,9 @@ payload" button that shows on hover); they are not evidence for a requirement.
 - Every button that shows only an icon (overflow menu, hide, attach, talk, send) has an accessible name and a tooltip,
   can take the focus, and is at least 28 by 28 pixels, in both theme variants; the empty message shows its placeholder
   until text is typed.
-- A mark drawn on the picture becomes one chip at the caret as one undo step; undo removes the chip and hides the mark
-  and redo restores both; marks are allowed exactly while a message can be written; no mark remains after sending;
-  clearing the marks on the picture takes the chips of all marks out of the message.
+- A mark drawn on the picture becomes one chip in the row of chips above the words as one undo step; undo removes the
+  chip and hides the mark and redo restores both; marks are allowed exactly while a message can be written; no mark
+  remains after sending; clearing the marks on the picture takes the chips of all marks out of the message.
 - Pressing the pointer on the talk button listens and releasing it anywhere, losing the capture, removing the panel, or
   (with the keyboard) releasing the space key ends it, once for each hold; the accessible name of the button follows
   the state; the words so far
@@ -386,6 +386,11 @@ This scenario is tested by `ChatPanelView_Send_TypedText_AppearsInTranscriptAndE
 
 **ChatPanelView_Send_TwoMessages_AreListedInOrder**: Two messages are sent and shown in order. This scenario is tested
 by `ChatPanelView_Send_TwoMessages_AreListedInOrder`.
+
+**ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords**: A message with a mark chip and the words
+`Chart downloads by month` is sent. The bubble holds a row for the chip that is as high as the chip and a text block
+below it that is at least one line high, and the bubble is as high as the two with its padding, so that neither is cut
+off. This scenario is tested by `ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords`.
 
 **ChatPanelView_Send_MessageWithMarkAndFile_ShowsChipsInTranscriptWithoutDeleteButtons**: A message with a mark, text,
 and a dropped file is sent; the entry shows `Mark 1` and `notes.txt` as chips without delete buttons, the summary says

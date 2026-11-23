@@ -166,6 +166,7 @@ sections:
                   - PreviewPaneViewModel_Zoom_StepsClampAndFit_FollowTheStepList
                   - PreviewPaneViewModel_ZoomOut_FromFit_GoesToTheStepBelowTheFittedZoom
                   - PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars
+                  - PreviewPaneView_FitToggle_ShowsItsOnStateWithTintOutlineAndAccentIcon
 
               - id: CanvasPilot-PreviewPane-ZoomWithControls
                 title: >-
@@ -182,6 +183,7 @@ sections:
                   menu, and the label shows at a glance whether the picture is shown at its own size or reduced.
                 tests:
                   - PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars
+                  - PreviewPaneView_FitToggle_ShowsItsOnStateWithTintOutlineAndAccentIcon
                   - PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether
                   - PreviewPaneViewModel_Zoom_StepsClampAndFit_FollowTheStepList
 

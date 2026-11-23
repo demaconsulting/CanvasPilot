@@ -522,7 +522,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         var paths = await picker.PickAttachmentsAsync(_composer.ProjectFolder);
         if (paths.Count > 0 && _composer.CanEdit)
         {
-            _composer.HandleDrop(new DroppedContent { Paths = paths });
+            _composer.AttachFiles(new DroppedContent { Paths = paths });
         }
     }
 

@@ -310,7 +310,7 @@ public sealed class ComposerSubsystemTests : IDisposable
         Assert.True(sent);
         var message = Assert.Single(sentMessages);
         var payload = Assert.IsType<MessagePayload>(message.Payload);
-        Assert.StartsWith("See [Mark 1] and this[Attachment 1: brief.txt][Attachment 2: paste-", payload.Text, StringComparison.Ordinal);
+        Assert.StartsWith("[Mark 1]\nSee  and this[Attachment 1: brief.txt][Attachment 2: paste-", payload.Text, StringComparison.Ordinal);
         Assert.Equal(["attachments/brief.txt", "attachments/" + Path.GetFileName(pastedPicture)], payload.Attachments.Select(item => item.ProjectRelativePath));
         var image = Assert.Single(payload.Images);
         Assert.Equal(picture.SourcePath, image.SourcePath);
