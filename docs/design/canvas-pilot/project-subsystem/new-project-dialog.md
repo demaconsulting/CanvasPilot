@@ -31,12 +31,17 @@ The target problem is empty while the name or folder has its own problem.
 **CloseRequested**: event with `NewProjectCloseRequestedEventArgs.Accepted` — raised when the dialog asks its
 host to close.
 
-**View**: `NewProjectDialogView` is an Avalonia window with a name box, a location box with a Browse button,
-the three message lines, the target path, and OK and Cancel buttons. Controls carry automation identifiers
-(`NewProjectNameTextBox`, `NewProjectFolderTextBox`, `NewProjectBrowseButton`, `NewProjectNameError`,
-`NewProjectFolderError`, `NewProjectTargetError`, `NewProjectTargetPath`, `NewProjectOkButton`,
-`NewProjectCancelButton`). The view has a parameterless constructor for the XAML loader and a constructor
-that takes the view model, and it closes itself when the view model asks.
+**View**: `NewProjectDialogView` is an Avalonia window, 560 by 360 and not resizable, drawn with the design tokens of
+`ThemeResources`: its body is the pane surface, and the content is a column of a `label` text, an input, and an `error`
+text for the name; a `label` text, the location input with a Browse button (a `SecondaryButton`), and the `error` texts
+for the folder and the target; and the `hint` text with the target path. A footer bar (the window surface with a subtle
+line above it) holds OK, the main action (a `PrimaryButton`, the default button of the window), and Cancel (a
+`SecondaryButton`, the cancel button of the window), both at least 88 px wide. The name input and the location input
+have automation names ("Project name" and "Location"). Controls carry automation identifiers (`NewProjectNameTextBox`,
+`NewProjectFolderTextBox`, `NewProjectBrowseButton`, `NewProjectNameError`, `NewProjectFolderError`,
+`NewProjectTargetError`, `NewProjectTargetPath`, `NewProjectOkButton`, `NewProjectCancelButton`), which the restyle did
+not change. The view has a parameterless constructor for the XAML loader and a constructor that takes the view model,
+and it closes itself when the view model asks.
 
 #### Key Methods
 
@@ -63,6 +68,8 @@ invalid.
 - **PathHelpers** — resolves the target path.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.
 - **Avalonia** — window and controls.
+- **ThemeResources** — the design tokens, the `PrimaryButton` and `SecondaryButton` control themes, and the label, hint,
+  and error text styles that the view uses; see its design.
 
 #### Callers
 

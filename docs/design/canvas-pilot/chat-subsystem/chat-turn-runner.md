@@ -42,7 +42,9 @@ turn and raises `BusyChanged` again.
 
 **Events to rows.** `AgentEvent.TextDelta` goes to the coalescing below. Any other event first adds the text that waits,
 so the rows keep their order. `ToolStarted` ends the reply that is being written (it is complete: its text is whole) and
-adds a `ToolActivityRowViewModel` with the sentence for what is under way. `ToolFinished` finds the row by call id (it
+adds a `ToolActivityRowViewModel` with the sentence for what is under way, giving it the runner's own clock, which the
+row uses to time the call (the manual clock of the tests therefore times it too). `ToolFinished` finds the row by call
+id (it
 makes one when the start was not seen) and finishes it with the sentence for what was done, or for what could not be
 done and why. `FileWritten` finds the latest `project_write` row that has no report of a file and reports that the file
 was created or replaced (the sentence is "Created" or "Replaced" and the path in code format), whichever of the file

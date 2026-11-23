@@ -16,17 +16,28 @@ control (see the *AvaloniaEdit* design) while no rule of the message lives in it
 The unit is made of these parts, all in the user interface layer:
 
 - `ComposerEditorView` (a `UserControl`, bound to a `ComposerViewModel`): hosts the editing surface (`TextEditor`), the
-  strip of live dictated words above it, the line for the status text below it, the hint that a project must be open,
-  and the highlight shown while a drag is over the text. `ThumbnailProvider` (get and set) gives the chips their
+  strip of live dictated words above it (an accent tint with italic text, shown while `IsDictating`), the line for the
+  status text below it, the hint that a project must be open, the placeholder (`ComposerPlaceholder`, the text
+  `ComposerViewModel.PlaceholderText` in the tertiary text color, shown while `ShowsPlaceholder` is true, and not
+  hit-testable, so that the surface under it still takes the pointer), and the highlight shown while a drag is over
+  the text. The surface has no background and no border of its own, a 48 pixel minimum height, the body type size and
+  the application font, because the card that the host puts around the view is the field. `ThumbnailProvider` (get and
+  set) gives the chips their
   pictures; `UndoRedoTarget` is the view model, which the Edit menu finds from the focused control's data context;
   `SurfaceText` and `IsConsistent` expose the rule that the surface equals the message; `FocusEditor` puts the focus in
   the surface; `PasteAsync(clipboard)` and `HandleDrop(data, point)` are the entry points that the paste command and the
   drop handler call.
 - `ChipElementGenerator`: the library's inline element generator, which turns each placeholder character of the surface
   into an inline control.
-- `ChipView` (a `UserControl`): one chip, with an icon for its kind (file, folder, picture, mark) or the picture from
-  the provider, its name, a delete button (which `IsDeleteButtonVisible` can hide; the transcript of sent messages hides
-  it), and a tooltip with the full path or `Mark n on the picture`.
+- `ChipView` (a `UserControl`): one chip, a pill at least 24 pixels high (the shared `ChipBorder` theme: a raised
+  surface with
+  a subtle border and a fully rounded corner) with an icon for its kind (file, folder, picture, mark) or the picture
+  from the provider, its name (trimmed with an ellipsis beyond 180 pixels), a delete button (which
+  `IsDeleteButtonVisible` can hide; the transcript of sent messages hides it), and a tooltip with the full path or
+  `Mark n on the picture`. A mark chip has the class `mark`, which tints the pill with `CpMarkTint`, gives it the
+  `CpMark` outline, and fills its icon with `CpMark`, so it reads like the mark on the picture. The delete button shows
+  a small cross icon; its accessible name and tooltip are `Remove {label}`, set when the chip is shown, so that the
+  screen reader says which chip.
 - `IChipThumbnailProvider` and `ImageChipThumbnailProvider`: the contract that gives a chip its small picture
   asynchronously, and the default implementation for attached picture files.
 - `DictatedTextBackgroundRenderer` and `DictatedRange`: draws the background behind dictated text; `GetRanges` finds the
@@ -123,9 +134,14 @@ it cannot be verified without a real input method (see the verification document
   *AvaloniaEdit* design.
 - **Avalonia** and **CommunityToolkit.Mvvm** (OTS): controls, drag and drop data, the clipboard, bitmaps, and the key
   binding commands.
+- **ThemeResources** (of the AppShell subsystem, by resource keys only): the colors, tints, mark colors, type sizes, the
+  icons, and the `ChipBorder` and `IconButton` themes.
 
 #### Callers
 
-- The chat panel hosts the view, gives it the view model of the message and a provider of pictures for mark chips, and
-  shows the sent messages with the same chip control, without its delete button (`IsDeleteButtonVisible`).
+- The chat panel hosts the view in the card of the message, gives it the view model of the message and a provider of
+  pictures for mark chips, and shows the sent messages with the same chip control, without its delete button
+  (`IsDeleteButtonVisible`). It listens for the Enter key before the view does and sends the message when Enter is
+  pressed on its own and the message can be sent; the view itself writes a line break for Enter, and that is what the
+  panel leaves to it in every other case.
 - The Edit menu and the keys reach undo and redo through `UndoRedoTarget`, which is the view model.

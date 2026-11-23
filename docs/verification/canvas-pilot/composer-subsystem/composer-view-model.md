@@ -48,6 +48,8 @@ from the background thread. No window, network, microphone, or special permissio
   the project or disposing the view model releases a session that is listening.
 - Each reason why dictation cannot work, a start without a session, a failure to start, a failure to end, a problem of
   the session, and a dictation without words each produce their own explanation and leave the draft as it is.
+- Deleting the chips of all marks takes every mark chip out of the message, each as its own step, and leaves the other
+  parts of the message as they were.
 
 #### Test Scenarios
 
@@ -176,6 +178,16 @@ refuses editing with the message to open a project. This scenario is tested by
 **ComposerViewModel_SetProject_UnusableFolder_ExplainsAndHasNoProject**: A store factory that refuses the folder leaves
 no project and puts the reason into the status. This scenario is tested by
 `ComposerViewModel_SetProject_UnusableFolder_ExplainsAndHasNoProject`.
+
+**ComposerViewModel_DeleteChip_IsOneStepAndUndoRestoresItAtTheSameOffset** (also evidence of the deletion of the mark
+chips, see below): The removal of a chip is one step that one undo brings back at its offset, and the clearing of all
+mark chips is built from exactly that deletion for each chip.
+
+**AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage**: This UI test of the annotation toolbar runs the
+real chat panel and composer: with two marks drawn, two mark chips are in the message; using the clear button of the
+toolbar has `DeleteMarkChips` take both out, and no mark chip and no visible mark remain. It is described in the
+verification of the `AnnotationOverlay` unit and is the evidence for the removal of all mark chips. No unit test of
+`ComposerViewModel` calls `DeleteMarkChips` itself; the undo of its steps is evidenced through `DeleteChip`.
 
 **ComposerViewModel_ClearDraft_EmptiesEverything**: Clearing empties the draft, the history, and the marks and asks the
 store to remove the saved pictures. This scenario is tested by `ComposerViewModel_ClearDraft_EmptiesEverything`.

@@ -73,7 +73,7 @@ public sealed class ApplicationComposition : IDisposable
     /// <param name="chat">The chat panel, which joins the composer and the annotation layer.</param>
     /// <param name="styleCatalog">The catalog of style kits.</param>
     /// <param name="activeStyle">The style kit that the open project uses.</param>
-    /// <param name="stylePicker">The list in the status bar with which the user chooses the style kit.</param>
+    /// <param name="stylePicker">The pill in the title bar with which the user chooses the style kit.</param>
     /// <param name="styleCheck">What the Check Against Style item of the Image menu runs.</param>
     /// <param name="styleTools">The descriptors of the tools that give and check the style, for an assistant.</param>
     /// <param name="agent">The AI copilot, or <see langword="null" /> when the composition has none.</param>
@@ -218,7 +218,7 @@ public sealed class ApplicationComposition : IDisposable
     public IActiveStyle ActiveStyle { get; }
 
     /// <summary>
-    ///     Gets the list in the status bar of the main window with which the user chooses the style kit of the open project.
+    ///     Gets the pill in the title bar of the main window with which the user chooses the style kit of the open project.
     /// </summary>
     public StylePickerViewModel StylePicker { get; }
 

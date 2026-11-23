@@ -5,7 +5,9 @@
 #### Purpose
 
 `ThemeResources` is the one place that says how CanvasPilot looks. It holds the design tokens (colors, spacing, corner
-radii, type sizes, and shadows) for the dark and the light theme variant, the line icons, the control themes, and the
+radii, type sizes, and shadows) for the dark and the light theme variant, the line icons, the control themes and shared
+looks (the icon button, tool toggle, pill, main, quiet, and card buttons, chip, splitter, project tree row, card,
+headings, and banner), and the
 palettes that make the standard controls of the Fluent theme follow the brand. Every view takes its look from these
 resources, so the look of the application changes in one place and a change of the theme variant repaints what is on the
 screen.
@@ -26,7 +28,18 @@ that are the same in both variants at the top level. All keys start with `Cp`.
 - *Accent*: `CpAccent` and `CpTextOnAccent` (the same in both variants), `CpAccentText`, `CpAccentTint` and
   `CpAccentTintHover` (selected and hovered rows), `CpFocusRing`, `CpAccentGradient` (the brand gradient), and the
   mark colors `CpMark` and `CpMarkTint`.
-- *State*: `CpSuccess`, `CpWarning`, and `CpDanger`, for text and icons, always paired with a word or a shape.
+- *State*: `CpSuccess`, `CpWarning`, and `CpDanger`, for text and icons, always paired with a word or a shape, and the
+  tints `CpWarningTint` and `CpDangerTint` (about 12 to 15 percent of the state color, for the background of a banner
+  or notice, with the state color for its outline or icon and the primary text color for its words).
+- *File-type badges*: `CpBadgeSvg`, `CpBadgeMermaid`, `CpBadgeVega`, `CpBadgePdf`, `CpBadgeImage`, `CpBadgeData`, and
+  `CpBadgeSource`, the tile colors of the explorer. They are the same in both variants and each is dark enough for a
+  white glyph at 4.5 to 1 or more. A badge never carries the meaning alone, because the name and extension are beside
+  it.
+- *Brand and welcome*: `CpAccentGradient` and `CpBrandTextGradient` (the "Pilot" in the name on the welcome screen),
+  `CpWelcomeBackdrop` (a deep three-stop gradient in the dark variant, the pane color in the light one),
+  `CpWelcomeGlowOpacity` (1 in the dark variant, 0.12 in the light one), and the three radial glows
+  `CpWelcomeGlowViolet`, `CpWelcomeGlowCyan`, and `CpWelcomeGlowPink`, which fade to nothing at their edge; and
+  `CpShadowFocus`, the 4 pixel glow around the composer card while it has the focus.
 - *Scales*: spacing `CpSpace1` to `CpSpace7` (4, 8, 12, 16, 24, 32, and 48), radii `CpRadiusKey`, `CpRadiusRow`,
   `CpRadiusInput`, `CpRadiusCard`, `CpRadiusWelcome`, and `CpRadiusPill`, type sizes `CpFontCaption` to
   `CpFontDisplay` (11, 12, 13, 14, 16, 20, and 34) with line heights `CpLineCaption` to `CpLineDisplay`, and
@@ -58,12 +71,41 @@ on the tokens:
   the workspace); the line is 2 px in the accent while the pointer is over it or it is dragged (the thumb has the
   `:pressed` state, there is no separate dragging state); the keyboard increment is 16 px. The theme is for a vertical
   splitter between two columns.
+- `PrimaryButton` (a `Button`): the one main action of a window or card: at least 32 by 32, 13 px semibold text, a
+  horizontal padding of 16, filled with `CpAccent` and white text, 90 percent opacity under the pointer and 80 percent
+  pressed. The class `gradient` fills it with the brand gradient, and the class `warning` fills it with `CpWarning` and
+  gives it the window surface color as text (dark text on amber, as the notice about the AI provider needs). A button
+  that holds only an icon needs a name and a tooltip.
+- `SecondaryButton` (a `Button`): any other action: the same size and type, the raised surface, a 1 px `CpBorderStrong`
+  outline that turns to the accent under the pointer, and the accent tint while pressed.
+- `CardButton` (a `Button`): a whole card that is one button (a recent project of the welcome screen): raised, a 1 px
+  subtle outline that turns to the accent under the pointer, the welcome radius, stretched, with no padding so the card
+  puts its own content inside.
+- `ExplorerTreeViewItem` (a `TreeViewItem`): a row of a tree at least 26 px high with a 20 px chevron toggle in front
+  (which turns by 90 degrees when the row is open and is invisible when the row has no children), indented by 16 px for
+  each level of the item (`ThemeConverters.TreeLevelIndent` turns the `Level` of the item into the left margin of the
+  header), the lighter accent tint under the pointer, the accent tint, a 3 by 14 accent bar at the left edge, and a
+  semibold name for the selected row, the dashed accent ring and tint of a row that is marked as the target of a drag
+  that is over it, and the keyboard focus ring. The view puts the badge, the name, and the thumbnail of a node into the
+  header.
 
-Each theme except the chip shows the keyboard focus the same way: a template part `PART_FocusRing`, a 2 px border
-that is transparent at rest and has the focus ring color while the control has the pseudo-class `:focus-visible` (focus
-by the keyboard, never by the pointer). The ring lies 1 px outside the control, so the themes switch off the clipping
-of the control to its bounds, and the default focus adorner of Avalonia is switched off so that two rings do not show.
-A view that puts such a control in a container must not clip the container to its bounds if the ring is to be seen.
+Each themed button, the splitter, and the tree row except the chip shows the keyboard focus the same way: a template
+part `PART_FocusRing`, a 2 px border that is transparent at rest and has the focus ring color while the control has the
+pseudo-class `:focus-visible` (focus by the keyboard, never by the pointer). The ring lies 1 px outside the control, so
+the themes switch off the clipping of the control to its bounds, and the default focus adorner of Avalonia is switched
+off so that two rings do not show. A view that puts such a control in a container must not clip the container to its
+bounds if the ring is to be seen.
+
+**Shared looks** (`Controls.axaml`, outside the keyed themes): styles that a view chooses with a class and that carry no
+literal color. `Border.card` is a raised card (raised surface, subtle outline, card radius, padding of 16);
+`TextBlock.pageTitle` (20 px semibold primary), `TextBlock.sectionTitle` (16 px semibold primary), `TextBlock.label` (12
+px semibold secondary), `TextBlock.hint` (12 px secondary, wrapping), `TextBlock.error` (danger color, wrapping),
+`TextBlock.caution` (warning color, wrapping), and `TextBlock.success` (success color) are the type of a page, always
+with words next to the color; `Border.bannerDanger` is the banner that reports a problem (danger tint, danger outline).
+Other styles of the file set `TabItem` to 14 px semibold with a height of at least 36, make every `ListBox` an inset
+list (pane color, subtle outline, input radius), and make `ListBox.rail` the page rail of a dialog (a transparent list
+whose rows have the row radius, the accent tint under the pointer and when chosen, and the focus ring). Styles of the
+windows themselves (the `StylePill` of the style list, for example) stay with the view that owns them.
 
 **Palettes** (`App.axaml`): `FluentTheme.Palettes` has one `ColorPaletteResources` per variant that sets the system
 accent to the brand accent, the region color (the window surface of dialogs) to the pane surface, the main text color
@@ -79,11 +121,21 @@ comes from a thread other than the user interface thread (the settings service r
 changed the settings) is posted to the user interface thread, and a variant that is already requested is not set again.
 `Dispose` stops following; the composition disposes it with the other units.
 
+**Converters** (`AppShellSubsystem/Styles/ThemeConverters.cs`): the static class `ThemeConverters` holds what a control
+theme cannot do in markup alone: `TreeIndent` (16, the width of one tree level) and `TreeLevelIndent`, a value converter
+from the `Level` of a tree item (0 at the top) to the left margin `level * 16`, which the `ExplorerTreeViewItem`
+template binds to its header.
+
 **Contrast**: every text color is at least 4.5 to 1 on the surfaces it is documented for, and the focus ring, the
 input outline, and the mark color are at least 3 to 1 on the pane and on raised surfaces. The light warning color is a
-little darker than the first proposal of the design (`#a84e08` instead of `#b45309`) so that it reaches 4.5 to 1 on the
-window surface as well, and the input outline has its own token because the decorative strong border of the design is
-only about 1.5 to 1.
+little darker than the first proposal of the design (`#9a4607` instead of `#b45309`; the first value that was kept,
+`#a84e08`, reached only 4.43 to 1 on the tinted banner) so that it reaches 4.5 to 1 on the window surface and on the
+warning banner, and the input outline has its own token because the decorative strong border of the design is
+only about 1.5 to 1. The amber button uses the window surface color for its text, and the welcome backdrop is checked at
+its three gradient stops and under the violet glow, which are the places where the text on it is hardest to read. The
+contrast of the notice and welcome colors is the subject of an accessibility sweep (see the verification design of this
+unit); the window and
+the dialogs share the same colors, so a color that fails there fails every view that uses it.
 
 #### Key Methods
 
@@ -106,5 +158,7 @@ application when it loads the style file, which the headless tests would show at
 
 #### Callers
 
-- Every view of the application, through dynamic resources. `App` merges the dictionary and sets the palettes.
+- Every view of the application, through dynamic resources. `App` merges the dictionary and sets the palettes. In
+  particular the project explorer uses the tree row theme, the welcome screen the card button and the amber main button,
+  and every dialog the card, heading, banner, main, and quiet button looks.
 - The composition root, which creates the `ThemeVariantApplier` when it is given the running application.

@@ -48,10 +48,13 @@ This document covers the verification design for the following software items:
     - **MarkSourceResolver** — the parts of the source file under a mark
     - **AnnotationOverlay** — the layer on which the user draws numbered marks with an optional note, and its tool bar
   - **AppShell** subsystem
-    - **MainWindowShell** — main window, menus, and dialog service
-    - **ProjectWorkspace** — explorer and preview content area
+    - **MainWindowShell** — main window, title bar, menus, window layout, and dialog service
+    - **ProjectWorkspace** — explorer, stage, and chat column with their splitters and layout
+    - **StatusBar** — the bar at the bottom that reports the shown picture
+    - **ProviderPill** — the pill in the title bar that tells which AI provider answers and whether it can be used
+    - **Welcome** — the start screen with the recent project cards
     - **AboutDialog** — application identity window
-    - **ThemeResources** — design tokens and palettes of the dark and light themes
+    - **ThemeResources** — design tokens, icons, control themes, and palettes of the dark and light themes
   - **Chat** subsystem
     - **ChatPanel** — the transcript of the sent messages, the composer with its send and hold-to-talk buttons, and the
       joining of marks to the message
@@ -86,7 +89,8 @@ This document covers the verification design for the following software items:
     - **PayloadDescriber** — the payload as text
   - **Preview** subsystem
     - **ImageRenderService** — background drawing of image source files with CanvasNet and PNG encoding
-    - **PreviewPane** — preview of the selected file with busy, error, and note display
+    - **PreviewPane** — preview of the selected file on a stage with zoom, and busy, error, and note display
+    - **ThumbnailProvider** — the small pictures of the explorer rows
     - **ImageExporter** — PNG file and clipboard export of the shown picture
     - **ImageDragSource** — the shown picture as a PNG file, ready to be dragged into another program
     - **ExportPresetDialog** — the dialog in which the user chooses the size to export at
@@ -116,7 +120,7 @@ This document covers the verification design for the following software items:
     - **StyleGuidance** — the style of a kit as text of a known size for an assistant
     - **StyleChecker** — a picture measured against the palette of a kit, and the command of the Image menu
     - **StyleTools** — the tools style_get and style_check of an assistant
-    - **StylePicker** — the choice of the kit of the project in the status bar
+    - **StylePicker** — the choice of the kit of the project in the pill of the title bar
     - **StyleSettingsPage** — the settings page for shared kit folders and the default kit
     - **StyleKitEditor** — the editing of one kit of the user or of the project
     - **StyleKitManager** — the window that shows and manages the kits
@@ -205,7 +209,10 @@ Checks that cannot be automated are described in the verification document of th
 before each release: the installed package (install, upgrade, shortcut, closing a running instance, and the native
 speech files in the installed folder), the operating system file pickers, clipboard, and drag and drop (including
 dragging the shown picture into other programs and pasting a screenshot), input method composition in the message
-editor, a real speech model download, and dictating with a real microphone and a real model. The checklist is in the
+editor, a real speech model download, dictating with a real microphone and a real model, and the look and use of the
+window on a real display (the height of the system buttons against the title bar, dragging and double-clicking the empty
+title bar, snap layouts, dragging a splitter with the mouse, Ctrl+wheel zoom and middle-button panning, the window on
+a second monitor, a screen reader, and the display scales of 125 and 150 percent). The checklist is in the
 system verification document. They are not evidence for a requirement.
 
 ## Companion Artifact Structure

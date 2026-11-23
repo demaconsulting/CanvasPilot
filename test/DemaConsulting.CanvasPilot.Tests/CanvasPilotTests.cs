@@ -2519,7 +2519,7 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a user chooses the style of a project in the status bar, that a new project starts with the default
+    ///     Test that a user chooses the style of a project in the title bar, that a new project starts with the default
     ///     kit of the user, that the choice is in the project file and is the same after the application is started
     ///     again, that a project that never had a style stays without one, and that a kit that cannot be found is said.
     /// </summary>

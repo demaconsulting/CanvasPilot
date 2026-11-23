@@ -6,13 +6,17 @@
 
 The `AppShell` subsystem is the part of CanvasPilot the user sees and starts. Its boundary starts with the user's
 choices in the main window, its menus, and its dialogs, and ends with calls on the `Project` and `Settings` subsystems
-and the files and windows the user sees as a result. It contains four units: `MainWindowShell`, the main window and its
-view model, which owns the File, Edit, Image, Tools, and Help commands, the window title, the recent projects menu, the
-Undo and Redo of the focused part, and the talk key; `ProjectWorkspace`, the content area with the project explorer, the
-place where the image preview is shown, and the chat column; `AboutDialog`, the window that identifies the application
-and its open source libraries; and `ThemeResources`, the design tokens (colors, spacing, radii, type, and shadows) of
-the dark and the light theme and the palettes that make the standard controls follow the brand, from which every view
-takes its look. The subsystem also contains the composition root that builds the application's units at startup
+and the files and windows the user sees as a result. It contains seven units: `MainWindowShell`, the main window and its
+view model, which owns the File, Edit, Image, Tools, and Help commands, the title bar with the project name, the
+window title, the recent projects menu, the Undo and Redo of the focused part, the talk key, and the saved window
+layout; `ProjectWorkspace`, the content area with the project explorer, the stage where the image preview is shown, and
+the chat column that the user can resize and hide; `StatusBar`, the bar at the bottom that reports the shown picture;
+`ProviderPill`, the pill in the title bar that says which AI provider answers and whether it can be used; `Welcome`, the
+start screen with the recent project cards that takes the place of the workspace while no project is open;
+`AboutDialog`, the window that identifies the application and its open source libraries; and `ThemeResources`, the
+design tokens (colors, spacing, radii, type, and shadows) of the dark and the light theme, the vendored line icons, the
+shared control themes, and the palettes that make the standard controls follow the brand, from which every view takes
+its look. The subsystem also contains the composition root that builds the application's units at startup
 (`ApplicationComposition`, started by `App`), the `ViewLocator` that maps a view model to its view, and the thin desktop
 head `Program` that starts the Avalonia application. These items have no requirements of their own and are described
 here because they only join the units together.
@@ -35,7 +39,9 @@ here because they only join the units together.
   which the `Chat` subsystem owns; the window shows the payload inspector as a dialog that it owns.
   `ShowKnowledgeBrowserAsync` is declared by `IKnowledgeBrowserLauncher`, which the `Knowledge` subsystem owns; the
   window shows the browser of the drawing knowledge as a window that it owns and that does not block it, one at a time,
-  and completes the request when the window is shown.
+  and completes the request when the window is shown. `PickAttachmentsAsync` is declared by `IAttachmentPicker`, which
+  the `Composer` subsystem owns; the window shows the system file dialog for the Attach button of the chat panel and
+  answers the paths that were chosen, or an empty list when it was cancelled or cannot be shown.
 - *Constraints*: A platform picker that cannot be shown answers `null`, which reads as cancelled.
 
 **Image Exporter**: The extension point behind the Image menu.
@@ -81,10 +87,15 @@ here because they only join the units together.
   automation identifier that are the same (`FileMenu`, `NewProjectMenuItem`, `OpenProjectMenuItem`,
   `RecentProjectsMenuItem`, `SaveProjectMenuItem`, `CloseProjectMenuItem`, `ExitMenuItem`, `EditMenu`, `UndoMenuItem`,
   `RedoMenuItem`, `ImageMenu`, `ExportPngMenuItem`, `CopyImageMenuItem`, `CheckAgainstStyleMenuItem`, `ToolsMenu`,
-  `StyleKitsMenuItem`, `SettingsMenuItem`, `HelpMenu`, `DrawingKnowledgeMenuItem`, `AboutMenuItem`). While a project is
-  open the content area has a chat column on the right of the preview, 380 wide at first, and a status bar at the bottom
-  (`StatusBar`) with the label `Style:` and the list of the style kits (`StylePicker`), which is hidden while no project
-  is open.
+  `StyleKitsMenuItem`, `SettingsMenuItem`, `HelpMenu`, `DrawingKnowledgeMenuItem`, `AboutMenuItem`). The menu sits in
+  a title bar (`AppTitleBar`, 44 pixels high, with the project name in bold and the application name after it,
+  `AppTitleBarText`) that also holds the style pill (`StylePicker`) and the AI provider pill (`ProviderPill`) while a
+  project is open and leaves room for the buttons of the system. The window opens 1440 by 900 at first and is never
+  smaller than 960 by 600, or at the size, place, and state that the user left, fitted to the screens. While no
+  project is open the content area shows the welcome screen (`WelcomeView`); while a project is open it shows the
+  workspace, with the explorer on the left (264 wide at first), the stage with the preview in the middle, a chat column
+  on the right (400 wide at first), and between them splitters with a one pixel line and a nine pixel hit area. A
+  status bar of one height (`StatusBar`, 26 pixels) is always shown at the bottom.
 
 ### Design
 
@@ -107,22 +118,38 @@ here because they only join the units together.
    cards the first time the Help menu asks for them. The speech model service that the composition creates is disposed
    with the composition. After the shell, the composition makes the mark registry, the composer of the message, the
    layer on which the user marks the picture, and the chat panel. It puts the layer in the overlay slot of the preview
-   pane and the layer's tool bar in the top bar slot, and gives the layer the switch for dragging the picture out. The
-   chat panel joins the layer to the message: it allows marks while the composer can edit, tells the layer which mark
-   chips the message holds whenever the composer changes, and adds the chip of each mark that the layer reports, so that
-   an undo of the chip hides the mark. The composition places the panel in the chat column of the workspace and makes it
-   the push-to-talk target of the shell; the workspace shows the column while a project is open and makes the window's
-   dialog service the panel's launcher of the payload inspector. The style kits are built before the image exporter and
-   the shell: the catalog of kits, the selection that says which kit the open project uses (which is also the exporter's
-   source of export sizes), the picker that chooses it, and the descriptors of the two style tools. The composition
-   starts reading the kits on a worker and does not wait for it, so the start of the application never waits for a
-   folder; the catalog, the selection, and the picker are disposed before the services they listen to. The shell is
-   given the picker, which it shows in a status bar while a project is open and asks to give a new project the default
-   style kit. The composition also makes the check of the shown picture against the style (`StyleCheckCommand`, over the
-   preview pane as the source of pictures and as the sink of notes) and gives it to the shell for the Check Against
-   Style item of the Image menu. It gives the shell, too, a function that makes the view model of the window that
-   manages style kits (over the catalog, the selection, the render service, and the project service) from the dialogs
-   that the window asks through, for the Style Kits item of the Tools menu.
+   pane and the layer's tool bar in the toolbar slot that floats at the top center of the stage, and gives the layer the
+   switch for dragging the picture out. The chat panel joins the layer to the message: it allows marks while the
+   composer can edit, tells the layer which mark chips the message holds whenever the composer changes, and adds the
+   chip of each mark that the layer reports, so that an undo of the chip hides the mark. The composition places the
+   panel in the chat column of the workspace and makes it the push-to-talk target of the shell; the workspace shows the
+   column while a project is open and makes the window's dialog service the panel's launcher of the payload inspector.
+   The style kits are built before the image exporter and the shell: the catalog of kits, the selection that says which
+   kit the open project uses (which is also the exporter's source of export sizes), the picker that chooses it, and the
+   descriptors of the two style tools. The composition starts reading the kits on a worker and does not wait for it, so
+   the start of the application never waits for a folder; the catalog, the selection, and the picker are disposed before
+   the services they listen to. The shell is given the picker, which it shows as a pill in the title bar while a project
+   is open and asks to give a new project the default style kit. The composition also makes the check of the shown
+   picture against the style (`StyleCheckCommand`, over the preview pane as the source of pictures and as the sink of
+   notes) and gives it to the shell for the Check Against Style item of the Image menu. It gives the shell, too, a
+   function that makes the view model of the window that manages style kits (over the catalog, the selection, the render
+   service, and the project service) from the dialogs that the window asks through, for the Style Kits item of the Tools
+   menu. The composition also makes the `ThumbnailProvider` of the `Preview` subsystem over the render service, gives it
+   to the project explorer (which asks for the small pictures of its rows) and to the shell (which loads the pictures of
+   the recent project cards with it), owns it, and disposes it with the other units; the shell switches the small
+   pictures of the explorer on or off as the Appearance page of the settings says, at the start and whenever the
+   settings change. After the chat panel exists the composition makes the `ProviderPillViewModel` over the chat panel
+   (which holds the result of the readiness check), the settings, and the settings command of the shell, and gives it to
+   the shell, which shows it in the title bar and disposes it. The shell itself makes the `StatusBarViewModel` over the
+   workspace (which holds the preview pane and the open project), the `RecentThumbnailLoader` over the thumbnail
+   provider, and the `WelcomeViewModel` over itself, so that the welcome screen shows its recent projects and commands;
+   the window shows the welcome screen and the workspace as siblings in one area and shows the welcome screen while no
+   project is open, and the workspace view is not built until the first project is opened. Last, the composition makes
+   the `ThemeVariantApplier` that shows the theme choice of the settings. The window layout is kept by the shell and the
+   window together: the window applies the saved size, place, and state through `WindowPlacement.Resolve` when it is
+   built, which fits them to the screens that are connected, the workspace restores the saved widths of the explorer and
+   the chat column through `WorkspaceLayout.Fit`, and the window saves them when the splitters have been moved and when
+   it closes (see the *MainWindowShell* and *ProjectWorkspace* designs).
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. It follows the focus (the nearest data context that can undo and redo becomes the shell's `EditTarget`)
    and the F8 key (start and stop of the push-to-talk target, also on deactivation and close). `App` records
@@ -165,8 +192,9 @@ visible in one place. System tests call the same composition with temporary fold
 
 ### Dependencies
 
-The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`) and are split into two
-views. The hub supplier `ProjectService` is left out of both; it is described with the `Project` subsystem. The
+The dependencies of the units come from the SysML2 model (`sysml2tools query dependencies`) and are split into three
+views. The hub suppliers `ProjectService` and `RollingFileLogger` are left out; they are described with the `Project`
+and `Logging` subsystems. The
 composition root is not a unit of the model, so what it creates and joins (the units of the `Agent` subsystem, the
 chat history store, and the readiness check that the AI Provider page asks) is described in the design above and not
 as dependency edges of the model; the units themselves state what they depend on, for example `ChatPanel` on the
@@ -178,7 +206,17 @@ The first view shows what the main window and the workspace host. `MainWindowShe
 
 ![AppShell workspace dependencies](AppShellSubsystemWorkspaceView.svg)
 
-The second view shows the dialogs and actions that the main window opens. `MainWindowShell` depends on
+The second view shows what the window shows around the work. `MainWindowShell` depends on `StatusBar`, `ProviderPill`,
+and `Welcome`, which it creates and holds, on `SettingsService` (`Settings`), which it saves the window layout in and
+follows, and on `ThemeResources`; `StatusBar` depends on `ProjectWorkspace` and `PreviewPane` (`Preview`), whose picture
+and project it reports; `ProviderPill` depends on `ChatPanel` (`Chat`), the contract of the `Agent` subsystem, and
+`SettingsService`; and `Welcome` depends on `ProviderPill` and `ProjectExplorer` (`Project`). The three units do not
+depend on `MainWindowShell` in the model, because it creates them: they receive what they need through their
+constructors and the commands that the shell gives them.
+
+![AppShell chrome dependencies](AppShellSubsystemChromeView.svg)
+
+The third view shows the dialogs and actions that the main window opens. `MainWindowShell` depends on
 `RecentProjects` and `NewProjectDialog` (`Project`), `SettingsDialog` (`Settings`), `ImageExporter` and
 `ExportPresetDialog` (`Preview`), and `StylePicker`, `StyleKitManager`, and `StyleChecker` (`Style`).
 

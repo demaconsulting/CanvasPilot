@@ -10,7 +10,8 @@ nothing of windows or themes: the application watches the settings and shows the
 
 #### Data Model
 
-**Title**: `string` — `Appearance`.
+**Title**: `string` — `Appearance`. **Description**: `The theme of the window and how the project explorer looks.`
+**IconKey**: `CpIconImage`. The settings dialog shows them in its list of pages and above the page.
 
 **Themes**: `IReadOnlyList<SettingsChoice<ThemeChoice>>` — `Follow system`, `Dark`, and `Light`, in that order.
 
@@ -21,11 +22,12 @@ nothing of windows or themes: the application watches the settings and shows the
 
 **IsValid**: `bool` — always `true`, because every combination of the choices can be stored.
 
-**View**: `AppearanceSettingsPageView` shows a labeled list of the themes, a line that says what following the system
-means, and two check boxes. The view has a parameterless constructor for the XAML loader; the view locator binds it to
+**View**: `AppearanceSettingsPageView` shows two raised cards, each with a section title. The card `Theme` has a labeled
+list of the themes (named `Theme`) and a hint that says what following the system means; the card `Project explorer` has
+two check boxes. The view has a parameterless constructor for the XAML loader; the view locator binds it to
 the view model, whose type name ends in `ViewModel`. Controls carry automation identifiers (`SettingsAppearancePage` for
-the page, `AppearanceThemeComboBox`, `AppearanceShowThumbnailsCheckBox`, and `AppearanceComfortableRowsCheckBox`), and
-the list of themes has the automation name `Theme`.
+the page, `AppearanceThemeComboBox`, `AppearanceShowThumbnailsCheckBox`, and `AppearanceComfortableRowsCheckBox`). The
+card look and the hint come from the shared styles of the controls, so no color is written in the view.
 
 #### Key Methods
 

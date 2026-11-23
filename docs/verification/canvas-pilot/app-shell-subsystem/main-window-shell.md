@@ -2,18 +2,23 @@
 
 #### Verification Approach
 
-`MainWindowShell` is verified at two levels. Unit tests in `MainWindowShellTests.cs` drive the shell view model over
-a real project service, recent projects list, and settings service on temporary folders, with a hand-written
+`MainWindowShell` is verified at two levels. Unit tests in `MainWindowShellTests.cs` drive the shell view model over a
+real project service, recent projects list, and settings service on temporary folders, with a hand-written
 `FakeDialogService` that plays the user and a hand-written `FakeImageExporter`; two tests use an NSubstitute
-`IProjectService` to force a failed creation and a failed save. Unit tests in `MessageDialogTests.cs` drive the
-message dialog view model. Headless UI tests in `MainWindowViewTests.cs` (the `UiTests` project, using Avalonia's
-headless platform) show the real `MainWindowView`, find controls by name and automation identifier, run the
-commands behind the menu items, and exercise the real message, About, Settings, and New Project dialogs by clicking
-their buttons. The platform pickers cannot be shown headless; the UI test confirms they answer as cancelled, and
-the real pickers are checked manually before a release. Likewise the real keyboard (the repeat of a held F8, the
-window losing the active state when the user switches to another program, and a screen reader's use of the Edit
-menu) is checked manually on a desktop before a release; the headless tests send key events and call the platform's
-deactivation callback.
+`IProjectService` to force a failed creation and a failed save. Unit tests in `MessageDialogTests.cs` drive the message
+dialog view model. Headless UI tests (the `UiTests` project, using Avalonia's headless platform) show the real
+`MainWindowView`, find controls by name and automation identifier, run the commands behind the menu items, and exercise
+the real message, About, Settings, and New Project dialogs by clicking their buttons: `MainWindowViewTests.cs` for the
+window, its title bar, menus, dialogs, and body; `WorkspaceLayoutViewTests.cs` for the saved size of the window and the
+widths of the columns; `AccessibilityViewTests.cs` for the access keys of the menu and the names, tooltips, focus, and
+sizes of the controls of the window in both theme variants; and `StylePickerViewTests.cs` for the style list in the
+title bar. The platform pickers cannot be shown headless; the UI test confirms they answer as cancelled, and the real
+pickers are checked manually before a release. Likewise the real keyboard (the repeat of a held F8, the window losing
+the active state when the user switches to another program, and a screen reader's use of the Edit menu), the buttons of
+the system over the title bar (their room is tested as a pure function, but the headless platform never extends the
+window into its frame), dragging the empty strip of the title bar, and the move of the window between monitors are
+checked manually on a desktop before a release; the headless tests send key events and call the platform's deactivation
+callback.
 
 #### Test Environment
 
@@ -48,8 +53,8 @@ temporary local folders; no network or external services are required.
   service.
 - Message, confirmation, and prompt dialogs return the user's answer, trim a prompt's text, and cannot accept a
   blank prompt.
-- A shell that has a style picker shows a status bar with it while a project is open and no bar otherwise; a project
-  that was created, and no project that was only opened, is given the default style kit of the user.
+- A shell that has a style picker shows it, as a pill in the title bar, while a project is open and not otherwise; a
+  project that was created, and no project that was only opened, is given the default style kit of the user.
 - The Tools menu has Style Kits above Settings, usable when the application has a window that manages style kits;
   running it makes the view model of the window from the dialog service each time and hands it to the dialog service,
   and does nothing without a window or a dialog service. The real main window shows that window as a window that it owns
@@ -58,6 +63,19 @@ temporary local folders; no network or external services are required.
 - Check Against Style, the last item of the Image menu, is usable only while the application can check and a picture is
   shown, runs the check, tells the user in a message why when nothing was checked, and is unusable and does nothing in a
   shell that has no check.
+- The window opens 1440 by 900 with a least size of 960 by 600, has a title bar 44 high over its whole width that holds
+  the menu, shows the project name in bold followed by the application name (the application name alone with no project)
+  while the system title stays `{project} - CanvasPilot`, keeps 138 pixels free at the right end on Windows and 78 at
+  the left end on macOS only when the window extends into its frame, and shows the provider pill inside the right edge
+  of the title bar.
+- The status bar is at the bottom at all times, 26 high, with and without a project.
+- With no project the welcome screen is shown and the workspace has not been built; once a project is open the workspace
+  is shown, and after it is closed the welcome screen is shown again.
+- Closing the window saves its size and state, a window made later over the same settings opens with them, the saved
+  widths of the explorer and the chat column are used, and a width chosen with a splitter is saved.
+- Every menu and every item of a menu has an access key that is unique among its neighbors.
+- In both theme variants every button of the main window that shows no text has a name and a tooltip and is at least 28
+  by 28, every enabled button can take the keyboard focus, and every field, list, and drop-down has a name.
 
 #### Test Scenarios
 
@@ -232,7 +250,7 @@ of the payload inspector of the chat panel. This scenario is tested by
 by `MainWindowView_ExitMenuItem_ClosesWindow`.
 
 **MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses**: The About command opens the dialog with
-the identity texts and five libraries, and clicking Close ends it. This scenario is tested by
+the identity texts and six libraries, and clicking Close ends it. This scenario is tested by
 `MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses`.
 
 **MainWindowView_DrawingKnowledgeMenuItem_ShowsBrowserWindowThatDoesNotBlock**: The Drawing Knowledge command of the
@@ -257,7 +275,8 @@ enables Save and the Recent Projects menu. This scenario is tested by
 `MainWindowView_NewProjectMenuItem_CancelThenOk_CreatesProjectAndUpdatesTitle`.
 
 **MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow**: A remembered project opens from the
-menu entry and the window lists only its image files; Close Project restores the empty state. This scenario is
+menu entry and the window lists only its image files as the nodes of the tree; Close Project restores the empty state:
+the title, an empty list, the placeholder text, and the welcome screen shown again. This scenario is
 tested by `MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow`.
 
 **MainWindowView_RecentProjectsSubmenu_ItemShowsNameAndOpensProject**: In the open submenu the item shows the
@@ -347,3 +366,55 @@ is, and the Cancel button of the editor completes the request. This scenario is 
 
 **MainWindowView_Close_ClosesTheStyleKitsWindowItOwns**: Closing the main window closes the window that manages kits.
 This scenario is tested by `MainWindowView_Close_ClosesTheStyleKitsWindowItOwns`.
+
+**MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes**: The shown window is 1440 by 900 with a least size of 960
+by 600; the title bar is 44 high and as wide as the window and holds the menu; both rooms kept free for the buttons of
+the system are 0 wide, because the headless window is not extended into its frame. This scenario is tested by
+`MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes`.
+
+**MainWindowView_CaptionReserve_FollowsPlatformAndExtension**: The room kept free is 0 and 0 when the window is not
+extended on Windows or on macOS, 138 on the right on Windows, 78 on the left on macOS, and none on another platform.
+This scenario is tested by `MainWindowView_CaptionReserve_FollowsPlatformAndExtension`, a theory of five cases.
+
+**MainWindowView_TitleBar_ShowsProjectNameThenApplicationName**: The title text is `CanvasPilot` with no project,
+`Release Overview · CanvasPilot` while the project is open (the name in bold), `CanvasPilot` again after Close, and the
+title of the system is `Release Overview - CanvasPilot` while the project is open. This scenario is tested by
+`MainWindowView_TitleBar_ShowsProjectNameThenApplicationName`.
+
+**MainWindowView_StatusBar_AlwaysShownAndReportsThePicture**: The status bar is visible and 26 high with no project and
+says that no project is open; with a project and no picture it says that no picture is selected; for a drawn picture it
+shows the file, size, format, and render time, and for a broken one it shows the failure. This scenario is tested by
+`MainWindowView_StatusBar_AlwaysShownAndReportsThePicture`.
+
+**MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage**: The provider pill is inside the title
+bar and its right edge, 26 high, named with the provider and how it is; using it opens the settings on the AI Provider
+page. This scenario is tested by `MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage`.
+
+**MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns**: With no project the workspace has not been
+built (no chat host or splitter exists); once a project is open the chat panel is shown 400 wide to the right of the
+preview, which is to the right of the explorer, 264 wide; after the project is closed the chat host is hidden. This
+scenario is tested by `MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns`.
+
+**MainWindowShell_WindowLayout_RestoresWidthsAndSavesChoicesAndWindow**: A shell over settings that hold the widths 300
+and 500 gives them to the workspace; a choice of 220 and 350 is saved at once; telling the shell a window of 1200 by 800
+at 40, 50 that is maximized saves them with the widths. This scenario is tested by
+`MainWindowShell_WindowLayout_RestoresWidthsAndSavesChoicesAndWindow`.
+
+**WorkspaceLayout_CloseWindow_SavesTheSizeAndANewWindowOpensWithIt**: Closing a window that the user made 1200 by 700
+saves that size in the normal state, and a window made later over the same shell opens with that size and state. This
+scenario is tested by `WorkspaceLayout_CloseWindow_SavesTheSizeAndANewWindowOpensWithIt`.
+
+**WorkspaceLayout_Splitters_SavedWidthsUsedAndKeyboardChoiceSaved**: With saved widths of 300 and 500 the columns open
+with them, and one key on each splitter moves it by 16 and is saved in the settings. This scenario is tested by
+`WorkspaceLayout_Splitters_SavedWidthsUsedAndKeyboardChoiceSaved`.
+
+**Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey**: The five menus have five different access keys, and every item
+of each menu has one that no other item of the menu has. This scenario is tested by
+`Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The welcome screen and the workspace of an open
+project, the About dialog, the knowledge browser, the New Project dialog, the Style Kits window, and every page of the
+settings are walked in the dark and the light theme; a button that shows no text has a name and a tooltip, is at least
+28 by 28, and every enabled button takes the focus; every field, list, drop-down, slider, and tree has a name; and more
+than 150 controls were looked at. This scenario is tested by
+`Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

@@ -29,8 +29,13 @@ watcher; no network, external services, or display are required.
   nodes inside the picture; a picture of an SVG has no element positions.
 - Content assigned to the pane's overlay slot stays there while different pictures are shown, a changed file is
   rendered again, and a file cannot be drawn.
-- The slot in the pane's top bar is hidden while empty and shows the content assigned to it at its own size outside the
-  scaled picture; this is verified by the pane's unit and headless tests.
+- The slot that floats over the pane's stage is hidden while empty and shows the content assigned to it at its own size
+  outside the scaled picture; this is verified by the pane's unit and headless tests.
+- The picture of a pane is zoomed in steps from 25 to 400 percent and fitted again, and the layer over the picture zooms
+  with it, which is verified by the headless pane test with the zoom pill.
+- A thumbnail of a file is a bitmap of the size of a thumbnail, is not drawn again while the file does not change, and
+  the cache holds no more than its capacity; this is verified by the headless tests of the thumbnail provider over the
+  real render service.
 - The shown picture can be prepared for dragging out as a file that is a PNG of exactly that picture, which is reused
   for the same picture and is another file for another picture.
 - Exported at a size that is chosen in the export dialog, the shown file is drawn again and written as a PNG of exactly
@@ -93,6 +98,19 @@ white, the red picture is in the middle, and the PNG that is encoded from it wit
 gives a note of the group `style`, and then another note of the same group; only the second is listed, the header says
 `1 note`, the list is open, and after another file is drawn the list is empty. This scenario is tested by
 `PreviewSubsystem_ShowNotesOfOtherParts_ListedWithRendererNotesAndGoWithTheNextPicture`.
+
+**PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether**: A headless UI test of the pane (see the verification of
+`PreviewPane`) with the real render service: an 800 by 400 picture and an overlay zoom together to the actual size and
+to half of it, and fit again by the label. It is the evidence of the subsystem requirement about zooming the picture,
+because `PreviewSubsystemTests.cs` has no scenario for the zoom. This scenario is tested by
+`PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether`.
+
+**ThumbnailProvider_CreateAsync_DrawsOnceUntilTheFileChanges** and
+**ThumbnailProvider_CreateAsync_FullCacheOrBadFile_EvictsLeastRecentlyUsedAndGivesNoBitmap**: Headless UI tests of the
+thumbnail provider (see its verification) over the real render service: a thumbnail is 56 by 36 pixels, is drawn once
+until the file changes, and the cache forgets the thumbnail used least recently; they are the evidence of the subsystem
+requirement about thumbnails, because `PreviewSubsystemTests.cs` has no scenario for them. These scenarios are tested by
+the tests of the same names.
 
 **PreviewSubsystem_ExportAtPreset_ShownPicture_WritesPngOfThePresetSizeAndRemembersTheChoice**: With the 40 by 20
 picture shown, a source of one size (300 by 300 at 200 dots per inch), and a user who works the real export dialog view

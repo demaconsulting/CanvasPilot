@@ -26,10 +26,13 @@ refused refresh.
 
 **IsDownloading**: whether any download runs.
 
-**View**: `ModelCatalogPanelView` is an Avalonia user control with two list boxes (`SpeechSttModelList`,
-`SpeechTtsModelList`), a row template with `SpeechModelStatus`, `SpeechModelProgress`, `SpeechModelFailure`,
-`SpeechModelDownloadButton`, and `SpeechModelCancelButton`, a message line (`SpeechModelsMessage`), and a Refresh
-models button (`SpeechRefreshModelsButton`).
+**View**: `ModelCatalogPanelView` is an Avalonia user control with a section title (`Speech models`) and an explanation
+in the hint look, two labeled list boxes (`SpeechSttModelList`, `SpeechTtsModelList`, named `Speech to text models` and
+`Text to speech models`), a row template with the name of the model, `SpeechModelStatus` (hint look),
+`SpeechModelProgress`, `SpeechModelFailure` (error look), `SpeechModelDownloadButton`, and `SpeechModelCancelButton`
+(secondary look, at least 28 high), a message line in the error look (`SpeechModelsMessage`), and a Refresh models
+button (`SpeechRefreshModelsButton`). The rows keep the stock list item look. The settings page puts the view in a
+raised card; the view writes no color.
 
 #### Key Methods
 

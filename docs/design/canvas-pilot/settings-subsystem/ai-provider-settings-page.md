@@ -110,21 +110,33 @@ user. A provider that cannot be used is a result, not an exception.
 check as an optional constructor argument; without it `HasConnectionCheck` is false and the view shows no button. The
 command is available while the entries are valid and no check runs. It applies the entries to the settings that were
 loaded last (nothing is stored), gives the provider settings to the check, shows "Checking the connection..." while it
-runs, and then shows the sentence of the answer, in red when `IsUsable` is false (`IsCheckConnectionFailed`). An
-exception of the check becomes the sentence "The connection could not be checked: ...". Editing the provider, model,
+runs, and then shows the sentence of the answer, in the danger color when `IsUsable` is false
+(`IsCheckConnectionFailed`). An exception of the check becomes the sentence "The connection could not be checked: ...".
+Editing the provider, model,
 reasoning level, context window, endpoint, or path, or closing the dialog, removes the answer and drops the answer of a
 check that is still running.
 
-**View**: `AiProviderSettingsPageView` is an Avalonia user control with a combo box for the provider, the combo box of
-the models (visible only while there is a list, with disabled entries for models that cannot be used), the text box for
-the model name, the Refresh models button with the sentence about the list, the details and the warning of the chosen
-model, a combo box of the reasoning levels (enabled by the model) with its note, text boxes, the Check connection
-button, notes, and error and warning lines that are visible only when their message is not empty. Controls carry
-automation identifiers (`AiProviderComboBox`, `AiModelComboBox`, `AiModelNameTextBox`, `AiRefreshModelsButton`,
+**Page heading**: `Title` is `AI Provider`, `Description` is the sentence `Choose which AI provider and model the
+copilot uses, and check that it can be reached.`, and `IconKey` is `CpIconSparkle`; the settings dialog shows them in
+its list of pages and above the page.
+
+**View**: `AiProviderSettingsPageView` is an Avalonia user control in a scroll viewer with up to three raised cards,
+each with a section title and, above each entry, a label in the label look. The card `Provider and model` has a combo
+box for the provider, the combo box of the models (visible only while there is a list, with disabled entries for
+models that cannot be used), the text box for the model name, the Refresh models button with the sentence about the
+list, the details and the warning of the chosen model, and a combo box of the reasoning levels (enabled by the model)
+with its note. The card `Connection` has the text boxes for the context window, the Ollama endpoint, and the path of
+the Copilot tool, with their notes. The card `Check` is shown only when there is a check; it has the Check connection
+button and the answer. Notes and sentences use the hint look, warnings the caution look, and error lines the error
+look and are visible only when their message is not empty; the answer of the check is in the danger color when the
+provider cannot be used. No color is written in the view: all come from the shared styles of the controls and the
+design tokens. Every entry has an automation name (`Provider`, `Model`, `Model name`, `Reasoning level`, `Context
+window in tokens`, `Ollama endpoint`, and `GitHub Copilot command-line tool path`). Controls carry automation
+identifiers (`AiProviderComboBox`, `AiModelComboBox`, `AiModelNameTextBox`, `AiRefreshModelsButton`,
 `AiModelListMessage`, `AiModelDetails`, `AiModelWarning`, `AiContextWindowTextBox`, `AiContextWindowWarning`,
 `AiContextWindowNote`, `AiReasoningEffortComboBox`, `AiReasoningEffortNote`, `AiOllamaEndpointTextBox`,
 `AiCopilotCliPathTextBox`, `AiCopilotCliPathNote`, `AiCheckConnectionButton`, `AiCheckConnectionResult`, and
-`...Error`).
+`...Error`); none of them changed in the redesign.
 
 #### Key Methods
 

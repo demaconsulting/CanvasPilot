@@ -32,10 +32,14 @@ nothing is selected.
 **Commands**: `ExportCommand` (enabled while a line is selected) and `CancelCommand`. **CloseRequested**: event with
 `ExportPresetCloseRequestedEventArgs.Accepted`, raised when the dialog asks its host to close.
 
-**View**: `ExportPresetDialogView` is an Avalonia window with a list of the lines (name and size line), the result
-sentence, and Export and Cancel buttons. Controls carry automation identifiers (`ExportPresetList`,
-`ExportPresetResult`, `ExportPresetOkButton`, `ExportPresetCancelButton`). The view has a parameterless constructor for
-the XAML loader and a constructor that takes the view model, and it closes itself when the view model asks.
+**View**: `ExportPresetDialogView` is an Avalonia window, 520 by 440 with a minimum of 420 by 340, whose body is the
+pane surface (`CpSurfacePane`): a section title ("Choose how the picture is exported."), a list of the lines (the name
+in semibold and the size line in the hint style), the result sentence in the hint style, and a footer bar
+(`CpSurfaceWindow` with a line above it) that holds the primary *Export...* button (the default) and the secondary
+*Cancel* button (the cancel key). The list is named "Export sizes" for screen readers. Controls carry automation
+identifiers (`ExportPresetList`, `ExportPresetResult`, `ExportPresetOkButton`, `ExportPresetCancelButton`), which the
+restyle did not change. The view has a parameterless constructor for the XAML loader and a constructor that takes the
+view model, and it closes itself when the view model asks.
 
 #### Key Methods
 

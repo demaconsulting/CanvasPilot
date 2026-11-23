@@ -15,7 +15,9 @@ not deterministic; the real `ChatTurnRunner`, the real panel, and the real compo
 real project service and the real `ChatHistoryStore` over a temporary folder that stands for the user's computer. The
 tests check the observable result: what the transcript holds, which files are in the project, what the payload and the
 inspector hold, and that the draft is empty or kept. The views are verified by the headless UI tests described in the
-unit verification documents, and the system test that composes the whole application is described in the system
+unit verification documents; the subsystem requirements about what the panel offers in its view (prompts, hiding, the
+attach button, and the names of the buttons) are linked to those UI tests, which run the real panel with the real
+composer and editing view, and the system test that composes the whole application is described in the system
 verification.
 
 ### Test Environment
@@ -41,7 +43,13 @@ a requirement):
    released.
 5. *Looks.* The transcript and the panel are readable in the light and the dark theme, long messages wrap, chips in a
    sent message show their pictures, the newest message is in view after sending, and the inspector's text is selectable
-   and its pictures are in proportion.
+   and its pictures are in proportion. A sent message is a bubble at the right that is never wider than 85 percent of
+   the panel, and its "View payload" button shows only while the pointer is over the message or the keyboard focus is
+   in it; the name of the copilot and its avatar show once for a run of replies and tool lines; a tool line shows a
+   spinner while it runs and then a check, or a cross with a red outline when it failed, with the time when it took a
+   tenth of a second or more; the restored messages are dimmed and the first one has the divider "Earlier"; three dots
+   pulse while the copilot works; the talk button is red and pulses while it listens; a mark chip is tinted like the
+   mark; the card of the message has the colored outline and glow while the editing control has the focus.
 6. *The copilot panel.* With Copilot chosen in the settings on a machine that is not signed in for CanvasPilot, the
    banner above the transcript says how to sign in (`gh auth login` or a token variable); "Open Settings" opens the
    settings and "Check again" repeats the check, and on a signed-in machine the banner is hidden and the answer streams
@@ -82,6 +90,10 @@ a requirement):
   project folder holds exactly the project file, its empty data folder, and the file that the copilot created; a second
   panel in the same project shows the conversation as text and gives the copilot the saved words with the next message;
   Clear deletes the history and resets the copilot; and through all of it no history file is in the project.
+- The empty conversation offers example prompts that fill in the message, follow-up prompts show once there is a
+  conversation, the header button asks for the panel to be hidden, the attach button adds the picked files as chips,
+  and every button that shows only an icon has a name, a tooltip, and a target of at least 28 by 28 pixels. These are
+  verified by the headless UI tests of the panel.
 
 ### Test Scenarios
 
@@ -138,3 +150,21 @@ the recognizer hears "turn the", and the button is released with the final text 
 sent. The live words were "turn the"; the payload text is `Please turn the arrow red`, and its segments are the typed
 text "Please " and the dictated text "turn the arrow red", in that order. This scenario is tested by
 `ChatSubsystem_HoldToTalk_DictatedWords_AreKeptAsDictatedInTheSentPayload`.
+
+**ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation**: This UI test, which runs
+the real panel, composer, and editing view, shows that the empty conversation offers the four example prompts and no
+follow-up, that an example becomes the message, and that the follow-ups appear once the message is sent. It stands as
+the evidence of the guidance of a new conversation and is described in the verification of the `ChatPanel` unit.
+
+**ChatPanelView_CollapseButton_RaisesCollapseRequested**: This UI test shows that the button of the header raises the
+request to hide the panel, which the workspace of the shell handles (see the verification of the `AppShell`
+subsystem). It is described in the verification of the `ChatPanel` unit.
+
+**ChatPanelView_AttachButton_AddsThePickedFilesAsChips**: This UI test shows that the attach button asks the picker
+that the window gives the panel, from the project folder, and that the real composer makes a file chip of the file it
+returns. It is described in the verification of the `ChatPanel` unit.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: This UI test walks the workspace of an open project,
+and with it the panel, in both theme variants, and shows that every button without text has a name and a tooltip,
+takes the
+focus, and is at least 28 by 28 pixels. It is described in the verification of the `ChatPanel` unit.

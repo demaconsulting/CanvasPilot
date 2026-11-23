@@ -2,15 +2,20 @@
 
 #### Verification Approach
 
-`ProjectExplorer` is verified at two levels. Unit tests in `ProjectExplorerTests.cs` drive
-`ProjectExplorerViewModel` on real temporary project folders. Refreshes are driven through a hand-written
-`FakeRefreshScheduler` that holds scheduled callbacks until a test runs them, so debouncing and stale refreshes
-are checked without real delays, and a hand-written `FakeImageSourceFilter` keeps most tests independent of the
-CanvasNet library; two tests use the real `CanvasNetImageSourceFilter` against `CanvasNetViewer.Extensions`. One
-test lets the real `FileSystemWatcher` report a new file and waits (with a timeout) for the explorer to request
-the refresh. Headless UI tests in `ProjectExplorerViewTests.cs` (the `UiTests` project, using Avalonia's
-headless platform) show the real `ProjectExplorerView`, including one test with the real
-`DispatcherRefreshScheduler` that adds and deletes files on disk and waits for the list to follow.
+`ProjectExplorer` is verified at two levels. Unit tests in `ProjectExplorerTests.cs` drive `ProjectExplorerViewModel`
+and `ProjectNodeViewModel` on real temporary project folders. Refreshes are driven through a hand-written
+`FakeRefreshScheduler` that holds scheduled callbacks until a test runs them, so debouncing and stale refreshes are
+checked without real delays; a hand-written `FakeImageSourceFilter` keeps most tests independent of the CanvasNet
+library, while two tests use the real `CanvasNetImageSourceFilter` against `CanvasNetViewer.Extensions`; and a
+hand-written `RecordingThumbnailSource` (in `ProjectSubsystemFakes.cs`) records which files thumbnails were asked for
+and gives no bitmap, or fails, so that the thumbnail behavior is checked without drawing. Two tests let the real
+`FileSystemWatcher` report a change and wait (with a timeout) for the explorer to request the refresh. Headless UI tests
+in `ProjectExplorerViewTests.cs` (the `UiTests` project, using Avalonia's headless platform) show the real
+`ProjectExplorerView`, including one test with the real `DispatcherRefreshScheduler` that adds and deletes files on disk
+and waits for the tree to follow, and tests that drag files from a temporary folder onto the drop zone and the rows
+through the headless window. The thumbnail view test in `ThumbnailViewTests.cs` shows the explorer over a real
+`ThumbnailProvider`, and the accessibility sweep in `AccessibilityViewTests.cs` walks the workspace that holds the
+explorer.
 
 #### Test Environment
 
@@ -23,17 +28,38 @@ platforms; the same requirements are also covered by tests that run everywhere.
 #### Acceptance Criteria
 
 - All unit and UI tests pass with zero failures (skipped platform-specific tests excepted).
-- Only image source files in the project root are listed, sorted by name; sub-folders, the data folder, the
-  project file, and hidden files are not. An empty list and an unreadable folder are explained.
+- The project folder is shown as a tree, folders first and then files, each group sorted ignoring case, with the folders
+  at any depth, the files that CanvasNet draws, and the assets (bitmaps, PDF files, and `style.json` files); the data
+  folder, the project file, hidden files, and other files are not shown. The flat list holds the drawn files in tree
+  order. An empty tree and an unreadable folder are explained.
 - Every extension in `CanvasNetViewer.Extensions`, including compound ones, is accepted in any case, and other
-  files are not.
-- The selection is kept for a file that stays and cleared for one that goes.
+  files are not. The kind and format of a node follow its name.
+- A tree with more entries or folders than the limits is cut short and marked.
+- The selection of a node and of a file stay in step: a folder or an asset selects no file; a file selected by path
+  shows its folders; a file that stays keeps its selection and one that goes loses it. Expanded folders stay expanded
+  across refreshes and a reopening of the same project, and are forgotten for another project.
 - A burst of refresh requests leaves one pending refresh after the debounce delay; requests with no project or
-  after disposal are ignored; a stale refresh does nothing; the real watcher requests a refresh for a new file.
-- Closing, replacing, and disposing stop the watcher and clear or replace the list.
-- Delete removes the selected file and reports a message for no selection or an undeletable file.
-- Rename moves the file, selects it, allows a case-only change, does nothing for the same name, and refuses empty,
-  path-containing, reserved, hidden, unsupported-extension, and existing names without replacing anything.
+  after disposal are ignored; a stale refresh does nothing; the real watcher requests a refresh for a new file and for a
+  change in a sub-folder but not for a change in the data folder. The Refresh command reads the folder at once and only
+  works with a project.
+- Closing, replacing, and disposing stop the watcher and clear or replace the tree.
+- Delete removes the selected file wherever it lies and reports a message for no selection or an undeletable file.
+- Rename moves the file within its folder, selects it, allows a case-only change, does nothing for the same name, and
+  refuses empty, path-containing, reserved, hidden, unsupported-extension, and existing names without replacing
+  anything.
+- A new file lands in the selected folder, the folder of the selected file, or the project folder, holds a blank drawing
+  of its kind, and is selected; a new folder is selected with its parents expanded; bad, hidden, and taken names and a
+  missing project are refused with a message.
+- Added files are copied, with free names and the source untouched, into `attachments` or the chosen folder; folders,
+  other kinds of files, and targets outside the project or in the data folder are refused with a message.
+- The view shows rows 26 high with chevrons, a 16 px indent per level, badges, a bar and a semibold name on the selected
+  row, the problem line with the danger icon, the header label and three named buttons with tooltips that run their
+  commands, and the drop zone only with a project; drops are copied where they fall and lit while the drag is over the
+  place.
+- Thumbnails are asked for only for drawn files that can be seen, once, again when a file changes, not while off, and
+  freed with removed nodes; a missing or failing source leaves the rows as they were; the view shows a 28 by 18 box only
+  on the rows that have one.
+- The tree is named and every button has a name, a tooltip, keyboard focus, and a target of at least 28 by 28 pixels.
 
 #### Test Scenarios
 
@@ -43,6 +69,10 @@ files, and a data folder file shows the folders first and then the files, each s
 format of each node, lists the drawn pictures in the flat list in tree order, and shows neither the hidden files, the
 project file, the data folder, nor the text files. This scenario is tested by
 `ProjectExplorerViewModel_Open_ProjectFolder_BuildsTreeWithFoldersFirstAndSkipsHiddenAndOtherFiles`.
+
+**ProjectNodeViewModel_KindAndFormat_FromTheFileName**: The kind and the format of a node are told from its file name,
+including the compound extension of Vega-Lite and the `style.json` file. This scenario is tested by
+`ProjectNodeViewModel_KindAndFormat_FromTheFileName`.
 
 **ProjectExplorerViewModel_Open_HiddenAttributeFile_IsNotListed**: A file with the hidden attribute is not
 listed (Windows only). This scenario is tested by
@@ -70,17 +100,27 @@ files are listed with no special handling. This scenario is tested by
 and a text file is not. This scenario is tested by
 `ProjectExplorerViewModel_Open_WithCanvasNetFilter_ListsSvgButNotText`.
 
+**ProjectExplorerViewModel_Open_TooManyOrTooDeep_IsTruncatedAndSaysSo**: A folder with more files than a small limit
+holds only the limit and is marked cut short, and a folder with folders deeper than the depth limit is marked too; a
+limit of zero is refused. This scenario is tested by
+`ProjectExplorerViewModel_Open_TooManyOrTooDeep_IsTruncatedAndSaysSo`.
+
 **ProjectExplorerViewModel_OpenAndClose_StartsAndStopsWatchingAndClearsList**: Opening starts watching; closing
-stops it, clears the list, selection, and message, and cancels the pending refresh. This scenario is tested by
+stops it, clears the tree, the list, selection, and message, and cancels the pending refresh. This scenario is tested by
 `ProjectExplorerViewModel_OpenAndClose_StartsAndStopsWatchingAndClearsList`.
 
 **ProjectExplorerViewModel_Open_AnotherFolder_ReplacesListAndIgnoresStaleRefresh**: Opening a second folder
-replaces the list; a refresh scheduled for the first folder, run late, does not change it. This scenario is
+replaces the tree; a refresh scheduled for the first folder, run late, does not change it. This scenario is
 tested by `ProjectExplorerViewModel_Open_AnotherFolder_ReplacesListAndIgnoresStaleRefresh`.
 
-**ProjectExplorerViewModel_Refresh_FilesAddedAndRemoved_UpdatesListAndKeepsSelection**: A file added between two
-and the first deleted updates the list while the same selected item stays selected. This scenario is tested by
+**ProjectExplorerViewModel_Refresh_FilesAddedAndRemoved_UpdatesListAndKeepsSelection**: A file added between two and the
+first deleted updates the tree and the list while the same selected item stays selected. This scenario is tested by
 `ProjectExplorerViewModel_Refresh_FilesAddedAndRemoved_UpdatesListAndKeepsSelection`.
+
+**ProjectExplorerViewModel_Refresh_NestedChanges_KeepsNodesSelectionAndExpansion**: A refresh keeps the nodes that
+remain (so the selection and the expansion stay), adds new files in sub-folders, removes the ones that went, and clears
+the selection of a node that went. This scenario is tested by
+`ProjectExplorerViewModel_Refresh_NestedChanges_KeepsNodesSelectionAndExpansion`.
 
 **ProjectExplorerViewModel_Refresh_SelectedFileRemoved_ClearsSelection**: Deleting the selected file and
 refreshing clears the selection and the list. This scenario is tested by
@@ -90,12 +130,22 @@ refreshing clears the selection and the list. This scenario is tested by
 a file; refresh clears the error and lists it. This scenario is tested by
 `ProjectExplorerViewModel_Refresh_FolderReappears_ClearsError`.
 
+**ProjectExplorerViewModel_Expansion_SurvivesRefreshAndReopenOfTheSameProjectOnly**: Folders that the user expanded stay
+expanded after a refresh that makes new nodes for them and when the same project is opened again, and are forgotten when
+another project is opened. This scenario is tested by
+`ProjectExplorerViewModel_Expansion_SurvivesRefreshAndReopenOfTheSameProjectOnly`.
+
 **ProjectExplorerViewModel_SelectFile_ListedAndUnlisted_ReportsResult**: Selecting a listed file by a path in a
 different case succeeds and announces the selected file; an unlisted path reports `false` and clears the
 selection. This scenario is tested by `ProjectExplorerViewModel_SelectFile_ListedAndUnlisted_ReportsResult`.
 
+**ProjectExplorerViewModel_SelectedNode_FolderFileAndAsset_FollowsTheSelectionOfTheFile**: Selecting a node selects the
+file when it is drawn and no file for a folder or an asset that is not drawn; selecting a file by path expands the
+folders above it and selects its node; the two selections stay in step. This scenario is tested by
+`ProjectExplorerViewModel_SelectedNode_FolderFileAndAsset_FollowsTheSelectionOfTheFile`.
+
 **ProjectExplorerViewModel_RequestRefresh_Burst_CoalescesIntoOneRefresh**: Three requests leave one pending
-callback with the custom delay; the list changes only when it runs. This scenario is tested by
+callback with the custom delay; the tree changes only when it runs. This scenario is tested by
 `ProjectExplorerViewModel_RequestRefresh_Burst_CoalescesIntoOneRefresh`.
 
 **ProjectExplorerViewModel_RequestRefresh_DefaultDebounce_IsQuarterSecond**: Without a delay argument the
@@ -110,8 +160,17 @@ open and after disposal schedule nothing. This scenario is tested by
 folder makes the real watcher request a refresh within a timeout, and running it lists the file. This scenario
 is tested by `ProjectExplorerViewModel_Open_FileCreatedInFolder_WatcherRequestsRefresh`.
 
+**ProjectExplorerViewModel_Open_ChangeInSubFolderAndInDataFolder_OnlyTheFirstRequestsRefresh**: A change in a sub-folder
+makes the real watcher request a refresh, and a change inside the hidden data folder does not. This scenario is tested
+by `ProjectExplorerViewModel_Open_ChangeInSubFolderAndInDataFolder_OnlyTheFirstRequestsRefresh`.
+
+**ProjectExplorerViewModel_AddFilesToFolderAndRefreshCommand_ShowTheNewFiles**: A file added to a folder of the project
+shows in that folder, a file created behind the explorer's back shows after the Refresh command runs, and the command
+can be used only while a project is open. This scenario is tested by
+`ProjectExplorerViewModel_AddFilesToFolderAndRefreshCommand_ShowTheNewFiles`.
+
 **ProjectExplorerViewModel_DeleteSelected_SelectedFile_DeletesFileAndRefreshes**: Deleting the selected file
-removes it from disk and list and clears the selection. This scenario is tested by
+removes it from disk and tree and clears the selection. This scenario is tested by
 `ProjectExplorerViewModel_DeleteSelected_SelectedFile_DeletesFileAndRefreshes`.
 
 **ProjectExplorerViewModel_DeleteAndRename_NothingSelected_ReportMessage**: Delete and rename with nothing
@@ -127,7 +186,7 @@ supported extension moves the file, lists it, and selects it. This scenario is t
 `ProjectExplorerViewModel_RenameSelected_ValidName_RenamesAndSelectsNewFile`.
 
 **ProjectExplorerViewModel_RenameSelected_CaseOnlyChange_IsAllowed**: Changing only letter case is allowed and
-the list shows the new spelling. This scenario is tested by
+the tree shows the new spelling. This scenario is tested by
 `ProjectExplorerViewModel_RenameSelected_CaseOnlyChange_IsAllowed`.
 
 **ProjectExplorerViewModel_RenameSelected_SameName_DoesNothing**: Renaming to the same name returns no problem
@@ -141,6 +200,43 @@ message and the file untouched. This scenario is tested by
 **ProjectExplorerViewModel_RenameSelected_TargetExists_IsRefusedAndNothingReplaced**: Renaming onto an existing
 file or folder is refused and the existing content is intact. This scenario is tested by
 `ProjectExplorerViewModel_RenameSelected_TargetExists_IsRefusedAndNothingReplaced`.
+
+**ProjectExplorerViewModel_RenameAndDelete_FileInSubFolder_StaysInItsFolder**: A picture in a sub-folder is renamed
+within its own folder and stays selected, and is then deleted from disk and tree. This scenario is tested by
+`ProjectExplorerViewModel_RenameAndDelete_FileInSubFolder_StaysInItsFolder`.
+
+**ProjectExplorerViewModel_CreateFile_TargetFolderAndNames_CreatesOrRefuses**: A new file goes into the selected folder,
+the folder of the selected file, or the project folder, gets a blank drawing of its kind, is listed and selected, and a
+bad, unsupported, or existing name is refused. This scenario is tested by
+`ProjectExplorerViewModel_CreateFile_TargetFolderAndNames_CreatesOrRefuses`.
+
+**ProjectExplorerViewModel_CreateFile_KindsAndNoProject_GetTemplatesOrAreRefused**: The blank drawings fit the SVG,
+Mermaid, and Vega-Lite kinds, other kinds start empty, and nothing is created while no project is open. This scenario is
+tested by `ProjectExplorerViewModel_CreateFile_KindsAndNoProject_GetTemplatesOrAreRefused`.
+
+**ProjectExplorerViewModel_CreateFolder_NamesAndTarget_CreatesOrRefuses**: A new folder is created in the target folder,
+is selected with the folders above it expanded, and names that are bad, start with a period, or exist are refused. This
+scenario is tested by `ProjectExplorerViewModel_CreateFolder_NamesAndTarget_CreatesOrRefuses`.
+
+**ProjectExplorerViewModel_AddFiles_PicturesAndOthers_CopiesAndExplains**: Added files are copied into the attachments
+folder, or a chosen folder of the project, under free names; the sources stay; folders and other kinds of files are left
+out and named in the message; a target outside the project, and one in the data folder, is refused. This scenario is
+tested by `ProjectExplorerViewModel_AddFiles_PicturesAndOthers_CopiesAndExplains`.
+
+**ProjectExplorerViewModel_Thumbnails_AskedOnlyForDrawnVisibleFilesAndAgainWhenTheFileChangesOrTheSettingIsOn**:
+Thumbnails are asked for only for drawn files whose rows can be seen (every folder above them expanded), once for each,
+again for a file that changed, not at all while thumbnails are off, and again for the files that can be seen when they
+are turned on. This scenario is tested by
+`ProjectExplorerViewModel_Thumbnails_AskedOnlyForDrawnVisibleFilesAndAgainWhenTheFileChangesOrTheSettingIsOn`.
+
+**ProjectExplorerViewModel_Thumbnails_NoSourceOrFailingSource_LeavesNodesWithoutThumbnail**: An explorer with no source
+of thumbnails asks for none and works as before, and a source that fails leaves the node without a thumbnail and does
+not break the explorer. This scenario is tested by
+`ProjectExplorerViewModel_Thumbnails_NoSourceOrFailingSource_LeavesNodesWithoutThumbnail`.
+
+**ProjectExplorerViewModel_Nodes_RemovedOrCleared_AreDisposed**: Nodes that are removed from the tree or cleared with it
+are disposed, so that a thumbnail that arrives for them later is thrown away. This scenario is tested by
+`ProjectExplorerViewModel_Nodes_RemovedOrCleared_AreDisposed`.
 
 **ProjectExplorerViewModel_Dispose_OpenFolder_StopsWatchingAndRefusesOpen**: Disposing twice stops the watcher,
 and opening afterwards throws. This scenario is tested by
@@ -165,5 +261,45 @@ scenario is tested by `ProjectExplorerView_SelectFileInViewModel_SelectsItemInLi
 tested by `ProjectExplorerView_RenameRefused_ShowsErrorMessage`.
 
 **ProjectExplorerView_FilesChangeOnDisk_ListRefreshesAfterDebounce**: With the real scheduler, a file added and a
-file deleted on disk appear in the list by themselves. This scenario is tested by
+file deleted on disk appear in the tree by themselves. This scenario is tested by
 `ProjectExplorerView_FilesChangeOnDisk_ListRefreshesAfterDebounce`.
+
+**ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent**: A folder row has a chevron and, once expanded,
+its children are indented 16 pixels below it; every row has a badge of its kind and is 26 pixels high; selecting a
+folder selects no file and selecting a picture selects its file. This scenario is tested by
+`ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent`.
+
+**ProjectExplorerView_SelectedRow_ShowsBarAndSemiboldName**: Only the selected row shows the accent bar and the semibold
+name. This scenario is tested by `ProjectExplorerView_SelectedRow_ShowsBarAndSemiboldName`.
+
+**ProjectExplorerView_UnreadableFolder_ShowsTheProblemWithTheDangerIcon**: A missing project folder shows its words in
+the danger color with an icon of the same color, and lists nothing. This scenario is tested by
+`ProjectExplorerView_UnreadableFolder_ShowsTheProblemWithTheDangerIcon`.
+
+**ProjectExplorerView_Header_ShowsLabelAndButtonsThatRunTheCommands**: The header shows the label EXPLORER and three
+buttons with names, tooltips, and targets of at least 28 by 28 pixels; they run the New file and New folder commands,
+and Refresh reads the folder again. This scenario is tested by
+`ProjectExplorerView_Header_ShowsLabelAndButtonsThatRunTheCommands`.
+
+**ProjectExplorerView_NoCommandsNoProject_ButtonsOffAndDropZoneHidden**: With no project and no commands the buttons are
+off and the drop zone is hidden; opening a project turns the Refresh button and the zone on. This scenario is tested by
+`ProjectExplorerView_NoCommandsNoProject_ButtonsOffAndDropZoneHidden`.
+
+**ProjectExplorerView_DropFiles_OnZoneAndOnFolderRow_CopiesAndHighlights**: A file dropped on the drop zone is copied
+into the attachments folder and one dropped on a folder row into that folder, the place is lit during the drag and not
+after the drop, and the sources stay. This scenario is tested by
+`ProjectExplorerView_DropFiles_OnZoneAndOnFolderRow_CopiesAndHighlights`.
+
+**ProjectExplorerView_DropTextOrOtherFile_ChangesNothingOrExplains**: A drop of text lights nothing and adds nothing; a
+dropped text file is refused with a message and not copied. This scenario is tested by
+`ProjectExplorerView_DropTextOrOtherFile_ChangesNothingOrExplains`.
+
+**ProjectExplorerView_Thumbnails_ShownOnRowsOfDrawnFilesAndFollowTheSetting**: A row of a picture shows a thumbnail box
+28 by 18 once the picture is made, a PDF row and a folder row show none, turning thumbnails off takes them away, and
+turning them on makes them again. This scenario is tested by
+`ProjectExplorerView_Thumbnails_ShownOnRowsOfDrawnFilesAndFollowTheSetting`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: In the workspace of an open project, which holds the
+explorer, in both theme variants, the tree has a name and every button without text has a name, a tooltip, keyboard
+focus, and a size of at least 28 by 28. This scenario is tested by
+`Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

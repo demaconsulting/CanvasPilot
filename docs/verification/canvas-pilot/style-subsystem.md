@@ -33,6 +33,9 @@ project file of the application library from the repository; no network, display
   kit passes, and a picture with another color fails and names it.
 - The tools of an assistant over the real units give the style of the project (within the budget), check a picture of
   the project and name the color that is off the palette, and refuse a file outside the project.
+- The window that manages kits and the Style Kits page of the settings dialog, shown with the real application in both
+  theme variants, give every entry a name, every button without text a name and a tooltip, and every enabled button the
+  keyboard focus.
 
 ### Test Scenarios
 
@@ -82,3 +85,9 @@ the line that ends a cut block names the tool; `style_check` with no arguments c
 it with half of the pixels off the palette and names the color, and a path that climbs out of the project is refused.
 This scenario is tested by
 `StyleSubsystem_GuideTheAssistant_ToolsOverRealUnits_GiveTheStyleAndCheckAPictureOfTheProject`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: Headless UI test of the whole application. The main
+window, each dialog, the window that manages kits, and every page of the settings dialog are shown in both theme
+variants and every control is looked at; a button that shows no text has a name and a tooltip, a text box, drop-down,
+list, and slider has a name, and every enabled button can take the keyboard focus. This scenario is tested by
+`Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

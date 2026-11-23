@@ -48,6 +48,9 @@ input-files:
   - docs/design/canvas-pilot/app-shell-subsystem/project-workspace.md
   - docs/design/canvas-pilot/app-shell-subsystem/about-dialog.md
   - docs/design/canvas-pilot/app-shell-subsystem/theme-resources.md
+  - docs/design/canvas-pilot/app-shell-subsystem/status-bar.md
+  - docs/design/canvas-pilot/app-shell-subsystem/provider-pill.md
+  - docs/design/canvas-pilot/app-shell-subsystem/welcome.md
   - docs/design/canvas-pilot/chat-subsystem.md
   - docs/design/canvas-pilot/chat-subsystem/chat-panel.md
   - docs/design/canvas-pilot/chat-subsystem/chat-turn-runner.md
@@ -78,6 +81,7 @@ input-files:
   - docs/design/canvas-pilot/preview-subsystem.md
   - docs/design/canvas-pilot/preview-subsystem/image-render-service.md
   - docs/design/canvas-pilot/preview-subsystem/preview-pane.md
+  - docs/design/canvas-pilot/preview-subsystem/thumbnail-provider.md
   - docs/design/canvas-pilot/preview-subsystem/image-exporter.md
   - docs/design/canvas-pilot/preview-subsystem/export-preset-dialog.md
   - docs/design/canvas-pilot/preview-subsystem/image-drag-source.md

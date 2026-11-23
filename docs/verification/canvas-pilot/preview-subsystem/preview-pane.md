@@ -13,14 +13,29 @@ service, and `MainWindowViewTests.cs` shows the pane inside the main window.
 
 #### Test Environment
 
-Unit tests use the standard test environment. UI tests run under the Avalonia headless platform with the Skia
+Unit tests do not need a display. UI tests run under the Avalonia headless platform with the Skia
 renderer, serialized with test parallelization disabled; no display or windowing system is required. Tests use
 temporary local folders and real file I/O; no network or external services are required.
+
+**Checks by hand before a release** (the headless platform cannot deliver real wheel, key, and middle-button input; they
+are not evidence for a requirement):
+
+1. *Zoom with the wheel and the keys.* With a picture larger than the pane shown, `Ctrl` with the wheel zooms in and out
+   in steps, the wheel alone scrolls, and `Ctrl+0`, `Ctrl+1`, `Ctrl+Plus`, and `Ctrl+Minus` fit, show the actual size,
+   and zoom, after a click on the empty stage has given the pane the focus.
+2. *Panning.* At a zoom where the picture is larger than the pane, dragging with the middle button moves the picture and
+   the scroll bars follow.
+3. *Looks.* In the light and the dark theme, the stage shows its dot grid, the picture has a margin and a soft shadow,
+   the zoom pill sits at the bottom right, the busy line runs along the top of the stage while a large file renders, the
+   error card is centered with a red outline, and an open drawer of notes at a stage narrower than about 700 pixels may
+   cover the zoom pill (a known limit).
+4. *Names.* With a screen reader, the zoom buttons are read as Fit to window, Actual size, Zoom out, Zoom in, and the
+   zoom label, each with its tooltip.
 
 #### Acceptance Criteria
 
 - All unit and UI tests pass with zero failures.
-- Selecting a file renders it in the project folder, shows busy, then the picture, its status line, and its notes;
+- Selecting a file renders it in the project folder, shows busy, then the picture, its status sentence, and its notes;
   a pane created over an existing selection renders at once.
 - A newer selection cancels the running render's token, and results of the cancelled render, success or error,
   never replace the newer picture whichever result arrives first; clearing the selection, closing the project, and
@@ -32,13 +47,27 @@ temporary local folders and real file I/O; no network or external services are r
   requests a render for changes in the project folder and its sub-folders but not while nothing is selected.
 - Changes in the hidden data folder and to the project file are not relevant; all other paths are.
 - Straight-alpha RGBA converts to premultiplied BGRA with rounding, honoring the row size; the created bitmap has the
-  picture's size and pixels; fit and actual size change the stretch of the `Viewbox` around the picture and the scroll
-  bars.
+  picture's size and pixels.
+- The pane tells the file name, and for a shown picture its size, format in capital letters, and render time, tells none
+  of the picture's facts before a render ends or after one fails, and sums its state up in one sentence.
+- The placeholder says that no project is open, or that a file is to be selected, while there is nothing else to show,
+  and is hidden while a picture, an error, or a running render is shown.
+- The zoom steps are 25, 50, 75, 100, 150, 200, 300, and 400 percent; zooming in or out from the fitted picture goes to
+  the next step above or below the percent at which it is shown; the zoom never leaves 25 to 400 and the commands for a
+  larger or smaller zoom are off at its ends; the actual size command gives 100 percent; fitting again shows the label
+  of the fitted zoom; the zoom last chosen stays while Fit is on.
+- Fit scales the picture down to the pane without scroll bars and never enlarges it; with Fit off the picture is at its
+  own size with automatic scroll bars. The zoom pill zooms the picture and the overlay together: the Fit toggle, the
+  actual size button, the zoom out button, and the zoom label change the zoom and the label as they should, the label
+  fits the picture again, and the picture on screen has the size of the picture times the zoom.
+- The busy line is 2 pixels high at the top of the stage while a render runs, and hidden otherwise; the error card shows
+  the code, message, and hint; the notes drawer lies inside the stage, shows the header `1 note` and the notes when
+  open.
 - The overlay slot is empty and hidden by default, shows the content assigned to it exactly over the picture, has the
-  picture's pixel size in its own coordinates at actual size and when the picture is scaled down to the pane, and is
-  scaled on screen by the same factor as the picture.
-- The slot in the top bar is empty and hidden by default, shows the content assigned to it at its own size although the
-  picture is scaled down, and is not inside the scaled picture.
+  picture's pixel size in its own coordinates at actual size, when zoomed, and when the picture is scaled down to the
+  pane, and is scaled on screen by the same factor as the picture.
+- The slot that floats over the stage is empty and hidden by default, shows the content assigned to it at its own size
+  although the picture is scaled down, and is not inside the scaled picture.
 - A press of the left button on the shown picture followed by a move of at least four pixels starts one drag with the
   copy effect that offers a PNG file and a bitmap of the picture's size; a click, a move of three pixels, a drag while
   dragging out is off, and a drag from a pane without a drag source start nothing; a drag operation that fails is
@@ -122,9 +151,25 @@ blank arguments are refused. This scenario is tested by
 `PreviewPaneViewModel_IsRelevantChange_PathOutsideProject_IsRelevant`.
 
 **PreviewPaneViewModel_New_NoProject_ShowsPlaceholderAndFitsWindow** and
-**PreviewPaneViewModel_New_NullArguments_Throw**: A new pane is idle with the placeholder, fits the window, and has
-no notes; missing collaborators are refused. These scenarios are tested by
+**PreviewPaneViewModel_New_NullArguments_Throw**: A new pane is idle with the placeholder `No project is open.`, fits
+the window, and has no notes; missing collaborators are refused. These scenarios are tested by
 `PreviewPaneViewModel_New_NoProject_ShowsPlaceholderAndFitsWindow` and `PreviewPaneViewModel_New_NullArguments_Throw`.
+
+**PreviewPaneViewModel_Render_ReportsFileSizeFormatAndRenderTimeOfTheShownPicture**: Before a file is selected the file
+name, size, format, and render time are empty. Selecting `a.svg` gives the name and no other fact while the render runs;
+after a 900 by 500 SVG is shown the facts are `a.svg`, `900 × 500 px`, `SVG`, and `Rendered in N ms`; after another file
+fails to draw only its name is left and the render time is `null`. This scenario is tested by
+`PreviewPaneViewModel_Render_ReportsFileSizeFormatAndRenderTimeOfTheShownPicture`.
+
+**PreviewPaneViewModel_Zoom_StepsClampAndFit_FollowTheStepList**: A fitted pane that the view reports as shown at 90
+percent has the label `90%`. Zooming in gives 100 percent and turns Fit off; ten more steps stop at 400 with zooming in
+off and zooming out on; ten steps out stop at 25 with zooming out off and zooming in on; the actual size command gives
+100 percent and `IsActualSize`; fitting again turns Fit on, is not the actual size, and the label is `90%` again. This
+scenario is tested by `PreviewPaneViewModel_Zoom_StepsClampAndFit_FollowTheStepList`.
+
+**PreviewPaneViewModel_ZoomOut_FromFit_GoesToTheStepBelowTheFittedZoom**: Zooming out of a fitted picture shown at 90
+percent gives 75 percent and turns Fit off. This scenario is tested by
+`PreviewPaneViewModel_ZoomOut_FromFit_GoesToTheStepBelowTheFittedZoom`.
 
 **RenderedImageBitmap_Convert_OpaquePixels_SwapsRedAndBlueOnly**,
 **RenderedImageBitmap_Convert_SemiTransparentPixel_MultipliesColorByAlpha**,
@@ -137,25 +182,33 @@ scenarios are tested by the tests of the same names.
 
 **PreviewPaneView_SvgSelected_ShowsBitmapWithConvertedPixels**: With the real render service, selecting a
 half-transparent red SVG shows a 40 by 20 bitmap whose first pixel is 0, 0, 128, 128 (premultiplied blue, green, red,
-alpha), the scroller, and the status line, and hides the placeholder, error panel, and busy indicator. This scenario
-is tested by `PreviewPaneView_SvgSelected_ShowsBitmapWithConvertedPixels`.
+alpha), the scroller, and the status sentence `red.svg: 40 x 20 px, svg`, and hides the placeholder, error panel, and
+busy indicator. This scenario is tested by `PreviewPaneView_SvgSelected_ShowsBitmapWithConvertedPixels`.
 
-**PreviewPaneView_BrokenFile_ShowsErrorCodeMessageAndHint**: A malformed SVG shows the error panel with the code, the
-XML message, and the hint, hides the picture, and shows `render failed` in the status. This scenario is tested by
-`PreviewPaneView_BrokenFile_ShowsErrorCodeMessageAndHint`.
+**PreviewPaneView_BrokenFile_ShowsErrorCodeMessageAndHint**: A malformed SVG shows the error card with the code, the
+XML message, and the hint, hides the picture, and shows `render failed` in the status sentence. This scenario is tested
+by `PreviewPaneView_BrokenFile_ShowsErrorCodeMessageAndHint`.
 
 **PreviewPaneView_RenderRunning_ShowsBusyIndicatorUntilDone**: With a render service that waits, the pane shows the
-placeholder while idle, the busy indicator and `Rendering slow.svg...` while the render runs, and neither once it
-finishes. This scenario is tested by `PreviewPaneView_RenderRunning_ShowsBusyIndicatorUntilDone`.
+placeholder while idle, the busy line and `Rendering slow.svg...` while the render runs, and neither once it finishes.
+While it runs the line is 2 pixels high and its top is the top of the stage. This scenario is tested by
+`PreviewPaneView_RenderRunning_ShowsBusyIndicatorUntilDone`.
 
-**PreviewPaneView_RenderWithNotes_ListsDiagnostics**: An SVG that embeds a file outside the project shows the
-expander with the header `1 note` and a list that holds the `image-access-denied` note. This scenario is tested by
+**PreviewPaneView_RenderWithNotes_ListsDiagnostics**: An SVG that embeds a file outside the project shows the drawer
+hidden before the render; afterwards it is shown with the header `1 note`, and, when opened, lies entirely inside the
+stage and holds the `image-access-denied` note. This scenario is tested by
 `PreviewPaneView_RenderWithNotes_ListsDiagnostics`.
 
 **PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars**: Fitting scales down without scroll bars (the
-`Viewbox` stretches uniformly, down only); clearing the check box shows the actual size (no scaling) with automatic
-scroll bars; checking it again restores fitting; the `Image` itself is never stretched. This scenario is tested by
-`PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars`.
+`Viewbox` stretches uniformly, down only); clearing the Fit toggle shows the actual size (no scaling) with automatic
+scroll bars and `FitToWindow` off; checking it again restores fitting; the `Image` itself is never stretched. This
+scenario is tested by `PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars`.
+
+**PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether**: A pane shows an 800 by 400 picture fitted to the pane, with
+an overlay; the label ends with `%`. The actual size button gives the label `100%`, a picture 800 wide on screen, and
+Fit off. Two presses of the zoom out button give `50%`, a picture of 400 by 200 on screen, and an overlay that covers
+exactly the same rectangle and is still 800 by 400 in its own coordinates. A press of the label fits the picture again
+and gives the fitted label. This scenario is tested by `PreviewPaneView_ZoomPill_ZoomsPictureAndOverlayTogether`.
 
 **PreviewPaneViewModel_Overlay_AssignedContent_IsExposedAndAnnounced**: The overlay slot of a new pane is empty;
 assigning an object exposes exactly that object and sets `HasOverlay`; clearing it again resets both; each change
@@ -176,13 +229,13 @@ keep the aspect ratio of 2 to 1, and cover the same rectangle in the window. Thi
 while the slot is empty, visible and holding exactly the assigned control after it is assigned, and hidden again after
 the slot is cleared. This scenario is tested by `PreviewPaneView_OverlaySlot_EmptyThenAssigned_IsHiddenThenShown`.
 
-**PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced**: The slot in the top bar of a new pane is empty;
-assigning an object exposes exactly that object and sets `HasToolbar`; clearing it resets both; each change raises
-`PropertyChanged` for `Toolbar` and `HasToolbar`, and the overlay slot is not affected. This scenario is tested by
-`PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced`.
+**PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced**: The slot that floats over the stage in a new
+pane is empty; assigning an object exposes exactly that object and sets `HasToolbar`; clearing it resets both; each
+change raises `PropertyChanged` for `Toolbar` and `HasToolbar`, and the overlay slot is not affected. This scenario is
+tested by `PreviewPaneViewModel_Toolbar_AssignedContent_IsExposedAndAnnounced`.
 
 **PreviewPaneView_ToolbarSlot_EmptyThenAssigned_IsHiddenThenShownOutsideThePicture**: With a large picture shown, scaled
-down to the pane, the host of the slot in the top bar is hidden while the slot is empty; after a control of 100 by 20 is
+down to the pane, the host of the floating slot is hidden while the slot is empty; after a control of 100 by 20 is
 assigned the host is visible, holds exactly that control, the control measures 100 by 20 on screen, and it is not a
 descendant of the scroll viewer that holds the picture; after the slot is cleared the host is hidden again. This
 scenario is tested by `PreviewPaneView_ToolbarSlot_EmptyThenAssigned_IsHiddenThenShownOutsideThePicture`.

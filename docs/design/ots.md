@@ -78,6 +78,11 @@ OTS items are third-party tools and libraries consumed by the project. This docu
 integration pattern and usage design for each item. The internal design of OTS items is out of
 scope; only how this project integrates and uses each item is documented.
 
+Third-party material that is copied into the repository and is not restored by the build is not an OTS item and has no
+integration design of its own: the Fluent System Icons glyphs (MIT License) that the `ThemeResources` unit vendors as
+line icons are described in the design of that unit, listed in the About dialog, and delivered with the installed
+application together with their license notice in `THIRD-PARTY-NOTICES.md`.
+
 ## OTS Items
 
 The following OTS items have integration design documentation:

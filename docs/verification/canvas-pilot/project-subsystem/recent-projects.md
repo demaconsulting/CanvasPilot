@@ -2,10 +2,12 @@
 
 #### Verification Approach
 
-`RecentProjects` is verified by unit tests in `RecentProjectsTests.cs`. Most tests use a real `SettingsService` on
-a temporary folder and real project files, so they check the stored list and what a new service loads. One test
-uses an NSubstitute `ISettingsService` whose `Update` throws, to force a failed save. The tests assert the
-returned lists, the stored settings, and the `Changed` event.
+`RecentProjects` is verified by unit tests in `RecentProjectsTests.cs`. Most tests use a real `SettingsService` on a
+temporary folder and real project files, so they check the stored list and what a new service loads. One test uses an
+NSubstitute `ISettingsService` whose `Update` throws, to force a failed save. The test of the time of opening
+(`RecentProjects_Add_RecordsTheTimeOfOpeningAndRemoveForgetsIt`, in `WelcomeTests.cs`) gives the list a hand-written
+clock (`TimeProvider`) so the recorded times can be checked exactly. The tests assert the returned lists, the stored
+settings, and the `Changed` event.
 
 #### Test Environment
 
@@ -22,6 +24,8 @@ or display are required.
   means no event.
 - The list is stored in the settings file next to other settings, and a failed save is reported without an
   exception or event.
+- Each opening records its time from the clock that the test sets, a second opening renews it, and removing the project
+  forgets it.
 
 #### Test Scenarios
 
@@ -69,3 +73,9 @@ scenario is tested by `RecentProjects_Add_EmptyOrInvalidPath_IsIgnored`.
 
 **RecentProjects_Constructor_NullSettings_Throws**: A null settings service is refused. This scenario is
 tested by `RecentProjects_Constructor_NullSettings_Throws`.
+
+**RecentProjects_Add_RecordsTheTimeOfOpeningAndRemoveForgetsIt**: With a real settings service and a clock that the test
+sets, adding a project records the time of opening, adding it again three hours later renews the time, and removing the
+project leaves no time in the settings. This scenario is tested by
+`RecentProjects_Add_RecordsTheTimeOfOpeningAndRemoveForgetsIt`, which is in `WelcomeTests.cs` because the welcome screen
+is its reason.

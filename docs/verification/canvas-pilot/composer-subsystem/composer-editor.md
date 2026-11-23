@@ -39,7 +39,9 @@ and no real input method is used.
    one step.
 4. *Looks.* Chips are readable and aligned with the text in the light and the dark theme, long names are shortened with
    an ellipsis, the dictated background is visible but does not hide the text, and the surface wraps long lines with
-   chips in them.
+   chips in them. A chip is a pill; a mark chip is tinted pink with a pink outline and icon like the mark on the
+   picture; the cross of a chip is announced by a screen reader as "Remove" and the name of the chip; the placeholder
+   is readable in both themes and disappears when typing starts.
 
 #### Acceptance Criteria
 
@@ -60,6 +62,7 @@ and no real input method is used.
 - Dictated text has its range drawn and only that, and the range disappears when the block is undone.
 - Previews are made only for picture files of at most 20 MB, are reused until the file changes, and are never made for
   anything else; a failing provider leaves the icon.
+- While the message of an open project is empty the surface shows the placeholder text, and typing hides it.
 
 #### Test Scenarios
 
@@ -233,3 +236,10 @@ tested by `ChipView_ProviderThrows_KeepsIcon`.
 chip, dictated text, typed text, and dictated text, only the two dictated stretches are reported, at offsets that count
 the chip as one position. This scenario is tested by
 `DictatedTextBackgroundRenderer_GetRanges_DictatedTextBetweenChipsAndTyped_ReturnsOnlyDictated`.
+
+**ChatPanelView_ComposerCard_PlaceholderNamesAndHint**: This UI test of the chat panel hosts the real editing view in
+the card of the message. A new panel in an open project shows the placeholder, whose text is the constant of the view
+model,
+over the empty surface, and typing "Make it blue" hides it. It is described in the verification of the `ChatPanel`
+unit, and is the evidence for the placeholder because the view is tested here only without the card around it. This
+scenario is tested by `ChatPanelView_ComposerCard_PlaceholderNamesAndHint`.

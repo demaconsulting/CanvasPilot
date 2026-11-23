@@ -32,7 +32,7 @@ has no state and no user interface.
 values), it answers with `StyleGuidance.Build` of the active kit. With `kit` it finds that kit through the catalog (the
 kit of the most local place); an id that no kit has is answered with
 `No style kit has the id '{id}'. Known kits: {ids}.`, and the ids are the kits that are not overridden, in order. With
-no kit chosen, or with a kit that is missing, it says so and how to choose one (the Style Kits window, the Style list,
+no kit chosen, or with a kit that is missing, it says so and how to choose one (the Style Kits window, the style pill,
 or `style_get` with `kit`). With `section` it answers with `StyleGuidance.BuildSection`, the whole section, with no cut;
 the name is not case sensitive; a name that is not a section is answered with the list of the sections.
 

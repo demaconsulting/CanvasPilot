@@ -33,8 +33,9 @@ as single whole sections, with the full paths of the example images. `StyleCheck
 picture against the palette of a kit, in a histogram and in CIELAB, and reports what is on the palette, what is a blend
 at an edge, and what is off the palette. `StyleTools` describes the two tools of an assistant, `style_get` and
 `style_check`, as plain values (the descriptor record of the drawing knowledge) with a function from text to text that
-never throws; the check reads only files inside the folder of the project. `StylePicker` is the list in the status bar
-of the main window with which the user chooses the kit of the open project. `StyleSettingsPage` is the page of the
+never throws; the check reads only files inside the folder of the project. `StylePicker` is the pill in the title bar
+of the main window with which the user chooses the kit of the open project and from which the window that manages kits
+is reached. `StyleSettingsPage` is the page of the
 settings dialog with which the user lists the shared folders of kits and chooses the default kit of a new project.
 `StyleKitEditor` is the editor of one kit of the user or of the project: a draft of every part that is checked with the
 rules of the style file and is written, with the example files that were added and removed, only when the user saves.
@@ -139,17 +140,19 @@ kits. The subsystem depends on CanvasNet for the classification of font families
   reads only a file inside the project folder (not in `.canvaspilot`, and not through a link that leads out) and waits
   for the drawing on a thread of the pool, so it must not be called from the thread of the user interface.
 
-**StylePicker**: The choice of the kit in the status bar.
+**StylePicker**: The choice of the kit in the title bar.
 
 - *Type*: In-process .NET view model `StylePickerViewModel` with the value `StylePickerItem`, and the view
   `StylePickerView`.
 - *Role*: Provider (the choices and the selection that the window shows), and Consumer (the active style, the catalog,
   and the project service).
 - *Contract*: `Items` is no style, then each kit that is not hidden by a kit of a more local place, then the kit that
-  the project names when it cannot be found; `SelectedItem` is the kit that the project uses, and setting it writes the
-  choice through `IActiveStyle.SetActiveAsync`; `IsVisible` is true while a project is open; `ErrorMessage` says why a
-  choice was refused; `ApplyDefaultToNewProjectAsync` passes on the request that the shell makes after it created a
-  project.
+  the project names when it cannot be found; each choice has the name of the kit and up to three colors of its palette
+  for the pill; `SelectedItem` is the kit that the project uses, and setting it writes the choice through
+  `IActiveStyle.SetActiveAsync`; `IsVisible` is true while a project is open; `ErrorMessage` says why a choice was
+  refused; `ManageKitsCommand` (set by the main window) is what the last entry of the list, `Manage style kits...`,
+  does, and `HasManageKits` says whether there is one; `ApplyDefaultToNewProjectAsync` passes on the request that the
+  shell makes after it created a project.
 - *Constraints*: Keeps no choice of its own: the list is rebuilt from the active style and the catalog on the thread
   that owns the user interface whenever either announces a change.
 
@@ -233,7 +236,7 @@ anything is made from it. Details are in the design of the `StyleKitDocument` un
 - **StyleGuidance** unit: the style of a kit as text for an assistant.
 - **StyleChecker** unit: a picture measured against the palette of a kit.
 - **StyleTools** unit: the tools `style_get` and `style_check` of an assistant.
-- **StylePicker** unit: the choice of the kit of the open project in the status bar.
+- **StylePicker** unit: the choice of the kit of the open project in the title bar.
 - **StyleSettingsPage** unit: the shared folders and the default kit in the settings dialog.
 - **StyleKitEditor** unit: the editing of one kit of the user or of the project.
 - **StyleKitManager** unit: the window that shows and manages the kits.

@@ -22,9 +22,11 @@ default entry in each.
 **CaptureStatus / PlaybackStatus**: `string` — a count of the devices found, an explanation that none was found, or
 the problem text when the audio system could not be used.
 
-**View**: `DeviceSelectionView` is an Avalonia user control with two combo boxes, two status lines, and a Refresh
-devices button (`SpeechCaptureDeviceComboBox`, `SpeechPlaybackDeviceComboBox`, `SpeechCaptureStatus`,
-`SpeechPlaybackStatus`, `SpeechRefreshDevicesButton`).
+**View**: `DeviceSelectionView` is an Avalonia user control with a section title (`Audio devices`), two labeled combo
+boxes, two status lines, and a Refresh devices button with the secondary look (`SpeechCaptureDeviceComboBox`,
+`SpeechPlaybackDeviceComboBox`, `SpeechCaptureStatus`, `SpeechPlaybackStatus`, `SpeechRefreshDevicesButton`). The combo
+boxes are named `Microphone` and `Speakers`, and the status lines are in the hint look. The settings page puts the view
+in a raised card; the view writes no color.
 
 #### Key Methods
 

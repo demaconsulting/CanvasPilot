@@ -21,7 +21,9 @@ display: the editing control only reports and shows.
   sets while the copilot works), `CanUndo`, `CanRedo`, `IsSending`, `StatusText` and `HasStatus` (one
   sentence about the last action), `DictationState` (`Idle`, `Starting`, `Listening`, `Finishing`), `IsDictating`, and
   `LivePartialText` (the words recognized so far while the talk control is held), `MarkChipIds` (the marks that are part
-  of the message).
+  of the message), and `ShowsPlaceholder` (a project is open and the message has neither text nor chips, so the
+  editing control shows its hint). The constant `PlaceholderText` is "Describe a change, or mark the picture…".
+  `HasContent`, `ShowsPlaceholder`, `CanEdit`, and `CanSend` are announced with every change of the message.
 - Commands: `UndoCommand`, `RedoCommand`, and `SendCommand`, whose `CanExecute` follows the state above.
 - Events: `Changed` (once for each action that changed the message, the caret, or what can be undone),
   `UndoRedoStateChanged` (from `IUndoRedoTarget`), and `MessageSent` with a `SentMessage`.
@@ -31,8 +33,12 @@ display: the editing control only reports and shows.
 - Supporting types of the unit: `IUndoRedoTarget` (`CanUndo`, `CanRedo`, `Undo`, `Redo`, `UndoRedoStateChanged`), which
   the Edit menu and the keys reach the focused part through; `IPushToTalkTarget` (`BeginPushToTalkAsync`,
   `EndPushToTalkAsync`), which the talk button and key reach; `IMessageBuilder` (`BuildAsync`), which the composer owns
-  and the payload builder implements; and `SentMessage` (the snapshot, the marks whose chips are in it, the staged
-  attachments, the payload as an object, and the time) with `MessageSentEventArgs`. All are immutable or contracts.
+  and the payload builder implements; `IAttachmentPicker` (`PickAttachmentsAsync(initialFolder)`, which answers the full
+  paths of the files the user chose, or none), the seam by which the attach button of the chat panel asks for files and
+  that the main window implements through the dialog service, because a file dialog needs the main window as its
+  owner (the composer itself never calls it); and `SentMessage` (the snapshot, the marks whose chips are in it, the
+  staged attachments, the payload as an object, and the time) with `MessageSentEventArgs`. All are immutable or
+  contracts.
 - Internal state: the attachment store and intake of the open project, counters of project changes and of dictations
   that were given up, the cancellation of a start that is under way, the session that is listening, and the context of
   the thread that pressed the talk button.
@@ -47,7 +53,13 @@ selection, or one position, as one step. `AddDictatedBlock` makes a `Dictate` ed
 everything it accepted, at the place of the drop or at the caret over the selection; a paste of plain text is the same
 path with a text segment. `AddMark(mark)` checks that the registry holds that very mark and executes an `AddMark` edit
 at the caret; there is no way to make a mark from text, so dictated text that looks like a chip stays text.
-`DeleteChip(offset)` executes a `DeleteChip` edit. An action that changes nothing is not a step (the history ignores
+`DeleteChip(offset)` executes a `DeleteChip` edit. `DeleteMarkChips()` deletes the chips of all marks: it finds the
+offset
+of the first mark chip in the document and calls `DeleteChip` for it, again and again until no mark chip is left or a
+deletion is refused, so each chip is its own step and one undo brings back the last one; it returns how many it
+deleted and touches no other segment. The chat panel calls it when the annotation layer asks for the marks to be
+cleared, and the `Changed` of each deletion makes the layer follow. An action that changes nothing is not a step (the
+history ignores
 empty edits), and an action that is refused (no project, or a message being sent) changes nothing. After each executed
 edit the view model sets the caret from the edit and raises its notifications once.
 
@@ -129,4 +141,5 @@ send. It is owned by the interface thread and is not safe for concurrent use.
 - The `ApplicationComposition` creates it, follows the open project with `SetProject`, and disposes it.
 - The editing control and the chat panel call the editing methods, show its state, and handle
   `MessageSent`; the window finds it as the `IUndoRedoTarget` for the Edit menu and as the `IPushToTalkTarget` for the
-  talk key.
+  talk key. The chat panel also calls `DeleteMarkChips`, and the main window implements `IAttachmentPicker`, which the
+  chat panel calls.

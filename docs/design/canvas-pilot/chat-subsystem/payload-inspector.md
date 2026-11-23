@@ -19,8 +19,13 @@ the main window shows it, on behalf of the chat panel, through a seam.
 - `PayloadPictureViewModel`: one picture, with a `Caption`, the PNG bytes of the payload (`ByteCount` says how many),
   and `Bitmap`, which is decoded the first time it is read and released by `Dispose`. Bytes that cannot be decoded give
   no bitmap and no exception.
-- `PayloadInspectorView` (a `Window`): the description in a read-only multi-line text box in a monospaced font, a
-  splitter, the list of pictures with their captions (or the statement that there are none), and a Close button.
+- `PayloadInspectorView` (a `Window`): on the pane color, two columns with a section title over each, "What the
+  assistant would receive" over the description in a read-only multi-line text box in a monospaced font (with the
+  accessible name of the title), and "Pictures" over the list of pictures with their captions (or the statement that
+  there are none), the columns separated by a splitter that shows a grip and can be moved with the pointer and the
+  keyboard (`PayloadInspectorSplitter`, with a name), and below them a footer bar on the window color with a line above
+  it that holds the primary Close button, which is both the default and the cancel button of the window. The shared
+  styles give the titles and the hints their look, and all colors are tokens.
 - `IPayloadInspectorLauncher`: the seam by which a panel asks for the window; `IDialogService` of the shell extends it
   and the main window implements it by showing the window as a dialog it owns.
 
@@ -47,6 +52,8 @@ its caption and shows no picture. The window cannot fail the application: it sho
 
 - **MessagePayload** and its parts, and **PayloadDescriber**: what is shown and the text that describes it.
 - **Avalonia** and **CommunityToolkit.Mvvm** (OTS): the window, controls, bitmaps, and commands.
+- **ThemeResources** (of the AppShell subsystem, by resource keys only): the pane and window colors, the border colors,
+  the type sizes, the `SplitterGrip` theme, and the `PrimaryButton` theme.
 
 #### Callers
 

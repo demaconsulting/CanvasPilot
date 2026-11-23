@@ -2,8 +2,11 @@
 
 This document provides the detailed design for CanvasPilot, an AI-assisted drawing application built on CanvasNet.
 CanvasPilot is an Avalonia desktop application for Windows that is delivered as an MSI installer package. It provides
-folder-based projects, an explorer of the project's image source files, a preview of the selected file that is drawn by
-CanvasNet, PNG export, copy to the clipboard, and drag-out of the shown picture, persisted settings with AI provider and
+folder-based projects, an explorer tree of the project's folders and image source files with small pictures, a preview
+of the selected file that is drawn by
+CanvasNet on a stage with zoom, PNG export, copy to the clipboard, and drag-out of the shown picture, a welcome screen,
+a title bar with the style and AI provider pills, a status bar, a window layout that is remembered, a dark and a light
+theme with one set of design tokens and line icons, persisted settings with AI provider and
 speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders, and pictures,
 and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload inspector, the drawing
 knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the Help menu), style kits
@@ -45,7 +48,8 @@ Local items:
     GitHub Copilot, on the shared runtime of the starter), and **AgentService** unit (the conversation of the open
     project, one turn at a time, with the data of the Copilot runtime kept outside the project).
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
-  - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, **AboutDialog**, and **ThemeResources** units.
+  - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, **StatusBar**, **ProviderPill**, **Welcome**,
+    **AboutDialog**, and **ThemeResources** units.
   - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, **ChatHistoryStore**, and **PayloadInspector** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
@@ -54,8 +58,8 @@ Local items:
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Payload** subsystem: **MessagePayload**, **MarkImageComposer**, **PayloadBuilder**, and **PayloadDescriber**
     units.
-  - **Preview** subsystem: **ImageRenderService**, **PreviewPane**, **ImageExporter**, **ImageDragSource**, and
-    **ExportPresetDialog** units.
+  - **Preview** subsystem: **ImageRenderService**, **PreviewPane**, **ThumbnailProvider**, **ImageExporter**,
+    **ImageDragSource**, and **ExportPresetDialog** units.
   - **Project** subsystem: **ProjectService**, **RecentProjects**, **NewProjectDialog**, and
     **ProjectExplorer** units.
   - **Settings** subsystem: **SettingsService**, **SettingsDialog**, **AiProviderSettingsPage**, and
@@ -123,7 +127,7 @@ Annotation and Payload read the pictures of the Preview subsystem, which follows
 explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing: the AppShell
 opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards, so the
 copilot can be given the same cards. The Style subsystem holds the style kits: the AppShell shows its window from the
-Tools menu and its list of kits in the status bar, the Preview subsystem offers the sizes of the kit of the project when
+Tools menu and its pill of kits in the title bar, the Preview subsystem offers the sizes of the kit of the project when
 a picture is exported, and the check of a picture against the palette puts its result among the notes of the preview; it
 depends on Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none of them depends on it.
 The Agent subsystem is the AI copilot: the Chat subsystem reaches it only through `IAgentService` and the events of a
@@ -150,8 +154,10 @@ and Style subsystems beside them, and the third-party items and the local data t
       chosen provider, and the service that keeps the conversation of the open project
     - **AnnotationSubsystem/** - marks on the shown picture: pinned to their picture, numbered, drawn with the pointer
       or the keyboard on a layer over the picture, and mapped to the parts of the source file under them
-    - **AppShellSubsystem/** - main window, project workspace, About dialog, composition root, view locator, and the
-      design tokens of the dark and light themes (`Styles/`)
+    - **AppShellSubsystem/** - main window with its title bar, menu, and status bar, the AI provider pill, the welcome
+      screen with its recent project cards, project workspace with its saved window layout, About dialog, composition
+      root, view locator, and the design tokens, vendored line icons, and control themes of the dark and light themes
+      (`Styles/`)
     - **ChatSubsystem/** - the chat panel with the transcript of the sent messages, the composer, the send and
       hold-to-talk buttons and the joining of marks to the message, and the payload inspector window
     - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, the
@@ -163,13 +169,15 @@ and Style subsystems beside them, and the third-party items and the local data t
     - **LoggingSubsystem/** - local rolling log file subsystem
     - **PayloadSubsystem/** - the message that is sent as one immutable payload: text with references, attachments,
       annotated pictures, mark crops, mark geometry, and source elements, and its description
-    - **PreviewSubsystem/** - image rendering with CanvasNet, preview pane, PNG and clipboard export, and drag-out
-    - **ProjectSubsystem/** - projects, recent projects, New Project dialog, and project explorer
+    - **PreviewSubsystem/** - image rendering with CanvasNet, preview pane with its stage and zoom, the small pictures
+      of the explorer, PNG and clipboard export, and drag-out
+    - **ProjectSubsystem/** - projects, recent projects, New Project dialog, and the project explorer with its tree,
+      header, drop zone, and thumbnails
     - **SettingsSubsystem/** - persisted settings, settings dialog, and settings pages
     - **SpeechSubsystem/** - audio devices, speech models and their downloads, and the Speech settings page
     - **StyleSubsystem/** - style kits: the format, the places that hold them, zip import and export, the kit of the
-      project, the text and tools for an assistant, the check of a picture against a palette, the list in the status
-      bar, the settings page, the window that manages kits and the editor, and the kits that come with the program under
+      project, the text and tools for an assistant, the check of a picture against a palette, the pill in the title bar,
+      the settings page, the window that manages kits and the editor, and the kits that come with the program under
       BuiltIn/
     - **UtilitiesSubsystem/** - shared utilities subsystem
   - **DemaConsulting.CanvasPilot.Desktop/** - thin executable project (`CanvasPilot.exe`) that starts the Avalonia

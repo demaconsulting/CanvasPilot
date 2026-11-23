@@ -9,7 +9,8 @@ it and lets a test change its validity, a real `SettingsService` on a temporary 
 UI tests in `SettingsDialogViewTests.cs` (the `UiTests` project, using Avalonia's headless platform) show the
 real `SettingsDialogView` over the real `AiProviderSettingsPageViewModel` and a minimal second page, and
 interact with it through mouse clicks and list selection by automation identifier. The headless tests assert
-the observable result, such as the saved file, window visibility, and enabled state, rather than internals.
+the observable result, such as the saved file, window visibility, and enabled state, rather than internals. The look of
+the window (the sizes, the colors in the two themes, and the accent bar of the rail) is checked by eye before a release.
 
 #### Test Environment
 
@@ -27,6 +28,12 @@ temporary local folders and real file I/O; no network or external services are r
 - OK and Apply are disabled while any page is invalid and are enabled again when every page is valid.
 - A failed save shows a message and keeps the dialog open.
 - Each page is told that the dialog closed exactly once, however the dialog is closed.
+- The window shows the pages in a rail, each with an icon that has a shape and its title, the title of the chosen page
+  and the sentence of the page above it (no sentence for a page that has none), and follows the choice of another page.
+- A message of a failed save shows in a banner in words at the foot of the window, and no banner shows without one.
+- In the accessibility sweep of the windows of the application, in both theme variants, the list of pages and the
+  entries of every page have names, every button that shows no text has a name and a tooltip, and every enabled button
+  can take the keyboard focus.
 
 #### Test Scenarios
 
@@ -98,3 +105,15 @@ buttons are disabled and Cancel is enabled. This scenario is tested by
 
 **SettingsDialogView_CloseWindow_NotifiesPages**: The window is closed directly; the second page was told once.
 This scenario is tested by `SettingsDialogView_CloseWindow_NotifiesPages`.
+
+**SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner**: The window is shown over the AI provider page and a
+second page that has no sentence and no icon of its own. The heading says `AI Provider` with a sentence, the banner is
+not shown, and the list has an icon with a shape for each of its two entries (the second has the default icon). After
+the second page is chosen and a message is set, the heading says `Other`, the sentence is hidden, and the banner shows
+the message. This scenario is tested by `SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: Headless UI test of the whole application. The main
+window and each dialog and window are shown in both theme variants, and the settings dialog shows each of its pages in
+turn; every control is looked at. A button or toggle that shows no text has a name and a tooltip, a text box, drop-down,
+list, and slider has a name, every enabled button can take the keyboard focus, and an icon button is at least 28 by 28.
+This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

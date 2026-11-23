@@ -12,7 +12,9 @@ page cancels the ones that are still running when the dialog closes.
 
 #### Data Model
 
-**Title**: `Speech`. **IsValid**: always `true`, because the page offers only choices and has nothing to mistype.
+**Title**: `Speech`. **Description**: `The microphone and speakers, and the models that turn speech into text and text
+into speech.` **IconKey**: `CpIconMic`; the settings dialog shows them in its list of pages and above the page.
+**IsValid**: always `true`, because the page offers only choices and has nothing to mistype.
 
 **Devices**: a `DeviceSelectionViewModel`. **Models**: a `ModelCatalogPanelViewModel`. **SttParameters /
 TtsParameters**: `ModelParameterEditorViewModel`s for the chosen speech-to-text and text-to-speech models.
@@ -22,7 +24,14 @@ parameter identifier, then the value as an invariant-culture string). The editor
 model changes and when the page is applied.
 
 **View**: `SpeechSettingsPageView` is an Avalonia user control that stacks the views of the four view models, which
-the view locator finds, in a scrolling panel. It is bound to the page by the view locator.
+the view locator finds, in a scrolling panel, each in a raised card (`SpeechDevices`, `SpeechModels`,
+`SpeechSttParameters`, and `SpeechTtsParameters`; the identifiers did not change). It is bound to the page by the view
+locator. The look of the part views is the shared look of the settings pages: a section title, labels, hints, and error
+lines from the shared text styles, secondary buttons, and no color written in a view. The part views only gained names
+for their entries and these styles, and no behavior: the list of microphones is named `Microphone`, the list of speakers
+`Speakers`, and the two lists of models `Speech to text models` and `Text to speech models`; the failure of a download
+and the message about the catalog are in the error look, and the status lines in the hint look. The rows of the model
+lists keep the stock list item look.
 
 #### Key Methods
 

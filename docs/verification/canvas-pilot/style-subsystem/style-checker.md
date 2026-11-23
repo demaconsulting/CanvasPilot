@@ -150,8 +150,8 @@ check, and answers with a sentence that tells the user that there is no picture.
 `StyleCheckCommand_RunAsync_NoPicture_ReturnsMessageAndShowsNothing`.
 
 **StyleCheckCommand_RunAsync_NoKitOrMissingKit_ReturnsMessageAndShowsNothing**: With a picture and no style kit the
-sentence says that the project has no style kit and points at the status bar; with a kit that cannot be found it names
-the kit; no notes are shown in either case. This scenario is tested by
+sentence says that the project has no style kit and asks the user to choose one; with a kit that cannot be found it
+names the kit; no notes are shown in either case. This scenario is tested by
 `StyleCheckCommand_RunAsync_NoKitOrMissingKit_ReturnsMessageAndShowsNothing`.
 
 **StyleCheckCommand_RunAsync_PictureOnThePalette_ShowsPassedNotes**: A picture of white and blue, which the kit has, is

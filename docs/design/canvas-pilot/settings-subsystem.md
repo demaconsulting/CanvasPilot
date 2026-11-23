@@ -35,9 +35,10 @@ implements; this subsystem depends on neither.
 
 - *Type*: In-process .NET API (`ISettingsPage`).
 - *Role*: Provider.
-- *Contract*: A page has a `Title` and an `IsValid` flag, loads its working state from `AppSettings`,
-  returns an updated `AppSettings` from `Apply`, and is told once through `OnClosed` when the dialog closes.
-  A page view model is named `...ViewModel`, so the view locator finds its `...View`.
+- *Contract*: A page has a `Title`, a `Description` (the sentence under the title; empty by default), an `IconKey` (the
+  resource key of its icon; a default icon by default), and an `IsValid` flag, loads its working state from
+  `AppSettings`, returns an updated `AppSettings` from `Apply`, and is told once through `OnClosed` when the dialog
+  closes. A page view model is named `...ViewModel`, so the view locator finds its `...View`.
 - *Constraints*: `Apply` throws `InvalidOperationException` when the page is not valid.
 
 **Settings File**: The local persistent store.
@@ -53,7 +54,9 @@ implements; this subsystem depends on neither.
 
 - *Type*: Avalonia window (`SettingsDialogView`) shown modally by its caller.
 - *Role*: Provider.
-- *Contract*: A page list on the left, the selected page on the right, and OK, Cancel, and Apply buttons.
+- *Contract*: A rail of pages on the left, each with an icon and a title; the selected page on the right under its
+  title and a sentence; and a footer with a banner for a problem with saving and the OK, Cancel, and Apply buttons. The
+  window is 860 by 620 and at least 640 by 420.
 - *Constraints*: OK and Apply are disabled while any page is invalid.
 
 ### Design

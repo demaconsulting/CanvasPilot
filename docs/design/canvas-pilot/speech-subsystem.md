@@ -104,9 +104,10 @@ three units, the two services and `DictationService`, so the page and its tests 
 
 - *Type*: Avalonia control (`SpeechSettingsPageView`) shown by the settings dialog.
 - *Role*: Provider.
-- *Contract*: Two drop-down lists for the microphone and speakers with a Refresh devices button; a list of
+- *Contract*: Two named drop-down lists for the microphone and speakers with a Refresh devices button; a list of
   speech-to-text models and a list of text-to-speech models, each row with its state, a Download button, a
-  progress bar, and a Cancel button while downloading; and the settings of the chosen model of each kind.
+  progress bar, and a Cancel button while downloading; and the settings of the chosen model of each kind. The four
+  parts are raised cards on the page, which has an icon and a sentence in the list of pages of the dialog.
 
 ### Design
 

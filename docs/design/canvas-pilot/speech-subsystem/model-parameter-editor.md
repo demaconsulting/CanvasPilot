@@ -27,10 +27,13 @@ always one the model declared. `ValueText` is the option's value.
 
 **BooleanParameterViewModel**: `Value`. `ValueText` is `true` or `false`; either case is read.
 
-**View**: `ModelParameterEditorView` is an Avalonia user control with a heading, an explanation line, and a list that
-shows each parameter with a template for its kind: a slider or a whole-number box, a drop-down list, or a check box
+**View**: `ModelParameterEditorView` is an Avalonia user control with a section title (the `Title` of the editor), an
+explanation line in the hint look, and a list that
+shows each parameter, with its name in the primary text color and its description in the hint look, with a template for
+its kind: a slider or a whole-number box, a drop-down list, or a check box
 (`SpeechParametersEmptyMessage`, `SpeechParameterList`, `SpeechParameterSlider`, `SpeechParameterNumberBox`,
-`SpeechParameterComboBox`, and `SpeechParameterCheckBox`).
+`SpeechParameterComboBox`, and `SpeechParameterCheckBox`). The settings page puts the view in a raised card; the view
+writes no color.
 
 #### Key Methods
 

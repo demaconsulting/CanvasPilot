@@ -7,22 +7,45 @@
 `MainWindowShell` is the view model of the main window together with the window (`MainWindowView`) that shows it.
 It owns the File, Edit, Image, Tools, and Help commands, the window title, and the recent projects menu, and it follows
 the open project. It routes Undo and Redo to the part of the window that has the focus and the talk key to the chat
-panel. It talks to the user only through an `IDialogService`, which the window implements, so the shell
+panel. The window has a title bar that holds the compact menu, the name of the open project, the list that chooses
+the style kit, and the AI provider pill; a body that shows the welcome screen while no project is open and the
+workspace once one is; and a status bar at the bottom. The shell also remembers the size, place, and state of the
+window and the widths of the explorer and the chat column, and applies the thumbnail setting of the Appearance page to
+the explorer. It talks to the user only through an `IDialogService`, which the window implements, so the shell
 is tested without a window. The small message, confirmation, and prompt dialog that the window shows for
 `ShowMessageAsync`, `ConfirmAsync`, and `PromptAsync` (`MessageDialogViewModel` and `MessageDialogView`) belongs to
-this unit.
+this unit. The status bar, the provider pill, and the welcome screen are units of their own (see *StatusBar Design*,
+*ProviderPill Design*, and *Welcome Design*); this unit creates them and places them in the window.
 
 #### Data Model
 
-**Title**: `string` — `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`.
+**Title**: `string` — `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`. It is the title
+that the system shows in the task bar and the list of windows.
+
+**TitleBarName** / **TitleBarSuffix**: `string` — what the title bar of the window shows: the project name (or
+`CanvasPilot` while no project is open), which the view sets in bold, and, while a project is open, a middle dot and
+the application name (` · CanvasPilot`) in the quiet color; otherwise the suffix is empty. Both follow `CurrentProject`.
 
 **CurrentProject** / **HasProject**: the open `ProjectInfo` or `null`, and whether there is one.
 
 **Workspace**: `ProjectWorkspaceViewModel` — the content area; the shell owns and disposes it.
 
-**RecentProjects** / **HasRecentProjects**: a read-only collection of `RecentProjectItem` (`Name`, `Header`,
-`FilePath`, `OpenCommand`) built from `IRecentProjects.GetRecent`. `Header` doubles underscores so the menu does
-not treat them as access keys.
+**StatusBar**: `StatusBarViewModel` — the status bar at the bottom of the window, made over the workspace. It is always
+there; the shell disposes it.
+
+**Welcome**: `WelcomeViewModel` — the welcome screen that the window shows instead of the workspace while no project is
+open. The shell makes it over itself and disposes it.
+
+**ProviderPill** / **HasProviderPill**: the optional `ProviderPillViewModel` that tells which AI provider is chosen and
+whether it can be used, which the composition root sets after it has made the chat panel; the shell disposes it. The
+window shows it in the title bar only while there is one.
+
+**RecentProjects** / **HasRecentProjects**: a read-only collection of `RecentProjectItem` built from
+`IRecentProjects.GetRecent`, most recent first. An item has the project `Name`, the menu `Header` (which doubles
+underscores so the menu does not treat them as access keys), the `FilePath`, and `OpenCommand`; for the cards of the
+welcome screen it also carries the time of the last opening (read from `AppSettings.RecentProjectOpened`), the number of
+pictures in the project folder, a thumbnail, and a command that removes it from the list (see *Welcome Design*). Only
+the first `WelcomeViewModel.MaximumCards` items have their pictures counted and their thumbnail drawn.
 
 **ImageExporter**: `IImageExporter` of the `Preview` subsystem — `NullImageExporter` unless one is supplied to the
 constructor; the application supplies the exporter of the `Preview` subsystem.
@@ -45,34 +68,94 @@ while the talk key is held, which the composition root sets to the chat panel. `
 
 **ExitRequested**: event raised by Exit; the window closes itself in response.
 
-**StylePicker** / **ShowStatusBar**: `StylePicker` is the optional `StylePickerViewModel` of the `Style` subsystem, the
-list with which the user chooses the style kit of the project; the composition root supplies it and keeps it, so the
-shell does not dispose it. `ShowStatusBar` is true while there is a picker and it is visible, which it is while a
-project is open; the shell follows the picker's `IsVisible` and raises the change of `ShowStatusBar`.
+**StylePicker**: the optional `StylePickerViewModel` of the `Style` subsystem, the list with which the user chooses the
+style kit of the project; the composition root supplies it and keeps it, so the shell does not dispose it. The window
+shows it, as a pill, in the title bar (`StylePickerHost`); the picker itself is visible only while a project is open.
+The shell sets the picker's `ManageKitsCommand` to `ShowStyleKitsCommand`, which is how the last entry of the list opens
+the Style Kits window. There is no `ShowStatusBar` property any more: the style list left the status bar, and the status
+bar is always shown.
+
+**SavedWindow**: `WindowSettings` — the layout that was saved when the window was last closed (`AppSettings.Window`),
+which is the default layout (1440 by 900, the explorer 264 and the chat column 400 wide, no place) when none was saved.
+`SaveWindow(width, height, left, top, maximized)` writes a new size, place, and state back, and the widths of the
+explorer and the chat column are written when the workspace announces a choice.
 
 **FolderPicker**: the folder picker of the dialog service (`IFolderPicker`), or `null` until the window attached itself.
 The composition root gives it to the Style Kits settings page through a function, because the pages are made before the
 window exists.
 
 **MessageDialogViewModel**: `Title`, `Message`, `OkText`, `ShowCancel`, `IsPrompt`, `InputText`, `Accepted`, `OkCommand`
-(unavailable for a prompt whose entry is blank), `CancelCommand`, and `CloseRequested`.
+(unavailable for a prompt whose entry is blank), `CancelCommand`, and `CloseRequested`. `MessageDialogView` is 480 by
+240 with the pane color; the message is body-large primary text, the entry of a prompt has the accessible name `Answer`,
+and a footer bar under a subtle line holds the OK button (`PrimaryButton`, the default) and the Cancel button
+(`SecondaryButton`, shown only for a confirmation or a prompt). The ids `MessageDialogText`, `MessageDialogInput`,
+`MessageDialogOkButton`, and `MessageDialogCancelButton` are unchanged.
 
-**Main window**: `MainWindowView` has a `Menu` (`MainMenu`) with the five menus (File, Edit, Image, Tools, Help) and a
-host for the workspace. The Edit menu has Undo and Redo, whose `InputGesture` (Ctrl+Z, Ctrl+Y; Cmd+Z, Cmd+Shift+Z on
-macOS, chosen with `OnPlatform`) is only text, because the message editor handles those keys itself. The `HotKey` of New
-Project, Open Project, and Save Project is Ctrl+N, Ctrl+O, and Ctrl+S, or Cmd+N, Cmd+O, and Cmd+S on macOS. The window
-implements `IDialogService` with `ShowDialog`, `StorageProvider`, the clipboard, and the message dialog. Its constructor
-passes itself to `AttachDialogService`, and `ExitRequested` closes it. It also tracks the focus and the talk key (see
-**Focus tracking** and **Talk key** below). Its Help menu has `DrawingKnowledgeMenuItem` (`_Drawing Knowledge...`), a
-separator, and `AboutMenuItem`. The window shows the browser of the drawing knowledge with `Show` and itself as the
-owner, so that it does not block the window, and keeps the one that is open. Its Tools menu has `StyleKitsMenuItem`
-(`Style _Kits...`) above `SettingsMenuItem`. The window also implements `IStyleKitDialogs`, which `IDialogService`
-includes: it shows the window that manages style kits with `Show` and itself as the owner, one at a time (a request
-while it is open brings it to the front, restored if it was minimized, and disposes the view model that was made for the
-request), shows the editor of a kit modally over that window (or over itself when that is not open), and shows the
-pickers of a zip file to import, of a zip file to write, and of example images (which offers the file types that
-CanvasNet draws). Below the content the window has a status bar (`StatusBar`, a `Border` docked at the bottom) whose
-only content is the style picker (`StylePickerHost`); the bar is shown only while `ShowStatusBar` is true.
+**Main window**: `MainWindowView` is a window that is 1440 by 900 at first and cannot be made smaller than 960 by 600,
+and that extends its client area into the frame of the system (`ExtendClientAreaToDecorationsHint`, with a title bar
+hint of 44 pixels). Its content is a dock: the title bar on top, the status bar at the bottom, and the body in between.
+Its menu is `MainMenu`, with the five menus (File, Edit, Image, Tools, Help), and it lives in the title bar. The Edit
+menu has Undo and Redo, whose `InputGesture` (Ctrl+Z, Ctrl+Y; Cmd+Z, Cmd+Shift+Z on macOS, chosen with `OnPlatform`) is
+only text, because the message editor handles those keys itself. The `HotKey` of New Project, Open Project, and Save
+Project is Ctrl+N, Ctrl+O, and Ctrl+S, or Cmd+N, Cmd+O, and Cmd+S on macOS. Every menu and every item has an access key
+(the letter after the underscore of its header) that no other entry of the same menu has; the keys are File `F`, Edit
+`E`, Image `I`, Tools `T`, Help `H`, and within File `N`, `O`, `R`, `S`, `C`, and `x` (Exit), so that a person can use
+the whole menu with the keyboard alone. The window implements `IDialogService` with `ShowDialog`, `StorageProvider`, the
+clipboard, and the message dialog; the dialog service includes `IAttachmentPicker` of the `Composer` subsystem, whose
+`PickAttachmentsAsync` opens the file picker of the platform ("Attach Files", several files of any type) for the attach
+button of the chat panel, which the workspace connects to the chat panel when it attaches the dialog service. Its
+constructor passes itself to `AttachDialogService`, and `ExitRequested` closes it. It also tracks the focus and the talk
+key (see **Focus tracking** and **Talk key** below). Its Help menu has `DrawingKnowledgeMenuItem`
+(`_Drawing Knowledge...`), a separator, and `AboutMenuItem`. The window shows the browser of the drawing knowledge with
+`Show` and itself as the owner, so that it does not block the window, and keeps the one that is open. Its Tools menu has
+`StyleKitsMenuItem` (`Style _Kits...`) above `SettingsMenuItem`. The window also implements `IStyleKitDialogs`, which
+`IDialogService` includes: it shows the window that manages style kits with `Show` and itself as the owner, one at a
+time (a request while it is open brings it to the front, restored if it was minimized, and disposes the view model that
+was made for the request), shows the editor of a kit modally over that window (or over itself when that is not open),
+and shows the pickers of a zip file to import, of a zip file to write, and of example images (which offers the file
+types that CanvasNet draws).
+
+**Title bar**: a `Border` (`AppTitleBar`) 44 pixels high with the window surface color and a subtle line under it,
+marked as the title bar of the window (`WindowDecorationProperties.ElementRole`) so that the platform treats the empty
+part as the title bar (it drags the window, and a double click maximizes it, which is checked by hand on a real window),
+while the menu and the style list are marked as user elements that take clicks. When the platform cannot extend the
+client area, the same strip is an ordinary row below the title bar of the system. Its grid has seven columns from left
+to right: a leading reserve (`TitleBarLeadingReserve`), the brand mark (a 24 by 24 rounded tile with the accent gradient
+and the sparkle icon), the menu, the title text (`AppTitleBarText`, centered, with `TitleBarName` in semibold primary
+text and `TitleBarSuffix` in tertiary text, trimmed with an ellipsis), the style list host (`StylePickerHost`), the
+provider pill host (`ProviderPillHost`), and a trailing reserve (`TitleBarCaptionReserve`). The menu is quiet: no fill,
+items with 8 by 4 padding and secondary text, but all its items, keys, and access keys are kept.
+
+**Caption reserve**: the system draws its window buttons over the strip when the client area is extended, so the strip
+keeps room for them. `MainWindowView.CaptionReserve(isExtended, isWindows, isMacOs)` is a pure function that returns the
+room on the left and on the right: 138 pixels on the right on Windows, 78 pixels on the left on macOS (the traffic
+lights), and none elsewhere or when the window is not extended. The window applies it to the two reserve borders when
+`IsExtendedIntoWindowDecorations` changes, so the headless platform, which does not extend, keeps both at width 0.
+
+**Body and status bar**: the body is a grid with two siblings that fill it: `WorkspaceHost` (visible while
+`HasProject`) with the workspace as content, and `WelcomeHost` (visible while there is no project) with `Welcome`. The
+workspace view is made by the view locator when its content is first shown, which is when the first project is opened,
+so the workspace is not built before; when the project is closed the workspace view stays but is hidden, and the welcome
+screen shows again. The status bar is a `StatusBarView` docked at the bottom over `StatusBar`; it is always there.
+
+**Saved layout** (window): the constructor asks `WindowPlacement.Resolve` (see *ProjectWorkspace Design*) with the saved
+layout, the work areas of the screens that are connected, and the scale of the primary screen, and gives the window the
+resulting size, state, and, when there is one, a manual place. `OnWindowPositionChanged` remembers the place while the
+window is in its normal state, because the place that the system reports while it is maximized is not the place it
+returns to. `OnClosing` (when the closing is not canceled) calls `SaveWindow` with the width and the height, the place
+of the normal state, and whether the window is maximized.
+
+**Accessibility**: the controls of the window follow the rules that `AccessibilityViewTests` checks over the main window
+(with and without a project), the About dialog, the knowledge browser, the New Project dialog, the Style Kits window,
+and every page of the settings, in both theme variants: a button or toggle that shows no text has an
+`AutomationProperties.Name` and a tooltip, every enabled button can take the focus with the keyboard, such a button is
+at least 28 by 28 pixels, and a text field, list, drop-down, slider, or tree has a name (or a placeholder). The chevron
+of a tree row is left out on purpose, because the keyboard opens and closes the row itself with the Right and Left keys.
+
+**AutomationIds**: new are `AppTitleBar` (the strip) and `AppTitleBarText` (the title text); `StylePickerHost` and
+`ProviderPillHost` are the hosts of the two pills; `WorkspaceHost` and `WelcomeHost` are the two body hosts. `MainMenu`
+and every menu and item id are unchanged, and the name of each item equals its identifier. `StatusBar` is now the border
+inside the status bar view and `PreviewStatus` a panel in it (see *StatusBar Design*).
 
 #### Key Methods
 
@@ -125,10 +208,29 @@ the check.
 **Start folder**: The folder that holds the most recent project's folder, otherwise the default projects folder
 given to the constructor, otherwise none; pickers start there if the folder exists.
 
-**Following the services**: The shell subscribes to `IProjectService.CurrentChanged` and
-`IRecentProjects.Changed`. A notification raised on another thread is posted to the synchronization context of the
+**Following the services**: The shell subscribes to `IProjectService.CurrentChanged`, `IRecentProjects.Changed`, and
+`ISettingsService.Changed`. A notification raised on another thread is posted to the synchronization context of the
 thread that created the shell. Updating the title and the workspace is idempotent, so the shell also does it after
-its own operations. `Dispose` unsubscribes and disposes the workspace.
+its own operations. `Dispose` unsubscribes and disposes the status bar, the provider pill, the welcome screen, the
+recent project items, and the workspace.
+
+**Recent projects menu and cards**: `RefreshRecentProjects` reads the list first (reading drops files that are gone and
+may announce a change), then makes one `RecentProjectItem` for each file, with the time of the last opening from the
+settings, and, for the first `WelcomeViewModel.MaximumCards` only, the count of pictures of the project folder
+(`ProjectPictureCounter`) and the request to draw the first picture as the thumbnail (`RecentThumbnailLoader`, over the
+optional `IThumbnailSource`, which draws off the user interface thread). The items that are replaced are disposed and
+the requests for their pictures are dropped. The command of an item opens its project; its remove command removes the
+project from the list only.
+
+**Thumbnail setting**: The constructor gives the explorer `AppSettings.Appearance.ShowThumbnails`, and
+`OnSettingsChanged` gives it the new value on every change of the settings, on the user interface thread, so that the
+choice on the Appearance page takes effect in the open window.
+
+**Saving the layout**: `SaveWindow` writes the size (rounded), the place, and the state into `AppSettings.Window`
+through `ISettingsService.Update`. The shell also listens to `ProjectWorkspaceViewModel.LayoutChanged` and writes the
+widths of the explorer and the chat column when the user chose other ones; at construction it gives the workspace the
+saved widths with `RestoreColumnWidths`, which does not announce a choice. A write that fails with an `IOException` is
+logged as a warning and never thrown, because the window is closing or the user is dragging a splitter.
 
 **Dialog service**: `AttachDialogService` gives the shell, and through it the workspace, the dialog service. Until
 it is attached the commands that need the user do nothing. The workspace passes it on to the chat panel as the
@@ -158,30 +260,41 @@ no clipboard or refuses the image.
 The constructor throws `ArgumentNullException` for a missing collaborator, and `AttachDialogService` does the
 same. Problems with projects are results shown in a message dialog, never exceptions. A platform picker that
 cannot be shown answers `null`, which the shell reads as cancelled. `MessageDialogViewModel` throws for missing
-texts or a blank accepting label.
+texts or a blank accepting label. A failure to write the layout of the window or the widths of the columns to the
+settings is logged and swallowed (it is an `IOException`), so closing the window and dragging a splitter never fail.
+A drawing of a recent project card that fails is handled inside the welcome screen units and leaves the card without a
+picture.
 
 #### Dependencies
 
 - **ProjectService** (through `IProjectService`) — creates, opens, saves, and closes projects.
-- **RecentProjects** (through `IRecentProjects`) — the recent projects menu.
+- **RecentProjects** (through `IRecentProjects`) — the recent projects menu and the cards.
 - **NewProjectDialog** — collects a project name and location.
-- **SettingsDialog** and **SettingsService** (through `ISettingsService` and `ISettingsPage`) — the settings dialog.
-- **ProjectWorkspace** and **AboutDialog** — the content area and the About dialog.
+- **SettingsDialog** and **SettingsService** (through `ISettingsService` and `ISettingsPage`) — the settings dialog, the
+  saved window layout (`WindowSettings`), the time of each opening of a project, and the thumbnail setting.
+- **ProjectWorkspace** and **AboutDialog** — the content area and the About dialog; the window also uses
+  `WindowPlacement` of the `ProjectWorkspace` unit to fit the saved layout to the screens.
+- **StatusBar**, **ProviderPill**, and **Welcome** — the units that the shell creates and the window places at the
+  bottom, in the title bar, and in the body.
+- **ThemeResources** — every color, radius, type size, shadow, icon, and button look of the window and its dialogs
+  comes from the tokens and the control themes.
 - **KnowledgeBrowser** and **KnowledgeCatalog** (through `IKnowledgeBrowserLauncher` and `IKnowledgeCatalog`) — what
   the Drawing Knowledge command shows; the dialog service extends the launcher, which the `Knowledge` subsystem owns.
 - **ImageExporter** (through `IImageExporter` and `IExportDialogs`) — the Image menu commands run it, and the
   dialog service extends `IExportDialogs` so the exporter can ask the user through it.
 - **ExportPresetDialog** (through `IExportDialogs.PickExportPresetAsync`) — the main window shows the Export PNG dialog
   when the exporter asks how to export.
-- **StylePicker** (of the `Style` subsystem) - the list in the status bar that the shell hosts and that it asks to give
-  a new project the default style kit; the shell does not know the kits.
+- **StylePicker** (of the `Style` subsystem) - the list in the title bar that the shell hosts and that it asks to give
+  a new project the default style kit and to open the Style Kits window; the shell does not know the kits.
 - **StyleKitManager** (of the `Style` subsystem) - the window that manages style kits, which the shell asks the dialogs
   to show; the dialog service includes `IStyleKitDialogs`, so the same main window shows it, its editor, and its
   pickers.
 - **StyleChecker** (through `ICheckAgainstStyle`) - what the Check Against Style command runs; the interface belongs to
   the `Style` subsystem.
-- **Composer** (through `IUndoRedoTarget` and `IPushToTalkTarget`) — what the Edit menu and the talk key reach; the
-  seams are owned by the `Composer` subsystem and the shell does not know what implements them.
+- **Composer** (through `IUndoRedoTarget`, `IPushToTalkTarget`, and `IAttachmentPicker`) — what the Edit menu and the
+  talk key reach, and the picker of the files that the attach button asks for; the seams are owned by the `Composer`
+  subsystem and the shell does not know what implements them.
+- **Preview** (through `IThumbnailSource`) — draws the pictures of the recent project cards; optional.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.
 - **Avalonia** — the window, menus, dialogs, storage provider, and clipboard.
 
@@ -190,4 +303,5 @@ texts or a blank accepting label.
 - `App` (through `ApplicationComposition`) — creates the shell and shows `MainWindowView` over it.
 - `ApplicationComposition` — connects the `Preview` subsystem: `ImageExporter` is passed as the `IImageExporter`,
   and the preview pane is the workspace's preview content. It sets `PushToTalk` to the chat panel, which the talk
-  key of the window then starts and stops.
+  key of the window then starts and stops. It also sets `ProviderPill` after it has made the chat panel, and passes
+  the style list, the thumbnail source, and the other optional collaborators to the constructor.

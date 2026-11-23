@@ -27,7 +27,7 @@ using DemaConsulting.CanvasPilot.ProjectSubsystem;
 namespace DemaConsulting.CanvasPilot.StyleSubsystem;
 
 /// <summary>
-///     The list in the status bar of the main window with which the user chooses the style kit of the open project. It
+///     The pill in the title bar of the main window with which the user chooses the style kit of the open project. It
 ///     offers no style and every kit that is not hidden by a kit of a more local place, shows the kit that the project
 ///     uses, writes a choice into the project file, and says so when the project names a kit that cannot be found.
 /// </summary>

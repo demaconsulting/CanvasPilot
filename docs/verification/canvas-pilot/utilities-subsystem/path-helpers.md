@@ -2,14 +2,14 @@
 
 #### Verification Approach
 
-`PathHelpers` is verified with unit tests defined in `PathHelpersTests.cs`. Because `PathHelpers`
-performs pure path manipulation using only .NET BCL types, no mocking or test doubles are
-required. Tests call `PathHelpers.SafePathCombine` directly with controlled base and relative
-path arguments and assert on the returned string or the thrown exception type and message.
+`PathHelpers` is verified with unit tests defined in `PathHelpersTests.cs`. Because `PathHelpers` uses only .NET BCL
+types, no mocking or test doubles are required. Tests call `PathHelpers.SafePathCombine` directly with controlled base
+and relative path arguments and assert on the returned string or the thrown exception type and message. The test of
+`PathHelpers.UniqueFileName` makes a temporary folder with real files and folders and asserts on the returned names.
 
 #### Test Environment
 
-N/A - standard test environment.
+N/A - standard test environment. The test of `UniqueFileName` uses a temporary local folder and real file I/O.
 
 #### Acceptance Criteria
 
@@ -20,6 +20,8 @@ N/A - standard test environment.
 - Absolute paths supplied as the relative argument cause `ArgumentException`.
 - Null inputs cause `ArgumentNullException`.
 - A filename beginning with `".."` that is not a traversal sequence is accepted correctly.
+- A free file name is returned unchanged, and a name that a file or a folder has gets the first free number in
+  parentheses before the extension.
 
 #### Test Scenarios
 
@@ -74,3 +76,9 @@ the `basePath` argument; an `ArgumentNullException` is thrown, confirming the nu
 as the `relativePath` argument; an `ArgumentNullException` is thrown, confirming the null guard
 on `relativePath`. This scenario is tested by
 `PathHelpers_SafePathCombine_NullRelativePath_ThrowsArgumentNullException`.
+
+**PathHelpers_UniqueFileName_FreeAndTakenNames_NumbersBeforeTheExtension**: In a folder that holds `photo.png`,
+`photo (2).png`, and a folder `plans`, a free name (`chart.png`) comes back unchanged, `photo.png` becomes
+`photo (3).png`, the folder name `plans` becomes `plans (2)`, a null folder is refused with `ArgumentNullException`, and
+a blank name with `ArgumentException`. This scenario is tested by
+`PathHelpers_UniqueFileName_FreeAndTakenNames_NumbersBeforeTheExtension`.

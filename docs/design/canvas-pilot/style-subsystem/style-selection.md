@@ -12,7 +12,7 @@ first, then the sizes of the application. It has no user interface.
 
 #### Data Model
 
-- `IActiveStyle`: the contract that the window, the status bar, the tools, and the checker use: `Active` (the kit entry
+- `IActiveStyle`: the contract that the window, the style pill, the tools, and the checker use: `Active` (the kit entry
   or `null`), `ActiveId` (the id in the project file or `null`), `IsMissing`, `SetActiveAsync(id)`, and `Changed`.
 - `StyleSelection` keeps no copy of the choice. Every answer is read from the open project (`IProjectService.Current`)
   and the catalog (`IStyleKitCatalog.Resolve`) at the time of the question, so it is never stale. The only state is a
@@ -73,4 +73,4 @@ Failures to write a log entry are ignored.
 - `ImageExporter` (through `IExportPresetSource`) — asks for the sizes when the user exports a picture.
 - `ApplicationComposition` and `MainWindowShell` — build the unit and call `ApplyDefaultToNewProjectAsync` after a
   project is created.
-- The picker of the status bar, the guidance, the tools, and the check of a picture — read the active kit.
+- The pill of the title bar, the guidance, the tools, and the check of a picture — read the active kit.

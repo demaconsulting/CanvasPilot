@@ -19,6 +19,8 @@ embedded Inter font, serialized with test parallelization disabled; no display i
 - Loading shows the stored theme and options, and applying returns the settings with only the appearance replaced.
 - The dialog shows the page with a themed list that has the name `Theme` and two check boxes, each with an automation
   identifier, and choosing OK stores the edited choices.
+- In the accessibility sweep of the windows of the application, in both theme variants, the page's list has a name and
+  every enabled button can take the keyboard focus.
 
 #### Test Scenarios
 
@@ -47,3 +49,8 @@ stored state. This scenario is tested by `AppearanceSettingsPageView_Show_ShowsS
 **AppearanceSettingsPageView_ChooseThemeAndOptions_Ok_StoresThem**: Dark is chosen, the thumbnails are turned off, the
 comfortable rows are turned on, and OK is chosen; a fresh service loads those choices. This scenario is tested by
 `AppearanceSettingsPageView_ChooseThemeAndOptions_Ok_StoresThem`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The settings dialog of the real application is shown in
+both theme variants and each of its pages, this one among them, is chosen and every control of it is looked at; the
+drop-down has a name and every enabled button can take the keyboard focus. This scenario is tested by
+`Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

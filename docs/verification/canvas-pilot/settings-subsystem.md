@@ -25,6 +25,9 @@ external services, or display are required.
 - The theme and the explorer options chosen on the Appearance page and accepted with OK are present when a new service
   loads the file, and the choices of the AI provider page are unchanged.
 - Choices made in a dialog that is cancelled are not stored.
+- The window of the settings shows the pages in a rail with an icon and a title each, the title and the sentence of the
+  chosen page above it, and a banner in words when saving fails; every page and entry has a name for assistive
+  technology and every button can be reached with the keyboard.
 - A corrupt settings file does not prevent the dialog from opening and saving; the corrupt file is kept aside
   as `settings.json.bad` and the new choices are stored.
 
@@ -60,3 +63,13 @@ by `SettingsSubsystem_Appearance_DialogOk_StoresThemeAndOptions`.
 theme with tall rows, a listed project and its time of opening are stored, a model name is typed in the dialog, and OK
 is chosen. A fresh service loads the model name and the layout, the look, and the time as they were. This scenario is
 tested by `SettingsSubsystem_RememberLayoutAndAppearance_SavedWithOthers_SurviveRestartAndDialogChanges`.
+
+**SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner**: Headless UI test of the real dialog over the AI
+provider page and a second page. The heading and the sentence follow the page that is chosen, each entry of the rail has
+an icon, and a message of a failed save shows in the banner. This scenario is tested by
+`SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: Headless UI test of the whole application. The settings
+dialog is shown with each of its pages in both theme variants and every control is looked at; entries have names, a
+button that shows no text has a name and a tooltip, and every enabled button can take the keyboard focus. This scenario
+is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.

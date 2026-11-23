@@ -24,6 +24,8 @@ temporary local folders; no network or external services are required.
   folder, and an existing non-empty project folder each show a message and keep OK disabled.
 - Browse starts in the current folder, shows the chosen folder, and keeps the entry when cancelled.
 - OK with valid entries accepts and closes; Cancel closes without accepting.
+- The name entry and the location entry have accessible names, and every button can take the keyboard focus and is at
+  least 28 by 28 pixels, in both theme variants.
 
 #### Test Scenarios
 
@@ -100,3 +102,8 @@ scenario is tested by `NewProjectDialogView_OkButton_ClosesWindowAndAccepts`.
 
 **NewProjectDialogView_CancelButton_ClosesWindowWithoutAccepting**: Clicking Cancel closes the window without
 accepting. This scenario is tested by `NewProjectDialogView_CancelButton_ClosesWindowWithoutAccepting`.
+
+**Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The accessibility sweep opens the New Project dialog in
+the dark and the light theme variant, and finds that its entries have accessible names and that every button can take
+the focus and is at least 28 by 28 pixels. The sweep belongs to the whole application and also walks the other windows.
+This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
