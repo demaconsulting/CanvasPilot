@@ -97,6 +97,13 @@ public sealed partial class MainWindowView : Window, IDialogService
     private KnowledgeBrowserView? _knowledgeBrowser;
 
     /// <summary>
+    ///     Whether the XAML is fully loaded. While it loads, the window has no name scope and the named title bar
+    ///     controls do not exist yet, but the platform can already raise property changes (the extension into the
+    ///     frame is one), so changes that reach the title bar are ignored until this is set.
+    /// </summary>
+    private bool _componentReady;
+
+    /// <summary>
     ///     The window that manages style kits while it is open, or <see langword="null" />.
     /// </summary>
     private StyleKitManagerView? _styleKitManager;
@@ -108,6 +115,11 @@ public sealed partial class MainWindowView : Window, IDialogService
     public MainWindowView()
     {
         InitializeComponent();
+
+        // The platform may already have raised the extension while the XAML was loading (when it was ignored, see
+        // OnPropertyChanged), so apply the value it reached once, now that the title bar controls exist
+        _componentReady = true;
+        UpdateCaptionReserve();
     }
 
     /// <summary>
@@ -162,7 +174,8 @@ public sealed partial class MainWindowView : Window, IDialogService
     {
         base.OnPropertyChanged(change);
 
-        if (change.Property == IsExtendedIntoWindowDecorationsProperty)
+        // Raised while the XAML loads on a real window (the hint in the XAML sets it); the constructor applies it after
+        if (change.Property == IsExtendedIntoWindowDecorationsProperty && _componentReady)
         {
             UpdateCaptionReserve();
         }
@@ -599,17 +612,33 @@ public sealed partial class MainWindowView : Window, IDialogService
     }
 
     /// <summary>
-    ///     Keeps the room free at the ends of the title bar that the buttons of the system need.
+    ///     Keeps the room free at the ends of the title bar that the buttons of the system need. The controls are the
+    ///     generated fields of the XAML names (a name lookup throws while the window has no name scope, which is the
+    ///     case during the load); a control that does not exist yet has nothing to update.
     /// </summary>
     private void UpdateCaptionReserve()
     {
-        var (left, right) = CaptionReserve(IsExtendedIntoWindowDecorations, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
-        if (this.FindControl<Border>("TitleBarLeadingReserve") is { } leading)
+        ApplyCaptionReserve(TitleBarLeadingReserve, TitleBarCaptionReserve, IsExtendedIntoWindowDecorations, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
+    }
+
+    /// <summary>
+    ///     Sets the widths of the two title bar reserves; a reserve that is <see langword="null" /> (the control does not
+    ///     exist yet) is left alone.
+    /// </summary>
+    /// <param name="leading">The reserve on the left, or <see langword="null" />.</param>
+    /// <param name="trailing">The reserve on the right, or <see langword="null" />.</param>
+    /// <param name="isExtended">Whether the window extends into its frame.</param>
+    /// <param name="isWindows">Whether the platform is Windows.</param>
+    /// <param name="isMacOs">Whether the platform is macOS.</param>
+    internal static void ApplyCaptionReserve(Border? leading, Border? trailing, bool isExtended, bool isWindows, bool isMacOs)
+    {
+        var (left, right) = CaptionReserve(isExtended, isWindows, isMacOs);
+        if (leading is not null)
         {
             leading.Width = left;
         }
 
-        if (this.FindControl<Border>("TitleBarCaptionReserve") is { } trailing)
+        if (trailing is not null)
         {
             trailing.Width = right;
         }
