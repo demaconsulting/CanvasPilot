@@ -209,10 +209,11 @@ steps are in the verification of the unit or subsystem named at each check.
    8. *Marks and pictures.* With marks and an attached picture on a drawing, the answer shows that the model saw the
       marked picture and the close-ups (compare with **View payload**); with a model that cannot see pictures the
       answer works from the words only.
-10. *Live GitHub Copilot (steps 6, 7, and 8 were performed on 2026-11-22 on the development machine and are recorded
-    below; steps 1 to 5 and 9 are open, and steps 2 to 4 need a machine in another state).* Choose GitHub Copilot and
-    use **Check connection**, the banner, and a conversation. (Verification of the `Agent` subsystem and of the
-    `CopilotCliLocator`, `CopilotRuntimeStarter`, `AgentReadiness`, and `AgentProviderFactory` units.)
+10. *Live GitHub Copilot (steps 6, 7, and 8 were performed on 2026-11-22 on the development machine and step 10 on
+    2026-11-23, and they are recorded below; steps 1 to 5 and 9 are open, step 1 is covered for the sign-in of the
+    Copilot CLI by step 10, and steps 2 to 4 need a machine in another state).* Choose GitHub Copilot and use **Check
+    connection**, the banner, and a conversation. (Verification of the `Agent` subsystem and of the `CopilotCliLocator`,
+    `CopilotRuntimeStarter`, `AgentReadiness`, and `AgentProviderFactory` units.)
     1. With the winget CLI at version 1.0.113 or later and the Copilot CLI signed in (run `copilot`, then type
        `/login`), or `gh auth login` done, or one of `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` set: the check
        ends with "GitHub Copilot CLI {version} is ready." followed by "Signed in as {login} on {host}
@@ -294,6 +295,12 @@ steps are in the verification of the unit or subsystem named at each check.
        `Speech_NativeRuntimePublished`, `Copilot_RuntimeNotPublished`, and `StyleKits_BuiltInPublished`). The build
        output of the application and of the three test projects holds no Copilot runtime file either (no file that
        starts with `copilot` or `libcopilot`, no `runtime.node`, and no file over 100 MB other than an executable).
+       *Re-measured after the upgrade of the AI libraries to beta.5 (2026-11-23).* The same publish (without the MSI,
+       which was not rebuilt) holds 20 files (the 19 above and `THIRD-PARTY-NOTICES.md`) and no file whose name starts
+       with `copilot` or `libcopilot`, no `runtime.node`, and no `.copilot-explicit-cli`. `CanvasPilot.exe` is
+       131,943,394 bytes (125.8 MB, 0.4 MB more than with beta.4), well below the limit of 160 MB, so the limit stays.
+       The FileAssert assertion `Copilot_RuntimeNotPublished` passed on this folder, and `smoke.ps1` passed (the main
+       window "CanvasPilot" after 10 seconds and no error in the log).
     8. *The published application starts (the window was not used).* On 2026-11-22 the published `CanvasPilot.exe` was
        started from `publish\win-x64`: after 10 seconds the process was alive and responding, its window was titled
        "CanvasPilot", it used about 199 MB of working set and had started no child process, the log
@@ -311,10 +318,27 @@ steps are in the verification of the unit or subsystem named at each check.
        that no `copilot` process that the application started remains after it is closed. In that turn ask the copilot
        to run a shell command: the transcript shows no tool line for a tool that is not one of the tools of the
        application (run 5 shows this through the agent service without a window).
-    10. *Copilot CLI sign-in live runs (pending).* The record of the opt-in live runs that show how the runtime signed
-        in (`LiveCopilotTurn_Readiness_ReportsHowCopilotSignedIn` and the four other live tests): one run on the normal
-        machine and one with the GitHub CLI hidden from the `PATH` and the token variables cleared, so that only the
-        sign-in of the Copilot CLI is left.
+    10. *Copilot CLI sign-in live runs.* On 2026-11-23, on the development machine (Windows, Copilot CLI 1.0.114), the
+        five opt-in live tests of `LiveCopilotTurnTests.cs` passed in both runs below, in 36 to 37 seconds each run:
+        `LiveCopilotTurn_AgentService_ListsProjectFilesAndRendersAPicture`,
+        `LiveCopilotTurn_AgentService_ShellCommandRequest_IsRefusedAndRunsNothing`,
+        `LiveCopilotTurn_ComposedApplication_ChatWritesADrawingOnTheSharedRuntime`,
+        `LiveCopilotTurn_SettingsPage_ListsModelsAndTheChosenModelAndEffortRun`, and the new
+        `LiveCopilotTurn_Readiness_ReportsHowCopilotSignedIn`. No token is recorded here or by the tests.
+        1. *Run 1 (the normal machine).* `gh` was on the `PATH` and was signed in only to `hiarc.ghe.com` (the same
+           account), no token variable was set, and `COPILOT_HOME` was not set. The runtime reported the sign-in source
+           `CopilotCli`, the login `Malcolm-Nixon`, and the host `https://hiarc.ghe.com`. Check connection (the
+           readiness check over the real locator and starter) was usable in 3.5 seconds, with the sentence "GitHub
+           Copilot CLI 1.0.114 is ready. Signed in as Malcolm-Nixon on hiarc.ghe.com (Copilot CLI sign-in)."
+        2. *Run 2 (only the sign-in of the Copilot CLI is left).* `gh` was hidden from the `PATH`,
+           `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN` were cleared, and
+           `CANVASPILOT_LIVE_COPILOT_EXPECT_SIGNIN` was `CopilotCli`, so the test failed unless that source was used.
+           The result was the same as in run 1 (`CopilotCli`, `Malcolm-Nixon`, `https://hiarc.ghe.com`), usable in 3.2
+           seconds. So the sign-in of the Copilot CLI (`copilot`, then `/login`) works alone, with no GitHub CLI and no
+           token variable, and the host follows the account of the CLI (a GitHub Enterprise Cloud host here).
+        Not covered by these runs: a token variable as the source, the GitHub CLI as the only source, a live "not signed
+        in" machine, and a look at the window (the Check connection result on the AI Provider page and the tooltip of
+        the provider pill, which show the same sentence and are verified by the system test with a stand-in runtime).
 11. *The redesigned window on a real display (a person with the installed package; none of this has been run).* Check
     the window with a mouse, a keyboard, and a screen reader on Windows at 100, 125, and 150 percent display scale.
     (Verification of the `AppShell`, `Project`, `Preview`, `Chat`, and `Annotation` subsystems.)

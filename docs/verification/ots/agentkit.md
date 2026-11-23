@@ -21,7 +21,10 @@ agent over a scripted chat client that plays the model. No language model and no
 runtime is started only with an explicit CLI path that does not exist, so that no Copilot process runs. The tests are
 run again before a version upgrade is accepted. That the runtime starts on a real installed CLI, signed in as the
 library requires, is shown by the live tests that are recorded in the manual verification of the system, and the starter
-of CanvasPilot is verified in the unit verification of `CopilotRuntimeStarter`.
+of CanvasPilot is verified in the unit verification of `CopilotRuntimeStarter`. On 2026-11-23 the opt-in live tests
+passed against a real Copilot CLI 1.0.114 in two runs (with the GitHub CLI available, and with it hidden and the token
+variables cleared): the runtime signed in through the sign-in of the Copilot CLI and reported the source, the login, and
+the host without a token (see check 10, item 10, of the manual verification in the system verification).
 
 Two checks complement these tests. The FileAssert test `Copilot_RuntimeNotPublished` asserts, on the published win-x64
 output that the installer harvests whole, that no file whose name starts with `copilot` or `libcopilot`, no
