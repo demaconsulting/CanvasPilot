@@ -726,8 +726,8 @@ public sealed class AgentServiceTests
         Assert.Equal(SentinelFile, await File.ReadAllTextAsync(Path.Combine(rig.ProjectFolder, "note.txt"), token));
         Assert.IsType<AgentEvent.Completed>(events[^1]);
         Assert.Contains("Conversation started: provider=Ollama", log, StringComparison.Ordinal);
-        Assert.Contains("Turn started: provider=Ollama restoredTurns=1 digestAdded=True", log, StringComparison.Ordinal);
-        Assert.Contains("Turn ended: outcome=Completed", log, StringComparison.Ordinal);
+        Assert.Contains("Turn started: turn=1 provider=Ollama model=gemma3:12b effort=(default) historyTurns=1 digestAdded=True", log, StringComparison.Ordinal);
+        Assert.Contains("Turn ended: turn=1 outcome=Completed", log, StringComparison.Ordinal);
         Assert.Contains("Conversation released: provider=Ollama reason=reset", log, StringComparison.Ordinal);
         Assert.Contains("note.txt", log, StringComparison.Ordinal);
         Assert.All(

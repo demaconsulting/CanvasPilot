@@ -254,6 +254,18 @@ internal sealed class ScriptedAgentFactory : IAgentFactory
     /// </summary>
     internal AgentReadinessReport? Failure { get; set; }
 
+    /// <summary>
+    ///     Gets or sets how the factory describes the session of a conversation, or <see langword="null" /> for a provider
+    ///     that has no session of its own.
+    /// </summary>
+    internal Func<AgentSession, AgentSessionInfo>? Describe { get; set; }
+
+    /// <inheritdoc />
+    public AgentSessionInfo DescribeSession(AgentSession session)
+    {
+        return Describe?.Invoke(session) ?? AgentSessionInfo.None;
+    }
+
     /// <inheritdoc />
     public Task<AgentCreationResult> CreateAsync(AgentCreationRequest request, CancellationToken cancellationToken = default)
     {

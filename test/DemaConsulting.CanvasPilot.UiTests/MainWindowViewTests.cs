@@ -365,7 +365,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal(["UndoMenuItem", "RedoMenuItem"], structure[1].Children);
         Assert.Equal(["ExportPngMenuItem", "CopyImageMenuItem", "CheckAgainstStyleMenuItem"], structure[2].Children);
         Assert.Equal(["StyleKitsMenuItem", "SettingsMenuItem"], structure[3].Children);
-        Assert.Equal(["DrawingKnowledgeMenuItem", "AboutMenuItem"], structure[4].Children);
+        Assert.Equal(["DrawingKnowledgeMenuItem", "OpenLogFolderMenuItem", "AboutMenuItem"], structure[4].Children);
         foreach (var item in structure.SelectMany(top => top.Children.Prepend(top.Id)))
         {
             var found = window.FindControl<MenuItem>(item);
@@ -380,6 +380,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal(OperatingSystem.IsMacOS() ? new KeyGesture(Key.Z, KeyModifiers.Meta | KeyModifiers.Shift) : new KeyGesture(Key.Y, KeyModifiers.Control), window.FindControl<MenuItem>("RedoMenuItem")!.InputGesture);
         Assert.Equal("_Drawing Knowledge...", window.FindControl<MenuItem>("DrawingKnowledgeMenuItem")!.Header);
         Assert.Equal("Style _Kits...", window.FindControl<MenuItem>("StyleKitsMenuItem")!.Header);
+        Assert.Equal("Open _Log Folder", window.FindControl<MenuItem>("OpenLogFolderMenuItem")!.Header);
         Assert.Single(window.FindControl<MenuItem>("HelpMenu")!.Items.OfType<Separator>());
 
         window.Close();
@@ -396,7 +397,7 @@ public sealed class MainWindowViewTests : IDisposable
         window.Show();
 
         // Act & Assert: read which items are enabled
-        foreach (var enabled in new[] { "NewProjectMenuItem", "OpenProjectMenuItem", "ExitMenuItem", "StyleKitsMenuItem", "SettingsMenuItem", "DrawingKnowledgeMenuItem", "AboutMenuItem" })
+        foreach (var enabled in new[] { "NewProjectMenuItem", "OpenProjectMenuItem", "ExitMenuItem", "StyleKitsMenuItem", "SettingsMenuItem", "DrawingKnowledgeMenuItem", "OpenLogFolderMenuItem", "AboutMenuItem" })
         {
             Assert.True(IsUsable(window.FindControl<MenuItem>(enabled)!), enabled);
         }
@@ -406,6 +407,28 @@ public sealed class MainWindowViewTests : IDisposable
             Assert.False(IsUsable(window.FindControl<MenuItem>(disabled)!), disabled);
         }
 
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the Open Log Folder menu item asks the launcher to show the folder that the application logs to, with no
+    ///     project open.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog()
+    {
+        // Arrange: a shown main window over a launcher that records what it is asked
+        var launcher = new RecordingFolderLauncher();
+        var (_, window) = CreateWindow(folderLauncher: launcher);
+        window.Show();
+        var item = window.FindControl<MenuItem>("OpenLogFolderMenuItem")!;
+
+        // Act
+        await ((IAsyncRelayCommand)item.Command!).ExecuteAsync(null);
+
+        // Assert: the item is usable and the launcher got the log folder
+        Assert.True(IsUsable(item));
+        Assert.Equal([Path.Combine(_root, "logs")], launcher.Opened);
         window.Close();
     }
 
@@ -1419,10 +1442,11 @@ public sealed class MainWindowViewTests : IDisposable
     ///     Creates the application on the temporary root and a window over its shell.
     /// </summary>
     /// <param name="exporter">What the Image menu exports, or <see langword="null" /> for none.</param>
+    /// <param name="folderLauncher">What shows a folder for the Help menu, or <see langword="null" /> for one that shows nothing.</param>
     /// <returns>The composition and the window.</returns>
-    private (ApplicationComposition Composition, MainWindowView Window) CreateWindow(IImageExporter? exporter = null)
+    private (ApplicationComposition Composition, MainWindowView Window) CreateWindow(IImageExporter? exporter = null, IFolderLauncher? folderLauncher = null)
     {
-        var composition = AppShellUiHelpers.Compose(_root, exporter);
+        var composition = AppShellUiHelpers.Compose(_root, exporter, folderLauncher: folderLauncher);
         _compositions.Add(composition);
         return (composition, new MainWindowView(composition.Shell));
     }

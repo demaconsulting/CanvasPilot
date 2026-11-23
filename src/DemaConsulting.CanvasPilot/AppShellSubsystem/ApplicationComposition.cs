@@ -345,6 +345,10 @@ public sealed class ApplicationComposition : IDisposable
     ///     Gives the catalog of the Ollama server for the readiness check, the factory of the agents, and the model list of
     ///     the settings page, or <see langword="null" /> for catalogs on the real network.
     /// </param>
+    /// <param name="folderLauncher">
+    ///     Shows a folder in the file manager for the Open Log Folder item of the Help menu, or <see langword="null" /> for
+    ///     the file manager of the real system.
+    /// </param>
     /// <param name="application">
     ///     The running application, whose theme variant follows the theme choice of the settings (it is applied before the
     ///     composition is returned, so the first window opens in the right theme), or <see langword="null" /> for a
@@ -374,6 +378,7 @@ public sealed class ApplicationComposition : IDisposable
         ICliFileSystem? cliFileSystem = null,
         ICopilotRuntimeStarter? copilotStarter = null,
         IOllamaModelCatalogs? ollamaCatalogs = null,
+        IFolderLauncher? folderLauncher = null,
         Application? application = null)
     {
         ArgumentNullException.ThrowIfNull(logger);
@@ -525,7 +530,8 @@ public sealed class ApplicationComposition : IDisposable
             styleCheck,
             dialogs => new StyleKitManagerViewModel(styleCatalog, styleSelection, renderer, dialogs, projects, logger),
             logger,
-            thumbnails);
+            thumbnails,
+            folderLauncher ?? new SystemFolderLauncher());
         pickerOwner = shell;
 
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project

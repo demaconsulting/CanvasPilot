@@ -378,3 +378,18 @@ sections:
                   only an icon must therefore say in words what it does.
                 tests:
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+              - id: CanvasPilot-MainWindowShell-OpenLogFolder
+                title: >-
+                  The MainWindowShell shall offer Open Log Folder in the Help menu, usable with no project open, which shows
+                  the folder that the application logs to (the default folder when there is no logger) in the file manager
+                  of the system, and shall tell the user with the reason and the path when the file manager could not be
+                  started; the item shall be disabled when the application has no way to show a folder.
+                justification: |
+                  A person who reports a problem has to attach the log, and the log is in a folder that is not in the project
+                  and that they cannot be expected to know.
+                tests:
+                  - MainWindowShell_OpenLogFolder_ShowsTheFolderOfTheLogger
+                  - MainWindowShell_OpenLogFolder_NoLoggerOrLauncherFails_UsesTheDefaultFolderAndTellsTheUser
+                  - MainWindowShell_OpenLogFolder_WithoutLauncher_IsDisabledAndDoesNothing
+                  - MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog

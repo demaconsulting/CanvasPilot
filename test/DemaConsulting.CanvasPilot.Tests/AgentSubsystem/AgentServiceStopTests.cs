@@ -218,7 +218,7 @@ public sealed class AgentServiceStopTests
         Assert.Equal(2, rig.Factory.Requests.Count);
         Assert.Equal(3, client.Requests.Count);
         Assert.Equal(1, CountEarlierWords(client.Requests[2]));
-        Assert.Contains("Session recovered: reason=ConnectionLost", rig.ReadLog(), StringComparison.Ordinal);
+        Assert.Contains("Session recovered: turn=2 reason=ConnectionLost", rig.ReadLog(), StringComparison.Ordinal);
     }
 
     /// <summary>

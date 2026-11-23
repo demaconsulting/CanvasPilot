@@ -128,6 +128,11 @@ public sealed class AgentProviderFactory : IAgentFactory
     private volatile ICopilotAgentSource? _copilot;
 
     /// <summary>
+    ///     The data folder of the runtime that made the last Copilot agent, which tells where its sessions are recorded.
+    /// </summary>
+    private volatile string? _copilotDataDirectory;
+
+    /// <summary>
     ///     Whether the factory was disposed.
     /// </summary>
     private volatile bool _disposed;
@@ -178,6 +183,21 @@ public sealed class AgentProviderFactory : IAgentFactory
         return request.Settings.Provider == AiProviderKind.Ollama
             ? CreateOllamaAsync(request, cancellationToken)
             : CreateCopilotAsync(request, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public AgentSessionInfo DescribeSession(AgentSession session)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        if (session is not CopilotAgentSession { SessionId: { Length: > 0 } id })
+        {
+            return AgentSessionInfo.None;
+        }
+
+        // The runtime records the events of a session in a folder of the session below its data folder
+        var dataDirectory = _copilotDataDirectory;
+        return new AgentSessionInfo(id, dataDirectory is null ? null : Path.Combine(dataDirectory, "session-state", id, "events.jsonl"));
     }
 
     /// <inheritdoc />
@@ -378,6 +398,7 @@ public sealed class AgentProviderFactory : IAgentFactory
         }
 
         _copilot = started.Agents;
+        _copilotDataDirectory = request.CopilotDataDirectory ?? AgentService.GetCopilotDataDirectory();
         var agent = started.Agents.CreateAgent(new CopilotAgentRequest(request.Tools, request.Instructions, AgentName, request.ProjectFolder, selection));
         var effort = selection?.Settings.ReasoningEffort ?? "(default)";
         Write($"Agent created: provider=GitHubCopilot model={selection?.Model.Id ?? "(default)"} effort={effort} tools={request.Tools.Count}");

@@ -176,3 +176,26 @@ sections:
                   - AgentService_NextTurnAfterStop_FailsBeforeAnyUpdate_IsRecoveredOnceOnANewConversation
                   - AgentService_Recovery_IsOnlyOnceAndOnlyAfterAStop
                   - AgentService_Cancel_ByAResetOrAProjectChange_LogsItsSource
+
+              - id: CanvasPilot-AgentService-LogTurnLifecycle
+                title: >-
+                  The AgentService shall number each turn and give every line of its log the number, shall log for the start
+                  of a turn the provider, the model, the reasoning effort, the count of earlier turns that the caller handed
+                  over (historyTurns) and whether the digest of them was added, shall log the lifecycle of the provider
+                  session with its identifier (whether the run created or resumed it, and whether its handle was released
+                  after the run), shall log for the end of a turn the outcome, the cancel source, the times (the whole turn,
+                  the first event, the longest gap), the length of the answer text, whether the provider reasoned, and the
+                  usage when the provider reported it, shall log the file where the provider recorded the events of a session
+                  whose turn failed or was canceled, and shall name the reason when it releases a conversation, and never
+                  write the words of a message, an answer, or a file.
+                justification: |
+                  A turn of several minutes that ends in a failure or a Stop must be diagnosable from the log alone: which
+                  turn, on which model and effort, how long the provider was silent, what it cost in tokens, who canceled it,
+                  and where the provider's own record is. The words belong to the user and stay out of the log.
+                tests:
+                  - AgentService_Logging_Turn_CarriesIdsToolFactsAndAnswerFactsWithoutContent
+                  - AgentService_Logging_TurnNumbers_CountUpForTheLifeOfTheService
+                  - AgentService_Logging_Reasoning_IsAFlagWithoutWords
+                  - AgentService_Logging_ProviderSession_HasIdsRunKindsEventsFileAndReleaseReason
+                  - AgentService_Logging_CanceledTurn_NamesTheSourceAndTheEventsFile
+                  - AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly

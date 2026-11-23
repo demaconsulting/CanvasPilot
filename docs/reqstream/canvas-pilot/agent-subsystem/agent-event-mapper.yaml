@@ -140,3 +140,17 @@ sections:
                   user's words and drawings. The log may say what happened and never what was said.
                 tests:
                   - AgentEventMapper_Logging_Turn_HoldsMetadataOnly
+
+              - id: CanvasPilot-AgentEventMapper-LogToolCalls
+                title: >-
+                  The AgentEventMapper shall log the start of each tool call with the number of the turn, the id of the call,
+                  the name of the tool, the path that it works on (made safe for one line and cut to 120 characters) and the
+                  bytes of its arguments, and the end of the call with its outcome (ok, failed, or refused), the bytes of the
+                  result, whether it carried a picture, and the time it took, and shall add the HTTP status of a failed
+                  request to the line of the failure, and never the content of an argument or a result.
+                justification: |
+                  The file that a model writes is the user's drawing, but how large it was, which file it was, and how long
+                  the call took are what a person needs to see why a turn was slow or failed.
+                tests:
+                  - AgentEventMapper_Logging_Tools_HaveOutcomesAndSafePaths
+                  - AgentService_Logging_ProviderSession_HasIdsRunKindsEventsFileAndReleaseReason

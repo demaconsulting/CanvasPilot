@@ -172,6 +172,10 @@
                   AutomationProperties.AutomationId="DrawingKnowledgeMenuItem"
                   Header="_Drawing Knowledge..."
                   Command="{Binding ShowDrawingKnowledgeCommand}" />
+        <MenuItem Name="OpenLogFolderMenuItem"
+                  AutomationProperties.AutomationId="OpenLogFolderMenuItem"
+                  Header="Open _Log Folder"
+                  Command="{Binding OpenLogFolderCommand}" />
         <Separator />
         <MenuItem Name="AboutMenuItem"
                   AutomationProperties.AutomationId="AboutMenuItem"

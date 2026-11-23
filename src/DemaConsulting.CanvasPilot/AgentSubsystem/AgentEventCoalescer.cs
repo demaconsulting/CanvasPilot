@@ -174,6 +174,7 @@ internal sealed class AgentEventCoalescer
             Task? wait = null;
             Exception? fault = null;
             var ended = false;
+            var canceled = false;
             lock (_gate)
             {
                 if (_queue.First is { } first)
@@ -185,6 +186,11 @@ internal sealed class AgentEventCoalescer
                 {
                     ended = true;
                     fault = _fault;
+                }
+                else if (cancellationToken.IsCancellationRequested)
+                {
+                    // Only a reader that has nothing left to take is canceled: what waits is always handed over first
+                    canceled = true;
                 }
                 else
                 {
@@ -209,7 +215,19 @@ internal sealed class AgentEventCoalescer
                 yield break;
             }
 
-            await wait!.WaitAsync(cancellationToken).ConfigureAwait(false);
+            if (canceled)
+            {
+                throw new OperationCanceledException(cancellationToken);
+            }
+
+            try
+            {
+                await wait!.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // Look at the queue once more: an event may have arrived at the same moment, and it is not lost
+            }
         }
     }
 }

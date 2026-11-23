@@ -371,6 +371,30 @@ public sealed class FakeDialogService : IDialogService
 }
 
 /// <summary>
+///     Hand-written folder launcher for tests: it records the folders it was asked to show and can fail.
+/// </summary>
+public sealed class FakeFolderLauncher : IFolderLauncher
+{
+    /// <summary>
+    ///     Gets the folders that were asked for, in order.
+    /// </summary>
+    public List<string> Opened { get; } = [];
+
+    /// <summary>
+    ///     Gets or sets the sentence that the launcher fails with, or <see langword="null" /> to succeed.
+    /// </summary>
+    public string? Failure { get; set; }
+
+    /// <inheritdoc />
+    public bool TryOpen(string folder, out string? failure)
+    {
+        Opened.Add(folder);
+        failure = Failure;
+        return Failure is null;
+    }
+}
+
+/// <summary>
 ///     Hand-written image exporter for tests: it can be switched on and off and records how often it was asked to
 ///     export or copy.
 /// </summary>

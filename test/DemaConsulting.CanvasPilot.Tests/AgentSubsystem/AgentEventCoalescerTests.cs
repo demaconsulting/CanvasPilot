@@ -180,6 +180,31 @@ public sealed class AgentEventCoalescerTests
     }
 
     /// <summary>
+    ///     Test that canceling the token ends the wait for the next event, that a null event is refused, and that a reader
+    ///     whose token was canceled still gets the events that wait before it is canceled.
+    /// </summary>
+    [Fact]
+    public async Task AgentEventCoalescer_ReadAll_TokenCancelled_EndsTheWaitAfterTheEventsThatWait()
+    {
+        // Arrange: an event waits, and the token is canceled before it is read
+        var coalescer = new AgentEventCoalescer();
+        coalescer.Add(new AgentEvent.TextDelta("kept"));
+        using var canceledAlready = new CancellationTokenSource();
+        await canceledAlready.CancelAsync();
+        var seen = new List<AgentEvent>();
+
+        // Act and assert: the event is handed over, and then the reader is canceled
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        {
+            await foreach (var item in coalescer.ReadAllAsync(canceledAlready.Token))
+            {
+                seen.Add(item);
+            }
+        });
+        Assert.Equal(new AgentEvent.TextDelta("kept"), Assert.Single(seen));
+    }
+
+    /// <summary>
     ///     Test that canceling the token ends the wait for the next event, and that a null event is refused.
     /// </summary>
     [Fact]

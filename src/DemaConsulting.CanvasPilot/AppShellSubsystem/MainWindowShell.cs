@@ -109,6 +109,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private readonly RecentThumbnailLoader? _recentThumbnails;
 
     /// <summary>
+    ///     Shows a folder in the file manager, which the Help menu uses for the folder of the log, or null for none.
+    /// </summary>
+    private readonly IFolderLauncher? _folderLauncher;
+
+    /// <summary>
     ///     Tells which files of a project are pictures.
     /// </summary>
     private readonly IImageSourceFilter _pictureFilter = new CanvasNetImageSourceFilter();
@@ -204,6 +209,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Draws the pictures on the cards of the recent projects of the welcome screen, or <see langword="null" /> for none, which
     ///     leaves the cards without a picture. The shell does not dispose it.
     /// </param>
+    /// <param name="folderLauncher">
+    ///     Shows a folder in the file manager for the Open Log Folder item of the Help menu, or <see langword="null" /> for
+    ///     none, which leaves the item disabled.
+    /// </param>
     public MainWindowShell(
         IProjectService projectService,
         IRecentProjects recentProjects,
@@ -217,7 +226,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         ICheckAgainstStyle? checkAgainstStyle = null,
         Func<IStyleKitDialogs, StyleKitManagerViewModel>? styleKits = null,
         RollingFileLogger? logger = null,
-        IThumbnailSource? recentThumbnails = null)
+        IThumbnailSource? recentThumbnails = null,
+        IFolderLauncher? folderLauncher = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
         ArgumentNullException.ThrowIfNull(recentProjects);
@@ -235,6 +245,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _styleCheck = checkAgainstStyle;
         _styleKits = styleKits;
         _logger = logger;
+        _folderLauncher = folderLauncher;
         _recentThumbnails = recentThumbnails is null ? null : new RecentThumbnailLoader(recentThumbnails, RunOnOwnerThread, logger);
         Workspace = workspace;
         StatusBar = new StatusBarViewModel(workspace);
@@ -749,6 +760,37 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
             dialog.NotifyClosed();
         }
     }
+
+    /// <summary>
+    ///     Shows the folder of the log in the file manager, so that the user can attach the log to a report. The folder is the
+    ///     one that the logger writes to; when the file manager cannot be started the user is told, with the path.
+    /// </summary>
+    /// <returns>A task that completes when the folder was shown, or the problem was shown.</returns>
+    [RelayCommand(CanExecute = nameof(CanOpenLogFolder))]
+    private async Task OpenLogFolderAsync()
+    {
+        if (_folderLauncher is null)
+        {
+            return;
+        }
+
+        var folder = _logger?.LogDirectory ?? RollingFileLogger.DefaultLogDirectory;
+        if (_folderLauncher.TryOpen(folder, out var failure))
+        {
+            return;
+        }
+
+        _logger?.Log(LogLevel.Warning, "The folder of the log could not be shown in the file manager.");
+        if (_dialogs is not null)
+        {
+            await _dialogs.ShowMessageAsync("Open Log Folder", $"The folder of the log could not be shown: {failure} The log is in {folder}");
+        }
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether the application can show the folder of the log.
+    /// </summary>
+    private bool CanOpenLogFolder => _folderLauncher is not null;
 
     /// <summary>
     ///     Opens the About dialog.

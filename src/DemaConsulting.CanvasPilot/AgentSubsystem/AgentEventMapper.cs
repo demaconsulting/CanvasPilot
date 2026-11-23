@@ -69,8 +69,9 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         first <see cref="PathScanLength" /> characters that are searched for the path.
 ///     </para>
 ///     <para>
-///         The log gets metadata only: the provider, the kind of the failure, the type of the exception, and counts. The
-///         text of the messages, the arguments and results of tools, and the text of an exception are never logged.
+///         The log gets metadata only: the provider, the number of the turn, the kind of the failure and its HTTP status, the
+///         type of the exception, counts, and for each tool call its name, the path that it works on, the bytes of its
+///         arguments and result, its outcome, and its time. The text of the messages, the arguments and results of tools, and the text of an exception are never logged.
 ///         A mapper is made for one turn because it remembers the calls of the turn; it is not safe for concurrent use.
 ///     </para>
 /// </remarks>
@@ -128,6 +129,11 @@ public sealed class AgentEventMapper
     /// </summary>
     public const string OllamaConnectionLostMessage =
         "The connection to the Ollama server was lost or could not be made. Check that Ollama is running and that the address in Settings is right, then send the message again.";
+
+    /// <summary>
+    ///     The longest path that the log holds; a longer one is cut.
+    /// </summary>
+    private const int MaxLoggedPathLength = 120;
 
     /// <summary>
     ///     The deepest level of the chain of inner exceptions that is searched.
@@ -196,6 +202,16 @@ public sealed class AgentEventMapper
     private readonly HashSet<string> _finished = new(StringComparer.Ordinal);
 
     /// <summary>
+    ///     The time stamps of the starts of the calls, by the id of the call, for the time that a call took.
+    /// </summary>
+    private readonly Dictionary<string, long> _toolStarted = new(StringComparer.Ordinal);
+
+    /// <summary>
+    ///     The number of the turn, which ties the lines of the log together; zero when the mapper was made for no turn.
+    /// </summary>
+    private readonly int _turn;
+
+    /// <summary>
     ///     The number of text events made.
     /// </summary>
     private int _textEvents;
@@ -237,18 +253,21 @@ public sealed class AgentEventMapper
     ///     not a failure.
     /// </param>
     /// <param name="clock">The clock that spaces the progress events; <see langword="null" /> for the system's.</param>
+    /// <param name="turnNumber">The number of the turn, which the lines of the log carry; zero for none.</param>
     public AgentEventMapper(
         AiProviderKind provider,
         string? modelName = null,
         RollingFileLogger? logger = null,
         CancellationToken cancellationToken = default,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        int turnNumber = 0)
     {
         _provider = provider;
         _modelName = modelName?.Trim() ?? string.Empty;
         _logger = logger;
         _cancellationToken = cancellationToken;
         _clock = clock ?? TimeProvider.System;
+        _turn = turnNumber;
     }
 
     /// <summary>
@@ -381,7 +400,7 @@ public sealed class AgentEventMapper
             }
             else if (ended && !faulted && !_cancellationToken.IsCancellationRequested)
             {
-                Write(LogLevel.Info, $"Turn completed: provider={_provider} textEvents={_textEvents} toolCalls={_calls.Count}");
+                Write(LogLevel.Info, $"Turn completed: provider={_provider} textEvents={_textEvents} toolCalls={_calls.Count} turn={_turn}");
                 yield return new AgentEvent.Completed();
             }
 
@@ -401,12 +420,13 @@ public sealed class AgentEventMapper
 
         if (IsCanceled(exception, _cancellationToken))
         {
-            Write(LogLevel.Info, $"Turn canceled: provider={_provider}");
+            Write(LogLevel.Info, $"Turn canceled: provider={_provider} turn={_turn}");
             return null;
         }
 
         var (kind, detail) = Classify(exception);
-        Log(kind, exception.GetType().Name);
+        var status = Chain(exception).OfType<HttpRequestException>().Select(candidate => candidate.StatusCode).FirstOrDefault(code => code is not null);
+        Log(kind, exception.GetType().Name, status is { } code ? (int)code : null);
         return new AgentEvent.Failed(kind, Describe(kind, detail, exception));
     }
 
@@ -737,7 +757,73 @@ public sealed class AgentEventMapper
 
         _calls[id] = call.Name;
         _phase = null;
+        _toolStarted[id] = _clock.GetTimestamp();
+        Write(LogLevel.Info, $"Tool started: turn={_turn} call={id} name={call.Name} path={PathOf(call.Arguments)} argBytes={ArgumentBytes(call.Arguments)}");
         events.Add(new AgentEvent.ToolStarted(id, call.Name, SummarizeArguments(call.Arguments)));
+    }
+
+    /// <summary>
+    ///     Counts the bytes of the arguments of a call, in UTF-8, so that the log can say how large a drawing was without
+    ///     holding any of it.
+    /// </summary>
+    /// <param name="arguments">The arguments; may be <see langword="null" />.</param>
+    /// <returns>The sum of the bytes of the values.</returns>
+    private static long ArgumentBytes(IDictionary<string, object?>? arguments)
+    {
+        if (arguments is null)
+        {
+            return 0;
+        }
+
+        long total = 0;
+        foreach (var value in arguments.Values)
+        {
+            var text = value switch
+            {
+                null => string.Empty,
+                string plain => plain,
+                JsonElement { ValueKind: JsonValueKind.String } element => element.GetString() ?? string.Empty,
+                JsonElement element => element.GetRawText(),
+                IFormattable number => number.ToString(null, CultureInfo.InvariantCulture),
+                _ => value.ToString() ?? string.Empty,
+            };
+            total += Encoding.UTF8.GetByteCount(text);
+        }
+
+        return total;
+    }
+
+    /// <summary>
+    ///     Reads the name of the file or folder that a call works on, for the log: the value of the <c>path</c> argument, or
+    ///     else of the <c>folder</c> argument, with white space and control characters made safe for one line and cut to a
+    ///     short length. A path names a file of the project and is never the content of one.
+    /// </summary>
+    /// <param name="arguments">The arguments; may be <see langword="null" />.</param>
+    /// <returns>The path, or <c>(none)</c> when the call has none.</returns>
+    private static string PathOf(IDictionary<string, object?>? arguments)
+    {
+        if (arguments is null)
+        {
+            return "(none)";
+        }
+
+        foreach (var name in new[] { "path", "folder" })
+        {
+            var pair = arguments.FirstOrDefault(candidate => string.Equals(candidate.Key, name, StringComparison.Ordinal));
+            var value = pair.Value switch
+            {
+                string plain => plain,
+                JsonElement { ValueKind: JsonValueKind.String } element => element.GetString(),
+                _ => null,
+            };
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                var safe = new string([.. Flatten(value).Select(character => char.IsControl(character) ? '?' : character)]);
+                return safe.Length <= MaxLoggedPathLength ? safe : safe[..MaxLoggedPathLength] + "...";
+            }
+        }
+
+        return "(none)";
     }
 
     /// <summary>
@@ -754,6 +840,19 @@ public sealed class AgentEventMapper
 
         var (text, hasImage) = ReadResult(result.Result);
         var succeeded = result.Exception is null && !text.StartsWith(RefusalPrefix, StringComparison.Ordinal);
+        var milliseconds = _toolStarted.TryGetValue(id, out var begun) ? (long)_clock.GetElapsedTime(begun).TotalMilliseconds : -1;
+        var outcome = "ok";
+        if (result.Exception is not null)
+        {
+            outcome = "failed";
+        }
+        else if (!succeeded)
+        {
+            outcome = "refused";
+        }
+        Write(
+            LogLevel.Info,
+            $"Tool finished: turn={_turn} call={id} name={name} outcome={outcome} resultBytes={Encoding.UTF8.GetByteCount(text)} hasImage={hasImage} milliseconds={milliseconds}");
         if (result.Exception is not null)
         {
             text = $"The tool failed: {Flatten(result.Exception.Message)}";
@@ -899,9 +998,11 @@ public sealed class AgentEventMapper
     /// </summary>
     /// <param name="kind">The kind of the failure.</param>
     /// <param name="exceptionType">The type of the exception, or a name for the source of the failure.</param>
-    private void Log(AgentFailureKind kind, string exceptionType)
+    /// <param name="httpStatus">The HTTP status that a failed request answered with, or <see langword="null" /> for none.</param>
+    private void Log(AgentFailureKind kind, string exceptionType, int? httpStatus = null)
     {
-        Write(LogLevel.Warning, $"Turn failed: provider={_provider} kind={kind} source={exceptionType}");
+        var status = httpStatus is { } code ? string.Create(CultureInfo.InvariantCulture, $" httpStatus={code}") : string.Empty;
+        Write(LogLevel.Warning, $"Turn failed: provider={_provider} kind={kind} source={exceptionType} turn={_turn}{status}");
     }
 
     /// <summary>
