@@ -313,3 +313,16 @@ panel depends on it.
 key of the history comes from the project.
 
 ![Chat history dependencies](ChatSubsystemHistoryView.svg)
+
+### Future Direction: Undo a Copilot Turn
+
+This is planned and is not implemented: today nothing restores the files that a turn of the copilot changed (see "Files
+the Copilot Writes" in the user guide), and the Edit menu undoes only the message being written.
+
+The design that is intended is a per-session snapshot of the files before each turn. Before a turn starts, the files
+that the turn may write are recorded in a snapshot that is kept outside the project folder, with the other data of the
+application, so that the project gets no history file or backup of its own; the snapshots belong to the session and are
+cleared when the project is closed. Undoing a turn restores the files of its snapshot. The provider session cannot be
+rewound, because the Copilot runtime keeps its own history of the conversation, so the copilot would still believe that
+its changes are in place. The next message therefore carries a note that tells the copilot which files were reverted and
+that their contents are those from before the turn.

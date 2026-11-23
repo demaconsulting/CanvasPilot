@@ -81,6 +81,7 @@ Planned:
 - **Spoken replies**: Text-to-speech for the copilot's answers
 - **Variations**: Compare alternative drafts side by side
 - **Export profiles and batch export**: Export many pictures at once, in the sizes and formats each use needs
+- **Undo a copilot turn**: Restore the files it changed and tell the copilot
 - **Linux and macOS builds**
 
 ## Getting started

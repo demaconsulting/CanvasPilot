@@ -421,8 +421,10 @@ the same as Enter. Send is dimmed while the message is empty. Select, copy, cut,
 a long message wraps and grows to a limit, after which the box scrolls. Text that you paste is plain text, and
 characters that cannot be shown are removed. The box has a glow in the focus color while you are writing in it.
 
-CanvasPilot remembers what you did, so that you can step back and forth. On macOS, use the Command key where this guide
-says Ctrl:
+CanvasPilot remembers what you did in the message that you are writing, so that you can step back and forth. Undo and
+redo apply only to that message (the text, the attachments, and the marks in it), never to the files of your project:
+they cannot take back what the copilot wrote. Undoing a copilot turn, which restores the files that it changed and tells
+the copilot, is planned and is not available yet. On macOS, use the Command key where this guide says Ctrl:
 
 - **Undo** with Ctrl+Z, or with **Edit > Undo**.
 - **Redo** with Ctrl+Y or Ctrl+Shift+Z, or with **Edit > Redo**.
@@ -938,10 +940,11 @@ CanvasPilot keeps the **text** of your conversation, so that it is there when yo
 
 **The copilot overwrites the files of your project directly. CanvasPilot keeps no backup and does not ask before the
 copilot replaces a file.** The transcript shows what it did ("created" or "replaced", with the sizes), and the explorer
-selects the file it wrote, but there is no way to undo it in CanvasPilot. Keep the project under source control (for
-example Git) or copy the project folder before you ask the copilot to change files that you care about, and check the
-result before you rely on it. The copilot is told to read a file before it replaces it and to keep what you did not ask
-it to change, but a model can be wrong.
+selects the file it wrote, but there is no way to undo it in CanvasPilot (Edit > Undo applies only to the message you
+are writing; undoing a copilot turn is planned). Keep the project under source control (for example Git) or copy the
+project folder before you ask the copilot to change files that you care about, and check the result before you rely on
+it. The copilot is told to read a file before it replaces it and to keep what you did not ask it to change, but a model
+can be wrong.
 
 Only drawing sources and small data files are written (at most 256 KiB each), only inside the project folder, and only
 files that the copilot is asked to create or change. CanvasPilot adds nothing else to your project because of the
