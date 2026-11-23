@@ -62,9 +62,11 @@ that has the focus, or `null` while the focus is in a part that has nothing to u
 follows `UndoRedoStateChanged` of the current target (a notification on another thread is posted to the user
 interface thread) and re-evaluates both commands, and it stops following a target that was replaced.
 
-**PushToTalk** / **PushToTalkKey** / **IsPushToTalkActive**: `PushToTalk` is the `IPushToTalkTarget?` that listens
-while the talk key is held, which the composition root sets to the chat panel. `PushToTalkKey` is the constant
-`Key.F8`. `IsPushToTalkActive` is true between a start and the stop that follows it.
+**PushToTalk** / **TalkKey** / **IsPushToTalkActive**: `PushToTalk` is the `IPushToTalkTarget?` that listens
+while the talk key is held, which the composition root sets to the chat panel. `TalkKey` is the `PushToTalkSetting`
+that holds the talk key in effect (`F9` by default, or the key that the Speech page stored) and follows the settings;
+it is the one source that the window, the status bar, the welcome screen, and the chat panel read.
+`IsPushToTalkActive` is true between a start and the stop that follows it.
 
 **ExitRequested**: event raised by Exit; the window closes itself in response.
 

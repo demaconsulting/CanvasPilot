@@ -80,3 +80,37 @@ sections:
                   be reached by the keyboard.
                 tests:
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+              - id: CanvasPilot-SpeechSettingsPage-ChooseTalkKey
+                title: >-
+                  The SpeechSettingsPage shall let the user choose the key, or the chord of Ctrl, Alt, or Shift and a key,
+                  that is held to talk, by pressing it in a box (a modifier alone is waited out and Esc cancels), show it in
+                  words, store it with the speech settings (nothing for the default F9), and put the default back with a
+                  reset button.
+                justification: |
+                  No key is free on every keyboard: F8, the first default, is swallowed by the function keys of many
+                  laptops, and other keys belong to the system or to other tools. The user must be able to choose a key
+                  that works for them without editing a file.
+                tests:
+                  - SpeechSettingsPageViewModel_PushToTalkKey_CaptureValidateResetAndStore
+                  - SpeechSettingsPageViewModel_LoadApply_PushToTalkKey_RoundTripsAndUnsafeShowsDefault
+                  - SpeechSettingsPageView_PushToTalkKeyBox_CapturesValidatesAndResets
+
+              - id: CanvasPilot-SpeechSettingsPage-RefuseUnsafeTalkKeys
+                title: >-
+                  The SpeechSettingsPage shall refuse, with a sentence that says why and what to do, and leave the key as it
+                  was, a talk key that is a modifier alone, a key of typing or moving (Esc, Enter, Tab, Backspace, the cursor
+                  keys), a character key without Ctrl or Alt, Ctrl+Space, Alt+Space, Ctrl+Alt, a chord with the Windows key,
+                  a shortcut of editing, Alt+F4, or one of the function keys F1, F8, F10, F11, and F12, and shall write and
+                  read a key as text such as F9 or Ctrl+Shift+Space.
+                justification: |
+                  A key that is refused here never takes effect, so a bad choice cannot take away a key that people need to
+                  type or one that the system owns. F8 is refused because it never reached the window on many laptops.
+                tests:
+                  - PushToTalkBinding_Default_IsF9AndSafe
+                  - PushToTalkBinding_Validate_SafeKeys_AreAccepted
+                  - PushToTalkBinding_Validate_UnsafeKeys_AreRefusedWithASentence
+                  - PushToTalkBinding_DisplayAndParse_RoundTripAndRefuseUnsafeText
+                  - PushToTalkBinding_Stored_DefaultIsEmptyAndOldF8MeansTheDefault
+                  - PushToTalkBinding_MatchesAndIsPartOf_FollowTheChord
+                  - PushToTalkSetting_FollowsTheSettingsAndStopsWhenDisposed

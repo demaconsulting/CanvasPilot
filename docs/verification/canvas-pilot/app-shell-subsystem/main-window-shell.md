@@ -13,7 +13,7 @@ window, its title bar, menus, dialogs, and body; `WorkspaceLayoutViewTests.cs` f
 widths of the columns; `AccessibilityViewTests.cs` for the access keys of the menu and the names, tooltips, focus, and
 sizes of the controls of the window in both theme variants; and `StylePickerViewTests.cs` for the style list in the
 title bar. The platform pickers cannot be shown headless; the UI test confirms they answer as cancelled, and the real
-pickers are checked manually before a release. Likewise the real keyboard (the repeat of a held F8, the window losing
+pickers are checked manually before a release. Likewise the real keyboard (the repeat of a held F9, the window losing
 the active state when the user switches to another program, and a screen reader's use of the Edit menu), the buttons of
 the system over the title bar (their room is tested as a pure function, but the headless platform never extends the
 window into its frame), dragging the empty strip of the title bar, and the move of the window between monitors are
@@ -34,7 +34,7 @@ temporary local folders; no network or external services are required.
 - Undo and Redo act on the focused part that can undo and redo, are usable only while it has a step to undo or redo,
   follow its changes, and are unusable and do nothing while the focus is in a part that cannot (for example the
   explorer) or while there is no target; a target that was replaced is no longer followed.
-- The F8 key starts the push-to-talk target once while it is held (repeats are ignored), stops the target that was
+- The F9 key starts the push-to-talk target once while it is held (repeats are ignored), stops the target that was
   started when the key goes up, the window closes, or the window is deactivated, and does nothing without a target.
 - The title is the application name, or the project name followed by the application name, and follows a project
   opened, closed, or created through the service, and stops following after disposal.
@@ -198,7 +198,7 @@ removed, neither command is usable and running them reaches no one; a notificati
 not re-evaluate the commands. This scenario is tested by
 `MainWindowShell_UndoRedo_NoTarget_DisabledAndReplacedTargetIgnored`.
 
-**MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget**: The talk key is F8. A press starts the target, repeats
+**MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget**: The talk key is F9. A press starts the target, repeats
 of the key start nothing more, a release stops it once, and a second release is ignored. This scenario is tested by
 `MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget`.
 
@@ -227,18 +227,18 @@ not; the Undo item undoes the typing and then Redo is usable; the Redo item rest
 has the focus the edit target is empty and neither item is usable. This scenario is tested by
 `MainWindowView_EditMenu_TypingInComposerEnablesUndoAndExplorerFocusDisables`.
 
-**MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget**: Pressing F8 twice (a repeat) starts the target once; another
-key does nothing; releasing F8 stops it once and a second release is ignored. This scenario is tested by
+**MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget**: Pressing F9 twice (a repeat) starts the target once; another
+key does nothing; releasing F9 stops it once and a second release is ignored. This scenario is tested by
 `MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget`.
 
-**MainWindowView_PushToTalkKey_NoTarget_IsIgnored**: Without a target F8 starts nothing. This scenario is tested by
+**MainWindowView_PushToTalkKey_NoTarget_IsIgnored**: Without a target F9 starts nothing. This scenario is tested by
 `MainWindowView_PushToTalkKey_NoTarget_IsIgnored`.
 
-**MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget**: Closing the window while F8 is held stops the
+**MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget**: Closing the window while F9 is held stops the
 target. This scenario is tested by `MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget`.
 
 **MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget**: When the platform reports that the window
-was deactivated while F8 is held, the target is stopped at once and the release that follows changes nothing. The
+was deactivated while F9 is held, the target is stopped at once and the release that follows changes nothing. The
 headless platform never deactivates a window, so the test calls the platform's deactivation callback by reflection. This
 scenario is tested by `MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget`.
 

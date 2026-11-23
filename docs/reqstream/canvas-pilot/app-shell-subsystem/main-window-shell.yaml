@@ -53,18 +53,21 @@ sections:
 
               - id: CanvasPilot-MainWindowShell-StartDictationFromKey
                 title: >-
-                  The MainWindowShell shall start listening on the push-to-talk target when the F8 key goes down, ignore
-                  the repeats of a key that is held, stop listening on the target that was started when the key goes up,
-                  when the window closes, or when the window stops being the active one, and do nothing while there
-                  is no target.
+                  The MainWindowShell shall start listening on the push-to-talk target when the talk key (F9 until the user
+                  chooses another key or chord on the Speech page, which takes effect at once) goes down, ignore the
+                  repeats of a key that is held, stop listening on the target that was started when the key, or any key
+                  of the chord, goes up, when the window closes, or when the window stops being the active one, and do
+                  nothing while there is no target.
                 justification: |
                   Holding a key lets the user dictate while the hands stay on the keyboard or pointer. The keyboard
                   repeats a held key, which must not start the dictation again, and a key that is released in another
-                  window or after the window is gone would never be heard, which would leave the microphone open.
+                  window or after the window is gone would never be heard, which would leave the microphone open. F8, the
+                  first default, never reached the window on laptops whose function keys do other things.
                 tests:
                   - MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget
                   - MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget
                   - MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget
+                  - MainWindowView_PushToTalkKey_ChosenChord_StartsOnTheChordAndStopsWhenAnyKeyOfItIsReleased
                   - MainWindowView_PushToTalkKey_NoTarget_IsIgnored
                   - MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget
                   - MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget

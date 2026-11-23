@@ -26,7 +26,7 @@ the workspace.
   `Ready` and are empty otherwise. `NotesText` is the header of the diagnostics of the pane (such as `1 note`) while the
   state is `Ready` and the render has notes; `HasNotes` tells whether it is not empty.
 - *Project*: `HasProject` mirrors the workspace. `ProjectSavedText` is the constant "Project saved" and `TalkKeyText` is
-  the name of the push-to-talk key of `MainWindowShell`, `F8`.
+  the text of the push-to-talk key in effect (`F9` by default), which follows the `PushToTalkSetting` of the shell.
 
 The inputs of the facts are the view model properties `FileName`, `ImageSizeText`, `FormatText`, `RenderTimeText`,
 `RenderMilliseconds`, `StatusText`, `HasDiagnostics`, and `DiagnosticsHeader` of the preview pane, which the
@@ -50,7 +50,7 @@ view model. Its only code is the call that loads the XAML.
   failed", and the file name), and `StatusBarIdle` (the summary sentence in the tertiary text color). The state is told
   by words and by an icon or a progress bar, never by color alone.
 - *Right side*: shown only while `HasProject`; the check icon with the "Project saved" words (`StatusBarProjectSaved`)
-  and the hint "Hold F8 to talk" (`StatusBarTalkHint`), in which the key name is drawn as a key cap.
+  and the hint "Hold F9 to talk" (`StatusBarTalkHint`), in which the key name is drawn as a key cap.
 - *Screen reader*: the `PreviewStatus` panel has the `Summary` sentence as its automation name and the live setting
   `Polite`, so a screen reader is told when the sentence changes without being interrupted.
 

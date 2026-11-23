@@ -102,6 +102,7 @@ sections:
               - CanvasPilot-SettingsService-KeepWindowLayout
               - CanvasPilot-SettingsService-KeepAppearance
               - CanvasPilot-SettingsService-KeepRecentProjectOpenTimes
+              - CanvasPilot-SettingsService-NormalizeTalkKey
             tests:
               - SettingsSubsystem_RememberLayoutAndAppearance_SavedWithOthers_SurviveRestartAndDialogChanges
 

@@ -964,7 +964,7 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that the talk key is F8 and that pressing and releasing it starts and stops the push-to-talk target once.
+    ///     Test that the talk key is F9 by default and that pressing and releasing it starts and stops the push-to-talk target once.
     /// </summary>
     [Fact]
     public async Task MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget()
@@ -984,8 +984,8 @@ public sealed class MainWindowShellTests : IDisposable
         await shell.EndPushToTalkAsync();
         await shell.EndPushToTalkAsync();
 
-        // Assert: the target was started once and stopped once, and the key is F8
-        Assert.Equal(Avalonia.Input.Key.F8, MainWindowShell.PushToTalkKey);
+        // Assert: the target was started once and stopped once, and the key is the default, F9
+        Assert.Equal(("F9", Avalonia.Input.Key.F9, Avalonia.Input.KeyModifiers.None), (shell.TalkKey.Text, shell.TalkKey.Binding.Key, shell.TalkKey.Binding.Modifiers));
         Assert.True(activeWhileHeld);
         Assert.False(shell.IsPushToTalkActive);
         await target.Received(1).BeginPushToTalkAsync();

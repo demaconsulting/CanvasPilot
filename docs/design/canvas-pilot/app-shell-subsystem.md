@@ -75,7 +75,7 @@ here because they only join the units together.
 
 - *Type*: In-process .NET API (`IPushToTalkTarget` of the `Composer` subsystem; `MainWindowShell.PushToTalk`).
 - *Role*: Consumer; the chat panel is the implementation.
-- *Contract*: `BeginPushToTalkAsync` when the F8 key goes down and `EndPushToTalkAsync` when it goes up, the window
+- *Contract*: `BeginPushToTalkAsync` when the F9 key goes down and `EndPushToTalkAsync` when it goes up, the window
   closes, or the window is no longer the active one; a held key's repeats are ignored.
 
 **Main Window and Dialogs**: The user interface.
@@ -155,7 +155,7 @@ here because they only join the units together.
    designs).
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. It follows the focus (the nearest data context that can undo and redo becomes the shell's `EditTarget`)
-   and the F8 key (start and stop of the push-to-talk target, also on deactivation and close). `App` records
+   and the F9 key (start and stop of the push-to-talk target, also on deactivation and close). `App` records
    unhandled errors in the log and disposes the composition when the application exits.
 3. The shell follows the project service: when the open project changes it updates the title and shows the
    project's folder in the workspace, which opens or closes the explorer. Changes raised on another thread are

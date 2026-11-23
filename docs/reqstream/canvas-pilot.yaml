@@ -406,6 +406,7 @@ sections:
         children:
           - CanvasPilot-Speech-DictateWhileHeld
           - CanvasPilot-Speech-ExplainDictationUnavailable
+          - CanvasPilot-Speech-ChooseTalkKey
           - CanvasPilot-Composer-AddDictatedWordsAsOneBlock
           - CanvasPilot-Chat-HoldToTalk
           - CanvasPilot-AppShell-PushToTalkKey

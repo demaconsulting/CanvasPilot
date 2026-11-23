@@ -233,6 +233,34 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the talk key is empty (the default, F9) when the file has none, that a safe key is kept in its normal
+    ///     form and survives a save, and that an unsafe one, the old default F8 among them, becomes the default.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_PushToTalkKey_IsNormalizedAndUnsafeOrOldF8BecomesTheDefault()
+    {
+        // Arrange and act: files with no key, a chord in another form, the old default, and a key that cannot be used
+        WriteSettingsFile("""{ "version": 1 }""");
+        var none = new SettingsService(SettingsFolder).Load().Speech.PushToTalkKey;
+        WriteSettingsFile("""{ "version": 1, "speech": { "pushToTalkKey": "shift+ctrl+space" } }""");
+        var service = new SettingsService(SettingsFolder);
+        var chord = service.Load();
+        service.Save(chord);
+        var reloaded = new SettingsService(SettingsFolder).Load().Speech.PushToTalkKey;
+        WriteSettingsFile("""{ "version": 1, "speech": { "pushToTalkKey": "F8" } }""");
+        var oldDefault = new SettingsService(SettingsFolder).Load().Speech.PushToTalkKey;
+        WriteSettingsFile("""{ "version": 1, "speech": { "pushToTalkKey": "Escape" } }""");
+        var unsafeKey = new SettingsService(SettingsFolder).Load().Speech.PushToTalkKey;
+
+        // Assert
+        Assert.Equal(string.Empty, none);
+        Assert.Equal("Ctrl+Shift+Space", chord.Speech.PushToTalkKey);
+        Assert.Equal("Ctrl+Shift+Space", reloaded);
+        Assert.Equal(string.Empty, oldDefault);
+        Assert.Equal(string.Empty, unsafeKey);
+    }
+
+    /// <summary>
     ///     Test that properties missing from the file take their default values.
     /// </summary>
     [Fact]

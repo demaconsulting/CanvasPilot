@@ -41,7 +41,7 @@ or on `Preview`.
 `MainWindowShell` is the view model of the main window and the only item that talks to the user about projects and
 settings: it runs the File, Edit, Image, Tools, and Help commands and shows its dialogs through an `IDialogService` that
 the window implements. The Edit commands, Undo and Redo, act on the part of the window that has the focus (the message
-editor), and the shell starts and stops the chat panel's dictation while the talk key (F8) is held. `ProjectWorkspace`
+editor), and the shell starts and stops the chat panel's dictation while the talk key (F9) is held. `ProjectWorkspace`
 holds the project explorer, the preview pane, and, while a project is open, the chat column, with splitters whose widths
 are kept; `StatusBar` reports the shown picture at the bottom of the window, `ProviderPill` tells in the title bar which
 AI provider answers and whether it can be used, `Welcome` is the start screen while no project is open, and
@@ -68,7 +68,7 @@ downloaded, no microphone, an engine that will not start, or native speech files
 own explanation, never an exception. The native speech runtime arrives with the speech library's packages and is
 shipped beside the application and in the installer; `DictationService` checks that it is there before it loads an
 engine, because an engine started without it can crash the process, which no code can catch. The talk button of the chat
-panel calls the service, and so does the talk key, F8, through the main window.
+panel calls the service, and so does the talk key, F9, through the main window.
 
 `ImageRenderService` is the only item that draws files: it calls the CanvasNet viewer library in the background,
 confined to the project folder, and returns the pixels, notes, or a coded error. Each picture it returns also says
@@ -613,7 +613,7 @@ made in the project when the message is sent.
   and message, confirmation, and prompt dialogs) and, from the Help and Tools menus, the windows of the drawing
   knowledge and of the style kits, which do not block the main window.
 - *Format*: The window title is `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`.
-  Every menu item has a name and an automation identifier that are the same. The F8 key is the talk key: dictation
+  Every menu item has a name and an automation identifier that are the same. The F9 key is the talk key: dictation
   listens while it is held. The window opens at the size, place, and state that the user left (1440 by 900 at first,
   never smaller than 960 by 600), fitted to the screens, with the widths of the explorer and the chat column that the
   user chose; these are kept in the settings (see *Settings*).

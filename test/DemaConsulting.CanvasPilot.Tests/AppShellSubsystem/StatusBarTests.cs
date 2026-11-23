@@ -101,7 +101,7 @@ public sealed class StatusBarTests : IDisposable
         Assert.False(_bar.HasProject);
         Assert.Equal(string.Empty, _bar.FileName);
         Assert.Equal(string.Empty, _bar.SizeText);
-        Assert.Equal("F8", StatusBarViewModel.TalkKeyText);
+        Assert.Equal("F9", _bar.TalkKeyText);
     }
 
     /// <summary>

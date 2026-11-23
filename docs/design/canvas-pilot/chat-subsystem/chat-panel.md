@@ -53,7 +53,7 @@ The unit is made of these parts, all in the user interface layer:
   card is a raised surface with a radius of 14 and a strong border, which turns to the focus ring color with a soft
   glow while the editing view has the focus (the style `Border.composer:focus-within`). It holds the composer's editing
   view bound to the composer (at most 240 pixels high) and under it a row with the attach button (`ChatAttachButton`),
-  the talk button (`ChatHoldToTalkButton`, an icon button) with a key cap "F8", the hint "Enter to send"
+  the talk button (`ChatHoldToTalkButton`, an icon button) with a key cap "F9", the hint "Enter to send"
   (`ChatSendHint`), and the Send button (`ChatSendButton`, an icon button with the accent gradient, 36 by 32). Every
   button that shows only an icon has an `AutomationProperties.Name` and a tooltip; the name of the talk button is the
   bound `TalkText`, so that it follows the state. While `IsTalking` the talk button has the class `talking`, which

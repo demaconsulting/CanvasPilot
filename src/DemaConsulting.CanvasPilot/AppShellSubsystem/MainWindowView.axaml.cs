@@ -548,7 +548,7 @@ public sealed partial class MainWindowView : Window, IDialogService
     /// <param name="e">The event data.</param>
     private void OnKeyDownTunnel(object? sender, KeyEventArgs e)
     {
-        if (_shell is not { PushToTalk: not null } || e.Key != MainWindowShell.PushToTalkKey)
+        if (_shell is not { PushToTalk: not null } || !_shell.TalkKey.Binding.Matches(e.Key, e.KeyModifiers))
         {
             return;
         }
@@ -558,13 +558,14 @@ public sealed partial class MainWindowView : Window, IDialogService
     }
 
     /// <summary>
-    ///     Stops listening when the talk key goes up.
+    ///     Stops listening when the talk key goes up, or when any key of the chord does: letting go of Ctrl, Alt, or Shift
+    ///     of a chord ends the talking as well.
     /// </summary>
     /// <param name="sender">The window.</param>
     /// <param name="e">The event data.</param>
     private void OnKeyUpTunnel(object? sender, KeyEventArgs e)
     {
-        if (_shell is null || e.Key != MainWindowShell.PushToTalkKey)
+        if (_shell is null || !_shell.TalkKey.Binding.IsPartOf(e.Key))
         {
             return;
         }

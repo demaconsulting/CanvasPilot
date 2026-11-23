@@ -85,7 +85,7 @@ sections:
 
           - id: CanvasPilot-AppShell-PushToTalkKey
             title: >-
-              The AppShell subsystem shall let the user dictate into the message by holding the F8 key anywhere in the
+              The AppShell subsystem shall let the user dictate into the message by holding the F9 key anywhere in the
               main window: dictation starts when the key goes down, ignores the repeats of the key, and ends when the
               key is released, the window is closed, or the window is no longer active.
             justification: |

@@ -19,6 +19,8 @@
 // SOFTWARE.
 
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 
 namespace DemaConsulting.CanvasPilot.SpeechSubsystem;
 
@@ -34,5 +36,26 @@ public sealed partial class SpeechSettingsPageView : UserControl
     public SpeechSettingsPageView()
     {
         InitializeComponent();
+
+        // The box captures the key that is pressed in it, before the box itself would use the key to edit its text or to
+        // move the focus; the tunnel route is used so that Tab, Space, and the arrows reach the page model as well
+        PushToTalkKeyBox.AddHandler(KeyDownEvent, OnPushToTalkKeyDown, RoutingStrategies.Tunnel);
+    }
+
+    /// <summary>
+    ///     Gives the key that was pressed in the box to the page model, and keeps the key from doing what it normally does.
+    /// </summary>
+    /// <param name="sender">The box.</param>
+    /// <param name="e">The event data.</param>
+    private void OnPushToTalkKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not SpeechSettingsPageViewModel page)
+        {
+            return;
+        }
+
+        // A modifier alone is waited out; Esc cancels. Everything else is offered to the model, and the focus stays
+        page.TryCapturePushToTalk(e.Key, e.KeyModifiers);
+        e.Handled = true;
     }
 }

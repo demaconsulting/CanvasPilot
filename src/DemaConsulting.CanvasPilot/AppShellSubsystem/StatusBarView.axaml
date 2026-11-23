@@ -125,7 +125,7 @@
                   Padding="6,0">
             <TextBlock FontSize="{DynamicResource CpFontCaption}"
                        FontWeight="SemiBold"
-                       Text="{x:Static vm:StatusBarViewModel.TalkKeyText}" />
+                       Text="{Binding TalkKeyText}" />
           </Border>
           <TextBlock Foreground="{DynamicResource CpTextTertiary}" Text="to talk" />
         </StackPanel>

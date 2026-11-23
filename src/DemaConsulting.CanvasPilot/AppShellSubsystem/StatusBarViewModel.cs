@@ -21,6 +21,7 @@
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -63,9 +64,9 @@ public sealed class StatusBarViewModel : ObservableObject, IDisposable
     public const string ProjectSavedText = "Project saved";
 
     /// <summary>
-    ///     The name of the key that is held to talk, shown as a key cap in the hint.
+    ///     The talk key that is in effect, which the hint shows.
     /// </summary>
-    public static readonly string TalkKeyText = MainWindowShell.PushToTalkKey.ToString();
+    private readonly PushToTalkSetting _talkKey;
 
     /// <summary>
     ///     The workspace whose project and preview the bar follows.
@@ -81,14 +82,22 @@ public sealed class StatusBarViewModel : ObservableObject, IDisposable
     ///     Creates the status bar over a workspace. The bar does not own the workspace.
     /// </summary>
     /// <param name="workspace">The workspace whose project and preview the bar follows.</param>
-    public StatusBarViewModel(ProjectWorkspaceViewModel workspace)
+    /// <param name="talkKey">The talk key that the hint shows; <see langword="null" /> for the default key.</param>
+    public StatusBarViewModel(ProjectWorkspaceViewModel workspace, PushToTalkSetting? talkKey = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
 
         _workspace = workspace;
+        _talkKey = talkKey ?? PushToTalkSetting.Fixed();
         _workspace.PropertyChanged += OnWorkspacePropertyChanged;
+        _talkKey.PropertyChanged += OnTalkKeyChanged;
         FollowPreview();
     }
+
+    /// <summary>
+    ///     Gets the name of the key that is held to talk, shown as a key cap in the hint. It follows the setting.
+    /// </summary>
+    public string TalkKeyText => _talkKey.Text;
 
     /// <summary>
     ///     Gets the state of the picture that the bar reports.
@@ -192,10 +201,24 @@ public sealed class StatusBarViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _workspace.PropertyChanged -= OnWorkspacePropertyChanged;
+        _talkKey.PropertyChanged -= OnTalkKeyChanged;
         if (_preview is not null)
         {
             _preview.PropertyChanged -= OnPreviewPropertyChanged;
             _preview = null;
+        }
+    }
+
+    /// <summary>
+    ///     Says that the talk key changed.
+    /// </summary>
+    /// <param name="sender">The setting of the talk key.</param>
+    /// <param name="e">The change details.</param>
+    private void OnTalkKeyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PushToTalkSetting.Text))
+        {
+            OnPropertyChanged(nameof(TalkKeyText));
         }
     }
 

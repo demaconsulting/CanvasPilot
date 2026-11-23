@@ -20,7 +20,7 @@ platform with the Skia renderer, serialized with test parallelization disabled; 
 
 - All unit and UI tests pass with zero failures.
 - With no project open the bar is shown, 26 pixels high, idle, with the words "No project open", and without file, size,
-  and project facts; the talk key is `F8`.
+  and project facts; the talk key is `F9`.
 - With a project open and no file selected the bar is idle with "No picture selected", `HasProject` is true, the words
   "Project saved" are the saved text, and the change is announced.
 - Selecting a file gives the rendering state with "Rendering a.svg..." and the file name; a successful render gives the
@@ -35,7 +35,7 @@ platform with the Skia renderer, serialized with test parallelization disabled; 
 #### Test Scenarios
 
 **StatusBar_NoProject_IsIdleAndSaysNoProjectIsOpen**: A bar over a workspace with no project is idle with the summary
-"No project open", reports that no project is open, and has no file or size text; the key name is `F8`. This scenario is
+"No project open", reports that no project is open, and has no file or size text; the key name is `F9`. This scenario is
 tested by `StatusBar_NoProject_IsIdleAndSaysNoProjectIsOpen`.
 
 **StatusBar_ProjectOpenNoSelection_SaysNoPictureSelected**: The project is opened; the bar stays idle with the summary

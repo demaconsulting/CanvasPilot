@@ -77,13 +77,15 @@ sections:
               - id: CanvasPilot-StatusBar-ShowProjectHints
                 title: >-
                   The StatusBar shall show, while a project is open and not otherwise, the words "Project saved" and the hint
-                  that the F8 key is held to talk.
+                  that the talk key (F9 until the user chooses another) is held to talk, naming the key that is in effect.
                 justification: |
                   The user is told that their work is kept and how to speak a request without searching the menus. Neither
-                  statement means anything while no project is open, so neither is shown then.
+                  statement means anything while no project is open, so neither is shown then. The hint must name the key
+                  that really works, so it follows the choice on the Speech page.
                 tests:
                   - StatusBar_NoProject_IsIdleAndSaysNoProjectIsOpen
                   - StatusBar_ProjectOpenNoSelection_SaysNoPictureSelected
+                  - PushToTalkHints_StatusBarAndWelcome_FollowTheSettings
                   - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
 
               - id: CanvasPilot-StatusBar-AnnounceToScreenReader

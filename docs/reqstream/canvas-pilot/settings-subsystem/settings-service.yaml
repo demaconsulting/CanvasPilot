@@ -203,3 +203,14 @@ sections:
                 tests:
                   - SettingsService_SaveLoad_WindowAppearanceAndOpenedTimes_RoundTrips
                   - SettingsService_Load_RecentProjectOpened_KeepsOnlyListedProjects
+
+              - id: CanvasPilot-SettingsService-NormalizeTalkKey
+                title: >-
+                  The SettingsService shall keep the talk key of the speech settings as text, read a missing value, a value
+                  that is not a safe key, and the old default F8 as the default (stored as nothing, so that F9 is in effect),
+                  and write a safe key in its normal form such as Ctrl+Shift+Space.
+                justification: |
+                  F8 was never usable on many laptops, so a file that holds it must not keep the user without a talk key, and
+                  a file that was edited by hand must never give the window a key that takes away typing.
+                tests:
+                  - SettingsService_Load_PushToTalkKey_IsNormalizedAndUnsafeOrOldF8BecomesTheDefault

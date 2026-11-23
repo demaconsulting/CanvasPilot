@@ -45,7 +45,7 @@ Available now:
   (fit, 1:1, steps, and Ctrl+mouse wheel), and error codes, hints, and notes explained
 - **Export and share**: Export the picture as a PNG file, copy the image, or drag the picture into other applications
 - **Chat composer**: Press Enter to send and Shift+Enter for a new line, write a message by typing or by push-to-talk
-  dictation (hold F8), attach files by drag and drop, paste, or the paperclip, with folders and images as inline chips,
+  dictation (hold F9), attach files by drag and drop, paste, or the paperclip, with folders and images as inline chips,
   and undo and redo in fine-grained steps
 - **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows from a
   floating tool bar, numbered and with notes; the marks are embedded in the message with crops and the source elements

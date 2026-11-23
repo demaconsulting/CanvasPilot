@@ -71,6 +71,18 @@ sections:
             tests:
               - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
 
+          - id: CanvasPilot-Speech-ChooseTalkKey
+            title: >-
+              The Speech subsystem shall let the user choose the key or chord that is held to talk on the Speech page,
+              refuse keys that are unsafe to take over, and keep F9 as the default.
+            justification: |
+              The key that works depends on the keyboard and on the other tools that run on the computer, so the user must
+              be able to change it and the application must never take away a key that is needed for typing or owned by the
+              system.
+            children:
+              - CanvasPilot-SpeechSettingsPage-ChooseTalkKey
+              - CanvasPilot-SpeechSettingsPage-RefuseUnsafeTalkKeys
+
           - id: CanvasPilot-Speech-ToleratePoorMachines
             title: >-
               The Speech subsystem shall keep the settings dialog working, explain what is missing, and keep the

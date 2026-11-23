@@ -158,6 +158,13 @@ public sealed record SpeechSettings
     public string TtsModelId { get; init; } = string.Empty;
 
     /// <summary>
+    ///     Gets the key, or the chord of modifiers and a key, that is held to dictate a message, written as
+    ///     <c>F9</c> or <c>Ctrl+Shift+Space</c>. An empty string means the default (<c>F9</c>); a value that is not a safe
+    ///     binding (including the old default <c>F8</c>) is replaced by an empty string when the settings are loaded.
+    /// </summary>
+    public string PushToTalkKey { get; init; } = string.Empty;
+
+    /// <summary>
     ///     Gets the per-model parameter values: model identifier, then parameter identifier, then the value as an
     ///     invariant-culture string.
     /// </summary>

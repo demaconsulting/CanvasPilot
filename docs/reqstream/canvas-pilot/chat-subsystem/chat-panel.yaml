@@ -150,6 +150,7 @@ sections:
                   - ChatPanelView_HoldToTalk_PointerCaptureLost_EndsListening
                   - ChatPanelView_HoldToTalk_SpaceKeyHeldOnFocusedButton_ListensUntilReleased
                   - ChatPanelView_HoldToTalk_PanelRemovedWhileHeld_EndsListening
+                  - PushToTalkHints_ChatPanel_KeyCapTooltipAndTipFollowTheSetting
 
               - id: CanvasPilot-ChatPanel-ShowWhyDictationCannotWork
                 title: >-

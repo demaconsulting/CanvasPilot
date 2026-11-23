@@ -21,6 +21,7 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
@@ -106,9 +107,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public const string EmptyTranscriptText = "What would you like to draw?";
 
     /// <summary>
-    ///     The tip under the example prompts of the empty conversation.
+    ///     The format of the tip under the example prompts of the empty conversation; the argument is the talk key.
     /// </summary>
-    public const string EmptyTipText = "Drop a picture, or hold F8 and speak";
+    public const string EmptyTipFormat = "Drop a picture, or hold {0} and speak";
 
     /// <summary>
     ///     The prompts that the empty conversation offers; choosing one writes it in the message.
@@ -185,6 +186,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     The open project, which tells where its history is kept, or <see langword="null" /> for none.
     /// </summary>
     private readonly IProjectService? _projects;
+
+    /// <summary>
+    ///     The talk key that is in effect, which the hints show.
+    /// </summary>
+    private readonly PushToTalkSetting _talkKey;
 
     /// <summary>
     ///     The clock that dates the rows of a turn.
@@ -271,7 +277,8 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// <param name="clock">The clock and timers of the turns, or <see langword="null" /> for the system's.</param>
     /// <param name="history">Where the text of the conversation is kept on this computer, or <see langword="null" /> for nowhere: the transcript is then only in memory.</param>
     /// <param name="projects">The project service, which tells which project is open and so where its history is kept, or <see langword="null" /> for none: nothing is then saved or restored.</param>
-    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, the clock, the history store, and the project service is <see langword="null" />.</exception>
+    /// <param name="talkKey">The talk key that the hints show, or <see langword="null" /> for the default key.</param>
+    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, the clock, the history store, the project service, and the talk key is <see langword="null" />.</exception>
     public ChatPanelViewModel(
         ComposerViewModel composer,
         MarkRegistry marks,
@@ -282,7 +289,8 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         IAgentService? agent = null,
         TimeProvider? clock = null,
         IChatHistoryStore? history = null,
-        IProjectService? projects = null)
+        IProjectService? projects = null,
+        PushToTalkSetting? talkKey = null)
     {
         ArgumentNullException.ThrowIfNull(composer);
         ArgumentNullException.ThrowIfNull(marks);
@@ -296,6 +304,8 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _logger = logger;
         _history = history;
         _projects = projects;
+        _talkKey = talkKey ?? PushToTalkSetting.Fixed();
+        _talkKey.PropertyChanged += OnTalkKeyChanged;
         _clock = clock ?? TimeProvider.System;
         Transcript = [];
         _sink = new TranscriptSink(Transcript);
@@ -514,6 +524,22 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public bool IsTalking => _composer.IsDictating;
 
     /// <summary>
+    ///     Gets the name of the key that is held to talk, which the key cap of the composer shows. It follows the setting.
+    /// </summary>
+    public string TalkKeyText => _talkKey.Text;
+
+    /// <summary>
+    ///     Gets the tooltip of the talk button, which names the talk key as another way to talk.
+    /// </summary>
+    public string TalkToolTip =>
+        $"Hold this button, or hold {_talkKey.Text}, speak, and let go to add what you said to the message";
+
+    /// <summary>
+    ///     Gets the tip under the example prompts of the empty conversation, which names the talk key that is in effect.
+    /// </summary>
+    public string EmptyTipText => string.Format(CultureInfo.InvariantCulture, EmptyTipFormat, _talkKey.Text);
+
+    /// <summary>
     ///     Gets the label of the talk button, which says what the button is doing.
     /// </summary>
     public string TalkText => _composer.DictationState switch
@@ -668,12 +694,28 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     }
 
     /// <summary>
+    ///     Says that the hints that name the talk key changed when the talk key changed.
+    /// </summary>
+    /// <param name="sender">The setting of the talk key.</param>
+    /// <param name="e">The change details.</param>
+    private void OnTalkKeyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PushToTalkSetting.Text))
+        {
+            OnPropertyChanged(nameof(TalkKeyText));
+            OnPropertyChanged(nameof(TalkToolTip));
+            OnPropertyChanged(nameof(EmptyTipText));
+        }
+    }
+
+    /// <summary>
     ///     Stops following the composer and the annotation layer and releases the pictures of the transcript and the
     ///     draft's chips. It does not dispose the composer, the registry, or the layer.
     /// </summary>
     public void Dispose()
     {
         _disposed = true;
+        _talkKey.PropertyChanged -= OnTalkKeyChanged;
         _composer.PropertyChanged -= _composerPropertyChanged;
         _composer.MessageSent -= _messageSent;
         _composer.Changed -= _composerChanged;

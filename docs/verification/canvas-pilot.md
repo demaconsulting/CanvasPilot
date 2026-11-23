@@ -150,7 +150,7 @@ and data objects instead of the Windows ones), so what follows is unverified unt
 steps are in the verification of the unit or subsystem named at each check.
 
 1. *Real dictation.* On a machine with a microphone, install the MSI, download a speech-to-text model on the Speech
-   page, choose it and the microphone, open a project, and dictate with both the talk button and the F8 key: the words
+   page, choose it and the microphone, open a project, and dictate with both the talk button and the F9 key: the words
    show while the control is held, one dictated block is added at the caret on release, and one undo removes it. Also
    try the reasons: no model chosen, a model not downloaded, the microphone unplugged. (Verification of the `Speech` and
    `Chat` subsystems.)
@@ -354,7 +354,7 @@ steps are in the verification of the unit or subsystem named at each check.
     3. Zoom: Ctrl+wheel, Ctrl+0, Ctrl+1, Ctrl+plus, Ctrl+minus while the preview has the focus, and panning with the
        middle button; the tool keys V, R, E, F, and A choose a tool while the focus is in the preview and not in a text
        box.
-    4. The chat: Enter sends and Shift+Enter writes a line break; hold the talk button and the F8 key (the button turns
+    4. The chat: Enter sends and Shift+Enter writes a line break; hold the talk button and the F9 key (the button turns
        red and pulses); the Attach button opens the system file dialog; the header menu clears the history; the collapse
        button hides the column and the chip on the stage brings it back.
     5. A screen reader reads the names of the icon buttons, the status bar sentence, and the AI provider pill, and the

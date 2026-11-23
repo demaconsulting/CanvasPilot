@@ -131,7 +131,7 @@ name of the file, its size in pixels (for example `900 × 500 px`), its format, 
 "Rendering..." with a spinner, and when a file cannot be drawn it says "Render failed" with an error icon. With no
 project it says "No project open", and with a project and no file chosen it says "No picture selected". At the right,
 while a project is open, it shows the fixed text "Project saved", which does not check for unsaved changes, and
-reminds you to "Hold F8 to talk" (see *Dictating a Message*). The
+reminds you to "Hold F9 to talk" (see *Dictating a Message*). The
 status bar speaks its sentence to screen readers when it changes.
 
 ## Window Size and Layout
@@ -179,7 +179,7 @@ file no longer exists is removed from the list after a message. The welcome scre
 While no project is open, the window shows the welcome screen instead of the three panes. At the left it has the name
 and the tagline, the buttons **New project** and **Open project** (the same as **File > New Project...** and **File >
 Open Project...**, with Ctrl+N and Ctrl+O), and a short **How it works** in three steps: *Describe* what you need by
-typing or by holding F8 and speaking, *Mark* the picture to show what to change, and *Share* the result as a PNG or by
+typing or by holding F9 and speaking, *Mark* the picture to show what to change, and *Share* the result as a PNG or by
 copying it into email or a slide.
 
 ![The welcome screen of CanvasPilot in the dark theme. At the left are the name, the tagline "Describe a picture. Your
@@ -363,7 +363,7 @@ has:
   copilot is idle.
 - the **message box**, a rounded card in which you write the next message (see *Writing a Message*). Without an open
   project it cannot be edited. A status line below it says what is going on, for example what was left out of a drop.
-- under the message box, the **Attach files** button, the **Hold to talk** microphone button with the key cap F8, the
+- under the message box, the **Attach files** button, the **Hold to talk** microphone button with the key cap F9, the
   hint "Enter to send", and the **Send** button (an arrow). While the copilot works, three pulsing dots with the text
   "The copilot is working..." and a **Stop** button appear above the message box, and Send waits.
 
@@ -386,7 +386,7 @@ from an earlier session are shown a little paler under a divider that says "Earl
 ### The Example Prompts and the Suggestions
 
 An empty conversation shows four example prompts: *Draw our release flow*, *Chart downloads by month*, *Put both on one
-page*, and *Make it match my style kit*, and a tip, "Drop a picture, or hold F8 and speak". Choose one to write it into
+page*, and *Make it match my style kit*, and a tip, "Drop a picture, or hold F9 and speak". Choose one to write it into
 the message box at the caret, ready for you to change and send. Once there is a conversation and the copilot is idle,
 the suggested prompts *Add a legend*, *Make title larger*, and *Export as PNG* do the same. Nothing is sent until you
 send it.
@@ -421,7 +421,7 @@ See *Speech*.
 Then dictate:
 
 1. Click in the message box where the words are to go.
-2. Press and hold the **Hold to talk** microphone button, or hold the **F8** key while the CanvasPilot window is active.
+2. Press and hold the **Hold to talk** microphone button, or hold the **F9** key while the CanvasPilot window is active.
    The status bar and the key cap beside the button remind you of the key.
 3. Speak. The button turns red and pulses while you hold it, its name changes to "Starting... keep holding" and then
    "Listening... let go to finish", and the words that CanvasPilot has recognized so far appear above the message box
@@ -1185,7 +1185,7 @@ keys that CanvasPilot has, besides the usual keys of the system, are:
 | Anywhere | Ctrl+N, Ctrl+O, Ctrl+S | New project, open project, save project |
 | Message box | Enter, Shift+Enter | Send the message, start a new line |
 | Message box | Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z | Undo and redo |
-| Anywhere in the window | F8 (hold) | Talk, and let go to add the words to the message |
+| Anywhere in the window | F9 (hold) | Talk, and let go to add the words to the message |
 | Explorer | Up and down arrows | Move through the rows |
 | Explorer | Right and left arrows | Open and close a folder |
 | Explorer | F2, Delete | Rename and delete the selected picture |

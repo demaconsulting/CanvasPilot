@@ -175,7 +175,7 @@
                              LineHeight="{DynamicResource CpLineBody}"
                              Foreground="{DynamicResource CpTextSecondary}"
                              TextWrapping="Wrap"
-                             Text="Type a request, or hold F8 and speak it. The copilot draws the picture." />
+                             Text="{Binding DescribeStepText}" />
                 </StackPanel>
               </Border>
 

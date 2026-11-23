@@ -22,6 +22,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 using DemaConsulting.CanvasPilot.UtilitiesSubsystem;
 
 namespace DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -240,6 +241,7 @@ public sealed class SettingsService : ISettingsService
                 PlaybackDevice = speech.PlaybackDevice ?? string.Empty,
                 SttModelId = speech.SttModelId ?? string.Empty,
                 TtsModelId = speech.TtsModelId ?? string.Empty,
+                PushToTalkKey = PushToTalkBinding.Normalize(speech.PushToTalkKey),
                 ModelParameters = parameters,
             },
             Styles = styles with

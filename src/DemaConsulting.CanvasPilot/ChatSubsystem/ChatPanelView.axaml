@@ -267,7 +267,7 @@
                    TextWrapping="Wrap"
                    FontSize="{DynamicResource CpFontSmall}"
                    Foreground="{DynamicResource CpTextTertiary}"
-                   Text="{x:Static vm:ChatPanelViewModel.EmptyTipText}" />
+                   Text="{Binding EmptyTipText}" />
       </StackPanel>
     </Grid>
 
@@ -385,7 +385,7 @@
                   Theme="{DynamicResource IconButton}"
                   Classes.talking="{Binding IsTalking}"
                   IsEnabled="{Binding CanTalk}"
-                  ToolTip.Tip="Hold this button, speak, and let go to add what you said to the message">
+                  ToolTip.Tip="{Binding TalkToolTip}">
             <PathIcon Classes="icon" Data="{DynamicResource CpIconMic}" />
           </Button>
           <Border Grid.Column="2"
@@ -398,7 +398,7 @@
                   BorderBrush="{DynamicResource CpBorderStrong}">
             <TextBlock FontSize="{DynamicResource CpFontCaption}"
                        Foreground="{DynamicResource CpTextSecondary}"
-                       Text="F8" />
+                       Text="{Binding TalkKeyText}" />
           </Border>
 
           <TextBlock Name="SendHintText"

@@ -29,6 +29,7 @@ using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
@@ -47,11 +48,6 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     The application name shown in the window title.
     /// </summary>
     public const string ApplicationName = "CanvasPilot";
-
-    /// <summary>
-    ///     The key that is held to talk: while it is down the message is dictated.
-    /// </summary>
-    public const Key PushToTalkKey = Key.F8;
 
     /// <summary>
     ///     Creates and opens projects.
@@ -248,7 +244,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _folderLauncher = folderLauncher;
         _recentThumbnails = recentThumbnails is null ? null : new RecentThumbnailLoader(recentThumbnails, RunOnOwnerThread, logger);
         Workspace = workspace;
-        StatusBar = new StatusBarViewModel(workspace);
+        TalkKey = new PushToTalkSetting(settingsService);
+        StatusBar = new StatusBarViewModel(workspace, TalkKey);
         ImageExporter = imageExporter ?? new NullImageExporter();
         RecentProjects = new ReadOnlyObservableCollection<RecentProjectItem>(_recentItems);
         Welcome = new WelcomeViewModel(this);
@@ -293,6 +290,12 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Gets the status bar at the bottom of the window, which is always there and reports on the shown picture.
     /// </summary>
     public StatusBarViewModel StatusBar { get; }
+
+    /// <summary>
+    ///     Gets the talk key that is in effect, which follows the settings. The window listens for it, and the status bar,
+    ///     the welcome screen, and the chat panel show it; this is the one place that knows it.
+    /// </summary>
+    public PushToTalkSetting TalkKey { get; }
 
     /// <summary>
     ///     Gets the welcome screen, which is shown instead of the workspace while no project is open.
@@ -423,7 +426,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     public bool HasRecentProjects => _recentItems.Count > 0;
 
     /// <summary>
-    ///     Gets or sets what listens while <see cref="PushToTalkKey" /> is held, normally the chat panel, or null when
+    ///     Gets or sets what listens while the talk key (<see cref="TalkKey" />) is held, normally the chat panel, or null when
     ///     nothing does, in which case the key does nothing.
     /// </summary>
     public IPushToTalkTarget? PushToTalk { get; set; }
@@ -503,6 +506,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         }
 
         StatusBar.Dispose();
+        TalkKey.Dispose();
         ProviderPill?.Dispose();
         _settingsService.Changed -= OnSettingsChanged;
         Workspace.LayoutChanged -= OnWorkspaceLayoutChanged;

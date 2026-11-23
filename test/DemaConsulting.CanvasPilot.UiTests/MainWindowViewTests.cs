@@ -1237,7 +1237,7 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that holding F8 starts the push-to-talk target once, even when the key repeats, that releasing it stops the
+    ///     Test that holding F9 starts the push-to-talk target once, even when the key repeats, that releasing it stops the
     ///     target, and that other keys do nothing.
     /// </summary>
     [AvaloniaFact]
@@ -1249,14 +1249,14 @@ public sealed class MainWindowViewTests : IDisposable
         composition.Shell.PushToTalk = target;
         window.Show();
 
-        // Act: press F8 and let it repeat, press another key, release F8, and release it again
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
-        var heldBegins = target.Begins;
+        // Act: press F9 and let it repeat, press another key, release F9, and release it again
         window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        var heldBegins = target.Begins;
+        window.KeyPressQwerty(PhysicalKey.F7, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F7, RawInputModifiers.None);
         window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
-        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
-        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
 
         // Assert: one start while held, one stop at the release, and nothing for the other key
         Assert.Equal(1, heldBegins);
@@ -1268,7 +1268,42 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that F8 does nothing while the shell has no push-to-talk target.
+    ///     Test that the key the user chose on the Speech page is the talk key at once: the old key does nothing, the chord
+    ///     starts the target once however it repeats, and letting go of a modifier of the chord ends the talking.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_PushToTalkKey_ChosenChord_StartsOnTheChordAndStopsWhenAnyKeyOfItIsReleased()
+    {
+        // Arrange: a shown window, a target, and the chord chosen in the settings
+        var (composition, window) = CreateWindow();
+        var target = new RecordingTalkTarget();
+        composition.Shell.PushToTalk = target;
+        window.Show();
+        composition.Settings.Update(current => current with { Speech = current.Speech with { PushToTalkKey = "Ctrl+Shift+Space" } });
+
+        // Act: the old key, the key alone, then the chord with a repeat, the release of Ctrl, and a second release
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.None);
+        var beginsBefore = target.Begins;
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.Control | RawInputModifiers.Shift);
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.Control | RawInputModifiers.Shift);
+        var held = (target.Begins, composition.Shell.IsPushToTalkActive);
+        window.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
+        window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.Shift);
+
+        // Assert: the old key and the key alone did nothing, the chord started once, and the release of Ctrl stopped it once
+        Assert.Equal(0, beginsBefore);
+        Assert.Equal((1, true), held);
+        Assert.Equal(1, target.Ends);
+        Assert.False(composition.Shell.IsPushToTalkActive);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that F9 does nothing while the shell has no push-to-talk target.
     /// </summary>
     [AvaloniaFact]
     public void MainWindowView_PushToTalkKey_NoTarget_IsIgnored()
@@ -1278,10 +1313,10 @@ public sealed class MainWindowViewTests : IDisposable
         composition.Shell.PushToTalk = null;
         window.Show();
 
-        // Act: press and release F8
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        // Act: press and release F9
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
         var active = composition.Shell.IsPushToTalkActive;
-        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
 
         // Assert: nothing started
         Assert.False(active);
@@ -1300,7 +1335,7 @@ public sealed class MainWindowViewTests : IDisposable
         var target = new RecordingTalkTarget();
         composition.Shell.PushToTalk = target;
         window.Show();
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
 
         // Act: close the window
         window.Close();
@@ -1322,7 +1357,7 @@ public sealed class MainWindowViewTests : IDisposable
         composition.Shell.PushToTalk = target;
         window.Show();
         window.Activate();
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
 
         // Act: the platform tells the window that another window became the active one (the headless platform never does)
         var deactivated = (Action?)typeof(Avalonia.Platform.IWindowBaseImpl)
@@ -1333,7 +1368,7 @@ public sealed class MainWindowViewTests : IDisposable
 
         // Assert: the target was stopped once when the window was deactivated, and the release that follows changes nothing
         var endsAfterDeactivation = target.Ends;
-        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
         Assert.Equal(1, target.Begins);
         Assert.Equal(1, endsAfterDeactivation);
         Assert.Equal(1, target.Ends);

@@ -559,7 +559,8 @@ public sealed class ApplicationComposition : IDisposable
             logger,
             agent,
             history: chatHistory,
-            projects: projects);
+            projects: projects,
+            talkKey: shell.TalkKey);
 
         // The chat panel is the right-hand column of the workspace, which shows it while a project is open, and it is
         // what the talk key of the window listens for
