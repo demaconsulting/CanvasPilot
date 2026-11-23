@@ -115,8 +115,9 @@ internal static class AppShellUiHelpers
     /// <param name="root">The temporary root that holds the log, settings, and projects folders.</param>
     /// <param name="exporter">What the Image menu exports, or <see langword="null" /> for none.</param>
     /// <param name="application">The application whose theme the composition follows the settings for, or <see langword="null" />.</param>
+    /// <param name="styleFolder">The folder of the style kits of the user, or <see langword="null" /> for the <c>styles</c> folder of the root.</param>
     /// <returns>The composition.</returns>
-    public static ApplicationComposition Compose(string root, IImageExporter? exporter = null, Application? application = null)
+    public static ApplicationComposition Compose(string root, IImageExporter? exporter = null, Application? application = null, string? styleFolder = null)
     {
         var projects = Directory.CreateDirectory(Path.Combine(root, "projects")).FullName;
         var logger = new RollingFileLogger(Path.Combine(root, "logs"));
@@ -129,7 +130,7 @@ internal static class AppShellUiHelpers
             defaultProjectsFolder: projects,
             audioDevices: new FakeAudioDeviceService(),
             speechModels: new FakeSpeechModelService(),
-            styleUserFolder: Path.Combine(root, "styles"),
+            styleUserFolder: styleFolder ?? Path.Combine(root, "styles"),
             application: application);
     }
 

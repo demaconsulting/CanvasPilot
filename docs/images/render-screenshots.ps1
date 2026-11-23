@@ -3,16 +3,27 @@
     Draws the screenshots of the README and the user guide with the headless UI tests, or checks that they are current.
 
 .DESCRIPTION
-    The screenshots are pictures of the real application: the opt-in test class in
-    test/DemaConsulting.CanvasPilot.UiTests (trait Category=Screenshots) builds a demonstration project, shows the
-    real windows headless with Avalonia.Headless and Skia and the embedded Inter font, and saves each window as a
-    PNG. The tests skip themselves unless the environment variable CANVASPILOT_SCREENSHOT_DIR names an output
+    The screenshots are pictures of the real application: the opt-in test class ScreenshotTests in
+    test/DemaConsulting.CanvasPilot.UiTests (trait Category=Screenshots) builds a demonstration project in a temporary
+    folder, shows the real windows headless with Avalonia.Headless and Skia and the embedded Inter font, and saves each
+    window as a PNG. The tests skip themselves unless the environment variable CANVASPILOT_SCREENSHOT_DIR names an output
     folder, so the normal test run (build.ps1) never writes pictures. This script sets that variable and runs only
-    those tests.
+    those tests. It writes these pictures:
 
-    Without -Check it writes the pictures over the ones in docs/images. Review them, and commit the changed
-    pictures with the change to the application that made them differ. Pictures with a name that starts with
-    "smoke-" come from the smoke test of the tool itself and are never kept.
+      main-window.png        the main window, dark, in a conversation with a picture, two marks, and tool chips (1600 x 1000)
+      main-window-light.png  the same window in the light theme
+      welcome.png            the welcome screen with four recent projects and their small pictures (1600 x 1000)
+      style-kits.png         the Style Kits manager with the kits of the program and of the user (1180 x 1000)
+
+    The pictures do not depend on the computer: the content is made by the tests, the culture is US English, and the
+    fonts are embedded. The demonstration projects are made in C:\CanvasPilot (or the same place at the root of the
+    drive on another system) when that folder does not exist, so that the paths on the cards are neutral, and in a
+    temporary folder otherwise; everything is removed at the end. A drawing is repeatable except for the render time
+    that the status bar of the main window tells.
+
+    Without -Check it writes the pictures over the ones in docs/images. Review them (the whole window, the text, no
+    clipping), and commit the changed pictures with the change to the application that made them differ. Pictures with
+    a name that starts with "smoke-" come from the smoke test of the tool itself, which this script does not run.
 
     With -Check it draws the pictures into a temporary folder and compares each with the committed picture of the
     same name using "canvasnet compare ... --threshold rmse=2 --threshold diff-ratio=0.01". It changes nothing in
@@ -46,8 +57,8 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $project = 'test/DemaConsulting.CanvasPilot.UiTests'
 $committedFolder = Join-Path $repo 'docs/images'
 
-# Selects the screenshot tests, and when asked only those whose name contains the given text
-$filter = 'Category=Screenshots'
+# Selects the screenshot tests (not the smoke test of the tool itself), and when asked only those whose name contains the given text
+$filter = 'Category=Screenshots&FullyQualifiedName!~Smoke'
 if ($Only) { $filter += "&FullyQualifiedName~$Only" }
 
 # Runs the screenshot tests so that they write to the given folder
