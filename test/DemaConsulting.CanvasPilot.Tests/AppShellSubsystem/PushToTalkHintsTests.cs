@@ -42,7 +42,7 @@ public sealed class PushToTalkHintsTests : IDisposable
     /// <summary>
     ///     Temporary root removed on disposal.
     /// </summary>
-    private readonly string _root = Directory.CreateTempSubdirectory("canvaspilot-talkkey-tests-").FullName;
+    private readonly string _root = Directory.CreateTempSubdirectory("canvaspilot-talk-key-tests-").FullName;
 
     /// <summary>
     ///     What is disposed with the fixture.

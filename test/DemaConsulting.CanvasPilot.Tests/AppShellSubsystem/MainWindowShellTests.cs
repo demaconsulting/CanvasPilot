@@ -1052,7 +1052,7 @@ public sealed class MainWindowShellTests : IDisposable
     public async Task MainWindowShell_OpenLogFolder_ShowsTheFolderOfTheLogger()
     {
         // Arrange: a shell with a logger on a temporary folder and a launcher that records what it was asked
-        var root = Directory.CreateTempSubdirectory("canvaspilot-logfolder-").FullName;
+        var root = Directory.CreateTempSubdirectory("canvaspilot-log-folder-").FullName;
         try
         {
             var logger = new RollingFileLogger(Path.Combine(root, "logs"));

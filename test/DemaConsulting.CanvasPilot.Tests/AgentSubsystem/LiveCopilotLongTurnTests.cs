@@ -818,7 +818,7 @@ public sealed class LiveCopilotLongTurnTests
                 {
                     var kind = row.Kind;
                     Recorder.Add("ui", $"row:{kind}", string.Empty);
-                    row.PropertyChanged += (_, _) => Recorder.Add("ui", $"rowchange:{kind}", string.Empty);
+                    row.PropertyChanged += (_, _) => Recorder.Add("ui", $"row-change:{kind}", string.Empty);
                 }
             };
         }
