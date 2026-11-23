@@ -88,8 +88,8 @@
 
       <!-- State -->
       <SolidColorBrush x:Key="CpSuccess" Color="#047857" />
-      <SolidColorBrush x:Key="CpWarning" Color="#a84e08" />
-      <SolidColorBrush x:Key="CpWarningTint" Color="#1fa84e08" />
+      <SolidColorBrush x:Key="CpWarning" Color="#9a4607" />
+      <SolidColorBrush x:Key="CpWarningTint" Color="#1f9a4607" />
       <SolidColorBrush x:Key="CpDanger" Color="#b91c1c" />
       <SolidColorBrush x:Key="CpDangerTint" Color="#1fb91c1c" />
 

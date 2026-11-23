@@ -124,6 +124,7 @@
     <TreeView Grid.Row="1"
               Name="ExplorerTree"
               AutomationProperties.AutomationId="ProjectExplorerList"
+              AutomationProperties.Name="Project files"
               Background="Transparent"
               Padding="8,4"
               ItemsSource="{Binding Roots}"

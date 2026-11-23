@@ -117,8 +117,21 @@ public sealed class ApplicationComposition : IDisposable
         Agent = agent;
         _ownedServices = ownedServices;
 
-        // The message is written in the open project: follow it, and start with the one that is open now
-        _projectChanged = (_, _) => Composer.SetProject(Projects.Current?.FolderPath);
+        // The message is written in the open project: follow it, and start with the one that is open now. A project that is
+        // opened may be announced from a worker thread, and the composer drives the editor, so it is told on the thread of the
+        // user interface that created the composition.
+        var context = SynchronizationContext.Current;
+        _projectChanged = (_, _) =>
+        {
+            if (context is null || SynchronizationContext.Current == context)
+            {
+                Composer.SetProject(Projects.Current?.FolderPath);
+            }
+            else
+            {
+                context.Post(_ => Composer.SetProject(Projects.Current?.FolderPath), null);
+            }
+        };
         Projects.CurrentChanged += _projectChanged;
         Composer.SetProject(Projects.Current?.FolderPath);
     }
