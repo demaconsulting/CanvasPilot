@@ -143,7 +143,7 @@ public sealed class LiveCopilotLongTurnTests
             await rig.AssertReadyAsync();
 
             // Act: the request is sent, and a minute into the turn (a timer of the test) the user presses Stop
-            var started = rig.BeginTurn(MarketingRequest);
+            var started = await rig.BeginTurnAsync(MarketingRequest);
             await Task.Delay(TimeSpan.FromSeconds(60), token);
             var stillBusy = rig.Chat.IsCopilotBusy;
             report.Append(rig.RuntimeEvents("Runtime events just before Stop"));
@@ -251,6 +251,7 @@ public sealed class LiveCopilotLongTurnTests
             Assert.Equal(0, rig.LogCount("Session recovered:"));
             Assert.Equal(0, rig.LogCount("Conversation released:"));
             Assert.Equal(0, rig.LogCount("its session is dropped"));
+            Assert.Equal(2, rig.LogCount("outcome=Completed cancelSource=None"));
             Assert.Equal(1, rig.StarterRuntimes);
         }
         finally
@@ -612,16 +613,16 @@ public sealed class LiveCopilotLongTurnTests
         }
 
         /// <summary>
-        ///     Sends a message the way the user does and returns when the turn has started, not when it has ended.
+        ///     Sends a message the way the user does and returns when the message was sent and the turn has started, not when it has ended.
         /// </summary>
         /// <param name="text">The message.</param>
         /// <returns>The time on the clock of the recorder when the message was sent.</returns>
-        internal long BeginTurn(string text)
+        internal async Task<long> BeginTurnAsync(string text)
         {
             Composition.Composer.InsertTyped(text);
             var started = Recorder.Elapsed;
             Recorder.Add("test", "send", string.Empty);
-            _ = Chat.SendCommand.ExecuteAsync(null);
+            await Chat.SendCommand.ExecuteAsync(null);
             return started;
         }
 
@@ -634,7 +635,7 @@ public sealed class LiveCopilotLongTurnTests
         /// <returns>When the turn started and ended and what was counted in between.</returns>
         internal async Task<LiveWindow> RunTurnAsync(string text, TimeSpan limit, CancellationToken token)
         {
-            var started = BeginTurn(text);
+            var started = await BeginTurnAsync(text);
             await Chat.WaitForTurnAsync().WaitAsync(limit, token);
             var ended = Recorder.Elapsed;
             return new LiveWindow(started, ended, Recorder.Summarize(started, ended));
@@ -672,7 +673,7 @@ public sealed class LiveCopilotLongTurnTests
         {
             var sum = window.Sum;
             var text = new StringBuilder();
-            text.AppendLine($"-- {label}: {(window.EndMilliseconds - window.StartMilliseconds) / 1000.0:F1} s wall ({window.StartMilliseconds}..{window.EndMilliseconds} ms)");
+            text.AppendLine($"-- {label}: {(window.EndMilliseconds - window.StartMilliseconds) / 1000.0:F1} s wall ({window.StartMilliseconds}..{window.EndMilliseconds} ms); sign-in {LiveCopilotTurnTests.DescribeSignIn(_starter.SignIn)}");
             text.AppendLine($"   Observations by kind: {string.Join(", ", sum.Counts.Select(pair => $"{pair.Key}={pair.Value}"))}");
             text.AppendLine($"   Status silent for at most {sum.MaxGapMilliseconds} ms (without the elapsed-time ticks: {sum.MaxGapWithoutTicksMilliseconds} ms)");
             text.AppendLine($"   Provider updates seen by the service: first after {sum.FirstProviderMilliseconds} ms, at most {sum.MaxProviderGapMilliseconds} ms between two");

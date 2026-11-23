@@ -257,6 +257,40 @@ public sealed class AgentServiceStopTests
     }
 
     /// <summary>
+    ///     Test that a turn that completed is not treated as one that was interrupted when its consumer stops reading at the
+    ///     completion, as the chat does: the cancel source is none, and a failure of the next turn before it says anything is
+    ///     shown at once instead of being recovered on a new conversation.
+    /// </summary>
+    [Fact]
+    public async Task AgentService_CompletedTurnReadOnlyToItsCompletion_IsNotInterruptedAndTheNextFailureIsShown()
+    {
+        // Arrange: a model that answers once and then loses the connection
+        var token = TestContext.Current.CancellationToken;
+        var client = new ProgrammableChatClient((number, _) => number == 1
+            ? ProgrammableChatClient.Say("answer")
+            : ProgrammableChatClient.Fail(new HttpRequestException("The connection was closed.")));
+        using var rig = new AgentServiceRig(client);
+
+        // Act: the first turn is read only up to its completion, and then the next turn is run
+        await foreach (var item in rig.Service.RunTurnAsync(Request("One"), token))
+        {
+            if (item is AgentEvent.Completed)
+            {
+                break;
+            }
+        }
+
+        await AgentServiceRig.WaitUntilAsync(() => rig.ReadLog().Contains("Turn ended: turn=1", StringComparison.Ordinal), token);
+        var next = await AgentServiceRig.CollectAsync(rig.Service.RunTurnAsync(Request("Two"), token), token);
+
+        // Assert: the completed turn was not canceled by its consumer, and the failure was shown and not recovered
+        Assert.Contains("Turn ended: turn=1 outcome=Completed cancelSource=None", rig.ReadLog(), StringComparison.Ordinal);
+        Assert.Equal(AgentFailureKind.ConnectionLost, Assert.IsType<AgentEvent.Failed>(Assert.Single(next)).Kind);
+        Assert.DoesNotContain("Session recovered", rig.ReadLog(), StringComparison.Ordinal);
+        Assert.Equal(2, client.Requests.Count);
+    }
+
+    /// <summary>
     ///     Test that the source of a cancellation that did not come from the caller is logged: a reset and a change of the
     ///     project end the running turn with their own source, and a turn that the caller stops is the user's.
     /// </summary>

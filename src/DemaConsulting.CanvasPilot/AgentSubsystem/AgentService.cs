@@ -585,6 +585,13 @@ public sealed class AgentService : IAgentService
                     }
                 }
 
+                // Nothing follows the completion, so a consumer that stops reading there has read the whole turn: it is not
+                // a turn that the consumer canceled, and the conversation is not marked as interrupted
+                if (mapped is AgentEvent.Completed)
+                {
+                    drained = true;
+                }
+
                 stats.Events++;
                 stats.Outcome = mapped switch
                 {
