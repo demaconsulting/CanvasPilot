@@ -12,7 +12,7 @@
 
       main-window.png        the main window, dark, in a conversation with a picture, two marks, and tool chips (1600 x 1000)
       main-window-light.png  the same window in the light theme
-      main-window-robot.png  the main window with the real marketing picture that the copilot drew (a six-axis robot arm and a monkey), its tool rows, and the cost of the turn (1600 x 1000)
+      main-window-example.png  the main window with a real picture that the copilot drew from one request (a continuous-compliance pipeline overview), its tool rows, and the cost of the turn (1600 x 1000)
       welcome.png            the welcome screen with four recent projects and their small pictures (1600 x 1000)
       style-kits.png         the Style Kits manager with the kits of the program and of the user (1180 x 1000)
 

@@ -180,22 +180,23 @@ public sealed class ScreenshotTests : IDisposable
     }
 
     /// <summary>
-    ///     Draws the main window with the picture that the copilot made in a real session, a marketing image of a robot arm
-    ///     and a monkey: the picture on the stage, the explorer that lists it, and the short conversation that made it with the
-    ///     tool rows and the line that says what the turn cost. It writes the dark picture that the README shows first.
+    ///     Draws the main window with the picture that the copilot made in a real session, a one-slide overview of a
+    ///     continuous-compliance pipeline: the picture on the stage, the explorer that lists it, and the short conversation that
+    ///     made it with the tool rows and the line that says what the turn cost. It writes the dark picture that the README
+    ///     shows first.
     /// </summary>
     /// <returns>A task that completes when the picture is written.</returns>
     [AvaloniaFact]
     [Trait("Category", ScreenshotSupport.Category)]
-    public async Task Screenshot_MainWindow_RobotMarketingImageWithTurnCost()
+    public async Task Screenshot_MainWindow_CopilotExampleWithTurnCost()
     {
         // Arrange: the requested folder (skips the test when none was requested), the user's style kits, and the application
         var folder = ScreenshotSupport.RequireFolder();
         ScreenshotDemo.WriteUserKits(Path.Combine(_root, "styles"));
         var composition = Compose();
         await composition.StyleStartupRefresh;
-        _owned.Add(await ScreenshotDemo.ShowReadyProviderAsync(composition, ScreenshotDemo.RobotModelName));
-        var project = await ScreenshotDemo.CreateProjectAsync(_projectsFolder.Value, ScreenshotDemo.RobotProjectName, ScreenshotDemo.WriteRobotProject);
+        _owned.Add(await ScreenshotDemo.ShowReadyProviderAsync(composition, ScreenshotDemo.ExampleModelName));
+        var project = await ScreenshotDemo.CreateProjectAsync(_projectsFolder.Value, ScreenshotDemo.ExampleProjectName, ScreenshotDemo.WriteExampleProject);
         var window = new MainWindowView(composition.Shell);
         window.Show();
 
@@ -204,15 +205,15 @@ public sealed class ScreenshotTests : IDisposable
         await composition.Projects.SetActiveStyleKitAsync("dema", TestContext.Current.CancellationToken);
         await ScreenshotDemo.FixSavedTimeAsync(composition, project, TestContext.Current.CancellationToken);
         var explorer = composition.Shell.Workspace.Explorer;
-        explorer.SelectFile(Path.Combine(project.FolderPath, ScreenshotDemo.RobotPicture));
+        explorer.SelectFile(Path.Combine(project.FolderPath, ScreenshotDemo.ExamplePicture));
         await composition.Preview.RenderCompletion;
-        ScreenshotDemo.FillRobotTranscript(composition.Chat, project.FolderPath);
+        ScreenshotDemo.FillExampleTranscript(composition.Chat, project.FolderPath);
         window.GetVisualDescendants().OfType<ComposerSubsystem.ComposerEditorView>().First().FocusEditor();
         await SettleAsync(() => AllNodes(explorer.Roots).Where(node => node.IsPreviewable).All(node => node.HasThumbnail));
         ScreenshotDemo.FixRenderTime(composition);
 
         // Assert: the picture was written
-        var path = ScreenshotSupport.Capture(window, folder, "main-window-robot.png", WindowWidth, WindowHeight, ThemeVariant.Dark);
+        var path = ScreenshotSupport.Capture(window, folder, "main-window-example.png", WindowWidth, WindowHeight, ThemeVariant.Dark);
         window.Close();
         Assert.True(File.Exists(path));
     }

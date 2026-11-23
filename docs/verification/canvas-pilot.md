@@ -461,6 +461,31 @@ word.
   that the choice reaches the session and the runtime accepts it, not that the model answered with a window above the
   standard one (10.3k tokens of input is far below both).
 
+**(e) The picture of the README screenshot (documentation-image provenance).** 2026-11-23, the same machine, account,
+CLI, library, and SDK, with an opt-in generator that was used once and is not kept in the repository: it ran the
+composed application over an empty project `Demo` with `claude-opus-5.5` at `high` effort and recorded the rows of the
+transcript, the reply, and the usage line. The request was one message: "Create a one-slide overview (16:9, 1600×900) of
+a continuous-compliance pipeline for a regulated software team: code commit → build and test → requirements trace →
+review evidence → release documents (PDF), with a short title, one-line subtitle, clean icons per stage, and a small
+legend of the tools (ReqStream, ReviewMark, BuildMark, SonarMark). Professional, corporate look."
+
+- One turn, **157.7 s**, outcome `Completed`, no error notice, no follow-up needed: the rendered picture
+  (`compliance-pipeline.svg`, 9,664 bytes, 1600 by 900) was viewed and had no overlap, clipping, text overflow, or
+  misaligned icon (the two tool tags of the second card sit closer to its edges than the other cards' tags, which is a
+  style nit, not a defect).
+- The transcript had 5 assistant rows (4 short narrations and the final answer) and 10 tool rows, whose titles were:
+  "Read the style guidance", "Looked up CanvasNet help" three times, "Created compliance-pipeline.svg", "Rendered
+  compliance-pipeline.svg" (2.5 s), "Read compliance-pipeline.svg", "Checked the style", "Replaced
+  compliance-pipeline.svg", and "Rendered compliance-pipeline.svg" (0.3 s).
+- The service saw 137 provider updates (105 text, 10 calls, 10 results, 6 usage, 6 other) and logged
+  `events=84 merged=50`, `firstEventMs=13576`, and `maxGapMs=56408`; the runtime recorded 92 events over 156.4 s with a
+  longest gap of 88.3 s. The longest gap between changes of the status that the user sees was 2.0 s.
+- The caption said "134.1k in, 15.5k out, 5k reasoning, model x15 premium, 2:37", and the runtime counted 15 premium
+  requests. The screenshot `docs/images/main-window-example.png` shows this picture, these rows, and this line; its
+  request and rows are the real ones, its answer is a shortened form of the real answer (which also said that the
+  project had no style kit). The SVG is kept as the data `ScreenshotData/compliance-pipeline.svg` of the `UiTests`
+  project.
+
 **Findings.**
 
 - **A Claude model buffers its answer on this runtime.** It is silent for 45 to 125 s and then sends everything in a

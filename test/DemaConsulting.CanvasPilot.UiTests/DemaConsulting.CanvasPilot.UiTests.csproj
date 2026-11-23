@@ -29,7 +29,7 @@
 
   <!-- The picture that the copilot drew for the README screenshot of the main window: project content, shown by the opt-in screenshot tests -->
   <ItemGroup>
-    <EmbeddedResource Include="ScreenshotData\crazy-monkey-robot.svg" LogicalName="ScreenshotData.crazy-monkey-robot.svg" />
+    <EmbeddedResource Include="ScreenshotData\compliance-pipeline.svg" LogicalName="ScreenshotData.compliance-pipeline.svg" />
   </ItemGroup>
 
   <!-- Makes the test projects run one after the other when `dotnet test` starts their hosts together -->

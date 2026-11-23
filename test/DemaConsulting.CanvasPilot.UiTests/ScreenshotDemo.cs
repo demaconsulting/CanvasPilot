@@ -59,20 +59,29 @@ internal static class ScreenshotDemo
     public const string MainPicture = "overview.svg";
 
     /// <summary>
-    ///     The name of the project of the robot screenshot.
+    ///     The name of the project of the example screenshot.
     /// </summary>
-    public const string RobotProjectName = "Crazy Monkey";
+    public const string ExampleProjectName = "Continuous Compliance";
 
     /// <summary>
-    ///     The name of the model that the provider pill shows in the robot screenshot.
+    ///     The name of the model that the provider pill shows in the example screenshot.
     /// </summary>
-    public const string RobotModelName = "claude-opus-5.5";
+    public const string ExampleModelName = "claude-opus-5.5";
 
     /// <summary>
-    ///     The marketing picture of the robot project, which the copilot drew: a six-axis robot arm that files papers, with a
-    ///     cartoon monkey and a headline.
+    ///     The picture of the example project, which the copilot drew in a real session from one request: a one-slide overview
+    ///     of a continuous-compliance pipeline.
     /// </summary>
-    public const string RobotPicture = "crazy-monkey-robot.svg";
+    public const string ExamplePicture = "compliance-pipeline.svg";
+
+    /// <summary>
+    ///     The request of the user in the example screenshot, the same words that were sent to the real copilot.
+    /// </summary>
+    public const string ExampleRequest =
+        "Create a one-slide overview (16:9, 1600×900) of a continuous-compliance pipeline for a regulated software team: "
+        + "code commit → build and test → requirements trace → review evidence → release documents (PDF), with a short title, "
+        + "one-line subtitle, clean icons per stage, and a small legend of the tools (ReqStream, ReviewMark, BuildMark, SonarMark). "
+        + "Professional, corporate look.";
 
     /// <summary>
     ///     The time that the status bar of the main windows tells for the save of the project file, as a local wall-clock time
@@ -159,15 +168,15 @@ internal static class ScreenshotDemo
     }
 
     /// <summary>
-    ///     Writes the file of the robot project: the marketing picture that the copilot drew, read from the resources of the
-    ///     test assembly, where it is kept as the data of the screenshot.
+    ///     Writes the file of the example project: the picture that the copilot drew, read from the resources of the test
+    ///     assembly, where it is kept as the data of the screenshot.
     /// </summary>
     /// <param name="folder">The project folder.</param>
-    public static void WriteRobotProject(string folder)
+    public static void WriteExampleProject(string folder)
     {
-        using var resource = typeof(ScreenshotDemo).Assembly.GetManifestResourceStream("ScreenshotData." + RobotPicture)
-            ?? throw new InvalidOperationException($"The screenshot data {RobotPicture} is not in the test assembly.");
-        using var file = File.Create(Path.Combine(folder, RobotPicture));
+        using var resource = typeof(ScreenshotDemo).Assembly.GetManifestResourceStream("ScreenshotData." + ExamplePicture)
+            ?? throw new InvalidOperationException($"The screenshot data {ExamplePicture} is not in the test assembly.");
+        using var file = File.Create(Path.Combine(folder, ExamplePicture));
         resource.CopyTo(file);
     }
 
@@ -258,35 +267,40 @@ internal static class ScreenshotDemo
     }
 
     /// <summary>
-    ///     Puts the conversation of the robot screenshot into the transcript of the chat: one request for a marketing picture,
-    ///     the tools that the copilot used to make it, its short answer, and the line under the answer that says what the turn
-    ///     cost, made as the program makes it, from the figures that a provider reports.
+    ///     Puts the conversation of the example screenshot into the transcript of the chat, as the real session showed it: one
+    ///     request, the ten tools that the copilot used (with the titles and times that the rows showed), its short answer, and
+    ///     the line under the answer that says what the turn cost, made as the program makes it, from the figures that the
+    ///     provider reported (134,094 tokens in, 15,512 out, 5,032 reasoning, 15 premium requests, 2 min 37 s).
     /// </summary>
     /// <param name="chat">The chat panel.</param>
     /// <param name="projectFolder">The folder of the project.</param>
-    public static void FillRobotTranscript(ChatPanelViewModel chat, string projectFolder)
+    public static void FillExampleTranscript(ChatPanelViewModel chat, string projectFolder)
     {
         var clock = new ManualClock();
 
-        chat.Transcript.Add(UserRow(
-            "Make a flashy marketing image: a six-axis industrial robot arm filing papers, with a cartoon monkey icon, a bold headline and two lines of blurb",
-            DateTime.Today.AddHours(14).AddMinutes(12),
-            projectFolder));
-        chat.Transcript.Add(ToolRow("style_get", string.Empty, clock, TimeSpan.Zero));
+        chat.Transcript.Add(UserRow(ExampleRequest, DateTime.Today.AddHours(14).AddMinutes(12), projectFolder));
+        chat.Transcript.Add(ToolRow("style_get", string.Empty, clock, TimeSpan.FromMilliseconds(600)));
+        chat.Transcript.Add(ToolRow("canvasnet_help", string.Empty, clock, TimeSpan.FromMilliseconds(600)));
+        chat.Transcript.Add(ToolRow("canvasnet_help", string.Empty, clock, TimeSpan.FromMilliseconds(600)));
         chat.Transcript.Add(ToolRow("canvasnet_help", string.Empty, clock, TimeSpan.Zero));
-        var written = ToolRow("project_write", RobotPicture, clock, TimeSpan.Zero);
-        written.ReportFile(ToolActivityText.Written(RobotPicture, replaced: false));
+        var written = ToolRow("project_write", ExamplePicture, clock, TimeSpan.Zero);
+        written.ReportFile(ToolActivityText.Written(ExamplePicture, replaced: false));
         chat.Transcript.Add(written);
-        chat.Transcript.Add(ToolRow("render_image", RobotPicture, clock, TimeSpan.Zero));
+        chat.Transcript.Add(ToolRow("render_image", ExamplePicture, clock, TimeSpan.FromMilliseconds(2500)));
+        chat.Transcript.Add(ToolRow("project_read", ExamplePicture, clock, TimeSpan.Zero));
         chat.Transcript.Add(ToolRow("style_check", string.Empty, clock, TimeSpan.Zero));
+        var replaced = ToolRow("project_write", ExamplePicture, clock, TimeSpan.Zero);
+        replaced.ReportFile(ToolActivityText.Written(ExamplePicture, replaced: true));
+        chat.Transcript.Add(replaced);
+        chat.Transcript.Add(ToolRow("render_image", ExamplePicture, clock, TimeSpan.FromMilliseconds(300)));
 
         var reply = new AssistantReplyViewModel(
-            "I made crazy-monkey-robot.svg at 1200 x 900: a six-axis robot arm files papers into a cabinet, with a cartoon monkey badge "
-            + "above the headline \"Filing is now monkey business\" and two lines of blurb. Mark anything you want changed.",
+            "I made compliance-pipeline.svg (1600 × 900): five stage cards with icons, a title, a loop line, and the tool "
+            + "legend. Mark anything you want changed.",
             AssistantReplyState.Completed);
         var usage = new TurnUsage();
-        usage.Add(new AgentEvent.Usage(41_800, 6_300, Multiplier: 15, Model: RobotModelName));
-        reply.SetUsageCaption(usage.Format(TimeSpan.FromSeconds(98), stopped: false));
+        usage.Add(new AgentEvent.Usage(134_094, 15_512, ReasoningTokens: 5_032, Multiplier: 15, Model: ExampleModelName));
+        reply.SetUsageCaption(usage.Format(TimeSpan.FromSeconds(157), stopped: false));
         chat.Transcript.Add(reply);
     }
 

@@ -21,11 +21,12 @@ standalone picture for email, presentations, and other media. There is no Markdo
 The workflow runs from a project folder to a picture you can export, copy, or drag into another program. When the
 picture is not right, you mark the problems on it or ask for changes, and go around again.
 
-![The main window of CanvasPilot in the dark theme, open on the project Crazy Monkey: the explorer lists
-crazy-monkey-robot.svg; on the stage is the picture the copilot made from one request, a marketing image of a six-axis
-robot arm filing papers under a cartoon monkey badge, with the headline "Filing is now monkey business"; and the
-conversation at the right shows the request, the tool rows of the copilot, its short answer, and a line with the tokens,
-the premium multiplier, and the time of the turn][main-window-robot]
+![The main window of CanvasPilot in the dark theme, open on the project Continuous Compliance: the explorer lists
+compliance-pipeline.svg; on the stage is the picture the copilot made from one request, a one-slide overview of a
+continuous-compliance pipeline with five stage cards (code commit, build and test, requirements trace, review evidence,
+release documents) and a legend of four tools; and the conversation at the right shows the request, the tool rows of
+the copilot, its short answer, and a line with the tokens, the premium multiplier, and the time of the
+turn][main-window-example]
 
 ![Workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in files,
 the AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the PNG; a
@@ -129,7 +130,7 @@ Copyright (c) DEMA Consulting. Licensed under the MIT License. See [LICENSE][lin
 <!-- Image References -->
 [hero]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/hero.png
 [workflow]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/workflow.png
-[main-window-robot]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/main-window-robot.png
+[main-window-example]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/main-window-example.png
 [welcome]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/welcome.png
 
 <!-- Badge References -->
