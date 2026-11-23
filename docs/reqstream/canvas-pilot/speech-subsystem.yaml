@@ -82,6 +82,10 @@ sections:
             children:
               - CanvasPilot-SpeechSettingsPage-ChooseTalkKey
               - CanvasPilot-SpeechSettingsPage-RefuseUnsafeTalkKeys
+              - CanvasPilot-PushToTalkBinding-RefuseUnsafeKeys
+              - CanvasPilot-PushToTalkBinding-WriteAndReadKeys
+              - CanvasPilot-PushToTalkBinding-MatchTheChord
+              - CanvasPilot-PushToTalkBinding-FollowTheSettings
 
           - id: CanvasPilot-Speech-ToleratePoorMachines
             title: >-

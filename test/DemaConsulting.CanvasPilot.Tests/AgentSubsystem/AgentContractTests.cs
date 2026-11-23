@@ -86,6 +86,19 @@ public sealed class AgentContractTests
     }
 
     /// <summary>
+    ///     Test that the events of progress hold what the contract says: no empty ids, no negative counts.
+    /// </summary>
+    [Fact]
+    public void AgentEvent_ProgressEvents_ValidateTheirArguments()
+    {
+        // Act and assert
+        Assert.Throws<ArgumentException>(() => new AgentEvent.ToolProgress(string.Empty, "project_write", 1, null));
+        Assert.Throws<ArgumentException>(() => new AgentEvent.ToolProgress("call-1", string.Empty, 1, null));
+        Assert.Equal(0, new AgentEvent.ToolProgress("call-1", "project_write", -5, "  ").ArgumentBytes);
+        Assert.Null(new AgentEvent.ToolProgress("call-1", "project_write", 1, "  ").Path);
+    }
+
+    /// <summary>
     ///     Test that events compare by value, so that a consumer can assert on a stream.
     /// </summary>
     [Fact]

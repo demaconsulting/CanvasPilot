@@ -1,0 +1,57 @@
+---
+# Software Unit Requirements for the FollowUpSuggestions Unit
+#
+# The FollowUpSuggestions unit decides which example prompts the chat panel offers: ways to start while the project has no
+# drawing, ways to refine once it has one, the export only while a picture is shown, and none while the copilot works. It
+# also finds out whether a project folder holds a drawing. It writes nothing and calls nothing; the chat panel shows what
+# it plans.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Chat Subsystem Requirements
+        sections:
+          - title: FollowUpSuggestions Requirements
+            requirements:
+              - id: CanvasPilot-FollowUpSuggestions-PlanStarterPrompts
+                title: >-
+                  The FollowUpSuggestions shall offer, while the project has no drawing, ways to start one (three prompts
+                  that ask for a flowchart, a title card, and a chart) and nothing that refines or exports a drawing.
+                justification: |
+                  A project with no drawing has nothing to change or to export, so the prompts that make sense there are
+                  the ones that ask for a first drawing.
+                tests:
+                  - FollowUpSuggestions_Plan_FollowsDrawingPictureAndBusy
+
+              - id: CanvasPilot-FollowUpSuggestions-PlanRefinements
+                title: >-
+                  The FollowUpSuggestions shall offer, once the project has a drawing, ways to refine it (a larger title, a
+                  legend, the style kit of the user) and no ways to start another, and shall add the export of the picture
+                  only while a picture is shown.
+                justification: |
+                  Someone who has a drawing wants to change it, and an export of a picture that is not shown would have
+                  nothing to export.
+                tests:
+                  - FollowUpSuggestions_Plan_FollowsDrawingPictureAndBusy
+
+              - id: CanvasPilot-FollowUpSuggestions-OfferNothingWhileBusy
+                title: >-
+                  The FollowUpSuggestions shall offer no prompt while the copilot works on a message.
+                justification: |
+                  A prompt that is chosen while the copilot works could not be sent, and the user's eye should stay on the
+                  progress of the turn.
+                tests:
+                  - FollowUpSuggestions_Plan_FollowsDrawingPictureAndBusy
+
+              - id: CanvasPilot-FollowUpSuggestions-FindDrawingInProject
+                title: >-
+                  The FollowUpSuggestions shall decide that a project folder holds a drawing when a file that the project
+                  explorer lists as an image source is at its top or in a folder a few levels inside it, and shall leave out
+                  the folders of the attachments and of the style kits at the top, the hidden folders, folders deeper than a
+                  few levels, and a folder that cannot be read.
+                justification: |
+                  A project that was made earlier, or by hand, already has drawings, and the prompts should follow what the
+                  folder holds. A picture that was only attached is not a drawing of the project, and a search that wandered
+                  into a large or hidden folder would be slow and wrong.
+                tests:
+                  - ProjectDrawingProbe_HasDrawing_FindsDrawingsAndLeavesOutWhatIsNotTheirs

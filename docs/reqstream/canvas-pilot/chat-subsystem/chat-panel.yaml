@@ -386,7 +386,6 @@ sections:
                 tests:
                   - ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation
                   - ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce
-                  - FollowUpSuggestions_Plan_FollowsDrawingPictureAndBusy
                   - ChatPanelViewModel_EmptyProject_OffersStarterPrompts
                   - ChatPanelViewModel_TurnWritesDrawing_SuggestionsHideWhileBusyThenBecomeRefinements
                   - ChatPanelViewModel_TurnWritesNotes_StillOffersStarterPrompts

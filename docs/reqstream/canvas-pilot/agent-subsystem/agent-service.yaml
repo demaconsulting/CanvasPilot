@@ -199,3 +199,17 @@ sections:
                   - AgentService_Logging_ProviderSession_HasIdsRunKindsEventsFileAndReleaseReason
                   - AgentService_Logging_CanceledTurn_NamesTheSourceAndTheEventsFile
                   - AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly
+
+              - id: CanvasPilot-AgentService-KeepCompletedTurnComplete
+                title: >-
+                  The AgentService shall record a turn whose answer ended with its completion as completed with no cancel
+                  source, also when the caller stopped reading at the completion event, shall not mark the conversation as
+                  interrupted for it, and shall therefore show the failure of a later turn that fails before it says
+                  anything instead of replacing the conversation and running that turn again.
+                justification: |
+                  The chat stops reading at the completion of a turn. A service that took that for a cancellation recorded
+                  every finished turn as interrupted, and then hid a real connection failure of the next message behind a
+                  silent replacement of the conversation that sent the history again. A turn that has ended with its
+                  answer has nothing left to cancel.
+                tests:
+                  - AgentService_CompletedTurnReadOnlyToItsCompletion_IsNotInterruptedAndTheNextFailureIsShown

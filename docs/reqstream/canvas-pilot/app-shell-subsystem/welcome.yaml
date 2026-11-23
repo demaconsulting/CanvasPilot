@@ -152,3 +152,13 @@ sections:
                 tests:
                   - WelcomeViewModel_ProviderBanner_FollowsTheCheckOfTheProvider
                   - WelcomeView_ProviderNotUsable_ShowsNoticeWhoseButtonOpensSettings
+
+              - id: CanvasPilot-Welcome-NameTheTalkKey
+                title: >-
+                  The Welcome shall name, in the first step of how the application works, the key that is held to talk (F9
+                  until the user chooses another), and shall follow a change of the key.
+                justification: |
+                  The first screen is where a new user learns how to speak a request, and a key that is named wrongly is
+                  worse than none, so the sentence follows the setting.
+                tests:
+                  - PushToTalkHints_StatusBarAndWelcome_FollowTheSettings

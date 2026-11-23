@@ -347,6 +347,143 @@ sections:
           - CanvasPilot-Composer-HoldSendWhileCopilotWorks
           - CanvasPilot-Chat-StopTheCopilotTurn
 
+      - id: CanvasPilot-System-ShowCopilotProgress
+        title: >-
+          The application shall show, while the AI copilot works on a message, what the copilot is doing and how long the
+          turn has lasted, with the tools that ran as rows and the file that is being written on one row with its size so
+          far when the provider reports it, and a plain hint when nothing was heard for a long time, and shall show only what
+          the provider really reports.
+        tags: [system]
+        justification: |
+          A turn with a large drawing takes minutes, and a window that says nothing looks dead, so the user cannot decide
+          whether to wait or to stop. Some models send a drawing only when it is whole, so the time that has passed is the
+          one thing that is true for every model, and nothing is shown that the provider did not report.
+        children:
+          - CanvasPilot-Agent-ReportLiveProgress
+          - CanvasPilot-Chat-ShowLiveStatus
+        tests:
+          - CanvasPilot_ShowCopilotProgress_TurnThatWaits_ShowsWhatTheCopilotDoesTheElapsedTimeAndTheToolThatRan
+
+      - id: CanvasPilot-System-StopCopilotSafely
+        title: >-
+          The application shall let the user stop the AI copilot at any point of a turn, including in the middle of a tool
+          call, show at once that the stop was heard, end the turn without waiting for a provider that does not react, and
+          leave the conversation so that the next message is answered without the user starting over.
+        tags: [system]
+        justification: |
+          A user stops a turn that is slow or on a wrong path and then writes the next message. A stop that hangs the
+          window, or that leaves the conversation unusable, makes the application worse than closing and opening it again.
+        children:
+          - CanvasPilot-Agent-KeepConversationUsableAfterStop
+          - CanvasPilot-Chat-ShowStopping
+        tests:
+          - CanvasPilot_StopCopilotSafely_StopInTheMiddleOfAToolCall_NextMessageIsAnsweredOnTheSameConversation
+
+      - id: CanvasPilot-System-KeepCompletedTurnCompleted
+        title: >-
+          The application shall treat a turn that ended with its answer as completed and not as stopped, so that a failure of
+          the next message is shown to the user in the conversation and is not hidden by a silent replacement of the
+          conversation.
+        tags: [system]
+        justification: |
+          A failure that is hidden is a failure that the user cannot report or work around. Only a turn that was really
+          interrupted may have its next failure recovered, once and visibly.
+        children:
+          - CanvasPilot-Agent-TellCompletedTurnFromStoppedTurn
+        tests:
+          - CanvasPilot_KeepCompletedTurnCompleted_NextMessageFails_FailureIsShownAndNothingIsReplaced
+
+      - id: CanvasPilot-System-DiagnoseCopilotTurns
+        title: >-
+          The application shall record for every turn of the AI copilot a log that says which turn ran on which model, how
+          long it took, what each tool call did, who ended it, and what it used, without any word of the messages, the
+          answers, or the files, and shall let the user open the folder of the log files from the Help menu.
+        tags: [system]
+        justification: |
+          A turn of minutes that ends in a failure or a stop must be diagnosable from the log alone, and the log is a file
+          that people attach to a bug report. The facts are the evidence; the words belong to the user, and the folder of
+          the log is not one that a user can be expected to know.
+        children:
+          - CanvasPilot-Agent-LogTurns
+          - CanvasPilot-AppShell-OpenLogFolder
+        tests:
+          - CanvasPilot_DiagnoseCopilotTurns_OpenLogFolder_ShowsTheFolderThatHoldsTheLogOfTheTurns
+          - CanvasPilot_DiagnoseCopilotTurns_TurnWithWords_LogHoldsTheLifecycleAndNotTheWords
+
+      - id: CanvasPilot-System-ShowCopilotCost
+        title: >-
+          The application shall show what a turn of the AI copilot used (the tokens, the multiplier of the model, and the
+          time, with a note that a stopped turn may still count), and only what the provider reported, and shall warn where
+          the reasoning level is chosen that a high level on a large model is slow and costly.
+        tags: [system]
+        justification: |
+          A model such as Claude Opus counts many premium requests for one message, stopped or not, and a high reasoning
+          level can take minutes for one drawing. The user can decide only if the cost is visible, where the choice is made
+          and after the turn, without being nagged during it.
+        children:
+          - CanvasPilot-Agent-ReportTurnUsage
+          - CanvasPilot-Chat-ShowTurnUsage
+          - CanvasPilot-Settings-WarnAboutCostlyEffort
+        tests:
+          - CanvasPilot_ShowCopilotCost_TurnWithReportedUsage_CaptionUnderTheLastReplyHasOnlyWhatWasReported
+
+      - id: CanvasPilot-System-KeepWindowButtonsClear
+        title: >-
+          The application shall offer no full-screen mode and shall keep the buttons that the system draws at the edge of the
+          window clear of its menu, title, and pills, so that the window can always be minimized, maximized, restored, and
+          closed.
+        tags: [system]
+        justification: |
+          A window in full screen has no title bar and no buttons, and a title bar that lies under the buttons of the system
+          hides them. A user who has lost the buttons has lost the window.
+        children:
+          - CanvasPilot-AppShell-KeepWindowButtonsClear
+        tests:
+          - MainWindowView_TitleBar_PillEndsClearOfTheWindowButtons
+          - MainWindowView_TitleBarDecorations_AskForNoFullScreenButton
+
+      - id: CanvasPilot-System-ChooseTalkKey
+        title: >-
+          The application shall let the user choose the key, or the chord of Ctrl, Alt, or Shift and a key, that is held to
+          talk, with F9 as the default, shall refuse a key that would take away typing or that the system owns, shall keep the
+          choice between runs, and shall name the key that is in effect wherever it tells the user how to talk.
+        tags: [system]
+        justification: |
+          No key is free on every keyboard: the first default, F8, is swallowed by the function keys of many laptops, and
+          other keys belong to the system or to other tools. The user must be able to choose a key that works for them
+          without editing a file, and a hint that names a key that does not work is worse than none.
+        children:
+          - CanvasPilot-Speech-ChooseTalkKey
+          - CanvasPilot-Settings-RememberTalkKey
+        tests:
+          - CanvasPilot_ChooseTalkKey_DefaultAndChosenKey_EveryHintNamesTheKeyInUse
+
+      - id: CanvasPilot-System-SuggestNextPrompts
+        title: >-
+          The application shall offer example prompts that fit what the project has: ways to start while it has no drawing,
+          ways to refine once it has one, the export only while a picture is shown, and none while the AI copilot works.
+        tags: [system]
+        justification: |
+          A prompt that does not fit, such as asking for a legend in a project with no drawing, teaches the user that the
+          suggestions mean nothing, and a prompt that is chosen while the copilot works could not be sent.
+        children:
+          - CanvasPilot-Chat-GuideNewConversation
+        tests:
+          - CanvasPilot_SuggestNextPrompts_ProjectWithoutAndWithADrawing_PromptsFollowWhatTheProjectHas
+
+      - id: CanvasPilot-System-ShowHonestStatus
+        title: >-
+          The application shall say in its status bar only what is true: that the project file was saved, and when, only
+          once it has been saved, and never a claim that the work is saved that it cannot back.
+        tags: [system]
+        justification: |
+          A status that claims more than the application knows trains the user to ignore it, and a claim that work is saved
+          can cost the user that work.
+        children:
+          - CanvasPilot-AppShell-ReportSaveHonestly
+        tests:
+          - CanvasPilot_ShowHonestStatus_ProjectSaved_StatusBarSaysWhenTheProjectFileWasSaved
+
       - id: CanvasPilot-System-UndoRedoMessage
         title: >-
           The application shall let the user undo and redo changes to the message being composed one action at a time,
@@ -406,7 +543,6 @@ sections:
         children:
           - CanvasPilot-Speech-DictateWhileHeld
           - CanvasPilot-Speech-ExplainDictationUnavailable
-          - CanvasPilot-Speech-ChooseTalkKey
           - CanvasPilot-Composer-AddDictatedWordsAsOneBlock
           - CanvasPilot-Chat-HoldToTalk
           - CanvasPilot-AppShell-PushToTalkKey
@@ -602,7 +738,6 @@ sections:
           - CanvasPilot-Agent-MakeTheAgentOfTheProvider
           - CanvasPilot-Agent-ConverseInProjectConversations
           - CanvasPilot-Chat-ShowCopilotConversation
-          - CanvasPilot-Chat-GuideNewConversation
           - CanvasPilot-Chat-HideConversation
           - CanvasPilot-AppShell-ComposeAiCopilot
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
