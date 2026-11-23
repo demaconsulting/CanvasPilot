@@ -31,41 +31,42 @@ namespace DemaConsulting.CanvasPilot.UiTests;
 public sealed class AiProviderSettingsPageViewTests
 {
     /// <summary>
-    ///     Test that the Ollama endpoint is enabled only while Ollama is selected, and the Copilot tool path only
-    ///     while GitHub Copilot is selected.
+    ///     Test that the entries of the provider that is not selected are hidden, not just disabled: the Ollama endpoint
+    ///     only while Ollama is selected, and the Copilot tool path only while GitHub Copilot is selected.
     /// </summary>
     [AvaloniaFact]
-    public void AiProviderSettingsPageView_SelectProvider_EnablesMatchingEntry()
+    public void AiProviderSettingsPageView_SelectProvider_ShowsMatchingEntry()
     {
         // Arrange: a shown page with default settings, which select GitHub Copilot
         var (window, viewModel) = ShowPage();
         var endpoint = SettingsUiHelpers.Find<TextBox>(window, "AiOllamaEndpointTextBox");
         var cliPath = SettingsUiHelpers.Find<TextBox>(window, "AiCopilotCliPathTextBox");
         var providers = SettingsUiHelpers.Find<ComboBox>(window, "AiProviderComboBox");
-        var copilotOnlyEndpointEnabled = endpoint.IsEnabled;
-        var copilotOnlyCliPathEnabled = cliPath.IsEnabled;
+        var copilotOnlyEndpointVisible = endpoint.IsVisible;
+        var copilotOnlyCliPathVisible = cliPath.IsVisible;
 
         // Act: choose Ollama in the combo box
         providers.SelectedIndex = 1;
 
         // Assert: Copilot showed only its path entry, and Ollama shows only its endpoint entry
-        Assert.False(copilotOnlyEndpointEnabled);
-        Assert.True(copilotOnlyCliPathEnabled);
+        Assert.False(copilotOnlyEndpointVisible);
+        Assert.True(copilotOnlyCliPathVisible);
         Assert.True(viewModel.IsOllamaSelected);
+        Assert.True(endpoint.IsVisible);
         Assert.True(endpoint.IsEnabled);
-        Assert.False(cliPath.IsEnabled);
+        Assert.False(cliPath.IsVisible);
 
         window.Close();
     }
 
     /// <summary>
-    ///     Test that an invalid context window shows its error message, and a valid one hides it.
+    ///     Test that an invalid context window shows its error message, and a valid one hides it, while Ollama is selected.
     /// </summary>
     [AvaloniaFact]
     public void AiProviderSettingsPageView_InvalidContextWindow_ShowsError()
     {
-        // Arrange: a shown page
-        var (window, viewModel) = ShowPage();
+        // Arrange: a shown page with Ollama selected
+        var (window, viewModel) = ShowPage(AiProviderKind.Ollama);
         var box = SettingsUiHelpers.Find<TextBox>(window, "AiContextWindowTextBox");
         var error = SettingsUiHelpers.Find<TextBlock>(window, "AiContextWindowError");
         var initiallyVisible = error.IsVisible;
@@ -312,9 +313,8 @@ public sealed class AiProviderSettingsPageViewTests
     }
 
     /// <summary>
-    ///     Test that the context window is shown as an Ollama setting: the label says so, a note replaces the warning while
-    ///     GitHub Copilot is selected, and a window below the recommended minimum shows a warning under the field while
-    ///     Ollama is selected.
+    ///     Test that the context window is shown as an Ollama setting: it is hidden while GitHub Copilot is selected, and
+    ///     while Ollama is selected a window below the recommended minimum shows a warning under the field.
     /// </summary>
     [AvaloniaFact]
     public void AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum()
@@ -322,30 +322,164 @@ public sealed class AiProviderSettingsPageViewTests
         // Arrange: a shown page with GitHub Copilot selected
         var (window, viewModel) = ShowPage();
         var warning = SettingsUiHelpers.Find<TextBlock>(window, "AiContextWindowWarning");
-        var note = SettingsUiHelpers.Find<TextBlock>(window, "AiContextWindowNote");
         var box = SettingsUiHelpers.Find<TextBox>(window, "AiContextWindowTextBox");
-        var labelShown = window.GetVisualDescendants().OfType<TextBlock>().Any(block => block.Text == "Context window (tokens, Ollama only)");
-        var copilotNoteVisible = note.IsVisible;
-        var copilotNoteText = note.Text;
+        var label = SettingsUiHelpers.Find<TextBlock>(window, "AiContextWindowLabel");
+        var hiddenForCopilot = !box.IsVisible && !label.IsVisible;
 
         // Act: choose Ollama, type a window just below the minimum, then the minimum
         SettingsUiHelpers.Find<ComboBox>(window, "AiProviderComboBox").SelectedIndex = 1;
-        var ollamaNoteVisible = note.IsVisible;
+        var shownForOllama = box.IsVisible && label.IsVisible;
         box.Text = "16383";
         var warnedBelow = warning.IsVisible;
         var warningText = warning.Text;
         box.Text = "16384";
 
-        // Assert: Copilot got the note and no warning, Ollama got the warning below the minimum and no note, and the
-        // warning is gone at the minimum and never made the page invalid
-        Assert.True(labelShown);
-        Assert.True(copilotNoteVisible);
-        Assert.Contains("Ollama only", copilotNoteText, StringComparison.Ordinal);
-        Assert.False(ollamaNoteVisible);
+        // Assert: Copilot hid the entry, Ollama shows it with the warning below the minimum, and the warning is gone at
+        // the minimum and never made the page invalid
+        Assert.True(hiddenForCopilot);
+        Assert.Equal("Context window (tokens)", label.Text);
+        Assert.True(shownForOllama);
         Assert.True(warnedBelow);
         Assert.Contains("16,384", warningText, StringComparison.Ordinal);
         Assert.False(warning.IsVisible);
         Assert.True(viewModel.IsValid);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     The automation ids of the entries, labels, notes, and messages that belong to Ollama only.
+    /// </summary>
+    private static readonly string[] OllamaOnlyIds =
+    [
+        "AiContextWindowLabel",
+        "AiContextWindowTextBox",
+        "AiContextWindowError",
+        "AiContextWindowWarning",
+        "AiOllamaEndpointLabel",
+        "AiOllamaEndpointTextBox",
+        "AiOllamaEndpointError",
+    ];
+
+    /// <summary>
+    ///     The automation ids of the entries, labels, notes, and messages that belong to GitHub Copilot only.
+    /// </summary>
+    private static readonly string[] CopilotOnlyIds =
+    [
+        "AiCopilotCliPathLabel",
+        "AiCopilotCliPathTextBox",
+        "AiCopilotCliPathError",
+        "AiCopilotCliPathNote",
+        "AiEffortCostWarning",
+    ];
+
+    /// <summary>
+    ///     Test that with GitHub Copilot selected every entry, label, note, and message of Ollama is hidden, even when the
+    ///     hidden entries hold values that would produce errors and warnings, and that every Copilot entry is shown.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AiProviderSettingsPageView_CopilotSelected_ShowsOnlyCopilotControls()
+    {
+        // Arrange: a page with GitHub Copilot selected, a large model at a high level, and junk in the Ollama entries
+        var large = Model("opus", efforts: ["low", "high"]) with { BillingMultiplier = 15, Category = "powerful" };
+        var viewModel = new AiProviderSettingsPageViewModel(null, new FixedModels(large), TimeSpan.Zero);
+        viewModel.Load(new AppSettings
+        {
+            AiProvider = new AiProviderSettings { ModelName = "opus", ReasoningEffort = "high", ContextWindowTokens = 4096 },
+        });
+        await viewModel.ModelListLoaded;
+        viewModel.OllamaEndpoint = "junk";
+        viewModel.ContextWindowText = "junk";
+        var window = new Window { Width = 520, Height = 1300, Content = new AiProviderSettingsPageView { DataContext = viewModel } };
+        window.Show();
+
+        // Act: look at every Ollama control and every Copilot control
+        var ollama = OllamaOnlyIds.Select(id => (Id: id, Control: SettingsUiHelpers.Find<Control>(window, id))).ToList();
+        var copilot = CopilotOnlyIds.Select(id => (Id: id, Control: SettingsUiHelpers.Find<Control>(window, id))).ToList();
+
+        // Assert: no Ollama control is visible or effectively visible, every Copilot control is, and the page is valid
+        Assert.True(viewModel.IsCopilotSelected);
+        Assert.All(ollama, item => Assert.False(item.Control.IsVisible, $"{item.Id} is visible while GitHub Copilot is selected."));
+        Assert.All(ollama, item => Assert.False(item.Control.IsEffectivelyVisible, $"{item.Id} is effectively visible while GitHub Copilot is selected."));
+        Assert.All(copilot.Where(item => item.Id != "AiCopilotCliPathError"), item => Assert.True(item.Control.IsVisible, $"{item.Id} is hidden while GitHub Copilot is selected."));
+        Assert.All(copilot.Where(item => item.Id != "AiCopilotCliPathError"), item => Assert.True(item.Control.IsEffectivelyVisible, $"{item.Id} is not effectively visible while GitHub Copilot is selected."));
+        Assert.False(copilot.Single(item => item.Id == "AiCopilotCliPathError").Control.IsVisible);
+        Assert.True(viewModel.IsValid);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that with Ollama selected every entry, label, note, and message of GitHub Copilot is hidden, even while the
+    ///     Copilot entries hold values that would produce errors and a warning, and that every Ollama entry is shown.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AiProviderSettingsPageView_OllamaSelected_ShowsOnlyOllamaControls()
+    {
+        // Arrange: a page with GitHub Copilot selected whose model list has a large model at a high level, and a path that
+        // is not valid
+        var large = Model("opus", efforts: ["low", "high"]) with { BillingMultiplier = 15, Category = "powerful" };
+        var viewModel = new AiProviderSettingsPageViewModel(null, new FixedModels(large), TimeSpan.Zero);
+        viewModel.Load(new AppSettings
+        {
+            AiProvider = new AiProviderSettings { ModelName = "opus", ReasoningEffort = "high" },
+        });
+        await viewModel.ModelListLoaded;
+        viewModel.CopilotCliPath = "bad\0path";
+        var window = new Window { Width = 520, Height = 1300, Content = new AiProviderSettingsPageView { DataContext = viewModel } };
+        window.Show();
+        var costWarningForCopilot = SettingsUiHelpers.Find<TextBlock>(window, "AiEffortCostWarning").IsEffectivelyVisible;
+        var cliErrorForCopilot = SettingsUiHelpers.Find<TextBlock>(window, "AiCopilotCliPathError").IsEffectivelyVisible;
+
+        // Act: choose Ollama, which asks the same source for models, and let the list load; type a bad endpoint
+        viewModel.SelectedProvider = viewModel.Providers[1];
+        await viewModel.ModelListLoaded;
+        viewModel.OllamaEndpoint = "junk";
+        var ollama = OllamaOnlyIds.Select(id => (Id: id, Control: SettingsUiHelpers.Find<Control>(window, id))).ToList();
+        var copilot = CopilotOnlyIds.Select(id => (Id: id, Control: SettingsUiHelpers.Find<Control>(window, id))).ToList();
+
+        // Assert: the Copilot page had the warning and the error, and with Ollama none of the Copilot controls is visible or
+        // effectively visible, while every Ollama control that has something to show is
+        Assert.True(costWarningForCopilot);
+        Assert.True(cliErrorForCopilot);
+        Assert.True(viewModel.IsOllamaSelected);
+        Assert.All(copilot, item => Assert.False(item.Control.IsVisible, $"{item.Id} is visible while Ollama is selected."));
+        Assert.All(copilot, item => Assert.False(item.Control.IsEffectivelyVisible, $"{item.Id} is effectively visible while Ollama is selected."));
+        var always = new[] { "AiContextWindowLabel", "AiContextWindowTextBox", "AiOllamaEndpointLabel", "AiOllamaEndpointTextBox", "AiOllamaEndpointError" };
+        Assert.All(ollama.Where(item => always.Contains(item.Id)), item => Assert.True(item.Control.IsEffectivelyVisible, $"{item.Id} is hidden while Ollama is selected."));
+        Assert.False(ollama.Single(item => item.Id == "AiContextWindowError").Control.IsVisible);
+        Assert.False(viewModel.IsValid);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that no text of the page names the other provider's entry while a provider is selected: the labels of the
+    ///     hidden entries are not shown at all.
+    /// </summary>
+    [AvaloniaFact]
+    public void AiProviderSettingsPageView_ProviderSelected_ShowsNoLabelOfTheOtherProvidersEntries()
+    {
+        // Arrange: a shown page with GitHub Copilot selected
+        var (window, viewModel) = ShowPage();
+        string[] VisibleTexts() =>
+        [
+            .. window.GetVisualDescendants().OfType<TextBlock>().Where(block => block.IsEffectivelyVisible).Select(block => block.Text ?? string.Empty),
+        ];
+        var forCopilot = VisibleTexts();
+
+        // Act: choose Ollama
+        viewModel.SelectedProvider = viewModel.Providers[1];
+        var forOllama = VisibleTexts();
+
+        // Assert: each provider shows its own labels and none of the other's
+        Assert.Contains("GitHub Copilot command-line tool path", forCopilot);
+        Assert.DoesNotContain("Ollama endpoint", forCopilot);
+        Assert.DoesNotContain(forCopilot, text => text.StartsWith("Context window", StringComparison.Ordinal));
+        Assert.Contains("Ollama endpoint", forOllama);
+        Assert.Contains("Context window (tokens)", forOllama);
+        Assert.DoesNotContain("GitHub Copilot command-line tool path", forOllama);
+        Assert.DoesNotContain(forOllama, text => text.Contains("copilot.exe", StringComparison.Ordinal));
 
         window.Close();
     }
@@ -457,11 +591,12 @@ public sealed class AiProviderSettingsPageViewTests
     /// <summary>
     ///     Shows an AI provider page over default settings in a plain window.
     /// </summary>
+    /// <param name="provider">The provider that the settings select.</param>
     /// <returns>The window and the page's view model.</returns>
-    private static (Window Window, AiProviderSettingsPageViewModel ViewModel) ShowPage()
+    private static (Window Window, AiProviderSettingsPageViewModel ViewModel) ShowPage(AiProviderKind provider = AiProviderKind.GitHubCopilot)
     {
         var viewModel = new AiProviderSettingsPageViewModel();
-        viewModel.Load(new AppSettings());
+        viewModel.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = provider } });
         var window = new Window { Content = new AiProviderSettingsPageView { DataContext = viewModel } };
         window.Show();
         return (window, viewModel);

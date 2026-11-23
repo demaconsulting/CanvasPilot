@@ -1198,7 +1198,11 @@ shows what is wrong in a red banner at the foot of the dialog, with an icon and 
 
 The AI Provider page chooses the provider that the copilot uses and how to reach it (see *Setting Up an AI Provider* for
 what to install and the messages of the check). Changes take effect when you choose OK or Apply, and a conversation
-that is running is started again with the new choices when you send the next message.
+that is running is started again with the new choices when you send the next message. The page shows only the entries
+that belong to the provider that you chose: the options of the other provider are hidden, not just dimmed, so that
+nothing on the page asks for a value that would not be used.
+
+Shown for both providers:
 
 - **Provider**: GitHub Copilot or Ollama. Ollama is supported and covered by automated tests (live checks are pending);
   GitHub Copilot runs through the Copilot CLI that you installed.
@@ -1208,21 +1212,30 @@ that is running is started again with the new choices when you send the next mes
 - **Model name**: The id of the model, filled by your choice in the list and also typed. For Ollama a model is required
   and the name is the one that `ollama list` shows. For GitHub Copilot, leave it empty to use the provider's default
   model. A name that is not in the list is tried as you typed it.
-- **Context window (tokens, Ollama only)**: The size of the context window that is requested for every Ollama request,
-  from 512 to 2,000,000 tokens (default 32,768). A value that you or an earlier version stored is kept as it is. Below
-  16,384 tokens the page shows a warning, not an error, that says that drawings with pictures and tools may fail. A
-  window that is larger than the model was trained for is refused when the conversation starts. The
-  setting does not apply to GitHub Copilot, which sets its own; the page says so when Copilot is chosen.
 - **Reasoning level**: The levels that the chosen model offers, or "Provider default". It is enabled only while the
   model offers levels (see *The Reasoning Level*). A level that an earlier version stored under the old setting is read
   as it was (low, medium, or high), and is kept until you choose another.
-- **Ollama endpoint**: The address of the Ollama server (default `http://localhost:11434`). It is used when the
-  provider is Ollama.
+- **Check connection**: Checks the entries on the page, as they are now, and shows the answer below the button (see
+  *Check Connection and the Banner*).
+
+Shown only while **GitHub Copilot** is chosen:
+
 - **GitHub Copilot command-line tool path**: The full path of the installed `copilot.exe`. Leave it empty to locate the
   tool automatically. A path that you enter wins over the search, and launcher shims, such as the one that VS Code puts
   on the `PATH`, are ignored by the automatic search (see *Which Copilot CLI Is Used*).
-- **Check connection**: Checks the entries on the page, as they are now, and shows the answer below the button (see
-  *Check Connection and the Banner*).
+- The warning that a high reasoning level on a large model is slow and costly (see *The Reasoning Level*).
+
+Shown only while **Ollama** is chosen:
+
+- **Context window (tokens)**: The size of the context window that is requested for every Ollama request,
+  from 512 to 2,000,000 tokens (default 32,768). A value that you or an earlier version stored is kept as it is. Below
+  16,384 tokens the page shows a warning, not an error, that says that drawings with pictures and tools may fail. A
+  window that is larger than the model was trained for is refused when the conversation starts. GitHub Copilot sets its
+  own window, so the entry is not shown for it.
+- **Ollama endpoint**: The address of the Ollama server (default `http://localhost:11434`).
+
+Choosing the other provider keeps what you typed in the entries that were hidden, and an entry that is hidden can never
+stop you from choosing OK.
 
 There is no option for unrestricted tools: the copilot always has only the tools of CanvasPilot, confined to the
 project folder (see *What the Copilot Can Do in Your Project*). A value that an earlier version stored for it is kept in

@@ -147,9 +147,9 @@ public sealed class AiProviderSettingsPageTests
     [InlineData("8,192")]
     public void AiProviderSettingsPageViewModel_ContextWindowText_OutOfBounds_IsInvalid(string text)
     {
-        // Arrange: a loaded page
+        // Arrange: a loaded page with Ollama selected, the provider that the context window belongs to
         var page = new AiProviderSettingsPageViewModel();
-        page.Load(new AppSettings());
+        page.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama } });
 
         // Act: type the text
         page.ContextWindowText = text;
@@ -187,9 +187,9 @@ public sealed class AiProviderSettingsPageTests
     [Fact]
     public void AiProviderSettingsPageViewModel_Apply_InvalidEntries_ThrowsInvalidOperationException()
     {
-        // Arrange: a page with an invalid context window
+        // Arrange: a page with Ollama selected and an invalid context window
         var page = new AiProviderSettingsPageViewModel();
-        page.Load(new AppSettings());
+        page.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama } });
         page.ContextWindowText = "1";
 
         // Act / Assert: applying is refused
@@ -202,9 +202,9 @@ public sealed class AiProviderSettingsPageTests
     [Fact]
     public void AiProviderSettingsPageViewModel_ContextWindowText_Edited_RaisesIsValidChanged()
     {
-        // Arrange: a loaded page and a listener
+        // Arrange: a loaded page with Ollama selected and a listener
         var page = new AiProviderSettingsPageViewModel();
-        page.Load(new AppSettings());
+        page.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama } });
         var names = new List<string?>();
         page.PropertyChanged += (_, e) => names.Add(e.PropertyName);
 
@@ -429,8 +429,8 @@ public sealed class AiProviderSettingsPageTests
     }
 
     /// <summary>
-    ///     Test that an invalid context window gets an error and no warning, and that the context window is explained as
-    ///     Ollama only: no warning while GitHub Copilot is selected, and a note instead.
+    ///     Test that an invalid context window gets an error and no warning while Ollama is selected, and that while GitHub
+    ///     Copilot is selected, which the entry does not belong to, there is neither a warning nor an error.
     /// </summary>
     [Fact]
     public void AiProviderSettingsPageViewModel_ContextWindowWarning_InvalidOrCopilot_GivesNoWarning()
@@ -441,18 +441,41 @@ public sealed class AiProviderSettingsPageTests
         page.ContextWindowText = "0";
         var invalidWarning = page.ContextWindowWarning;
         var invalidError = page.ContextWindowError;
-        var ollamaNote = page.ContextWindowNote;
 
         // Act: a small valid window, with GitHub Copilot selected
         page.ContextWindowText = "8192";
         page.SelectedProvider = page.Providers[0];
 
-        // Assert: the invalid entry is an error only, the Ollama page has no note, and Copilot has the note and no warning
+        // Assert: the invalid entry is an error only, and Copilot has no warning for it
         Assert.Equal(string.Empty, invalidWarning);
         Assert.NotEmpty(invalidError);
-        Assert.Equal(string.Empty, ollamaNote);
         Assert.Equal(string.Empty, page.ContextWindowWarning);
-        Assert.Contains("Ollama only", page.ContextWindowNote, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, page.ContextWindowError);
+    }
+
+    /// <summary>
+    ///     Test that entries that belong to the provider that is not selected never block the page: a context window that is
+    ///     not valid while GitHub Copilot is selected is not an error, and applying keeps the stored value.
+    /// </summary>
+    [Fact]
+    public void AiProviderSettingsPageViewModel_ContextWindowText_InvalidWhileCopilotSelected_IsIgnoredAndStoredValueKept()
+    {
+        // Arrange: a page with GitHub Copilot selected, a stored window, and junk typed in the hidden window entry
+        var stored = new AppSettings { AiProvider = new AiProviderSettings { ContextWindowTokens = 65536 } };
+        var page = new AiProviderSettingsPageViewModel();
+        page.Load(stored);
+        page.ContextWindowText = "junk";
+
+        // Act: apply, then choose Ollama, for which the same text is an error
+        var applied = page.Apply(stored);
+        var validForCopilot = page.IsValid;
+        page.SelectedProvider = page.Providers[1];
+
+        // Assert: the page was valid and kept the stored window, and the entry blocks the page for Ollama only
+        Assert.True(validForCopilot);
+        Assert.Equal(65536, applied.AiProvider.ContextWindowTokens);
+        Assert.False(page.IsValid);
+        Assert.NotEmpty(page.ContextWindowError);
     }
 
     /// <summary>
@@ -518,7 +541,7 @@ public sealed class AiProviderSettingsPageTests
         // Arrange: a page over a check that fails, and a gate that holds the answer back
         var check = new RecordingCheck(new ProviderCheckResult(false, "Not signed in."));
         var page = new AiProviderSettingsPageViewModel(check);
-        page.Load(new AppSettings());
+        page.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama } });
 
         // Act: check, then make the entries invalid, then restore them and start a check that is held
         await page.CheckConnectionCommand.ExecuteAsync(null);

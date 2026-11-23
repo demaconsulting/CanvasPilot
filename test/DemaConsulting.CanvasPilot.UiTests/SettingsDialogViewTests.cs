@@ -237,7 +237,8 @@ public sealed class SettingsDialogViewTests : IDisposable
         var (window, aiPage, _) = CreateDialog();
         window.Show();
 
-        // Act: type an invalid context window
+        // Act: choose Ollama and type an invalid context window
+        aiPage.SelectedProvider = aiPage.Providers[1];
         aiPage.ContextWindowText = "1";
 
         // Assert: OK and Apply are disabled and Cancel is enabled

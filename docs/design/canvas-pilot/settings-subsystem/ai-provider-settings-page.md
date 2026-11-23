@@ -13,7 +13,22 @@ that the provider decides: the model and the reasoning level are validated by th
 starts (the factory of agents and the readiness check of the `Agent` subsystem).
 
 The unrestricted agent tools flag is not offered at all, because the copilot has no such tools; its value is loaded and
-applied unchanged. The context window is shown as a setting of Ollama only.
+applied unchanged.
+
+**Provider-specific entries are hidden, not disabled.** Every control that belongs to one provider is bound to
+`IsVisible` on `IsOllamaSelected` or `IsCopilotSelected`, so that the page shows only what the selected provider uses:
+
+| Selected | Shown (provider-specific) | Hidden |
+| --- | --- | --- |
+| GitHub Copilot | the label, entry, error, and note of the command-line tool path; the cost warning | the label, entry, error, and warning of the context window; the label, entry, and error of the Ollama endpoint |
+| Ollama | the label, entry, and warning of the context window; the label, entry, and error of the endpoint | the label, entry, error, and note of the command-line tool path; the cost warning |
+
+The provider, the model (list, name, Refresh models, details, and warning), the reasoning level with its note, and the
+Check connection card are shown for both providers because both providers have models and efforts. (The Copilot sign-in
+is shown only by the answer of the connection check; the page has no account line of its own.) Messages are hidden by
+the same rule: the error and warning properties of an entry are empty while the entry's provider is not selected, so a
+hidden entry can neither show a message nor block the page, and `Apply` keeps the stored value of an entry that is
+invalid while it is hidden.
 
 #### Data Model
 
@@ -81,18 +96,18 @@ as the user chooses. `BuildEffortCostWarning(info, effortId)` is the public stat
 a test reaches it without a page.
 
 **ContextWindowText**: `string` — the context window as typed. Valid when it parses as a whole number with
-no sign or separators, in invariant culture, from 512 to 2,000,000. The label says "Ollama only"; while GitHub
-Copilot is selected `ContextWindowNote` says that the window applies to Ollama only.
+no sign or separators, in invariant culture, from 512 to 2,000,000. It belongs to Ollama: the label ("Context window
+(tokens)"), the entry, and its messages are shown only while Ollama is selected; GitHub Copilot sets its own window.
 
 **ContextWindowWarning**: `string` — empty, or, while Ollama is selected and the context window is valid and below
 `AiProviderSettings.RecommendedMinimumContextTokens` (16,384), a sentence that recommends 32,768. It is a warning, not
 an error: `IsValid` does not change, and an invalid entry has the error and no warning.
 
 **OllamaEndpoint**: `string` — the endpoint as typed. Valid when it is an absolute `http` or `https` URL with
-a host. Enabled, and validated, only while Ollama is selected (`IsOllamaSelected`).
+a host. Shown, and validated, only while Ollama is selected (`IsOllamaSelected`).
 
 **CopilotCliPath**: `string` — the path of the GitHub Copilot command-line tool; empty means automatic discovery.
-Enabled, and validated, only while GitHub Copilot is selected (`IsCopilotSelected`); the only check is that the text has
+Shown, and validated, only while GitHub Copilot is selected (`IsCopilotSelected`); the only check is that the text has
 no characters that are invalid in a file path. `CopilotCliPathNoteText` is shown under it: the installed `copilot.exe`
 of version 1.0.113 or later is used, a path set here wins over the search, and launcher shims are ignored (the rule is
 that of `CopilotCliLocator` of the `Agent` subsystem).
@@ -101,7 +116,8 @@ that of `CopilotCliLocator` of the `Agent` subsystem).
 unchanged.
 
 **ContextWindowError / OllamaEndpointError / CopilotCliPathError**: `string` — empty when valid, otherwise the
-message shown under the entry. The context window message states the bounds.
+message shown under the entry. Each is empty while the provider that the entry belongs to is not selected. The context
+window message states the bounds.
 
 **IsValid**: `bool` — true when all three errors are empty.
 
@@ -146,21 +162,22 @@ that cannot be used), the text box for the model name, the Refresh models button
 details and the warning of the chosen model, and a combo box of the reasoning levels (enabled by the model) with its
 note. The warning about cost (`AiEffortCostWarning`, in the caution look, visible only while `HasEffortCostWarning`)
 follows the note of the reasoning level in the same card. The card `Connection` has the text boxes for the context
-window, the Ollama endpoint, and the path of the Copilot tool, with their notes. The card `Check` is shown only when
-there is a check; it has the Check connection button and the answer. The answer is the sentence of the provider check,
-which for GitHub Copilot that can be used names the account, the host, and the kind of sign-in (for example "GitHub
-Copilot CLI {version} is ready. Signed in as octocat on github.com (Copilot CLI sign-in)."), and for Copilot that is not
-signed in is the sentence that says to run `copilot` and type `/login`, with what the library found. Notes and sentences
-use the hint look, warnings the caution look, and error lines the error look and are visible only when their message is
-not empty; the answer of the check is in the danger color when the provider cannot be used. No color is written in the
-view: all come from the shared styles of the controls and the design tokens. Every entry has an automation name
-(`Provider`, `Model`, `Model name`, `Reasoning level`, `Context window in tokens`, `Ollama endpoint`, and
-`GitHub Copilot command-line tool path`). Controls carry automation identifiers (`AiProviderComboBox`,
-`AiModelComboBox`, `AiModelNameTextBox`, `AiRefreshModelsButton`, `AiModelListMessage`, `AiModelDetails`,
-`AiModelWarning`, `AiContextWindowTextBox`, `AiContextWindowWarning`, `AiContextWindowNote`,
-`AiReasoningEffortComboBox`, `AiReasoningEffortNote`, `AiEffortCostWarning`, `AiOllamaEndpointTextBox`,
+window, the Ollama endpoint, and the path of the Copilot tool, with their notes; each is visible only while its provider
+is selected (see above). The card `Check` is shown only when there is a check; it has the Check connection button and
+the answer. The answer is the sentence of the provider check, which for GitHub Copilot that can be used names the
+account, the host, and the kind of sign-in (for example "GitHub Copilot CLI {version} is ready. Signed in as octocat on
+github.com (Copilot CLI sign-in)."), and for Copilot that is not signed in is the sentence that says to run `copilot`
+and type `/login`, with what the library found. Notes and sentences use the hint look, warnings the caution look, and
+error lines the error look and are visible only when their message is not empty; the answer of the check is in the
+danger color when the provider cannot be used. No color is written in the view: all come from the shared styles of the
+controls and the design tokens. Every entry has an automation name (`Provider`, `Model`, `Model name`,
+`Reasoning level`, `Context window in tokens`, `Ollama endpoint`, and `GitHub Copilot command-line tool path`). Controls
+carry automation identifiers (`AiProviderComboBox`, `AiModelComboBox`, `AiModelNameTextBox`, `AiRefreshModelsButton`,
+`AiModelListMessage`, `AiModelDetails`, `AiModelWarning`, `AiContextWindowLabel`, `AiContextWindowTextBox`,
+`AiContextWindowError`, `AiContextWindowWarning`, `AiReasoningEffortComboBox`, `AiReasoningEffortNote`,
+`AiEffortCostWarning`, `AiOllamaEndpointLabel`, `AiOllamaEndpointTextBox`, `AiCopilotCliPathLabel`,
 `AiCopilotCliPathTextBox`, `AiCopilotCliPathNote`, `AiCheckConnectionButton`, `AiCheckConnectionResult`, and
-`...Error`); none of them changed in the redesign, and `AiEffortCostWarning` is the one that was added after it.
+`...Error`); the identifiers that were added after the redesign are `AiEffortCostWarning` and the labels.
 
 #### Key Methods
 
@@ -169,10 +186,10 @@ window is formatted in invariant culture. The changes of the entries are not tak
 list of models is asked for once, at the end.
 
 **Apply**: Returns the settings with the `AiProvider` section replaced by the page's entries and every other section
-unchanged. Model name and path text are trimmed, and the reasoning effort is the id that was chosen. The Ollama endpoint
-and Copilot path entries replace the stored value only when they are themselves valid, so a half-typed entry for the
-provider that is not selected never replaces a stored value. Throws `InvalidOperationException` when the page is not
-valid.
+unchanged. Model name and path text are trimmed, and the reasoning effort is the id that was chosen. The context window,
+Ollama endpoint, and Copilot path entries replace the stored value only when they are themselves valid, so a half-typed
+(or hidden) entry for the provider that is not selected never replaces a stored value. Throws
+`InvalidOperationException` when the page is not valid.
 
 **StartModelLoad / RefreshModelsAsync**: Starts the listing of the models as described above and ends the one that runs.
 

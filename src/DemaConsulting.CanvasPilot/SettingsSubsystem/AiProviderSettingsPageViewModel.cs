@@ -42,9 +42,12 @@ namespace DemaConsulting.CanvasPilot.SettingsSubsystem;
 ///     <para>
 ///         The reasoning level is a choice among the efforts that the selected model offers and is enabled only while the
 ///         model offers some; the stored value is the id that the provider uses. The unrestricted agent tools flag is not
-///         offered at all because the copilot has no such tools; the value is loaded and applied unchanged. The context
-///         window belongs to Ollama only, and its warning (a window below
-///         <see cref="AiProviderSettings.RecommendedMinimumContextTokens" />) is shown only while Ollama is selected.
+///         offered at all because the copilot has no such tools; the value is loaded and applied unchanged. Every entry that
+///         belongs to one provider is shown only while that provider is selected: the context window and the endpoint
+///         belong to Ollama, and the command-line tool path and the cost warning belong to GitHub
+///         Copilot. The context window warning (a window below
+///         <see cref="AiProviderSettings.RecommendedMinimumContextTokens" />) and every problem of such an entry are given
+///         only while that provider is selected, so a hidden entry can neither warn nor block the page.
 ///     </para>
 /// </remarks>
 public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, ISettingsPage
@@ -69,11 +72,6 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     ///     typing does not ask the provider once per letter.
     /// </summary>
     public const int DefaultTypingDelayMilliseconds = 600;
-
-    /// <summary>
-    ///     The note shown under the context window while GitHub Copilot is selected.
-    /// </summary>
-    public const string ContextWindowCopilotNoteText = "The context window applies to Ollama only; GitHub Copilot sets its own.";
 
     /// <summary>
     ///     The note shown under the Copilot command-line tool path.
@@ -181,8 +179,8 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
         nameof(IsCopilotSelected),
         nameof(OllamaEndpointError),
         nameof(CopilotCliPathError),
+        nameof(ContextWindowError),
         nameof(ContextWindowWarning),
-        nameof(ContextWindowNote),
         nameof(IsValid))]
     private SettingsChoice<AiProviderKind> _selectedProvider;
 
@@ -396,21 +394,16 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     public Task ModelListLoaded => _modelLoad;
 
     /// <summary>
-    ///     Gets a value indicating whether Ollama is the selected provider, which enables the endpoint entry.
+    ///     Gets a value indicating whether Ollama is the selected provider, which shows the entries that belong to Ollama
+    ///     (the context window and the endpoint) and hides the entries of GitHub Copilot.
     /// </summary>
     public bool IsOllamaSelected => SelectedProvider.Value == AiProviderKind.Ollama;
 
     /// <summary>
-    ///     Gets a value indicating whether GitHub Copilot is the selected provider, which enables the command-line
-    ///     tool path entry.
+    ///     Gets a value indicating whether GitHub Copilot is the selected provider, which shows the entries that belong to
+    ///     it (the command-line tool path and the cost warning) and hides the entries of Ollama.
     /// </summary>
     public bool IsCopilotSelected => SelectedProvider.Value == AiProviderKind.GitHubCopilot;
-
-    /// <summary>
-    ///     Gets the note under the context window while GitHub Copilot is selected, or an empty string while Ollama is
-    ///     selected, which is what the window belongs to.
-    /// </summary>
-    public string ContextWindowNote => IsCopilotSelected ? ContextWindowCopilotNoteText : string.Empty;
 
     /// <summary>
     ///     Gets the context window warning, or an empty string. It is a warning, not an error: the page stays valid. It is
@@ -446,10 +439,11 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     public bool CanCheckConnection => _providerCheck is not null && IsValid && !IsCheckingConnection;
 
     /// <summary>
-    ///     Gets the context window problem, or an empty string when the entry is valid.
+    ///     Gets the context window problem, or an empty string when the entry is valid or Ollama is not selected, which is
+    ///     the only provider that the entry belongs to; a hidden entry never blocks the page.
     /// </summary>
     public string ContextWindowError =>
-        TryParseContextWindow(out _)
+        !IsOllamaSelected || TryParseContextWindow(out _)
             ? string.Empty
             : $"Enter a whole number from {AiProviderSettings.MinContextWindowTokens} to " +
               $"{AiProviderSettings.MaxContextWindowTokens}.";
@@ -509,13 +503,14 @@ public sealed partial class AiProviderSettingsPageViewModel : ObservableObject, 
     public AppSettings Apply(AppSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        if (!IsValid || !TryParseContextWindow(out var contextWindow))
+        if (!IsValid)
         {
             throw new InvalidOperationException("The AI provider settings are not valid.");
         }
 
         // An entry belonging to the provider that is not selected is kept only when it is itself valid, so a
         // half-typed value for an unused provider never replaces a stored one.
+        var contextWindow = TryParseContextWindow(out var tokens) ? tokens : settings.AiProvider.ContextWindowTokens;
         var endpoint = AiProviderSettings.IsValidOllamaEndpoint(OllamaEndpoint)
             ? OllamaEndpoint.Trim()
             : settings.AiProvider.OllamaEndpoint;

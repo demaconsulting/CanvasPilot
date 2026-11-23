@@ -99,7 +99,7 @@ clicked; the name is stored and the window is still open. This scenario is teste
 clicked; the window closes and no settings file exists. This scenario is tested by
 `SettingsDialogView_CancelButton_ClosesWithoutSaving`.
 
-**SettingsDialogView_InvalidPage_DisablesOkAndApply**: An invalid context window is typed; the OK and Apply
+**SettingsDialogView_InvalidPage_DisablesOkAndApply**: Ollama is chosen and an invalid context window is typed; the OK and Apply
 buttons are disabled and Cancel is enabled. This scenario is tested by
 `SettingsDialogView_InvalidPage_DisablesOkAndApply`.
 
