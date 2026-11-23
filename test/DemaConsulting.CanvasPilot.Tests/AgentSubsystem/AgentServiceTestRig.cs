@@ -360,6 +360,19 @@ internal sealed class AgentServiceRig : IDisposable
     }
 
     /// <summary>
+    ///     Reads the log after every release of a conversation has finished. A release runs in the background and writes its
+    ///     line (<c>Conversation released: ... reason=...</c>) last, after it deleted the provider session, so seeing the
+    ///     session deleted does not mean that the line is in the log. The service waits for every pending release when it is
+    ///     disposed, so the log is complete when this returns. The service cannot be used afterwards.
+    /// </summary>
+    /// <returns>The text of the log.</returns>
+    internal string ReadLogAfterReleases()
+    {
+        Service.Dispose();
+        return ReadLog();
+    }
+
+    /// <summary>
     ///     Lists every file and folder below a folder, relative and sorted, so that two lists can be compared.
     /// </summary>
     /// <param name="folder">The folder.</param>

@@ -139,7 +139,7 @@ public sealed class AgentServiceStopTests
         Assert.Equal(2, rig.Factory.Requests.Count);
         Assert.Equal("after", TextOf(next));
         Assert.Equal(1, CountEarlierWords(client.Requests[1]));
-        Assert.Contains("reason=stopped-early", rig.ReadLog(), StringComparison.Ordinal);
+        Assert.Contains("reason=stopped-early", rig.ReadLogAfterReleases(), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -178,8 +178,9 @@ public sealed class AgentServiceStopTests
         Assert.DoesNotContain(stopped, item => item is AgentEvent.Failed or AgentEvent.Completed);
         Assert.Equal(2, rig.Factory.Requests.Count);
         Assert.Equal("after", TextOf(next));
-        Assert.Contains("did not stop", rig.ReadLog(), StringComparison.Ordinal);
-        Assert.Contains("reason=stop-timeout", rig.ReadLog(), StringComparison.Ordinal);
+        var log = rig.ReadLogAfterReleases();
+        Assert.Contains("did not stop", log, StringComparison.Ordinal);
+        Assert.Contains("reason=stop-timeout", log, StringComparison.Ordinal);
     }
 
     /// <summary>
