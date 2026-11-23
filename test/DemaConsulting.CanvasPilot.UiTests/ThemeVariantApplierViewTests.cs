@@ -61,10 +61,14 @@ public sealed class ThemeVariantApplierViewTests : IDisposable
     [AvaloniaFact]
     public void ThemeVariantApplier_ToVariant_EachChoice_IsTheVariantItNames()
     {
-        // Act / Assert: the three choices
-        Assert.Equal(ThemeVariant.Dark, ThemeVariantApplier.ToVariant(ThemeChoice.Dark));
-        Assert.Equal(ThemeVariant.Light, ThemeVariantApplier.ToVariant(ThemeChoice.Light));
-        Assert.Equal(ThemeVariant.Default, ThemeVariantApplier.ToVariant(ThemeChoice.FollowSystem));
+        // Arrange: the choices of the theme setting
+        var choices = new[] { ThemeChoice.Dark, ThemeChoice.Light, ThemeChoice.FollowSystem };
+
+        // Act: translate each choice
+        var variants = choices.Select(ThemeVariantApplier.ToVariant).ToArray();
+
+        // Assert: the three choices
+        Assert.Equal([ThemeVariant.Dark, ThemeVariant.Light, ThemeVariant.Default], variants);
     }
 
     /// <summary>

@@ -94,6 +94,7 @@ public sealed class AccessibilityViewTests : IDisposable
     [AvaloniaFact]
     public async Task Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize()
     {
+        // Arrange: a remembered project, and the main window
         var problems = new List<string>();
         Interlocked.Exchange(ref _swept, 0);
         await CreateProjectAsync("Release Overview", "overview.svg");
@@ -103,6 +104,7 @@ public sealed class AccessibilityViewTests : IDisposable
         window.Show();
         Dispatcher.UIThread.RunJobs();
 
+        // Act: sweep the welcome screen, the workspace, and every dialog and window in each theme variant
         foreach (var variant in ThemeUiHelpers.Variants)
         {
             // The welcome screen, then the workspace of the open project
@@ -128,6 +130,8 @@ public sealed class AccessibilityViewTests : IDisposable
         }
 
         window.Close();
+
+        // Assert: no control has a problem, and the sweep looked at enough controls
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems.Distinct().Take(60)));
         Assert.True(Volatile.Read(ref _swept) > 150, $"Only {_swept} controls were looked at.");
     }
@@ -215,6 +219,10 @@ public sealed class AccessibilityViewTests : IDisposable
     [AvaloniaFact]
     public void Accessibility_Colors_NoticesAndWelcomeTextAreReadable()
     {
+        // Arrange: the running application, which merges the token dictionary
+        Assert.NotNull(Application.Current);
+
+        // Act / Assert: compute the contrast of the text on the banners and the amber button in each variant, and check it
         foreach (var variant in ThemeUiHelpers.Variants)
         {
             var pane = ThemeUiHelpers.ColorOf("CpSurfacePane", variant);
@@ -238,10 +246,11 @@ public sealed class AccessibilityViewTests : IDisposable
             Assert.True(amber >= 4.5, $"The text of the amber button in {variant} is {amber:F2}:1, below 4.5:1.");
         }
 
-        // The backdrop of the dark welcome screen: its three stops, and the worst place under a violet glow
+        // Act: read the backdrop of the dark welcome screen: its three stops, and the worst place under a violet glow
         var stops = ThemeUiHelpers.StopColorsOf("CpWelcomeBackdrop", ThemeVariant.Dark);
         Assert.Equal(3, stops.Count);
         var glow = ThemeUiHelpers.Over(ThemeUiHelpers.StopColorsOf("CpWelcomeGlowViolet", ThemeVariant.Dark)[0], stops[1]);
+        // Assert: the text on every part of the backdrop has at least 4.5:1 contrast
         foreach (var background in stops.Append(glow))
         {
             foreach (var text in new[] { "CpTextPrimary", "CpTextSecondary", "CpAccentText" })

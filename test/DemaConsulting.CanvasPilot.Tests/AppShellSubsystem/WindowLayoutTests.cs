@@ -134,9 +134,17 @@ public sealed class WindowLayoutTests
     [Fact]
     public void WindowPlacement_Resolve_NullArguments_Throw()
     {
-        // Act / Assert: each argument is checked
-        Assert.Throws<ArgumentNullException>(() => WindowPlacement.Resolve(null!, [Screen], 1));
-        Assert.Throws<ArgumentNullException>(() => WindowPlacement.Resolve(new WindowSettings(), null!, 1));
+        // Arrange: valid settings, and a valid list of screens
+        var settings = new WindowSettings();
+        PixelRect[] screens = [Screen];
+
+        // Act: resolve with each argument missing in turn
+        var missingSettings = Record.Exception(() => WindowPlacement.Resolve(null!, screens, 1));
+        var missingScreens = Record.Exception(() => WindowPlacement.Resolve(settings, null!, 1));
+
+        // Assert: each argument is checked
+        Assert.IsType<ArgumentNullException>(missingSettings);
+        Assert.IsType<ArgumentNullException>(missingScreens);
     }
 
     /// <summary>
@@ -146,8 +154,11 @@ public sealed class WindowLayoutTests
     [Fact]
     public void WorkspaceLayout_Fit_WideWindow_UsesTheChosenWidthsWithinTheirLimits()
     {
-        // Act: fit the default widths into a wide window, and widths beyond the limits
-        var normal = WorkspaceLayout.Fit(1600, 264, 400, chatVisible: true);
+        // Arrange: a wide window, the default widths, and widths beyond the limits
+        const double wideWindow = 1600;
+
+        // Act: fit the default widths into the wide window, and widths beyond the limits
+        var normal = WorkspaceLayout.Fit(wideWindow, 264, 400, chatVisible: true);
         var beyond = WorkspaceLayout.Fit(3000, 50, 2000, chatVisible: true);
 
         // Assert: the chosen widths, and the widths clamped to their limits
@@ -171,8 +182,12 @@ public sealed class WindowLayoutTests
     [InlineData(700, 180, 320)]
     public void WorkspaceLayout_Fit_NarrowWindow_TakesRoomFromTheExplorerFirst(double totalWidth, double explorer, double chat)
     {
+        // Arrange: the default widths of the explorer and the chat column, in the theory data's window
+        const double defaultExplorer = 264;
+        const double defaultChat = 400;
+
         // Act: fit the default widths into the window
-        var fitted = WorkspaceLayout.Fit(totalWidth, 264, 400, chatVisible: true);
+        var fitted = WorkspaceLayout.Fit(totalWidth, defaultExplorer, defaultChat, chatVisible: true);
 
         // Assert: the expected widths, and the stage keeps at least its smallest width unless the window is below the least
         Assert.Equal((explorer, chat), fitted);
@@ -188,9 +203,13 @@ public sealed class WindowLayoutTests
     [Fact]
     public void WorkspaceLayout_Fit_ChatNotShown_HasNoChatWidth()
     {
-        // Act: fit the widths with no chat into a narrow and a wide window
-        var narrow = WorkspaceLayout.Fit(600, 264, 400, chatVisible: false);
-        var wide = WorkspaceLayout.Fit(1600, 264, 400, chatVisible: false);
+        // Arrange: a narrow and a wide window, and the default widths
+        const double narrowWindow = 600;
+        const double wideWindow = 1600;
+
+        // Act: fit the widths with no chat into both windows
+        var narrow = WorkspaceLayout.Fit(narrowWindow, 264, 400, chatVisible: false);
+        var wide = WorkspaceLayout.Fit(wideWindow, 264, 400, chatVisible: false);
 
         // Assert: no chat width, and the explorer gives up room only when the stage needs it
         Assert.Equal((239d, 0d), narrow);

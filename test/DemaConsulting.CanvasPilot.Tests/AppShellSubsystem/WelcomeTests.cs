@@ -108,8 +108,13 @@ public sealed class WelcomeTests : IDisposable
     [InlineData(3, "3 pictures")]
     public void RecentProjectItem_PictureCountTextFor_UsesThePlural(int count, string expected)
     {
-        // Act & Assert: the words
-        Assert.Equal(expected, RecentProjectItem.PictureCountTextFor(count));
+        // Arrange: a number of pictures and the words that are expected
+
+        // Act: tell the number
+        var text = RecentProjectItem.PictureCountTextFor(count);
+
+        // Assert: the words
+        Assert.Equal(expected, text);
     }
 
     /// <summary>
@@ -164,8 +169,11 @@ public sealed class WelcomeTests : IDisposable
     [Fact]
     public void ProjectPictureCounter_Count_MissingFolder_HasNoPictures()
     {
-        // Act: count a folder that does not exist
-        var (count, first) = ProjectPictureCounter.Count(Path.Combine(_root, "missing"), new FakeImageSourceFilter(".svg"));
+        // Arrange: a folder that does not exist
+        var missing = Path.Combine(_root, "missing");
+
+        // Act: count its pictures
+        var (count, first) = ProjectPictureCounter.Count(missing, new FakeImageSourceFilter(".svg"));
 
         // Assert: none
         Assert.Equal(0, count);
@@ -208,10 +216,12 @@ public sealed class WelcomeTests : IDisposable
     [Fact]
     public void WelcomeViewModel_Cards_ShowTheSixMostRecentAndCountTheRest()
     {
-        // Arrange: a shell with no recent project, and then eight projects that were opened one after the other
+        // Arrange: a shell with no recent project
         var (shell, recent) = CreateShell();
         var welcome = shell.Welcome;
         var empty = (welcome.HasRecent, welcome.HasNoRecent, welcome.CountText, welcome.Cards.Count);
+
+        // Act: open eight projects, one after the other
         for (var i = 1; i <= 8; i++)
         {
             var file = Path.Combine(_root, $"p{i}", $"p{i}.canvaspilot");
@@ -298,8 +308,13 @@ public sealed class WelcomeTests : IDisposable
     [Fact]
     public void WelcomeViewModel_Constructor_NullShell_Throws()
     {
-        // Act & Assert: the shell is required
-        Assert.Throws<ArgumentNullException>(() => new WelcomeViewModel(null!));
+        // Arrange: no shell
+
+        // Act: create the welcome screen without it
+        var exception = Record.Exception(() => new WelcomeViewModel(null!));
+
+        // Assert: the shell is required
+        Assert.IsType<ArgumentNullException>(exception);
     }
 
     /// <summary>

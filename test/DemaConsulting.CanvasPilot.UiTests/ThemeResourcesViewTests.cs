@@ -259,7 +259,7 @@ public sealed class ThemeResourcesViewTests
     [AvaloniaFact]
     public void ThemeResources_Tokens_TextColorsMeetContrastOnTheirSurfaces()
     {
-        // The surfaces that each text token is used on (the tertiary text and the state colors are not used on
+        // Arrange: the surfaces that each text token is used on (the tertiary text and the state colors are not used on
         // the stage, and the tertiary text is not used on overlays)
         var allSurfaces = new[] { "CpSurfaceWindow", "CpSurfacePane", "CpSurfaceStage", "CpSurfaceRaised", "CpSurfaceOverlay" };
         var calmSurfaces = new[] { "CpSurfaceWindow", "CpSurfacePane", "CpSurfaceRaised" };
@@ -274,6 +274,7 @@ public sealed class ThemeResourcesViewTests
             ("CpDanger", calmSurfaces)
         };
 
+        // Act / Assert: compute the contrast of each text on each of its surfaces, in both variants, and check it
         foreach (var variant in ThemeUiHelpers.Variants)
         {
             foreach (var (text, surfaces) in texts)
@@ -313,6 +314,10 @@ public sealed class ThemeResourcesViewTests
     [AvaloniaFact]
     public void ThemeResources_Tokens_NonTextColorsMeetContrast()
     {
+        // Arrange: the running application, which merges the token dictionary
+        Assert.NotNull(Application.Current);
+
+        // Act / Assert: compute the contrast of each line or shape on each surface, in both variants, and check it
         foreach (var variant in ThemeUiHelpers.Variants)
         {
             foreach (var color in new[] { "CpFocusRing", "CpBorderControl", "CpMark" })
@@ -337,6 +342,9 @@ public sealed class ThemeResourcesViewTests
     [AvaloniaFact]
     public void ThemeResources_Icons_EveryIconResolvesToGeometryOnItsGrid()
     {
+        // Arrange: the running application, which merges the icon dictionary
+        Assert.NotNull(Application.Current);
+
         foreach (var key in IconKeys)
         {
             // Act: look the icon up in the application resources
