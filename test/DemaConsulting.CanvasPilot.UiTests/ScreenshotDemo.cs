@@ -108,11 +108,20 @@ internal static class ScreenshotDemo
     /// <param name="pictures">The number of pictures that the project holds.</param>
     public static void WriteWelcomeProject(string folder, string mainPicture, int pictures)
     {
-        File.WriteAllText(Path.Combine(folder, "a-main.svg"), mainPicture, Encoding.UTF8);
+        // A card shows the picture that was changed last, so the small pictures get an older time and the main one a newer
+        // time that is set explicitly: a file that is written a moment later can carry the same time stamp, and the card
+        // would then show one of the plain small pictures, which is a blank card
+        var written = DateTime.UtcNow;
         for (var number = 2; number <= pictures; number++)
         {
-            File.WriteAllText(Path.Combine(folder, $"z-{number}.svg"), SmallPicture, Encoding.UTF8);
+            var small = Path.Combine(folder, $"z-{number}.svg");
+            File.WriteAllText(small, SmallPicture, Encoding.UTF8);
+            File.SetLastWriteTimeUtc(small, written.AddMinutes(-10));
         }
+
+        var main = Path.Combine(folder, "a-main.svg");
+        File.WriteAllText(main, mainPicture, Encoding.UTF8);
+        File.SetLastWriteTimeUtc(main, written);
     }
 
     /// <summary>
