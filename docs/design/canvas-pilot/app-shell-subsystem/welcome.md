@@ -25,6 +25,11 @@ and the provider pill of the shell.
   is true while the pill needs attention or is in error, and false while it is checking or ready or when there is no
   pill. `ProviderBannerTitle` is `{provider} is not ready` and `ProviderBannerText` is the tooltip sentence of the pill,
   which is the sentence of the check.
+- *Talk key*: `DescribeStepText` is the sentence of the first of the three steps of "How it works", which names the
+  talk key that is in effect: "Type a request, or hold F9 and speak it. The copilot draws the picture." The key is the
+  text of `TalkKey` (the `PushToTalkSetting`) of the shell, so the sentence says the key that really works, F9 until the
+  user chooses another key on the Speech page, and is announced again when the key changes. The view binds the text of
+  the step (`WelcomeStepDescribe`) to it; there is no fixed key name in the view.
 - *Sizes*: `CardPictureWidth` and `CardPictureHeight` (568 by 320 pixels) are twice the size of the picture on a card
   (284 by 160), so that the picture is sharp on screens that have twice the pixels.
 
@@ -123,8 +128,10 @@ record which picture was shown last, so the card cannot show it.
 
 #### Key Methods
 
-**WelcomeViewModel constructor**: refuses a missing shell, subscribes to the change notifications of the recent list and
-of the shell, follows the provider pill, and builds the cards.
+**WelcomeViewModel constructor**: refuses a missing shell, subscribes to the change notifications of the recent list, of
+the shell, and of its talk key, follows the provider pill, and builds the cards.
+
+**OnTalkKeyChanged**: when the text of the talk key of the shell changes, announces `DescribeStepText`.
 
 **RebuildCards**: empties the cards and fills them with the first six items of the shell's list, then announces
 `HasRecent`, `HasNoRecent`, and `CountText`. The items themselves are owned by the shell and are not disposed here.
@@ -134,7 +141,7 @@ subscribes to the new one, and announces the notice again. **OnPillPropertyChang
 (`ShowProviderBanner`, `ProviderBannerTitle`, `ProviderBannerText`) whenever the pill announces a change, because the
 pill announces every change as one.
 
-**Dispose**: unsubscribes from the list, the shell, and the pill.
+**Dispose**: unsubscribes from the list, the shell, the talk key, and the pill.
 
 **RecentProjectItem.OpenedTextFor** and **PictureCountTextFor**: the pure functions above. **SetThumbnail**: swaps the
 bitmap, announces `Thumbnail`, `HasThumbnail`, and `HasNoThumbnail`, and then disposes the previous bitmap.
@@ -160,8 +167,10 @@ scroll the page.
 
 #### Dependencies
 
-- **MainWindowShell** — the recent list, the provider pill, and the new, open, and settings commands; it also creates
-  the `RecentProjectItem` objects and the `RecentThumbnailLoader` and owns the thumbnail source.
+- **MainWindowShell** — the recent list, the provider pill, the talk key, and the new, open, and settings commands; it
+  also creates the `RecentProjectItem` objects and the `RecentThumbnailLoader` and owns the thumbnail source.
+- **PushToTalkBinding** (the `PushToTalkSetting` of the `Speech` subsystem, held by the shell) — the text of the talk
+  key in effect, for the first step.
 - **ProviderPill** — the state, the provider name, and the sentence of the check, for the notice.
 - **ProjectExplorer** — `IImageSourceFilter`, which tells which files are pictures, and `IThumbnailSource`, which draws
   a picture of a given size (implemented by the thumbnail provider of the preview subsystem).

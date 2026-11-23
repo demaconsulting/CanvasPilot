@@ -10,7 +10,10 @@ copilot with
 the tools it called, and the notices) and, while it is empty, the prompts that help to begin, and hosts, in a card, the
 editing control of the message that is being composed with the button that attaches files, the button that listens
 while it is held, and the button that sends it. It also offers the button that stops the copilot, says whether the
-copilot can be used, and joins the marks that are drawn on the picture to the message. It exists so that the rules of
+copilot can be used, and joins the marks that are drawn on the picture to the message. While the copilot works it shows
+what the copilot is doing, for how long, and, when the wait is long, why that is no sign of a fault; when the turn has
+ended it shows what the turn cost under the last reply; and it offers the prompts that fit what the project has (see
+`FollowUpSuggestions`). It exists so that the rules of
 the composer, the dictation service, the annotation layer, and the turn of the copilot stay where they are tested
 without a window, while the user sees one panel in which they work together. It can be placed in any column of a
 window and knows nothing of the window around it: it asks the window to hide the column and to show the file dialog
@@ -26,41 +29,48 @@ The unit is made of these parts, all in the user interface layer:
   `TranscriptEntryViewModel` rows), `Thumbnails` (the provider of chip pictures for the message being written), and
   `InspectorLauncher`. It exposes `CanSend`, `CanTalk`, `IsTalking`, `TalkText`, `HasTranscript`, `SendCommand` (the
   composer's command), `BeginPushToTalkAsync`, `EndPushToTalkAsync`, and `PrepareDictationAsync`, and for the copilot
-  `IsCopilotBusy`, `StopCommand` and `Stop`, `OpenSettingsCommand` with the event `OpenSettingsRequested`,
-  `RefreshReadinessAsync` with `CheckAgainCommand`, `HasReadinessIssue`, `ReadinessMessage`, and `WaitForTurnAsync`. It
-  also exposes what the title bar needs to show the state of the provider (`HasCopilot`, `Readiness`, the latest report
-  including the answer that everything is ready, and `IsCheckingReadiness`). It
-  implements `IPushToTalkTarget`. The constructor takes the copilot, the clock, the history store, and the project
-  service as optional last arguments; without a copilot the panel only appends the entry of a sent message and shows
-  nothing of the copilot, and without a store or a project service nothing is saved or restored. For the history it
-  exposes `ClearHistoryCommand` and the text `ClearedText` of the notice that says that the history was cleared.
-  For the conversation pane it exposes the constants `EmptyTranscriptText` ("What would you like to draw?") and
-  `EmptyTipText`, the lists `ExamplePrompts` (four) and `SuggestedPrompts` (three follow-ups), `ShowSuggestions`
-  (a conversation exists and the copilot is idle), `UsePrompt`, `CollapseCommand` with the event `CollapseRequested`,
-  and, for the attach button, the property `AttachmentPicker` (an `IAttachmentPicker` that the window sets) and the
-  generated `AttachCommand`.
+  `IsCopilotBusy`, `StopCommand` and `Stop`, `IsStopping`, the busy row (`BusyText`, `BusyElapsedText`, `BusyHintText`,
+  and `HasBusyHint`), `OpenSettingsCommand` with the event `OpenSettingsRequested`, `RefreshReadinessAsync` with
+  `CheckAgainCommand`, `HasReadinessIssue`, `ReadinessMessage`, and `WaitForTurnAsync`. It also exposes what the title
+  bar needs to show the state of the provider (`HasCopilot`, `Readiness`, the latest report including the answer that
+  everything is ready, and `IsCheckingReadiness`). It implements `IPushToTalkTarget`. The constructor takes the copilot,
+  the clock, the history store, the project service, the talk key (a `PushToTalkSetting` of the Speech subsystem), and
+  the filter of drawings (an `IImageSourceFilter`) as optional last arguments; without a copilot the panel only appends
+  the entry of a sent message and shows nothing of the copilot, without a store or a project service nothing is saved or
+  restored, without a talk key the hints name the default key, and without a filter the folder of the project is not
+  searched for a drawing. For the history it exposes `ClearHistoryCommand` and the text `ClearedText` of the notice that
+  says that the history was cleared. For the hints that name the talk key it exposes `TalkKeyText`, `TalkToolTip`, and
+  `EmptyTipText`, which follow the setting. For the conversation pane it exposes the constant `EmptyTranscriptText`
+  ("What would you like to draw?") and `EmptyTipFormat`, the list `Suggestions` (the prompts that are offered now, with
+  `HasSuggestions`) and `ShowSuggestions` (a conversation exists and there are prompts), `UsePrompt`, `CollapseCommand`
+  with the event `CollapseRequested`, and, for the attach button, the property `AttachmentPicker` (an
+  `IAttachmentPicker` that the window sets) and the generated `AttachCommand`.
 - `ChatPanelView` (a `UserControl`): a column of six rows. The header is 48 pixels high and holds a round gradient
   sparkle, the title "Conversation", the overflow button (`ChatOverflowButton`, whose `MenuFlyout` holds the
-  `ChatClearHistoryButton` menu item "Clear chat history"), and the collapse button (`ChatCollapseButton`). Below it
-  are the readiness banner (hidden unless `HasReadinessIssue`, on the warning tint with a warning icon, with the
-  sentence, an "Open Settings" button, and a "Check again" button), the transcript list, the empty state, the row with
-  the typing indicator, the row of follow-up prompts, and the composer card. The empty state (shown while
-  `HasTranscript` is false, centered, at most 320 wide) holds a gradient sparkle, the title (`ChatTranscriptEmpty`),
-  the four example buttons (`ChatExamplePrompt`), and the tip. The typing indicator (`ChatBusyIndicator`, visible only
-  while `IsCopilotBusy`) holds three 6 pixel dots that pulse one after the other over 1.2 seconds, the text "The
-  copilot is working..." (`ChatBusyText`), and the pill Stop button (`ChatStopButton`). The follow-up prompts
-  (`ChatSuggestion`, three pill buttons in a wrapping panel) are visible when `ShowSuggestions` is true. The composer
-  card is a raised surface with a radius of 14 and a strong border, which turns to the focus ring color with a soft
-  glow while the editing view has the focus (the style `Border.composer:focus-within`). It holds the composer's editing
-  view bound to the composer (at most 240 pixels high) and under it a row with the attach button (`ChatAttachButton`),
-  the talk button (`ChatHoldToTalkButton`, an icon button) with a key cap "F9", the hint "Enter to send"
-  (`ChatSendHint`), and the Send button (`ChatSendButton`, an icon button with the accent gradient, 36 by 32). Every
-  button that shows only an icon has an `AutomationProperties.Name` and a tooltip; the name of the talk button is the
-  bound `TalkText`, so that it follows the state. While `IsTalking` the talk button has the class `talking`, which
-  makes it red on the danger tint and pulses its opacity once a second. Its code handles the hold of the talk button
-  and the Enter key, asks for the readiness and prepares dictation when the panel is shown, writes a chosen prompt
-  through the view model and puts the keyboard focus on the editing view, and scrolls to the end when a row is added and
-  while a reply grows.
+  `ChatClearHistoryButton` menu item "Clear chat history"), and the collapse button (`ChatCollapseButton`). Below it are
+  the readiness banner (hidden unless `HasReadinessIssue`, on the warning tint with a warning icon, with the sentence,
+  an "Open Settings" button, and a "Check again" button), the transcript list, the empty state, the row with the typing
+  indicator, the row of the suggested prompts, and the composer card. The empty state (shown while `HasTranscript` is
+  false, centered, at most 320 wide) holds a gradient sparkle, the title (`ChatTranscriptEmpty`), the example buttons
+  (`ChatExamplePrompt`, one for each prompt of `Suggestions`, which are the ways to start in a project with no drawing,
+  and otherwise the ways to refine one), and the tip, whose text is the bound `EmptyTipText`. The typing indicator
+  (`ChatBusyIndicator`, visible only while `IsCopilotBusy`) holds three 6 pixel dots that pulse one after the other over
+  1.2 seconds, a text block with the bound `BusyText` (`ChatBusyText`, trimmed with an ellipsis when it is too long)
+  next to the bound `BusyElapsedText` (`ChatBusyElapsed`, in the tertiary color), under them the hint (`ChatBusyHint`,
+  wrapping, visible only while `HasBusyHint`), and the pill Stop button (`ChatStopButton`). The prompts above the
+  message (`ChatSuggestion`, pill buttons in a wrapping panel, one for each prompt of `Suggestions`) are visible when
+  `ShowSuggestions` is true. The composer card is a raised surface with a radius of 14 and a strong border, which turns
+  to the focus ring color with a soft glow while the editing view has the focus (the style
+  `Border.composer:focus-within`). It holds the composer's editing view bound to the composer (at most 240 pixels high)
+  and under it a row with the attach button (`ChatAttachButton`), the talk button (`ChatHoldToTalkButton`, an icon
+  button, whose tooltip is the bound `TalkToolTip`) with a key cap that shows the bound `TalkKeyText` (the key of the
+  setting, `F9` by default), the hint "Enter to send" (`ChatSendHint`), and the Send button (`ChatSendButton`, an icon
+  button with the accent gradient, 36 by 32). Every button that shows only an icon has an `AutomationProperties.Name`
+  and a tooltip; the name of the talk button is the bound `TalkText`, so that it follows the state. While `IsTalking`
+  the talk button has the class `talking`, which makes it red on the danger tint and pulses its opacity once a second.
+  Its code handles the hold of the talk button and the Enter key, asks for the readiness and prepares dictation when the
+  panel is shown, writes a chosen prompt through the view model and puts the keyboard focus on the editing view, and
+  scrolls to the end when a row is added and while a reply grows.
 - `TranscriptEntryViewModel`: one sent message. It holds the `SentMessage`, its `Payload` when it is a `MessagePayload`,
   `Items` (the runs of text with their origin and the chips, in order), `Summary` (for example `2 marks, 1 attachment`),
   `SentText` (the time), `Thumbnails`, and `ViewPayloadCommand`. It owns the picture provider it made and releases it in
@@ -87,27 +97,35 @@ The unit is made of these parts, all in the user interface layer:
     (`Streaming`, `Completed`, `Stopped`, `Failed`) with `IsStreaming`, `IsComplete`, and `StatusLabel` (`Stopped` or
     `Failed`, otherwise empty). `AppendText` adds a piece while it streams; `Complete`, `Stop`, and `Fail` end it once,
     and after that it never changes. A reply made from restored text starts in a given state. `Blocks` is the text read
-    once by `KnowledgeMarkdown` when the reply is complete, and `null` otherwise. The view is two columns, 22 pixels
-    for the avatar and the rest for the content. On a row that opens a group the avatar (a round gradient sparkle) and
-    the name "Copilot" are shown; a row that does not open one has neither. The status label, `Stopped` or `Failed`,
-    is a small pill chip (`AssistantReplyStatus` is its text). The view shows the text as plain selectable text at 13
-    pixels while `IsComplete` is false and draws `Blocks` with the Knowledge subsystem's `MarkdownBlocksPanel` once it
-    is true, without a border; stopped and failed text stays plain, because it may end in the middle of a construct.
+    once by `KnowledgeMarkdown` when the reply is complete, and `null` otherwise. The view is two columns, 22 pixels for
+    the avatar and the rest for the content. On a row that opens a group the avatar (a round gradient sparkle) and the
+    name "Copilot" are shown; a row that does not open one has neither. The status label, `Stopped` or `Failed`, is a
+    small pill chip (`AssistantReplyStatus` is its text). The view shows the text as plain selectable text at 13 pixels
+    while `IsComplete` is false and draws `Blocks` with the Knowledge subsystem's `MarkdownBlocksPanel` once it is true,
+    without a border; stopped and failed text stays plain, because it may end in the middle of a construct.
+    `UsageCaption` and `HasUsageCaption` hold the line that says what the turn cost, which the turn runner puts on the
+    last reply of a turn with `SetUsageCaption` (it is no part of the text, is not saved with the history, and can be
+    set after the reply has ended, and setting the same caption again changes nothing); a reply without one has none.
+    The view has a fourth row in the content column that shows it as a small, wrapping text in the secondary color
+    (`UsageCaptionText`, automation id `AssistantReplyUsage`), visible only while `HasUsageCaption` is true.
   - `ToolActivityRowViewModel` and `ToolActivityRowView`: one tool call with `CallId`, `ToolName`, `ArgumentSummary`,
     `Summary` (one sentence), `DisplaySummary` (the sentence without markdown backticks, which the chip shows),
-    `IsRunning`, `Succeeded`, `HasImage`, `HasFileReport`, and for the view `ShowsSuccess`
-    (ended and worked), `ShowsFailure` (ended and did not work), and `ElapsedText`. `Finish` ends it with the result,
-    `ReportFile` says that a file was created or replaced (the report stays when the tool then finishes with success
-    and is replaced by a refusal when it does not), and `Abandon` ends a call that has no result. The constructor of a
-    call that starts takes an optional `TimeProvider`, which `ChatTurnRunner` passes its own clock to and which is the
-    system clock when it is omitted; the row takes a time stamp when it is made and the elapsed time when `Finish`
-    runs. `ElapsedText` is the seconds with one decimal, such as `0.8 s`, when the call took at least a tenth of a
-    second, and empty for a call that is under way, that was restored or abandoned, or that was quicker. The view is a
-    24 pixel pill (the shared `ChipBorder` theme) under the same two-column layout as a reply, with the name row above
-    it on the first row of a group: a check (`SuccessIcon`) when `ShowsSuccess`, a spinner (`RunningSpinner`, a
-    refresh icon that turns once a second, `ToolActivityRunning`) while `IsRunning`, or a cross (`FailureIcon`) when
-    `ShowsFailure`, then the summary (`ToolActivitySummary`), and `· 0.8 s` (`ToolActivityElapsed`) when
-    `ElapsedText` is not empty. A failed call has the danger color on the outline and the sentence.
+    `IsRunning`, `Succeeded`, `HasImage`, `HasFileReport`, and for the view `ShowsSuccess` (ended and worked),
+    `ShowsFailure` (ended and did not work), and `ElapsedText`. `UpdateRunning` changes the sentence (and the
+    description of the arguments, when one is given) of a call that has no result yet, which is how the progress of a
+    file that the model is writing (`Writing x.svg... 9.8 KB`) grows on one row and how the start of the call then says
+    what runs; it does nothing for a call that has ended. `Finish` ends it with the result, `ReportFile` says that a
+    file was created or replaced (the report stays when the tool then finishes with success and is replaced by a refusal
+    when it does not), and `Abandon` ends a call that has no result. The constructor of a call that starts takes an
+    optional `TimeProvider`, which `ChatTurnRunner` passes its own clock to and which is the system clock when it is
+    omitted; the row takes a time stamp when it is made and the elapsed time when `Finish` runs. `ElapsedText` is the
+    seconds with one decimal, such as `0.8 s`, when the call took at least a tenth of a second, and empty for a call
+    that is under way, that was restored or abandoned, or that was quicker. The view is a 24 pixel pill (the shared
+    `ChipBorder` theme) under the same two-column layout as a reply, with the name row above it on the first row of a
+    group: a check (`SuccessIcon`) when `ShowsSuccess`, a spinner (`RunningSpinner`, a refresh icon that turns once a
+    second, `ToolActivityRunning`) while `IsRunning`, or a cross (`FailureIcon`) when `ShowsFailure`, then the summary
+    (`ToolActivitySummary`), and `· 0.8 s` (`ToolActivityElapsed`) when `ElapsedText` is not empty. A failed call has
+    the danger color on the outline and the sentence.
   - `NoticeRowViewModel` and `NoticeRowView`: an immutable notice with `Severity` (`Information` or `Error`), `Message`,
     `Remedy`, `CanOpenSettings`, and `OpenSettingsCommand`, which calls the action that the notice was made with. The
     view is a centered raised card with an info icon, or for an error a circle icon in the danger color on the danger
@@ -133,7 +151,9 @@ The unit is made of these parts, all in the user interface layer:
 **State of the panel.** The view model holds the folder of the project the transcript belongs to, so that it can tell
 that the project changed, the latest readiness report, a counter of the checks, and whether a check runs, the task of
 the latest turn, and
-the `TranscriptSink` through which the runner adds its rows. With a history store it also holds the saved conversation
+the `TranscriptSink` through which the runner adds its rows. For the prompts it holds the list that is offered now and a
+flag that says that the copilot wrote a drawing in the open project (set from any thread, cleared when the project
+changes). With a history store it also holds the saved conversation
 of the open project (the project and its saved rows) and a generation counter that is increased whenever the
 conversation is dropped or cleared. The view holds one flag, whether the talk button is held,
 and the view model it follows.
@@ -150,12 +170,28 @@ Nothing else about marks is known here.
 
 **Prompts and collapse.** `UsePrompt` writes a prompt with `ComposerViewModel.InsertTyped` at the caret (over the
 selection) when the composer `CanEdit`, and returns whether it did; it throws for a null prompt. The view calls it from
-the `Click` of an example or a follow-up button, which carry the prompt as their content, and puts the keyboard focus on
-the editing view when it returned true, so that the user can change the words and send them. The example prompts and
-the tip live in the empty state, which is visible while `HasTranscript` is false, so the first message hides them.
-`ShowSuggestions` is `HasTranscript && !IsCopilotBusy`; the view model announces it whenever either of the two changes,
-so the follow-ups come and go with the turn. `CollapseCommand` only raises `CollapseRequested`: the panel does not know
-whether it stands in a column; the workspace hides the column and shows a button to bring it back.
+the `Click` of an example or a suggestion button, which carry the prompt as their content, and puts the keyboard focus
+on the editing view when it returned true, so that the user can change the words and send them. The examples and the tip
+live in the empty state, which is visible while `HasTranscript` is false, so the first message hides them.
+`CollapseCommand` only raises `CollapseRequested`: the panel does not know whether it stands in a column; the workspace
+hides the column and shows a button to bring it back.
+
+**Which prompts are offered.** The panel does not hold a fixed list. `Suggestions` is the plan of `FollowUpSuggestions`
+(a unit of its own, see its design) for three facts that the panel finds out: whether the copilot works
+(`IsCopilotBusy`), whether a picture is shown (`HasPicture` of the annotation layer), and whether the project has a
+drawing. The project has a drawing when a picture is shown, when the copilot wrote a drawing during this session of the
+project (the panel follows `FileWritten` of `IAgentService` and notes a file that the filter accepts; the event can come
+from any thread, so only a flag is set), or, when the panel was given a filter, when the folder of the project holds one
+(`ProjectDrawingProbe`, which is looked at only when nothing cheaper answers and never while the copilot works). The
+panel plans again, and announces `Suggestions` and `HasSuggestions` (and, through them, `ShowSuggestions`) only when the
+plan differs from the one it offers, when: it is made; the project changes (after the transcript was emptied and the
+saved conversation loaded, and with the flag of the written drawing cleared, because a drawing that the copilot wrote
+belongs to the project it was written in); the annotation layer reports that `HasPicture` changed; and a turn starts or
+ends (a turn that ends may have written the first drawing). Nothing is offered while the copilot works, so the prompts
+go away when a turn starts and come back, refined, when it has ended. The empty conversation shows `Suggestions` as its
+examples (the ways to start in an empty project, or the refinements in a project that has a drawing but whose
+conversation is empty); `ShowSuggestions` is `HasTranscript && HasSuggestions`, and the view model announces it whenever
+either changes, so the prompts above the message show only once a conversation exists and while the copilot is idle.
 
 **Rows that open a group.** Whenever `Transcript` changes, the panel walks it once and sets `OpensGroup` of each row to
 true for the first row and for a row of kind `Assistant` or `Tool` whose predecessor is a `User` or a `Notice` row, and
@@ -192,6 +228,37 @@ and tells `StopCommand` to check again. `Stop` calls the runner's `Stop`. A chan
 `TranscriptSink.Discarding`, stops the turn, and empties the transcript, so that rows that the old turn still adds are
 dropped and disposed; the flag is cleared when the turn has ended. Disposing the panel stops a running turn the same
 way.
+
+**The busy row.** While a turn runs the row with the typing indicator tells what the copilot is doing, and the panel
+decides none of it: it follows the status that the runner keeps (see the design of the `ChatTurnRunner`). It subscribes
+to `StatusChanged` of the runner and, whenever that is raised (and when the busy state changes), announces `BusyText`
+(the phase: the working text at the start, then what the copilot reports, such as thinking, writing a named file with
+the bytes so far, running a tool, or waiting for the model), `BusyElapsedText` (the time since the start as `m:ss`),
+`BusyHintText` and `HasBusyHint` (the hint about a long wait), and `IsStopping`. The elapsed time is ticked by the
+runner's own one-second timer, made from the clock that the panel was given (the system clock in the application, a
+manual clock in the tests), and not by a timer of the view, so the panel has no timer of its own and a test moves the
+time by advancing the clock. The hint appears when nothing was heard from the copilot for 30 seconds and no tool runs,
+and says that large drawings can take minutes, that some models show nothing until the drawing is complete, and that
+Stop cancels the turn but the provider may still count the request; any sign of life from the copilot hides it. When no
+turn runs all four texts are empty and the row is hidden with the indicator.
+
+**Stopping.** `StopCommand` can run while a turn runs and is not stopping (`IsCopilotBusy && !IsStopping`). Pressing it
+calls the runner's `Stop`, which at once makes `IsStopping` true and the status "Stopping...", so the busy row says that
+the Stop was heard and the Stop button is disabled until the turn has ended, which can be a moment later because a
+provider needs time to end what it was doing; the panel then returns to idle as it does for any turn (the reply is
+marked as stopped, and the composer can send).
+
+**What the turn cost.** The panel does nothing for the caption of the usage: the runner puts it on the last reply of the
+turn, or into an information notice when the turn made no reply, and the rows show it. It is not saved in the history
+(`ChatHistoryMapper` saves the words of a reply only), so a restored conversation has none.
+
+**The talk key in the hints.** The panel does not know which key is held to talk: it is given the `PushToTalkSetting`
+that the composition root shares with the window, the status bar, and the welcome screen, and shows its text (`F9`
+unless the user chose another key) in the key cap of the talk button (`TalkKeyText`), in the tooltip of the talk button
+(`TalkToolTip`, "Hold this button, or hold {key}, speak, and let go to add what you said to the message"), and in the
+tip of the empty conversation (`EmptyTipText`, from `EmptyTipFormat`, "Drop a picture, or hold {key} and speak").
+When the setting changes the panel announces all three, so the hints change as soon as the user has chosen the key in
+the settings. Without a setting the panel uses the default key and nothing changes.
 
 **History.** The panel keeps the words of the conversation on this computer through `IChatHistoryStore`, and needs
 `IProjectService` to know which project is open, because the key is made from the path of the project file. When a
@@ -277,8 +344,9 @@ never the words of a message or an answer.
 **Identifiers that a test needs.** The controls of the panel have these `AutomationProperties.AutomationId` values; a
 list of every id of the unit is not kept here.
 
-- New: `ChatOverflowButton`, `ChatCollapseButton`, `ChatAttachButton`, `ChatSendHint`, `ChatExamplePrompt` (four),
-  `ChatSuggestion` (three), `ToolActivityElapsed`, and `ComposerPlaceholder` (of the editing view).
+- New: `ChatOverflowButton`, `ChatCollapseButton`, `ChatAttachButton`, `ChatSendHint`, `ChatExamplePrompt` (one for each
+  prompt of `Suggestions`), `ChatSuggestion` (the same prompts above the message), `ChatBusyElapsed`, `ChatBusyHint`,
+  `AssistantReplyUsage`, `ToolActivityElapsed`, and `ComposerPlaceholder` (of the editing view).
 - Changed: `ChatClearHistoryButton` is now a menu item inside the flyout of `ChatOverflowButton`; `ChatTranscriptEmpty`
   is the title text of the empty state, whose container is hidden with it, so tests check `IsEffectivelyVisible`;
   `ChatSendButton` and `ChatHoldToTalkButton` are icon buttons, so their names (`Send` and the talk text) and not their
@@ -301,8 +369,13 @@ a tool chip, and the busy line do not stop when the system asks for reduced moti
 - **MarkImageComposer** (through `IMarkImageComposer`), **MessagePayload**, and **PayloadInspector**: the pictures of
   marks and the payload that "View payload" shows.
 - **DictationService** (through `IDictationService`): prepared ahead of the first press.
+- **PushToTalkSetting** (of the Speech subsystem): the key that is held to talk, which the hints show.
+- **FollowUpSuggestions** and **ProjectDrawingProbe** (the unit of the same name): the plan of the prompts that are
+  offered, and the search of the project folder for a drawing, with **IImageSourceFilter** of `ProjectService` to tell
+  which files are drawings.
 - **AgentService** (through `IAgentService`, `AgentReadinessReport`, and the events only): the readiness and the turns,
-  by way of the **ChatTurnRunner**.
+  by way of the **ChatTurnRunner**; the panel also follows `FileWritten` of the service, to know that the copilot wrote
+  a drawing.
 - **KnowledgeMarkdown** and **MarkdownBlocksPanel** of the Knowledge subsystem: the final text of a reply drawn as
   Markdown. This is the only use of the Knowledge subsystem.
 - **ChatHistoryStore** (through `IChatHistoryStore`, `ChatHistoryRow`, and `ChatHistoryResult`): where the words of the
@@ -319,8 +392,8 @@ a tool chip, and the busy line do not stop when the system asks for reduced moti
 #### Callers
 
 - The composition root (`ApplicationComposition`) builds the panel over the composer, the registry, the layer, the mark
-  picture composer, the dictation service, the copilot, the history store, and the project service, holds it as `Chat`,
-  and disposes it. It calls
+  picture composer, the dictation service, the copilot, the history store, the project service, the talk key of the
+  window's shell, and the CanvasNet filter of drawings, holds it as `Chat`, and disposes it. It calls
   `RefreshReadinessAsync` when the settings change and handles `OpenSettingsRequested` with the shell's command that
   opens the settings.
 - The main window places the view in the chat column of its workspace; the talk

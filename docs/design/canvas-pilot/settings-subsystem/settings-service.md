@@ -28,8 +28,16 @@ default `http://localhost:11434`), `UnrestrictedAgentTools` (`bool`, default `fa
 empty for automatic discovery).
 
 **SpeechSettings**: `record` — `CaptureDevice`, `PlaybackDevice`, `SttModelId`, and `TtsModelId` (`string`,
-empty for the default), and `ModelParameters` (model identifier, then parameter identifier, then the value
-as an invariant-culture string).
+empty for the default), `PushToTalkKey` (`string`, the key or chord that is held to dictate, written as `F9` or
+`Ctrl+Shift+Space`; empty, the default, means F9), and `ModelParameters` (model identifier, then parameter identifier,
+then the value as an invariant-culture string).
+
+**Talk key**: `PushToTalkKey` is an additive part of the document: an earlier build ignores it and a file of an earlier
+build has none, so the version of the file stays 1 and the default F9 is in effect. The rule that decides what is a
+safe key is `PushToTalkBinding.Normalize` of the `Speech` subsystem (see *PushToTalkBinding Design*): the service does
+not repeat it. The old default F8, which many laptops never deliver to the window, is not a safe key any more, so a file
+that holds it is read as the default and is rewritten with an empty value by the next save, and a user who had left the
+default therefore gets F9. The default is stored as nothing, so that it can follow a later release.
 
 **StyleSettings**: `record` — `SharedKitFolders` (`IReadOnlyList<string>`, the full paths of the folders in which a team
 shares style kits, in order of precedence with an earlier folder winning) and `DefaultKitId` (`string`, the id of the
@@ -97,8 +105,12 @@ each once (ignoring case, in the first spelling) and in their order, drops a rel
 warning in the log, and keeps a folder that does not exist because a network folder may be back later; and replaces a
 default style kit id that no kit can have with none. For the window layout it clamps the size and the widths of the
 columns to their bounds (a value outside is brought to the nearest bound, not reset), forgets a place that lies beyond
-32767, and treats an unknown state as `Normal`; an unknown theme choice becomes `FollowSystem`; and it keeps the times
-of opening only for paths that are in the list of recent projects (ignoring case).
+32767, and treats an unknown state as `Normal`; an unknown theme choice becomes `FollowSystem`; it replaces the talk key
+by its normal form (`PushToTalkBinding.Normalize`: a safe key or chord is written in the order `Ctrl+Alt+Shift` and the
+key, and a missing value, a key that is not safe, or the old default F8 becomes the empty string, which means the
+default); and it keeps the times of opening only for paths that are in the list of recent projects (ignoring case).
+Because `Save` and `Update` normalize too, a talk key that a caller writes is cleaned in the same way before it is
+stored and announced, so the window never receives a key that would take away typing.
 
 **Save**: Replaces the settings in effect and writes them.
 
@@ -129,6 +141,8 @@ file is replaced only after the temporary file has been written completely.
 #### Dependencies
 
 - **PathHelpers** — resolves the settings file and temporary file paths inside the settings folder.
+- **PushToTalkBinding** (of the `Speech` subsystem) — the rule that cleans the stored talk key when the settings are
+  normalized.
 - **RollingFileLogger** — optional; records missing, unreadable, corrupt, and newer files and failed saves.
 - **System.Text.Json** and **System.IO** — serialization and file system primitives.
 
@@ -137,4 +151,5 @@ file is replaced only after the temporary file has been written completely.
 - `SettingsDialog` — reads `Current` and calls `Save`.
 - The application composition root — creates the service and calls `Load`.
 - Other subsystems that persist or read settings, such as the recent projects list, use `Current`, `Update`,
-  and `Changed`.
+  and `Changed`. The `PushToTalkSetting` of the `Speech` subsystem reads the talk key from `Current` and follows
+  `Changed`.

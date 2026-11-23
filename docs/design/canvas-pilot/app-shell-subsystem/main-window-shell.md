@@ -6,16 +6,18 @@
 
 `MainWindowShell` is the view model of the main window together with the window (`MainWindowView`) that shows it. It
 owns the File, Edit, Image, Tools, and Help commands, the window title, and the recent projects menu, and it follows the
-open project. It routes Undo and Redo to the part of the window that has the focus and the talk key to the chat panel.
-The window has a title bar that holds the compact menu, the name of the open project, the list that chooses the style
-kit, and the AI provider pill; a body that shows the welcome screen while no project is open and the workspace once one
-is; and a status bar at the bottom. The shell also remembers the size, place, and state of the window and the widths of
-the explorer and the chat column, and applies the thumbnail and row height settings of the Appearance page to the
-explorer. It talks to the user only through an `IDialogService`, which the window implements, so the shell is tested
-without a window. The small message, confirmation, and prompt dialog that the window shows for `ShowMessageAsync`,
-`ConfirmAsync`, and `PromptAsync` (`MessageDialogViewModel` and `MessageDialogView`) belongs to this unit. The status
-bar, the provider pill, and the welcome screen are units of their own (see *StatusBar Design*, *ProviderPill Design*,
-and *Welcome Design*); this unit creates them and places them in the window.
+open project. It routes Undo and Redo to the part of the window that has the focus and the talk key to the chat panel,
+and it shows the folder of the log in the file manager on request (Help ▸ Open Log Folder), so that a person who reports
+a problem can attach the log. The window has no full-screen mode. The window has a title bar that holds the compact
+menu, the name of the open project, the list that chooses the style kit, and the AI provider pill; a body that shows the
+welcome screen while no project is open and the workspace once one is; and a status bar at the bottom. The shell also
+remembers the size, place, and state of the window and the widths of the explorer and the chat column, and applies the
+thumbnail and row height settings of the Appearance page to the explorer. It talks to the user only through an
+`IDialogService`, which the window implements, so the shell is tested without a window. The small message, confirmation,
+and prompt dialog that the window shows for `ShowMessageAsync`, `ConfirmAsync`, and `PromptAsync`
+(`MessageDialogViewModel` and `MessageDialogView`) belongs to this unit. The status bar, the provider pill, and the
+welcome screen are units of their own (see *StatusBar Design*, *ProviderPill Design*, and *Welcome Design*); this unit
+creates them and places them in the window.
 
 #### Data Model
 
@@ -53,9 +55,25 @@ constructor; the application supplies the exporter of the `Preview` subsystem.
 **Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled while a
 project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can export),
 `OpenSettingsCommand`, `ShowStyleKitsCommand` (enabled while the application has a window that manages style kits),
-`ShowDrawingKnowledgeCommand` (enabled while the application has knowledge to show), and `ShowAboutCommand`, and
-`UndoCommand` and `RedoCommand` (enabled while `EditTarget` can undo or redo), and `CheckAgainstStyleCommand` (enabled
-while a picture can be checked against the style).
+`ShowDrawingKnowledgeCommand` (enabled while the application has knowledge to show), `OpenLogFolderCommand` (enabled
+while the shell has a folder launcher, with or without an open project), and `ShowAboutCommand`, and `UndoCommand` and
+`RedoCommand` (enabled while `EditTarget` can undo or redo), and `CheckAgainstStyleCommand` (enabled while a picture can
+be checked against the style).
+
+**IFolderLauncher** / **SystemFolderLauncher** (`AppShellSubsystem/IFolderLauncher.cs`): the seam through which the
+shell shows a folder in the file manager, so that the shell does not know how a system does it and a test stands in for
+the file manager. `TryOpen(folder, out failure)` returns `true` when the file manager was asked to show the folder and
+otherwise `false` with a sentence in `failure`; it throws `ArgumentException` for a blank folder. The optional
+constructor parameter `folderLauncher` gives the shell its launcher; without one the command is disabled.
+`SystemFolderLauncher` is the launcher of the real system: it creates the folder when it does not exist and starts
+`explorer.exe` on Windows, `open` on macOS, and `xdg-open` elsewhere, with the folder as a single argument
+(`ProcessStartInfo.ArgumentList`, no shell, no command line, so that the name of the folder is never read as anything
+else), and it does not wait for the file manager, because Explorer answers with exit codes that mean nothing. A program
+that does not start, or a folder that cannot be made, is reported as `false` with the message of the exception
+(`Win32Exception`, `InvalidOperationException`, `IOException`, or `UnauthorizedAccessException`); no other exception is
+caught. The composition root passes a `SystemFolderLauncher` unless a test supplies another launcher, and the tests use
+a hand-written `FakeFolderLauncher` (and the UI tests a recording launcher) that records the folders it was asked for
+and can be made to fail.
 
 **EditTarget**: `IUndoRedoTarget?` (a `Composer` seam) - what Edit > Undo and Redo act on: the part of the window
 that has the focus, or `null` while the focus is in a part that has nothing to undo. The window sets it. The shell
@@ -108,14 +126,14 @@ clipboard, and the message dialog; the dialog service includes `IAttachmentPicke
 button of the chat panel, which the workspace connects to the chat panel when it attaches the dialog service. Its
 constructor passes itself to `AttachDialogService`, and `ExitRequested` closes it. It also tracks the focus and the talk
 key (see **Focus tracking** and **Talk key** below). Its Help menu has `DrawingKnowledgeMenuItem`
-(`_Drawing Knowledge...`), a separator, and `AboutMenuItem`. The window shows the browser of the drawing knowledge with
-`Show` and itself as the owner, so that it does not block the window, and keeps the one that is open. Its Tools menu has
-`StyleKitsMenuItem` (`Style _Kits...`) above `SettingsMenuItem`. The window also implements `IStyleKitDialogs`, which
-`IDialogService` includes: it shows the window that manages style kits with `Show` and itself as the owner, one at a
-time (a request while it is open brings it to the front, restored if it was minimized, and disposes the view model that
-was made for the request), shows the editor of a kit modally over that window (or over itself when that is not open),
-and shows the pickers of a zip file to import, of a zip file to write, and of example images (which offers the file
-types that CanvasNet draws).
+(`_Drawing Knowledge...`), `OpenLogFolderMenuItem` (`Open _Log Folder`, bound to `OpenLogFolderCommand`), a separator,
+and `AboutMenuItem`. The window shows the browser of the drawing knowledge with `Show` and itself as the owner, so that
+it does not block the window, and keeps the one that is open. Its Tools menu has `StyleKitsMenuItem` (`Style _Kits...`)
+above `SettingsMenuItem`. The window also implements `IStyleKitDialogs`, which `IDialogService` includes: it shows the
+window that manages style kits with `Show` and itself as the owner, one at a time (a request while it is open brings it
+to the front, restored if it was minimized, and disposes the view model that was made for the request), shows the editor
+of a kit modally over that window (or over itself when that is not open), and shows the pickers of a zip file to import,
+of a zip file to write, and of example images (which offers the file types that CanvasNet draws).
 
 **Title bar**: a `Border` (`AppTitleBar`) 44 pixels high with the window surface color and a subtle line under it,
 marked as the title bar of the window (`WindowDecorationProperties.ElementRole`) so that the platform treats the empty
@@ -128,22 +146,43 @@ text and `TitleBarSuffix` in tertiary text, trimmed with an ellipsis), the style
 provider pill host (`ProviderPillHost`), and a trailing reserve (`TitleBarCaptionReserve`). The menu is quiet: no fill,
 items with 8 by 4 padding and secondary text, but all its items, keys, and access keys are kept.
 
+**Window buttons and full screen**: the window asks for the buttons that it keeps through the attached property
+`WindowDrawnDecorations.TitleBarDecorations`, set in the XAML to the system title text and the minimize, maximize (or
+restore), and close buttons, and not the full-screen button, so the drawn decorations have three buttons. The reason is
+that a window in full screen has no title bar and no buttons, and the only way back is a bar that appears when the
+pointer rests at the top edge, which users do not find; a drawing tool has no use for the mode. Nothing else leads
+there: no menu item and no key is bound to full screen (F11 does nothing), and the saved layout has only a maximized
+flag, so a full screen is never stored or restored. When the window state becomes `FullScreen` all the same (a program,
+or a shortcut of the system), the window's property-change handler for `WindowState` sets it back to `Normal` before it
+updates the reserve.
+
 **Caption reserve**: the system draws its window buttons over the strip when the client area is extended, so the strip
 keeps room for them. `MainWindowView.CaptionReserve(isExtended, isWindows, isMacOs)` is a pure function that returns the
-room on the left and on the right: 138 pixels on the right on Windows, 78 pixels on the left on macOS (the traffic
-lights), and none elsewhere or when the window is not extended. These are the fallback: on Windows the window then
-measures the real room, because the buttons that Avalonia draws over the strip are 45 pixels wide with a gap, and the
-theme insets them by the frame and the shadow of the window, so they cover more than 138 pixels at the right edge (and
-the full-screen button can add more). `MeasureCaptionButtonsReserve` finds the overlay panel of the drawn window
-decorations (`PART_OverlayPanel`) and takes the distance from its left edge to the right edge of the window; the window
-sets the trailing reserve to it after it opens, when its size or its state changes, so the pill is never under a
-button. The window applies the fallback to the two reserve borders when
-`IsExtendedIntoWindowDecorations` changes, so the headless platform, which does not extend, keeps both at width 0. A
-real window raises that change while the XAML loads, when the window has no name scope and the reserve controls do not
-exist (a name lookup then throws and crashed the published program at the start). So the window ignores the change until
-the component is loaded (`_componentReady`), applies the value once at the end of the constructor, and sets the
-generated fields through `ApplyCaptionReserve`, which leaves a missing control alone. This gating cannot be tested
-in a headless test; it is guarded by the launch smoke test (`smoke.ps1`) and the manual launch check.
+room on the left and on the right: `WindowsCaptionButtonsWidth` pixels on the right on Windows, 78 pixels on the left on
+macOS (the traffic lights), and none elsewhere or when the window is not extended. The Windows value is a formula from
+the theme of the drawn decorations and not a loose number: three buttons of 45 pixels (`CaptionButtonWidth`,
+`CaptionButtonCount`), the space of 2 pixels between two of them (`CaptionButtonSpacing`, so two spaces), and the frame
+line of 1 pixel at the right (`CaptionFrameThickness`), which is 3 * 45 + 2 * 2 + 1 = 140 pixels. It is the fallback for
+the time before the buttons are laid out; the width that is measured wins.
+`UpdateCaptionReserve(isExtended, isWindows, isMacOs)` applies the fallback and then, only for a platform that reserves
+room on the right, replaces it with the measured width, so that the pill is never under a button even when a theme draws
+the buttons differently. `MeasureCaptionButtonsReserve(window)` finds the overlay panel of the drawn window decorations
+(`PART_OverlayPanel`) that is visible and has a width, and returns the distance from its left edge to the right edge of
+the window, or `null` when there is none. The drawn decorations are not part of the visual tree of the window: the host
+of the window holds the window and, as siblings of it, the layers of the decorations. The search therefore starts at the
+top of the visual tree (the window's visual parent, and its parent, up to the root) and not at the window, and the place
+of the panel is taken relative to the window. An earlier version searched below the window only, where the buttons are
+not, and so always fell back to the constant. The window sets the trailing reserve after it opens, when its size or its
+state changes (a request that is posted at `Loaded` priority, so that the layout has been made), so the pill is never
+under a button. The window applies the fallback to the two reserve borders when `IsExtendedIntoWindowDecorations`
+changes, so the headless platform, which does not extend, keeps both at width 0. A real window raises that change while
+the XAML loads, when the window has no name scope and the reserve controls do not exist (a name lookup then throws and
+crashed the published program at the start). So the window ignores the change until the component is loaded
+(`_componentReady`), applies the value once at the end of the constructor, and sets the generated fields through
+`ApplyCaptionReserve`, which leaves a missing control alone. This gating cannot be tested in a headless test; it is
+guarded by the launch smoke test (`smoke.ps1`) and the manual launch check. The headless platform draws no frame, so the
+title-bar layout tests put the real overlay of the drawn decorations (built from the theme, with three buttons) over the
+title bar of the real window and call the overload that takes the platform facts; see *MainWindowShell Verification*.
 
 **System title text**: on Windows and Linux, Avalonia 12 draws the title of the window at the left of the strip when the
 frame is extended, which would lie over the brand mark and the menu. A style in the window hides that text
@@ -211,6 +250,15 @@ drawing knowledge could not be loaded, and no window is shown. The window keeps 
 brings that window to the front, restored if it was minimized, and leaves what the user was reading, and a request after
 it was closed shows a new one.
 
+**OpenLogFolder**: Does nothing when the shell has no launcher (the command is then disabled too). Otherwise it takes
+the folder that the logger writes to (`RollingFileLogger.LogDirectory` of the logger that was supplied, or
+`RollingFileLogger.DefaultLogDirectory` when the shell has no logger), so that it is the folder of the log that is being
+written and not a guess, and asks the launcher to show it. The command is usable with no project open, because a problem
+may be one that stops a project from opening. When the launcher answers `false`, the shell writes a warning to the log
+(without the path) and, when a dialog service is attached, shows a message titled `Open Log Folder` that says that the
+folder could not be shown, gives the reason that the launcher reported, and names the folder, so that the user can open
+it by hand.
+
 **ExportPng** / **CopyImage**: When the exporter can export, call it with the dialog service. The commands are
 re-evaluated when `CanExportChanged` is raised.
 
@@ -261,11 +309,20 @@ that a control marked as handled, looks at the control that took the focus and t
 `EditTarget` to the first data context that is an `IUndoRedoTarget`, or to `null` when none is. A control that is
 part of a menu is ignored, so choosing a menu item does not change what the item acts on.
 
-**Talk key**: `BeginPushToTalkAsync` remembers the `PushToTalk` target and starts it, and does nothing when there is
-no target or a start is already in effect (so the repeats of a held key are ignored). `EndPushToTalkAsync` stops the
-target that was started, even when `PushToTalk` was replaced meanwhile, and does nothing when none was started. The
-window calls them from tunneling `KeyDown` and `KeyUp` handlers for `PushToTalkKey` (marking the key handled while
-there is a target) and from its `Deactivated` event and when it closes, so the microphone is never left open.
+**Talk key**: the key is not a constant: `TalkKey` (a `PushToTalkSetting`, see *PushToTalkBinding Design*) holds the
+binding in effect, made over the settings service so that a key that the user chose on the Speech page takes effect, in
+the window and in every hint, as soon as the settings dialog is accepted. `BeginPushToTalkAsync` remembers the
+`PushToTalk` target and starts it, and does nothing when there is no target or a start is already in effect (so the
+repeats of a held key are ignored). `EndPushToTalkAsync` stops the target that was started, even when `PushToTalk` was
+replaced meanwhile, and does nothing when none was started. The window calls them from tunneling `KeyDown` and `KeyUp`
+handlers. The `KeyDown` handler acts only when there is a target and `TalkKey.Binding.Matches(key, modifiers)` holds,
+which is the key of the binding with exactly the modifiers of the binding (Ctrl, Alt, and Shift; Caps Lock and the like
+do not count), and then marks the key handled, so the application does not use it for anything else. The `KeyUp` handler
+acts when `TalkKey.Binding.IsPartOf(key)` holds, which is the key of the binding or, for a chord, a key of one of its
+modifiers, so that letting go of any key of the chord ends the talking, and not only the last key that was pressed (the
+release is marked handled while a talk is active). The
+window also calls `EndPushToTalkAsync` from its `Deactivated` event and when it closes, so the microphone is never left
+open. A key that the user chose is therefore at once the talk key, and the old key does nothing.
 
 **Clipboard image**: `IDialogService.CopyImageToClipboardAsync(image)` is implemented by the window: it creates a
 bitmap from the picture (`RenderedImageBitmap.Create`), puts it on the window's clipboard with `SetBitmapAsync`,
@@ -274,13 +331,17 @@ no clipboard or refuses the image.
 
 #### Error Handling
 
-The constructor throws `ArgumentNullException` for a missing collaborator, and `AttachDialogService` does the
-same. Problems with projects are results shown in a message dialog, never exceptions. A platform picker that
-cannot be shown answers `null`, which the shell reads as cancelled. `MessageDialogViewModel` throws for missing
-texts or a blank accepting label. A failure to write the layout of the window or the widths of the columns to the
-settings is logged and swallowed (it is an `IOException`), so closing the window and dragging a splitter never fail.
-A drawing of a recent project card that fails is handled inside the welcome screen units and leaves the card without a
-picture.
+The constructor throws `ArgumentNullException` for a missing collaborator, and `AttachDialogService` does the same.
+Problems with projects are results shown in a message dialog, never exceptions. A platform picker that cannot be shown
+answers `null`, which the shell reads as cancelled. `MessageDialogViewModel` throws for missing texts or a blank
+accepting label. A failure to write the layout of the window or the widths of the columns to the settings is logged and
+swallowed (it is an `IOException`), so closing the window and dragging a splitter never fail. A drawing of a recent
+project card that fails is handled inside the welcome screen units and leaves the card without a picture. Open Log
+Folder never throws: `SystemFolderLauncher` turns a program that does not start, or a folder that cannot be made, into a
+`false` answer with a sentence, and the shell turns that into a warning in the log and a message to the user that names
+the folder; a shell without a launcher has the command disabled, and running it anyway does nothing. Caption reserve: a
+title bar without the overlay panel (the headless platform, or the time before the layout) is not an error; the
+measurement answers `null` and the constant stays.
 
 #### Dependencies
 
@@ -311,6 +372,12 @@ picture.
 - **Composer** (through `IUndoRedoTarget`, `IPushToTalkTarget`, and `IAttachmentPicker`) — what the Edit menu and the
   talk key reach, and the picker of the files that the attach button asks for; the seams are owned by the `Composer`
   subsystem and the shell does not know what implements them.
+- **PushToTalkBinding** (the `PushToTalkSetting` of the `Speech` subsystem) — the talk key in effect, which follows the
+  settings; the window matches key presses against its binding.
+- **LoggingSubsystem** (`RollingFileLogger`) — the folder that the log is written to, which Open Log Folder shows, and
+  the warning when it cannot be shown.
+- **Operating system file manager** (through `IFolderLauncher`) — Explorer, `open`, or `xdg-open`, which show the
+  folder.
 - **Preview** (through `IThumbnailSource`) — draws the pictures of the recent project cards; optional.
 - **CommunityToolkit.Mvvm** — property change notification and command source generators.
 - **Avalonia** — the window, menus, dialogs, storage provider, and clipboard.
@@ -320,5 +387,7 @@ picture.
 - `App` (through `ApplicationComposition`) — creates the shell and shows `MainWindowView` over it.
 - `ApplicationComposition` — connects the `Preview` subsystem: `ImageExporter` is passed as the `IImageExporter`,
   and the preview pane is the workspace's preview content. It sets `PushToTalk` to the chat panel, which the talk
-  key of the window then starts and stops. It also sets `ProviderPill` after it has made the chat panel, and passes
-  the style list, the thumbnail source, and the other optional collaborators to the constructor.
+  key of the window then starts and stops, and passes the `TalkKey` of the shell to the chat panel, so that its hints
+  name the key that is in effect. It also sets `ProviderPill` after it has made the chat panel, and passes
+  the style list, the thumbnail source, the folder launcher (a `SystemFolderLauncher` unless a test supplies another),
+  and the other optional collaborators to the constructor.

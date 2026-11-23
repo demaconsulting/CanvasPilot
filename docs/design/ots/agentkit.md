@@ -40,7 +40,11 @@ tools before any is adopted.
   selection, from which the model and the reasoning effort are taken), and `CopilotModelCatalog`, which lists the models
   that the signed-in account may use. The installed CLI is the default source (`CopilotRuntimeSource.InstalledCli`);
   `CopilotCli.MinimumVersion` is the oldest CLI that the library accepts. The runtime reports how it signed in
-  (`SignInSource`, `GitHubLogin`, and `GitHubHost`, none of which holds a secret).
+  (`SignInSource`, `GitHubLogin`, and `GitHubHost`, none of which holds a secret). The agent that it builds streams
+  `AgentResponseUpdate`s of text, tool calls and results, and usage; the usage content carries the event of the Copilot
+  SDK as its raw representation, from which CanvasPilot reads the model multiplier, the reasoning tokens, and the model.
+  The agent opens or resumes the runtime session for each run and releases it after the run (see *The session of a
+  Copilot conversation*).
 
 ### Integration Pattern
 
@@ -128,6 +132,69 @@ The OTS tests `AgentKit_ModelSettings_Validate_RefusesWhatTheModelCannotDoAndBin
 `AgentKit_ModelSettingsChatClient_GetResponse_AddsTheModelAndEffortWithoutChangingCallersOptions`, and
 `AgentKit_OllamaModelCatalog_ListAsync_DescribesCapabilitiesWindowAndEfforts` call the library as the application does
 and pin these rules.
+
+### The session of a Copilot conversation
+
+The Copilot agent of AgentKit keeps the runtime session of a conversation per run, not per application: each run of the
+agent opens the session (the first run) or resumes it (every later run), and when the run ends the library cancels the
+run and releases the session handle. The session itself, with its recorded events, stays at the runtime until the host
+deletes it (CanvasPilot does when it drops the conversation). These are the rules of the library that the `AgentService`
+unit relies on:
+
+- A session gets its identifier when the first run creates it; `AgentSession` of a conversation that has not run has
+  none. The identifier and the folder of the session below the data directory of the runtime are what the log of
+  CanvasPilot names.
+- The runtime therefore closes the session after every run, completed or stopped, and resumes it before the next one.
+  Resuming is quick (about a tenth of a second) and replays nothing, so the application keeps one conversation, one
+  agent and one session object, for the open project and pays no cost for the per-run release.
+- Canceling the token of a run ends the run on the host side; the library has no explicit abort of the runtime turn on
+  that path (see *Known Limits and Upstream Requests*).
+
+### Known Limits and Upstream Requests
+
+The design of the `Agent` subsystem depends on what AgentKit and the Copilot runtime really do, which is less than a
+live display of a long turn would need. The facts below were established with a probe program that starts the runtime
+the way CanvasPilot does and records every raw session event with a time stamp, and with the log and the events file of
+the runtime. They explain why CanvasPilot shows only the elapsed time and the phase of a long turn for some models, and
+they are the requests that CanvasPilot makes upstream. Nothing here is worked around by reflection into the library:
+the library is used through its public API only.
+
+- **U1 — BLOCKS only the model-originated part of live progress.** In `CopilotAgent.UpdateMapper.ToUpdate`, stop
+  dropping progress events: map `AssistantToolCallDeltaEvent` and `AssistantStreamingDeltaEvent` to an update whose
+  content is `new AIContent { RawRepresentation = sessionEvent }` (the same pattern already used for the final
+  `AssistantMessageEvent`), `AssistantReasoningDeltaEvent` to `TextReasoningContent(delta) { RawRepresentation =
+  sessionEvent }`, and `AssistantIntentEvent` / `ToolExecutionProgressEvent` likewise raw; keep root-agent-only
+  filtering; document the contract in `copilot-agent.md`; do not coalesce (host throttles). Release as the next AgentKit
+  beta release (or later). *CanvasPilot cannot work around this: `Events.OnEvent` is overwritten, `Client` is internal,
+  deltas are ephemeral (not in `events.jsonl`); reflection into internals is rejected.* The release in use drops these
+  events (`default: return null`), so only whole messages, tool calls and results, and usage reach the application. The
+  `AgentEventMapper` unit already maps the events from the raw representation, so no change of CanvasPilot is needed
+  when the library forwards them.
+- **U2 — recommended (not blocking).** In `CopilotAgent.FinishAsync`, when the run was canceled and the turn has not
+  ended, call `CopilotSession.AbortAsync()` and wait (bounded) for the session to go idle **before**
+  `channel.DisposeAsync()`; expose the abort through `ICopilotTurnChannel`. Evidence: token cancel alone left the
+  runtime turn running (follow-up waited 37 s); dispose happened to end it in the app.
+- **U3 — investigation request (the Copilot CLI, the Copilot SDK, and the AgentKit release in use).** Repro: start
+  `CopilotRuntime`, create a session through `BuildSessionConfig`, send any prompt with any model, account on
+  `*.ghe.com`: runtime logs `turn model is in neither the picker nor the unfiltered catalog … falling back to default
+  capabilities and the chat-completions wire {latest_model_list_fetch_succeeded:false}` while `Rpc.Models.ListAsync`
+  succeeds and passing `gitHubTokenProvider`+`gitHubHost` changes nothing. For Claude models the response is then
+  buffered (7 deltas, ≈ 45 s silence, ≈ 4500 deltas in 0.4 s) and the runtime logs `Session event stream lagged …
+  skipped:N`. Ask: (a) find why the session-level model-list fetch fails (GHE host? token routing?) and whether
+  github.com accounts are affected; (b) let AgentKit pass the catalog's capabilities to the session
+  (`ModelSwitchToRequest.ModelCapabilitiesOverride`) if (a) cannot be fixed; (c) confirm that Claude streams
+  incrementally once the model is in the picker. The probe is in `%TEMP%\ck-probe\Program.cs` (not committed anywhere).
+
+**Not an issue.** Three things in the logs of the runtime look like faults and are not; the application's own log names
+the provider session so that they can be told apart from real problems:
+
+- The per-run `session.shutdown`, `Closing session`, and `Resumed session` lines after and before every turn are
+  AgentKit's documented lifecycle (open or resume per run, release after it), as described in *The session of a Copilot
+  conversation*.
+- `received response for unknown request id` after every turn, also after a short one, is a benign race of the SDK.
+- The `events.jsonl` of a session is gone after the application ends, because CanvasPilot deletes the session when it
+  drops the conversation (the "forget the conversation" rule); it is kept while the conversation lives, and the log
+  gives its path for a failed or canceled turn.
 
 ### Direction: selectable tool packs
 

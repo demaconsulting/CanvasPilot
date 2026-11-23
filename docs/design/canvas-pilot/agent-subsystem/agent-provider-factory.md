@@ -13,8 +13,11 @@ asks it for an agent when a conversation starts and when the project or the rele
 
 **IAgentFactory** is the seam of the unit: `CreateAsync(AgentCreationRequest, cancellationToken)` returns an
 `AgentCreationResult`, `DeleteSessionAsync(AgentSession, cancellationToken)` deletes what the provider kept for a
-conversation that ends, and the factory is `IAsyncDisposable`. Tests of the service and of the chat use a factory that
-puts an agent on a scripted chat client in place of a real provider.
+conversation that ends, `DescribeSession(AgentSession)` tells the log what the provider calls a session and where it
+recorded it (see *The Description of a Session*), and the factory is `IAsyncDisposable`. `DescribeSession` has a default
+implementation that answers nothing, so a provider or a test double that has no session of its own needs no code for it.
+Tests of the service and of the chat use a factory that puts an agent on a scripted chat client in place of a real
+provider.
 
 **AgentCreationRequest(Settings, Tools, Instructions, ProjectFolder)** carries the `AiProviderSettings`, the tools that
 the agent may call and nothing else (the registry has confined them to the project), the instructions, and the full path
@@ -101,6 +104,25 @@ locator found, so nothing is shipped or downloaded: the packaging guards (`Copil
 sign-in that the runtime uses and the way that its source, login, and host are reported are described in the design of
 the `CopilotRuntimeStarter` unit.
 
+#### The Description of a Session
+
+A turn that runs for minutes and ends in a failure or a Stop must be diagnosable from the log alone, so the service asks
+the factory what the provider calls the session of the conversation. `DescribeSession(session)` returns an
+`AgentSessionInfo(Id, EventsFile)`, a record with the identifier of the session at the provider and the full path of the
+file where the provider records the events of the session, each `null` when there is none. `AgentSessionInfo.None` is
+the answer for a provider with no session of its own (Ollama), for a session that has no identifier yet, and for any
+other kind of session.
+
+For GitHub Copilot the session is the `CopilotAgentSession` of AgentKit, which gets its identifier when the first run
+creates the session at the runtime (a conversation that has not run yet has none). The events file is
+`{data folder of the runtime}\session-state\{id}\events.jsonl`; the factory keeps the data folder of the request that
+made the latest Copilot agent (or the default folder of the service when the request names none), because that is where
+the runtime that it started keeps its sessions. The file exists until the session is deleted, which is when the
+conversation is dropped. The call reads two fields and touches no file, so it is safe at any time, including after the
+runtime was stopped. The service uses it to write the identifier into the lines of the log (whether a run created or
+resumed the session, and the reason for a release) and, for a turn that failed or was canceled, the path of the events
+file, which is the runtime's own record of the session.
+
 #### Ownership
 
 - A **result** owns the clients of its Ollama agent. A Copilot agent owns nothing, and the result never owns the
@@ -135,8 +157,9 @@ the request.
 `MissingModelMessage`, `InvalidContextWindowMessage`, and `NoAgentSourceMessage`. The constructor takes the locator, the
 starter, the handler of the HTTP requests, the logger, `ownsStarter`, and the Ollama catalogs, each optional (the real
 ones when absent, the catalogs over the given handler; a starter that the factory makes is always owned). The supporting
-types are `AgentCreationRequest`, `AgentCreationResult`, and `IAgentFactory`; none has a part definition of its own. The
-Copilot source types are those of the `CopilotRuntimeStarter` unit.
+types are `AgentCreationRequest`, `AgentCreationResult`, `AgentSessionInfo`, and `IAgentFactory`; none has a part
+definition of its own. The Copilot source types are those of the `CopilotRuntimeStarter` unit. Besides the last source
+that made an agent, the factory remembers the data folder of the request that made it, for `DescribeSession`.
 
 #### Error Handling
 
@@ -169,6 +192,7 @@ Microsoft Agent Framework (`AIAgent`), and Microsoft.Extensions.AI (`AIFunction`
 
 #### Callers
 
-The `AgentService` unit holds one factory for the application, asks it for the agent of each conversation, deletes the
+The `AgentService` unit holds one factory for the application, asks it for the agent of each conversation, asks it to
+describe the session of a conversation for its log, deletes the
 session and disposes each result when the conversation ends, and disposes the factory when the application ends. The
 `AppShell` subsystem builds the factory with the starter that it shares with the readiness check.

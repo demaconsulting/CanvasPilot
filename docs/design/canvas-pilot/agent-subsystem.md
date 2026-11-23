@@ -37,14 +37,21 @@ turns the message that the user sent (the `MessagePayload`) into the user messag
 compact description of the attachments, pictures, and marks, and the pictures as PNG images, annotated pictures first
 and then the close-ups of the marks, at most ten. `AgentEventMapper` turns the stream of updates that an agent produces
 for a turn into the events of the contract, the same for both providers, and turns the exception of a failed turn into a
-failure with a sentence that says what to do. `AgentProviderFactory` makes the agent of a conversation for the chosen
-provider: for Ollama an agent on an Ollama client that is told the context window on every request, and for GitHub
-Copilot an agent on the shared runtime that the starter of the runtime gives, with only the supplied tools and the
-default-deny permission handler of the AI library. `AgentService` implements `IAgentService`: it makes nothing until the
-first message is sent, then builds the tools, the instructions, the agent, and one provider session for the open
-project, runs one turn at a time on them, rebuilds them when the project or a setting that decides the agent changes,
-deletes what the provider kept when a conversation ends, gives the Copilot runtime a data folder that is never inside a
-project, and writes metadata only to the log.
+failure with a sentence that says what to do. It also reports the progress that a provider streams while the model works
+(reasoning, the size of the arguments of a tool call that the model is writing, the size of a response) as events that
+carry counts and a file name and never content, spaced by a clock; maps the usage of each model call, with the model
+multiplier that GitHub Copilot reports, through one narrow adapter (`CopilotUsageReader`) that isolates an experimental
+member of the Copilot SDK; and logs the start and the end of each tool call. `AgentProviderFactory` makes the agent of a
+conversation for the chosen provider: for Ollama an agent on an Ollama client that is told the context window on every
+request, and for GitHub Copilot an agent on the shared runtime that the starter of the runtime gives, with only the
+supplied tools and the default-deny permission handler of the AI library; it also tells the log what the provider calls
+the session of a conversation and where it recorded it. `AgentService` implements `IAgentService`: it makes nothing
+until the first message is sent, then builds the tools, the instructions, the agent, and one provider session for the
+open project, runs one turn at a time on them, rebuilds them when the project or a setting that decides the agent
+changes, deletes what the provider kept when a conversation ends, gives the Copilot runtime a data folder that is never
+inside a project, and writes metadata only to the log. It reads the provider on a thread of the pool into a queue that
+merges what says the same thing again (`AgentEventCoalescer`, an internal part of the unit), makes a Stop safe at any
+point of a turn, and numbers each turn so that its log lines can be read together.
 
 The subsystem depends on `Settings` (the provider choices), `Project` (the open project folder), `Payload` (the
 message), `Knowledge`, `Style`, and `Preview` (the content and the rendering that its tools give the copilot),
@@ -63,11 +70,14 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   `AgentTurnRequest` and a cancellation token and returns the events of the turn in order as an
   `IAsyncEnumerable<AgentEvent>`. `ResetConversation` forgets the conversation so that the next turn starts a new
   provider session. The event `FileWritten` tells the shell, on the thread of the tool, which file the copilot created
-  or replaced.
+  or replaced. Canceling the token of a turn is the Stop: it ends the stream soon, at any point of the turn, and leaves
+  the conversation usable for the next message.
 - *Constraints*: Only one turn runs at a time; a request made while a turn runs gets a single `Failed` event of kind
   `Busy`. A turn ends with exactly one `Completed` or `Failed` event, or simply ends when the caller cancels; no event
-  follows either. A provider that cannot be used is reported, not thrown. A project that contains a data folder of the
-  application is refused with a `Failed` event of kind `DataInsideProject`.
+  follows either, so a caller that stops reading at the `Completed` event has read the whole turn. The events that
+  carry facts arrive exactly once and in order; progress events may be merged while the caller lags. A provider that
+  cannot be used is reported, not thrown. A project that contains a data folder of the application is refused with a
+  `Failed` event of kind `DataInsideProject`.
 
 **Turn records**: What one turn is asked and what it answers.
 
@@ -75,8 +85,12 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   `AgentReadinessReport`), described in the design of the `AgentContract` unit.
 - *Role*: Provider (data).
 - *Contract*: A request carries the message and, after a restart, the words of the earlier turns; a turn answers with
-  events that end with `Completed` or `Failed`; the readiness report carries a status and one sentence.
-- *Constraints*: None of the records names a type of an AI library.
+  events that end with `Completed` or `Failed`; the readiness report carries a status and one sentence. The events are
+  the answer (`TextDelta`), the tool calls (`ToolStarted`, `ToolFinished`), the files (`FileWritten`), the usage of each
+  model call (`Usage`, with the tokens, the reasoning tokens, the model multiplier, and the model), the progress while
+  the model works (`Thinking`, `ToolProgress`, `ModelWorking`), and the end.
+- *Constraints*: None of the records names a type of an AI library. The progress events carry counts of bytes and the
+  name of a file, never the content of an argument or of a response.
 
 **CopilotCliLocator**: The installed GitHub Copilot CLI, as the readiness checks need it.
 
@@ -199,10 +213,13 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   of the Microsoft Agent Framework and the content types of Microsoft.Extensions.AI.
 - *Contract*: `MapAsync(updates)` returns the events of the turn and ends them with `Completed`, with `Failed`, or, when
   the token of the turn was canceled, with neither; `Map(update)` maps one update; `MapFailure(exception)` returns the
-  `Failed` event for an exception, or `null` for a cancellation.
+  `Failed` event for an exception, or `null` for a cancellation. The constructor also takes the clock that spaces the
+  progress events and the number of the turn that its log lines carry.
 - *Constraints*: The same for GitHub Copilot and Ollama; a call is tied to its result by id and a summary is at most 200
   characters, a long text argument being shown by its length; every failure has a kind and a sentence that names the
-  remedy; the log gets metadata only.
+  remedy; a progress event is made at most once for every 250 milliseconds of the clock, or at once when the phase
+  changes, and carries only counts and a path; the model multiplier is read in one adapter only; the log gets metadata
+  only.
 
 **AgentProviderFactory**: The agent of a conversation for the chosen provider.
 
@@ -212,7 +229,10 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   `Settings` subsystem, the tools of the registry, and the instructions.
 - *Contract*: `CreateAsync(request)` returns an `AgentCreationResult`, which holds an `AIAgent` of the Microsoft Agent
   Framework or the readiness status and sentence that say why none could be made; disposing the result releases what the
-  agent owns, and disposing a factory that owns its starter stops the Copilot runtime.
+  agent owns, and disposing a factory that owns its starter stops the Copilot runtime. `DescribeSession(session)` gives
+  an `AgentSessionInfo`: the identifier of the provider session and the file where the provider records its events (for
+  Copilot, the `events.jsonl` of the session below the data folder of the runtime), or nothing for a provider with no
+  session of its own and for a session that has not run yet.
 - *Constraints*: Ollama gets the address, the model, and the context window of the settings on every request; GitHub
   Copilot is reached only through the shared runtime of the starter, and gets exactly the supplied tools and the project
   folder with the default-deny permission handler; settings that cannot be used are a result, not an exception.
@@ -227,9 +247,10 @@ that interface, as the `Composer` subsystem owns `IMessageBuilder` for the `Payl
   passes on), the active style, the logger, and the local data root. `RunTurnAsync` runs a turn on the conversation of
   the open project, made now if it does not exist; `ResetConversation` drops it; `Dispose` ends the turn, releases the
   conversation, and disposes the factory.
-- *Constraints*: Nothing is made before the first turn; one turn at a time; the Copilot data folder is below the local
-  data root and never inside a project; the restored history is one block of at most 6,000 characters, once, in memory
-  only; the log has metadata only.
+- *Constraints*: Nothing is made before the first turn; one turn at a time; the provider is read off the thread of the
+  caller and a Stop ends a turn within five seconds even when the provider ignores it; the Copilot data folder is below
+  the local data root and never inside a project; the restored history is one block of at most 6,000 characters, once,
+  in memory only; the log has metadata only.
 
 **IProviderCheck**: The connection check that the settings dialog can ask for.
 
@@ -291,10 +312,95 @@ without an agent for each way that a start fails and an agent that is made with 
 validated model selection of the project. The service is tested with a scripted model on the real tools, instructions,
 and mappers, a stand-in for the open project and for the settings that raise the events of the real services, and a log
 file: the tests run whole turns, change the project and the settings, stop, reset, and dispose, and show that nothing is
-written into the project and that no word of a message, an answer, a tool, or a file reaches the log. Two subsystem
+written into the project and that no word of a message, an answer, a tool, or a file reaches the log. The event pipeline
+and the Stop are tested on a scripted model that can wait inside a tool call, before its first update, or without ever
+looking at the token (with a manual clock for the grace period), and with a consumer that lags, stops reading, or reads
+only up to the completion; the coalescer is tested on its own, and the progress mapping with hand-built events of the
+Copilot SDK on a manual clock. Two subsystem
 tests run it as the application will, once over the stand-in Ollama server with the real factory and once for Copilot
 with a stand-in starter. The starter itself is tested over a stand-in function that starts the runtime, because the
 runtime is a sealed class that needs a real CLI: sharing, replacement, failure mapping, and disposal are shown there.
+
+**The event pipeline of a turn.** The caller does not read the provider directly. `AgentService` starts a pump on a
+thread of the pool that reads the updates of the agent, maps them with the `AgentEventMapper` of the turn, and adds each
+event to an `AgentEventCoalescer`; the caller, which is the chat on the thread of the user interface, reads the
+coalescer at its own pace. Some providers send thousands of small events in one burst (a Claude model on the Copilot
+runtime was seen to send nothing for about 45 seconds and then about 4,500 events in 0.4 seconds, and the runtime then
+reports that its event stream lagged; the lag was reproduced without any user interface, so it is not caused by the
+application). The pipeline makes sure that the application is never the slower side: while the caller lags, events that
+are next to each other and say the same thing again are merged (the pieces of text are joined, only the latest progress
+of a call and the latest size of the response are kept, and a repeated `Thinking` is dropped), and the events that carry
+facts (a tool that started or finished, a file that was written, the usage, `Completed`, `Failed`) are never merged,
+dropped, or reordered. A file that a tool wrote while the model worked is put into the queue before the event that
+follows it, so a file comes before the answer of the call that wrote it. The number of merged events is logged. When the
+provider's stream ends with an exception, the caller gets the events before it and then the failure that the mapper made
+of it.
+
+**Honest progress.** What the user can be told about a running turn depends on what the provider really sends, and the
+subsystem never invents progress. The mapper turns three things into events: reasoning (`Thinking`, once for each phase
+and without its words), the bytes of the arguments of a tool call that the model is still writing (`ToolProgress`, with
+the file name once the first characters of the arguments name it), and the size of the response so far (`ModelWorking`).
+Each carries counts and at most a file name, never the content of a drawing, which belongs to the user and is large; the
+events are spaced by the clock of the mapper so that a stream of thousands of pieces reaches the screen as a few events.
+These events come from the raw events of the Copilot SDK that the provider carries next to its content, so they exist
+only for a provider and a library release that forward them: the release of AgentKit in use forwards whole messages
+only, and a Claude model on the Copilot runtime is silent for a minute or two in the middle of a long answer. For such a
+turn the only truthful status is the time that has passed and the phase that the facts of the turn give (waiting for the
+model, a tool that runs); the `Chat` subsystem shows exactly that, and shows byte progress as soon as the events arrive.
+See the design of the `AgentEventMapper` unit for the rules and *Known Limits and Upstream Requests* in the design of
+the AgentKit OTS item.
+
+**Stop.** Canceling the token of a turn must work at any point, including in the middle of a tool call, and the
+conversation must be usable afterwards. The token of a turn is linked to the token of the caller, to the end of the
+service, and to a reset or a change of the project; the turn records which of them canceled it first (the caller, a
+reset, the project, the end of the service, or a consumer that stopped reading) and logs it. The token of the turn is
+also the token that the provider's stream is read with, so a provider that honors it ends its stream at once, and the
+next turn begins only after the stream was disposed. A provider that does not end its stream within five seconds of the
+cancellation is left to finish in the background, the turn ends without a failure, and the conversation is dropped, so
+that the caller is never held by it. What happens to the conversation depends on how far the provider got: a Stop before
+the provider said anything drops the conversation, because it is not known what the provider session holds, and the next
+turn starts on a new provider session that gets the digest of the history once; a Stop later keeps the conversation and
+marks it as interrupted. If the next turn on an interrupted conversation fails with a lost connection or an unexpected
+error before it says anything, the failure is not shown: the conversation is replaced and the turn is run once more on
+the new one, with the line `Session recovered: turn=N reason=...` in the log, and never otherwise, so a genuine failure
+is never hidden. A turn that completed is not a canceled turn: nothing follows `Completed`, so a consumer that stops
+reading there (as the chat does) has read the whole turn, and the conversation is not marked as interrupted. A Stop does
+not refund the request at the provider: the model multiplier of the stopped message is still counted.
+
+**The provider session per run.** AgentKit opens or resumes the runtime session for each run of the agent and releases
+the handle after it; the session itself, and its events file, stay until the conversation is dropped. The runtime
+therefore logs a `session.shutdown` and a close of the session after every turn, completed or stopped, and a resume
+before the next one; resuming takes about a tenth of a second and replays nothing. The runtime also logs `received
+response for unknown request id` after every turn, which is a benign race of the SDK. None of this is a fault, and the
+application keeps one conversation, with one provider session, for the open project for as long as the project and the
+settings do not change. What was missing was clarity in the log, which is why the log names the provider session.
+
+**Logging.** The log is for people who attach it to a bug report, and it must let them tell what happened to a turn of
+several minutes without a word of the user's content. Every line of a turn carries its number (`turn=N`, counted for the
+life of the service). `Turn started` names the provider, the model, the reasoning effort, `historyTurns` (the count of
+earlier turns that the caller handed over, which is its whole saved conversation, not what is sent) and whether the
+digest of them was added (only when the provider session is new). `Tool started` and `Tool finished` name the tool, the
+call, the file that it works on (made safe for one line and cut to 120 characters), the bytes of the arguments and of
+the result, the outcome (`ok`, `failed`, or `refused`), and the time. `Provider session` names the identifier of the
+session, whether the run `created` or `resumed` it, and whether the handle was released after the run. `Turn ended`
+names the outcome, the cancel source, the time of the turn, the time to the first event and the longest gap between
+events (the number that shows the silence of a buffering model), the number of events and of merged events, the length
+of the answer text, whether the provider reasoned, the usage, the reasoning tokens, and the model multiplier. A turn
+that failed or was canceled also gets the line `Provider session events` with the file where the provider recorded the
+events of its session, which exists until the conversation is dropped. A conversation is released with its reason
+(reset, changed, settings, project, dispose, unused, stopped-early, stop-timeout, or recovered) and its session
+identifier. The rule that protects the user does not change: the log never gets the words of a message, the answer of
+the model, the arguments or the result of a tool, or the content of a file; a test puts sentinel texts into each and
+reads the whole log.
+
+**Usage and cost.** The mapper makes a `Usage` event for each model call with the tokens that the AI library reports
+(input, output, and reasoning) and, for GitHub Copilot, the model multiplier, the model, and the reasoning tokens that
+the runtime reports on the raw event. The multiplier is a member of the Copilot SDK that is marked experimental; one
+adapter (`CopilotUsageReader`)
+reads it behind a single narrow warning suppression, so that a change of the SDK touches one method. The multiplier is
+per call and not a total for the message (a message is billed once, however many model calls it makes), so the service
+logs the largest it saw, and the `Chat` subsystem decides how to show it. A provider that reports none, such as Ollama,
+gives no multiplier.
 
 **Where the data of the copilot lives.** The copilot's own data never goes into the project folder. The folder of a
 project receives only files that the user or the copilot is asked to create.
@@ -345,7 +451,11 @@ the project.
   sizing of the Ollama client that the provider factory uses, and the model catalogs, model settings, and selections
   that list and validate models.
 - **Microsoft Agent Framework** (OTS): the stream of updates (`AgentResponseUpdate`) of an agent that the event mapper
-  reads; **Microsoft.Extensions.AI** also gives it the content types (text, call, result, usage, error, picture).
+  reads; **Microsoft.Extensions.AI** also gives it the content types (text, call, result, usage, error, picture,
+  reasoning).
+- **GitHub Copilot SDK** (OTS, brought in by AgentKit): the raw events that the Copilot agent carries next to its
+  content (the usage of a call with its experimental model multiplier, the arguments of a tool call that the model is
+  writing, the size of a response, reasoning), which the event mapper reads and the usage adapter isolates.
 - **Settings** subsystem: the AI provider choices (`SettingsService`), the recommended minimum context window that
   chooses the tier of the instructions, and the `IProviderCheck` and `IProviderModelSource` interfaces that
   `AgentReadiness` and `ProviderModelCatalog` implement (documented with `AiProviderSettingsPage`); `Settings` does not

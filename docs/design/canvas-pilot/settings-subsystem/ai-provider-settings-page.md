@@ -63,6 +63,23 @@ level"). While nothing is known about the model (no list, or a name that is not 
 shown, and disabled, with the note that the levels of the model are not known, so that a server that is down does not
 erase a setting.
 
+**EffortCostWarning / HasEffortCostWarning**: `string` and `bool` — a caution under the reasoning level that tells the
+user, where the level is chosen, that a high level on a large model is slow and costly. It is worked out from the
+information of the chosen model (`ProviderModelInfo`, kept as it is known) and the effort that is chosen, and is empty
+unless all of these hold: GitHub Copilot is the selected provider (only its models are billed in premium requests); the
+model is known (listed with its information, so a typed name that is not listed gets no warning); the effort is high,
+which means `high`, `xhigh`, or `max` in any letter case, where an empty choice counts as the default effort of the
+model (`DefaultReasoningEffort`) because the provider chooses it then; and the model is large, which means that its
+`BillingMultiplier` is at least `LargeModelMultiplier` (3), or its `Category` is `powerful`, or its `PriceCategory` is
+`high`, `very_high`, or `premium`. The sentence is: "A high reasoning level on a large model is slow (a big drawing can
+take minutes) and costly: each message counts 15 premium requests, and stopping a turn does not give the request back.
+Choose a lower level for everyday work." The number is the multiplier of the model written with up to two decimals in
+invariant culture, and, when the provider does not publish a multiplier, the words are "each message counts several
+premium requests". It is a warning and not an error: it never changes `IsValid`, and the page stores whatever the user
+chooses. It is announced again whenever the model information or the effort changes, so that it appears and disappears
+as the user chooses. `BuildEffortCostWarning(info, effortId)` is the public static function that holds the rule, so that
+a test reaches it without a page.
+
 **ContextWindowText**: `string` — the context window as typed. Valid when it parses as a whole number with
 no sign or separators, in invariant culture, from 512 to 2,000,000. The label says "Ollama only"; while GitHub
 Copilot is selected `ContextWindowNote` says that the window applies to Ollama only.
@@ -96,8 +113,10 @@ and the composition root passes it in), and without naming a type of the AI libr
 yet and returns a `ProviderModelList`: the models in the order to show them and a message that is empty when the list is
 complete. `ProviderModelInfo` is plain data: the id, the name, whether the model can call tools, accepts pictures, and
 reasons, its largest context window, the efforts that it offers, the default effort, whether it can be used and why not,
-and the notes of the provider. A provider that cannot be asked is a list with no models and a sentence, not an
-exception.
+and the notes of the provider, and, as optional last fields that default to `null`, what the provider says about cost:
+`BillingMultiplier` (the premium requests that one message counts), `Category` (such as `powerful`), and `PriceCategory`
+(the price band). The page uses these three, and nothing else, for `EffortCostWarning`. A provider that cannot be asked
+is a list with no models and a sentence, not an exception.
 
 **IProviderCheck / ProviderCheckResult** (supporting types, in `IProviderCheck.cs`): the seam through which the
 connection check reaches the provider without the `Settings` subsystem depending on the subsystem that implements it
@@ -125,21 +144,23 @@ each with a section title and, above each entry, a label in the label look. The 
 box for the provider, the combo box of the models (visible only while there is a list, with disabled entries for models
 that cannot be used), the text box for the model name, the Refresh models button with the sentence about the list, the
 details and the warning of the chosen model, and a combo box of the reasoning levels (enabled by the model) with its
-note. The card `Connection` has the text boxes for the context window, the Ollama endpoint, and the path of the Copilot
-tool, with their notes. The card `Check` is shown only when there is a check; it has the Check connection button and the
-answer. The answer is the sentence of the provider check, which for GitHub Copilot that can be used names the account,
-the host, and the kind of sign-in (for example "GitHub Copilot CLI {version} is ready. Signed in as octocat on
-github.com (Copilot CLI sign-in)."), and for Copilot that is not signed in is the sentence that says to run `copilot`
-and type `/login`, with what the library found. Notes and sentences use the hint look, warnings the caution look, and
-error lines the error look and are visible only when their message is not empty; the answer of the check is in the
-danger color when the provider cannot be used. No color is written in the view: all come from the shared styles of the
-controls and the design tokens. Every entry has an automation name (`Provider`, `Model`, `Model name`,
-`Reasoning level`, `Context window in tokens`, `Ollama endpoint`, and `GitHub Copilot command-line tool path`). Controls
-carry automation identifiers (`AiProviderComboBox`, `AiModelComboBox`, `AiModelNameTextBox`, `AiRefreshModelsButton`,
-`AiModelListMessage`, `AiModelDetails`, `AiModelWarning`, `AiContextWindowTextBox`, `AiContextWindowWarning`,
-`AiContextWindowNote`, `AiReasoningEffortComboBox`, `AiReasoningEffortNote`, `AiOllamaEndpointTextBox`,
+note. The warning about cost (`AiEffortCostWarning`, in the caution look, visible only while `HasEffortCostWarning`)
+follows the note of the reasoning level in the same card. The card `Connection` has the text boxes for the context
+window, the Ollama endpoint, and the path of the Copilot tool, with their notes. The card `Check` is shown only when
+there is a check; it has the Check connection button and the answer. The answer is the sentence of the provider check,
+which for GitHub Copilot that can be used names the account, the host, and the kind of sign-in (for example "GitHub
+Copilot CLI {version} is ready. Signed in as octocat on github.com (Copilot CLI sign-in)."), and for Copilot that is not
+signed in is the sentence that says to run `copilot` and type `/login`, with what the library found. Notes and sentences
+use the hint look, warnings the caution look, and error lines the error look and are visible only when their message is
+not empty; the answer of the check is in the danger color when the provider cannot be used. No color is written in the
+view: all come from the shared styles of the controls and the design tokens. Every entry has an automation name
+(`Provider`, `Model`, `Model name`, `Reasoning level`, `Context window in tokens`, `Ollama endpoint`, and
+`GitHub Copilot command-line tool path`). Controls carry automation identifiers (`AiProviderComboBox`,
+`AiModelComboBox`, `AiModelNameTextBox`, `AiRefreshModelsButton`, `AiModelListMessage`, `AiModelDetails`,
+`AiModelWarning`, `AiContextWindowTextBox`, `AiContextWindowWarning`, `AiContextWindowNote`,
+`AiReasoningEffortComboBox`, `AiReasoningEffortNote`, `AiEffortCostWarning`, `AiOllamaEndpointTextBox`,
 `AiCopilotCliPathTextBox`, `AiCopilotCliPathNote`, `AiCheckConnectionButton`, `AiCheckConnectionResult`, and
-`...Error`); none of them changed in the redesign.
+`...Error`); none of them changed in the redesign, and `AiEffortCostWarning` is the one that was added after it.
 
 #### Key Methods
 
@@ -156,6 +177,11 @@ valid.
 **StartModelLoad / RefreshModelsAsync**: Starts the listing of the models as described above and ends the one that runs.
 
 **CheckConnectionAsync**: Runs the connection check as described above.
+
+**BuildEffortCostWarning**: Returns an empty string when the model information is `null`; otherwise takes the chosen
+effort (the default effort of the model when none is chosen), tests it against `high`, `xhigh`, and `max` and the model
+against the multiplier, category, and price band named above, and returns the sentence when both tests hold and an empty
+string otherwise. The property `EffortCostWarning` applies it only while GitHub Copilot is selected.
 
 **OnClosed**: Removes the answer, cancels the check and the listing that still run.
 

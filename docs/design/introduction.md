@@ -50,7 +50,8 @@ Local items:
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, **StatusBar**, **ProviderPill**, **Welcome**,
     **AboutDialog**, and **ThemeResources** units.
-  - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, **ChatHistoryStore**, and **PayloadInspector** units.
+  - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, **ChatHistoryStore**, **FollowUpSuggestions**, and
+    **PayloadInspector** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
   - **Knowledge** subsystem: **KnowledgeCatalog**, **KnowledgeSearch**, **KnowledgePromptBuilder**,
@@ -66,7 +67,7 @@ Local items:
     **AppearanceSettingsPage** units (the AI provider page lists the models of the provider and offers the reasoning
     levels that the chosen model has).
   - **Speech** subsystem: **AudioDeviceService**, **SpeechModelService**, **DictationService**, **DeviceSelection**,
-    **ModelCatalogPanel**, **ModelParameterEditor**, and **SpeechSettingsPage** units.
+    **ModelCatalogPanel**, **ModelParameterEditor**, **SpeechSettingsPage**, and **PushToTalkBinding** units.
   - **Style** subsystem: **StyleKitDocument**, **StyleKitCatalog**, **StyleKitArchive**, **StyleSelection**,
     **StyleGuidance**, **StyleChecker**, **StyleTools**, **StylePicker**, **StyleSettingsPage**, **StyleKitEditor**, and
     **StyleKitManager** units.

@@ -71,8 +71,16 @@ here from the preview pane view, whose automation name is the summary sentence),
 
 #### Key Methods
 
-**Constructor**: refuses a missing workspace, subscribes to the property changes of the workspace, and follows the
-preview pane that the workspace holds.
+**Constructor**: refuses a missing workspace and subscribes to the property changes of the workspace, to the changes of
+the talk key, and, when there is a project service, to its `CurrentChanged`; then it follows the preview pane that the
+workspace holds. The talk key (`PushToTalkSetting`) is optional and defaults to a fixed setting that holds the default
+key, the project service is optional (without it nothing is said about saving), and the clock (`TimeProvider`, the
+system's by default) tells what day it is for the text of the time; the shell passes its own talk key and project
+service.
+
+**FormatSavedTime**: a public static function that writes the time of a save: `ToLocalTime`, then the short time pattern
+(`t`) of the culture when the save was on the same local day as now, and otherwise the general short date and time
+pattern (`g`).
 
 **FollowPreview**: compares the preview of the workspace with the one that is followed. When they differ it drops the
 subscription to the old pane and subscribes to the new one. A pane that is not a `PreviewPaneViewModel` is treated as no
@@ -84,7 +92,14 @@ same few facts.
 
 **OnPreviewPropertyChanged**: announces a change of every property whenever the followed pane changes anything.
 
-**Dispose**: unsubscribes from the workspace and from the pane and drops the pane. After it nothing is announced.
+**OnProjectsChanged**: when the project service announces that the open project changed or was saved, announces
+`SavedText` and `HasSavedText` on the synchronization context that the bar was made on (directly when there was none),
+because the service may raise the event on another thread.
+
+**OnTalkKeyChanged**: when the text of the talk key changes, announces `TalkKeyText`.
+
+**Dispose**: unsubscribes from the workspace, the talk key, the project service, and the pane and drops the pane. After
+it nothing is announced.
 
 #### Error Handling
 
@@ -102,11 +117,16 @@ sentence of the marking tools is not part of the bar; it is read out from the ov
   notifications.
 - **PreviewPane** — `PreviewPaneViewModel` supplies the busy, error, and image flags, the file name, the size, the
   format, the render time, the sentence, and the diagnostics header.
-- **MainWindowShell** — the name of the push-to-talk key, which the hint shows.
+- **ProjectService** (through `IProjectService`) — the open project, whose document says when the project file was saved
+  (`ModifiedUtc`), and `CurrentChanged`, which the service raises after the project is created, opened, closed, or
+  saved.
+- **PushToTalkBinding** (the `PushToTalkSetting` of the `Speech` subsystem, which `MainWindowShell` passes) — the text
+  of the push-to-talk key in effect, which the hint shows and which follows the settings.
 - **ThemeResources** — the surface, line, text, and state colors, the type size, and the check and error icons.
 - **CommunityToolkit.Mvvm** — `ObservableObject`, the base of the view model.
 
 #### Callers
 
-- **MainWindowShell** creates the view model, exposes it as its `StatusBar` property, and disposes it.
+- **MainWindowShell** creates the view model over its workspace, its talk key, and its project service, exposes it as
+  its `StatusBar` property, and disposes it.
 - **MainWindowView** places the `StatusBarView` at the bottom of the window with the view model as its data context.

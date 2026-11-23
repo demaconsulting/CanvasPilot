@@ -12,7 +12,8 @@ type of an AI library, so the chat can be written and tested without any provide
 
 **IAgentService**: `interface`, `IDisposable` — `GetReadinessAsync(CancellationToken)` returns
 `Task<AgentReadinessReport>`; `RunTurnAsync(AgentTurnRequest, CancellationToken)` returns
-`IAsyncEnumerable<AgentEvent>`; `ResetConversation()` returns nothing; the event `FileWritten`
+`IAsyncEnumerable<AgentEvent>`, and canceling its token is the Stop of the turn; `ResetConversation()` returns nothing;
+the event `FileWritten`
 (`EventHandler<FileWrittenEventArgs>`) tells the shell which project file the copilot created or replaced.
 
 **AgentTurnRequest**: `record` — `Payload` (`MessagePayload`, never `null`) and `RestoredHistory`
@@ -30,9 +31,27 @@ library can derive from it and the family is closed. `MaxSummaryLength` is 200. 
 - `ToolFinished(CallId, Name, Succeeded, Summary, HasImage)` — the call ended; the `CallId` is that of its
   `ToolStarted`.
 - `FileWritten(RelativePath, Replaced)` — the copilot created (`Replaced` is false) or replaced a project file.
-- `Usage(InputTokens, OutputTokens)` — counts so far; either is `null` when the provider does not report it.
+- `Usage(InputTokens, OutputTokens, ReasoningTokens, Multiplier, Model)` — what the provider counted for one model
+  call; each member is `null` when the provider does not report it. `Multiplier` is the model multiplier that a
+  provider bills a message with (the premium requests that it counts; only GitHub Copilot reports one) and is per call,
+  not a total for the message; `ReasoningTokens`, `Multiplier`, and `Model` are optional and default to `null`.
+- `Thinking` — the model is thinking: the provider reports reasoning that is not shown. It says that the turn is alive
+  and in what phase; it carries no text.
+- `ToolProgress(CallId, Name, ArgumentBytes, Path)` — the model is still writing the arguments of a tool call that the
+  provider streams before it runs the tool. It carries the bytes received so far (never negative) and the name of the
+  file once it is known (`null` before; white space is `null`; a long name is cut like a summary). It never carries the
+  content of the arguments. `CallId` and `Name` are never empty, and the `CallId` is that of the `ToolStarted` that
+  follows.
+- `ModelWorking(BytesReceived)` — the model is writing its answer, and the provider says how many bytes of the response
+  were received so far.
 - `Completed` — the turn ended normally.
 - `Failed(Kind, Message)` — the turn failed; `Message` is never empty and is meant for the user.
+
+The events fall in two groups that the pipeline of the `AgentService` unit treats differently. *Facts* (`ToolStarted`,
+`ToolFinished`, `FileWritten`, `Usage`, `Completed`, `Failed`) happen once and are delivered exactly once and in order.
+*Text and progress* (`TextDelta`, `Thinking`, `ToolProgress`, `ModelWorking`) say what is going on and may be merged
+while a consumer lags: texts are joined, and only the latest progress counts. The records do not enforce this; it is the
+rule of the pipeline.
 
 **AgentFailureKind**: `enum` — `NotReady`, `Authentication`, `ProtocolMismatch`, `ModelNotFound`, `ConnectionLost`,
 `Busy`, `DataInsideProject` (a folder where the application keeps its own data lies inside the project, so the turn is
@@ -50,8 +69,10 @@ refused), and `Unexpected`.
 `ToolFinished` constructors apply it to their summaries, so an event can never carry a longer one.
 
 **Constructors of the records**: Check what each record needs and refuse the rest: `AgentTurnRequest` a `null` payload,
-the tool events an empty call id or name, `Failed` and `AgentReadinessReport` an empty or white-space message, and
-`TextDelta` a `null` text.
+the tool events and `ToolProgress` an empty call id or name, `Failed` and `AgentReadinessReport` an empty or white-space
+message, and `TextDelta` a `null` text. `ToolProgress` also clamps a negative byte count to zero and turns a path that
+is empty or white space into `null`, and applies `Summarize` to a path, so a progress event can never carry more than a
+file name.
 
 **AgentReadinessReport.IsUsable**: The single rule that decides which statuses allow a turn.
 

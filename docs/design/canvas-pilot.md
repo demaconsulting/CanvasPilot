@@ -41,9 +41,11 @@ or on `Preview`.
 `MainWindowShell` is the view model of the main window and the only item that talks to the user about projects and
 settings: it runs the File, Edit, Image, Tools, and Help commands and shows its dialogs through an `IDialogService` that
 the window implements. The Edit commands, Undo and Redo, act on the part of the window that has the focus (the message
-editor), and the shell starts and stops the chat panel's dictation while the talk key (F9) is held. `ProjectWorkspace`
+editor), and the shell starts and stops the chat panel's dictation while the talk key is held (F9 until the user chooses
+another key or chord on the Speech page, which every hint then names). `ProjectWorkspace`
 holds the project explorer, the preview pane, and, while a project is open, the chat column, with splitters whose widths
-are kept; `StatusBar` reports the shown picture at the bottom of the window, `ProviderPill` tells in the title bar which
+are kept; `StatusBar` reports the shown picture at the bottom of the window and, while a project is open, when the
+project file was last saved (when that is known) and the talk key, `ProviderPill` tells in the title bar which
 AI provider answers and whether it can be used, `Welcome` is the start screen while no project is open, and
 `AboutDialog` identifies the application, and `ThemeResources` holds the design tokens of the dark and the light theme
 and its line icons from which every view takes its colors, spacing, type, and icons. At startup the application builds
@@ -68,7 +70,7 @@ downloaded, no microphone, an engine that will not start, or native speech files
 own explanation, never an exception. The native speech runtime arrives with the speech library's packages and is
 shipped beside the application and in the installer; `DictationService` checks that it is there before it loads an
 engine, because an engine started without it can crash the process, which no code can catch. The talk button of the chat
-panel calls the service, and so does the talk key, F9, through the main window.
+panel calls the service, and so does the talk key, F9 by default, through the main window.
 
 `ImageRenderService` is the only item that draws files: it calls the CanvasNet viewer library in the background,
 confined to the project folder, and returns the pixels, notes, or a coded error. Each picture it returns also says
@@ -395,8 +397,9 @@ is asked to create.
 - *Copilot runtime data*: `%LOCALAPPDATA%\CanvasPilot\copilot`, chosen by `AgentService` and handed to the one
   `CopilotRuntimeStarter` by the composition; its sessions are deleted when
   a conversation ends.
-- *Log*: `%LOCALAPPDATA%\CanvasPilot\logs`; the copilot writes only metadata (provider, model, tool names, sizes,
-  status, durations), never a message, an answer, a picture, a token, or the content of a file.
+- *Log*: `%LOCALAPPDATA%\CanvasPilot\logs`; the copilot writes only metadata (the number of the turn, provider, model,
+  reasoning effort, tool names, sizes, status, durations, the usage figures, and the identifier of the provider
+  session), never a message, an answer, a picture, a token, or the content of a file.
 - *Settings*: `%APPDATA%\CanvasPilot\settings.json`; it never holds a credential.
 - *Memory only*: the digest of the restored history that is given to a new provider session, and the pictures that
   `render_image` draws.
@@ -414,17 +417,18 @@ user, for example) is refused, so that a configuration mistake cannot write into
   UTF-8, in `canvaspilot.log` plus timestamped archive files in the log folder.
 - *Constraints*: The default location is `%LOCALAPPDATA%\CanvasPilot\logs`. Files are written locally
   only; no telemetry or remote transmission is performed. Disk usage is bounded by the rotation size
-  and the retained archive count.
+  and the retained archive count. Help ▸ Open Log Folder shows the folder in the file manager of the system, so that a
+  person who reports a problem can attach the log.
 
 **Settings File**: The user's persisted settings.
 
 - *Direction*: Input and output.
 - *Type*: JSON file on the local file system.
-- *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects with the time each was opened,
-  the AI provider choices, the speech choices, the style choices (the shared kit folders and the default kit), the
-  window layout (size, place, state, and the widths of the explorer and the chat column), and the appearance (the theme
-  choice, the small pictures of the explorer, and the row height). Unknown properties
-  are ignored.
+- *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects with the time each was opened, the
+  AI provider choices, the speech choices (the devices, the models, and the talk key), the style choices (the shared kit
+  folders and the default kit), the window layout (size, place, state, and the widths of the explorer and the chat
+  column), and the appearance (the theme choice, the small pictures of the explorer, and the row height). Unknown
+  properties are ignored.
 - *Constraints*: The default location is `%APPDATA%\CanvasPilot\settings.json`. The file is written
   atomically. A corrupt file is renamed `settings.json.bad` and defaults are used. The file never
   contains credentials.
@@ -567,9 +571,13 @@ made in the project when the message is sent.
 - *Type*: The speech section of the settings file; the operating system's audio system, through the
   DemaConsulting.Speech library; the library's default model store on the local file system; and HTTPS downloads of
   model files.
-- *Format*: Devices are stored by name, models by identifier, and each model's parameter values as
-  invariant-culture strings, in the `speech` section of `settings.json`. The model store is
-  `%LOCALAPPDATA%\DemaConsulting.Speech\Models` on Windows and is shared with other DEMA Consulting applications.
+- *Format*: Devices are stored by name, models by identifier, each model's parameter values as invariant-culture
+  strings, and the talk key as text (`F9`, `Ctrl+Shift+Space`; nothing for the default F9), in the `speech` section of
+  `settings.json`. A talk key that is not safe to take over (a key that types, the keys of editing and moving, a
+  modifier alone, Windows key chords, `Ctrl+Space`, `Alt+Space`, `Ctrl+Alt` chords, the shortcuts of editing, `Alt+F4`,
+  and F1, F8, F10, F11, and F12) is refused on the page and, when found in the file, read as the default. The model
+  store is `%LOCALAPPDATA%\DemaConsulting.Speech\Models` on Windows and is shared with other DEMA Consulting
+  applications.
 - *Constraints*: The audio system and the model store are used only when the Speech page is opened or dictation is used.
   Downloads start only when the user asks, verify checksums before installing, and are cancelled when the settings
   dialog closes. A machine without audio hardware, a blocked network, or an unreadable store is explained on the page
@@ -612,14 +620,21 @@ made in the project when the message is sent.
   bar at the bottom; and modal dialogs (New Project, Settings, About, payload inspector, export size, style kit editor,
   and message, confirmation, and prompt dialogs) and, from the Help and Tools menus, the windows of the drawing
   knowledge and of the style kits, which do not block the main window.
-- *Format*: The window title is `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`.
-  Every menu item has a name and an automation identifier that are the same. The F9 key is the talk key: dictation
-  listens while it is held. The window opens at the size, place, and state that the user left (1440 by 900 at first,
-  never smaller than 960 by 600), fitted to the screens, with the widths of the explorer and the chat column that the
-  user chose; these are kept in the settings (see *Settings*).
+- *Format*: The window title is `{project name} - CanvasPilot` while a project is open, otherwise `CanvasPilot`. Every
+  menu item has a name and an automation identifier that are the same; Help has Open Log Folder, usable with no project
+  open. The talk key is F9 until the user chooses another key or chord on the Speech page (a setting that is kept and
+  that every hint follows): dictation listens while it is held, and ends when any key of a chord is let go. The window
+  has no full-screen mode: its title bar asks for the minimize, maximize or restore, and close buttons only, no key is
+  bound to full screen, and a window that is put into full screen by other means is turned back to the normal state. The
+  window opens at the size, place, and state that the user left (1440 by 900 at first, never smaller than 960 by 600),
+  fitted to the screens, with the widths of the explorer and the chat column that the user chose; these are kept in the
+  settings (see *Settings*).
 - *Constraints*: Menu items are enabled only when their command can run; Undo and Redo act on the part of the window
   that has the focus and are disabled when that part has nothing to undo. The chat column is shown only while a project
-  is open. Problems are shown in a dialog, never as an unhandled failure. Every control that shows only an icon has a
+  is open. The title bar keeps room at its right end, on Windows, for the window buttons, which is the width that they
+  measure once laid out (the three buttons of 45 pixels with 2 between them and a frame line of 1, 140 pixels, until
+  then), so that the AI provider pill is never under a button. Problems are shown in a dialog, never as an unhandled
+  failure. Every control that shows only an icon has a
   name, a tooltip, and a target of at least 28 by 28 pixels, every field has a name, and the colors take their
   contrast from the design tokens in both theme variants.
 
@@ -902,10 +917,20 @@ the project does not contain the data folders of the application, and builds the
 the agent, and one provider session. `PayloadMessageMapper` turns the payload into the message of the model, the agent
 streams its updates, and `AgentEventMapper` turns them into events that the runner shows as the streamed answer, one row
 for each tool call, and notices; a file that `project_write` creates or replaces also raises `FileWritten`, which the
-shell turns into a refresh and a selection of the file in the explorer. Stop cancels the token of the turn, which ends
-the stream without a failure and keeps what was written. After a completed, stopped, or failed turn the panel saves the
-words of the conversation with `ChatHistoryStore`; "Clear chat history" deletes them, empties the transcript, and has
-the service forget the conversation and delete the session of the provider.
+shell turns into a refresh and a selection of the file in the explorer. While the turn runs the runner also keeps the
+words of what the copilot is doing (working, thinking, the file that is being written with the bytes so far, the tool
+that runs, the wait for the model), ticks the elapsed time once a second, and, when nothing has been heard for 30
+seconds and no tool runs, adds a hint that a large drawing can take minutes; the busy row of the chat panel shows them,
+and shows nothing of them when no turn runs. Stop cancels the token of the turn, which ends the stream without a failure
+and keeps what was written; from the press until the turn has ended the busy row says that the copilot is stopping, and
+a second press does nothing. The service records who canceled the turn and gives a provider that does not end its stream
+within a few seconds of the cancellation no more time, ending the turn without a failure and dropping its conversation,
+so that Stop leaves the next message usable. When the turn has ended the runner puts one quiet caption under the last
+reply with the tokens and the time that the provider reported and, for GitHub Copilot, the premium-request multiplier of
+the model (a stopped turn says that the request may still count); the settings page of the AI provider warns beforehand
+that a high reasoning level on a large model is slow and costly. After a completed, stopped, or failed turn the panel
+saves the words of the conversation with `ChatHistoryStore`; "Clear chat history" deletes them, empties the transcript,
+and has the service forget the conversation and delete the session of the provider.
 
 ## Design Constraints
 

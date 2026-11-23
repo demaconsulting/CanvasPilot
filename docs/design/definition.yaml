@@ -55,6 +55,7 @@ input-files:
   - docs/design/canvas-pilot/chat-subsystem/chat-panel.md
   - docs/design/canvas-pilot/chat-subsystem/chat-turn-runner.md
   - docs/design/canvas-pilot/chat-subsystem/chat-history-store.md
+  - docs/design/canvas-pilot/chat-subsystem/follow-up-suggestions.md
   - docs/design/canvas-pilot/chat-subsystem/payload-inspector.md
   - docs/design/canvas-pilot/composer-subsystem.md
   - docs/design/canvas-pilot/composer-subsystem/composer-document.md
@@ -103,6 +104,7 @@ input-files:
   - docs/design/canvas-pilot/speech-subsystem/model-catalog-panel.md
   - docs/design/canvas-pilot/speech-subsystem/model-parameter-editor.md
   - docs/design/canvas-pilot/speech-subsystem/speech-settings-page.md
+  - docs/design/canvas-pilot/speech-subsystem/push-to-talk-binding.md
   - docs/design/canvas-pilot/style-subsystem.md
   - docs/design/canvas-pilot/style-subsystem/style-kit-document.md
   - docs/design/canvas-pilot/style-subsystem/style-kit-catalog.md

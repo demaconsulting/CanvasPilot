@@ -8,7 +8,8 @@ The `AppShell` subsystem is the part of CanvasPilot the user sees and starts. It
 choices in the main window, its menus, and its dialogs, and ends with calls on the `Project` and `Settings` subsystems
 and the files and windows the user sees as a result. It contains seven units: `MainWindowShell`, the main window and its
 view model, which owns the File, Edit, Image, Tools, and Help commands, the title bar with the project name, the
-window title, the recent projects menu, the Undo and Redo of the focused part, the talk key, and the saved window
+window title, the recent projects menu, the Undo and Redo of the focused part, the talk key (F9 until the user chooses
+another on the Speech page), the Help ▸ Open Log Folder command, and the saved window
 layout; `ProjectWorkspace`, the content area with the project explorer, the stage where the image preview is shown, and
 the chat column that the user can resize and hide; `StatusBar`, the bar at the bottom that reports the shown picture;
 `ProviderPill`, the pill in the title bar that says which AI provider answers and whether it can be used; `Welcome`, the
@@ -73,10 +74,21 @@ here because they only join the units together.
 
 **Push-to-Talk Target**: What the talk key starts and stops.
 
-- *Type*: In-process .NET API (`IPushToTalkTarget` of the `Composer` subsystem; `MainWindowShell.PushToTalk`).
+- *Type*: In-process .NET API (`IPushToTalkTarget` of the `Composer` subsystem; `MainWindowShell.PushToTalk`), and the
+  talk key itself (`MainWindowShell.TalkKey`, a `PushToTalkSetting` of the `Speech` subsystem).
 - *Role*: Consumer; the chat panel is the implementation.
-- *Contract*: `BeginPushToTalkAsync` when the F9 key goes down and `EndPushToTalkAsync` when it goes up, the window
-  closes, or the window is no longer the active one; a held key's repeats are ignored.
+- *Contract*: `BeginPushToTalkAsync` when the talk key goes down and `EndPushToTalkAsync` when it, or any key of its
+  chord, goes up, the window closes, or the window is no longer the active one; a held key's repeats are ignored. The
+  talk key is F9 until the user chooses another key or a chord on the Speech page, and it follows the settings, so the
+  window, the status bar, the welcome screen, and the chat panel always name the key that works.
+
+**Folder Launcher**: How the shell shows a folder in the file manager.
+
+- *Type*: In-process .NET API (`IFolderLauncher`; `SystemFolderLauncher` is the implementation of the real system).
+- *Role*: Consumer of the contract; the composition root passes the launcher to the shell.
+- *Contract*: `TryOpen(folder, out failure)` answers whether the file manager was asked to show the folder, and when
+  not, gives a sentence with the reason. The shell uses it for Help ▸ Open Log Folder; it is a seam so that a test
+  stands in for Explorer, `open`, or `xdg-open`.
 
 **Main Window and Dialogs**: The user interface.
 
@@ -87,15 +99,16 @@ here because they only join the units together.
   automation identifier that are the same (`FileMenu`, `NewProjectMenuItem`, `OpenProjectMenuItem`,
   `RecentProjectsMenuItem`, `SaveProjectMenuItem`, `CloseProjectMenuItem`, `ExitMenuItem`, `EditMenu`, `UndoMenuItem`,
   `RedoMenuItem`, `ImageMenu`, `ExportPngMenuItem`, `CopyImageMenuItem`, `CheckAgainstStyleMenuItem`, `ToolsMenu`,
-  `StyleKitsMenuItem`, `SettingsMenuItem`, `HelpMenu`, `DrawingKnowledgeMenuItem`, `AboutMenuItem`). The menu sits in
-  a title bar (`AppTitleBar`, 44 pixels high, with the project name in bold and the application name after it,
-  `AppTitleBarText`) that also holds the style pill (`StylePicker`) and the AI provider pill (`ProviderPill`) while a
-  project is open and leaves room for the buttons of the system. The window opens 1440 by 900 at first and is never
-  smaller than 960 by 600, or at the size, place, and state that the user left, fitted to the screens. While no
-  project is open the content area shows the welcome screen (`WelcomeView`); while a project is open it shows the
-  workspace, with the explorer on the left (264 wide at first), the stage with the preview in the middle, a chat column
-  on the right (400 wide at first), and between them splitters with a one pixel line and a nine pixel hit area. A
-  status bar of one height (`StatusBar`, 26 pixels) is always shown at the bottom.
+  `StyleKitsMenuItem`, `SettingsMenuItem`, `HelpMenu`, `DrawingKnowledgeMenuItem`, `OpenLogFolderMenuItem`,
+  `AboutMenuItem`). The menu sits in a title bar (`AppTitleBar`, 44 pixels high, with the project name in bold and the
+  application name after it, `AppTitleBarText`) that also holds the style pill (`StylePicker`) and the AI provider pill
+  (`ProviderPill`) while a project is open and leaves room for the window buttons that the system draws (minimize,
+  maximize or restore, and close; the window has no full-screen button and no full-screen mode). The window opens 1440
+  by 900 at first and is never smaller than 960 by 600, or at the size, place, and state that the user left, fitted to
+  the screens. While no project is open the content area shows the welcome screen (`WelcomeView`); while a project is
+  open it shows the workspace, with the explorer on the left (264 wide at first), the stage with the preview in the
+  middle, a chat column on the right (400 wide at first), and between them splitters with a one pixel line and a nine
+  pixel hit area. A status bar of one height (`StatusBar`, 26 pixels) is always shown at the bottom.
 
 ### Design
 
@@ -122,40 +135,45 @@ here because they only join the units together.
    switch for dragging the picture out. The chat panel joins the layer to the message: it allows marks while the
    composer can edit, tells the layer which mark chips the message holds whenever the composer changes, and adds the
    chip of each mark that the layer reports, so that an undo of the chip hides the mark. The composition places the
-   panel in the chat column of the workspace and makes it the push-to-talk target of the shell; the workspace shows the
-   column while a project is open and makes the window's dialog service the panel's launcher of the payload inspector.
-   The style kits are built before the image exporter and the shell: the catalog of kits, the selection that says which
-   kit the open project uses (which is also the exporter's source of export sizes), the picker that chooses it, and the
-   descriptors of the two style tools. The composition starts reading the kits on a worker and does not wait for it, so
-   the start of the application never waits for a folder; the catalog, the selection, and the picker are disposed before
-   the services they listen to. When the composition is disposed it also waits, for at most ten seconds, until no render
-   of the render service is still running (the units that asked for renders have cancelled them by then), so that a
-   render that fails late cannot write to a log whose folder is gone. The shell is given the picker, which it shows as a
-   pill in the title bar while a project is open and asks to give a new project the default style kit. The composition
-   also makes the check of the shown picture against the style (`StyleCheckCommand`, over the preview pane as the source
-   of pictures and as the sink of notes) and gives it to the shell for the Check Against Style item of the Image menu.
-   It gives the shell, too, a function that makes the view model of the window that manages style kits (over the
-   catalog, the selection, the render service, and the project service) from the dialogs that the window asks through,
-   for the Style Kits item of the Tools menu. The composition also makes the `ThumbnailProvider` of the `Preview`
-   subsystem over the render service, gives it to the project explorer (which asks for the small pictures of its rows)
-   and to the shell (which loads the pictures of the recent project cards with it), owns it, and disposes it with the
-   other units; the shell switches the small pictures of the explorer on or off as the Appearance page of the settings
-   says, at the start and whenever the settings change. After the chat panel exists the composition makes the
-   `ProviderPillViewModel` over the chat panel (which holds the result of the readiness check), the settings, and the
-   settings command of the shell, and gives it to the shell, which shows it in the title bar and disposes it. The shell
-   itself makes the `StatusBarViewModel` over the workspace (which holds the preview pane and the open project), the
-   `RecentThumbnailLoader` over the thumbnail provider, and the `WelcomeViewModel` over itself, so that the welcome
-   screen shows its recent projects and commands; the window shows the welcome screen and the workspace as siblings in
-   one area and shows the welcome screen while no project is open, and the workspace view is not built until the first
-   project is opened. Last, the composition makes the `ThemeVariantApplier` that shows the theme choice of the settings.
-   The window layout is kept by the shell and the window together: the window applies the saved size, place, and state
-   through `WindowPlacement.Resolve` when it is built, which fits them to the screens that are connected, the workspace
-   restores the saved widths of the explorer and the chat column through `WorkspaceLayout.Fit`, and the window saves
-   them when the splitters have been moved and when it closes (see the *MainWindowShell* and *ProjectWorkspace*
-   designs).
+   panel in the chat column of the workspace and makes it the push-to-talk target of the shell, and gives the panel the
+   talk key of the shell, so that its hints name the key that is in effect; the workspace shows the column while a
+   project is open and makes the window's dialog service the panel's launcher of the payload inspector. The style kits
+   are built before the image exporter and the shell: the catalog of kits, the selection that says which kit the open
+   project uses (which is also the exporter's source of export sizes), the picker that chooses it, and the descriptors
+   of the two style tools. The composition starts reading the kits on a worker and does not wait for it, so the start of
+   the application never waits for a folder; the catalog, the selection, and the picker are disposed before the services
+   they listen to. When the composition is disposed it also waits, for at most ten seconds, until no render of the
+   render service is still running (the units that asked for renders have cancelled them by then), so that a render that
+   fails late cannot write to a log whose folder is gone. The shell is given the picker, which it shows as a pill in the
+   title bar while a project is open and asks to give a new project the default style kit. The composition also makes
+   the check of the shown picture against the style (`StyleCheckCommand`, over the preview pane as the source of
+   pictures and as the sink of notes) and gives it to the shell for the Check Against Style item of the Image menu. It
+   gives the shell, too, a function that makes the view model of the window that manages style kits (over the catalog,
+   the selection, the render service, and the project service) from the dialogs that the window asks through, for the
+   Style Kits item of the Tools menu. The composition gives the shell, too, the folder launcher (a
+   `SystemFolderLauncher` unless a test supplies another) for the Open Log Folder item of the Help menu. The composition
+   also makes the `ThumbnailProvider` of the `Preview` subsystem over the render service, gives it to the project
+   explorer (which asks for the small pictures of its rows) and to the shell (which loads the pictures of the recent
+   project cards with it), owns it, and disposes it with the other units; the shell switches the small pictures of the
+   explorer on or off as the Appearance page of the settings says, at the start and whenever the settings change. After
+   the chat panel exists the composition makes the `ProviderPillViewModel` over the chat panel (which holds the result
+   of the readiness check), the settings, and the settings command of the shell, and gives it to the shell, which shows
+   it in the title bar and disposes it. The shell itself makes the `PushToTalkSetting` that holds the talk key in effect
+   over the settings service, the `StatusBarViewModel` over the workspace (which holds the preview pane and the open
+   project), the talk key, and the project service (so that the bar says when the project file was saved and which key
+   is held to talk), the `RecentThumbnailLoader` over the thumbnail provider, and the `WelcomeViewModel` over itself, so
+   that the welcome screen shows its recent projects and commands; the window shows the welcome screen and the workspace
+   as siblings in one area and shows the welcome screen while no project is open, and the workspace view is not built
+   until the first project is opened. Last, the composition makes the `ThemeVariantApplier` that shows the theme choice
+   of the settings. The window layout is kept by the shell and the window together: the window applies the saved size,
+   place, and state through `WindowPlacement.Resolve` when it is built, which fits them to the screens that are
+   connected, the workspace restores the saved widths of the explorer and the chat column through `WorkspaceLayout.Fit`,
+   and the window saves them when the splitters have been moved and when it closes (see the *MainWindowShell* and
+   *ProjectWorkspace* designs).
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. It follows the focus (the nearest data context that can undo and redo becomes the shell's `EditTarget`)
-   and the F9 key (start and stop of the push-to-talk target, also on deactivation and close). `App` records
+   and the talk key (start and stop of the push-to-talk target on the chord of the settings, also on deactivation and
+   close; the window turns a full-screen state back to normal). `App` records
    unhandled errors in the log and disposes the composition when the application exits.
 3. The shell follows the project service: when the open project changes it updates the title and shows the
    project's folder in the workspace, which opens or closes the explorer. Changes raised on another thread are
