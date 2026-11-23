@@ -324,16 +324,17 @@ steps are in the verification of the unit or subsystem named at each check.
         `LiveCopilotTurn_AgentService_ShellCommandRequest_IsRefusedAndRunsNothing`,
         `LiveCopilotTurn_ComposedApplication_ChatWritesADrawingOnTheSharedRuntime`,
         `LiveCopilotTurn_SettingsPage_ListsModelsAndTheChosenModelAndEffortRun`, and the new
-        `LiveCopilotTurn_Readiness_ReportsHowCopilotSignedIn`. No token is recorded here or by the tests.
-        1. *Run 1 (the normal machine).* `gh` was on the `PATH` and was signed in only to `hiarc.ghe.com` (the same
+        `LiveCopilotTurn_Readiness_ReportsHowCopilotSignedIn`. No token is recorded here or by the tests; the login and the host
+        are written as placeholders.
+        1. *Run 1 (the normal machine).* `gh` was on the `PATH` and was signed in only to `<GitHub Enterprise host>` (the same
            account), no token variable was set, and `COPILOT_HOME` was not set. The runtime reported the sign-in source
-           `CopilotCli`, the login `Malcolm-Nixon`, and the host `https://hiarc.ghe.com`. Check connection (the
+           `CopilotCli`, the login `<login>`, and the host `<GitHub Enterprise host>`. Check connection (the
            readiness check over the real locator and starter) was usable in 3.5 seconds, with the sentence "GitHub
-           Copilot CLI 1.0.114 is ready. Signed in as Malcolm-Nixon on hiarc.ghe.com (Copilot CLI sign-in)."
+           Copilot CLI 1.0.114 is ready. Signed in as <login> on <GitHub Enterprise host> (Copilot CLI sign-in)."
         2. *Run 2 (only the sign-in of the Copilot CLI is left).* `gh` was hidden from the `PATH`,
            `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, and `GITHUB_TOKEN` were cleared, and
            `CANVASPILOT_LIVE_COPILOT_EXPECT_SIGNIN` was `CopilotCli`, so the test failed unless that source was used.
-           The result was the same as in run 1 (`CopilotCli`, `Malcolm-Nixon`, `https://hiarc.ghe.com`), usable in 3.2
+           The result was the same as in run 1 (`CopilotCli`, `<login>`, `<GitHub Enterprise host>`), usable in 3.2
            seconds. So the sign-in of the Copilot CLI (`copilot`, then `/login`) works alone, with no GitHub CLI and no
            token variable, and the host follows the account of the CLI (a GitHub Enterprise Cloud host here).
         Not covered by these runs: a token variable as the source, the GitHub CLI as the only source, a live "not signed

@@ -2064,7 +2064,7 @@ public sealed class CanvasPilotTests : IDisposable
     /// <param name="Dialogs">The dialog service of the shell.</param>
     /// <param name="Factory">The factory that makes the agents on the scripted model, or <see langword="null" /> for the real one.</param>
     /// <param name="Probe">The stand-in for the Ollama server.</param>
-    /// <param name="Runner">The stand-in for the processes: the Copilot CLI and the GitHub CLI.</param>
+    /// <param name="Runner">The stand-in for the processes: the Copilot CLI.</param>
     /// <param name="Environment">The environment of the development machine, in which a test may set a token.</param>
     /// <param name="Project">The project that is open.</param>
     /// <param name="LocalDataRoot">The local data root that the composition was given.</param>

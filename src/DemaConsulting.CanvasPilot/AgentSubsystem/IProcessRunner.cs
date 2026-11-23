@@ -56,7 +56,7 @@ public sealed record ProcessResult(bool Started, int ExitCode, string Output, bo
 
 /// <summary>
 ///     Runs a program to completion with a time limit and returns what it printed. The interface is the seam that lets
-///     the code that probes installed programs (the Copilot CLI locator, the credential check of the readiness checks) be
+///     the code that probes installed programs (the Copilot CLI locator and the readiness check) be
 ///     tested without running any program.
 /// </summary>
 /// <remarks>

@@ -37,7 +37,7 @@ public enum AgentReadinessStatus
     /// <summary>The GitHub Copilot CLI is older than the oldest version that works.</summary>
     CopilotCliTooOld,
 
-    /// <summary>No credentials that the AI library can use were found for GitHub Copilot.</summary>
+    /// <summary>The runtime of GitHub Copilot started but is not signed in (no sign-in that the AI library can use was found).</summary>
     CopilotNotSignedIn,
 
     /// <summary>The GitHub Copilot runtime could not be started.</summary>
