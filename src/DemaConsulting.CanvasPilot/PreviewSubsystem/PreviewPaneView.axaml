@@ -222,13 +222,14 @@
         </StackPanel>
       </Border>
 
-      <!-- Notes of the render: a drawer over the bottom left of the stage, closed to a warning chip. The status line of
+      <!-- Notes of the render: a drawer over the bottom left of the stage, closed to a warning chip, and raised above the
+           zoom pill (16 px margin, 36 px high, 8 px gap) so that the two never overlap on a narrow stage. The status line of
            the picture is in the status bar of the main window, which follows this pane. -->
       <Expander Name="DiagnosticsDrawer"
                 AutomationProperties.AutomationId="PreviewDiagnosticsExpander"
                 HorizontalAlignment="Left"
                 VerticalAlignment="Bottom"
-                Margin="16"
+                Margin="16,16,16,60"
                 MaxWidth="480"
                 Padding="0"
                 ExpandDirection="Up"

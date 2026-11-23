@@ -199,6 +199,11 @@ hidden before the render; afterwards it is shown with the header `1 note`, and, 
 stage and holds the `image-access-denied` note. This scenario is tested by
 `PreviewPaneView_RenderWithNotes_ListsDiagnostics`.
 
+**PreviewPaneView_DiagnosticsDrawerOnNarrowStage_DoesNotOverlapTheZoomPill**: In a pane 400 pixels wide that shows a
+picture with a note, both the drawer and the zoom pill are shown, and the drawer, closed and open, lies above the pill
+and does not cover it. This scenario is tested by
+`PreviewPaneView_DiagnosticsDrawerOnNarrowStage_DoesNotOverlapTheZoomPill`.
+
 **PreviewPaneView_FitToWindowToggled_ChangesStretchAndScrollBars**: Fitting scales down without scroll bars (the
 `Viewbox` stretches uniformly, down only); clearing the Fit toggle shows the actual size (no scaling) with automatic
 scroll bars and `FitToWindow` off; checking it again restores fitting; the `Image` itself is never stretched. This

@@ -107,10 +107,12 @@ back to front, are:
    enabled by `IsZoomOutPossible` and `IsZoomInPossible`. Every button has an `AutomationProperties.Name` and a tooltip
    with its key (`Fit to window  Ctrl+0`, `Actual size  Ctrl+1`, `Zoom out  Ctrl+Minus`, `Zoom in  Ctrl+Plus`, and
    `Click to fit to window` for the label).
-8. The notes drawer (`PreviewDiagnosticsExpander`): an `Expander` that opens upward, at the bottom left (margin 16, at
-   most 480 wide), whose header is a warning icon and the `DiagnosticsHeader`, and whose body is a scrolling list
-   (`PreviewDiagnostics`, at most 160 high). It is two-way bound to `AreDiagnosticsExpanded` and visible while
-   `HasDiagnostics` holds. At a stage narrower than about 700 pixels an open drawer can cover the zoom pill.
+8. The notes drawer (`PreviewDiagnosticsExpander`): an `Expander` that opens upward, at the bottom left (margin 16 at
+   the left, the right, and the top, and 60 at the bottom, which is the 16 pixel margin and the 36 pixel height of the
+   zoom pill and 8 pixels between them; at most 480 wide), whose header is a warning icon and the `DiagnosticsHeader`,
+   and whose body is a scrolling list (`PreviewDiagnostics`, at most 160 high). It is two-way bound to
+   `AreDiagnosticsExpanded` and visible while `HasDiagnostics` holds. Because the drawer sits above the zoom pill, the
+   two never overlap, also on a narrow stage.
 
 The view creates the bitmap when the view model's picture changes, disposes the previous one, and releases it when
 detached. The `UserControl` has key bindings for `Ctrl+0` (`ZoomToFit`), `Ctrl+1` (`ZoomActualSize`), `Ctrl+Plus` and

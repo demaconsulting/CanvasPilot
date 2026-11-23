@@ -407,7 +407,8 @@ public sealed class ChatPanelViewTests
         var runs = harness.Entries.Single().FindControl<SelectableTextBlock>("MessageText")!.Inlines!.OfType<Avalonia.Controls.Documents.Run>().ToList();
         Assert.Equal(2, runs.Count);
         Assert.Null(runs[0].Background);
-        Assert.NotNull(runs[1].Background);
+        var dictated = Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(runs[1].Background);
+        Assert.Equal(ThemeUiHelpers.ColorOf("CpFillDictated", Avalonia.Styling.ThemeVariant.Dark), dictated.Color);
     }
 
     /// <summary>

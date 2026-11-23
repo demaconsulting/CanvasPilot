@@ -51,11 +51,6 @@ public sealed class MarkdownBlocksPanel : StackPanel
     private static readonly FontFamily CodeFont = new("Cascadia Mono,Consolas,Menlo,monospace");
 
     /// <summary>
-    ///     The shade behind code, which is the same on a light and a dark theme because it lets the theme show through.
-    /// </summary>
-    private static readonly IBrush CodeBackground = new SolidColorBrush(Color.FromArgb(0x30, 0x80, 0x80, 0x80));
-
-    /// <summary>
     ///     The sizes of the text of headings of the levels from 1 to 6.
     /// </summary>
     private static readonly double[] HeadingSizes = [20, 16, 14, 14, 14, 14];
@@ -218,7 +213,8 @@ public sealed class MarkdownBlocksPanel : StackPanel
                     break;
                 case MarkdownSpanStyle.Code:
                     run.FontFamily = CodeFont;
-                    run.Background = CodeBackground;
+                    // The shade behind code is a token of the theme, so it follows a change of the theme variant
+                    run.Bind(Inline.BackgroundProperty, text.GetResourceObservable("CpFillCode"));
                     break;
                 default:
                     break;

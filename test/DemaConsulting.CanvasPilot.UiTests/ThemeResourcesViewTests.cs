@@ -20,12 +20,15 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
@@ -134,7 +137,8 @@ public sealed class ThemeResourcesViewTests
         "CpBorderSubtle", "CpBorderStrong", "CpBorderControl",
         "CpTextPrimary", "CpTextSecondary", "CpTextTertiary",
         "CpAccentText", "CpAccentTint", "CpAccentTintHover", "CpFocusRing",
-        "CpSuccess", "CpWarning", "CpDanger"
+        "CpSuccess", "CpWarning", "CpDanger",
+        "CpFillDictated", "CpFillCode"
     ];
 
     /// <summary>
@@ -425,6 +429,37 @@ public sealed class ThemeResourcesViewTests
 
         Assert.True(inside > 10, $"Only {inside} red pixels were drawn by the icon.");
         Assert.Equal(0, outside);
+    }
+
+    /// <summary>
+    ///     Test that the shade behind code in the text of a knowledge card is the fill token of the theme, and that it is found
+    ///     again when the theme variant of the window is switched.
+    /// </summary>
+    [AvaloniaFact]
+    public void ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant()
+    {
+        // Arrange: a panel with a paragraph that has a code span, in a window that asks for dark
+        var panel = new MarkdownBlocksPanel
+        {
+            Blocks = [new ParagraphBlock([new MarkdownSpan("plain ", MarkdownSpanStyle.Normal), new MarkdownSpan("code", MarkdownSpanStyle.Code)])]
+        };
+        var window = new Window { Content = panel, RequestedThemeVariant = ThemeVariant.Dark };
+        window.Show();
+        var text = panel.GetVisualDescendants().OfType<SelectableTextBlock>().Single();
+        Assert.NotNull(text.Inlines);
+        var runs = text.Inlines.OfType<Run>().ToList();
+
+        // Act: read the backgrounds of the runs, switch the window to light, and read the code run again
+        var plain = runs[0].Background;
+        var dark = Assert.IsAssignableFrom<ISolidColorBrush>(runs[1].Background).Color;
+        window.RequestedThemeVariant = ThemeVariant.Light;
+        var light = Assert.IsAssignableFrom<ISolidColorBrush>(runs[1].Background).Color;
+        window.Close();
+
+        // Assert: plain text has none, and the code run shows the token of each variant
+        Assert.Null(plain);
+        Assert.Equal(ThemeUiHelpers.ColorOf("CpFillCode", ThemeVariant.Dark), dark);
+        Assert.Equal(ThemeUiHelpers.ColorOf("CpFillCode", ThemeVariant.Light), light);
     }
 
     /// <summary>

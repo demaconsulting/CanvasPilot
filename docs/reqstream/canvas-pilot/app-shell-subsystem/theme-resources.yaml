@@ -26,6 +26,7 @@ sections:
                   value in one variant would show as a wrong color or a missing space.
                 tests:
                   - ThemeResources_Tokens_ResolveInBothVariants
+                  - ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant
 
               - id: CanvasPilot-ThemeResources-MeetContrast
                 title: >-

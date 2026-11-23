@@ -47,11 +47,6 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 public sealed partial class TranscriptEntryView : UserControl
 {
     /// <summary>
-    ///     The background of dictated words, the same as in the editing control.
-    /// </summary>
-    private static readonly IBrush DictatedBackground = new SolidColorBrush(Color.FromArgb(0x22, 0x80, 0x80, 0x80));
-
-    /// <summary>
     ///     Initializes a new instance of the <see cref="TranscriptEntryView" /> class.
     /// </summary>
     public TranscriptEntryView()
@@ -88,10 +83,14 @@ public sealed partial class TranscriptEntryView : UserControl
             }
             else
             {
-                MessageText.Inlines.Add(new Run(item.Text)
+                var run = new Run(item.Text);
+                if (item.Origin == TextOrigin.Dictated)
                 {
-                    Background = item.Origin == TextOrigin.Dictated ? DictatedBackground : null,
-                });
+                    // The subtle shade behind dictated words is a token of the theme, so it follows a change of the theme variant
+                    run.Bind(Inline.BackgroundProperty, MessageText.GetResourceObservable("CpFillDictated"));
+                }
+
+                MessageText.Inlines.Add(run);
             }
         }
     }

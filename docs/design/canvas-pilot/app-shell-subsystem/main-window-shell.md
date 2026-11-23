@@ -4,18 +4,18 @@
 
 #### Purpose
 
-`MainWindowShell` is the view model of the main window together with the window (`MainWindowView`) that shows it.
-It owns the File, Edit, Image, Tools, and Help commands, the window title, and the recent projects menu, and it follows
-the open project. It routes Undo and Redo to the part of the window that has the focus and the talk key to the chat
-panel. The window has a title bar that holds the compact menu, the name of the open project, the list that chooses
-the style kit, and the AI provider pill; a body that shows the welcome screen while no project is open and the
-workspace once one is; and a status bar at the bottom. The shell also remembers the size, place, and state of the
-window and the widths of the explorer and the chat column, and applies the thumbnail and row height settings of the Appearance page to
-the explorer. It talks to the user only through an `IDialogService`, which the window implements, so the shell
-is tested without a window. The small message, confirmation, and prompt dialog that the window shows for
-`ShowMessageAsync`, `ConfirmAsync`, and `PromptAsync` (`MessageDialogViewModel` and `MessageDialogView`) belongs to
-this unit. The status bar, the provider pill, and the welcome screen are units of their own (see *StatusBar Design*,
-*ProviderPill Design*, and *Welcome Design*); this unit creates them and places them in the window.
+`MainWindowShell` is the view model of the main window together with the window (`MainWindowView`) that shows it. It
+owns the File, Edit, Image, Tools, and Help commands, the window title, and the recent projects menu, and it follows the
+open project. It routes Undo and Redo to the part of the window that has the focus and the talk key to the chat panel.
+The window has a title bar that holds the compact menu, the name of the open project, the list that chooses the style
+kit, and the AI provider pill; a body that shows the welcome screen while no project is open and the workspace once one
+is; and a status bar at the bottom. The shell also remembers the size, place, and state of the window and the widths of
+the explorer and the chat column, and applies the thumbnail and row height settings of the Appearance page to the
+explorer. It talks to the user only through an `IDialogService`, which the window implements, so the shell is tested
+without a window. The small message, confirmation, and prompt dialog that the window shows for `ShowMessageAsync`,
+`ConfirmAsync`, and `PromptAsync` (`MessageDialogViewModel` and `MessageDialogView`) belongs to this unit. The status
+bar, the provider pill, and the welcome screen are units of their own (see *StatusBar Design*, *ProviderPill Design*,
+and *Welcome Design*); this unit creates them and places them in the window.
 
 #### Data Model
 

@@ -269,6 +269,46 @@ public sealed class PreviewPaneViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the diagnostics drawer, closed and open, lies above the zoom pill and does not cover it, on a stage that is
+    ///     narrow (400 px).
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_DiagnosticsDrawerOnNarrowStage_DoesNotOverlapTheZoomPill()
+    {
+        // Arrange: an SVG that the render reports a note for, selected and drawn in a narrow pane, so that the pill and the
+        // drawer both show
+        await File.WriteAllTextAsync(Path.Combine(Path.GetDirectoryName(_folder)!, "canvaspilot-outside-pill.png"), "x", TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(
+            Path.Combine(_folder, "linked.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' width='10' height='10'>" +
+            "<image href='../canvaspilot-outside-pill.png' width='10' height='10'/></svg>",
+            TestContext.Current.CancellationToken);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        var expander = SettingsUiHelpers.Find<Expander>(window, "PreviewDiagnosticsExpander");
+        var pill = SettingsUiHelpers.Find<Border>(window, "PreviewZoomPill");
+        explorer.SelectFile(Path.Combine(_folder, "linked.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+
+        // Act: measure the drawer and the pill while the drawer is closed, and again while it is open
+        var closedDrawer = ScreenExtent(window, expander);
+        var pillExtent = ScreenExtent(window, pill);
+        expander.IsExpanded = true;
+        AppShellUiHelpers.Flush();
+        var openDrawer = ScreenExtent(window, expander);
+
+        // Assert: both are shown, and the drawer is above the pill in both states
+        Assert.True(expander.IsVisible);
+        Assert.True(pill.IsVisible);
+        Assert.False(closedDrawer.Intersects(pillExtent), $"The closed drawer {closedDrawer} covers the pill {pillExtent}.");
+        Assert.False(openDrawer.Intersects(pillExtent), $"The open drawer {openDrawer} covers the pill {pillExtent}.");
+        Assert.True(openDrawer.Bottom <= pillExtent.Top);
+
+        File.Delete(Path.Combine(Path.GetDirectoryName(_folder)!, "canvaspilot-outside-pill.png"));
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that clearing Fit to window shows the picture at its own size with scroll bars, and setting it again
     ///     scales the picture to the pane.
     /// </summary>

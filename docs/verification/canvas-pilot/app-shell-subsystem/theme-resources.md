@@ -50,8 +50,13 @@ parallelization disabled; no display is required.
 #### Test Scenarios
 
 **ThemeResources_Tokens_ResolveInBothVariants**: Every token is looked up in the dark and the light variant and has its
-documented type; the surfaces, the main text color, and the focus ring differ between the variants. This scenario is
-tested by `ThemeResources_Tokens_ResolveInBothVariants`.
+documented type (the fill tokens for dictated words and code among them); the surfaces, the main text color, and the
+focus ring differ between the variants. This scenario is tested by `ThemeResources_Tokens_ResolveInBothVariants`.
+
+**ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant**: A knowledge card paragraph with a code span, in a
+window that asks for dark, shows the code run with the `CpFillCode` color of the dark variant and plain text with no
+background; after the window asks for light, the code run shows the color of the light variant. This scenario is tested
+by `ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant`.
 
 **ThemeResources_Tokens_TextColorsMeetContrastOnTheirSurfaces**: The contrast of each text color on each of its
 surfaces, of white on the accent, and of the text colors on a selected row is computed in both variants and is at least

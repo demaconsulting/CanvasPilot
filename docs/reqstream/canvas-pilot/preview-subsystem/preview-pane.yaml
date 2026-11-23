@@ -96,6 +96,7 @@ sections:
                 tests:
                   - PreviewPaneViewModel_SelectFile_RenderSucceeds_ShowsBusyThenImageStatusAndNotes
                   - PreviewPaneView_RenderWithNotes_ListsDiagnostics
+                  - PreviewPaneView_DiagnosticsDrawerOnNarrowStage_DoesNotOverlapTheZoomPill
 
               - id: CanvasPilot-PreviewPane-RenderAgainOnFileChanges
                 title: >-
