@@ -395,7 +395,7 @@ public sealed record PushToTalkBinding
         }
 
         // A number is not a key name of the enumeration
-        if (!name.All(char.IsLetterOrDigit) || char.IsDigit(name[0]))
+        if (name.Length == 0 || !name.All(char.IsLetterOrDigit) || char.IsDigit(name[0]))
         {
             key = Key.None;
             return false;

@@ -143,6 +143,9 @@ public sealed class PushToTalkBindingTests
         Assert.Null(PushToTalkBinding.Parse("Hyper+F9"));
         Assert.Null(PushToTalkBinding.Parse("Ctrl+Space"));
         Assert.Null(PushToTalkBinding.Parse("F8"));
+        Assert.Null(PushToTalkBinding.Parse("Ctrl+"));
+        Assert.Null(PushToTalkBinding.Parse("+"));
+        Assert.Null(PushToTalkBinding.Parse("Ctrl+Shift+"));
     }
 
     /// <summary>
