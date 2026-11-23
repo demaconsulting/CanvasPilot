@@ -255,6 +255,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
             _styleCheck.CanCheckChanged += OnCanCheckChanged;
         }
 
+        if (_style is not null)
+        {
+            _style.ManageKitsCommand = ShowStyleKitsCommand;
+        }
+
         RefreshRecentProjects();
         SyncProjectState();
     }

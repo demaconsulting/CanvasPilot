@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Text.Json;
+using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.StyleSubsystem;
@@ -133,6 +134,76 @@ public sealed class StylePickerTests : IDisposable
         Assert.Contains(_builtIn, picker.Items[1].ToolTip, StringComparison.Ordinal);
         _projects.Close();
         Assert.False(picker.IsVisible);
+    }
+
+    /// <summary>
+    ///     Test that a choice gives the name of the kit without its place and up to three main colors of its palette, that no
+    ///     style has none, and that the background and the text are never among the colors.
+    /// </summary>
+    [Fact]
+    public async Task StylePicker_Items_KitPalette_GivesNameAndUpToThreeMainColors()
+    {
+        // Arrange: a kit with many colors besides the two kits of the fixture
+        var vivid = StyleKitPlaces.Kit("vivid", "Colors.", "Vivid") with
+        {
+            Palette = new Dictionary<string, string>
+            {
+                ["background"] = "#FFFFFF",
+                ["text"] = "#000000",
+                ["highlight"] = "#111111",
+                ["accent"] = "#333333",
+                ["primary"] = "#4F46E5",
+                ["secondary"] = "#06B6D4",
+                ["extra"] = "#444444"
+            }
+        };
+        StyleKitPlaces.WriteKit(_builtIn, vivid);
+        using var picker = CreatePicker();
+        await _catalog.RefreshAsync(Ct);
+
+        // Act: read the choices
+        var none = picker.Items[0];
+        var clean = picker.Items.Single(item => item.Id == "clean");
+        var colorful = picker.Items.Single(item => item.Id == "vivid");
+
+        // Assert: no style is drawn empty, a plain kit has its one color, and a rich kit has primary, secondary, and accent
+        Assert.Equal(StylePickerViewModel.NoStyleLabel, none.DisplayName);
+        Assert.True(none.HasNoSwatches);
+        Assert.Empty(none.Swatches);
+        Assert.Equal("Clean", clean.DisplayName);
+        Assert.Equal("Clean (built-in)", clean.Label);
+        Assert.Equal(["#2563EB"], clean.Swatches);
+        Assert.False(clean.HasNoSwatches);
+        Assert.Equal("Vivid", colorful.DisplayName);
+        Assert.Equal(["#4F46E5", "#06B6D4", "#333333"], colorful.Swatches);
+    }
+
+    /// <summary>
+    ///     Test that the command behind the footer entry of the list can be set and taken away, and that the list says
+    ///     whether it has one.
+    /// </summary>
+    [Fact]
+    public void StylePicker_ManageKitsCommand_SetThenCleared_IsAnnouncedAndTold()
+    {
+        // Arrange: a picker with no such command that announces its changes
+        using var picker = CreatePicker();
+        var changed = new List<string?>();
+        picker.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var before = picker.HasManageKits;
+        var ran = 0;
+
+        // Act: set a command, run it through the picker, and take it away
+        picker.ManageKitsCommand = new RelayCommand(() => ran++);
+        var withCommand = picker.HasManageKits;
+        picker.ManageKitsCommand.Execute(null);
+        picker.ManageKitsCommand = null;
+
+        // Assert: the picker told and announced it each time
+        Assert.False(before);
+        Assert.True(withCommand);
+        Assert.Equal(1, ran);
+        Assert.False(picker.HasManageKits);
+        Assert.Equal(2, changed.Count(name => name == nameof(StylePickerViewModel.HasManageKits)));
     }
 
     /// <summary>

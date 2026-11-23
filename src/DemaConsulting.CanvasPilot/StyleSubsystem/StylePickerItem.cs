@@ -27,4 +27,28 @@ namespace DemaConsulting.CanvasPilot.StyleSubsystem;
 /// <param name="Label">The text shown in the list: the name of the kit and the place it comes from, or <c>(No style)</c>.</param>
 /// <param name="ToolTip">The description of the kit and where it is, or what the choice means.</param>
 /// <param name="IsMissing"><see langword="true" /> for the kit that the project names and that cannot be found.</param>
-public sealed record StylePickerItem(string? Id, string Label, string ToolTip, bool IsMissing);
+/// <param name="Name">The name of the kit without its place, shown in the pill, or <see langword="null" /> to show the label.</param>
+/// <param name="SwatchList">The main colors of the palette of the kit, up to three, as <c>#RRGGBB</c> separated by semicolons.</param>
+public sealed record StylePickerItem(
+    string? Id,
+    string Label,
+    string ToolTip,
+    bool IsMissing,
+    string? Name = null,
+    string SwatchList = "")
+{
+    /// <summary>
+    ///     Gets the text shown in the pill: the name of the kit, or the label for no style and a kit that is missing.
+    /// </summary>
+    public string DisplayName => Name ?? Label;
+
+    /// <summary>
+    ///     Gets the main colors of the palette of the kit, up to three, as <c>#RRGGBB</c>; none for no style.
+    /// </summary>
+    public IReadOnlyList<string> Swatches => SwatchList.Length == 0 ? [] : SwatchList.Split(';');
+
+    /// <summary>
+    ///     Gets a value indicating whether the choice has no colors to show, which is drawn as an empty dashed swatch.
+    /// </summary>
+    public bool HasNoSwatches => SwatchList.Length == 0;
+}

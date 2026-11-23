@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 using System.Text.Json;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.VisualTree;
@@ -28,8 +29,8 @@ using DemaConsulting.CanvasPilot.StyleSubsystem;
 namespace DemaConsulting.CanvasPilot.UiTests;
 
 /// <summary>
-///     Headless UI tests for the style picker in the status bar of the main window: the status bar is there only while a
-///     project is open, the list shows the kits, and choosing a kit writes it into the project file.
+///     Headless UI tests for the style picker in the title bar of the main window: the list is there only while a
+///     project is open, drawn as a pill, shows the kits, and choosing a kit writes it into the project file.
 /// </summary>
 public sealed class StylePickerViewTests : IDisposable
 {
@@ -96,11 +97,83 @@ public sealed class StylePickerViewTests : IDisposable
         Assert.Contains("Slides Dark (built-in)", labels);
         Assert.Contains("DEMA (built-in)", labels);
         Assert.Equal(0, picker.SelectedIndex);
-        Assert.Contains(
-            SettingsUiHelpers.Find<ContentControl>(window, "StylePickerHost").GetVisualDescendants().OfType<TextBlock>(),
-            text => text.Text == "Style:");
+        Assert.Equal("Style kit", AutomationProperties.GetName(picker));
 
         window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the list is drawn as a pill 26 high that shows the name of the chosen kit without its place and one dot
+    ///     per main color of the kit, an empty dashed dot for no style, and that the error text is not shown without an error.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task StylePickerView_Pill_ShowsNameAndSwatchesOfTheChosenKit()
+    {
+        // Arrange: a shown main window with a project open and the kits read
+        var (composition, window) = CreateWindow();
+        window.Show();
+        await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
+        await OpenProjectAsync(composition);
+        window.UpdateLayout();
+        var picker = SettingsUiHelpers.Find<ComboBox>(window, "StylePicker");
+        var noStyle = PillText(picker);
+
+        // Act: choose the DEMA kit
+        picker.SelectedIndex = picker.Items.OfType<StylePickerItem>().ToList().FindIndex(item => item.Id == "dema");
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
+
+        // Assert: the pill is 26 high and shows only the name of the kit, with dots for its colors
+        var dots = picker.GetVisualDescendants().OfType<Avalonia.Controls.Shapes.Ellipse>().Where(dot => dot.IsEffectivelyVisible).ToArray();
+        Assert.Equal(26, picker.Bounds.Height);
+        Assert.Equal(StylePickerViewModel.NoStyleLabel, noStyle);
+        Assert.Equal("DEMA", PillText(picker));
+        Assert.InRange(dots.Length, 1, 3);
+        Assert.DoesNotContain(dots, dot => dot.Fill is null);
+        Assert.False(SettingsUiHelpers.Find<TextBlock>(window, "StylePickerError").IsVisible);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the list ends with an entry that opens the window that manages style kits, and that using it closes the
+    ///     list.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task StylePickerView_ManageStyleKitsEntry_OpensTheWindowThatManagesKits()
+    {
+        // Arrange: a shown main window with a project open and the list opened
+        var (composition, window) = CreateWindow();
+        window.Show();
+        await composition.StyleCatalog.RefreshAsync(TestContext.Current.CancellationToken);
+        await OpenProjectAsync(composition);
+        window.UpdateLayout();
+        var picker = SettingsUiHelpers.Find<ComboBox>(window, "StylePicker");
+        picker.IsDropDownOpen = true;
+        AppShellUiHelpers.Flush();
+        var popup = picker.GetVisualDescendants().OfType<Avalonia.Controls.Primitives.Popup>().Single();
+        var entry = SettingsUiHelpers.Find<Button>(popup.Child!, "StylePickerManageKits");
+
+        // Act: use the entry with the pointer
+        SettingsUiHelpers.Click(window, entry);
+        AppShellUiHelpers.Flush();
+        var manager = AppShellUiHelpers.FindDialog<StyleKitManagerView>(window);
+
+        // Assert: the window that manages kits is open, and the list is closed
+        Assert.True(manager.IsVisible);
+        Assert.False(picker.IsDropDownOpen);
+        manager.Close();
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Reads the text of the name that the pill shows.
+    /// </summary>
+    /// <param name="picker">The pill.</param>
+    /// <returns>The text of the name.</returns>
+    private static string PillText(ComboBox picker)
+    {
+        return picker.GetVisualDescendants().OfType<TextBlock>().First(text => text.IsEffectivelyVisible && text.Text is { Length: > 0 }).Text!;
     }
 
     /// <summary>

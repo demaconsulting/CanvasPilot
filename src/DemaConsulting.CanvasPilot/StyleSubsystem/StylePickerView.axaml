@@ -5,26 +5,223 @@
              x:DataType="vm:StylePickerViewModel"
              IsVisible="{Binding IsVisible}">
 
-  <!-- The style of the open project: a label, the list of kits, and the reason when a choice could not be kept. -->
+  <UserControl.Resources>
+    <ResourceDictionary>
+
+      <!-- The swatches of a choice: up to three overlapping dots in the main colors of the kit, or one empty dashed dot
+           for no style. They are decoration; the name next to them carries the meaning. -->
+      <DataTemplate x:Key="StyleSwatchesTemplate" x:DataType="vm:StylePickerItem">
+        <Panel Height="12" VerticalAlignment="Center">
+          <ItemsControl ItemsSource="{Binding Swatches}"
+                        IsVisible="{Binding !HasNoSwatches}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Orientation="Horizontal" Spacing="-4" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="x:String">
+                <Ellipse Width="12"
+                         Height="12"
+                         Stroke="{DynamicResource CpSurfaceRaised}"
+                         StrokeThickness="1.5"
+                         Fill="{Binding Converter={x:Static vm:StylePickerView.HexToBrush}}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Ellipse Width="12"
+                   Height="12"
+                   HorizontalAlignment="Left"
+                   Stroke="{DynamicResource CpBorderControl}"
+                   StrokeThickness="1"
+                   StrokeDashArray="2,2"
+                   IsVisible="{Binding HasNoSwatches}" />
+        </Panel>
+      </DataTemplate>
+
+      <!-- What the pill shows for the chosen kit: its swatches and its name, without the place it comes from. -->
+      <DataTemplate x:Key="StylePillContentTemplate" x:DataType="vm:StylePickerItem">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <ContentControl Content="{Binding}"
+                          ContentTemplate="{StaticResource StyleSwatchesTemplate}" />
+          <TextBlock VerticalAlignment="Center"
+                     MaxWidth="160"
+                     TextTrimming="CharacterEllipsis"
+                     Text="{Binding DisplayName}" />
+        </StackPanel>
+      </DataTemplate>
+
+      <!-- A choice in the list that opens under the pill: swatches, then the name and the place. -->
+      <DataTemplate x:Key="StyleItemTemplate" x:DataType="vm:StylePickerItem">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <ContentControl Content="{Binding}"
+                          ContentTemplate="{StaticResource StyleSwatchesTemplate}" />
+          <TextBlock VerticalAlignment="Center"
+                     Text="{Binding Label}"
+                     ToolTip.Tip="{Binding ToolTip}" />
+        </StackPanel>
+      </DataTemplate>
+
+      <!-- The look of a choice in the list: a quiet row that is tinted under the pointer and filled when it is chosen. -->
+      <ControlTheme x:Key="StylePillItem" TargetType="ComboBoxItem">
+        <Setter Property="Padding" Value="8,0" />
+        <Setter Property="MinHeight" Value="28" />
+        <Setter Property="Margin" Value="0,1" />
+        <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusRow}" />
+        <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="FontSize" Value="{DynamicResource CpFontSmall}" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <ContentPresenter Name="PART_ContentPresenter"
+                              Background="{TemplateBinding Background}"
+                              BorderBrush="{TemplateBinding BorderBrush}"
+                              BorderThickness="{TemplateBinding BorderThickness}"
+                              CornerRadius="{TemplateBinding CornerRadius}"
+                              Padding="{TemplateBinding Padding}"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                              VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTintHover}" />
+        </Style>
+        <Style Selector="^:selected /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ ContentPresenter#PART_ContentPresenter">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+          <Setter Property="BorderThickness" Value="2" />
+        </Style>
+      </ControlTheme>
+
+      <!-- StylePill: the list of kits as a 26 px pill with swatches, the name, and a chevron. The items, the selection, the
+           tooltip, and the keyboard use are those of the ComboBox. -->
+      <ControlTheme x:Key="StylePill" TargetType="ComboBox">
+        <Setter Property="Background" Value="{DynamicResource CpSurfaceRaised}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CpBorderControl}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+        <Setter Property="FontSize" Value="{DynamicResource CpFontSmall}" />
+        <Setter Property="MinHeight" Value="26" />
+        <Setter Property="Height" Value="26" />
+        <Setter Property="Padding" Value="10,0,8,0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="ItemContainerTheme" Value="{StaticResource StylePillItem}" />
+        <Setter Property="ItemTemplate" Value="{StaticResource StyleItemTemplate}" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Panel>
+              <Border Name="PART_FocusRing"
+                      Margin="-3"
+                      BorderThickness="2"
+                      BorderBrush="Transparent"
+                      CornerRadius="{DynamicResource CpRadiusPill}"
+                      IsHitTestVisible="False" />
+              <Border Name="PillBackground"
+                      Background="{TemplateBinding Background}"
+                      BorderBrush="{TemplateBinding BorderBrush}"
+                      BorderThickness="{TemplateBinding BorderThickness}"
+                      CornerRadius="{DynamicResource CpRadiusPill}"
+                      Padding="{TemplateBinding Padding}">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <ContentControl Name="PART_SelectionBox"
+                                  VerticalAlignment="Center"
+                                  Content="{TemplateBinding SelectionBoxItem}"
+                                  ContentTemplate="{StaticResource StylePillContentTemplate}" />
+                  <PathIcon Classes="icon"
+                            Width="12"
+                            Height="12"
+                            VerticalAlignment="Center"
+                            Foreground="{DynamicResource CpTextTertiary}"
+                            Data="{DynamicResource CpIconChevronDown}" />
+                </StackPanel>
+              </Border>
+              <Popup Name="PART_Popup"
+                     IsOpen="{TemplateBinding IsDropDownOpen, Mode=TwoWay}"
+                     MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                     PlacementTarget="PillBackground"
+                     Placement="BottomEdgeAlignedRight"
+                     IsLightDismissEnabled="True"
+                     InheritsTransform="True"
+                     WindowManagerAddShadowHint="False">
+                <Border Background="{DynamicResource CpSurfaceOverlay}"
+                        BorderBrush="{DynamicResource CpBorderSubtle}"
+                        BorderThickness="1"
+                        CornerRadius="10"
+                        Padding="4"
+                        Margin="0,6,0,0"
+                        MinWidth="260"
+                        BoxShadow="{DynamicResource CpShadowDialog}">
+                  <DockPanel>
+                    <!-- The footer entry opens the window that manages style kits -->
+                    <Border DockPanel.Dock="Bottom"
+                            Margin="0,4,0,0"
+                            Padding="0,4,0,0"
+                            BorderBrush="{DynamicResource CpBorderSubtle}"
+                            BorderThickness="0,1,0,0"
+                            IsVisible="{ReflectionBinding HasManageKits}">
+                      <Button Name="PART_ManageKits"
+                              AutomationProperties.AutomationId="StylePickerManageKits"
+                              Theme="{DynamicResource IconButton}"
+                              HorizontalAlignment="Stretch"
+                              HorizontalContentAlignment="Left"
+                              Padding="8,0"
+                              Command="{ReflectionBinding ManageKitsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                          <PathIcon Classes="icon" Data="{DynamicResource CpIconSettings}" />
+                          <TextBlock VerticalAlignment="Center"
+                                     FontSize="{DynamicResource CpFontSmall}"
+                                     Text="Manage style kits..." />
+                        </StackPanel>
+                      </Button>
+                    </Border>
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                      <ItemsPresenter Name="PART_ItemsPresenter"
+                                      ItemsPanel="{TemplateBinding ItemsPanel}" />
+                    </ScrollViewer>
+                  </DockPanel>
+                </Border>
+              </Popup>
+            </Panel>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#PillBackground">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpAccent}" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+        </Style>
+        <Style Selector="^:disabled">
+          <Setter Property="Opacity" Value="0.4" />
+        </Style>
+      </ControlTheme>
+
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <!-- The style of the open project: the pill, and the reason when a choice could not be kept. -->
   <StackPanel Orientation="Horizontal" Spacing="8">
 
-    <TextBlock VerticalAlignment="Center" Text="Style:" />
-
-    <ComboBox AutomationProperties.AutomationId="StylePicker"
-              MinWidth="220"
+    <ComboBox Name="PickerBox"
+              AutomationProperties.AutomationId="StylePicker"
+              AutomationProperties.Name="Style kit"
+              Theme="{StaticResource StylePill}"
               ItemsSource="{Binding Items}"
               SelectedItem="{Binding SelectedItem}"
-              ToolTip.Tip="{Binding ToolTipText}">
-      <ComboBox.ItemTemplate>
-        <DataTemplate x:DataType="vm:StylePickerItem">
-          <TextBlock Text="{Binding Label}" ToolTip.Tip="{Binding ToolTip}" />
-        </DataTemplate>
-      </ComboBox.ItemTemplate>
-    </ComboBox>
+              ToolTip.Tip="{Binding ToolTipText}" />
 
     <TextBlock AutomationProperties.AutomationId="StylePickerError"
                VerticalAlignment="Center"
-               Foreground="Firebrick"
+               FontSize="{DynamicResource CpFontSmall}"
+               Foreground="{DynamicResource CpDanger}"
+               TextTrimming="CharacterEllipsis"
+               MaxWidth="260"
                IsVisible="{Binding HasError}"
                Text="{Binding ErrorMessage}" />
 
