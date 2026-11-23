@@ -123,6 +123,22 @@ public sealed partial class ProjectNodeViewModel : ObservableObject
     public string Format => IsFolder ? string.Empty : FormatOf(Name);
 
     /// <summary>
+    ///     Gets the key that the view uses to draw the badge of the node, one of <c>folder</c>, <c>svg</c>, <c>mermaid</c>,
+    ///     <c>vega</c>, <c>pdf</c>, <c>image</c>, <c>style</c>, or <c>source</c>.
+    /// </summary>
+    public string BadgeKey => Kind switch
+    {
+        ProjectNodeKind.Folder => "folder",
+        ProjectNodeKind.Svg => "svg",
+        ProjectNodeKind.Mermaid => "mermaid",
+        ProjectNodeKind.VegaLite => "vega",
+        ProjectNodeKind.Pdf => "pdf",
+        ProjectNodeKind.Bitmap => "image",
+        ProjectNodeKind.Style => "style",
+        _ => "source"
+    };
+
+    /// <summary>
     ///     Gets the children of a folder, folders first and then files, each sorted by name ignoring case.
     /// </summary>
     public ReadOnlyObservableCollection<ProjectNodeViewModel> Children { get; }

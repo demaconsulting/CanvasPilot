@@ -705,8 +705,8 @@ public sealed class MainWindowViewTests : IDisposable
         var item = Assert.IsType<RecentProjectItem>(recentMenu.Items.Cast<object>().Single());
         await item.OpenCommand.ExecuteAsync(null);
         AppShellUiHelpers.Flush();
-        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
-        var listed = list.Items.OfType<ProjectFileItem>().Select(file => file.Name).ToArray();
+        var list = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        var listed = list.Items.OfType<ProjectNodeViewModel>().Select(file => file.Name).ToArray();
         var titleWhileOpen = window.Title;
         window.FindControl<MenuItem>("CloseProjectMenuItem")!.Command!.Execute(null);
         AppShellUiHelpers.Flush();
@@ -769,7 +769,7 @@ public sealed class MainWindowViewTests : IDisposable
         var withoutSelection = placeholder.Text;
 
         // Act: select the file, then supply preview content
-        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        SelectFirstExplorerNode(window);
         AppShellUiHelpers.Flush();
         var withSelection = placeholder.Text;
         composition.Shell.Workspace.Preview = "Rendered picture";
@@ -807,7 +807,7 @@ public sealed class MainWindowViewTests : IDisposable
         var disabledBefore = !IsUsable(export) && !IsUsable(copy);
 
         // Act: select the file in the explorer and wait for the render
-        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        SelectFirstExplorerNode(window);
         await composition.Preview.RenderCompletion;
         AppShellUiHelpers.Flush();
         var enabledWithPicture = IsUsable(export) && IsUsable(copy);
@@ -851,7 +851,7 @@ public sealed class MainWindowViewTests : IDisposable
         var disabledBefore = !IsUsable(item);
 
         // Act: show the picture, and run the item
-        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        SelectFirstExplorerNode(window);
         await composition.Preview.RenderCompletion;
         AppShellUiHelpers.Flush();
         var enabledWithPicture = IsUsable(item);
@@ -1036,7 +1036,7 @@ public sealed class MainWindowViewTests : IDisposable
         window.Show();
         await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
         AppShellUiHelpers.Flush();
-        SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").SelectedIndex = 0;
+        SelectFirstExplorerNode(window);
         AppShellUiHelpers.Flush();
 
         // Act: run Delete and confirm in the dialog
@@ -1051,7 +1051,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Contains("a.svg", question, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(folder, "a.svg")));
         Assert.True(File.Exists(Path.Combine(folder, "b.svg")));
-        Assert.Equal(1, SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList").ItemCount);
+        Assert.Equal(1, SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList").ItemCount);
 
         window.Close();
     }
@@ -1139,7 +1139,7 @@ public sealed class MainWindowViewTests : IDisposable
         redo.Command!.Execute(null);
         LayOut(window);
         var afterRedo = composition.Composer.Document.FlatText;
-        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
+        var list = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
         var focused = list.ContainerFromIndex(0)!.Focus();
         LayOut(window);
         var afterExplorerFocus = (Target: composition.Shell.EditTarget, Undo: IsUsable(undo), Redo: IsUsable(redo));
@@ -1313,6 +1313,16 @@ public sealed class MainWindowViewTests : IDisposable
     private static double LeftOf(Control control, Window window)
     {
         return control.TranslatePoint(new Point(0, 0), window)?.X ?? double.NaN;
+    }
+
+    /// <summary>
+    ///     Selects the first node of the explorer tree, as a click on the first row does.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    private static void SelectFirstExplorerNode(Window window)
+    {
+        var tree = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        tree.SelectedItem = tree.Items[0];
     }
 
     /// <summary>

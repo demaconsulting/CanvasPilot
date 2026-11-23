@@ -4,37 +4,140 @@
              x:Class="DemaConsulting.CanvasPilot.ProjectSubsystem.ProjectExplorerView"
              x:DataType="vm:ProjectExplorerViewModel">
 
+  <UserControl.Styles>
+    <!-- The badge of a file: a 16 px tile of the color of its kind with a white glyph. The name beside it always says what
+         the file is, so the badge only helps the eye. A folder is an amber outline without a tile. -->
+    <Style Selector="Border.badge">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Background" Value="{DynamicResource CpBadgeSource}" />
+    </Style>
+    <Style Selector="Border.badge PathIcon">
+      <Setter Property="Width" Value="11" />
+      <Setter Property="Height" Value="11" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Data" Value="{DynamicResource CpIconCode}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=svg]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeSvg}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=mermaid]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeMermaid}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=mermaid] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconFlow}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=vega]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeVega}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=vega] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconDataBarVertical}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=pdf]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgePdf}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=pdf] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconDocumentPdf}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=image]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeImage}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=image] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconImage}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=style]">
+      <Setter Property="Background" Value="{DynamicResource CpBadgeData}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=style] PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconBraces}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=folder]">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.badge[Tag=folder] PathIcon">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="Foreground" Value="{DynamicResource CpWarning}" />
+      <Setter Property="Data" Value="{DynamicResource CpIconFolder}" />
+    </Style>
+    <Style Selector="Border.badge[Tag=folder].open PathIcon">
+      <Setter Property="Data" Value="{DynamicResource CpIconFolderOpen}" />
+    </Style>
+  </UserControl.Styles>
+
   <Grid RowDefinitions="*,Auto">
 
-    <ListBox Grid.Row="0"
-             AutomationProperties.AutomationId="ProjectExplorerList"
-             ItemsSource="{Binding Items}"
-             SelectedItem="{Binding SelectedItem}">
-      <ListBox.ItemTemplate>
-        <DataTemplate x:DataType="vm:ProjectFileItem">
-          <TextBlock Text="{Binding Name}" Margin="4,2" ToolTip.Tip="{Binding FullPath}" />
-        </DataTemplate>
-      </ListBox.ItemTemplate>
-    </ListBox>
+    <!-- The project as a tree: folders first, then files. The list keeps its automation id, but its items are tree items now:
+         a folder can be selected and expanded, and only a file that is drawn is previewed. -->
+    <TreeView Grid.Row="0"
+              Name="ExplorerTree"
+              AutomationProperties.AutomationId="ProjectExplorerList"
+              Background="Transparent"
+              Padding="8,4"
+              ItemsSource="{Binding Roots}"
+              SelectedItem="{Binding SelectedNode, Mode=TwoWay}">
+      <TreeView.Styles>
+        <Style Selector="TreeViewItem" x:DataType="vm:ProjectNodeViewModel">
+          <Setter Property="Theme" Value="{DynamicResource ExplorerTreeViewItem}" />
+          <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+        </Style>
+      </TreeView.Styles>
+      <TreeView.ItemTemplate>
+        <TreeDataTemplate x:DataType="vm:ProjectNodeViewModel" ItemsSource="{Binding Children}">
+          <Grid ColumnDefinitions="Auto,*" ToolTip.Tip="{Binding FullPath}">
+            <Border Grid.Column="0"
+                    Classes="badge"
+                    Classes.open="{Binding IsExpanded}"
+                    Tag="{Binding BadgeKey}">
+              <PathIcon Classes="icon" />
+            </Border>
+            <TextBlock Grid.Column="1"
+                       Margin="8,0,0,0"
+                       VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       Text="{Binding Name}" />
+          </Grid>
+        </TreeDataTemplate>
+      </TreeView.ItemTemplate>
+    </TreeView>
 
     <TextBlock Grid.Row="0"
                AutomationProperties.AutomationId="ProjectExplorerEmptyMessage"
-               Margin="8"
+               Margin="16,12"
                HorizontalAlignment="Center"
                VerticalAlignment="Top"
-               Opacity="0.7"
+               Foreground="{DynamicResource CpTextTertiary}"
                TextWrapping="Wrap"
                IsHitTestVisible="False"
                IsVisible="{Binding EmptyMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                Text="{Binding EmptyMessage}" />
 
-    <TextBlock Grid.Row="1"
-               AutomationProperties.AutomationId="ProjectExplorerError"
-               Margin="4"
-               Foreground="Firebrick"
-               TextWrapping="Wrap"
-               IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-               Text="{Binding ErrorMessage}" />
+    <!-- A problem that stopped the explorer from reading the folder, or from renaming or deleting a file -->
+    <Border Grid.Row="1"
+            Margin="8"
+            Padding="8,6"
+            CornerRadius="{DynamicResource CpRadiusRow}"
+            Background="{DynamicResource CpSurfaceRaised}"
+            IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <Grid ColumnDefinitions="Auto,*">
+        <PathIcon Grid.Column="0"
+                  Classes="icon"
+                  Margin="0,2,8,0"
+                  VerticalAlignment="Top"
+                  Foreground="{DynamicResource CpDanger}"
+                  Data="{DynamicResource CpIconErrorCircle}" />
+        <TextBlock Grid.Column="1"
+                   AutomationProperties.AutomationId="ProjectExplorerError"
+                   Foreground="{DynamicResource CpDanger}"
+                   FontSize="{DynamicResource CpFontSmall}"
+                   TextWrapping="Wrap"
+                   Text="{Binding ErrorMessage}" />
+      </Grid>
+    </Border>
 
   </Grid>
 

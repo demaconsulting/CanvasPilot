@@ -15,7 +15,8 @@
   state of the stock look shows through.
 -->
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:DemaConsulting.CanvasPilot.AppShellSubsystem">
 
   <Styles.Resources>
     <ResourceDictionary>
@@ -233,6 +234,122 @@
         </Style>
         <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
           <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+        </Style>
+      </ControlTheme>
+
+      <!-- ExplorerTreeViewItem: a 26 px row of a tree with a chevron, indented by 16 px per level. Hover tints the row,
+           the selected row has the accent tint and a 3 by 14 bar at its left edge (and the name is set semibold by the
+           view), and keyboard focus draws the 2 px focus ring. The row is full width, and the content is the template of
+           the view. -->
+      <ControlTheme x:Key="ExplorerTreeViewItem" TargetType="TreeViewItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+        <Setter Property="FontSize" Value="{DynamicResource CpFontBody}" />
+        <Setter Property="MinHeight" Value="26" />
+        <Setter Property="Padding" Value="4,0,8,0" />
+        <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusRow}" />
+        <Setter Property="FocusAdorner" Value="{x:Null}" />
+        <Setter Property="ClipToBounds" Value="False" />
+        <Setter Property="Template">
+          <ControlTemplate>
+            <StackPanel>
+              <Panel>
+                <Border Name="PART_LayoutRoot"
+                        MinHeight="{TemplateBinding MinHeight}"
+                        Background="{TemplateBinding Background}"
+                        CornerRadius="{TemplateBinding CornerRadius}">
+                  <Grid Name="PART_Header"
+                        ColumnDefinitions="Auto,*"
+                        Margin="{TemplateBinding Level, Converter={x:Static local:ThemeConverters.TreeLevelIndent}}">
+                    <ToggleButton Name="PART_ExpandCollapseChevron"
+                                  Grid.Column="0"
+                                  Width="20"
+                                  Height="20"
+                                  Margin="4,0,0,0"
+                                  Padding="0"
+                                  VerticalAlignment="Center"
+                                  Focusable="False"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  Foreground="{DynamicResource CpTextTertiary}"
+                                  AutomationProperties.Name="Expand or collapse"
+                                  IsChecked="{TemplateBinding IsExpanded, Mode=TwoWay}">
+                      <ToggleButton.Template>
+                        <ControlTemplate>
+                          <Border Background="Transparent">
+                            <PathIcon Name="PART_Chevron"
+                                      Classes="icon"
+                                      Width="12"
+                                      Height="12"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      Data="{DynamicResource CpIconChevronRight}">
+                              <PathIcon.RenderTransform>
+                                <RotateTransform Angle="0" />
+                              </PathIcon.RenderTransform>
+                            </PathIcon>
+                          </Border>
+                        </ControlTemplate>
+                      </ToggleButton.Template>
+                      <ToggleButton.Styles>
+                        <Style Selector="ToggleButton:checked /template/ PathIcon#PART_Chevron">
+                          <Setter Property="RenderTransform" Value="rotate(90deg)" />
+                        </Style>
+                      </ToggleButton.Styles>
+                    </ToggleButton>
+                    <ContentPresenter Name="PART_HeaderPresenter"
+                                      Grid.Column="1"
+                                      Focusable="False"
+                                      Padding="{TemplateBinding Padding}"
+                                      Content="{TemplateBinding Header}"
+                                      ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                      HorizontalContentAlignment="Stretch"
+                                      VerticalContentAlignment="Center" />
+                  </Grid>
+                </Border>
+                <Border Name="PART_SelectionBar"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Center"
+                        Width="3"
+                        Height="14"
+                        CornerRadius="2"
+                        IsVisible="False"
+                        IsHitTestVisible="False"
+                        Background="{DynamicResource CpAccent}" />
+                <Border Name="PART_FocusRing"
+                        BorderThickness="2"
+                        BorderBrush="Transparent"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        IsHitTestVisible="False" />
+              </Panel>
+              <ItemsPresenter Name="PART_ItemsPresenter"
+                              IsVisible="{TemplateBinding IsExpanded}"
+                              ItemsPanel="{TemplateBinding ItemsPanel}" />
+            </StackPanel>
+          </ControlTemplate>
+        </Setter>
+        <Style Selector="^:pointerover /template/ Border#PART_LayoutRoot">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTintHover}" />
+        </Style>
+        <Style Selector="^:selected /template/ Border#PART_LayoutRoot">
+          <Setter Property="Background" Value="{DynamicResource CpAccentTint}" />
+        </Style>
+        <Style Selector="^:selected /template/ Border#PART_SelectionBar">
+          <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="^:selected">
+          <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="^:empty /template/ ToggleButton#PART_ExpandCollapseChevron">
+          <Setter Property="IsHitTestVisible" Value="False" />
+          <Setter Property="Opacity" Value="0" />
+        </Style>
+        <Style Selector="^:focus-visible /template/ Border#PART_FocusRing">
+          <Setter Property="BorderBrush" Value="{DynamicResource CpFocusRing}" />
+        </Style>
+        <Style Selector="^:disabled">
+          <Setter Property="Opacity" Value="0.4" />
         </Style>
       </ControlTheme>
 

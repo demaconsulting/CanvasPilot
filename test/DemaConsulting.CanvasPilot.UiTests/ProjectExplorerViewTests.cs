@@ -18,9 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
@@ -65,11 +68,11 @@ public sealed class ProjectExplorerViewTests : IDisposable
         var (window, _) = ShowExplorer(project: true);
 
         // Act / Assert: the list holds the two images in name order and no empty message shows
-        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
+        var list = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
         Assert.Equal(2, list.ItemCount);
         Assert.Equal(
             ["a.svg", "b.svg"],
-            list.Items.OfType<ProjectFileItem>().Select(item => item.Name));
+            list.Items.OfType<ProjectNodeViewModel>().Select(node => node.Name));
         Assert.False(SettingsUiHelpers.Find<TextBlock>(window, "ProjectExplorerEmptyMessage").IsVisible);
 
         window.Close();
@@ -107,10 +110,10 @@ public sealed class ProjectExplorerViewTests : IDisposable
         // Arrange: a shown explorer with two files
         Touch("a.svg", "b.svg");
         var (window, viewModel) = ShowExplorer(project: true);
-        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
+        var list = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
 
         // Act: select the second file in the list
-        list.SelectedIndex = 1;
+        list.SelectedItem = list.Items[1];
 
         // Assert: the view model reports its path
         Assert.Equal(Path.Combine(_folder, "b.svg"), viewModel.SelectedFile);
@@ -127,13 +130,13 @@ public sealed class ProjectExplorerViewTests : IDisposable
         // Arrange: a shown explorer with two files
         Touch("a.svg", "b.svg");
         var (window, viewModel) = ShowExplorer(project: true);
-        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
+        var list = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
 
         // Act: select a file by path
         viewModel.SelectFile(Path.Combine(_folder, "a.svg"));
 
         // Assert: the list shows it selected
-        Assert.Equal(0, list.SelectedIndex);
+        Assert.Same(list.Items[0], list.SelectedItem);
 
         window.Close();
     }
@@ -148,7 +151,7 @@ public sealed class ProjectExplorerViewTests : IDisposable
         Touch("a.svg");
         var (window, viewModel) = ShowExplorer(project: true);
         var error = SettingsUiHelpers.Find<TextBlock>(window, "ProjectExplorerError");
-        var initiallyVisible = error.IsVisible;
+        var initiallyVisible = error.IsEffectivelyVisible;
         viewModel.SelectFile(Path.Combine(_folder, "a.svg"));
 
         // Act: try an invalid new name
@@ -156,7 +159,7 @@ public sealed class ProjectExplorerViewTests : IDisposable
 
         // Assert: the error appears and the file is unchanged
         Assert.False(initiallyVisible);
-        Assert.True(error.IsVisible);
+        Assert.True(error.IsEffectivelyVisible);
         Assert.Contains("must not contain", error.Text);
         Assert.True(File.Exists(Path.Combine(_folder, "a.svg")));
 
@@ -174,7 +177,7 @@ public sealed class ProjectExplorerViewTests : IDisposable
         var token = TestContext.Current.CancellationToken;
         Touch("first.svg");
         var (window, viewModel) = ShowExplorer(project: true, scheduler: new DispatcherRefreshScheduler(), debounce: TimeSpan.FromMilliseconds(50));
-        var list = SettingsUiHelpers.Find<ListBox>(window, "ProjectExplorerList");
+        var list = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
 
         // Act: add a file and wait for the list to follow, then delete the first and wait again
         await File.WriteAllTextAsync(Path.Combine(_folder, "second.svg"), string.Empty, token);
@@ -188,6 +191,128 @@ public sealed class ProjectExplorerViewTests : IDisposable
         Assert.Equal(["second.svg"], viewModel.Items.Select(item => item.Name));
 
         window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the view shows folders and files as a tree: a folder row with a chevron and its children indented 16 pixels
+    ///     below it once it is expanded, a badge of the kind in front of each name, rows 26 high, and that selecting a folder
+    ///     selects no file while selecting a picture does.
+    /// </summary>
+    [AvaloniaFact]
+    public void ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent()
+    {
+        // Arrange: a project with a folder that holds a picture and a PDF, and a picture at the top
+        Touch("top.svg", "assets/inner.svg", "assets/plan.pdf");
+        var (window, viewModel) = ShowExplorer(project: true);
+        var tree = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        var folderItem = Assert.IsType<TreeViewItem>(tree.ContainerFromIndex(0));
+        var collapsedHeight = folderItem.Bounds.Height;
+
+        // Act: expand the folder, then read the rows
+        viewModel.Roots[0].IsExpanded = true;
+        window.UpdateLayout();
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
+        var inner = Assert.IsType<TreeViewItem>(folderItem.ContainerFromIndex(0));
+        var topFile = Assert.IsType<TreeViewItem>(tree.ContainerFromIndex(1));
+        var badges = window.GetVisualDescendants().OfType<Border>().Where(border => border.Classes.Contains("badge")).Select(border => border.Tag).ToArray();
+        var indent = LeftOf(inner, window) - LeftOf(topFile, window);
+        var rowHeight = inner.GetVisualDescendants().OfType<Border>().First(border => border.Name == "PART_LayoutRoot").Bounds.Height;
+
+        // Assert: the folder and its children are rows with badges, nested one level in, 26 high
+        Assert.True(folderItem.IsExpanded);
+        Assert.Equal(["folder", "svg", "pdf", "svg"], badges);
+        Assert.Equal(16, indent, 0.5);
+        Assert.Equal(26, rowHeight, 0.5);
+        Assert.True(folderItem.Bounds.Height > collapsedHeight);
+
+        // Act: select the folder, then the nested picture
+        tree.SelectedItem = viewModel.Roots[0];
+        var afterFolder = viewModel.SelectedFile;
+        tree.SelectedItem = viewModel.Roots[0].Children[0];
+        var afterPicture = viewModel.SelectedFile;
+
+        // Assert: a folder selects no file and a picture selects its file
+        Assert.Null(afterFolder);
+        Assert.Equal(Path.Combine(_folder, "assets", "inner.svg"), afterPicture);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the selected row shows the accent bar and a semibold name, and that rows that are not selected show
+    ///     neither.
+    /// </summary>
+    [AvaloniaFact]
+    public void ProjectExplorerView_SelectedRow_ShowsBarAndSemiboldName()
+    {
+        // Arrange: a shown explorer with two files
+        Touch("a.svg", "b.svg");
+        var (window, viewModel) = ShowExplorer(project: true);
+        var tree = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        var first = Assert.IsType<TreeViewItem>(tree.ContainerFromIndex(0));
+        var second = Assert.IsType<TreeViewItem>(tree.ContainerFromIndex(1));
+
+        // Act: select the first file
+        viewModel.SelectFile(Path.Combine(_folder, "a.svg"));
+        window.UpdateLayout();
+        AppShellUiHelpers.Flush();
+
+        // Assert: only the selected row has the bar and the heavier name
+        Assert.True(BarOf(first).IsVisible);
+        Assert.False(BarOf(second).IsVisible);
+        Assert.Equal(Avalonia.Media.FontWeight.SemiBold, first.FontWeight);
+        Assert.NotEqual(Avalonia.Media.FontWeight.SemiBold, second.FontWeight);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that an unreadable project folder shows its problem with the danger icon and words, and that the explorer
+    ///     lists nothing then.
+    /// </summary>
+    [AvaloniaFact]
+    public void ProjectExplorerView_UnreadableFolder_ShowsTheProblemWithTheDangerIcon()
+    {
+        // Arrange: an explorer that is shown with a project folder that does not exist
+        var (window, viewModel) = ShowExplorer(project: false);
+        var error = SettingsUiHelpers.Find<TextBlock>(window, "ProjectExplorerError");
+
+        // Act: open the missing folder
+        viewModel.Open(Path.Combine(_folder, "missing"));
+        window.UpdateLayout();
+        var icon = error.GetVisualAncestors().OfType<Grid>().First().GetVisualDescendants().OfType<PathIcon>().First();
+
+        // Assert: the words say what happened, in the danger color with an icon of the same color, and nothing is listed
+        Assert.True(error.IsEffectivelyVisible);
+        Assert.Contains("could not be read", error.Text, StringComparison.Ordinal);
+        Assert.Equal(ThemeUiHelpers.ColorOf("CpDanger", window.ActualThemeVariant), Assert.IsAssignableFrom<Avalonia.Media.ISolidColorBrush>(error.Foreground).Color);
+        Assert.Equal(((Avalonia.Media.ISolidColorBrush)error.Foreground!).Color, ((Avalonia.Media.ISolidColorBrush)icon.Foreground!).Color);
+        Assert.Equal(0, SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList").ItemCount);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Reads the selection bar of a row.
+    /// </summary>
+    /// <param name="row">The tree item.</param>
+    /// <returns>The bar.</returns>
+    private static Border BarOf(TreeViewItem row)
+    {
+        return row.GetVisualDescendants().OfType<Border>().First(border => border.Name == "PART_SelectionBar");
+    }
+
+    /// <summary>
+    ///     Finds the place of the left edge of the badge of a row in a window, which is where the content of the row starts.
+    /// </summary>
+    /// <param name="control">The control.</param>
+    /// <param name="window">The window.</param>
+    /// <returns>The place, in the coordinates of the window.</returns>
+    private static double LeftOf(Control control, Window window)
+    {
+        return control.GetVisualDescendants().OfType<Border>().First(border => border.Classes.Contains("badge"))
+            .TranslatePoint(new Point(0, 0), window)?.X ?? double.NaN;
     }
 
     /// <summary>
@@ -234,14 +359,16 @@ public sealed class ProjectExplorerViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Creates empty files in the project folder.
+    ///     Creates empty files in the project folder, creating folders as needed.
     /// </summary>
-    /// <param name="names">The file names.</param>
+    /// <param name="names">The file names, relative to the project folder.</param>
     private void Touch(params string[] names)
     {
         foreach (var name in names)
         {
-            File.WriteAllText(Path.Combine(_folder, name), string.Empty);
+            var path = Path.Combine(_folder, name);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, string.Empty);
         }
     }
 

@@ -494,6 +494,7 @@ reviews:
       - "src/**/AppShellSubsystem/Styles/Tokens.axaml"
       - "src/**/AppShellSubsystem/Styles/Icons.axaml"
       - "src/**/AppShellSubsystem/Styles/Controls.axaml"
+      - "src/**/AppShellSubsystem/Styles/ThemeConverters.cs"
       - "test/**/ThemeResourcesViewTests.cs"
       - "test/**/ControlThemesViewTests.cs"
       - "test/**/ThemeVariantApplierViewTests.cs"

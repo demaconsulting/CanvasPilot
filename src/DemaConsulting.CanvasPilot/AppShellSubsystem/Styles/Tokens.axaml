@@ -94,6 +94,16 @@
   <SolidColorBrush x:Key="CpTextOnAccent" Color="#ffffff" />
   <SolidColorBrush x:Key="CpMark" Color="#ec4899" />
   <SolidColorBrush x:Key="CpMarkTint" Color="#29ec4899" />
+
+  <!-- File-type badges of the explorer: a tile of one color per kind of file with a white glyph (at least 4.5:1), the same in
+       both variants. A badge never carries the meaning alone, because the name and the extension are beside it. -->
+  <SolidColorBrush x:Key="CpBadgeSvg" Color="#b45309" />
+  <SolidColorBrush x:Key="CpBadgeMermaid" Color="#0f766e" />
+  <SolidColorBrush x:Key="CpBadgeVega" Color="#be185d" />
+  <SolidColorBrush x:Key="CpBadgePdf" Color="#b91c1c" />
+  <SolidColorBrush x:Key="CpBadgeImage" Color="#1d4ed8" />
+  <SolidColorBrush x:Key="CpBadgeData" Color="#6d28d9" />
+  <SolidColorBrush x:Key="CpBadgeSource" Color="#475569" />
   <LinearGradientBrush x:Key="CpAccentGradient" StartPoint="0%,0%" EndPoint="100%,100%">
     <GradientStop Color="#4f46e5" Offset="0" />
     <GradientStop Color="#06b6d4" Offset="1" />
