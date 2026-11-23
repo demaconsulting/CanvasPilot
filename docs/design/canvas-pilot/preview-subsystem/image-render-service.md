@@ -62,6 +62,13 @@ value is the result of the render and not an exception of the caller.
 
 #### Key Methods
 
+**WhenIdleAsync**: gives a task that is complete while no render is running and completes when the last running render
+has ended and written its log entry, if any. `RenderAsync` counts each render in a lock when it is started and takes it
+away in a `finally` on the thread-pool thread, and a new signal is made when a render starts while none was running. The
+application composition has a last owned service that waits (at most ten seconds) for this task when the composition is
+disposed, after the units that start renders have cancelled theirs, so that a render of a file that was deleted or of a
+thumbnail cannot write its warning to a log whose folder is already gone.
+
 **RenderAsync**: Validates the arguments, then runs on the thread pool: throws if the token is already cancelled
 (which becomes a cancelled result), calls `CanvasNetViewer.Render(fullPath, options)` with
 `FileAccess = FileAccessPolicy.UnderRoots(projectFolder)`, the token as `CancellationToken`, and

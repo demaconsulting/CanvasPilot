@@ -417,6 +417,14 @@ public sealed class ApplicationComposition : IDisposable
         // and the audio system only when they are first used, so creating them costs nothing at startup; the ones
         // created here are the composition's to dispose, the dictation service before the model service it uses.
         var owned = new List<IDisposable> { thumbnails };
+
+        // The renders that run in the background write to the log when they fail; when the composition is disposed it waits
+        // for them (they are cancelled by then), so that nothing writes to the log after it has gone
+        if (renderer is ImageRenderService drawing)
+        {
+            owned.Add(new RenderDrain(drawing));
+        }
+
         if (speechModels is null)
         {
             var modelService = new SpeechModelService(logger);
@@ -570,6 +578,35 @@ public sealed class ApplicationComposition : IDisposable
         return new ApplicationComposition(
             logger, settings, projects, recentProjects, preview, shell, dictation, composer, marks, annotation, chat,
             styleCatalog, styleSelection, stylePicker, styleCheck, styleTools, agent, owned, styleStartup);
+    }
+
+    /// <summary>
+    ///     Waits, when the composition is disposed, for the renders that are still running in the background, which the
+    ///     units that asked for them have cancelled; the last of the owned services, after the units that start renders.
+    /// </summary>
+    private sealed class RenderDrain : IDisposable
+    {
+        /// <summary>The longest time that a render may take to end.</summary>
+        private static readonly TimeSpan DrainWait = TimeSpan.FromSeconds(10);
+
+        /// <summary>The service whose renders are waited for.</summary>
+        private readonly ImageRenderService _service;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="RenderDrain" /> class.
+        /// </summary>
+        /// <param name="service">The service whose renders are waited for.</param>
+        internal RenderDrain(ImageRenderService service)
+        {
+            _service = service;
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            // The wait is bounded so that a render that does not end cannot keep the application open
+            _ = _service.WhenIdleAsync().Wait(DrainWait);
+        }
     }
 
     /// <summary>

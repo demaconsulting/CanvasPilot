@@ -1083,12 +1083,17 @@ public sealed class MainWindowViewTests : IDisposable
         SelectFirstExplorerNode(window);
         AppShellUiHelpers.Flush();
 
+        // The selected file is drawn in the background; wait until that is done, so that the file is not deleted under a
+        // render that is still reading it, and so that no render is left to write to the log after the test is disposed
+        await composition.Preview.RenderCompletion;
+
         // Act: run Delete and confirm in the dialog
         var deleting = composition.Shell.Workspace.DeleteSelectedCommand.ExecuteAsync(null);
         var dialog = AppShellUiHelpers.FindDialog<MessageDialogView>(window);
         var question = SettingsUiHelpers.Find<TextBlock>(dialog, "MessageDialogText").Text;
         SettingsUiHelpers.Click(dialog, SettingsUiHelpers.Find<Button>(dialog, "MessageDialogOkButton"));
         await deleting;
+        await composition.Preview.RenderCompletion;
         AppShellUiHelpers.Flush();
 
         // Assert: the dialog named the file, and the file is gone from disk and from the list
@@ -1364,11 +1369,16 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Selects the first node of the explorer tree, as a click on the first row does.
+    ///     Selects the first node of the explorer tree, as a click on the first row does, after the queued work of the window has
+    ///     run.
     /// </summary>
     /// <param name="window">The window.</param>
     private static void SelectFirstExplorerNode(Window window)
     {
+        // The window follows the project and the explorer through work that is queued for the thread of the window (the
+        // workspace view is only made once the project is shown), so the queued work is run before the tree is looked for
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
         var tree = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
         tree.SelectedItem = tree.Items[0];
     }

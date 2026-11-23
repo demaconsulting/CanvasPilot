@@ -128,28 +128,31 @@ here because they only join the units together.
    kit the open project uses (which is also the exporter's source of export sizes), the picker that chooses it, and the
    descriptors of the two style tools. The composition starts reading the kits on a worker and does not wait for it, so
    the start of the application never waits for a folder; the catalog, the selection, and the picker are disposed before
-   the services they listen to. The shell is given the picker, which it shows as a pill in the title bar while a project
-   is open and asks to give a new project the default style kit. The composition also makes the check of the shown
-   picture against the style (`StyleCheckCommand`, over the preview pane as the source of pictures and as the sink of
-   notes) and gives it to the shell for the Check Against Style item of the Image menu. It gives the shell, too, a
-   function that makes the view model of the window that manages style kits (over the catalog, the selection, the render
-   service, and the project service) from the dialogs that the window asks through, for the Style Kits item of the Tools
-   menu. The composition also makes the `ThumbnailProvider` of the `Preview` subsystem over the render service, gives it
-   to the project explorer (which asks for the small pictures of its rows) and to the shell (which loads the pictures of
-   the recent project cards with it), owns it, and disposes it with the other units; the shell switches the small
-   pictures of the explorer on or off as the Appearance page of the settings says, at the start and whenever the
-   settings change. After the chat panel exists the composition makes the `ProviderPillViewModel` over the chat panel
-   (which holds the result of the readiness check), the settings, and the settings command of the shell, and gives it to
-   the shell, which shows it in the title bar and disposes it. The shell itself makes the `StatusBarViewModel` over the
-   workspace (which holds the preview pane and the open project), the `RecentThumbnailLoader` over the thumbnail
-   provider, and the `WelcomeViewModel` over itself, so that the welcome screen shows its recent projects and commands;
-   the window shows the welcome screen and the workspace as siblings in one area and shows the welcome screen while no
-   project is open, and the workspace view is not built until the first project is opened. Last, the composition makes
-   the `ThemeVariantApplier` that shows the theme choice of the settings. The window layout is kept by the shell and the
-   window together: the window applies the saved size, place, and state through `WindowPlacement.Resolve` when it is
-   built, which fits them to the screens that are connected, the workspace restores the saved widths of the explorer and
-   the chat column through `WorkspaceLayout.Fit`, and the window saves them when the splitters have been moved and when
-   it closes (see the *MainWindowShell* and *ProjectWorkspace* designs).
+   the services they listen to. When the composition is disposed it also waits, for at most ten seconds, until no render
+   of the render service is still running (the units that asked for renders have cancelled them by then), so that a
+   render that fails late cannot write to a log whose folder is gone. The shell is given the picker, which it shows as a
+   pill in the title bar while a project is open and asks to give a new project the default style kit. The composition
+   also makes the check of the shown picture against the style (`StyleCheckCommand`, over the preview pane as the source
+   of pictures and as the sink of notes) and gives it to the shell for the Check Against Style item of the Image menu.
+   It gives the shell, too, a function that makes the view model of the window that manages style kits (over the
+   catalog, the selection, the render service, and the project service) from the dialogs that the window asks through,
+   for the Style Kits item of the Tools menu. The composition also makes the `ThumbnailProvider` of the `Preview`
+   subsystem over the render service, gives it to the project explorer (which asks for the small pictures of its rows)
+   and to the shell (which loads the pictures of the recent project cards with it), owns it, and disposes it with the
+   other units; the shell switches the small pictures of the explorer on or off as the Appearance page of the settings
+   says, at the start and whenever the settings change. After the chat panel exists the composition makes the
+   `ProviderPillViewModel` over the chat panel (which holds the result of the readiness check), the settings, and the
+   settings command of the shell, and gives it to the shell, which shows it in the title bar and disposes it. The shell
+   itself makes the `StatusBarViewModel` over the workspace (which holds the preview pane and the open project), the
+   `RecentThumbnailLoader` over the thumbnail provider, and the `WelcomeViewModel` over itself, so that the welcome
+   screen shows its recent projects and commands; the window shows the welcome screen and the workspace as siblings in
+   one area and shows the welcome screen while no project is open, and the workspace view is not built until the first
+   project is opened. Last, the composition makes the `ThemeVariantApplier` that shows the theme choice of the settings.
+   The window layout is kept by the shell and the window together: the window applies the saved size, place, and state
+   through `WindowPlacement.Resolve` when it is built, which fits them to the screens that are connected, the workspace
+   restores the saved widths of the explorer and the chat column through `WorkspaceLayout.Fit`, and the window saves
+   them when the splitters have been moved and when it closes (see the *MainWindowShell* and *ProjectWorkspace*
+   designs).
 2. `App` creates the `MainWindowView` over the shell. The window passes itself to the shell as the dialog
    service. It follows the focus (the nearest data context that can undo and redo becomes the shell's `EditTarget`)
    and the F8 key (start and stop of the push-to-talk target, also on deactivation and close). `App` records

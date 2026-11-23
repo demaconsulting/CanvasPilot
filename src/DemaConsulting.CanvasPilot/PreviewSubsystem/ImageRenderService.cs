@@ -49,6 +49,21 @@ public sealed class ImageRenderService : IImageRenderService
     private readonly RollingFileLogger? _logger;
 
     /// <summary>
+    ///     Guards the count of the renders that are running and the signal that tells when none is.
+    /// </summary>
+    private readonly Lock _flightLock = new();
+
+    /// <summary>
+    ///     How many renders are running on thread-pool threads.
+    /// </summary>
+    private int _inFlight;
+
+    /// <summary>
+    ///     Completed when no render is running; replaced by a new one when a render starts while it is complete.
+    /// </summary>
+    private TaskCompletionSource _idle = CompletedSignal();
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ImageRenderService" /> class that draws with the viewer.
     /// </summary>
     /// <param name="logger">Optional logger for diagnostics.</param>
@@ -82,9 +97,68 @@ public sealed class ImageRenderService : IImageRenderService
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(projectFolder);
 
+        lock (_flightLock)
+        {
+            if (_inFlight++ == 0)
+            {
+                _idle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
+        }
+
         // The viewer observes the token itself, so the task is not started with it: a cancelled render
         // completes with a cancelled result instead of a cancelled task.
-        return Task.Run(() => Render(filePath, projectFolder, settings, cancellationToken), CancellationToken.None);
+        return Task.Run(
+            () =>
+            {
+                try
+                {
+                    return Render(filePath, projectFolder, settings, cancellationToken);
+                }
+                finally
+                {
+                    EndRender();
+                }
+            },
+            CancellationToken.None);
+    }
+
+    /// <summary>
+    ///     Gets a task that completes when no render is running: every render that was started has finished, including the
+    ///     writing of its log entry. A caller that is shutting down cancels its renders first and then waits for this, so
+    ///     that nothing writes to a file or a folder that is about to go away.
+    /// </summary>
+    /// <returns>The task; it is complete when no render is running now.</returns>
+    public Task WhenIdleAsync()
+    {
+        lock (_flightLock)
+        {
+            return _idle.Task;
+        }
+    }
+
+    /// <summary>
+    ///     Makes a signal that is already complete.
+    /// </summary>
+    /// <returns>The completed signal.</returns>
+    private static TaskCompletionSource CompletedSignal()
+    {
+        var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        signal.SetResult();
+        return signal;
+    }
+
+    /// <summary>
+    ///     Notes that a render has ended and completes the signal when it was the last one.
+    /// </summary>
+    private void EndRender()
+    {
+        lock (_flightLock)
+        {
+            if (--_inFlight == 0)
+            {
+                _idle.SetResult();
+            }
+        }
     }
 
     /// <inheritdoc />
