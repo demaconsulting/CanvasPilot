@@ -234,7 +234,7 @@ package CanvasPilotDesignViews {
     }
 
     view AppShellSubsystemChromeView : GeneralView {
-        doc /* Dependencies of the main window shell on the status bar, the AI provider pill, and the welcome screen that it creates, on the settings it saves and follows, and on the design tokens, and of those three units on the panels they report. Hub supplier omitted: RollingFileLogger. */
+        doc /* Dependencies of the main window shell on the status bar, the AI provider pill, and the welcome screen that it creates, on the settings it saves and follows, on the key that is held to talk, which it listens for and which the status bar and the welcome screen name, and on the design tokens, and of those three units on the panels they report. Hub supplier omitted: RollingFileLogger. */
         expose CanvasPilot_MainWindowShell::MainWindowShell;
         expose CanvasPilot_StatusBar::StatusBar;
         expose CanvasPilot_ProviderPill::ProviderPill;
@@ -246,6 +246,7 @@ package CanvasPilotDesignViews {
         expose CanvasPilot_ChatPanel::ChatPanel;
         expose CanvasPilot_AgentContract::AgentContract;
         expose CanvasPilot_ProjectExplorer::ProjectExplorer;
+        expose CanvasPilot_PushToTalkBinding::PushToTalkBinding;
         filter not (@SysML::Documentation);
     }
 
@@ -264,9 +265,11 @@ package CanvasPilotDesignViews {
     }
 
     view ChatSubsystemPanelView : GeneralView {
-        doc /* Dependencies of the chat panel on the units that compose a message, on the turn runner that runs the turn of the AI copilot, on the contract of the Agent subsystem through which it asks whether the provider can be used, and on the Markdown reader of the Knowledge subsystem that draws the final text of a reply. Hub suppliers omitted: RollingFileLogger, PathHelpers, and ProjectService; the dependencies on the chat history store and the project service are in ChatSubsystemHistoryView. */
+        doc /* Dependencies of the chat panel on the units that compose a message, on the turn runner that runs the turn of the AI copilot, on the planner of the prompts that it offers, on the key that is held to talk whose name it shows, on the contract of the Agent subsystem through which it asks whether the provider can be used, and on the Markdown reader of the Knowledge subsystem that draws the final text of a reply. Hub suppliers omitted: RollingFileLogger, PathHelpers, and ProjectService; the dependencies on the chat history store and the project service are in ChatSubsystemHistoryView. */
         expose CanvasPilot_ChatPanel::ChatPanel;
         expose CanvasPilot_ChatTurnRunner::ChatTurnRunner;
+        expose CanvasPilot_FollowUpSuggestions::FollowUpSuggestions;
+        expose CanvasPilot_PushToTalkBinding::PushToTalkBinding;
         expose CanvasPilot_AgentContract::AgentContract;
         expose CanvasPilot_KnowledgeMarkdown::KnowledgeMarkdown;
         expose CanvasPilot_ComposerViewModel::ComposerViewModel;
@@ -367,6 +370,7 @@ package CanvasPilotDesignViews {
         expose CanvasPilot_ModelCatalogPanel::ModelCatalogPanel;
         expose CanvasPilot_ModelParameterEditor::ModelParameterEditor;
         expose CanvasPilot_SpeechSettingsPage::SpeechSettingsPage;
+        expose CanvasPilot_PushToTalkBinding::PushToTalkBinding;
         expose OtsDependencies::Speech;
         expose CanvasPilot_SettingsService::SettingsService;
         expose CanvasPilot_SettingsDialog::SettingsDialog;

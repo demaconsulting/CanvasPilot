@@ -19,14 +19,16 @@ package CanvasPilot_MainWindowShell {
     private import CanvasPilot_ThemeResources::*;
     private import CanvasPilot_Welcome::*;
     private import CanvasPilot_ProviderPill::*;
+    private import CanvasPilot_PushToTalkBinding::*;
 
     part def MainWindowShell {
-        doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands (Help shows the About dialog and the browser of the drawing knowledge), the window title, the title bar that holds the compact menu, the name of the open project, the style list, and the AI provider pill, the body that shows the welcome screen or the workspace and the status bar below it, the recent projects menu, Undo and Redo of the focused part, the talk key, the saved size, place, and state of the window with the widths of its columns, the thumbnail setting of the explorer, and the dialog service the window implements. */
+        doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands (Help shows the About dialog, the browser of the drawing knowledge, and, through a folder launcher that tests replace, the folder of the log files, with a message that gives the reason and the path when it cannot be shown), the window title, the title bar that holds the compact menu, the name of the open project, the style list, and the AI provider pill and keeps clear of the buttons that the system draws at the edge of the window (it asks for the minimize, maximize, and close buttons and no full-screen button, keeps free the width that they cover, measured from the top of the visual tree with 140 pixels as the fallback on Windows, and turns a window that is put into full screen by any other means back to the normal state, with no key for full screen), the body that shows the welcome screen or the workspace and the status bar below it, the recent projects menu, Undo and Redo of the focused part, the talk key (the key or chord that the speech settings choose, F9 by default: dictation starts when it goes down, ignores its repeats, and ends when any key of the chord is released, the window closes, or the window is no longer active), the saved size, place, and state of the window with the widths of its columns, the thumbnail setting of the explorer, and the dialog service the window implements. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/MainWindowShell.cs",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/IDialogService.cs",
+                "src/DemaConsulting.CanvasPilot/AppShellSubsystem/IFolderLauncher.cs",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/MessageDialogViewModel.cs",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/MessageDialogView.axaml",
                 "src/DemaConsulting.CanvasPilot/AppShellSubsystem/MessageDialogView.axaml.cs",
@@ -38,6 +40,7 @@ package CanvasPilot_MainWindowShell {
                 "test/DemaConsulting.CanvasPilot.Tests/AppShellSubsystem/MessageDialogTests.cs",
                 "test/DemaConsulting.CanvasPilot.Tests/AppShellSubsystem/AppShellSubsystemFakes.cs",
                 "test/DemaConsulting.CanvasPilot.UiTests/MainWindowViewTests.cs",
+                "test/DemaConsulting.CanvasPilot.UiTests/MainWindowTitleBarLayoutTests.cs",
                 "test/DemaConsulting.CanvasPilot.UiTests/AccessibilityViewTests.cs",
                 "test/DemaConsulting.CanvasPilot.UiTests/AppShellUiTestSupport.cs"
             );
@@ -110,5 +113,8 @@ package CanvasPilot_MainWindowShell {
 
         // Takes every color, size, icon, and button look of the window and its dialogs from the tokens and control themes.
         dependency MainWindowShell to ThemeResources;
+
+        // Holds the key that is held to talk, as the setting that follows the choice of the user, and listens for it.
+        dependency MainWindowShell to PushToTalkBinding;
     }
 }

@@ -3,10 +3,11 @@ package CanvasPilot_SpeechSettingsPage {
     private import CanvasPilot_DeviceSelection::*;
     private import CanvasPilot_ModelCatalogPanel::*;
     private import CanvasPilot_ModelParameterEditor::*;
+    private import CanvasPilot_PushToTalkBinding::*;
     private import CanvasPilot_SettingsDialog::*;
 
     part def SpeechSettingsPage {
-        doc /* The Speech page of the settings dialog; composes the device pickers, model catalog, and parameter editors and maps them to and from the stored speech settings. */
+        doc /* The Speech page of the settings dialog; composes the device pickers, model catalog, and parameter editors and maps them to and from the stored speech settings, and lets the user choose the key that is held to talk by pressing it in a box (a modifier alone is waited out and Esc cancels), shows it in words, refuses a key that is not safe with the sentence that says why and leaves the earlier key, stores it with the speech settings (nothing for the default), and puts the default back with a reset button. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -37,5 +38,8 @@ package CanvasPilot_SpeechSettingsPage {
 
         // Composes the parameter editors of the chosen models.
         dependency SpeechSettingsPage to ModelParameterEditor;
+
+        // Checks, writes, and reads the key that is held to talk with the rules of the key.
+        dependency SpeechSettingsPage to PushToTalkBinding;
     }
 }

@@ -2,10 +2,11 @@ package CanvasPilot_Welcome {
     private import SoftwareItemMetadata::*;
     private import CanvasPilot_ProjectExplorer::*;
     private import CanvasPilot_ProviderPill::*;
+    private import CanvasPilot_PushToTalkBinding::*;
     private import CanvasPilot_RollingFileLogger::*;
 
     part def Welcome {
-        doc /* The screen that fills the main window while no project is open: the name, tagline, and three steps of the application, the New project and Open project buttons, up to six cards of the most recent projects (picture, name, folder, when it was opened in words, how many pictures it holds) that open the project and are moved between with the arrow keys and removed from the list only with Delete or a menu, a card that invites the first project, and a notice with an Open Settings button while the AI provider needs something or cannot be used. The counting of the pictures of a project and the drawing of the card pictures in the background are supporting types of this unit. */
+        doc /* The screen that fills the main window while no project is open: the name, tagline, and three steps of the application (the first names the key that is held to talk, which follows the settings), the New project and Open project buttons, up to six cards of the most recent projects (picture, name, folder, when it was opened in words, how many pictures it holds) that open the project and are moved between with the arrow keys and removed from the list only with Delete or a menu, a card that invites the first project, and a notice with an Open Settings button while the AI provider needs something or cannot be used. The counting of the pictures of a project and the drawing of the card pictures in the background are supporting types of this unit. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -33,5 +34,8 @@ package CanvasPilot_Welcome {
 
         // Logs a card picture that could not be drawn.
         dependency Welcome to RollingFileLogger;
+
+        // Names the key that is held to talk in the first step of how the application works, which follows the speech settings.
+        dependency Welcome to PushToTalkBinding;
     }
 }
