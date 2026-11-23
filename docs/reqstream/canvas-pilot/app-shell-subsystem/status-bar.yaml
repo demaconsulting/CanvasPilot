@@ -1,0 +1,100 @@
+---
+# Software Unit Requirements for the StatusBar Unit
+#
+# The StatusBar unit is the bar at the bottom of the main window (StatusBarViewModel.cs, StatusBarView.axaml). It follows
+# the workspace and its preview pane and says, with words as well as with an icon, what picture is shown and in what state
+# it is, and, while a project is open, that the project is saved and which key is held to talk.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: AppShell Subsystem Requirements
+        sections:
+          - title: StatusBar Requirements
+            requirements:
+              - id: CanvasPilot-StatusBar-AlwaysShown
+                title: >-
+                  The StatusBar shall be shown at the bottom of the main window, 26 pixels high, whether or not a project
+                  is open.
+                justification: |
+                  A bar that comes and goes moves the rest of the window and makes the user wonder whether the
+                  application has stopped telling them something. A bar that is always there, at one height, gives the
+                  picture area a stable size and a fixed place to look at.
+                tests:
+                  - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
+
+              - id: CanvasPilot-StatusBar-SayNothingToShow
+                title: >-
+                  The StatusBar shall say "No project open" while no project is open and "No picture selected" while a
+                  project is open and no file is selected or no picture is shown, and shall show no file, size, format, or
+                  render time then.
+                justification: |
+                  An empty bar looks like a fault. Plain words tell the user why there is nothing to report and what is
+                  missing, so that they know the next step is to open a project or to select a file.
+                tests:
+                  - StatusBar_NoProject_IsIdleAndSaysNoProjectIsOpen
+                  - StatusBar_ProjectOpenNoSelection_SaysNoPictureSelected
+                  - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
+
+              - id: CanvasPilot-StatusBar-ReportThePicture
+                title: >-
+                  The StatusBar shall report for the picture that is shown the name of its file, its size in pixels, its
+                  format, how long the render took, and, when the render has notes, how many notes there are.
+                justification: |
+                  Whoever prepares a picture for an email or a slide needs to know which file is on the screen and what
+                  it is, without opening another window. The render time and the notes show at a glance that a picture
+                  was drawn with problems or slowly.
+                tests:
+                  - StatusBar_RenderSucceedsThenFails_FollowsEveryStateWithItsFacts
+                  - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
+
+              - id: CanvasPilot-StatusBar-ReportRenderingAndFailure
+                title: >-
+                  The StatusBar shall say with words and an icon, and not with a color alone, that the selected file is
+                  being rendered, that the render failed, or that a picture is ready, and shall show the facts of the
+                  picture only while it is ready.
+                justification: |
+                  A render can take a moment or can fail, and the user must be able to tell a picture that is still on its
+                  way from one that will not come. Words and an icon tell it also to people who cannot tell the colors
+                  apart, and facts that belong to another file would mislead.
+                tests:
+                  - StatusBar_RenderSucceedsThenFails_FollowsEveryStateWithItsFacts
+                  - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
+
+              - id: CanvasPilot-StatusBar-FollowTheWorkspace
+                title: >-
+                  The StatusBar shall change what it says when the project is opened or closed, when the selected file or its
+                  render changes, and when the preview pane of the workspace is replaced, and shall stop doing so when it is
+                  disposed.
+                justification: |
+                  The bar is only useful when it tells what is true now. It must follow the workspace without the user
+                  asking, and it must not keep reacting to a workspace that has gone on without it.
+                tests:
+                  - StatusBar_ProjectOpenNoSelection_SaysNoPictureSelected
+                  - StatusBar_PreviewReplaced_FollowsTheNewPane
+                  - StatusBar_NullWorkspaceThrows_DisposedBarNoLongerFollows
+
+              - id: CanvasPilot-StatusBar-ShowProjectHints
+                title: >-
+                  The StatusBar shall show, while a project is open and not otherwise, the words "Project saved" and the hint
+                  that the F8 key is held to talk.
+                justification: |
+                  The user is told that their work is kept and how to speak a request without searching the menus. Neither
+                  statement means anything while no project is open, so neither is shown then.
+                tests:
+                  - StatusBar_NoProject_IsIdleAndSaysNoProjectIsOpen
+                  - StatusBar_ProjectOpenNoSelection_SaysNoPictureSelected
+                  - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
+
+              - id: CanvasPilot-StatusBar-AnnounceToScreenReader
+                title: >-
+                  The StatusBar shall give a screen reader one sentence that sums up what the bar says, such as the file with
+                  its size and format, that the render failed, or that no picture is selected, and shall have the screen
+                  reader told politely when the sentence changes.
+                justification: |
+                  People who use a screen reader cannot see the bar, so the sentence is the only way for them to learn
+                  that a render has finished or failed. A polite announcement tells them without interrupting what they
+                  are doing.
+                tests:
+                  - StatusBar_RenderSucceedsThenFails_FollowsEveryStateWithItsFacts
+                  - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture

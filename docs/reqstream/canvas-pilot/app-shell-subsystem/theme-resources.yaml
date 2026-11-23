@@ -3,7 +3,10 @@
 #
 # The ThemeResources unit is the set of design tokens of the user interface (Styles/Tokens.axaml): the colors,
 # spacing, corner radii, type sizes, and shadows, for the dark and the light theme variant, from which every view
-# takes its look, and the palettes (in App.axaml) that make the standard controls follow them.
+# takes its look, the shared control themes and looks (Styles/Controls.axaml) for buttons, toggles, chips, splitters,
+# and the rows of the project tree, the line icons (Styles/Icons.axaml), and the palettes (in App.axaml) that make the
+# standard controls follow them. The tree row look is shown by the project explorer, so its tests are the explorer's
+# view tests.
 
 sections:
   - title: CanvasPilot Requirements
@@ -107,8 +110,8 @@ sections:
               - id: CanvasPilot-ThemeResources-ShowKeyboardFocus
                 title: >-
                   The ThemeResources shall show a 2 pixel ring in the focus color just outside an icon button, tool
-                  toggle, pill button, or splitter when it has the focus by the keyboard, and show no ring when it has
-                  the focus by the pointer.
+                  toggle, pill button, main button, quiet button, card button, or splitter when it has the focus by the
+                  keyboard, and show no ring when it has the focus by the pointer or on any other control.
                 justification: |
                   People who use the keyboard, and people who cannot see well, must always know which control will act
                   when they press a key. A ring that also appears after a mouse click is noise for the people who point,
@@ -116,3 +119,43 @@ sections:
                 tests:
                   - ThemeResources_Controls_FocusRingShowsForKeyboardFocusOnly
                   - ThemeResources_Controls_FocusRingIsDrawnOutsideTheButton
+                  - Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly
+
+              - id: CanvasPilot-ThemeResources-ProvideButtonLooks
+                title: >-
+                  The ThemeResources shall provide a look for the one main action of a window or a card, filled with the
+                  accent or the brand gradient, or in amber with dark text for a notice, a quiet look for any other action,
+                  raised with an outline that turns to the accent under the pointer, and a look for a whole card that is one
+                  button, each with the ring that shows the keyboard focus.
+                justification: |
+                  A window that has one clear main action, quieter other actions, and cards that can be chosen as a whole is
+                  easier to use than one in which every button looks alike. One look for each keeps the windows consistent,
+                  and the ring keeps all of them usable without a pointer.
+                tests:
+                  - Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly
+                  - Accessibility_Colors_NoticesAndWelcomeTextAreReadable
+
+              - id: CanvasPilot-ThemeResources-ProvideTreeRowLook
+                title: >-
+                  The ThemeResources shall provide a look for the rows of the project tree that makes each row 26 pixels
+                  high, indents the children of a folder by 16 pixels for each level, tints a row under the pointer and the
+                  selected row, and marks the selected row with an accent bar at its left edge and a semibold name.
+                justification: |
+                  People find and keep their place in a list of files by the indent of the rows and by a mark on the chosen
+                  one that does not depend on color alone. One look for the tree keeps the explorer and the other trees of
+                  the application consistent.
+                tests:
+                  - ProjectExplorerView_FoldersAndFiles_ShowAsRowsWithBadgesAndIndent
+                  - ProjectExplorerView_SelectedRow_ShowsBarAndSemiboldName
+
+              - id: CanvasPilot-ThemeResources-ReadableNoticesAndWelcome
+                title: >-
+                  The ThemeResources shall give the text of a warning or an error banner, the dark text of the amber button,
+                  and the text on the backdrop of the welcome screen, including under its glows, at least 4.5 to 1 contrast,
+                  in both theme variants.
+                justification: |
+                  A notice that cannot be read does not tell the user what is wrong, and a tinted banner, an amber button, or
+                  a glowing backdrop make a text color that is readable on a plain surface hard to read. People with low
+                  vision, or in bright rooms, need the contrast that accessibility guidelines ask for on these as well.
+                tests:
+                  - Accessibility_Colors_NoticesAndWelcomeTextAreReadable

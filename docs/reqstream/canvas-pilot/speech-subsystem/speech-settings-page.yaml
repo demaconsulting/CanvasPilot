@@ -68,3 +68,15 @@ sections:
                 tests:
                   - SpeechSettingsPageViewModel_OnClosed_RunningDownload_IsCancelled
                   - SettingsDialogView_CloseWindow_CancelsRunningDownload
+
+              - id: CanvasPilot-SpeechSettingsPage-BeUsableWithAssistiveTechnology
+                title: >-
+                  The SpeechSettingsPage shall give the lists of microphones, speakers, and models a name that assistive
+                  technology can read, give every button that shows no text a name and a tooltip, and let every enabled
+                  button take the keyboard focus, in both theme variants.
+                justification: |
+                  People who use a screen reader or only the keyboard must be able to choose a microphone and a model. A list
+                  that has a label beside it but no name is read as nothing, and a button that cannot take the focus cannot
+                  be reached by the keyboard.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

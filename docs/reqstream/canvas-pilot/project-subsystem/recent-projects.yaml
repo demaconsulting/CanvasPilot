@@ -2,7 +2,8 @@
 # Software Unit Requirements for the RecentProjects Unit
 #
 # The RecentProjects unit keeps the most-recently-used list of project files in the application settings,
-# through ISettingsService, so the list survives restarts and shares the settings file with other subsystems.
+# through ISettingsService, so the list survives restarts and shares the settings file with other subsystems. It also
+# records the time at which each listed project was opened, taken from an optional TimeProvider.
 
 sections:
   - title: CanvasPilot Requirements
@@ -57,3 +58,13 @@ sections:
                   - RecentProjects_Remove_ListedProject_IsRemoved
                   - RecentProjects_Clear_ListedProjects_EmptiesList
                   - RecentProjects_Constructor_NullSettings_Throws
+
+              - id: CanvasPilot-RecentProjects-RecordOpeningTime
+                title: >-
+                  The RecentProjects shall record the time of each opening of a project in the application settings,
+                  renew it when the project is opened again, and forget it when the project is removed from the list.
+                justification: |
+                  The welcome screen tells the user when each recent project was last opened, so the time must be kept
+                  with the list. A project that is no longer listed must not leave its time behind in the settings.
+                tests:
+                  - RecentProjects_Add_RecordsTheTimeOfOpeningAndRemoveForgetsIt

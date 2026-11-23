@@ -2,8 +2,9 @@
 # Software Unit Requirements for the ComposerEditor Unit
 #
 # The ComposerEditor unit is the view of the message being composed: one editing surface in which typed text, dictated
-# text, and chips for attached files, folders, pictures, and marks stand in order. It shows what the ComposerViewModel
-# holds and reports everything the user does to it as that view model's actions; the editing rules, the undo steps, and
+# text, and chips for attached files, folders, pictures, and marks stand in order, with a hint of what to write while
+# it is empty. It shows what the ComposerViewModel holds and reports everything the user does to it as that view
+# model's actions; the editing rules, the undo steps, and
 # the handling of what is dropped and pasted belong to the view model and the intake. Runtime OTS requirements of the
 # editing control are children of the requirements below.
 
@@ -57,8 +58,9 @@ sections:
               - id: CanvasPilot-ComposerEditor-EditTextWithCaretAndSelection
                 title: >-
                   The ComposerEditor shall let the user type text, delete it with Backspace and Delete, select it, type
-                  over a selection, commit several characters at once with an input method, and break lines with Enter,
-                  with a caret, wrapping, and word navigation, such that each typed or deleted character, each commit of
+                  over a selection, commit several characters at once with an input method, and break lines with Enter
+                  (unless the control that hosts it takes the key, as the chat panel does for Enter on its own), with a
+                  caret, wrapping, and word navigation, such that each typed or deleted character, each commit of
                   an input method, and each replacement of a selection is one step of the message.
                 justification: |
                   The editing surface is the place where most messages are written, and users expect it to behave as any
@@ -193,3 +195,14 @@ sections:
                   - ComposerEditorView_StatusAndPartialText_AreShown
                   - ComposerEditorView_DropWithoutProject_ChangesNothing
                   - ComposerEditorView_ProjectOpenedAndClosed_EditableOnlyWhileProjectIsOpen
+
+              - id: CanvasPilot-ComposerEditor-ShowPlaceholder
+                title: >-
+                  The ComposerEditor shall show the text "Describe a change, or mark the picture…" over the editing
+                  surface while the message of an open project is empty, and shall hide it as soon as the message has
+                  any text.
+                justification: |
+                  An empty box does not say what it is for, and the chat has no label above the message. A hint in the
+                  box says what to write and goes away when the user starts.
+                tests:
+                  - ChatPanelView_ComposerCard_PlaceholderNamesAndHint

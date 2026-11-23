@@ -5,8 +5,10 @@
 # - Define requirements for the CanvasPilot AppShell subsystem
 # - The AppShell subsystem spans MainWindowShell (MainWindowShell.cs, IDialogService.cs,
 #   MainWindowView.axaml, MessageDialogViewModel.cs, MessageDialogView.axaml), ProjectWorkspace
-#   (ProjectWorkspaceViewModel.cs, ProjectWorkspaceView.axaml), and AboutDialog (AboutDialogViewModel.cs,
-#   AboutDialogView.axaml), ThemeResources (Styles/Tokens.axaml and the palettes of App.axaml), plus the composition root (ApplicationComposition.cs, App.axaml.cs) and the view
+#   (ProjectWorkspaceViewModel.cs, ProjectWorkspaceView.axaml, WindowLayout.cs), StatusBar, ProviderPill, Welcome
+#   (the start screen with its recent project cards), and AboutDialog (AboutDialogViewModel.cs,
+#   AboutDialogView.axaml), ThemeResources (Styles/Tokens.axaml, Icons.axaml, Controls.axaml and the palettes of
+#   App.axaml), plus the composition root (ApplicationComposition.cs, App.axaml.cs) and the view
 #   locator (ViewLocator.cs)
 # - Subsystem requirements describe the application shell behavior that satisfies the system-level requirements
 
@@ -62,6 +64,7 @@ sections:
               while it is written, and hiding it without a project keeps the window to what can be used.
             children:
               - CanvasPilot-ProjectWorkspace-HostChatColumn
+              - CanvasPilot-ProjectWorkspace-HideAndRestoreChat
             tests:
               - MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns
               - AppShellSubsystem_ComposeApplication_ChatIsTheChatColumnAndTheTalkKeyTarget
@@ -117,6 +120,7 @@ sections:
               confirming it protects the user's files, and a refused name or a locked file must be explained.
             children:
               - CanvasPilot-ProjectWorkspace-ConfirmDeleteAndPromptRename
+              - CanvasPilot-ProjectWorkspace-AskForNamesOfNewFilesAndFolders
             tests:
               - AppShellSubsystem_ManageFiles_RenameAndDelete_UpdateFolderAndExplorer
 
@@ -130,6 +134,7 @@ sections:
             children:
               - CanvasPilot-AboutDialog-ShowApplicationIdentity
               - CanvasPilot-AboutDialog-ListDependencies
+              - CanvasPilot-AboutDialog-AcknowledgeIconSet
               - CanvasPilot-AboutDialog-CloseDialog
             tests:
               - AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries
@@ -148,6 +153,8 @@ sections:
               - CanvasPilot-ThemeResources-MeetContrast
               - CanvasPilot-ThemeResources-FollowVariantSwitch
               - CanvasPilot-ThemeResources-ProvideControlThemes
+              - CanvasPilot-ThemeResources-ProvideButtonLooks
+              - CanvasPilot-ThemeResources-ProvideTreeRowLook
             tests:
               - AppShellSubsystem_Themes_PaletteThemesStockControlsInBothVariants
           - id: CanvasPilot-AppShell-ApplyThemeChoice
@@ -173,6 +180,131 @@ sections:
               - CanvasPilot-ThemeResources-ShowKeyboardFocus
             tests:
               - AppShellSubsystem_Themes_TabKeyShowsTheFocusRingOnTheFocusedControlOnly
+              - Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly
+
+          - id: CanvasPilot-AppShell-ProvideTitleBar
+            title: >-
+              The AppShell subsystem shall show a title bar that holds the menu, the name of the open project, the style
+              list, and the AI provider pill, keep room for the buttons of the system, and open the window at a size that
+              shows the explorer, the picture, and the chat.
+            justification: |
+              The title bar is the first thing the user sees and carries the two pills that decide whether work can
+              proceed: the style of the drawings and the provider that answers. Keeping the menu there saves a row of the
+              window for the picture, and the system buttons must stay usable.
+            children:
+              - CanvasPilot-MainWindowShell-ShowTitleBar
+              - CanvasPilot-MainWindowShell-KeepRoomForSystemButtons
+              - CanvasPilot-MainWindowShell-OpenWithDesignSizes
+              - CanvasPilot-MainWindowShell-HostProviderPillInTitleBar
+            tests:
+              - MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes
+              - MainWindowView_TitleBar_ShowsProjectNameThenApplicationName
+              - MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage
+
+          - id: CanvasPilot-AppShell-ShowStatusBar
+            title: >-
+              The AppShell subsystem shall show a status bar at the bottom of the main window, always and at one height,
+              that says whether a project is open, whether a picture is selected, and, for the picture that is shown, its
+              file, size, format, render time, and notes, or that it is being rendered or failed, with words and not color
+              alone, and, while a project is open, that the project is saved and which key is held to talk.
+            justification: |
+              The user needs to know at a glance what is on the screen and in what state, and a bar that comes and goes
+              moves the window. Words as well as colors let people who cannot tell the colors apart, and screen readers,
+              know the state.
+            children:
+              - CanvasPilot-StatusBar-AlwaysShown
+              - CanvasPilot-StatusBar-SayNothingToShow
+              - CanvasPilot-StatusBar-ReportThePicture
+              - CanvasPilot-StatusBar-ReportRenderingAndFailure
+              - CanvasPilot-StatusBar-FollowTheWorkspace
+              - CanvasPilot-StatusBar-ShowProjectHints
+              - CanvasPilot-StatusBar-AnnounceToScreenReader
+              - CanvasPilot-MainWindowShell-ShowStatusBarAtBottom
+            tests:
+              - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
+
+          - id: CanvasPilot-AppShell-ShowProviderPill
+            title: >-
+              The AppShell subsystem shall show in the title bar of the main window a pill that names the AI provider and
+              model that the settings choose and says with words and a dot whether the provider can be used, with the
+              sentence of the check as its tooltip, and that opens the settings on the AI provider page when it is used.
+            justification: |
+              The user must know which provider answers and whether it works, and the way to fix a problem should be one
+              click away, without a search through the menus.
+            children:
+              - CanvasPilot-ProviderPill-ShowProviderAndModel
+              - CanvasPilot-ProviderPill-ShowTheStateWithWords
+              - CanvasPilot-ProviderPill-ExplainInTooltip
+              - CanvasPilot-ProviderPill-ReportMissingProvider
+              - CanvasPilot-ProviderPill-OpenSettings
+              - CanvasPilot-ProviderPill-ShowInTitleBar
+              - CanvasPilot-ProviderPill-AnnounceToScreenReader
+              - CanvasPilot-ProviderPill-StopFollowingWhenDisposed
+            tests:
+              - MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage
+
+          - id: CanvasPilot-AppShell-ShowWelcomeScreen
+            title: >-
+              The AppShell subsystem shall show, in place of the workspace while no project is open, a welcome screen that
+              introduces the application, offers to create or open a project, lists the six most recent projects as cards
+              that open them and can be removed from the list, and tells when the AI provider needs something, and shall
+              not build the workspace until a project is open.
+            justification: |
+              A window with no project has nothing to work on, so the first screen should show the next step and the way
+              back to recent work, and should say early when the AI provider is not ready.
+            children:
+              - CanvasPilot-MainWindowShell-ShowWelcomeOrWorkspace
+              - CanvasPilot-Welcome-ShowWhileNoProject
+              - CanvasPilot-Welcome-DeferWorkspace
+              - CanvasPilot-Welcome-IntroduceApplication
+              - CanvasPilot-Welcome-OfferStartButtons
+              - CanvasPilot-Welcome-ListRecentProjects
+              - CanvasPilot-Welcome-TellOpeningTimeInWords
+              - CanvasPilot-Welcome-CountPictures
+              - CanvasPilot-Welcome-OpenProjectFromCard
+              - CanvasPilot-Welcome-MoveBetweenCardsByKeyboard
+              - CanvasPilot-Welcome-RemoveCardFromList
+              - CanvasPilot-Welcome-InviteFirstProject
+              - CanvasPilot-Welcome-NoticeAiProviderProblem
+            tests:
+              - WelcomeView_RecentProjects_ListCardsAndOpenAProject
+              - MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow
+              - MainWindowView_Workspace_ChatColumnVisibleOnlyWithProject_ThreeColumns
+
+          - id: CanvasPilot-AppShell-RememberWindowLayout
+            title: >-
+              The AppShell subsystem shall open the window with the size, place, and state, and the widths of the explorer
+              and the chat column, that the user left, fitted to the screens that are connected and to the width of the
+              window, and let the user resize the columns with the pointer or the keyboard.
+            justification: |
+              People arrange the window once and expect to find it so, also after a screen was removed, and a window that is
+              narrow must still show every part of the work without cropping.
+            children:
+              - CanvasPilot-MainWindowShell-RememberWindowLayout
+              - CanvasPilot-ProjectWorkspace-ResizeColumns
+              - CanvasPilot-ProjectWorkspace-FitColumnsToWindow
+              - CanvasPilot-ProjectWorkspace-FitSavedWindowToScreens
+            tests:
+              - WorkspaceLayout_WindowWidth_NothingIsCroppedAndTheExplorerGivesUpRoomFirst
+              - WorkspaceLayout_Splitters_SavedWidthsUsedAndKeyboardChoiceSaved
+              - WorkspaceLayout_CloseWindow_SavesTheSizeAndANewWindowOpensWithIt
+
+          - id: CanvasPilot-AppShell-MakeWindowsAccessible
+            title: >-
+              The AppShell subsystem shall make the windows usable with the keyboard and a screen reader: the whole menu has
+              access keys, buttons that show only an icon have a name, a tooltip, and a target of at least 28 by 28 pixels,
+              fields have names, and the text of notices, the amber button, and the welcome screen is readable.
+            justification: |
+              People who cannot use a pointer or see well must be able to reach and understand every control of the
+              windows.
+            children:
+              - CanvasPilot-MainWindowShell-MakeMenuUsableByKeyboard
+              - CanvasPilot-MainWindowShell-NameAndSizeControls
+              - CanvasPilot-ThemeResources-ReadableNoticesAndWelcome
+            tests:
+              - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+              - Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey
+              - Accessibility_Colors_NoticesAndWelcomeTextAreReadable
 
           - id: CanvasPilot-AppShell-ProvideIcons
             title: >-
@@ -212,18 +344,18 @@ sections:
             tests:
               - AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication
 
-          - id: CanvasPilot-AppShell-ChooseStyleInStatusBar
+          - id: CanvasPilot-AppShell-ChooseStyleInTitleBar
             title: >-
               The AppShell subsystem shall build the style kit catalog, the active style, the list that chooses it, and the
               two style tool descriptors with the other units of the application, read the kits in the background so that the
               start of the application does not wait for them, let the exporter offer the sizes of the style, and show the
-              list in a status bar of the main window while a project is open.
+              list as a pill in the title bar of the main window while a project is open.
             justification: |
               The style units do not know the window, the exporter, or each other's owners, so one place has to join them. The
               kits live in folders that may be slow to read, so reading them must never delay the start, and the user should
               find the choice of the style where the work is.
             children:
-              - CanvasPilot-MainWindowShell-ShowTheActiveStyleInAStatusBar
+              - CanvasPilot-MainWindowShell-ShowTheActiveStyleInTheTitleBar
             tests:
               - AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired
 

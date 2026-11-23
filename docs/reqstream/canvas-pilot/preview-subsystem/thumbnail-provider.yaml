@@ -1,0 +1,44 @@
+---
+# Software Unit Requirements for the ThumbnailProvider Unit
+#
+# The ThumbnailProvider unit makes the small pictures of files, such as the thumbnails at the right of the rows of the
+# project explorer: it has the render service draw a file at the size of a thumbnail on a white background, off the user
+# interface thread, keeps the pixels of the latest thumbnails so that a file that did not change is not drawn again, and
+# gives every caller a bitmap of its own. It implements the IThumbnailSource interface that the Project subsystem
+# declares and consumes.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Preview Subsystem Requirements
+        sections:
+          - title: ThumbnailProvider Requirements
+            requirements:
+              - id: CanvasPilot-ThumbnailProvider-DrawThumbnail
+                title: >-
+                  The ThumbnailProvider shall make the thumbnail of a file by drawing the file into a picture of 56 by 36
+                  pixels, fitted inside with its proportions kept, over a white background, and give each caller a bitmap
+                  of its own, and shall give no bitmap for a file that is missing or cannot be drawn, without failing.
+                justification: |
+                  A small picture at the side of a file name helps the user find a drawing without opening it. Drawing it at
+                  twice the size it is shown at keeps it sharp on a dense display, and a white background keeps a picture with
+                  transparent parts from taking the color of the row. A caller that disposes its bitmap, as a row that is
+                  removed does, must not take the picture from another row that shows the same file, and a missing or broken
+                  file must leave the row without a thumbnail, never break the list.
+                tests:
+                  - ThumbnailProvider_CreateAsync_DrawsOnceUntilTheFileChanges
+                  - ThumbnailProvider_CreateAsync_FullCacheOrBadFile_EvictsLeastRecentlyUsedAndGivesNoBitmap
+
+              - id: CanvasPilot-ThumbnailProvider-ReuseDrawnThumbnails
+                title: >-
+                  The ThumbnailProvider shall keep the pixels of the thumbnails it made last, 256 of them unless it is
+                  given another number, forgetting the one used least recently first, draw a file again only when it is not
+                  kept or when its time or size has changed, and forget all kept thumbnails when asked.
+                justification: |
+                  A project can hold thousands of files, and the explorer asks again whenever a row is scrolled into view.
+                  Drawing each file once while it does not change keeps scrolling smooth and the processor free, and a bound
+                  on what is kept keeps the memory use of a large project small. A file that was edited must show its new
+                  picture.
+                tests:
+                  - ThumbnailProvider_CreateAsync_DrawsOnceUntilTheFileChanges
+                  - ThumbnailProvider_CreateAsync_FullCacheOrBadFile_EvictsLeastRecentlyUsedAndGivesNoBitmap

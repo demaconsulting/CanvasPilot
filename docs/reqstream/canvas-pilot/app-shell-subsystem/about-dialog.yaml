@@ -1,8 +1,9 @@
 ---
 # Software Unit Requirements for the AboutDialog Unit
 #
-# The AboutDialog unit is the modal About window and its view model: the application name, tagline, version,
-# copyright, and the open source libraries the application is built on.
+# The AboutDialog unit is the modal About window and its view model: the brand mark with the application name and
+# tagline, the version, the copyright, the open source libraries and the icon set that the application is built on, and
+# a Close button in a footer.
 
 sections:
   - title: CanvasPilot Requirements
@@ -32,6 +33,18 @@ sections:
                 justification: |
                   Acknowledging the libraries the application depends on is part of using open source software
                   responsibly, and it tells users what the application is made of.
+                tests:
+                  - AboutDialogViewModel_Dependencies_ListsOpenSourceLibraries
+                  - MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses
+
+              - id: CanvasPilot-AboutDialog-AcknowledgeIconSet
+                title: >-
+                  The AboutDialog shall name the Fluent System Icons, which give the application its line icons, among the
+                  things the application is built on, with what they are used for.
+                justification: |
+                  The line icons are the work of another party, who allows their use on condition that the copyright and
+                  license notice goes with the application. Naming the set where users read about the application
+                  acknowledges it, beside the notice that is installed with the program.
                 tests:
                   - AboutDialogViewModel_Dependencies_ListsOpenSourceLibraries
                   - MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses

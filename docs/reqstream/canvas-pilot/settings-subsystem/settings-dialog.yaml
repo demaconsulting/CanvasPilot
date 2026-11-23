@@ -3,7 +3,9 @@
 #
 # The SettingsDialog unit is the modal settings window and its view model. It hosts injected settings
 # pages behind the ISettingsPage contract, so the Settings subsystem does not depend on the subsystems that
-# contribute pages, and saves the pages' working copies only when the user chooses OK or Apply.
+# contribute pages, lists them in a rail with an icon and a title, shows the chosen page under its title and a sentence
+# about it, shows a problem with saving in a banner, and saves the pages' working copies only when the user chooses OK or
+# Apply.
 
 sections:
   - title: CanvasPilot Requirements
@@ -23,6 +25,22 @@ sections:
                 tests:
                   - SettingsDialogViewModel_New_Pages_LoadsEachPageAndSelectsFirst
                   - SettingsDialogViewModel_New_NoPages_HasNoSelectionAndIsValid
+                  - SettingsDialogView_Show_ListsPagesAndShowsFirstPageContent
+                  - SettingsDialogView_SelectOtherPage_ShowsItsContent
+
+              - id: CanvasPilot-SettingsDialog-ShowPageRailAndHeading
+                title: >-
+                  The SettingsDialog shall list the pages in a rail on the left, each with its icon and its title and the
+                  chosen page marked, and shall show above the chosen page its title and a sentence that says what the page
+                  is for, leaving out the sentence for a page that has none and giving a page that names no icon a
+                  default icon.
+                justification: |
+                  A person who opens the settings looks for one thing, so each page is found by its icon and its title, and
+                  the heading and the sentence confirm that the page that is shown is the one that was meant. A page that
+                  has no sentence must not leave an empty line, and a page that names no icon must still be a page in the
+                  list, so that a page that is added later cannot break the window.
+                tests:
+                  - SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner
                   - SettingsDialogView_Show_ListsPagesAndShowsFirstPageContent
                   - SettingsDialogView_SelectOtherPage_ShowsItsContent
 
@@ -57,13 +75,16 @@ sections:
 
               - id: CanvasPilot-SettingsDialog-ReportSaveFailure
                 title: >-
-                  The SettingsDialog shall show a message and stay open when the settings cannot be
-                  saved.
+                  The SettingsDialog shall show a message in a banner at the foot of the window, in words with an icon of a
+                  problem, and stay open when the settings cannot be saved, and shall show no banner while there is no
+                  message.
                 justification: |
                   A user whose settings could not be written must be told, and must keep their
-                  entries so they can retry or cancel.
+                  entries so they can retry or cancel. A banner that is empty must not take room, and a problem is told in
+                  words as well as by color so that it is not missed.
                 tests:
                   - SettingsDialogViewModel_Ok_SaveFails_ShowsErrorAndStaysOpen
+                  - SettingsDialogView_ChosenPage_ShowsHeadingIconsAndErrorBanner
 
               - id: CanvasPilot-SettingsDialog-NotifyPagesOnClose
                 title: >-
@@ -76,3 +97,15 @@ sections:
                   - SettingsDialogViewModel_Cancel_NotifiesPagesOnce
                   - SettingsDialogViewModel_NotifyClosed_CalledTwice_NotifiesPagesOnce
                   - SettingsDialogView_CloseWindow_NotifiesPages
+
+              - id: CanvasPilot-SettingsDialog-BeUsableWithAssistiveTechnology
+                title: >-
+                  The SettingsDialog shall give the list of pages a name and every page it shows names for its entries, give
+                  every button that shows no text a name and a tooltip, and let OK, Cancel, Apply, and the buttons of the
+                  pages take the keyboard focus, in both theme variants.
+                justification: |
+                  People who use a screen reader or only the keyboard must be able to choose a page, change an entry, and
+                  save. An entry that has no name is read as nothing, and a button that cannot take the focus cannot be
+                  reached by the keyboard.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

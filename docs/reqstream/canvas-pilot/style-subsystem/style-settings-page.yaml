@@ -46,3 +46,15 @@ sections:
                   - SettingsDialogView_StyleKitsPage_OkButtonSavesFoldersAndDefaultKit
                   - AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages
                   - MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses
+
+              - id: CanvasPilot-StyleSettingsPage-BeUsableWithAssistiveTechnology
+                title: >-
+                  The StyleSettingsPage shall give the list of folders, the text box for a new folder, and the list of
+                  default kits a name, give every button that shows no text a name and a tooltip, and let every enabled
+                  button take the keyboard focus, in both theme variants.
+                justification: |
+                  People who use a screen reader or only the keyboard must be able to name a shared folder and choose the
+                  default kit. An entry that has no name is read as nothing, and a button that cannot take the focus cannot
+                  be reached by the keyboard.
+                tests:
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

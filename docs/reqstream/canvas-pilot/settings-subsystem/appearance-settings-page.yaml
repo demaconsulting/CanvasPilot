@@ -39,3 +39,4 @@ sections:
                 tests:
                   - AppearanceSettingsPageView_Show_ShowsStoredAppearanceWithAutomationIds
                   - AppearanceSettingsPageView_ChooseThemeAndOptions_Ok_StoresThem
+                  - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

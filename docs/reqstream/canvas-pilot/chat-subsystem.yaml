@@ -3,16 +3,17 @@
 #
 # PURPOSE:
 # - Define requirements for the CanvasPilot Chat subsystem
-# - The Chat subsystem is the panel in which the user converses with the AI copilot: the transcript of the messages that
-#   were sent and of the answers, the composer below it with the buttons that send, that listen while held, and that stop
-#   the copilot, the banner of the readiness of the provider, the joining of the marks on the picture to the message, and
-#   the window that shows exactly what the assistant would receive for a message. It keeps the words of the conversation
-#   of each project on the user's computer, outside the project folder, restores them when the project is opened, and
-#   clears them on request. It uses the Composer, Annotation,
+# - The Chat subsystem is the panel in which the user converses with the AI copilot: a header with the title, a menu
+#   of more actions, and a button that hides the panel, the transcript of the messages that were sent and of the answers
+#   with the example and follow-up prompts, the composer card below it with the buttons that attach files, that listen
+#   while held, that send, and that stop the copilot, the banner of the readiness of the provider, the joining of the
+#   marks on the picture to the message, and the window that shows exactly what the assistant would receive for a
+#   message. It keeps the words of the conversation of each project on the user's computer, outside the project folder,
+#   restores them when the project is opened, and clears them on request. It uses the Composer, Annotation,
 #   Payload, Speech, and Knowledge (Markdown only) subsystems, the Project information types, and the Agent subsystem
 #   through its contract only, and
 #   holds none of their rules; it does not depend on the application shell, which places it in the chat column of the
-#   main window
+#   main window and hides and shows that column when the panel asks
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -55,6 +56,7 @@ sections:
               stays small and no provider reaches the user interface.
             children:
               - CanvasPilot-ChatPanel-HoldTranscriptRows
+              - CanvasPilot-ChatPanel-GroupCopilotRows
               - CanvasPilot-ChatPanel-ConverseWithCopilot
               - CanvasPilot-ChatTurnRunner-RunOneTurnAtATime
               - CanvasPilot-ChatTurnRunner-StreamAnswerIntoReplies
@@ -98,18 +100,74 @@ sections:
 
           - id: CanvasPilot-Chat-SendComposedMessage
             title: >-
-              The Chat subsystem shall let the user send the composed message with one button that can be used exactly
-              when the message can be sent, shall move a sent message from the composer to the transcript, and shall
-              keep the draft, add nothing to the transcript, and say why when the message cannot be sent.
+              The Chat subsystem shall let the user send the composed message with one button, or with the Enter key,
+              that can be used exactly when the message can be sent, shall move a sent message from the composer to the
+              transcript, and shall keep the draft, add nothing to the transcript, and say why when the message cannot
+              be sent.
             justification: |
               Sending is the moment when the user's words, marks, and files become one message, so it must be
               plain what can be sent, and a failure must never lose the draft or send half of it. The decision whether a
               message can be sent stays with the composer, so the button and the composer cannot disagree.
             children:
               - CanvasPilot-ChatPanel-SendFromPanel
+              - CanvasPilot-ChatPanel-SendWithEnterKey
             tests:
               - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
               - ChatSubsystem_SendMessage_AttachmentCannotBeStaged_KeepsDraftAndTranscriptUnchanged
+
+          - id: CanvasPilot-Chat-AttachFilesToMessage
+            title: >-
+              The Chat subsystem shall let the user attach files to the message with a button that opens the file
+              dialog of the system from the folder of the project, and shall add the files that were chosen to the
+              message as chips the way a drop of them does.
+            justification: |
+              Dropping files on the message is not obvious and not possible for everyone, so the same thing must be
+              available as a button. The dialog needs the main window, which the chat does not know, so the chat asks
+              for it through a seam and hands the files to the composer, which keeps the one set of rules for what may
+              be attached.
+            children:
+              - CanvasPilot-ChatPanel-AttachFiles
+            tests:
+              - ChatPanelView_AttachButton_AddsThePickedFilesAsChips
+
+          - id: CanvasPilot-Chat-GuideNewConversation
+            title: >-
+              The Chat subsystem shall, while there is no conversation, ask the user what to draw and offer example
+              prompts that write themselves into the message when chosen, and shall offer follow-up prompts once a
+              conversation exists.
+            justification: |
+              A new user who sees a blank panel does not know what to say, so the panel gives ways to start and then
+              ways to go on. A prompt only fills in the message, so the user stays in control of what is sent.
+            children:
+              - CanvasPilot-ChatPanel-OfferPrompts
+            tests:
+              - ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation
+
+          - id: CanvasPilot-Chat-HideConversation
+            title: >-
+              The Chat subsystem shall let the user ask, with a button in the header of the panel, that the conversation
+              be hidden to give the room to the picture, and shall leave the hiding and the way back to the window that
+              holds it.
+            justification: |
+              The user spends part of the time looking at the picture and part of the time talking about it, so the
+              conversation must be able to give way. The chat does not know the window it is in, so it only asks.
+            children:
+              - CanvasPilot-ChatPanel-HideConversation
+            tests:
+              - ChatPanelView_CollapseButton_RaisesCollapseRequested
+
+          - id: CanvasPilot-Chat-NameControls
+            title: >-
+              The Chat subsystem shall give every button of the panel that shows an icon and no text an accessible name
+              and a tooltip, make it at least 28 by 28 pixels, and let the keyboard reach it.
+            justification: |
+              Controls that are only pictures cannot be used by everyone, and the conversation is where the user spends
+              much of the time. Names, tooltips, and large enough targets make the panel usable with a screen reader,
+              the keyboard, a finger, and by someone who does not know the symbols.
+            children:
+              - CanvasPilot-ChatPanel-NameIconButtons
+            tests:
+              - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
 
           - id: CanvasPilot-Chat-LinkMarksToChips
             title: >-
@@ -122,6 +180,7 @@ sections:
               show marks that are no longer part of what is being said, or marks of a message that was already sent.
             children:
               - CanvasPilot-ChatPanel-LinkMarkChips
+              - CanvasPilot-ChatPanel-ClearMarkChips
             tests:
               - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
 
@@ -184,9 +243,9 @@ sections:
 
           - id: CanvasPilot-Chat-ClearChatHistory
             title: >-
-              The Chat subsystem shall let the user clear the chat history with one button, without a question first,
-              which deletes the saved history of the open project from the computer, empties the transcript, and makes the
-              AI copilot forget the conversation.
+              The Chat subsystem shall let the user clear the chat history with one item of the menu of the header,
+              without a question first, which deletes the saved history of the open project from the computer, empties
+              the transcript, and makes the AI copilot forget the conversation.
             justification: |
               The user owns the words of the conversation and must be able to remove them from the screen, from the
               computer, and from the provider's session in one step, and a conversation that is cleared must not be

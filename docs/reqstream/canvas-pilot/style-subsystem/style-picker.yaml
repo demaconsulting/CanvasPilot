@@ -1,10 +1,11 @@
 ---
 # Software Unit Requirements for the StylePicker Unit
 #
-# The StylePicker unit is the list in the status bar of the main window with which the user chooses the style kit of the
-# open project. It offers no style and every kit that is not hidden by a kit of a more local place, shows the kit that
-# the project uses, writes a choice into the project file through the active style, and says so when the project names a
-# kit that cannot be found.
+# The StylePicker unit is the pill in the title bar of the main window with which the user chooses the style kit of the
+# open project. It shows the kit that the project uses by its name and the main colors of its palette, offers no style and
+# every kit that is not hidden by a kit of a more local place, writes a choice into the project file through the active
+# style, says so when the project names a kit that cannot be found, and ends its list with an entry that opens the window
+# that manages style kits.
 
 sections:
   - title: CanvasPilot Requirements
@@ -40,3 +41,35 @@ sections:
                   - StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits
                   - StylePickerView_ChooseKit_WritesTheProjectFile
                   - StylePickerView_MissingKit_IsShownAsNotFound
+
+              - id: CanvasPilot-StylePicker-ShowKitAsPill
+                title: >-
+                  The StylePicker shall show the kit that the open project uses as a pill 26 pixels high in the title bar of
+                  the main window, with the name of the kit without the place it comes from and up to three dots in the main
+                  colors of its palette (the primary, secondary, and accent colors first and then others, never the
+                  background or the text color), show no style as its words with no color, and name the pill Style kit for
+                  assistive technology.
+                justification: |
+                  The kit is the look of every picture of the project, so the person at work should see it at a glance, in
+                  a small place that is always there, by its name and its colors. The place of the kit is useful when
+                  choosing and is noise once chosen. The background and the text color of a kit are nearly always white and
+                  black, so they would make every kit look the same. A pill that has no visible label needs a name for a
+                  screen reader.
+                tests:
+                  - StylePicker_Items_KitPalette_GivesNameAndUpToThreeMainColors
+                  - StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits
+                  - StylePickerView_Pill_ShowsNameAndSwatchesOfTheChosenKit
+
+              - id: CanvasPilot-StylePicker-ManageKitsFromTheList
+                title: >-
+                  The StylePicker shall, when the main window gives it the means, end its list with an entry named Manage
+                  style kits that opens the window that manages style kits and closes the list, and shall show no such entry
+                  when it has not been given the means.
+                justification: |
+                  A person who looks for a kit that is not in the list, or who wants to change one, should find the window
+                  that manages kits where the kits are chosen. The list must close, because the window that opens needs the
+                  room. The picker does not know the windows of the application, so the entry exists only when the host
+                  says what it does.
+                tests:
+                  - StylePicker_ManageKitsCommand_SetThenCleared_IsAnnouncedAndTold
+                  - StylePickerView_ManageStyleKitsEntry_OpensTheWindowThatManagesKits

@@ -31,6 +31,9 @@ includes:
   - docs/reqstream/canvas-pilot/app-shell-subsystem/project-workspace.yaml
   - docs/reqstream/canvas-pilot/app-shell-subsystem/about-dialog.yaml
   - docs/reqstream/canvas-pilot/app-shell-subsystem/theme-resources.yaml
+  - docs/reqstream/canvas-pilot/app-shell-subsystem/status-bar.yaml
+  - docs/reqstream/canvas-pilot/app-shell-subsystem/provider-pill.yaml
+  - docs/reqstream/canvas-pilot/app-shell-subsystem/welcome.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-history-store.yaml
@@ -66,6 +69,7 @@ includes:
   - docs/reqstream/canvas-pilot/preview-subsystem.yaml
   - docs/reqstream/canvas-pilot/preview-subsystem/image-render-service.yaml
   - docs/reqstream/canvas-pilot/preview-subsystem/preview-pane.yaml
+  - docs/reqstream/canvas-pilot/preview-subsystem/thumbnail-provider.yaml
   - docs/reqstream/canvas-pilot/preview-subsystem/image-exporter.yaml
   - docs/reqstream/canvas-pilot/preview-subsystem/export-preset-dialog.yaml
   - docs/reqstream/canvas-pilot/preview-subsystem/image-drag-source.yaml

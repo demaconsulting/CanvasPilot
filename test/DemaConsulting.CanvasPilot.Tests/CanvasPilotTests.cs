@@ -754,6 +754,49 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the user can add to the open project from the project explorer: a new drawing and a new folder are
+    ///     created where the selection is, a dropped picture is copied into the project under a free name, and nothing
+    ///     that was there is replaced.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ManageProjectFiles_NewFileFolderAndAddedPicture_ShowInTheTreeAndReplaceNothing()
+    {
+        // Arrange: the application with a project that holds one drawing, and a picture somewhere else
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.svg"), "<svg id=\"original\"/>", token);
+        var outside = Path.Combine(_tempRoot, "photo.png");
+        await File.WriteAllBytesAsync(outside, [1, 2, 3], token);
+        var explorer = composition.Shell.Workspace.Explorer;
+        explorer.Refresh();
+
+        // Act: make a folder, make a drawing in it, refuse a name that is taken, and add the picture twice
+        var folderProblem = explorer.CreateFolder("sketches");
+        var fileProblem = explorer.CreateFile("flow.mmd");
+        var takenProblem = explorer.CreateFile("flow.mmd");
+        var selected = explorer.SelectedFile;
+        var firstAdd = explorer.AddFiles([outside]);
+        var secondAdd = explorer.AddFiles([outside]);
+        var roots = explorer.Roots.Select(node => node.Name).ToArray();
+        composition.Dispose();
+
+        // Assert: the folder holds the new drawing, the taken name was refused, the picture was copied twice under
+        // different names, the source was left alone, and the existing drawing was not touched
+        Assert.Equal(string.Empty, folderProblem);
+        Assert.Equal(string.Empty, fileProblem);
+        Assert.NotEqual(string.Empty, takenProblem);
+        Assert.Equal(string.Empty, firstAdd);
+        Assert.Equal(string.Empty, secondAdd);
+        Assert.Equal(Path.Combine(folder, "sketches", "flow.mmd"), selected);
+        Assert.Contains("sketches", roots);
+        Assert.Contains("a.svg", roots);
+        Assert.True(File.Exists(outside));
+        Assert.Equal(2, Directory.GetFiles(Path.Combine(folder, "attachments"), "photo*.png").Length);
+        Assert.Equal("<svg id=\"original\"/>", await File.ReadAllTextAsync(Path.Combine(folder, "a.svg"), token));
+    }
+
+    /// <summary>
     ///     Test that the knowledge that the application holds can be looked up as an assistant would: the compact index
     ///     fits its budget and names the cards of CanvasNet and of CanvasPilot, the tool answers the index, a card, an
     ///     example, and a search, the skills cover every card, and the cards that are only about the host program are not
