@@ -100,7 +100,10 @@ mouse, the keyboard, or both. The parts, from the top left, are:
 
 - **Title bar**: The CanvasPilot mark, the menu (**File**, **Edit**, **Image**, **Tools**, and **Help**, each with its
   keys and access keys), the name of the open project in bold followed by CanvasPilot, and two pills at the right
-  (see below). The window buttons of the system stay at the far right end.
+  (see below). The window buttons of the system stay at the far right end: minimize, maximize or restore, and close.
+  CanvasPilot has no full-screen mode, so there is no full-screen button and F11 does nothing; a window in full screen
+  has no title bar and no buttons, and the way back from it is hard to find. The pills always end before the window
+  buttons, in the normal and in the maximized window, so they are never covered by them.
 - **Explorer**: The files and folders of the project (see *The Project Explorer*).
 - **Stage**: The picture, with the marking tools above it and the zoom pill below it (see *The Stage*).
 - **Conversation**: The chat with the copilot and the message box (see *Chatting*).
@@ -130,8 +133,11 @@ name of the file, its size in pixels (for example `900 × 500 px`), its format, 
 `Rendered in 84 ms`), and the number of notes when the drawing reported some. While a file is drawn it says
 "Rendering..." with a spinner, and when a file cannot be drawn it says "Render failed" with an error icon. With no
 project it says "No project open", and with a project and no file chosen it says "No picture selected". At the right,
-while a project is open, it shows the fixed text "Project saved", which does not check for unsaved changes, and
-reminds you to "Hold F9 to talk" (see *Dictating a Message*). The
+while a project is open, it shows when the project file was saved, for example "Project file saved 14:32" (the time of
+day for today, otherwise the date and the time), and reminds you which key is held to talk, for example "Hold F9 to
+talk" (see *Dictating a Message*). The saved time is the time at which the project file was last written. It is not
+shown for a project that has never been saved, because CanvasPilot cannot tell whether your drawings or the conversation
+have changes that are not saved, and so it never says that your work is saved. The
 status bar speaks its sentence to screen readers when it changes.
 
 ## Window Size and Layout
@@ -179,8 +185,8 @@ file no longer exists is removed from the list after a message. The welcome scre
 While no project is open, the window shows the welcome screen instead of the three panes. At the left it has the name
 and the tagline, the buttons **New project** and **Open project** (the same as **File > New Project...** and **File >
 Open Project...**, with Ctrl+N and Ctrl+O), and a short **How it works** in three steps: *Describe* what you need by
-typing or by holding F9 and speaking, *Mark* the picture to show what to change, and *Share* the result as a PNG or by
-copying it into email or a slide.
+typing or by holding the talk key (F9 unless you chose another) and speaking, *Mark* the picture to show what to change,
+and *Share* the result as a PNG or by copying it into email or a slide.
 
 ![The welcome screen of CanvasPilot in the dark theme. At the left are the name, the tagline "Describe a picture. Your
 copilot draws it.", the buttons New project and Open project with their keys Ctrl+N and Ctrl+O, and the three steps
@@ -205,8 +211,9 @@ the tool of your choice, so saving updates only the project file. **File > Close
 clears the explorer and the stage and shows the welcome screen. **File > Exit** closes CanvasPilot.
 
 The title bar shows the name of the open project followed by CanvasPilot. The project file is written when you choose
-Save. While a project is open, the status bar always shows the text "Project saved"; it does not check whether there are
-unsaved changes.
+Save. While a project is open, the status bar shows when the project file was last saved ("Project file saved" and the
+time) once it has been saved; it does not check whether there are unsaved changes, and it says nothing about saving for
+a project that has never been saved.
 
 # Working with Images
 
@@ -358,14 +365,16 @@ has:
   wrong and what to do, with the buttons **Open Settings** and **Check again**. The banner is hidden when everything is
   fine.
 - the **transcript**, the messages that you sent in this project and the copilot's answers, oldest first (see *The
-  Transcript*). While it is empty it asks "What would you like to draw?" and offers four example prompts.
-- up to three **suggested prompts**, small buttons just above the message box, while there is a conversation and the
-  copilot is idle.
+  Transcript*). While it is empty it asks "What would you like to draw?" and offers three example prompts.
+- up to four **suggested prompts**, small buttons just above the message box, while there is a conversation and the
+  copilot is idle (see *The Example Prompts and the Suggestions*).
 - the **message box**, a rounded card in which you write the next message (see *Writing a Message*). Without an open
   project it cannot be edited. A status line below it says what is going on, for example what was left out of a drop.
-- under the message box, the **Attach files** button, the **Hold to talk** microphone button with the key cap F9, the
-  hint "Enter to send", and the **Send** button (an arrow). While the copilot works, three pulsing dots with the text
-  "The copilot is working..." and a **Stop** button appear above the message box, and Send waits.
+- under the message box, the **Attach files** button, the **Hold to talk** microphone button with the key cap of the
+  talk key (F9 unless you chose another), the hint "Enter to send", and the **Send** button (an arrow). While the
+  copilot works, three pulsing dots with what the copilot is doing and how long the turn has lasted (for example
+  "Waiting for the model... 1:25") and a **Stop** button appear above the message box, and Send waits (see *Following a
+  Turn*).
 
 The transcript of a project is kept as text on your computer, so it comes back when you open the project again; see
 *Chat History* for what is kept and where.
@@ -385,11 +394,24 @@ from an earlier session are shown a little paler under a divider that says "Earl
 
 ### The Example Prompts and the Suggestions
 
-An empty conversation shows four example prompts: *Draw our release flow*, *Chart downloads by month*, *Put both on one
-page*, and *Make it match my style kit*, and a tip, "Drop a picture, or hold F9 and speak". Choose one to write it into
-the message box at the caret, ready for you to change and send. Once there is a conversation and the copilot is idle,
-the suggested prompts *Add a legend*, *Make title larger*, and *Export as PNG* do the same. Nothing is sent until you
-send it.
+An empty conversation shows three example prompts for starting a drawing (*Draw a flowchart of our release process*,
+*Make a title card for a launch announcement*, and *Chart something from a small table of numbers*) and a tip, "Drop a
+picture, or hold F9 and speak", which names the talk key that is in effect. Choose one to write it into the message box
+at the caret, ready for you to change and send.
+
+Once there is a conversation and the copilot is idle, the suggested prompts above the message box follow what the
+project has:
+
+- While the project has **no drawing** (no drawing source in the project folder, not counting the `attachments` and
+  `styles` folders and the hidden folders, and none that the copilot has written), they are the same three ways to
+  start. "Add a legend" would mean nothing there.
+- Once the project has a **drawing**, because a picture is shown, the copilot wrote one, or the folder already holds
+  one, they are ways to change it: *Make the title larger*, *Add a legend*, and *Use my style kit*, and *Export as PNG*
+  too while a picture is shown.
+- While the copilot **works**, none are offered.
+
+The suggestions are judged again when you open another project, when a picture is shown or goes away, and when a turn
+ends. Nothing is sent until you send it.
 
 ## Writing a Message
 
@@ -421,8 +443,9 @@ See *Speech*.
 Then dictate:
 
 1. Click in the message box where the words are to go.
-2. Press and hold the **Hold to talk** microphone button, or hold the **F9** key while the CanvasPilot window is active.
-   The status bar and the key cap beside the button remind you of the key.
+2. Press and hold the **Hold to talk** microphone button, or hold the **talk key** while the CanvasPilot window is
+   active. The talk key is **F9** until you choose another (see *Choosing the Talk Key*). The status bar and the key cap
+   beside the button remind you of the key.
 3. Speak. The button turns red and pulses while you hold it, its name changes to "Starting... keep holding" and then
    "Listening... let go to finish", and the words that CanvasPilot has recognized so far appear above the message box
    while you hold.
@@ -440,6 +463,33 @@ or it is not downloaded, no microphone is available, or the speech runtime is mi
 also block desktop applications from using the microphone; if the panel says that the microphone cannot be used, turn on
 **Let desktop apps access your microphone** under **Privacy & security > Microphone** in the Windows settings. See
 *Troubleshooting*.
+
+### Choosing the Talk Key
+
+The key that you hold to talk is **F9** by default, and you can choose another on the Speech page of the settings (see
+*Speech*). A single key or a chord of Ctrl, Alt, or Shift with a key works, for example `F9` or `Ctrl+Shift+Space`. The
+status bar, the welcome screen, the tip of an empty conversation, and the key cap of the microphone button always name
+the key that is in effect. Letting go of any key of a chord ends the dictation.
+
+The default used to be F8. It was changed because on many laptops F8 is a brightness, media, or screen-capture key
+that the keyboard or its driver takes before the window sees it, so holding it did nothing. No key is free on every
+computer, so CanvasPilot refuses the keys that would take something away from you or that the system owns, and says why
+beside the box. It refuses:
+
+- a modifier alone (Ctrl, Alt, Shift, or the Windows key) and the keys of editing and moving (Esc, Enter, Tab,
+  Backspace, Delete, Insert, Home, End, Page Up, Page Down, the arrow keys, and the like);
+- a letter, a digit, or the space bar without Ctrl or Alt, because it would type;
+- **Ctrl+Space**, which belongs to input methods and to tools such as PowerToys; **Alt+Space**, which opens the system
+  menu; Alt with a letter or a digit alone, which opens a menu; and **Ctrl+Alt**, which is AltGr on many keyboards;
+- every chord with the **Windows key**, which the system and tools such as the Xbox Game Bar use for their own
+  shortcuts;
+- the shortcuts of editing and of CanvasPilot (Ctrl+A, C, V, X, Y, Z, N, O, S, P, F, W, and Q) and Alt+F4; and
+- the function keys **F1** (help), **F8** (the old default), **F10** (menu), **F11** (full screen in many programs),
+  and **F12** (the debugger on many computers).
+
+The other function keys, F2 to F7, F9, and F13 to F24, work alone or with Ctrl, Alt, or Shift. CanvasPilot cannot know
+which other programs on your computer have registered a global shortcut, so if the key does nothing, choose another
+(see *Troubleshooting*).
 
 ## Attaching Files, Folders, and Images
 
@@ -685,6 +735,12 @@ model has no levels, or the levels of the model are not known because no list co
 the level to the provider. A higher level lets the model think longer before it answers, which may help with a
 complicated drawing and costs time.
 
+When GitHub Copilot is the provider, a **large model** (one that counts three or more premium requests for a message, or
+that the provider lists as powerful or high-priced) is chosen, and the level is `high`, `xhigh`, or `max` (or the
+provider chooses one of them), the page shows a warning under the level: the choice is slow, a big drawing can take
+minutes, each message counts that many premium requests, and stopping a turn does not give the request back. Choose a
+lower level for everyday work. Nothing is shown for other models or levels, so that the warning keeps its meaning.
+
 If you choose another model and the level that you had is not offered by it, the level goes back to "Provider default"
 and the page says so. The level you choose is saved with the other settings and takes effect with the next message,
 which starts the conversation again, as a change of the model does.
@@ -742,14 +798,54 @@ picture is for and what it should contain, and name the file if you mean a file 
 copilot is told how to draw with each format (the drawing knowledge), which style your project uses, and which files the
 project has, so you do not have to explain those.
 
-While the copilot works, the panel shows three pulsing dots and "The copilot is working..." with a **Stop** button, and
-its answer appears as it is written, as plain text first and as formatted text when the answer is whole. For each tool
+While the copilot works, the panel shows three pulsing dots with what the copilot is doing and how long the turn has
+lasted, and a **Stop** button (see *Following a Turn*). Its answer appears as it is written, as plain text first and as
+formatted text when the answer is whole. For each tool
 that the copilot uses, one chip appears in the transcript, for example "Writing logo.svg" and "Rendering logo.svg" with
 a spinner, and when it is done the same chip in the past tense with a green check ("Wrote logo.svg", "Rendered logo.svg
 · 0.8 s"). You can read your own message and the payload at any time; sending another message waits until the copilot
 has finished or you press Stop.
 
 A good loop is: ask for a first draft, look at the stage, mark what is wrong (see below), and ask for the change.
+
+## Following a Turn
+
+A turn can take minutes: a large drawing is written in one piece, and a large model with a high reasoning level thinks
+for a long time before it writes. So that the window never looks dead, the busy row above the message box says two
+things, and only what is true:
+
+- **What the copilot is doing**: "The copilot is working..." at the start, "Thinking...", "Waiting for the model..."
+  while a model call runs and no tool does, "Writing the answer...", and, when the provider reports it, "The model is
+  writing..." and the file that is being written with the size so far, for example "Writing `cover.svg`... 9.8 KB",
+  which is shown on the chip of the tool and then becomes "Wrote `cover.svg`" when the tool is done.
+- **How long the turn has lasted**, as minutes and seconds ("1:25"), counted every second while the turn runs. This is
+  the one thing that is true for every model, so it is always shown.
+
+When nothing has been heard from the copilot for 30 seconds and no tool is running, a hint appears: "Large drawings can
+take a few minutes, and some models show nothing until the drawing is complete. Stop cancels the turn, but the provider
+may still count the request."
+
+**Why a model can seem silent.** Some models, in particular the Claude models on the Copilot runtime that was used to
+test this version, do not send a drawing piece by piece. They send nothing for 45 seconds to two minutes and then the
+whole answer at once, so no size can be shown during that time; only the elapsed time and the words above carry the
+progress. An OpenAI model streams its drawing as it writes it, and for such a model the size of the file grows while
+it is written once the library that connects CanvasPilot to Copilot passes those pieces on (the version that was used
+for this guide does not yet). Nothing in the window is made up to fill the silence. If a model is too slow for you,
+choose a smaller model or a lower reasoning level (see *Choosing a Model*).
+
+## What a Turn Costs
+
+When a turn ends, one quiet line of small text under the last answer says what it used, and only what the provider
+reported, for example "180.3k in, 22.8k out, 5.9k reasoning, model x15 premium, 3:16": the tokens that were sent to the
+model, the tokens that it wrote, the tokens that it spent on thinking, the multiplier of the model, and how long the
+turn took. **GitHub Copilot counts each message that you send as a number of premium requests equal to the multiplier of
+the model** (a model that is marked x15 costs fifteen), however many steps the turn needed. Ollama reports tokens and no
+multiplier, so its line has tokens and the time only. A turn that you stopped says "stopped, the request may still
+count", because the provider counts a request when the model starts and **a Stop does not give it back**. When a turn
+produced no figures and was not stopped, there is no line.
+
+The AI Provider page warns you before you spend it: when a large model is chosen with the reasoning level `high`,
+`xhigh`, or `max`, the page says that the choice is slow and costly (see *The Reasoning Level*).
 
 ## Marks and Attachments
 
@@ -784,9 +880,17 @@ option for unrestricted tools is not offered.
 
 ## Stop
 
-Choose **Stop** while the copilot works. The copilot ends at once, and what it has written so far is kept in the
-transcript, marked **Stopped**, with the note "The copilot was stopped." Files that it has already written stay as they
-are. Send works again afterwards.
+Choose **Stop** while the copilot works, at any point: while it thinks, while it waits for the model, and in the middle
+of a tool. The busy row says "Stopping..." at once and Stop cannot be pressed twice. The copilot then ends, and what it
+has written so far is kept in the transcript, marked **Stopped**, with the note "The copilot was stopped." Files that it
+has already written stay as they are. Send works again afterwards, and your next message is answered in the same
+conversation; the copilot still knows what was said before.
+
+Two things stay true when you stop. The provider may still count the request (see *What a Turn Costs*), and a turn that
+the provider could not stop quickly is given up after five seconds, so the window never waits for it. If the
+conversation was left in a state that the provider cannot use, the next message starts it again once, with the words of
+the conversation so far, and the log says so ("Session recovered"); the same message is not tried a third time, and a
+failure that has nothing to do with a Stop is shown to you and not hidden.
 
 ## Chat History
 
@@ -844,9 +948,12 @@ fix it, a button **Open Settings**. Your message stays in the transcript, and yo
 - **The project is inside CanvasPilot's own data folder**: open a project outside `%LOCALAPPDATA%\CanvasPilot`.
 - **A tool failed**: the line of the tool says why (for example that a path is outside the project), and the copilot
   usually corrects itself in the next step.
-- **An unexpected failure**: "Send the message again. If it keeps failing, look at the application log." The log
-  records provider, model, tool names, sizes, and durations, but never the words of your messages or of the answers, the
-  pictures, or the contents of files.
+- **An unexpected failure**: "Send the message again. If it keeps failing, look at the application log." Choose **Help >
+  Open Log Folder** to open the folder of the log files. The log records, for each turn, its number, the provider, the
+  model and the reasoning level, how the session with the provider was opened, each tool with its outcome, size, and
+  time, how the turn ended and who ended it (you, a reset, a change of the project, or the end of the program), how
+  long it took and how long the provider was silent at the longest, and the tokens used. It never records the words of
+  your messages or of the answers, the pictures, the arguments of a tool, or the contents of files.
 
 # Drawing Knowledge
 
@@ -1128,6 +1235,11 @@ The Speech page stores which audio devices and speech models CanvasPilot is to u
 **speech-to-text model** and the **microphone** that you choose here (see *Dictating a Message*); the text-to-speech
 choices are stored but not used yet.
 
+- **Push-to-talk key** is the key that you hold to talk, F9 by default (see *Choosing the Talk Key*). Click the box and
+  press the key, or the keys, that you want; Esc cancels, and a modifier alone is waited out until you add the key. If
+  the key is not safe, a sentence under the box says why and the key stays as it was. **Reset to default (F9)** puts F9
+  back. The key is used when you choose OK or Apply. While the box has the focus it takes every key that you press,
+  Tab included, so leave it with the pointer.
 - **Audio devices** shows the microphone (capture) and speakers (playback) that the computer has, and the buttons
   **Refresh devices** to look again. A computer without audio hardware shows a message instead of devices, and the
   rest of the page still works.
@@ -1185,7 +1297,7 @@ keys that CanvasPilot has, besides the usual keys of the system, are:
 | Anywhere | Ctrl+N, Ctrl+O, Ctrl+S | New project, open project, save project |
 | Message box | Enter, Shift+Enter | Send the message, start a new line |
 | Message box | Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z | Undo and redo |
-| Anywhere in the window | F9 (hold) | Talk, and let go to add the words to the message |
+| Anywhere in the window | Talk key (F9 by default; hold) | Talk, and let go to add the words to the message |
 | Explorer | Up and down arrows | Move through the rows |
 | Explorer | Right and left arrows | Open and close a folder |
 | Explorer | F2, Delete | Rename and delete the selected picture |
@@ -1228,7 +1340,11 @@ These parts of the redesigned window are not built yet:
   holding the Space key and dragging.
 - The sentence about the marks is the tooltip of the marking toolbar and is read out by a screen reader, but it is not
   shown in the status bar.
-- The text **Project saved** in the status bar is fixed; it does not follow unsaved changes.
+- On the Speech page, the box for the talk key takes every key that is pressed while it has the focus, Tab included, so
+  a person who uses only the keyboard cannot leave it with the keyboard; use the pointer.
+- The size of a file that the copilot is writing is shown only when the library that connects CanvasPilot to Copilot
+  passes on the pieces of the drawing, and not for models that send the drawing whole; the elapsed time is always shown
+  (see *Following a Turn*).
 
 # About CanvasPilot
 
@@ -1244,7 +1360,7 @@ The line icons of the window are glyphs of the Fluent System Icons by Microsoft 
 | What | Location |
 | --- | --- |
 | Settings and recent projects | `%APPDATA%\CanvasPilot\settings.json` |
-| Log files | `%LOCALAPPDATA%\CanvasPilot\logs` |
+| Log files (choose **Help > Open Log Folder** to open it) | `%LOCALAPPDATA%\CanvasPilot\logs` |
 | Chat history of each project (text only) | `%LOCALAPPDATA%\CanvasPilot\history\{key}` |
 | Copilot runtime data (its sessions) | `%LOCALAPPDATA%\CanvasPilot\copilot` |
 | Pictures prepared for dragging out (temporary) | `%LOCALAPPDATA%\CanvasPilot\drag` |
@@ -1318,6 +1434,26 @@ only under the same conditions. Let go of the Hold to talk button, write somethi
 works.
 
 **Enter sends my message when I wanted a new line.** Press Shift+Enter for a new line; Enter alone sends.
+
+**Holding the talk key does nothing.** Look at the key cap beside the microphone button, or at the status bar, for the
+key that is in effect: it is F9 unless you chose another. Hold it while the CanvasPilot window is active; the key
+works only in the window. On many keyboards the function keys do something else (brightness, volume, or the like)
+unless Fn is held or the Fn lock is on, and some programs register a shortcut for the whole computer that takes a key
+before CanvasPilot sees it. Choose another key on the Speech page (see *Choosing the Talk Key*), or use the microphone
+button. If the button works and the key does not, it is the key.
+
+**The copilot has shown nothing for minutes.** Look at the elapsed time in the busy row: while it counts, CanvasPilot is
+waiting and the turn is alive. Some models send a drawing only when it is whole, so a large drawing can take two or
+three minutes with no other sign (see *Following a Turn*). Choose **Stop** if you do not want to wait; the provider may
+still count the request. For everyday work choose a lower reasoning level or a smaller model.
+
+**I stopped the copilot and the next message did not work as expected.** The next message goes to the same conversation.
+If it cannot be used, CanvasPilot replaces it once and writes "Session recovered" to the log. If you see an error
+notice instead, send the message again; the notice and the log say what happened (choose **Help > Open Log Folder**).
+
+**Where is the log?** Choose **Help > Open Log Folder**, which works with or without a project and shows the folder in
+your file manager (see *Where CanvasPilot Keeps Its Files*). Attach the newest file to a report of a problem after you
+have checked that it holds nothing private (see *Reporting a problem*).
 
 **A tool chip is red.** The tool did not work, and the chip says why, for example that a path is outside the project.
 The copilot usually corrects itself in the next step (see *Errors and What to Do*).

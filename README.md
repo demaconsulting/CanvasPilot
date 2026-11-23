@@ -45,8 +45,8 @@ Available now:
   (fit, 1:1, steps, and Ctrl+mouse wheel), and error codes, hints, and notes explained
 - **Export and share**: Export the picture as a PNG file, copy the image, or drag the picture into other applications
 - **Chat composer**: Press Enter to send and Shift+Enter for a new line, write a message by typing or by push-to-talk
-  dictation (hold F9), attach files by drag and drop, paste, or the paperclip, with folders and images as inline chips,
-  and undo and redo in fine-grained steps
+  dictation (hold F9 by default; you can choose another key on the Speech page), attach files by drag and drop, paste,
+  or the paperclip, with folders and images as inline chips, and undo and redo in fine-grained steps
 - **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows from a
   floating tool bar, numbered and with notes; the marks are embedded in the message with crops and the source elements
   under each mark
@@ -55,12 +55,19 @@ Available now:
   or a team folder; export at preset sizes and check a picture against the style
 - **AI copilot chat**: An AI copilot answers your messages in the conversation pane. It writes, renders, looks at, and
   fixes drawings in a self-checking loop, sees the pictures you attach and the marks you draw, and streams its answer,
-  with a chip for each tool it uses and a Stop button, and suggests the next prompts. **Ollama** is supported and
-  covered by automated tests (live checks against a running server are pending); **GitHub Copilot** runs through your
-  installed GitHub Copilot CLI (CanvasPilot never bundles or downloads it). The text of the conversation is kept on your
-  computer, outside the project, and you can clear it from the conversation menu
+  with a chip for each tool it uses, and suggests prompts that fit what your project has. A busy row shows what the
+  copilot is doing and an elapsed timer, a Stop button works at any point and leaves the conversation usable, and a
+  quiet line under each reply says what the turn used (tokens, the model's premium multiplier, and the time). Large
+  models can be slow and costly, and some send a drawing only when it is whole, so the timer, not a size, is what you
+  see while they work. **Ollama** is supported and covered by automated tests (live checks against a running server are
+  pending); **GitHub Copilot** runs through your installed GitHub Copilot CLI (CanvasPilot never bundles or downloads
+  it). The text of the conversation is kept on your computer, outside the project, and you can clear it from the
+  conversation menu. **Help > Open Log Folder** opens the log files, which hold facts about each turn and never your
+  words
 - **Safe by default**: The copilot has only CanvasPilot's own tools, confined to the project folder. It overwrites the
   files it changes directly, with no backup and no question, so keep your projects under source control
+- **Honest status**: The status bar says when the project file was saved, and only after it was, and the window has no
+  full-screen mode, so the title bar and the window buttons are always there
 - **Settings**: Choose the AI provider (with a connection check), pick its model from the list that the provider
   offers, with what each model can do and a warning for what it lacks, and set the model's reasoning level; the speech
   devices and models, with model downloads; and the theme and explorer choices
