@@ -52,6 +52,11 @@ network, or external services are required.
   the provider's own ids (`none`, `low`, `xhigh`, `max` among them) after the entry that leaves the choice to the
   provider; the chosen id is applied; choosing a model without levels clears it, and a stored level that the known model
   does not offer is reset with a note; a change of the model or the level removes the answer of a connection check.
+- While GitHub Copilot is selected and the chosen model is a large one (a multiplier of 3 or more, or a powerful or
+  high-priced model) with a high reasoning level (`high`, `xhigh`, or `max`, the default level of the model included
+  when none is chosen), the page shows a warning that the choice is slow and costly with the premium requests that a
+  message counts (for example 15); a lower level, a small model, a model that the provider does not describe, and
+  another provider show none, and the warning never makes the page invalid.
 - The context window is labeled as an Ollama setting; while Ollama is selected a valid value below 16,384 shows a
   warning that recommends 32,768 and leaves the page valid, 16,384 and an invalid entry show none, and while GitHub
   Copilot is selected a note replaces the warning.
@@ -225,6 +230,17 @@ error and no warning; a small valid window with GitHub Copilot selected has no w
 the page with Ollama selected has no note. This scenario is tested by
 `AiProviderSettingsPageViewModel_ContextWindowWarning_InvalidOrCopilot_GivesNoWarning`.
 
+**AiProviderSettingsPageViewModel_EffortCostWarning_AppearsOnlyForHighEffortOnLargeModels**: A source lists a large
+model (15 premium requests per message, `powerful`) and a small one (0.33, `lightweight`), both with the levels `low`
+and `high`. With the large model and `low` chosen there is no warning; choosing `high` shows the warning, which contains
+"slow", "costly", and "15 premium requests"; choosing the small model removes it. This scenario is tested by
+`AiProviderSettingsPageViewModel_EffortCostWarning_AppearsOnlyForHighEffortOnLargeModels`.
+
+**AiProviderSettingsPageViewModel_BuildEffortCostWarning_UsesTheDefaultEffortAndNeedsAModel**: For a model with a
+multiplier of 10 whose default level is `high`, an empty choice (the provider chooses) gives the warning and `low` gives
+none; for no model information the answer is empty whatever the level. This scenario is tested by
+`AiProviderSettingsPageViewModel_BuildEffortCostWarning_UsesTheDefaultEffortAndNeedsAModel`.
+
 **AiProviderSettingsPageViewModel_CheckConnection_NoProviderCheck_IsNotOffered**: A page without a check has no
 connection check and its command cannot run. This scenario is tested by
 `AiProviderSettingsPageViewModel_CheckConnection_NoProviderCheck_IsNotOffered`.
@@ -278,6 +294,11 @@ refresh flag. This scenario is tested by
 only"; with GitHub Copilot selected the note is visible; choosing Ollama hides it, 16383 shows the warning, and 16384
 hides it. This scenario is tested by
 `AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum`.
+
+**AiProviderSettingsPageView_HighEffortOnLargeModel_ShowsTheCostWarning**: A shown page over a large model with the
+levels `low` and `high`, loaded with `low`, hides the warning (`AiEffortCostWarning`); when the user chooses `high` in
+the reasoning-level box the warning becomes visible and contains "15 premium requests". This scenario is tested by
+`AiProviderSettingsPageView_HighEffortOnLargeModel_ShowsTheCostWarning`.
 
 **AiProviderSettingsPageView_CopilotCliPath_ShowsNoteOnInstalledExecutable**: The note under the path names
 `copilot.exe`, 1.0.113, and shims. This scenario is tested by

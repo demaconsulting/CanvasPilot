@@ -30,6 +30,17 @@ the created file while the drawing is in the project. The other makes the Copilo
 the runtime and through a fake starter, with the real tools of a project, and shows that the refusal gives no agent and
 that the runtime gets exactly the tools and the folder of the project.
 
+The description of a session (`DescribeSession`) is a default member of `IAgentFactory` that answers nothing, and the
+Copilot implementation reads the identifier that the library gives a session once its first run has created it at the
+runtime. That identifier exists only on a real runtime, so no test that runs everywhere makes a described Copilot
+session. The consumer of the description, the log of the `AgentService` unit, is verified with the scripted factory of
+the tests, which answers with an identifier and an events file of its own (the scenarios of the unit verification of
+`AgentService` that name the provider session). The real implementation is exercised by the opt-in live
+tests (`LiveCopilotLongTurnTests.cs`): they read the lines `Provider session` of the application log, which the service
+writes from the identifier that the real factory describes, and check that one conversation keeps one provider session,
+created by its first turn and resumed by the next; they are recorded in the manual verification of the system and belong
+to no requirement.
+
 #### Test Environment
 
 The unit tests use no network and no process; the locator works on a fake file system and a fake process runner. The
@@ -85,6 +96,11 @@ is used.
 - Deleting a session reaches the started runtime only for a Copilot session that has an id (`session-42` here); an
   Ollama session, a Copilot session without an id, a Copilot session on a factory whose runtime was never started, and
   the call with a missing session each delete nothing, and the missing session is refused.
+- A factory that does not describe a session (the default of `IAgentFactory`, which the scripted factory of the tests
+  uses unless it is given a description) answers with no identifier and no events file; a session that the scripted
+  factory describes reaches the log of the service with its identifier and its file (see the unit verification of
+  `AgentService`). On a real runtime, the live tests show an identifier for the session after its first run (the first
+  turn of a conversation `created` the session and the next turn `resumed` it).
 
 #### Test Scenarios
 

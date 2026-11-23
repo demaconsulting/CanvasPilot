@@ -22,6 +22,11 @@ hardware, model store, or display is required, and nothing is downloaded.
 - Stored settings round-trip through load and apply; choices made by the user are applied by device name, model
   identifier, and parameter value; the other sections of the settings are unchanged; choices that the page could not
   show are kept.
+- The page shows the stored talk key (F9 when none is stored or the stored key is not safe), takes a safe key or chord
+  that is pressed in the box, refuses an unsafe one with a sentence and keeps the key, waits out a modifier alone,
+  cancels the capture on Esc, stores F9 as nothing and any other key in its text form, and puts F9 back with the reset
+  button, which is usable only while the key is not F9; the rules themselves are verified in *PushToTalkBinding
+  Verification*.
 - Choosing another model shows its parameters, edits to the first model are remembered, and a new load shows the
   stored values, not an earlier session's edits.
 - Closing the page, or closing the dialog window by any route, cancels a running download.
@@ -69,6 +74,17 @@ tested by `SpeechSettingsPageViewModel_OnClosed_RunningDownload_IsCancelled`.
 **SpeechSettingsPageViewModel_InvalidArguments_Throw**: Missing services and missing settings are refused. This
 scenario is tested by `SpeechSettingsPageViewModel_InvalidArguments_Throw`.
 
+**SpeechSettingsPageViewModel_PushToTalkKey_CaptureValidateResetAndStore**: A page loaded with default settings shows
+`F9`, is at the default, and its reset command cannot run. A modifier alone is not taken; the key `A` without a modifier
+is refused with a sentence and the key stays `F9`; Esc is not taken and clears the sentence; `Ctrl+Shift+Space` is taken
+and applying stores `Ctrl+Shift+Space`; the reset command can then run, and running it shows `F9` and applying stores
+the empty string. This scenario is tested by `SpeechSettingsPageViewModel_PushToTalkKey_CaptureValidateResetAndStore`.
+
+**SpeechSettingsPageViewModel_LoadApply_PushToTalkKey_RoundTripsAndUnsafeShowsDefault**: Settings that store
+`Ctrl+Shift+T` are loaded; the page shows it and applying stores it unchanged; settings that store `Escape` are loaded
+and the page shows `F9`. This scenario is tested by
+`SpeechSettingsPageViewModel_LoadApply_PushToTalkKey_RoundTripsAndUnsafeShowsDefault`.
+
 **SettingsDialogView_SpeechPage_IsListedAndShownWhenChosen**: A dialog over the two standard pages lists `AI Provider`
 and `Speech`; choosing the second shows the model lists and removes the AI provider controls. This scenario is tested
 by `SettingsDialogView_SpeechPage_IsListedAndShownWhenChosen`.
@@ -80,6 +96,13 @@ nothing is running. This scenario is tested by `SettingsDialogView_CloseWindow_C
 **SettingsDialogView_OkButton_SavesSpeechChoices**: The second microphone and a model are chosen on the Speech page
 and OK is clicked; the settings file holds the microphone name and the model identifier. This scenario is tested by
 `SettingsDialogView_OkButton_SavesSpeechChoices`.
+
+**SpeechSettingsPageView_PushToTalkKeyBox_CapturesValidatesAndResets**: A shown page with the default key has the box
+`SpeechPushToTalkKeyBox` showing `F9`, no sentence, and the reset button unusable. With the focus in the box, pressing
+`A` leaves `F9`, shows the sentence (which mentions Ctrl or Alt); pressing `Ctrl+Shift+T` shows `Ctrl+Shift+T`, hides
+the sentence, enables the reset button, and applying stores `Ctrl+Shift+T`; Esc and a lone Ctrl change nothing; clicking
+the reset button shows `F9` and disables it again. This scenario is tested by
+`SpeechSettingsPageView_PushToTalkKeyBox_CapturesValidatesAndResets`.
 
 **MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses**: The Settings menu item of the main window
 opens a dialog that lists the AI Provider and Speech pages, and Cancel closes it. This scenario is tested by

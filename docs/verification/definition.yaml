@@ -52,6 +52,7 @@ input-files:
   - docs/verification/canvas-pilot/chat-subsystem/chat-panel.md
   - docs/verification/canvas-pilot/chat-subsystem/chat-turn-runner.md
   - docs/verification/canvas-pilot/chat-subsystem/chat-history-store.md
+  - docs/verification/canvas-pilot/chat-subsystem/follow-up-suggestions.md
   - docs/verification/canvas-pilot/chat-subsystem/payload-inspector.md
   - docs/verification/canvas-pilot/composer-subsystem.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-document.md
@@ -100,6 +101,7 @@ input-files:
   - docs/verification/canvas-pilot/speech-subsystem/model-catalog-panel.md
   - docs/verification/canvas-pilot/speech-subsystem/model-parameter-editor.md
   - docs/verification/canvas-pilot/speech-subsystem/speech-settings-page.md
+  - docs/verification/canvas-pilot/speech-subsystem/push-to-talk-binding.md
   - docs/verification/canvas-pilot/style-subsystem.md
   - docs/verification/canvas-pilot/style-subsystem/style-kit-document.md
   - docs/verification/canvas-pilot/style-subsystem/style-kit-catalog.md

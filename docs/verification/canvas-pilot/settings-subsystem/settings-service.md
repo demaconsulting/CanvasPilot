@@ -31,6 +31,9 @@ services are required.
   file is read and a warning is logged.
 - A save replaces the file without leaving a temporary file, and a failed save throws `IOException`, leaves the
   settings in effect unchanged, and raises no change event.
+- The talk key of the speech settings is empty when the file has none (F9 is then in effect), is read from a file and
+  written in its normal form (`Ctrl+Shift+Space`) and survives a save and a load, and is the empty string, the default,
+  when the file holds a key that is not safe or the old default `F8`; the version of the file stays 1.
 - `Changed` is raised once for each load, save, or update, with the settings in effect.
 
 #### Test Scenarios
@@ -197,3 +200,9 @@ object under their camel-case names. This scenario is tested by
 **SettingsService_Update_Appearance_KeepsOtherSettingsAndPersists**: The theme is changed by an update of full settings;
 a fresh service loads the new theme and the other settings as they were. This scenario is tested by
 `SettingsService_Update_Appearance_KeepsOtherSettingsAndPersists`.
+
+**SettingsService_Load_PushToTalkKey_IsNormalizedAndUnsafeOrOldF8BecomesTheDefault**: Four files with version 1 are
+loaded: one with no talk key, which gives the empty string (the default F9); one with `shift+ctrl+space`, which is read
+as `Ctrl+Shift+Space`, and a save of it followed by a load by a fresh service keeps `Ctrl+Shift+Space`; one with the old
+default `F8`, which gives the empty string; and one with `Escape`, which cannot be a talk key and gives the empty
+string. This scenario is tested by `SettingsService_Load_PushToTalkKey_IsNormalizedAndUnsafeOrOldF8BecomesTheDefault`.

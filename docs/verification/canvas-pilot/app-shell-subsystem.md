@@ -10,7 +10,10 @@ at each dialog because a real window and platform pickers are not part of these 
 test waits for a delay. The tests of the AI copilot also use a scripted chat model, a stand-in Ollama probe, and the
 processes, files, and environment of a fake machine, so that nothing of the computer of the person who runs them is
 started or read. The views themselves are verified by the headless UI tests described in the unit verification
-documents.
+documents. The behavior that needs no composition to show (the talk key and the chord that starts it, Help ▸ Open Log
+Folder with a fake launcher, the window buttons and the full-screen rule, the time of the last save in the status bar,
+and the talk key in the hints) is verified in the unit and the headless UI tests of `MainWindowShell`, `StatusBar`, and
+`Welcome`; the subsystem tests check that the composition joins the units so that the talk key reaches the chat panel.
 
 ### Test Environment
 
@@ -63,7 +66,14 @@ services, or display are required.
 - The main window has a title bar that holds the menu, the project name, and the provider pill, opens at the design
   size, and keeps its size, place, state, and column widths for the next window; the layout is fitted to the screens
   and never crops the stage below 360 pixels.
-- The status bar is always shown and reports the picture that is shown, rendering, and failure in words.
+- The status bar is always shown and reports the picture that is shown, rendering, and failure in words, and, while a
+  project is open, when the project file was saved (only once it has been) and the talk key that is in effect.
+- The talk key is F9 until the user chooses another on the Speech page; the window, the status bar, the welcome screen,
+  and the chat panel name the key that works, and the talk key of the composed shell reaches the chat panel.
+- The Help menu shows the folder of the log in the file manager (Open Log Folder), also with no project open, and tells
+  the user when it cannot.
+- The window has no full-screen button and no full-screen mode, and the provider pill in the title bar stays clear of
+  the window buttons at every window width.
 - The welcome screen is shown while no project is open and lists the recent projects as cards; the workspace is not
   built until a project is open.
 - Every icon-only button of the main window, the workspace of an open project, and the dialogs has a name, a tooltip,

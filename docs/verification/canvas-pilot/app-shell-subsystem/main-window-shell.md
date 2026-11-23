@@ -12,13 +12,29 @@ the real message, About, Settings, and New Project dialogs by clicking their but
 window, its title bar, menus, dialogs, and body; `WorkspaceLayoutViewTests.cs` for the saved size of the window and the
 widths of the columns; `AccessibilityViewTests.cs` for the access keys of the menu and the names, tooltips, focus, and
 sizes of the controls of the window in both theme variants; and `StylePickerViewTests.cs` for the style list in the
-title bar. The platform pickers cannot be shown headless; the UI test confirms they answer as cancelled, and the real
-pickers are checked manually before a release. Likewise the real keyboard (the repeat of a held F9, the window losing
-the active state when the user switches to another program, and a screen reader's use of the Edit menu), the buttons of
-the system over the title bar (their room is tested as a pure function, but the headless platform never extends the
-window into its frame), dragging the empty strip of the title bar, and the move of the window between monitors are
-checked manually on a desktop before a release; the headless tests send key events and call the platform's deactivation
-callback.
+title bar. `MainWindowTitleBarLayoutTests.cs` verifies the window buttons and the room kept for them: because the
+headless platform draws no window frame, the tests put the real overlay of the drawn decorations (built from the
+template of the theme, with the three buttons that the window asks for) over the title bar of the real window, where a
+window on Windows has it, and measure the result; the same file holds the tests that the window has no full-screen mode.
+The folder that Help ▸ Open Log Folder shows is tested with a hand-written `FakeFolderLauncher` (in
+`AppShellSubsystemFakes.cs`) that records the folders it is asked for and can be made to fail, and, in the UI tests,
+with a recording launcher given to the composed application; `SystemFolderLauncher` itself starts Explorer, `open`, or
+`xdg-open`, which no automated test does, so it is checked manually. The platform pickers cannot be shown headless; the
+UI test confirms they answer as cancelled, and the real pickers are checked manually before a release. Likewise the real
+keyboard (the repeat of a held F9, the window losing the active state when the user switches to another program, and a
+screen reader's use of the Edit menu), the buttons of the system over the title bar on a real window (their room is
+tested with the overlay of the theme and as a pure function, but the headless platform never extends the window into its
+frame; see the manual check below), dragging the empty strip of the title bar, and the move of the window between
+monitors are checked manually on a desktop before a release; the headless tests send key events and call the platform's
+deactivation callback.
+
+**Manual check of the title bar.** Before a release, on a Windows desktop the application is started with the window at
+a normal size and maximized, at 100 %, 125 %, and 150 % display scaling, with a project open so that the provider pill
+shows: the title bar shows the three buttons minimize, maximize or restore, and close and no full-screen button, the
+right edge of the provider pill is clear of the left edge of the minimize button with a normal space, and no part of the
+pill or its gear lies under a button. Pressing F11 does not enter full screen. Opening Help
+▸ Open Log Folder shows the folder of the log in Explorer (checked once on each platform that is released), and the
+folder is shown also when it did not exist before.
 
 #### Test Environment
 
@@ -34,8 +50,14 @@ temporary local folders; no network or external services are required.
 - Undo and Redo act on the focused part that can undo and redo, are usable only while it has a step to undo or redo,
   follow its changes, and are unusable and do nothing while the focus is in a part that cannot (for example the
   explorer) or while there is no target; a target that was replaced is no longer followed.
-- The F9 key starts the push-to-talk target once while it is held (repeats are ignored), stops the target that was
-  started when the key goes up, the window closes, or the window is deactivated, and does nothing without a target.
+- The talk key is F9 until the user chooses another key or chord on the Speech page, which takes effect at once. The key
+  starts the push-to-talk target once while it is held (repeats are ignored); the old key, and the key of a chord
+  pressed without its modifiers, do nothing; the target is stopped when the key, or any key of the chord, goes up, the
+  window closes, or the window is deactivated, and nothing happens without a target.
+- Help ▸ Open Log Folder is usable with no project open and asks the folder launcher to show the folder that the logger
+  writes to (the default log folder when there is no logger); when the launcher cannot show it, the user is told the
+  reason and the path in a message; the item is disabled in a shell that has no launcher, and running it then does
+  nothing.
 - The title is the application name, or the project name followed by the application name, and follows a project
   opened, closed, or created through the service, and stops following after disposal.
 - Accepting the New Project dialog creates, shows, and remembers the project; canceling creates nothing; a failed
@@ -65,9 +87,13 @@ temporary local folders; no network or external services are required.
   shell that has no check.
 - The window opens 1440 by 900 with a least size of 960 by 600, has a title bar 44 high over its whole width that holds
   the menu, shows the project name in bold followed by the application name (the application name alone with no project)
-  while the system title stays `{project} - CanvasPilot`, keeps 138 pixels free at the right end on Windows and 78 at
-  the left end on macOS only when the window extends into its frame, and shows the provider pill inside the right edge
-  of the title bar.
+  while the system title stays `{project} - CanvasPilot`, keeps 140 pixels free at the right end on Windows (the width
+  of three window buttons) until the buttons are laid out and then the width that they measure, and 78 at the left end
+  on macOS, only when the window extends into its frame, and shows the provider pill inside the right edge of the title
+  bar, clear of the first window button at every width of the window and in the maximized state.
+- The window asks for the minimize, maximize, and close buttons and not for the full-screen button, binds no key (F11)
+  and no menu item to full screen, and turns a window that is put into full screen back to the normal state, whatever
+  state it was in before.
 - The status bar is at the bottom at all times, 26 high, with and without a project.
 - With no project the welcome screen is shown and the workspace has not been built; once a project is open the workspace
   is shown, and after it is closed the welcome screen is shown again.
@@ -198,8 +224,9 @@ removed, neither command is usable and running them reaches no one; a notificati
 not re-evaluate the commands. This scenario is tested by
 `MainWindowShell_UndoRedo_NoTarget_DisabledAndReplacedTargetIgnored`.
 
-**MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget**: The talk key is F9. A press starts the target, repeats
-of the key start nothing more, a release stops it once, and a second release is ignored. This scenario is tested by
+**MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget**: The talk key is F9 by default (its text, key, and modifiers
+are read from the shell's `TalkKey`). A press starts the target, repeats of the key start nothing more, a release stops
+it once, and a second release is ignored. This scenario is tested by
 `MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget`.
 
 **MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget**: A press without a target starts
@@ -207,19 +234,37 @@ nothing; when the target is replaced while the key is down, the release stops th
 not touch the new one. This scenario is tested by
 `MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget`.
 
+**MainWindowShell_OpenLogFolder_ShowsTheFolderOfTheLogger**: With a logger on a temporary folder and a fake launcher,
+the command is usable with no project open, and running it asks the launcher once to show the folder that the logger
+writes to, and shows no message. This scenario is tested by `MainWindowShell_OpenLogFolder_ShowsTheFolderOfTheLogger`.
+
+**MainWindowShell_OpenLogFolder_NoLoggerOrLauncherFails_UsesTheDefaultFolderAndTellsTheUser**: A shell without a logger
+asks the launcher to show the default log folder; a launcher that fails with "No file manager." leads to one message
+titled `Open Log Folder` that contains the reason and the path of the folder. This scenario is tested by
+`MainWindowShell_OpenLogFolder_NoLoggerOrLauncherFails_UsesTheDefaultFolderAndTellsTheUser`.
+
+**MainWindowShell_OpenLogFolder_WithoutLauncher_IsDisabledAndDoesNothing**: A shell that has no launcher cannot run the
+command, and running it anyway shows no message. This scenario is tested by
+`MainWindowShell_OpenLogFolder_WithoutLauncher_IsDisabledAndDoesNothing`.
+
 **MainWindowView_Show_OpensWithShellTitle**: The window opens headless and shows the shell title. This scenario is
 tested by `MainWindowView_Show_OpensWithShellTitle`.
 
-**MainWindowView_Menus_HaveExpectedStructureAndAutomationIds**: The five menus and their items are in the
-expected order (the Help menu has Drawing Knowledge, a separator, and About), each has a matching name and automation
-identifier, and the Undo and Redo items show Ctrl+Z and
-Ctrl+Y as text (Cmd+Z and Cmd+Shift+Z on macOS). This scenario is tested by
+**MainWindowView_Menus_HaveExpectedStructureAndAutomationIds**: The five menus and their items are in the expected order
+(the Help menu has Drawing Knowledge, Open Log Folder, a separator, and About, and the Open Log Folder item has the
+header `Open _Log Folder`), each has a matching name and automation identifier, and the Undo and Redo items show Ctrl+Z
+and Ctrl+Y as text (Cmd+Z and Cmd+Shift+Z on macOS). This scenario is tested by
 `MainWindowView_Menus_HaveExpectedStructureAndAutomationIds`.
 
 **MainWindowView_Menus_NoProject_EnabledStateFollowsCommands**: With no project the New, Open, Exit, Settings, Drawing
-Knowledge, and About
+Knowledge, Open Log Folder, and About
 items are usable and the Recent, Save, Close, Undo, Redo, Export, and Copy items are not. This scenario is tested by
 `MainWindowView_Menus_NoProject_EnabledStateFollowsCommands`.
+
+**MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog**: In the real window composed over a recording launcher,
+with no project open, the Open Log Folder item is usable and its command asks the launcher once to show the `logs`
+folder of the application data of the test. This scenario is tested by
+`MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog`.
 
 **MainWindowView_EditMenu_TypingInComposerEnablesUndoAndExplorerFocusDisables**: With a project open, Undo is not
 usable; after typing in the message editor the shell's edit target is the composer and Undo is usable and Redo is
@@ -230,6 +275,13 @@ has the focus the edit target is empty and neither item is usable. This scenario
 **MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget**: Pressing F9 twice (a repeat) starts the target once; another
 key does nothing; releasing F9 stops it once and a second release is ignored. This scenario is tested by
 `MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget`.
+
+**MainWindowView_PushToTalkKey_ChosenChord_StartsOnTheChordAndStopsWhenAnyKeyOfItIsReleased**: After the key
+`Ctrl+Shift+Space` is saved in the settings, the old key F9 does nothing, Space alone does nothing, the chord starts the
+target once however it repeats, letting go of Ctrl stops it once, and the release of Space that follows changes nothing.
+This shows both that the chord comes from the settings at once and that the release of any key of the chord ends the
+talking. This scenario is tested by
+`MainWindowView_PushToTalkKey_ChosenChord_StartsOnTheChordAndStopsWhenAnyKeyOfItIsReleased`.
 
 **MainWindowView_PushToTalkKey_NoTarget_IsIgnored**: Without a target F9 starts nothing. This scenario is tested by
 `MainWindowView_PushToTalkKey_NoTarget_IsIgnored`.
@@ -373,8 +425,34 @@ the system are 0 wide, because the headless window is not extended into its fram
 `MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes`.
 
 **MainWindowView_CaptionReserve_FollowsPlatformAndExtension**: The room kept free is 0 and 0 when the window is not
-extended on Windows or on macOS, 138 on the right on Windows, 78 on the left on macOS, and none on another platform.
+extended on Windows or on macOS, 140 on the right on Windows (three buttons of 45 with the space between them and the
+frame line), 78 on the left on macOS, and none on another platform.
 This scenario is tested by `MainWindowView_CaptionReserve_FollowsPlatformAndExtension`, a theory of five cases.
+
+**MainWindowView_TitleBarDecorations_AskForNoFullScreenButton**: The composed window asks, through
+`WindowDrawnDecorations.TitleBarDecorations`, for the minimize, maximize, and close buttons, and not for the full-screen
+button. This scenario is tested by `MainWindowView_TitleBarDecorations_AskForNoFullScreenButton`.
+
+**MainWindowView_WindowState_FullScreenIsTurnedBackToNormal**: A shown window that is put into full screen is in the
+normal state at once, one that is maximized stays maximized, and one that is put into full screen from the maximized
+state ends in the normal state. This scenario is tested by `MainWindowView_WindowState_FullScreenIsTurnedBackToNormal`.
+
+**MainWindowView_KeyF11_DoesNotEnterFullScreen**: Pressing F11 in a shown window does not put it into full screen, and
+no menu item of the window has F11 as its input gesture. This scenario is tested by
+`MainWindowView_KeyF11_DoesNotEnterFullScreen`.
+
+**MainWindowView_TitleBar_PillEndsClearOfTheWindowButtons**: With the real overlay of the drawn decorations over the
+title bar of the real window, three buttons are visible and the room that the title bar keeps (after
+`UpdateCaptionReserve` with the facts of Windows) equals the distance from the left edge of the buttons to the right
+edge of the window, between 139 and the constant 140, and the provider pill ends at least 12 pixels before the first
+button and inside the window, and is shown. This scenario is tested by
+`MainWindowView_TitleBar_PillEndsClearOfTheWindowButtons`, a theory of four cases: widths 1920, 1280, and 960 in the
+normal state, and 1920 maximized; each case also writes a picture of the window for a person to look at.
+
+**MainWindowView_CaptionReserve_FallsBackToTheConstantUntilTheButtonsAreMeasured**: Without the overlay the measurement
+answers nothing and the room that is kept is the constant, 140; once the overlay is laid out the measurement finds it
+(although it is not below the window in the visual tree) and the room is the measured width, which differs from the
+constant. This scenario is tested by `MainWindowView_CaptionReserve_FallsBackToTheConstantUntilTheButtonsAreMeasured`.
 
 **MainWindowView_TitleBar_ShowsProjectNameThenApplicationName**: The title text is `CanvasPilot` with no project,
 `Release Overview · CanvasPilot` while the project is open (the name in bold), `CanvasPilot` again after Close, and the

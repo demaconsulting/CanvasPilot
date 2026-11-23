@@ -3,15 +3,21 @@
 #### Verification Approach
 
 `ChatTurnRunner` is verified with unit tests in
-`test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatTurnRunnerTests.cs` and `ToolActivityTextTests.cs`, over the
-real runner and the real rows. Two things are replaced, because they are not deterministic: the AI copilot, by
+`test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatTurnRunnerTests.cs` (the rows, the coalescing, stop, and
+failure), `ChatTurnRunnerStatusTests.cs` (the status of a running turn and the stopping state),
+`ChatTurnRunnerUsageTests.cs` (the usage and its caption, with the helper `TurnUsage`), and `ToolActivityTextTests.cs`,
+over the real runner and the real rows. Two things are replaced, because they are not deterministic: the AI copilot, by
 `ControlledAgentService` in `ChatTurnTestSupport.cs`, an implementation of `IAgentService` that streams the events that
 the test gives it at the moment the test gives them (so a test can look at the transcript between two events), ends its
-stream without an event when the turn is canceled, as the real service does, or throws the cancellation, and can fault;
-and the clock, by `ManualTimeProvider`, a `TimeProvider` whose time and timers move only when the test advances them.
-The synchronization context of the turn is tested with a context that runs what is posted to it at once and counts it.
-The tests check what a user can see: the rows of the transcript and their state, the outcome, the busy state and its
-changes, the requests that reached the copilot, and the log.
+stream without an event when the turn is canceled, as the real service does, throws the cancellation, ignores the token
+as a provider does that is slow to stop (`IgnoreCancellation`, until the test ends the stream), and can fault; and the
+clock, by `ManualTimeProvider`, a `TimeProvider` whose time and timers move only when the test advances them, and whose
+timers can repeat, so that the one-second timer of the elapsed time ticks when the test moves the clock by a second.
+Because every turn has that timer besides the timer of the text, a test that counts timers counts both. The
+synchronization context of the turn is tested with a context that runs what is posted to it at once and counts it. The
+tests check what a user can see: the rows of the transcript and their state, the outcome, the busy state and its
+changes, the status (the words, the elapsed time, the hint, the stopping state, and the changes that were announced),
+the caption of the usage, the requests that reached the copilot, and the log.
 
 #### Test Environment
 
@@ -41,6 +47,25 @@ sleep, and a wait for a turn to end is bounded by 10 seconds only as a guard aga
   offer of the settings exactly for the kinds whose cause is in the settings; nothing is thrown to the caller; the log
   holds the kind and the type of the exception and none of the words.
 - A disposed runner stops the turn that runs and refuses new turns.
+- While a turn runs the status says what the copilot reports and nothing else: the working text at the start, then
+  thinking, the size of the response, the file that is written with the bytes so far, the tool that runs, the wait for
+  the model, and the answer, each as it is reported; the elapsed time starts at `0:00`, changes once for every second of
+  the clock of the runner, is written as `m:ss` and as `h:mm:ss` from an hour on, and every change of the status is
+  announced; after a failure, a stop, or a completion the status is empty and no timer is left.
+- The progress of a file that is being written is one running row that is made by the first report (in the order of the
+  events, after the text that was written before it), is updated by every later report and by the start of the call, is
+  ended by its result, and is never made twice for one call; the path shows as soon as it is known.
+- The hint about a long wait shows when nothing was heard from the copilot for 30 seconds and no tool runs, not a second
+  earlier, is taken away by the next event, and is not shown while a tool runs or after the turn was asked to stop.
+- From the moment the turn is asked to stop until it has ended the runner is busy and stopping, says "Stopping..."
+  whatever the copilot still reports, shows no hint, treats a second stop as no change, announces the change, and ends
+  the turn as stopped with the text kept and an empty status.
+- The tokens that the provider reported for the calls of a turn are summed and the largest multiplier is kept; the
+  caption has only the figures that were reported, in the written form
+  (`12.4k in, 7.2k out, 400 reasoning, model x15 premium, 3:25`, `no premium requests` for a multiplier of zero), and
+  the time; it is on the last reply of the turn and on no earlier one; a stopped turn says that the request may still
+  count, in the reply or, without one, in an information notice; a turn without a reported figure that was not stopped
+  has no caption and no row.
 
 #### Test Scenarios
 
@@ -54,9 +79,10 @@ one reply, which is streaming and not complete after the first, holds both after
 turn completes. This scenario is tested by `ChatTurnRunner_RunTurn_StreamedText_GrowsOneReplyAndCompletesIt`.
 
 **ChatTurnRunner_RunTurn_ManySmallPieces_UpdateTheReplyAtMostOncePerInterval**: After a first piece that is shown at
-once, nineteen pieces one millisecond apart are not shown and one timer is set; when the interval has passed the timer
-adds them as one update and no timer is left; a piece after a long pause is shown at once, so the text changed twice
-after its first piece. This scenario is tested by
+once, nineteen pieces one millisecond apart are not shown and one timer for them is set (besides the timer of the
+elapsed time of the turn, so two timers are active); when the interval has passed the timer adds them as one update and
+only the timer of the elapsed time is left; a piece after a long pause is shown at once, so the text changed twice after
+its first piece. This scenario is tested by
 `ChatTurnRunner_RunTurn_ManySmallPieces_UpdateTheReplyAtMostOncePerInterval`.
 
 **ChatTurnRunner_RunTurn_TextToolText_AreThreeRowsInOrder**: Text that waits for the interval, a tool call, and more
@@ -137,3 +163,65 @@ also when it holds a comma, and a missing or empty path gives the fallback of th
 **ToolActivityText_FinishedWrittenAndAbandoned_SayWhatHappened**: The sentences of an unknown tool, of a failure with
 and without a reason, of a created and a replaced file, and of a call that was stopped or has no result are as
 specified. This scenario is tested by `ToolActivityText_FinishedWrittenAndAbandoned_SayWhatHappened`.
+
+**ChatTurnRunner_Status_Elapsed_IsTickedOnceASecondAndClearedAtTheEnd**: A turn starts with the working text, `0:00`, no
+hint, and no change announced. After 900 milliseconds the elapsed time is still `0:00` and nothing was announced; after
+the full second it is `0:01` and one change was announced; after 65 more seconds it is `1:06`; when the turn completes
+the status, the elapsed time, and the hint are empty and no timer is active. This scenario is tested by
+`ChatTurnRunner_Status_Elapsed_IsTickedOnceASecondAndClearedAtTheEnd`.
+
+**ChatTurnRunner_FormatElapsed_WritesMinutesAndSeconds**: For 0, 59, 60, 3599, 3600, and 7384 seconds the text is
+`0:00`, `0:59`, `1:00`, `59:59`, `1:00:00`, and `2:03:04`. This scenario is tested by
+`ChatTurnRunner_FormatElapsed_WritesMinutesAndSeconds`.
+
+**ChatTurnRunner_Status_FollowsWhatTheCopilotReports**: Thinking, the size of the response (2 KB), the progress of
+`art/flow.svg` at 10 KB, the start of the call, its end, and a piece of text give, one after the other, "Thinking...",
+"The model is writing... 2.0 KB", "Writing `art/flow.svg`... 10.0 KB", "Writing `art/flow.svg`...", "Waiting for the
+model...", and "Writing the answer...", and every change was announced. This scenario is tested by
+`ChatTurnRunner_Status_FollowsWhatTheCopilotReports`.
+
+**ChatTurnRunner_Progress_MakesOneRowThatTheCallUpdatesAndFinishes**: After a piece of text the first progress of a
+write call, with no path, makes one running tool row after the reply that says "Writing a file... 100 B"; a second
+progress with the path `a.svg` changes the sentence of that row to the file and the size and makes no second row; the
+start of the call keeps the one row, running, with the arguments of the call; its result ends the same row with "Wrote"
+and the file, successful; the transcript is the reply and that one row. This scenario is tested by
+`ChatTurnRunner_Progress_MakesOneRowThatTheCallUpdatesAndFinishes`.
+
+**ChatTurnRunner_Hint_AppearsAfterALongSilenceAndIsClearedByAnEvent**: One second before the delay there is no hint; at
+the delay the hint is the long-wait hint; an event takes it away. A tool that runs for twice the delay gives no hint;
+after the tool has ended, a wait of the delay shows it again. This scenario is tested by
+`ChatTurnRunner_Hint_AppearsAfterALongSilenceAndIsClearedByAnEvent`.
+
+**ChatTurnRunner_Status_FailureAndStop_ClearTheStatus**: After a turn that fails, and after a turn that is stopped, the
+status is empty and no timer is active. This scenario is tested by
+`ChatTurnRunner_Status_FailureAndStop_ClearTheStatus`.
+
+**ChatTurnRunner_Stop_ShowsStoppingUntilTheStreamEnds**: On a copilot that ignores the cancellation, a turn has written
+some text and is stopped twice; the runner is still busy, is stopping, says "Stopping...", and announced the change.
+After the copilot reports thinking and more than the delay has passed, it still says "Stopping...", shows no hint, and
+is still stopping. When the stream ends the outcome is stopped, the runner is idle with an empty status, and the reply
+is stopped with its text. This scenario is tested by `ChatTurnRunner_Stop_ShowsStoppingUntilTheStreamEnds`.
+
+**TurnUsage_Format_SumsTokensKeepsTheLargestMultiplier**: Two usage reports of 8,000 and 4,400 tokens in, 1,200 and
+6,000 out, and 100 and 300 reasoning, both with the multiplier 15, make the caption "12.4k in, 7.2k out, 400 reasoning,
+model x15 premium, 3:25" for a turn of 205 seconds. This scenario is tested by
+`TurnUsage_Format_SumsTokensKeepsTheLargestMultiplier`.
+
+**TurnUsage_Format_LeavesOutWhatWasNotReportedAndNotesAStop**: Nothing reported gives no caption; nothing reported with
+a stop gives the time and the note that the request may still count; a report with only 500 tokens out and a multiplier
+of zero gives "500 out, no premium requests, 0:05". This scenario is tested by
+`TurnUsage_Format_LeavesOutWhatWasNotReportedAndNotesAStop`.
+
+**ChatTurnRunner_Completed_PutsTheUsageCaptionOnTheLastReply**: A turn has a reply, a tool call, a second reply, and two
+usage reports of the multiplier 3; after 65 seconds it completes: the caption "3k in, 300 out, model x3 premium, 1:05"
+is on the second reply and the first has none. This scenario is tested by
+`ChatTurnRunner_Completed_PutsTheUsageCaptionOnTheLastReply`.
+
+**ChatTurnRunner_Stopped_SaysThatTheRequestMayStillCount**: A turn that reported 900 tokens in with the multiplier 15
+and wrote no reply is stopped: the outcome is stopped and an information notice says "900 in, model x15 premium, 0:00,
+stopped, the request may still count". This scenario is tested by
+`ChatTurnRunner_Stopped_SaysThatTheRequestMayStillCount`.
+
+**ChatTurnRunner_CompletedWithoutUsage_HasNoCaption**: A turn that answers "Hello." and reports no usage completes with
+a reply that has no caption and no notice. This scenario is tested by
+`ChatTurnRunner_CompletedWithoutUsage_HasNoCaption`.

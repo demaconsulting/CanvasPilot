@@ -4,32 +4,35 @@
 
 `ChatPanel` is verified with unit tests in `test/DemaConsulting.CanvasPilot.Tests/ChatSubsystem/ChatPanelTests.cs` for
 the view models and the picture provider, in `ChatPanelCopilotTests.cs` for the part that joins the AI copilot (the
-turn, the busy state, Stop, the notices, the change of project, and the readiness banner), in `ChatPanelHistoryTests.cs`
-for the part that keeps the conversation on this computer (saving, restoring, the digest for the copilot, and Clear,
-over the real `ChatHistoryStore` in a temporary folder), in `TranscriptRowTests.cs` of the same folder for the rows that
-the copilot's turn adds (reply, tool, and notice), and with headless Avalonia UI tests in
+turn, the busy state, the busy row with its phase, elapsed time, and hint, Stop and the stopping state, the notices, the
+change of project, and the readiness banner), in `FollowUpSuggestionsTests.cs` for the prompts that follow what the
+project has (these also verify the unit `FollowUpSuggestions`; see its verification), in `ChatPanelHistoryTests.cs` for
+the part that keeps the conversation on this computer (saving, restoring, the digest for the copilot, and Clear, over
+the real `ChatHistoryStore` in a temporary folder), in `TranscriptRowTests.cs` of the same folder for the rows that the
+copilot's turn adds (reply, tool, and notice), and with headless Avalonia UI tests in
 `test/DemaConsulting.CanvasPilot.UiTests/ChatPanelViewTests.cs`, `ChatPanelCopilotViewTests.cs`, and
 `ChatPanelHistoryViewTests.cs` (with `ChatUiTestSupport.cs` for the harness and the scripted copilot) for the views, in
 `AccessibilityViewTests.cs` for the names, tooltips, sizes, and keyboard focus of the buttons of the panel in the
 workspace of an open project, and in `AnnotationOverlayViewTests.cs` for the clearing of the marks through the real
-panel and annotation toolbar.
-Both use the real `ChatPanelViewModel`, `ComposerViewModel`, `ComposerDocument`, `ComposerHistory`, `AttachmentIntake`,
-`AttachmentStore`, `MarkRegistry`, and `AnnotationOverlayViewModel` over a temporary project folder, because the unit
-exists to connect them and the rule under test is how they agree. The UI tests also use the real `ChatPanelView`,
-`ComposerEditorView` with the AvaloniaEdit surface, `TranscriptEntryView`, and the views of the rows of the copilot
-(`AssistantReplyView` with the `MarkdownBlocksPanel`, `ToolActivityRowView`, and `NoticeRowView`). Only what has no
-place in a panel test is replaced: the dictation service (a controllable fake in the unit tests, a scripted one in the
-UI tests, both with a session that says words and ends with a chosen text), the builder of sent messages (one that gives
-a text, or a ready-made payload), the source of the shown picture, the composer of mark pictures (a substitute, or a
-stub that gives a one-pixel PNG), the launcher of the payload inspector (a recording one), the picker of files to attach
-(a fake that answers with the files the test names and records how it was asked), and the AI copilot (a
-controlled or scripted `IAgentService` that streams the events the test gives it when it gives them and reports the
-readiness the test chooses, with a manual clock in the unit tests, which times the tool rows too). Input reaches the
-views as the platform delivers it:
-pointer presses and releases on the talk button, move events away from it, the loss of the pointer capture, space key
-presses and releases on the focused button, Enter and Shift+Enter key presses in the editing control, text input and
-Ctrl+Z in the editing control, and clicks on the Send, Stop, "Open Settings", "Check again", and "View payload"
-buttons and on the example prompts.
+panel and annotation toolbar. Both use the real `ChatPanelViewModel`, `ComposerViewModel`, `ComposerDocument`,
+`ComposerHistory`, `AttachmentIntake`, `AttachmentStore`, `MarkRegistry`, and `AnnotationOverlayViewModel` over a
+temporary project folder, because the unit exists to connect them and the rule under test is how they agree. The UI
+tests also use the real `ChatPanelView`, `ComposerEditorView` with the AvaloniaEdit surface, `TranscriptEntryView`, and
+the views of the rows of the copilot (`AssistantReplyView` with the `MarkdownBlocksPanel`, `ToolActivityRowView`, and
+`NoticeRowView`). Only what has no place in a panel test is replaced: the dictation service (a controllable fake in the
+unit tests, a scripted one in the UI tests, both with a session that says words and ends with a chosen text), the
+builder of sent messages (one that gives a text, or a ready-made payload), the source of the shown picture, the composer
+of mark pictures (a substitute, or a stub that gives a one-pixel PNG), the launcher of the payload inspector (a
+recording one), the picker of files to attach (a fake that answers with the files the test names and records how it was
+asked), and the AI copilot (a controlled or scripted `IAgentService` that streams the events the test gives it when it
+gives them and reports the readiness the test chooses, with a manual clock in the unit tests, which times the tool rows
+and ticks the elapsed time of the turn, and, in the UI tests, a scripted copilot that can also ignore the cancellation
+as a slow provider does). The talk key of the hints is a real `PushToTalkSetting` over a real `SettingsService` in a
+temporary folder (in `PushToTalkHintsTests.cs` of the AppShell tests, which verifies the hints of every unit that shows
+the key). Input reaches the views as the platform delivers it: pointer presses and releases on the talk button, move
+events away from it, the loss of the pointer capture, space key presses and releases on the focused button, Enter and
+Shift+Enter key presses in the editing control, text input and Ctrl+Z in the editing control, and clicks on the Send,
+Stop, "Open Settings", "Check again", and "View payload" buttons and on the example prompts.
 
 #### Test Environment
 
@@ -57,9 +60,26 @@ payload" button that shows on hover); they are not evidence for a requirement.
   Enter sends.
 - The Attach files button asks the picker once, starting in the project folder, and the files it returns become
   attachment chips of the message.
-- The empty conversation shows the question, the four example prompts, and the tip, and choosing a prompt writes it into
-  the message so that it can be sent; the three follow-up prompts show only once there is a conversation; the button of
+- The empty conversation shows the question, the example prompts that fit the project (the ways to start in a project
+  with no drawing, the ways to refine one that has a drawing), and the tip, and choosing a prompt writes it into the
+  message so that it can be sent; the prompts above the message show only once there is a conversation; the button of
   the header raises the request to hide the panel.
+- The prompts follow what the project has: ways to start while it has no drawing, ways to refine (and the export, only
+  while a picture is shown) once a picture is shown, the copilot wrote a drawing, or the project folder holds one (not
+  in `attachments`), none while the copilot works, planned again when the project, the picture, or a turn changes, each
+  change announced, and a drawing written in one project not counted in another (see the verification of
+  `FollowUpSuggestions`).
+- While a turn runs the busy row says what the copilot is doing (the working text at the start, then what it reports),
+  how long the turn has lasted as `m:ss` from the clock of the panel, and, after 30 seconds without a sign from the
+  copilot, the hint about a long wait, hides the hint when the copilot is heard from, announces each change, and shows
+  nothing of it all when no turn runs.
+- From the press of Stop until the turn has ended the busy row says "Stopping...", Stop cannot be pressed again, the
+  turn goes on being busy, and the change is announced; when the provider has ended its stream the reply is stopped with
+  its text, Send can be used again, and the row is hidden.
+- The last reply of a completed turn shows the caption of what the turn cost, with only the figures that were
+  reported, and an earlier reply or a turn without a report shows none.
+- The key cap of the talk button, its tooltip, and the tip of the empty conversation name the key of the setting (`F9`
+  by default) and change, announced, when the setting changes.
 - Every button that shows only an icon (overflow menu, hide, attach, talk, send) has an accessible name and a tooltip,
   can take the focus, and is at least 28 by 28 pixels, in both theme variants; the empty message shows its placeholder
   until text is typed.
@@ -193,6 +213,53 @@ ready, "Check again" repeats the check and the banner is hidden. This scenario i
 
 **ChatPanelView_NoCopilot_ShowsNoBannerIndicatorOrStop**: A panel without a copilot shows no banner, no indicator, and
 no Stop button. This scenario is tested by `ChatPanelView_NoCopilot_ShowsNoBannerIndicatorOrStop`.
+
+**ChatPanelViewModel_TurnRuns_BusyRowShowsPhaseElapsedTimeAndHint**: A message is sent in a panel whose clock is manual.
+At the start the busy text is the working text, the elapsed time is `0:00`, and there is no hint; when the clock has
+advanced by the hint delay the elapsed time is `0:30`, the hint is the long-wait hint, and the panel says it has a hint;
+when the copilot reports that it thinks, the busy text is the thinking text and the hint is gone; the panel announced
+`BusyText`, `BusyElapsedText`, `BusyHintText`, and `HasBusyHint`; when the turn has completed all four are empty. This
+scenario is tested by `ChatPanelViewModel_TurnRuns_BusyRowShowsPhaseElapsedTimeAndHint`.
+
+**ChatPanelViewModel_Stop_ShowsStoppingAndDisablesStopUntilTheTurnEnds**: A turn runs on a copilot that is slow to stop;
+before the Stop the panel is not stopping and Stop can run. After the Stop command the panel is still busy, is stopping,
+says "Stopping...", and Stop cannot run, and `IsStopping` was announced; when the copilot ends its stream and the turn
+has ended, the panel is not busy, not stopping, and Stop cannot run. This scenario is tested by
+`ChatPanelViewModel_Stop_ShowsStoppingAndDisablesStopUntilTheTurnEnds`.
+
+**ChatPanelView_CopilotProgress_BusyRowShowsElapsedTimeAndWhatIsReported**: A message is sent; the busy row is shown
+with the elapsed time `0:00` and no hint. When the copilot reports that it thinks, the busy text becomes the thinking
+text; when it reports 2 KB of a file `flow.svg` being written, the busy text starts with "Writing `flow.svg`..." and
+names the size in KB; the hint is still hidden; when the turn completes the row is hidden. This scenario is tested by
+`ChatPanelView_CopilotProgress_BusyRowShowsElapsedTimeAndWhatIsReported`.
+
+**ChatPanelView_Stop_ShowsStoppingUntilTheTurnEnds**: A message is sent to a copilot that ignores the cancellation, some
+text arrives, and Stop is pressed: the busy row says "Stopping...", the panel is still busy, and the Stop button cannot
+be used; when the copilot ends its stream the reply has the label `Stopped`, Send can be used, and the busy row is
+hidden. This scenario is tested by `ChatPanelView_Stop_ShowsStoppingUntilTheTurnEnds`.
+
+**ChatPanelView_CompletedTurn_ShowsTheUsageCaptionUnderTheLastReply**: A turn answers "Done." and reports 12,400 tokens
+in, 7,200 out, and the multiplier 15; when it has completed the one reply shows its caption, visible, which starts with
+"12.4k in, 7.2k out, model x15 premium". This scenario is tested by
+`ChatPanelView_CompletedTurn_ShowsTheUsageCaptionUnderTheLastReply`.
+
+**ChatPanelViewModel_EmptyProject_OffersStarterPrompts**,
+**ChatPanelViewModel_TurnWritesDrawing_SuggestionsHideWhileBusyThenBecomeRefinements**,
+**ChatPanelViewModel_TurnWritesNotes_StillOffersStarterPrompts**,
+**ChatPanelViewModel_OpenProject_WithDrawingOffersRefinementsAndEachProjectIsJudgedAlone**, and
+**ChatPanelViewModel_PictureShown_OffersRefinementsWithExport**: These scenarios, in `FollowUpSuggestionsTests.cs`, show
+that the panel offers the starter prompts in an empty project, none while a turn runs, the refinements after the copilot
+wrote a drawing (not after it wrote a text file), the refinements for a project that already holds a drawing and not
+for one whose only picture is an attachment, each project judged by its own folder, and the refinements with the export
+while a picture is shown. They are described in the verification of the `FollowUpSuggestions` unit, together with the
+planner scenario `FollowUpSuggestions_Plan_FollowsDrawingPictureAndBusy`, and are tested by the tests of those names.
+
+**PushToTalkHints_ChatPanel_KeyCapTooltipAndTipFollowTheSetting**: A panel over a talk key setting that follows the
+settings names `F9` in its key cap, its tooltip ("Hold this button, or hold F9, speak, and let go to add what you said
+to the message"), and the tip of the empty conversation ("Drop a picture, or hold F9 and speak"); after the settings
+change the key to `F6`, all three name `F6` and the panel announced `TalkKeyText`, `EmptyTipText`, and `TalkToolTip`.
+This scenario is tested by `PushToTalkHints_ChatPanel_KeyCapTooltipAndTipFollowTheSetting` (in
+`PushToTalkHintsTests.cs`).
 
 **AssistantReplyViewModel_StreamThenComplete_GrowsAnnouncesAndIsFinalOnlyWhenCompleted**: A new reply is streaming and
 empty; two pieces of text grow it and are announced (an empty piece changes nothing); completing it makes the text
@@ -334,9 +401,10 @@ This scenario is tested by `TranscriptEntryViewModel_Items_AttachedPicture_AsksF
 mark without a picture, a mark whose function throws, and a folder chip give no picture and no failure. This scenario is
 tested by `ChipThumbnailProvider_GetThumbnail_NoPictureOrFailure_GivesNullAndDoesNotThrow`.
 
-**ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce**: In a panel with a project open and nothing said,
-the follow-ups are not offered; using an example prompt writes it as the message, and the collapse command raises its
-request once; four examples and some follow-ups exist, and a missing prompt is refused. This scenario is tested by
+**ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce**: In a panel with a project open, a picture shown,
+and nothing said, the prompts are not shown above the message; using the second of the offered prompts writes it as the
+message, and the collapse command raises its request once; the prompts offered are the plan for a project with a drawing
+and a picture shown (the refinements and the export), and a missing prompt is refused. This scenario is tested by
 `ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce`.
 
 **ChatPanelView_New_ShowsEmptyTranscriptHintComposerAndButtons**: A new panel shows the question of the empty
@@ -345,9 +413,10 @@ that cannot be used, and a talk button that can, named with its first text. This
 `ChatPanelView_New_ShowsEmptyTranscriptHintComposerAndButtons`.
 
 **ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation**: The empty conversation
-shows the four example prompts and none of the follow-ups; pressing the first example writes it as the message and
-enables Send; sending it hides the question and shows the follow-ups. This scenario is tested by
-`ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation`.
+shows the prompts that the panel plans for the project of the harness (a picture is shown, so the refinements and the
+export) as its examples, and none of the prompts above the message; pressing the first example writes it as the message
+and enables Send; sending it hides the question and shows the same prompts above the message. This scenario is tested
+by `ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation`.
 
 **ChatPanelView_CollapseButton_RaisesCollapseRequested**: Using the button of the header raises the request to hide the
 panel once. This scenario is tested by `ChatPanelView_CollapseButton_RaisesCollapseRequested`.
