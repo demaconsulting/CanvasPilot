@@ -19,7 +19,7 @@
 // SOFTWARE.
 
 using Avalonia;
-using Avalonia.Automation;
+using System.Reflection;using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -170,6 +170,66 @@ public sealed class MainWindowViewTests : IDisposable
 
         // Assert: it is where the platform draws its buttons
         Assert.Equal((left, right), reserve);
+    }
+
+    /// <summary>
+    ///     Test that setting the title bar reserves tolerates controls that do not exist yet (the state while the XAML
+    ///     loads on a real window) and sets the widths where the controls exist.
+    /// </summary>
+    [Fact]
+    public void MainWindowView_ApplyCaptionReserve_ToleratesMissingControls()
+    {
+        // Arrange: reserves of no width and a missing control
+        var leading = new Border();
+        var trailing = new Border();
+
+        // Act: apply with a missing control, then with Windows and macOS
+        MainWindowView.ApplyCaptionReserve(null, null, true, true, false);
+        MainWindowView.ApplyCaptionReserve(leading, trailing, true, true, false);
+        var windowsWidths = (leading.Width, trailing.Width);
+        MainWindowView.ApplyCaptionReserve(leading, trailing, true, false, true);
+        var macWidths = (leading.Width, trailing.Width);
+        MainWindowView.ApplyCaptionReserve(leading, null, false, true, false);
+
+        // Assert: nothing threw, the widths follow the platform, and a window that is not extended keeps none
+        Assert.Equal((0d, 138d), windowsWidths);
+        Assert.Equal((78d, 0d), macWidths);
+        Assert.Equal(0, leading.Width);
+    }
+
+    /// <summary>
+    ///     Test that the window ignores the extension into its frame while the XAML loads (when its title bar controls and
+    ///     name scope do not exist, which crashed the published program at the start), and keeps the room free for the
+    ///     buttons of the system once the extension is raised on the loaded window.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_ExtendedIntoFrame_IgnoredWhileLoadingAndAppliedAfterwards()
+    {
+        // Arrange: a shown window, and the field that tells it the XAML is loaded
+        var (_, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+        var ready = typeof(MainWindowView).GetField("_componentReady", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var raise = typeof(Window).GetMethod("ExtendClientAreaToDecorationsChanged", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var trailing = window.FindControl<Border>("TitleBarCaptionReserve")!;
+        var expected = MainWindowView.CaptionReserve(true, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
+
+        // Act: the platform raises the extension while the window is still loading, then on the loaded window
+        ready.SetValue(window, false);
+        raise.Invoke(window, [true]);
+        var whileLoading = trailing.Width;
+        ready.SetValue(window, true);
+        raise.Invoke(window, [false]);
+        raise.Invoke(window, [true]);
+        AppShellUiHelpers.Flush();
+
+        // Assert: the first is ignored without an error, and the second keeps the room the platform needs
+        Assert.True(window.IsExtendedIntoWindowDecorations);
+        Assert.Equal(0, whileLoading);
+        Assert.Equal(expected.Right, trailing.Width);
+        Assert.Equal(expected.Left, window.FindControl<Border>("TitleBarLeadingReserve")!.Width);
+
+        window.Close();
     }
 
     /// <summary>

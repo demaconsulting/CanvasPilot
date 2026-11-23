@@ -205,8 +205,12 @@ is refused. This scenario is tested by `AppShellSubsystem_Create_NullArguments_T
 room is kept for the buttons of the system. `MainWindowView_TitleBar_ShowsProjectNameThenApplicationName` shows the
 project name in bold with the application name after it, and
 `MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage` shows that the AI provider pill is in the
-title bar and that using it opens the settings on the AI Provider page. The caption buttons, dragging the empty strip,
-and snap layouts need a real window and are checked by hand before a release.
+title bar and that using it opens the settings on the AI Provider page. `MainWindowView_ApplyCaptionReserve_ToleratesMissingControls`
+shows that the reserves are set from the platform and that a missing control is left alone, and
+`MainWindowView_ExtendedIntoFrame_IgnoredWhileLoadingAndAppliedAfterwards` shows that the extension into the frame is
+ignored while the window loads and keeps the room free once it is loaded. The caption buttons, dragging the empty strip,
+and snap layouts need a real window and are checked by hand before a release; the launch smoke test (`smoke.ps1`) starts
+the published program to guard against a crash at the start.
 
 **MainWindowView_StatusBar_AlwaysShownAndReportsThePicture**: The window is shown with no project and with a project
 (a headless UI test in `MainWindowViewTests.cs`); the status bar is shown at one height in both states, says that no

@@ -296,6 +296,8 @@ sections:
                   that does not take over the frame must not waste room.
                 tests:
                   - MainWindowView_CaptionReserve_FollowsPlatformAndExtension
+                  - MainWindowView_ApplyCaptionReserve_ToleratesMissingControls
+                  - MainWindowView_ExtendedIntoFrame_IgnoredWhileLoadingAndAppliedAfterwards
                   - MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes
 
               - id: CanvasPilot-MainWindowShell-OpenWithDesignSizes

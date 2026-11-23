@@ -130,7 +130,11 @@ items with 8 by 4 padding and secondary text, but all its items, keys, and acces
 keeps room for them. `MainWindowView.CaptionReserve(isExtended, isWindows, isMacOs)` is a pure function that returns the
 room on the left and on the right: 138 pixels on the right on Windows, 78 pixels on the left on macOS (the traffic
 lights), and none elsewhere or when the window is not extended. The window applies it to the two reserve borders when
-`IsExtendedIntoWindowDecorations` changes, so the headless platform, which does not extend, keeps both at width 0.
+`IsExtendedIntoWindowDecorations` changes, so the headless platform, which does not extend, keeps both at width 0. A real
+window raises that change while the XAML loads, when the window has no name scope and the reserve controls do not exist
+(a name lookup then throws and crashed the published program at the start). So the window ignores the change until
+the component is loaded (_componentReady), applies the value once at the end of the constructor, and sets the generated
+fields through ApplyCaptionReserve, which leaves a missing control alone.
 
 **Body and status bar**: the body is a grid with two siblings that fill it: `WorkspaceHost` (visible while
 `HasProject`) with the workspace as content, and `WelcomeHost` (visible while there is no project) with `Welcome`. The
