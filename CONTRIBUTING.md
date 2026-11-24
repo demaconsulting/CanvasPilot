@@ -72,7 +72,7 @@ We follow a standard GitHub workflow for contributions:
 3. Build and run the tests (zero warnings and all tests must pass):
 
    ```bash
-   pwsh ./build.ps1
+   pwsh ./build.ps1 -All
    ```
 
 4. Start the application:
@@ -155,7 +155,7 @@ Examples:
 
 ```bash
 # Build and run all tests
-pwsh ./build.ps1
+pwsh ./build.ps1 -All
 
 # Run a specific test
 dotnet test --filter "FullyQualifiedName~YourTestName"
@@ -209,10 +209,10 @@ All tests must pass with zero warnings.
 
 ```pwsh
 # After making changes: applies dotnet format, markdown, and YAML fixes silently
-pwsh ./fix.ps1
+pwsh ./fix.ps1 -All
 
 # Before submitting a pull request: all linters must pass
-pwsh ./lint.ps1
+pwsh ./lint.ps1 -All
 ```
 
 ### 3. Code Coverage
