@@ -178,8 +178,10 @@ and exit 1.
 
 # Scoped Validation (ALL Agents Must Follow)
 
-`build.ps1 -Changed` (or `-Project Core|Desktop|Tests|UiTests|Ots`) builds and tests the test projects a change affects
-through the project reference graph; the Desktop executable project has no test project and is built only. A
+`build.ps1 -Changed` (or `-Project Core|Desktop|Tests|UiTests|Ots`; the shared module resolves `Core` and the short
+names, and `Ots` is the `$ProjectAliases` entry for `OtsSoftwareTests`) builds and tests the test projects a change
+affects through the project reference graph; files linked into a project through any item or file property select that
+project too; the Desktop executable project has no test project and is built only. A
 build-wide file (solution, project, props/targets, `global.json`, `.editorconfig`, `nuget.config`, tool manifest,
 `build.ps1`, `scripts/ProjectScripts.psm1`) runs the full build and tests; documentation-only changes build nothing.
 All tests are headless (no test takes over the desktop). `build.ps1` does not publish: the launch smoke test
