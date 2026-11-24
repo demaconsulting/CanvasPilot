@@ -532,7 +532,7 @@ caused it.
 Marks let you point at the place that you mean. With a picture shown, the floating bar at the top of the stage has five
 tool buttons and a button that clears the marks. Each shows an icon and has a tooltip with its name and key:
 
-- **Select** (V) is no marking tool; the picture can be dragged out.
+- **Select** (V) is no marking tool; the picture can be dragged out, and a double-click on a mark changes its note.
 - **Rectangle** (R), **Ellipse** (E), **Freehand** (F), and **Arrow** (A) draw that shape.
 - **Clear marks** takes every mark, and its chip, out of the message. It is available while there is a mark.
 
@@ -547,6 +547,14 @@ order you make them, and is drawn with its number. At the same time a chip, for 
 chips at the top of the message box, above your words, so you can write "the arrow in Mark 1 should point to the other
 box" and the reader knows which mark you mean. The mark is part of the message exactly as long as its chip is in it:
 deleting the chip hides the mark, and undoing the deletion shows it again. Marks are never made by voice.
+
+A mark's note shows beside its number on the picture, on one line that ends with "…" when the note is long. Rest the
+pointer on the mark, its number, its note, or its chip in the message to see the whole note. To change a note before
+you send the message, double-click the mark (with **Select** chosen) or its chip, choose **Edit note…** from the chip's
+right-click menu, or press F2 with the cursor right next to the chip in the message. The note card opens with the note:
+change it and press Enter or choose **Save note**, or press Escape or choose **Cancel** to keep the note as it was; the
+mark stays either way. Ctrl+Z in the message does not undo a changed note. A message that was sent cannot be changed,
+so neither can the notes of its marks.
 
 A mark belongs to the exact picture that it was drawn on. When you change the file and the picture is drawn again, the
 marks are not drawn on the new picture, because they might no longer point at the right place, but they stay in the

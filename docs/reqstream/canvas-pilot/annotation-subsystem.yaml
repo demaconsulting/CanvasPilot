@@ -5,7 +5,8 @@
 # - Define requirements for the CanvasPilot Annotation subsystem
 # - The Annotation subsystem holds the marks that the user draws on the shown picture for the message being composed:
 #   the layer on which the user draws them with the pointer or the keyboard, which picture each mark belongs to, its
-#   number, its geometry in the picture's pixels, and its optional note, and it finds the parts of the picture's source
+#   number, its geometry in the picture's pixels, and its optional note, which is shown beside the mark and can be
+#   changed until the message is sent, and it finds the parts of the picture's source
 #   file that lie under a mark. The registry and the resolver have no dependency on the user interface; the layer does,
 #   and reaches the composer only through the host that joins them. The layer offers a floating bar of tool buttons and a
 #   button that clears the marks of the message
@@ -125,3 +126,34 @@ sections:
               - CanvasPilot-AnnotationOverlay-ClearMarks
             tests:
               - AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage
+
+          - id: CanvasPilot-Annotation-ShowMarkNotes
+            title: >-
+              The Annotation subsystem shall show the note of each mark that it shows on the picture beside the mark's
+              number, on one line cut short with an ellipsis and kept inside the picture, nothing beside a mark without a
+              note, and the whole note when the pointer rests on the mark's number, line, or note.
+            justification: |
+              The user checks the notes before sending, and a note is read where its mark is. A long note must not
+              cover the picture, so it is cut short on the picture and shown whole on request; a mark without a note
+              needs no label.
+            children:
+              - CanvasPilot-AnnotationOverlay-ShowNoteBesideBadge
+              - CanvasPilot-AnnotationOverlay-ShowWholeNoteOnHover
+            tests:
+              - AnnotationSubsystem_ShowMarkNotes_MarksOnRenderedDiagram_ShownMarksCarryTheirNotes
+
+          - id: CanvasPilot-Annotation-EditMarkNotes
+            title: >-
+              The Annotation subsystem shall let the user change the note of a mark of the message, from the mark on the
+              picture or at the request of its host, keeping the mark's number, shape, place, and picture, shall show the
+              changed note at once, shall leave the note as it was when the user cancels, and shall not change the marks
+              of a message that was sent.
+            justification: |
+              A wrong note must be fixable without deleting the mark and drawing it again, which would change its number
+              and the words that refer to it. Canceling a change must never cost the user the mark. A sent message is
+              part of the conversation and keeps what it carried.
+            children:
+              - CanvasPilot-AnnotationOverlay-EditNoteOfMark
+              - CanvasPilot-MarkRegistry-ChangeNote
+            tests:
+              - AnnotationSubsystem_EditMarkNotes_ThroughOverlay_RegistryKeepsTheMarkAndChangesOnlyItsNote

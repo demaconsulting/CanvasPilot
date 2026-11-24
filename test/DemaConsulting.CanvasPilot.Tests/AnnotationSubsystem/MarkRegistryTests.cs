@@ -428,4 +428,117 @@ public sealed class MarkRegistryTests
         Assert.Throws<ArgumentOutOfRangeException>(() => MarkGeometry.Create(MarkKind.Rectangle, Drag, 0, 10));
         Assert.Throws<ArgumentOutOfRangeException>(() => MarkGeometry.Create(MarkKind.Rectangle, Drag, 10, 0));
     }
+
+    /// <summary>
+    ///     Test that changing the note of a mark keeps its identity, number, geometry, picture, time, and place in the
+    ///     order, changes only the note, and tells the observers once with the changed mark.
+    /// </summary>
+    [Fact]
+    public void MarkRegistry_ChangeNote_KnownMark_ChangesOnlyTheNoteAndTellsObservers()
+    {
+        // Arrange: three marks, the second with a note, and an observer of note changes
+        var now = new DateTimeOffset(2026, 11, 24, 8, 0, 0, TimeSpan.Zero);
+        var registry = new MarkRegistry(new FixedTimeProvider(now));
+        var picture = AnnotationTestPictures.Picture();
+        var first = registry.Add(picture, MarkKind.Rectangle, Drag);
+        var second = registry.Add(picture, MarkKind.Ellipse, Drag, "old note");
+        var third = registry.Add(picture, MarkKind.Arrow, Drag);
+        var raised = new List<Mark>();
+        registry.NoteChanged += (_, e) => raised.Add(e.Mark);
+
+        // Act: change the note of the second mark
+        var changed = registry.ChangeNote(second.Id, "new note");
+
+        // Assert: the changed mark is a new instance of the same mark with the new note, in the same place, told once
+        Assert.NotNull(changed);
+        Assert.NotSame(second, changed);
+        Assert.Equal(second.Id, changed.Id);
+        Assert.Equal(second.Number, changed.Number);
+        Assert.Same(second.Geometry, changed.Geometry);
+        Assert.Same(second.Snapshot, changed.Snapshot);
+        Assert.Equal(second.CreatedUtc, changed.CreatedUtc);
+        Assert.Equal("new note", changed.Note);
+        Assert.Equal([first, changed, third], registry.Marks);
+        Assert.Same(changed, registry.Find(second.Id));
+        Assert.Equal([changed], raised);
+
+        // Act: take the note away
+        var cleared = registry.ChangeNote(second.Id, null);
+
+        // Assert: the mark has no note any more, and the observers were told again
+        Assert.Null(cleared!.Note);
+        Assert.Equal(2, raised.Count);
+    }
+
+    /// <summary>
+    ///     Test that a changed note is cleaned and cut as the note of a new mark is.
+    /// </summary>
+    [Fact]
+    public void MarkRegistry_ChangeNote_NoteIsCleanedAndCappedLikeANewNote()
+    {
+        // Arrange: a mark without a note
+        var registry = new MarkRegistry();
+        var mark = registry.Add(AnnotationTestPictures.Picture(), MarkKind.Rectangle, Drag);
+
+        // Act: give it a note with line breaks and tabs, then one that is too long, then one of only spaces
+        var multiLine = registry.ChangeNote(mark.Id, "  two\r\nlines\twith tab  ");
+        var tooLong = registry.ChangeNote(mark.Id, new string('x', 300));
+        var blank = registry.ChangeNote(mark.Id, "   \n ");
+
+        // Assert: one trimmed line, cut to the limit, and no note for blank text
+        Assert.Equal(MarkRegistry.CleanNote("  two\r\nlines\twith tab  "), multiLine!.Note);
+        Assert.Equal(MarkRegistry.MaximumNoteLength, tooLong!.Note!.Length);
+        Assert.Null(blank!.Note);
+    }
+
+    /// <summary>
+    ///     Test that a note that is the same once cleaned, or a mark the registry does not hold, changes nothing and tells
+    ///     nobody.
+    /// </summary>
+    [Fact]
+    public void MarkRegistry_ChangeNote_SameNoteOrUnknownMark_ChangesNothingAndTellsNobody()
+    {
+        // Arrange: a mark with a note, and an observer
+        var registry = new MarkRegistry();
+        var mark = registry.Add(AnnotationTestPictures.Picture(), MarkKind.Rectangle, Drag, "keep");
+        var raised = 0;
+        registry.NoteChanged += (_, _) => raised++;
+
+        // Act: give it the same note with spaces around it, and change the note of a mark that is not there
+        var same = registry.ChangeNote(mark.Id, "  keep ");
+        var unknown = registry.ChangeNote(Guid.NewGuid(), "anything");
+
+        // Assert: the same instance comes back, nothing is found for the stranger, and nobody was told
+        Assert.Same(mark, same);
+        Assert.Null(unknown);
+        Assert.Equal([mark], registry.Marks);
+        Assert.Equal(0, raised);
+    }
+
+    /// <summary>
+    ///     Test that the marks and lists handed out before a note changed keep the note they had, as a sent message
+    ///     needs.
+    /// </summary>
+    [Fact]
+    public void MarkRegistry_ChangeNote_EarlierListsAndMarks_StayAsTheyWere()
+    {
+        // Arrange: a mark with a note, and the lists handed out before the change
+        var registry = new MarkRegistry();
+        var picture = AnnotationTestPictures.Picture();
+        var mark = registry.Add(picture, MarkKind.Rectangle, Drag, "before");
+        var copy = registry.Marks;
+        var active = registry.ActiveMarks([mark.Id]);
+        var visible = registry.VisibleMarks([mark.Id], picture.SnapshotKey);
+
+        // Act: change the note
+        registry.ChangeNote(mark.Id, "after");
+
+        // Assert: what was handed out still says "before", and only what is asked for now says "after"
+        Assert.Equal("before", mark.Note);
+        Assert.Equal("before", copy[0].Note);
+        Assert.Equal("before", active[0].Note);
+        Assert.Equal("before", visible[0].Note);
+        Assert.Equal("after", registry.ActiveMarks([mark.Id])[0].Note);
+        Assert.Throws<ArgumentNullException>(() => new MarkNoteChangedEventArgs(null!));
+    }
 }

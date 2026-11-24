@@ -1630,6 +1630,110 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a user who marks the shown diagram with a note sees the note with the mark and its chip, can change
+    ///     it from the chip, keeps it when a change is cancelled, and sends a message whose payload carries the note as it
+    ///     was last changed, on the same mark.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_MarkImage_EditNoteOfDraftMark_SentPayloadCarriesTheChangedNote()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown, and a mark with a note on it
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var diagram = Path.Combine(folder, "flow.mmd");
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[End]\n", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        var overlay = composition.Annotation;
+        var composer = composition.Composer;
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        overlay.BeginStroke(new RenderPoint(4, 4));
+        overlay.EndStroke(new RenderPoint(40, 30));
+        overlay.NoteText = "first";
+        overlay.CommitNote();
+        overlay.SelectTool(AnnotationTool.None);
+        var chip = Assert.Single(composer.Document.Chips.OfType<MarkChip>());
+        var before = Assert.Single(overlay.VisibleMarks);
+        var shownFirst = (composer.GetMarkNote(chip.MarkId), before.Note);
+
+        // Act: change the note from the chip and confirm it
+        var requested = composer.RequestMarkNoteEdit(chip.MarkId);
+        var opened = (overlay.IsEditingMarkNote, overlay.NoteText);
+        overlay.NoteText = "second";
+        overlay.CommitNote();
+        var after = Assert.Single(overlay.VisibleMarks);
+        var shownSecond = (composer.GetMarkNote(chip.MarkId), after.Note);
+
+        // Act: change it again and cancel, then type and send the message
+        composer.RequestMarkNoteEdit(chip.MarkId);
+        overlay.NoteText = "third";
+        overlay.Cancel();
+        var afterCancel = (composer.GetMarkNote(chip.MarkId), composer.Document.Chips.OfType<MarkChip>().Count());
+        composer.InsertTyped("Fix this");
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var payload = Assert.Single(composition.Chat.SentEntries).Payload;
+        composition.Dispose();
+
+        // Assert: the note was shown, opened for changing, changed on the same mark, kept when cancelled, and sent
+        Assert.Equal(("first", "first"), shownFirst);
+        Assert.True(requested);
+        Assert.Equal((true, "first"), opened);
+        Assert.Equal(("second", "second"), shownSecond);
+        Assert.Equal((before.Id, before.Number), (after.Id, after.Number));
+        Assert.Same(before.Geometry, after.Geometry);
+        Assert.Same(before.Snapshot, after.Snapshot);
+        Assert.Equal(("second", 1), afterCancel);
+        Assert.NotNull(payload);
+        var sent = Assert.Single(Assert.Single(payload.Images).Marks);
+        Assert.Equal(1, sent.Number);
+        Assert.Equal("second", sent.Note);
+    }
+
+    /// <summary>
+    ///     Test that the note of a mark of a message that was sent cannot be changed, neither on the picture nor from the
+    ///     composer, and that the payload of the sent message keeps its note.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_MarkImage_NoteOfSentMark_CannotBeChanged()
+    {
+        // Arrange: the application with a project that holds a diagram, which is shown, and a sent message with a noted mark
+        var token = TestContext.Current.CancellationToken;
+        var (composition, _) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        var diagram = Path.Combine(folder, "flow.mmd");
+        await File.WriteAllTextAsync(diagram, "flowchart LR\n  A[Start] --> B[End]\n", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(diagram);
+        await composition.Preview.RenderCompletion;
+        var overlay = composition.Annotation;
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        overlay.BeginStroke(new RenderPoint(4, 4));
+        overlay.EndStroke(new RenderPoint(40, 30));
+        overlay.NoteText = "a";
+        overlay.CommitNote();
+        overlay.SelectTool(AnnotationTool.None);
+        var oldId = Assert.Single(composition.Composer.Document.Chips.OfType<MarkChip>()).MarkId;
+        composition.Composer.InsertTyped("Fix this");
+        await composition.Chat.SendCommand.ExecuteAsync(null);
+        var payload = Assert.Single(composition.Chat.SentEntries).Payload;
+
+        // Act: ask to change the note of the sent mark on the picture and from the composer
+        var onPicture = overlay.BeginEditNote(oldId);
+        var fromComposer = composition.Composer.RequestMarkNoteEdit(oldId);
+        var editing = overlay.IsNoteEditing;
+        composition.Dispose();
+
+        // Assert: both were refused, nothing opened, and the sent payload keeps its note
+        Assert.False(onPicture);
+        Assert.False(fromComposer);
+        Assert.False(editing);
+        Assert.NotNull(payload);
+        Assert.Equal("a", Assert.Single(Assert.Single(payload.Images).Marks).Note);
+    }
+
+    /// <summary>
     ///     Test that a user who drags the shown picture out of the preview gives the other program a PNG file of exactly
     ///     the picture shown, that no file is offered when the pointer is used for something else, and that the file
     ///     does not outlive the application.

@@ -63,6 +63,10 @@ and no real input method is used.
 - Previews are made only for picture files of at most 20 MB, are reused until the file changes, and are never made for
   anything else; a failing provider leaves the icon.
 - While the message of an open project is empty the surface shows the placeholder text, and typing hides it.
+- The tooltip of a mark's chip is `Mark n on the picture`, followed by `: <note>` when the mark has a note, and follows
+  a change of the note; a double-click on a mark chip of the message, its Edit note item (named and showing F2), and F2
+  with the caret beside it ask the view model for that mark, with no selection and no change of the message; chips of
+  other kinds and chips of sent messages offer no change of a note.
 
 #### Test Scenarios
 
@@ -261,3 +265,23 @@ model,
 over the empty surface, and typing "Make it blue" hides it. It is described in the verification of the `ChatPanel`
 unit, and is the evidence for the placeholder because the view is tested here only without the card around it. This
 scenario is tested by `ChatPanelView_ComposerCard_PlaceholderNamesAndHint`.
+
+**ChipView_Show_MarkWithNote_TooltipAddsTheNote**: The chip of mark 2 shown with a note has the tooltip
+`Mark 2 on the picture: the door is blocked`; shown with no note or an empty one it has `Mark 2 on the picture`; the
+helper refuses a missing chip. This scenario is tested by `ChipView_Show_MarkWithNote_TooltipAddsTheNote`.
+
+**ChipView_DoubleClickAndEditNoteItem_RaiseEditNoteRequestedOnlyForEditableMarkChips**: An editable mark chip, a mark
+chip of a sent message, and an editable file chip are double-clicked in a window, and the Edit note item of the first is
+chosen. Only the editable mark chip asks, twice; only it has the menu, whose item is `Edit note…`, shows F2, and is
+named `Edit the note of Mark 1`; turning the change off takes the menu away. This scenario is tested by
+`ChipView_DoubleClickAndEditNoteItem_RaiseEditNoteRequestedOnlyForEditableMarkChips`.
+
+**ComposerEditorView_MarkNoteChanged_ChipTooltipShowsTheNewNote**: A mark chip with the note `old note` is drawn; the
+note is changed in the registry and the chip, drawn again, says `Mark 1 on the picture: new note`, offers the change of
+its note, and the message and what can be undone are as before. This scenario is tested by
+`ComposerEditorView_MarkNoteChanged_ChipTooltipShowsTheNewNote`.
+
+**ComposerEditorView_MarkChipDoubleClickedOrF2_AsksToEditTheNoteOfThatMark**: Two mark chips stand above the words
+`hi`. Two quick clicks on the second chip ask for the second mark and select nothing; F2 right after the first chip asks
+for the first mark; F2 in the words asks for nothing; the message does not change. This scenario is tested by
+`ComposerEditorView_MarkChipDoubleClickedOrF2_AsksToEditTheNoteOfThatMark`.

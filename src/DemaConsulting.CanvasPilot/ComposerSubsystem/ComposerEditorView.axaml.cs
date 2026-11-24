@@ -30,6 +30,7 @@ using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using CommunityToolkit.Mvvm.Input;
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 
 namespace DemaConsulting.CanvasPilot.ComposerSubsystem;
 
@@ -64,6 +65,12 @@ namespace DemaConsulting.CanvasPilot.ComposerSubsystem;
 ///         put dropped paths in as text, ignore pictures, and copy the placeholder characters to other programs. What a
 ///         drag or the clipboard brings is read as data only by <see cref="DataTransferReader" /> and handed to the view
 ///         model; typed text that holds a placeholder or a control character is refused before it enters.
+///     </para>
+///     <para>
+///         <b>Mark notes.</b> The chip of a mark shows the mark's current note in its tooltip, and is built again when a
+///         note changes. A double-click on the chip, the Edit note item of its context menu, or F2 with the caret beside
+///         it asks the view model to change the note; the change itself is made on the layer over the picture and is
+///         not a step of the message's history.
 ///     </para>
 ///     <para>
 ///         The view belongs to the user interface thread.
@@ -337,6 +344,9 @@ public sealed partial class ComposerEditorView : UserControl
         Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Y, CommandModifier), Command = new RelayCommand(() => _viewModel?.Redo()) });
         Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.Z, CommandModifier | KeyModifiers.Shift), Command = new RelayCommand(() => _viewModel?.Redo()) });
 
+        // F2 beside the chip of a mark asks to change the mark's note, as the Edit note item of the chip's menu says
+        Editor.KeyBindings.Add(new KeyBinding { Gesture = new KeyGesture(Key.F2), Command = new RelayCommand(() => _viewModel?.RequestMarkNoteEditAtCaret()) });
+
         // A drag of text inside the surface would be a removal and an insertion that breaks the chips, so it is off
         var options = Editor.Options;
         options.EnableTextDragDrop = false;
@@ -431,6 +441,7 @@ public sealed partial class ComposerEditorView : UserControl
 
         viewModel.Changed += OnViewModelChanged;
         viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        viewModel.MarkNoteChanged += OnMarkNoteChanged;
         Editor.IsReadOnly = !viewModel.CanEdit;
         WriteMessageToSurface();
     }
@@ -447,11 +458,23 @@ public sealed partial class ComposerEditorView : UserControl
 
         _viewModel.Changed -= OnViewModelChanged;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.MarkNoteChanged -= OnMarkNoteChanged;
         _viewModel = null;
     }
 
     /// <summary>
+    ///     Builds the chips again when the note of a mark changed, so that the chip of the mark shows the new note.
+    /// </summary>
+    /// <param name="sender">The view model.</param>
+    /// <param name="e">The mark as it is after the change.</param>
+    private void OnMarkNoteChanged(object? sender, MarkNoteChangedEventArgs e)
+    {
+        Editor.TextArea.TextView.Redraw();
+    }
+
+    /// <summary>
     ///     Makes the control for the chip of the message with a number, for the generator that draws chips in the text.
+    ///     The chip of a mark shows the mark's current note and offers to change it.
     /// </summary>
     /// <param name="index">The number of the chip, counted from zero in the order of the message.</param>
     /// <returns>The control, or <see langword="null" /> when the message has no such chip.</returns>
@@ -463,10 +486,26 @@ public sealed partial class ComposerEditorView : UserControl
             return null;
         }
 
-        var view = new ChipView();
-        view.Show(chip, ThumbnailProvider);
+        var note = chip is MarkChip mark ? _viewModel?.GetMarkNote(mark.MarkId) : null;
+        var view = new ChipView { IsNoteEditable = chip is MarkChip };
+        view.Show(chip, ThumbnailProvider, note);
         view.DeleteRequested += OnChipDeleteRequested;
+        view.EditNoteRequested += OnChipEditNoteRequested;
         return view;
+    }
+
+    /// <summary>
+    ///     Asks the view model to change the note of the mark whose chip was double-clicked or whose Edit note item was
+    ///     chosen.
+    /// </summary>
+    /// <param name="sender">The chip control.</param>
+    /// <param name="e">The event data.</param>
+    private void OnChipEditNoteRequested(object? sender, EventArgs e)
+    {
+        if (sender is ChipView { Chip: MarkChip markChip })
+        {
+            _viewModel?.RequestMarkNoteEdit(markChip.MarkId);
+        }
     }
 
     /// <summary>

@@ -165,7 +165,10 @@ and the view model it follows.
 identities. The panel subscribes to `MarkAdded` of the layer and calls `ComposerViewModel.AddMark`, which makes one edit
 that puts the chip in the row of chips above the words, and to `ClearMarksRequested` of the layer and calls
 `ComposerViewModel.DeleteMarkChips`, which deletes the chips of all marks one step each; the `Changed` that each
-deletion raises makes the layer show only the marks that are left. Both handlers are removed when the panel is disposed.
+deletion raises makes the layer show only the marks that are left. It also subscribes to
+`ComposerViewModel.MarkNoteEditRequested`, raised when the user asks from a mark's chip to change its note, and calls
+`AnnotationOverlayViewModel.BeginEditNote` with the mark, which opens the note card on the layer; the composer follows
+the change through the registry, so the panel passes nothing back. The handlers are removed when the panel is disposed.
 Nothing else about marks is known here.
 
 **Prompts and collapse.** `UsePrompt` writes a prompt with `ComposerViewModel.InsertTyped` at the caret (over the

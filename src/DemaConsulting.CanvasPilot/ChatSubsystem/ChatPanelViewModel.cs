@@ -218,6 +218,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     private readonly EventHandler _clearMarks;
 
     /// <summary>
+    ///     The handler that opens the note of a mark on the layer when the user asks for it from the mark's chip, kept so
+    ///     that it can be removed.
+    /// </summary>
+    private readonly EventHandler<MarkNoteEditRequestedEventArgs> _markNoteEditRequested;
+
+    /// <summary>
     ///     The handler of the sent messages, kept so that it can be removed.
     /// </summary>
     private readonly EventHandler<MessageSentEventArgs> _messageSent;
@@ -265,7 +271,8 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ChatPanelViewModel" /> class and joins the composer and the
-    ///     annotation layer.
+    ///     annotation layer: marks drawn on the layer become chips of the message, the layer shows the marks of the
+    ///     message, and a request from a mark's chip to change its note opens the note on the layer.
     /// </summary>
     /// <param name="composer">The composer of the message.</param>
     /// <param name="marks">The marks made for the draft, from which the pictures of the mark chips are made.</param>
@@ -334,15 +341,17 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
 
         // The panel follows the composer: what depends on it is announced again, a changed project drops the transcript,
-        // and a sent message joins the transcript
+        // a sent message joins the transcript, and a request from a mark's chip opens the mark's note on the layer
         _composerPropertyChanged = OnComposerPropertyChanged;
         _messageSent = (_, e) => OnMessageSent(e.Message);
         _composerChanged = (_, _) => JoinAnnotationToComposer();
         _markAdded = (_, e) => _composer.AddMark(e.Mark);
         _clearMarks = (_, _) => _composer.DeleteMarkChips();
+        _markNoteEditRequested = (_, e) => _annotation.BeginEditNote(e.MarkId);
         _composer.PropertyChanged += _composerPropertyChanged;
         _composer.MessageSent += _messageSent;
         _composer.Changed += _composerChanged;
+        _composer.MarkNoteEditRequested += _markNoteEditRequested;
         _annotation.MarkAdded += _markAdded;
         _annotation.ClearMarksRequested += _clearMarks;
         _annotation.PropertyChanged += OnAnnotationPropertyChanged;
@@ -794,6 +803,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer.PropertyChanged -= _composerPropertyChanged;
         _composer.MessageSent -= _messageSent;
         _composer.Changed -= _composerChanged;
+        _composer.MarkNoteEditRequested -= _markNoteEditRequested;
         _annotation.MarkAdded -= _markAdded;
         _annotation.ClearMarksRequested -= _clearMarks;
         _annotation.PropertyChanged -= OnAnnotationPropertyChanged;

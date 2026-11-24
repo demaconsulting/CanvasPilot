@@ -133,6 +133,46 @@ public sealed class ChatSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the note of a mark changed from its chip, through the panel and the real annotation layer, is the
+    ///     note that the payload of the sent message carries.
+    /// </summary>
+    [Fact]
+    public async Task ChatSubsystem_EditMarkNoteFromChip_SentPayloadCarriesTheChangedNote()
+    {
+        // Arrange: a drawn diagram shown to the layer, the real units, and a mark with a note in the message
+        var picture = await RenderAsync("flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var source = new FakeRenderedImageSource { CurrentImage = picture };
+        var marks = new MarkRegistry();
+        var markImages = new MarkImageComposer(_renderer);
+        using var composer = new ComposerViewModel(new PayloadBuilder(markImages), marks, new FakeDictationService());
+        using var annotation = new AnnotationOverlayViewModel(marks, source, _ => { });
+        using var panel = new ChatPanelViewModel(composer, marks, annotation, markImages);
+        composer.SetProject(_project);
+        annotation.SelectTool(AnnotationTool.Rectangle);
+        annotation.BeginStroke(new RenderPoint(2, 2));
+        annotation.EndStroke(new RenderPoint(40, 30));
+        annotation.NoteText = "too small";
+        annotation.CommitNote();
+        annotation.SelectTool(AnnotationTool.None);
+        var chip = Assert.Single(composer.Document.Chips.OfType<MarkChip>());
+
+        // Act: ask from the chip to change the note, type the new note on the layer, confirm, and send
+        var requested = composer.RequestMarkNoteEdit(chip.MarkId);
+        var opened = annotation.NoteText;
+        annotation.NoteText = "make it twice as big";
+        annotation.CommitNote();
+        await panel.SendCommand.ExecuteAsync(null);
+
+        // Assert: the layer opened with the old note, and the payload carries the changed note of the same mark
+        Assert.True(requested);
+        Assert.Equal("too small", opened);
+        var payload = Assert.IsType<MessagePayload>(Assert.Single(panel.SentEntries).Message.Payload);
+        var sent = Assert.Single(Assert.Single(payload.Images).Marks);
+        Assert.Equal(1, sent.Number);
+        Assert.Equal("make it twice as big", sent.Note);
+    }
+
+    /// <summary>
     ///     Test that words held to talk are added to the message as one dictated block and reach the payload of the sent
     ///     message with their origin, so that the assistant can tell them from typed words.
     /// </summary>

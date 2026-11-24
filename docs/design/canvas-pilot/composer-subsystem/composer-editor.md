@@ -36,14 +36,17 @@ The unit is made of these parts, all in the user interface layer:
 - `ChipElementGenerator`: the library's inline element generator, which turns each placeholder character of the surface
   into an inline control.
 - `ChipView` (a `UserControl`): one chip, a pill at least 24 pixels high (the shared `ChipBorder` theme: a raised
-  surface with
-  a subtle border and a fully rounded corner) with an icon for its kind (file, folder, picture, mark) or the picture
-  from the provider, its name (trimmed with an ellipsis beyond 180 pixels), a delete button (which
+  surface with a subtle border and a fully rounded corner) with an icon for its kind (file, folder, picture, mark) or
+  the picture from the provider, its name (trimmed with an ellipsis beyond 180 pixels), a delete button (which
   `IsDeleteButtonVisible` can hide; the transcript of sent messages hides it), and a tooltip with the full path or
-  `Mark n on the picture`. A mark chip has the class `mark`, which tints the pill with `CpMarkTint`, gives it the
-  `CpMark` outline, and fills its icon with `CpMark`, so it reads like the mark on the picture. The delete button shows
-  a small cross icon; its accessible name and tooltip are `Remove {label}`, set when the chip is shown, so that the
-  screen reader says which chip.
+  `Mark n on the picture`, followed by `: <note>` when the mark has a note (`GetMarkToolTip`). `IsNoteEditable` (off by
+  default, on for the chips of the message being written) gives the chip of a mark a context menu with the item *Edit
+  note…* (`ComposerChipEditNote`, named `Edit the note of Mark n`, showing the key F2), and makes a double-click on the
+  chip ask for the change too; both raise `EditNoteRequested`, and the double-click is handled so that the surface does
+  not select a word. A mark chip has the class `mark`, which tints the pill with `CpMarkTint`, gives it the `CpMark`
+  outline, and fills its icon with `CpMark`, so it reads like the mark on the picture. The delete button shows a small
+  cross icon; its accessible name and tooltip are `Remove {label}`, set when the chip is shown, so that the screen
+  reader says which chip.
 - `IChipThumbnailProvider` and `ImageChipThumbnailProvider`: the contract that gives a chip its small picture
   asynchronously, and the default implementation for attached picture files.
 - `DictatedTextBackgroundRenderer` and `DictatedRange`: draws the background behind dictated text; `GetRanges` finds the
@@ -103,6 +106,14 @@ the same chip) and calls `ComposerViewModel.DeleteChip`, one step, which also wo
 because the button does not take it. Backspace and Delete over a chip are one change of one placeholder character and
 therefore one step too.
 
+**Notes of marks.** When the generator makes the control of a mark chip, the view asks `ComposerViewModel.GetMarkNote`
+for the mark's note, shows it in the tooltip, and turns `IsNoteEditable` on. The view follows
+`ComposerViewModel.MarkNoteChanged` and draws the lines again, so every chip is made again with its current note. A
+double-click on the chip or its Edit note item calls `ComposerViewModel.RequestMarkNoteEdit` with the chip's mark. Chips
+cannot take the focus inside the surface, so the keyboard way is a key binding of F2, which calls
+`RequestMarkNoteEditAtCaret` for the mark chip just before the caret, or else just after it. None of them changes the
+message.
+
 **Previews.** `ImageChipThumbnailProvider` makes a preview only for a picture chip whose file exists and is not larger
 than 20 MB, decodes it straight to a width of 64 pixels on a background thread, keeps up to 64 previews keyed by path,
 time of the last write, and length, and remembers files that have none. SVG files and files that the decoder does not
@@ -147,7 +158,7 @@ it cannot be verified without a real input method (see the verification document
 
 - The chat panel hosts the view in the card of the message, gives it the view model of the message and a provider of
   pictures for mark chips, and shows the sent messages with the same chip control, without its delete button
-  (`IsDeleteButtonVisible`). It listens for the Enter key before the view does and sends the message when Enter is
-  pressed on its own and the message can be sent; the view itself writes a line break for Enter, and that is what the
-  panel leaves to it in every other case.
+  (`IsDeleteButtonVisible`) and without the change of notes (`IsNoteEditable` stays off). It listens for the Enter key
+  before the view does and sends the message when Enter is pressed on its own and the message can be sent; the view
+  itself writes a line break for Enter, and that is what the panel leaves to it in every other case.
 - The Edit menu and the keys reach undo and redo through `UndoRedoTarget`, which is the view model.

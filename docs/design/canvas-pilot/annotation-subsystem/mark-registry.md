@@ -19,13 +19,21 @@ another picture" true, in a unit that needs no window to test.
 - `Mark`: immutable; `Id` (a `Guid`, carried by the mark's chip), `Number` (one or more), `Geometry`, `Kind`, `Note`
   (`null` or one line of at most 200 characters), `Snapshot` (the `RenderedImage` it was drawn on) and `CreatedUtc`.
 - `MarkRegistry`: the list of marks in the order they were made, and a `TimeProvider` for the time of creation.
-- Invariants: numbers in the registry are unique; a mark never changes; the registry holds no mark after `Clear`.
+- `MarkNoteChangedEventArgs`: the data of `NoteChanged`, the `Mark` as it is after the change.
+- Invariants: numbers in the registry are unique; a mark instance never changes, and `ChangeNote` replaces it with a new
+  instance of the same identity, number, geometry, picture, and time; the registry holds no mark after `Clear`.
 
 #### Key Methods
 
 **Add(snapshot, kind, points, note)**: makes the geometry with `MarkGeometry.Create` (which throws for a shape that is
 not a mark, before anything is added), takes the number one more than the largest number in the registry (one for the
 first mark), cleans the note, adds the mark, and returns it.
+
+**ChangeNote(markId, note)**: finds the mark, cleans the note as `Add` does, and, when the cleaned note differs from the
+mark's note, puts a new `Mark` with the same identity, number, geometry, picture, and time of creation and the new note
+at the same place in the list, raises `NoteChanged` once on the caller's thread, and returns the new mark. It returns
+the mark unchanged, without the event, for the same note, and `null`, without a change, for a mark it does not hold.
+Marks and lists that were handed out before keep the note they had, which is what a message that was sent relies on.
 
 **MarkGeometry.Create(kind, points, width, height)**: moves every point into the picture, builds the normal form of the
 shape (corners sorted for rectangle and ellipse, tail and head for an arrow, drops repeated points and simplifies for a
@@ -56,6 +64,9 @@ about a click.
 
 #### Callers
 
-- `AnnotationOverlay` calls `Add` when the user finishes a shape and the note step ends, `VisibleMarks` to decide what
-  to show, and the registry is cleared by the composer when a message is sent.
+- `AnnotationOverlay` calls `Add` when the user finishes a shape and the note step ends, `ChangeNote` when the user
+  confirms a changed note, `VisibleMarks` to decide what to show, and follows `NoteChanged`; the registry is cleared by
+  the composer when a message is sent.
+- `ComposerViewModel` reads the note of a mark with `Find` for the tooltip of its chip and passes `NoteChanged` on to
+  the editing control.
 - The payload subsystem reads the marks of the message through `Marks` and `MarkSourceResolver`.

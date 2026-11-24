@@ -287,6 +287,29 @@ sections:
           - CanvasPilot_MarkImage_DrawOnShownPicture_AddsNumberedChipPinnedToSnapshot
           - CanvasPilot_MarkImage_Rerender_DoesNotMoveMarks
 
+      - id: CanvasPilot-System-ShowAndEditMarkNotes
+        title: >-
+          The application shall show the note of each mark of the message being written beside the mark's number on
+          the picture, on one line that is cut short with an ellipsis when it is long, shall show the whole note when
+          the pointer rests on the mark or on its chip, and shall let the user change the note of such a mark with
+          the pointer or the keyboard until the message is sent, so that the message that is sent carries each note
+          as it was last changed, while the marks of messages that were sent keep their notes.
+        tags: [system]
+        justification: |
+          A note that cannot be seen after it was typed is forgotten and cannot be checked before the message is
+          sent, so the user sees each note with its mark, and the whole of a long note on request. A wrong note must
+          be fixable without deleting the mark and drawing it again, which would also change its number. What was
+          sent belongs to the conversation and is never changed afterwards.
+        children:
+          - CanvasPilot-Annotation-ShowMarkNotes
+          - CanvasPilot-Annotation-EditMarkNotes
+          - CanvasPilot-Composer-ShowMarkNoteOnChip
+          - CanvasPilot-Composer-RequestMarkNoteEdit
+          - CanvasPilot-Chat-EditMarkNotesFromChips
+        tests:
+          - CanvasPilot_MarkImage_EditNoteOfDraftMark_SentPayloadCarriesTheChangedNote
+          - CanvasPilot_MarkImage_NoteOfSentMark_CannotBeChanged
+
       - id: CanvasPilot-System-DragImageOut
         title: >-
           The application shall let the user drag the shown picture out of the preview and drop it into another

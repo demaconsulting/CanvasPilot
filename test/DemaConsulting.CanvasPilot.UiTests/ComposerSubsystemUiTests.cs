@@ -25,7 +25,10 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Input.Raw;
+using Avalonia.Interactivity;
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
@@ -132,6 +135,82 @@ public sealed class ComposerSubsystemUiTests
         harness.AssertConsistent();
         harness.Press(PhysicalKey.Y, ComposerHarness.Command);
         Assert.Equal(["plan.txt", "logo.png"], Labels(harness));
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that the chip of a mark in the editor shows the mark's note after "Mark N on the picture", follows each
+    ///     change of the note made in the registry, and goes back to the plain text when the note is taken away.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ChipTooltipFollows()
+    {
+        // Arrange: a mark with a note whose chip is in the message, after some words
+        using var harness = new ComposerHarness();
+        harness.TypeEach("see");
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Arrow, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "first");
+        harness.ViewModel.AddMark(mark);
+        harness.Layout();
+        var tips = new List<object?> { ToolTip.GetTip(Assert.Single(harness.Chips)) };
+
+        // Act: change the note twice, the second time to none
+        harness.Marks.ChangeNote(mark.Id, "second");
+        harness.Layout();
+        tips.Add(ToolTip.GetTip(Assert.Single(harness.Chips)));
+        harness.Marks.ChangeNote(mark.Id, null);
+        harness.Layout();
+        tips.Add(ToolTip.GetTip(Assert.Single(harness.Chips)));
+
+        // Assert: the tooltip followed the note, and the message was not changed by it
+        Assert.Equal(["Mark 1 on the picture: first", "Mark 1 on the picture: second", "Mark 1 on the picture"], tips);
+        Assert.Equal("#\nsee", harness.ReadableMessage);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that the user asks to change the note of a mark from its chip in the editor by a double-click, by the Edit
+    ///     note item of the chip's menu, and by F2 beside the chip, that each request names the mark of the chip, and that
+    ///     none of them changes the message or adds an undo step.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerSubsystem_RequestMarkNoteEdit_DoubleClickMenuAndF2_AskForTheMarkOfTheChip()
+    {
+        // Arrange: a mark chip above the words "go", and an observer of the requests
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "note");
+        harness.ViewModel.AddMark(mark);
+        harness.TypeEach("go");
+        harness.Layout();
+        var requested = new List<Guid>();
+        harness.ViewModel.MarkNoteEditRequested += (_, e) => requested.Add(e.MarkId);
+        var before = (harness.Message, harness.ViewModel.CanRedo);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
+        harness.Press(PhysicalKey.Y, ComposerHarness.Command);
+
+        // Act: double-click the chip
+        var chip = Assert.Single(harness.Chips);
+        var label = chip.FindControl<TextBlock>("LabelText")!;
+        var center = label.TranslatePoint(new Point(label.Bounds.Width / 2, label.Bounds.Height / 2), harness.Window)!.Value;
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Layout();
+
+        // Act: choose Edit note from the chip's menu
+        var item = Assert.IsType<MenuItem>(Assert.Single(Assert.Single(harness.Chips).ContextMenu!.Items));
+        item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+
+        // Act: press F2 with the caret right after the chip
+        harness.MoveCaret(1);
+        harness.Press(PhysicalKey.F2);
+
+        // Assert: three requests, all for the mark of the chip, and the message and its history are unchanged
+        Assert.Equal([mark.Id, mark.Id, mark.Id], requested);
+        Assert.Equal(before, (harness.Message, harness.ViewModel.CanRedo));
+        Assert.True(harness.ViewModel.CanUndo);
         harness.AssertConsistent();
     }
 }

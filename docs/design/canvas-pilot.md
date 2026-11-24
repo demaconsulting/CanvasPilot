@@ -136,7 +136,12 @@ note, and then the overlay makes the mark in `MarkRegistry`, pinned to the pictu
 started, and reports it. The overlay does not know the composer. The chat panel adds the chip of every reported
 mark to the message with `ComposerViewModel.AddMark` and tells the overlay which mark chips the message holds, so the
 overlay draws only the marks of the shown picture whose chips are in the message and says how many it hides. While a
-tool is chosen the overlay has the preview pane turn off dragging the picture out, and Escape throws a shape away.
+tool is chosen the overlay has the preview pane turn off dragging the picture out, and Escape throws a shape away. The
+overlay shows the note of each mark on one short line beside its number, cut short with an ellipsis, and the whole note
+as the tooltip of the mark and of its chip. The note of a mark of the message can be changed until the message is sent:
+a double-click on the mark, or a request from its chip that the chat panel passes to the overlay, opens the note card
+again, and `MarkRegistry.ChangeNote` replaces the mark with a new immutable instance of the same identity, number,
+geometry, and picture and tells the overlay and the composer through its `NoteChanged` event.
 
 `MessagePayload` and the values it is made of are the one form in which the message that the user sends reaches the
 AI copilot: the text with `[Mark n]` and `[Attachment n: name]` at the places of the marks and
@@ -847,6 +852,14 @@ mark chips the message holds, and the overlay asks `MarkRegistry.VisibleMarks` w
 picture to show a picture. To describe a mark to the assistant, `MarkSourceResolver.Resolve` reads the element positions
 or anchors of the mark's picture and returns the parts of the source file under the mark, or that the picture cannot
 tell.
+
+When the user changes the note of a mark of the message, by a double-click on the mark with no tool chosen or by a
+double-click, the Edit note item, or F2 on its chip, the chip's request goes from `ComposerViewModel` through the chat
+panel to `AnnotationOverlayViewModel.BeginEditNote`, which opens the note card filled with the current note. Confirming
+calls `MarkRegistry.ChangeNote`, which raises `NoteChanged`; the overlay draws the new note and the editor builds the
+chip again with its new tooltip. The change is not a step of the message's undo history, because the note belongs to
+the registry and not to the text. The payload built at send time reads the marks as they are then, with their changed
+notes.
 
 When the message is sent, `ComposerViewModel.SendAsync` takes a snapshot of the document, puts the attachment chips of
 the snapshot into the project with `AttachmentStore.StageForSend` on a thread-pool thread, and gives the snapshot, the

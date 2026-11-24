@@ -81,6 +81,9 @@ services, or display is required.
 - A user who draws a rectangle on the shown picture gets a mark whose chip is in the message at the caret; undo of the
   chip hides the mark and redo shows it; dragging the picture out is off only while a marking tool is chosen; and when
   the file is edited the mark is not drawn on the new picture but stays in the message.
+- The note of a mark of the message is shown with the mark and its chip and can be changed from the chip until the
+  message is sent, on the same mark; a cancelled change keeps the note; the payload carries the note as it was last
+  changed; and the note of a mark of a sent message cannot be changed.
 - The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
   earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
   the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
@@ -196,7 +199,10 @@ steps are in the verification of the unit or subsystem named at each check.
    `Copilot_RuntimeNotPublished` and in the file table). (Verification of the `Speech` subsystem and of the WiX
    Toolset.)
 7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
-   the keyboard, and check the tool bar and the chips with a screen reader. (Verification of `AnnotationOverlay`.)
+   the keyboard, and check the tool bar and the chips with a screen reader. Give a mark a long note in the dark and the
+   light theme: the label beside its number is legible, ends with an ellipsis, and stays inside the picture; resting
+   the pointer on the mark or its chip shows the whole note; a double-click on the mark or the chip, or F2 beside the
+   chip, opens the note for changing, and Escape keeps the note and the mark. (Verification of `AnnotationOverlay`.)
 8. *Style kits with the real pickers.* On the installed package, open Tools > Style Kits, choose Import and Export with
    the system zip pickers, add example images with the image picker in the editor, change a color with the flyout and
    its sliders, and add a shared folder on the Style Kits page of the settings with the folder picker, including a
@@ -658,6 +664,19 @@ shows the mark. Undo removes the chip and the mark is not shown; redo shows both
 shown again the mark is not shown, the overlay counts one hidden mark, and the message still holds the chip. The overlay
 is the overlay of the preview pane and its tool bar is the pane's tool bar. This scenario is tested by
 `CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture`.
+
+**CanvasPilot_MarkImage_EditNoteOfDraftMark_SentPayloadCarriesTheChangedNote**: The composed application's user shows a
+diagram and draws a rectangle with the note `first`; the composer and the shown mark give `first`. A request from the
+chip opens the note on the layer with `first`; the note `second` is confirmed, and the shown mark and the composer give
+`second` on the same mark, with the same number, geometry, and picture. A second change to `third` is cancelled and the
+note stays `second` with the chip in the message. The message is sent, and its payload holds mark 1 with the note
+`second`. This scenario is tested by
+`CanvasPilot_MarkImage_EditNoteOfDraftMark_SentPayloadCarriesTheChangedNote`.
+
+**CanvasPilot_MarkImage_NoteOfSentMark_CannotBeChanged**: The composed application's user sends a message with a mark
+whose note is `a`. Asking to change the note of that mark on the layer and from the composer is refused, nothing opens,
+and the payload of the sent message keeps the note `a`. This scenario is tested by
+`CanvasPilot_MarkImage_NoteOfSentMark_CannotBeChanged`.
 
 **CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile**: The composed application is started with a file of an
 earlier run in its drag folder, which is removed at start. Without a picture no file is offered. With a 32 by 16 SVG

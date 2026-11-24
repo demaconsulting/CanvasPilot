@@ -90,10 +90,18 @@ public sealed class MarkAddedEventArgs : EventArgs
 ///         <b>Drawing.</b> A press starts a shape on the picture that is shown, moves reshape it, and the release ends
 ///         it. A shape that is smaller than a pixel is a click and makes no mark. Any other shape waits for a note: a
 ///         short remark that is entered or skipped, and only then is the mark made in the registry, pinned to the picture
-///         that was shown when the drawing started, and reported through <see cref="MarkAdded" />. The note is the last
-///         step because a mark never changes after it is made. Starting the next shape, or choosing another tool, keeps
-///         the mark with the note typed so far; Escape, a new picture, or a message that can no longer take the mark
-///         throws the unfinished shape away.
+///         that was shown when the drawing started, and reported through <see cref="MarkAdded" />. Starting the next
+///         shape, or choosing another tool, keeps the mark with the note typed so far; Escape, a new picture, or a
+///         message that can no longer take the mark throws the unfinished shape away.
+///     </para>
+///     <para>
+///         <b>Changing a note.</b> <see cref="BeginEditNote" /> opens the same note card for a mark of the message,
+///         filled with its note, as a double-click on the mark or a request of the host does. Confirming changes only
+///         the note, through <see cref="MarkRegistry.ChangeNote" />, and reports no new mark; Escape or Cancel closes
+///         the card and keeps the note and the mark as they were. Starting a shape, choosing another tool, or opening
+///         another note saves the note typed so far; a mark that leaves the message, or marks that can no longer be
+///         made, give the change up. The change of a note is not a step of the message's undo history, because the
+///         registry and not the message holds the note.
 ///     </para>
 ///     <para>
 ///         <b>Which marks are shown.</b> A mark belongs to the message while its chip is in the composer, which is told
@@ -190,9 +198,20 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     private bool _isDrawing;
 
     /// <summary>
-    ///     Whether a finished shape waits for its note.
+    ///     Whether a finished shape waits for its note, or the note of a mark is being changed.
     /// </summary>
     private bool _isNoteEditing;
+
+    /// <summary>
+    ///     The identity of the mark whose note is being changed, or <see langword="null" /> when the note card is not
+    ///     open for an existing mark.
+    /// </summary>
+    private Guid? _editingMarkId;
+
+    /// <summary>
+    ///     The number of the mark whose note is being changed.
+    /// </summary>
+    private int _editingNumber;
 
     /// <summary>
     ///     The note being typed.
@@ -260,10 +279,11 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
         _logger = logger;
         SelectToolCommand = new RelayCommand<AnnotationTool>(SelectTool);
         CommitNoteCommand = new RelayCommand(CommitNote, () => IsNoteEditing);
-        SkipNoteCommand = new RelayCommand(SkipNote, () => IsNoteEditing);
+        SkipNoteCommand = new RelayCommand(SkipNote, () => IsNoteEditing && !IsEditingMarkNote);
         CancelCommand = new RelayCommand(() => Cancel(), () => IsDrawing || IsNoteEditing);
         ClearMarksCommand = new RelayCommand(() => ClearMarksRequested?.Invoke(this, EventArgs.Empty));
         _pictures.CurrentImageChanged += OnPictureChanged;
+        _marks.NoteChanged += OnMarkNoteChanged;
         RefreshMarks();
     }
 
@@ -285,17 +305,20 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     public IRelayCommand<AnnotationTool> SelectToolCommand { get; }
 
     /// <summary>
-    ///     Gets the command that finishes the note and makes the mark, with the note typed so far.
+    ///     Gets the command that finishes the note with the text typed so far: it makes the mark of a finished shape,
+    ///     or saves the changed note of an existing mark.
     /// </summary>
     public IRelayCommand CommitNoteCommand { get; }
 
     /// <summary>
-    ///     Gets the command that makes the mark without a note.
+    ///     Gets the command that makes the mark without a note. It cannot run while the note of an existing mark is
+    ///     being changed.
     /// </summary>
     public IRelayCommand SkipNoteCommand { get; }
 
     /// <summary>
-    ///     Gets the command that throws the shape that is drawn, or that waits for its note, away.
+    ///     Gets the command that throws the shape that is drawn, or that waits for its note, away, or that closes the
+    ///     note card of an existing mark and keeps its note.
     /// </summary>
     public IRelayCommand CancelCommand { get; }
 
@@ -360,17 +383,45 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     public bool IsDrawing => _isDrawing;
 
     /// <summary>
-    ///     Gets a value indicating whether a finished shape waits for its note.
+    ///     Gets a value indicating whether the note card is open: a finished shape waits for its note, or the note of a
+    ///     mark is being changed.
     /// </summary>
     public bool IsNoteEditing => _isNoteEditing;
 
     /// <summary>
-    ///     Gets a value indicating whether there is a shape under construction to show.
+    ///     Gets a value indicating whether the note card is open to change the note of an existing mark, and not for a
+    ///     new shape.
     /// </summary>
-    public bool HasDraft => _isDrawing || _isNoteEditing;
+    public bool IsEditingMarkNote => _editingMarkId is not null;
 
     /// <summary>
-    ///     Gets or sets the note being typed for the finished shape. It is cut to the length that a mark keeps.
+    ///     Gets the identity of the mark whose note is being changed, or <see langword="null" /> when none is.
+    /// </summary>
+    public Guid? EditingMarkId => _editingMarkId;
+
+    /// <summary>
+    ///     Gets the name of the note box for a screen reader: that of the note of a new mark, or that of the note of the
+    ///     mark that is being changed, with its number.
+    /// </summary>
+    public string NoteBoxName => _editingMarkId is null
+        ? "Note for the new mark (optional)"
+        : string.Create(CultureInfo.InvariantCulture, $"Note for mark {_editingNumber}");
+
+    /// <summary>
+    ///     Gets the text of the button that confirms the note: "Add mark" for a new shape, "Save note" for an existing
+    ///     mark.
+    /// </summary>
+    public string CommitNoteText => _editingMarkId is null ? "Add mark" : "Save note";
+
+    /// <summary>
+    ///     Gets a value indicating whether there is a shape under construction to show. The note card of an existing
+    ///     mark has no shape to show.
+    /// </summary>
+    public bool HasDraft => _isDrawing || (_isNoteEditing && _editingMarkId is null);
+
+    /// <summary>
+    ///     Gets or sets the note being typed for the finished shape, or for the mark whose note is being changed. It is
+    ///     cut to the length that a mark keeps.
     /// </summary>
     public string NoteText
     {
@@ -445,6 +496,11 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     {
         get
         {
+            if (_editingMarkId is not null)
+            {
+                return string.Create(CultureInfo.InvariantCulture, $"Mark {_editingNumber}: change the note and press Enter, or press Escape to keep it.");
+            }
+
             if (_isNoteEditing)
             {
                 return string.Create(CultureInfo.InvariantCulture, $"Mark {_pendingNumber}: add a short note, or skip it.");
@@ -573,8 +629,58 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     {
         ArgumentNullException.ThrowIfNull(markIds);
 
+        // A mark whose chip left the message, by undo or clear, can no longer have its note changed
         _activeIds = [.. markIds];
+        if (_editingMarkId is { } editing && !_activeIds.Contains(editing))
+        {
+            Cancel();
+        }
+
         RefreshMarks();
+    }
+
+    /// <summary>
+    ///     Opens the note card to change the note of a mark of the message, filled with its current note, as a
+    ///     double-click on the mark or a request of the host does.
+    /// </summary>
+    /// <remarks>
+    ///     A note card that is already open is finished first with the note typed so far, as starting a shape does.
+    ///     The mark need not be on the picture that is shown, but marks must be allowed (<see cref="ToolsEnabled" />),
+    ///     because the card cannot stay open otherwise.
+    /// </remarks>
+    /// <param name="markId">The identity of the mark, as carried by its chip.</param>
+    /// <returns>
+    ///     <see langword="true" /> when the card opened; <see langword="false" />, with nothing changed, when marks cannot
+    ///     be made, a shape is being drawn, or the mark is not one of the message.
+    /// </returns>
+    public bool BeginEditNote(Guid markId)
+    {
+        if (!ToolsEnabled || _isDrawing || !_activeIds.Contains(markId) || _marks.Find(markId) is null)
+        {
+            return false;
+        }
+
+        // An open card keeps what was typed in it, then the card opens for this mark with its current note
+        if (_isNoteEditing)
+        {
+            FinishNote(withNote: true);
+        }
+
+        var mark = _marks.Find(markId);
+        if (mark is null || !_activeIds.Contains(markId))
+        {
+            return false;
+        }
+
+        _editingMarkId = markId;
+        _editingNumber = mark.Number;
+        _isNoteEditing = true;
+        _noteText = mark.Note ?? string.Empty;
+        _keyboardCursor = null;
+        _notice = string.Empty;
+        OnPropertyChanged(nameof(KeyboardCursor));
+        RaiseStateChanged();
+        return true;
     }
 
     /// <summary>
@@ -662,19 +768,30 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    ///     Makes the mark of the finished shape with the note typed so far, as the Enter key in the note does.
+    ///     Makes the mark of the finished shape with the note typed so far, or saves the changed note of an existing
+    ///     mark, as the Enter key in the note does.
     /// </summary>
     public void CommitNote() => FinishNote(withNote: true);
 
     /// <summary>
-    ///     Makes the mark of the finished shape without a note.
+    ///     Makes the mark of the finished shape without a note. It does nothing while the note of an existing mark is
+    ///     being changed, where only saving or canceling the change is offered.
     /// </summary>
-    public void SkipNote() => FinishNote(withNote: false);
+    public void SkipNote()
+    {
+        if (_editingMarkId is not null)
+        {
+            return;
+        }
+
+        FinishNote(withNote: false);
+    }
 
     /// <summary>
-    ///     Throws away the shape that is being drawn, or that waits for its note, and makes no mark.
+    ///     Throws away the shape that is being drawn, or that waits for its note, and makes no mark; or closes the note
+    ///     card of an existing mark and keeps its note and the mark as they were.
     /// </summary>
-    /// <returns><see langword="true" /> when there was a shape to throw away.</returns>
+    /// <returns><see langword="true" /> when there was a shape to throw away or a card to close.</returns>
     public bool Cancel()
     {
         if (!_isDrawing && !_isNoteEditing)
@@ -796,6 +913,7 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
 
         _disposed = true;
         _pictures.CurrentImageChanged -= OnPictureChanged;
+        _marks.NoteChanged -= OnMarkNoteChanged;
         if (_currentTool != AnnotationTool.None)
         {
             _currentTool = AnnotationTool.None;
@@ -870,13 +988,24 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    ///     Makes the mark of the shape that waits for its note.
+    ///     Makes the mark of the shape that waits for its note, or saves the changed note of an existing mark.
     /// </summary>
     /// <param name="withNote">Whether to keep the note that was typed.</param>
     private void FinishNote(bool withNote)
     {
         if (!_isNoteEditing)
         {
+            return;
+        }
+
+        // The note of an existing mark: only the note changes, and no new mark is reported; the registry's event
+        // brings the shown marks up to date
+        if (_editingMarkId is { } markId)
+        {
+            var text = withNote ? _noteText : null;
+            Discard();
+            _ = _marks.ChangeNote(markId, text);
+            RaiseStateChanged();
             return;
         }
 
@@ -909,6 +1038,7 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     {
         _isDrawing = false;
         _isNoteEditing = false;
+        _editingMarkId = null;
         _noteText = string.Empty;
         _stroke = null;
         _draft.Clear();
@@ -921,6 +1051,10 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
     {
         OnPropertyChanged(nameof(IsDrawing));
         OnPropertyChanged(nameof(IsNoteEditing));
+        OnPropertyChanged(nameof(IsEditingMarkNote));
+        OnPropertyChanged(nameof(EditingMarkId));
+        OnPropertyChanged(nameof(NoteBoxName));
+        OnPropertyChanged(nameof(CommitNoteText));
         OnPropertyChanged(nameof(HasDraft));
         OnPropertyChanged(nameof(DraftKind));
         OnPropertyChanged(nameof(DraftPoints));
@@ -1027,6 +1161,14 @@ public sealed class AnnotationOverlayViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HiddenMarksText));
         OnPropertyChanged(nameof(HasMarks));
     }
+
+    /// <summary>
+    ///     Shows a changed note at once: the marks that are shown are read again from the registry, which holds the
+    ///     changed mark.
+    /// </summary>
+    /// <param name="sender">The mark registry.</param>
+    /// <param name="e">The event data.</param>
+    private void OnMarkNoteChanged(object? sender, MarkNoteChangedEventArgs e) => RefreshMarks();
 
     /// <summary>
     ///     Moves a point into the shown picture.

@@ -225,6 +225,19 @@ sections:
             tests:
               - ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft
 
+          - id: CanvasPilot-Chat-EditMarkNotesFromChips
+            title: >-
+              The Chat subsystem shall open the note of a mark for changing on the layer over the picture when the user
+              asks for it from the mark's chip in the message, so that the message that is sent carries the changed note.
+            justification: |
+              The chip is in the message and the note card is on the layer over the picture; neither knows the other,
+              so the chat, which joins the message to the layer, passes the request on. The note that is sent must be
+              the one the user last confirmed.
+            children:
+              - CanvasPilot-ChatPanel-OpenMarkNoteFromChip
+            tests:
+              - ChatSubsystem_EditMarkNoteFromChip_SentPayloadCarriesTheChangedNote
+
           - id: CanvasPilot-Chat-HoldToTalk
             title: >-
               The Chat subsystem shall offer a talk button that listens exactly while it is held, shows the words as they

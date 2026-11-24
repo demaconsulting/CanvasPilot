@@ -20,6 +20,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -326,6 +327,85 @@ public sealed class ComposerEditorSupportTests : IDisposable
         Assert.Equal("Mark 3 on the picture", ToolTip.GetTip(views[3]));
         Assert.Equal(4, views.Select(view => view.FindControl<Avalonia.Controls.Shapes.Path>("IconPath")!.Data!.Bounds.ToString()).Distinct().Count());
         Assert.Same(chips[2], views[2].Chip);
+    }
+
+    /// <summary>
+    ///     Test that the tooltip of a mark's chip adds the mark's note after "Mark N on the picture", and stays as it was
+    ///     without a note.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChipView_Show_MarkWithNote_TooltipAddsTheNote()
+    {
+        // Arrange: the chip of mark 2
+        var mark = new MarkChip(Guid.NewGuid(), 2);
+        var view = new ChipView();
+
+        // Act: show it with a note, then with none, then with an empty one
+        view.Show(mark, null, "the door is blocked");
+        var withNote = ToolTip.GetTip(view);
+        view.Show(mark, null);
+        var withoutNote = ToolTip.GetTip(view);
+        view.Show(mark, null, string.Empty);
+        var emptyNote = ToolTip.GetTip(view);
+
+        // Assert: the note follows the usual text, and no note leaves the usual text
+        Assert.Equal("Mark 2 on the picture: the door is blocked", withNote);
+        Assert.Equal("Mark 2 on the picture", withoutNote);
+        Assert.Equal("Mark 2 on the picture", emptyNote);
+        Assert.Equal("Mark 2 on the picture: x", ChipView.GetMarkToolTip(mark, "x"));
+        Assert.Throws<ArgumentNullException>(() => ChipView.GetMarkToolTip(null!, "x"));
+    }
+
+    /// <summary>
+    ///     Test that a double-click on a mark's chip and the Edit note item of its context menu, which is named for a
+    ///     screen reader and shows F2, ask to change the note, only for a mark's chip whose note may be changed.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChipView_DoubleClickAndEditNoteItem_RaiseEditNoteRequestedOnlyForEditableMarkChips()
+    {
+        // Arrange: an editable mark chip, a mark chip of a sent message, and an editable file chip, in a window
+        var editable = new ChipView { IsNoteEditable = true };
+        editable.Show(new MarkChip(Guid.NewGuid(), 1), null);
+        var sent = new ChipView();
+        sent.Show(new MarkChip(Guid.NewGuid(), 2), null);
+        var file = new ChipView { IsNoteEditable = true };
+        file.Show(new FileChip(Path.Combine(_folder, "f.txt")), null);
+        var window = new Window { Content = new StackPanel { Children = { editable, sent, file } } };
+        window.Show();
+        var requests = new List<ChipView>();
+        foreach (var view in new[] { editable, sent, file })
+        {
+            view.EditNoteRequested += (sender, _) => requests.Add((ChipView)sender!);
+        }
+
+        // Act: double-click each chip on its label, and choose the menu item of the editable chip
+        foreach (var view in new[] { editable, sent, file })
+        {
+            var label = view.FindControl<TextBlock>("LabelText")!;
+            var center = label.TranslatePoint(new Point(label.Bounds.Width / 2, label.Bounds.Height / 2), window)!.Value;
+            window.MouseDown(center, MouseButton.Left);
+            window.MouseUp(center, MouseButton.Left);
+            window.MouseDown(center, MouseButton.Left);
+            window.MouseUp(center, MouseButton.Left);
+        }
+
+        var item = Assert.IsType<MenuItem>(Assert.Single(editable.ContextMenu!.Items));
+        item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        window.Close();
+
+        // Assert: two requests from the editable mark chip; only it has the menu, named and showing F2
+        Assert.Equal([editable, editable], requests);
+        Assert.Null(sent.ContextMenu);
+        Assert.Null(file.ContextMenu);
+        Assert.Equal("Edit note…", item.Header);
+        Assert.Equal(new KeyGesture(Key.F2), item.InputGesture);
+        Assert.Equal("Edit the note of Mark 1", Avalonia.Automation.AutomationProperties.GetName(item));
+        Assert.Equal("ComposerChipEditNote", Avalonia.Automation.AutomationProperties.GetAutomationId(item));
+
+        // Act / Assert: turning the change of notes off takes the menu away
+        editable.IsNoteEditable = false;
+        Assert.Null(editable.ContextMenu);
+        Assert.False(editable.IsNoteEditable);
     }
 
     /// <summary>

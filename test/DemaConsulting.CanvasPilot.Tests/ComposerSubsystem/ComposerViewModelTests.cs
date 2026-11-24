@@ -495,6 +495,133 @@ public sealed class ComposerViewModelTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the composer gives the current note of a mark from its registry and passes each change of a note
+    ///     on to its observers, until it is disposed.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_GetMarkNote_NoteChangedInRegistry_IsGivenAndAnnounced()
+    {
+        // Arrange: a mark with a note whose chip is in the message, and an observer of note changes
+        var mark = _marks.Add(AnnotationTestPictures.Picture(), MarkKind.Rectangle, [new RenderPoint(10, 10), new RenderPoint(60, 40)], "before");
+        _vm.AddMark(mark);
+        var announced = new List<Mark>();
+        _vm.MarkNoteChanged += (_, e) => announced.Add(e.Mark);
+        var before = _vm.GetMarkNote(mark.Id);
+
+        // Act: change the note in the registry
+        var changed = _marks.ChangeNote(mark.Id, "after");
+
+        // Assert: the composer gave the note before and after, announced the change once, and knows no stranger
+        Assert.Equal("before", before);
+        Assert.Equal("after", _vm.GetMarkNote(mark.Id));
+        Assert.Equal([changed!], announced);
+        Assert.Null(_vm.GetMarkNote(Guid.NewGuid()));
+
+        // Act: dispose the composer and change the note again
+        _vm.Dispose();
+        _marks.ChangeNote(mark.Id, "later");
+
+        // Assert: nothing more was announced
+        Assert.Single(announced);
+    }
+
+    /// <summary>
+    ///     Test that a request to change the note of a mark whose chip is in an editable message is passed on with the
+    ///     mark, and that it changes neither the message, the caret, the status, nor the undo history.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_RequestMarkNoteEdit_ChipInEditableMessage_RaisesRequestWithoutAStep()
+    {
+        // Arrange: a message with words and a mark chip, and an observer of requests and changes
+        _vm.InsertTyped("see");
+        var mark = NewMark();
+        _vm.AddMark(mark);
+        _vm.Undo();
+        _vm.Redo();
+        var requested = new List<Guid>();
+        var changed = 0;
+        _vm.MarkNoteEditRequested += (_, e) => requested.Add(e.MarkId);
+        _vm.Changed += (_, _) => changed++;
+        var before = (_vm.Document.FlatText, _vm.CaretOffset, _vm.CanUndo, _vm.CanRedo, _vm.StatusText);
+
+        // Act: ask to change the note of the mark
+        var passed = _vm.RequestMarkNoteEdit(mark.Id);
+
+        // Assert: the request was passed on once with the mark, and nothing of the message changed
+        Assert.True(passed);
+        Assert.Equal([mark.Id], requested);
+        Assert.Equal(0, changed);
+        Assert.Equal(before, (_vm.Document.FlatText, _vm.CaretOffset, _vm.CanUndo, _vm.CanRedo, _vm.StatusText));
+    }
+
+    /// <summary>
+    ///     Test that a request to change a note is refused for a mark without a chip in the message, while no project is
+    ///     open, and while the message is being sent.
+    /// </summary>
+    [Fact]
+    public async Task ComposerViewModel_RequestMarkNoteEdit_NoChipNoProjectOrSending_IsRefused()
+    {
+        // Arrange: a mark with a chip, a mark without one, and an observer of requests
+        var withChip = NewMark();
+        var withoutChip = NewMark();
+        _vm.AddMark(withChip);
+        var requested = 0;
+        _vm.MarkNoteEditRequested += (_, _) => requested++;
+
+        // Act: ask for the mark without a chip, then for the other while a send waits in the builder
+        var noChip = _vm.RequestMarkNoteEdit(withoutChip.Id);
+        _builder.Gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var send = _vm.SendAsync(TestContext.Current.CancellationToken);
+        Assert.True(SpinWait.SpinUntil(() => _builder.Messages.Count == 1, TimeSpan.FromSeconds(10)));
+        var sending = _vm.RequestMarkNoteEdit(withChip.Id);
+        _builder.Gate.SetResult();
+        await send;
+
+        // Act: put a chip in a new message, then close the project and ask again
+        var next = NewMark();
+        _vm.AddMark(next);
+        _vm.SetProject(null);
+        var noProject = _vm.RequestMarkNoteEdit(next.Id);
+
+        // Assert: every request was refused and none was passed on
+        Assert.False(noChip);
+        Assert.False(sending);
+        Assert.False(noProject);
+        Assert.Equal(0, requested);
+    }
+
+    /// <summary>
+    ///     Test that F2 beside a mark chip asks for the mark of the chip just before the caret, or else just after it, and
+    ///     for nothing when no mark chip is beside the caret.
+    /// </summary>
+    [Fact]
+    public void ComposerViewModel_RequestMarkNoteEditAtCaret_ChipBesideCaret_RequestsThatMark()
+    {
+        // Arrange: two mark chips in the row above the words "hi"
+        var first = NewMark();
+        var second = NewMark();
+        _vm.AddMark(first);
+        _vm.AddMark(second);
+        _vm.InsertTyped("hi");
+        var requested = new List<Guid>();
+        _vm.MarkNoteEditRequested += (_, e) => requested.Add(e.MarkId);
+
+        // Act: put the caret before the first chip, between the chips, after the second chip, and in the words
+        _vm.SetSelection(0);
+        var atStart = _vm.RequestMarkNoteEditAtCaret();
+        _vm.SetSelection(1);
+        var between = _vm.RequestMarkNoteEditAtCaret();
+        _vm.SetSelection(2);
+        var afterSecond = _vm.RequestMarkNoteEditAtCaret();
+        _vm.SetSelection(4);
+        var inWords = _vm.RequestMarkNoteEditAtCaret();
+
+        // Assert: the chip after the caret at the start, the one before it otherwise, and nothing in the words
+        Assert.Equal([true, true, true, false], new[] { atStart, between, afterSecond, inWords });
+        Assert.Equal([first.Id, first.Id, second.Id], requested);
+    }
+
+    /// <summary>
     ///     Test that deleting a chip is one step and that undo puts it back at the same offset.
     /// </summary>
     [Fact]

@@ -50,8 +50,8 @@ Available now:
   dictation (hold F9 by default; you can choose another key on the Speech page), attach files by drag and drop, paste,
   or the paperclip, with folders and images as inline chips, and undo and redo in fine-grained steps
 - **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows from a
-  floating tool bar, numbered and with notes; the marks are embedded in the message with crops and the source elements
-  under each mark
+  floating tool bar, numbered and with notes that show on the picture and can be changed until the message is sent;
+  the marks are embedded in the message with crops and the source elements under each mark
 - **Drawing knowledge**: Browse CanvasNet's built-in cards and CanvasPilot's own project guide from the Help menu
 - **Style kits**: Reusable palettes, fonts, size presets, and example images from the program, your folder, the project,
   or a team folder; export at preset sizes and check a picture against the style

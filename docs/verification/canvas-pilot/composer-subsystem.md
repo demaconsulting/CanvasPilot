@@ -45,6 +45,9 @@ project. No network, display, or special permission is needed.
 - The clearing of the marks takes every mark chip out of the message and no visible mark remains (the user interface
   test of the annotation toolbar over the real panel and composer), and the empty message shows its placeholder in the
   chat panel until text is typed (the user interface test of the chat panel).
+- Through the editing view, the tooltip of a mark's chip shows the mark's note and follows each change of it; a
+  double-click on the chip, the Edit note item of its menu, and F2 beside it each ask once for the mark of the chip,
+  without a change of the message or its undo history.
 
 ### Test Scenarios
 
@@ -135,3 +138,13 @@ runs the real composer through the real chat panel: two marks are drawn and two 
 the clear button of the toolbar takes both out and leaves no visible mark. It is the evidence of the removal of all
 mark chips, described in the verification of the `ComposerViewModel` unit. This scenario is tested by
 `AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage`.
+
+**ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ChipTooltipFollows**: A mark with a note is added after some words
+in the editing view; the note is changed in the registry and then taken away. The tooltip of the chip says
+`Mark 1 on the picture: first`, then `...: second`, then `Mark 1 on the picture`, and the message stays the chip, a line
+feed, and the words. This scenario is tested by `ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ChipTooltipFollows`.
+
+**ComposerSubsystem_RequestMarkNoteEdit_DoubleClickMenuAndF2_AskForTheMarkOfTheChip**: A mark chip stands above the
+words `go`. Two quick clicks on the chip, the Edit note item of its context menu, and F2 with the caret after the chip
+each raise one request for the mark of the chip; the message and what can be undone and redone are as before. This
+scenario is tested by `ComposerSubsystem_RequestMarkNoteEdit_DoubleClickMenuAndF2_AskForTheMarkOfTheChip`.

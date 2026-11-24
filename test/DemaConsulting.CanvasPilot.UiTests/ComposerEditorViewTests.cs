@@ -427,6 +427,79 @@ public sealed class ComposerEditorViewTests
     }
 
     /// <summary>
+    ///     Test that the chip of a mark shows the mark's note in its tooltip, and the new note as soon as the note of the
+    ///     mark changes, without a change of the message or a step of its history.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_MarkNoteChanged_ChipTooltipShowsTheNewNote()
+    {
+        // Arrange: a mark with a note whose chip is in the message
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "old note");
+        harness.ViewModel.AddMark(mark);
+        harness.Layout();
+        var before = ToolTip.GetTip(Assert.Single(harness.Chips));
+        var canUndo = harness.ViewModel.CanUndo;
+
+        // Act: change the note of the mark
+        harness.Marks.ChangeNote(mark.Id, "new note");
+        harness.Layout();
+
+        // Assert: the chip tells the new note, and the message and its history are as they were
+        Assert.Equal("Mark 1 on the picture: old note", before);
+        var chip = Assert.Single(harness.Chips);
+        Assert.Equal("Mark 1 on the picture: new note", ToolTip.GetTip(chip));
+        Assert.True(chip.IsNoteEditable);
+        Assert.Equal("#\n", harness.ReadableMessage);
+        Assert.Equal(canUndo, harness.ViewModel.CanUndo);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that a double-click on a mark's chip and F2 with the caret beside it ask the view model to change the note
+    ///     of that mark, that F2 elsewhere asks for nothing, and that the message stays as it was.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_MarkChipDoubleClickedOrF2_AsksToEditTheNoteOfThatMark()
+    {
+        // Arrange: two mark chips above the words "hi", and an observer of the requests
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var first = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        var second = harness.Marks.Add(picture, MarkKind.Ellipse, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        harness.ViewModel.AddMark(first);
+        harness.ViewModel.AddMark(second);
+        harness.TypeEach("hi");
+        harness.Layout();
+        var requested = new List<Guid>();
+        harness.ViewModel.MarkNoteEditRequested += (_, e) => requested.Add(e.MarkId);
+        var message = harness.Message;
+
+        // Act: double-click the second chip on its label
+        var label = harness.Chips[1].FindControl<TextBlock>("LabelText")!;
+        var center = label.TranslatePoint(new Point(label.Bounds.Width / 2, label.Bounds.Height / 2), harness.Window)!.Value;
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Layout();
+        var selectionAfterDoubleClick = harness.Editor.SelectionLength;
+
+        // Act: press F2 right after the first chip, and in the words
+        harness.MoveCaret(1);
+        harness.Press(PhysicalKey.F2);
+        harness.MoveCaret(harness.Message.Length - 1);
+        harness.Press(PhysicalKey.F2);
+
+        // Assert: the second mark by the double-click, the first by F2, nothing in the words, no selection, same message
+        Assert.Equal([second.Id, first.Id], requested);
+        Assert.Equal(0, selectionAfterDoubleClick);
+        Assert.Equal(message, harness.Message);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
     ///     Test that the editing surface is a named text field for assistive technology that reads the message with its
     ///     chips named, and that setting its value replaces the message.
     /// </summary>

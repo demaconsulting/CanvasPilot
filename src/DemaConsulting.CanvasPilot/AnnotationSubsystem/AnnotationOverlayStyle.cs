@@ -98,4 +98,68 @@ internal static class AnnotationOverlayStyle
     {
         return Math.Min(Math.Max(12, stroke * 5), shaftLength);
     }
+
+    /// <summary>
+    ///     Gets the size of the text of the note that is shown beside the badge of a mark, which grows with the badge.
+    ///     The note label is drawn only on the screen, never on the pictures sent to the assistant, so the payload
+    ///     subsystem has no copy of this.
+    /// </summary>
+    /// <param name="width">The width of the picture in pixels.</param>
+    /// <param name="height">The height of the picture in pixels.</param>
+    /// <returns>The size in pixels, from 8 to 18.</returns>
+    public static double NoteFontSize(int width, int height)
+    {
+        return Math.Round(BadgeRadius(width, height) * 0.9);
+    }
+
+    /// <summary>
+    ///     Gets the widest the note label beside a badge may be, so that a long note stays a short line on the picture.
+    /// </summary>
+    /// <param name="width">The width of the picture in pixels.</param>
+    /// <param name="height">The height of the picture in pixels.</param>
+    /// <returns>The width in pixels: 40 % of the picture, at least six and at most twenty-four badge radii.</returns>
+    public static double NoteMaxWidth(int width, int height)
+    {
+        var radius = BadgeRadius(width, height);
+        return Math.Max(radius * 6, Math.Min(width * 0.4, radius * 24));
+    }
+
+    /// <summary>
+    ///     Gets where the note label of a mark goes: beside its badge on the side that has room, at the height of the
+    ///     badge, and no wider than the room it has inside the picture.
+    /// </summary>
+    /// <param name="box">The bounding box of the mark.</param>
+    /// <param name="width">The width of the picture in pixels.</param>
+    /// <param name="height">The height of the picture in pixels.</param>
+    /// <returns>The place and the widest width of the label.</returns>
+    public static NoteLabelLayout NoteLabel(RenderBox box, int width, int height)
+    {
+        const double inset = 2;
+        var center = BadgeCenter(box, width, height);
+        var radius = BadgeRadius(width, height);
+        var gap = Math.Max(2, radius * 0.3);
+        var maximum = NoteMaxWidth(width, height);
+
+        // The room to the right and to the left of the badge, inside the picture
+        var right = width - inset - (center.X + radius + gap);
+        var left = center.X - radius - gap - inset;
+
+        // The right side is preferred; the left is used when the right is too narrow and the left has more room
+        var useRight = right >= Math.Min(maximum, radius * 6) || right >= left;
+        var room = useRight ? right : left;
+        var edge = useRight ? center.X + radius + gap : center.X - radius - gap;
+        return new NoteLabelLayout(edge, center.Y - radius, radius * 2, Math.Max(0, Math.Min(maximum, room)), !useRight);
+    }
 }
+
+/// <summary>
+///     Where the note label of a mark goes on the picture, in picture pixels.
+/// </summary>
+/// <param name="Edge">
+///     The left edge of the label when it is to the right of the badge, or its right edge when it is to the left.
+/// </param>
+/// <param name="Top">The top of the label, which is the top of the badge.</param>
+/// <param name="Height">The height of the label, which is the height of the badge, so the two are centered together.</param>
+/// <param name="MaxWidth">The widest the label may be, so that it stays inside the picture; zero or more.</param>
+/// <param name="LeftOfBadge">Whether the label is to the left of the badge.</param>
+internal readonly record struct NoteLabelLayout(double Edge, double Top, double Height, double MaxWidth, bool LeftOfBadge);

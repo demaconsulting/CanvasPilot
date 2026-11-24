@@ -96,6 +96,8 @@ a requirement):
   inspector for it shows the same text as the payload describer and two pictures of the sizes of the payload's.
 - A message that cannot be sent because an attachment has gone leaves the draft with its text and chip, adds nothing to
   the transcript, and says which file is the problem.
+- A request from a mark's chip opens the note of the mark on the layer with its note, and the payload of the message
+  sent after the note was changed and confirmed carries the changed note.
 - Words held to talk are shown while they are recognized, are added as one block at the caret on release, and are kept
   as dictated words, apart from the typed words, in the payload of the sent message.
 - A message that is sent is given to the copilot with its payload; while the turn runs the composer cannot send but can
@@ -169,6 +171,12 @@ and one image that has the picture's fingerprint and one mark with the node `Sta
 description is the describer's text, and its two pictures have the byte counts of the annotated picture and of the area
 around the mark. This scenario is tested by
 `ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft`.
+
+**ChatSubsystem_EditMarkNoteFromChip_SentPayloadCarriesTheChangedNote**: A diagram is drawn and shown to the real layer,
+and a rectangle with the note `too small` is drawn, so the panel puts its chip in the message. The chip asks to change
+the note; the layer opens with `too small`, the note is changed to `make it twice as big` and confirmed, and the message
+is sent through the real payload builder. The payload holds mark 1 with the changed note. This scenario is tested by
+`ChatSubsystem_EditMarkNoteFromChip_SentPayloadCarriesTheChangedNote`.
 
 **ChatSubsystem_SendMessage_AttachmentCannotBeStaged_KeepsDraftAndTranscriptUnchanged**: A file is dropped into a
 message and deleted before the message is sent. Sending adds nothing to the transcript, the draft keeps its typed text

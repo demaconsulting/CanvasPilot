@@ -25,6 +25,29 @@ using DemaConsulting.CanvasPilot.PreviewSubsystem;
 namespace DemaConsulting.CanvasPilot.AnnotationSubsystem;
 
 /// <summary>
+///     The data of the <see cref="MarkRegistry.NoteChanged" /> event: the mark as it is after its note changed.
+/// </summary>
+public sealed class MarkNoteChangedEventArgs : EventArgs
+{
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="MarkNoteChangedEventArgs" /> class.
+    /// </summary>
+    /// <param name="mark">The mark as it is after the change.</param>
+    /// <exception cref="ArgumentNullException">Thrown when the mark is <see langword="null" />.</exception>
+    public MarkNoteChangedEventArgs(Mark mark)
+    {
+        ArgumentNullException.ThrowIfNull(mark);
+        Mark = mark;
+    }
+
+    /// <summary>
+    ///     Gets the mark as it is after the change: the same identity, number, geometry, and picture, with the new note.
+    ///     It is already in the mark registry.
+    /// </summary>
+    public Mark Mark { get; }
+}
+
+/// <summary>
 ///     Holds the marks that the user has drawn for the message being composed, each pinned to the exact picture it was
 ///     drawn on, numbered in the order they were made, with its geometry in the pixels of that picture and an optional
 ///     short note.
@@ -42,6 +65,11 @@ namespace DemaConsulting.CanvasPilot.AnnotationSubsystem;
 ///         that the user undid and drew again does not take over the number of the one that was undone. The registry
 ///         is emptied when the message is sent. It is not safe for concurrent use: the user interface thread owns it;
 ///         <see cref="Marks" /> gives an immutable copy that other threads may read.
+///     </para>
+///     <para>
+///         A mark's number, geometry, and picture never change. Its note may be changed while the mark is in the
+///         registry (<see cref="ChangeNote" />), which replaces the mark with a new instance of the same identity, so
+///         copies handed out earlier, such as those of a message that was sent, keep the note they had.
 ///     </para>
 /// </remarks>
 public sealed class MarkRegistry
@@ -76,6 +104,12 @@ public sealed class MarkRegistry
     ///     were made, whether or not their chips are still in the message.
     /// </summary>
     public ImmutableArray<Mark> Marks => [.. _marks];
+
+    /// <summary>
+    ///     Occurs after the note of a mark changed through <see cref="ChangeNote" />. Raised on the thread of the
+    ///     caller, which is the user interface thread, after the registry holds the changed mark.
+    /// </summary>
+    public event EventHandler<MarkNoteChangedEventArgs>? NoteChanged;
 
     /// <summary>
     ///     Makes a mark on a picture and adds it to the registry.
@@ -115,6 +149,46 @@ public sealed class MarkRegistry
     public Mark? Find(Guid markId)
     {
         return _marks.FirstOrDefault(mark => mark.Id == markId);
+    }
+
+    /// <summary>
+    ///     Changes the note of a mark that the registry holds, keeping everything else about the mark.
+    /// </summary>
+    /// <remarks>
+    ///     The mark is replaced, at its place in the order, by a new immutable instance with the same identity, number,
+    ///     geometry, picture, and time of creation and the cleaned note, and <see cref="NoteChanged" /> is raised once.
+    ///     Marks and lists handed out before the change keep the note they had. Nothing changes, and nothing is
+    ///     raised, for a mark the registry does not hold or for a note that is the same once cleaned. Called on the
+    ///     user interface thread, which owns the registry.
+    /// </remarks>
+    /// <param name="markId">The identity of the mark, as carried by its chip.</param>
+    /// <param name="note">The new note, or <see langword="null" /> for none; cleaned as by <see cref="CleanNote" />.</param>
+    /// <returns>
+    ///     The mark as it is after the call (the new instance, or the unchanged one when the note is the same), or
+    ///     <see langword="null" /> when the registry holds no such mark.
+    /// </returns>
+    public Mark? ChangeNote(Guid markId, string? note)
+    {
+        // Find the mark; an unknown one changes nothing
+        var index = _marks.FindIndex(mark => mark.Id == markId);
+        if (index < 0)
+        {
+            return null;
+        }
+
+        // Clean the note as for a new mark; the same note changes nothing and tells nobody
+        var old = _marks[index];
+        var cleaned = CleanNote(note);
+        if (string.Equals(cleaned, old.Note, StringComparison.Ordinal))
+        {
+            return old;
+        }
+
+        // Replace the mark at its place with a new instance of the same identity, then tell the observers
+        var changed = new Mark(old.Id, old.Number, old.Geometry, cleaned, old.Snapshot, old.CreatedUtc);
+        _marks[index] = changed;
+        NoteChanged?.Invoke(this, new MarkNoteChangedEventArgs(changed));
+        return changed;
     }
 
     /// <summary>

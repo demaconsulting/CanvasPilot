@@ -12,7 +12,7 @@ package CanvasPilot_MarkRegistry {
     }
 
     part def MarkRegistry {
-        doc /* Holds the marks the user has drawn for the message being composed. Each mark is pinned to the exact picture it was drawn on, numbered one more than the largest number so far, described by its geometry in the pixels of its picture in one normal form (corners, tail and head, or a simplified stroke, every point inside the picture) and an optional note of one short line, and shown only on its own picture while its chip is in the message. The mark and geometry records are documented as supporting value types in this unit's design. */
+        doc /* Holds the marks the user has drawn for the message being composed. Each mark is pinned to the exact picture it was drawn on, numbered one more than the largest number so far, described by its geometry in the pixels of its picture in one normal form (corners, tail and head, or a simplified stroke, every point inside the picture) and an optional note of one short line, and shown only on its own picture while its chip is in the message. The note of a mark it holds can be changed, which replaces the mark with a new instance of the same identity, number, geometry, and picture, leaves the marks handed out before as they were, and tells the observers. The mark and geometry records are documented as supporting value types in this unit's design. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

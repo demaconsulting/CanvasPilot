@@ -28,6 +28,7 @@ using Avalonia.Controls.Shapes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.VisualTree;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 using Path = Avalonia.Controls.Shapes.Path;
@@ -37,7 +38,9 @@ namespace DemaConsulting.CanvasPilot.AnnotationSubsystem;
 ///     View of the layer over the shown picture, bound to an <see cref="AnnotationOverlayViewModel" /> by the view
 ///     locator. It is laid out in the pixels of the picture, so the pointer's position on it is already a point of the
 ///     picture at any zoom. It reports the pointer and the keys to the view model and draws what the view model holds:
-///     the shown marks with their numbers, the shape that is being drawn, and the cursor of the keyboard.
+///     the shown marks with their numbers and notes, the shape that is being drawn, and the cursor of the keyboard. The
+///     badge, line, and note label of a shown mark answer the pointer: they show the whole note as their tooltip, and a
+///     double-click on them with no tool chosen opens the note for changing.
 /// </summary>
 public sealed partial class AnnotationOverlayView : UserControl
 {
@@ -194,14 +197,26 @@ public sealed partial class AnnotationOverlayView : UserControl
 
     /// <summary>
     ///     Starts a shape on a press of the left button while a tool is chosen, and takes the pointer, so that the shape
-    ///     goes on when the pointer leaves the picture.
+    ///     goes on when the pointer leaves the picture. With no tool chosen, a double-click on a mark's badge, line, or
+    ///     note opens its note for changing; any other press is left unhandled for the picture underneath.
     /// </summary>
     /// <param name="sender">The surface.</param>
     /// <param name="e">The press.</param>
     private void OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (_viewModel is not { IsToolActive: true } viewModel || !e.GetCurrentPoint(Surface).Properties.IsLeftButtonPressed)
+        if (_viewModel is not { } viewModel || !e.GetCurrentPoint(Surface).Properties.IsLeftButtonPressed)
         {
+            return;
+        }
+
+        // With no tool chosen the press belongs to the picture underneath, except for a double-click on a mark
+        if (!viewModel.IsToolActive)
+        {
+            if (e.ClickCount == 2 && MarkAt(e.Source) is { } mark && viewModel.BeginEditNote(mark.Id))
+            {
+                e.Handled = true;
+            }
+
             return;
         }
 
@@ -293,17 +308,36 @@ public sealed partial class AnnotationOverlayView : UserControl
     }
 
     /// <summary>
-    ///     Throws the shape away on Escape wherever the focus is, while there is a shape to throw away.
+    ///     Throws the shape away on Escape wherever the focus is, while there is a shape to throw away, and closes the
+    ///     note card of an existing mark, keeping its note.
     /// </summary>
     /// <param name="sender">The window.</param>
     /// <param name="e">The key.</param>
     private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape && _viewModel is { HasDraft: true } viewModel)
+        if (e.Key == Key.Escape && _viewModel is { } viewModel && (viewModel.HasDraft || viewModel.IsNoteEditing))
         {
             viewModel.Cancel();
             e.Handled = true;
         }
+    }
+
+    /// <summary>
+    ///     Finds the mark that an element of the layer belongs to: its badge, its line, or its note label.
+    /// </summary>
+    /// <param name="source">The element the pointer event came from.</param>
+    /// <returns>The mark, or <see langword="null" /> when the element is not part of a shown mark.</returns>
+    private Mark? MarkAt(object? source)
+    {
+        for (var visual = source as Visual; visual is not null && !ReferenceEquals(visual, Surface); visual = visual.GetVisualParent())
+        {
+            if (visual is Control { Tag: Mark mark })
+            {
+                return mark;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>
@@ -328,7 +362,8 @@ public sealed partial class AnnotationOverlayView : UserControl
             return;
         }
 
-        // The lines of every shape first, so that no line is drawn over a number
+        // The lines of every shape first, then the notes, then the numbers, so that nothing is drawn over a number
+        var labels = new List<Control>();
         var badges = new List<Control>();
         foreach (var mark in _viewModel.VisibleMarks)
         {
@@ -336,16 +371,27 @@ public sealed partial class AnnotationOverlayView : UserControl
             var height = mark.Snapshot.Height;
             var path = AddShape(mark.Kind, mark.Geometry.Points, mark.Number, width, height, dashed: false);
             path.Tag = mark;
+            path.IsHitTestVisible = true;
             AutomationProperties.SetAutomationId(path, "AnnotationMarkShape");
             AutomationProperties.SetName(path, Describe(mark));
-            badges.Add(MakeBadge(mark.Number, mark.Geometry.BoundingBox, width, height));
+            SetNoteTip(path, mark);
+            badges.Add(MakeBadge(mark.Number, mark.Geometry.BoundingBox, width, height, mark));
+            if (MakeNoteLabel(mark) is { } label)
+            {
+                labels.Add(label);
+            }
         }
 
         if (_viewModel.HasDraft && _viewModel.DraftPoints.Count > 0 && _viewModel.PictureWidth > 0)
         {
             var path = AddShape(_viewModel.DraftKind, _viewModel.DraftPoints, _viewModel.PendingNumber, _viewModel.PictureWidth, _viewModel.PictureHeight, dashed: true);
             AutomationProperties.SetAutomationId(path, "AnnotationDraftShape");
-            badges.Add(MakeBadge(_viewModel.PendingNumber, BoxOf(_viewModel.DraftPoints), _viewModel.PictureWidth, _viewModel.PictureHeight));
+            badges.Add(MakeBadge(_viewModel.PendingNumber, BoxOf(_viewModel.DraftPoints), _viewModel.PictureWidth, _viewModel.PictureHeight, mark: null));
+        }
+
+        foreach (var label in labels)
+        {
+            MarkLayer.Children.Add(label);
         }
 
         foreach (var badge in badges)
@@ -497,8 +543,12 @@ public sealed partial class AnnotationOverlayView : UserControl
     /// <param name="box">The bounding box of the mark.</param>
     /// <param name="width">The width of the picture.</param>
     /// <param name="height">The height of the picture.</param>
+    /// <param name="mark">
+    ///     The shown mark the badge belongs to, which makes it answer the pointer with the note's tooltip and a
+    ///     double-click; <see langword="null" /> for the badge of the shape under construction, which does not.
+    /// </param>
     /// <returns>The badge, placed on the layer.</returns>
-    private static Border MakeBadge(int number, RenderBox box, int width, int height)
+    private static Border MakeBadge(int number, RenderBox box, int width, int height, Mark? mark)
     {
         var radius = AnnotationOverlayStyle.BadgeRadius(width, height);
         var center = AnnotationOverlayStyle.BadgeCenter(box, width, height);
@@ -511,7 +561,8 @@ public sealed partial class AnnotationOverlayView : UserControl
             Background = new SolidColorBrush(Color.Parse(AnnotationOverlayStyle.ColorOf(number))),
             BorderBrush = White,
             BorderThickness = new Thickness(2),
-            IsHitTestVisible = false,
+            IsHitTestVisible = mark is not null,
+            Tag = mark,
             Child = new TextBlock
             {
                 Text = label,
@@ -526,8 +577,87 @@ public sealed partial class AnnotationOverlayView : UserControl
         AutomationProperties.SetName(badge, $"Mark {label}");
         Canvas.SetLeft(badge, center.X - radius);
         Canvas.SetTop(badge, center.Y - radius);
+        if (mark is not null)
+        {
+            SetNoteTip(badge, mark);
+        }
+
         return badge;
     }
+
+    /// <summary>
+    ///     Makes the label that shows the note of a mark on one line beside its badge, cut short with an ellipsis when
+    ///     it is wider than the room it has inside the picture. Its colors come from the theme in use through the
+    ///     <c>markNote</c> style of the view; its edge has the color of the mark.
+    /// </summary>
+    /// <param name="mark">The shown mark.</param>
+    /// <returns>The label, placed on the layer, or <see langword="null" /> when the mark has no note.</returns>
+    private static Border? MakeNoteLabel(Mark mark)
+    {
+        if (string.IsNullOrEmpty(mark.Note))
+        {
+            return null;
+        }
+
+        // Place the label beside the badge, on the side that has room, as tall as the badge
+        var width = mark.Snapshot.Width;
+        var height = mark.Snapshot.Height;
+        var layout = AnnotationOverlayStyle.NoteLabel(mark.Geometry.BoundingBox, width, height);
+        var label = new Border
+        {
+            Classes = { "markNote" },
+            Tag = mark,
+            Height = layout.Height,
+            MaxWidth = layout.MaxWidth,
+            BorderBrush = new SolidColorBrush(Color.Parse(AnnotationOverlayStyle.ColorOf(mark.Number))),
+            BorderThickness = new Thickness(1),
+            IsHitTestVisible = true,
+            Child = new TextBlock
+            {
+                Text = mark.Note,
+                FontSize = AnnotationOverlayStyle.NoteFontSize(width, height),
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                TextWrapping = TextWrapping.NoWrap,
+                MaxLines = 1,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            },
+        };
+        if (layout.LeftOfBadge)
+        {
+            Canvas.SetRight(label, width - layout.Edge);
+        }
+        else
+        {
+            Canvas.SetLeft(label, layout.Edge);
+        }
+
+        Canvas.SetTop(label, layout.Top);
+        AutomationProperties.SetAutomationId(label, "AnnotationMarkNote");
+        AutomationProperties.SetName(label, string.Create(CultureInfo.InvariantCulture, $"Note of mark {mark.Number}: {mark.Note}"));
+        SetNoteTip(label, mark);
+        return label;
+    }
+
+    /// <summary>
+    ///     Gives an element of a mark the whole note of the mark as its tooltip, when the mark has a note.
+    /// </summary>
+    /// <param name="control">The badge, line, or note label of the mark.</param>
+    /// <param name="mark">The mark.</param>
+    private static void SetNoteTip(Control control, Mark mark)
+    {
+        if (!string.IsNullOrEmpty(mark.Note))
+        {
+            ToolTip.SetTip(control, NoteTip(mark));
+        }
+    }
+
+    /// <summary>
+    ///     Gets the tooltip that shows the whole note of a mark, with its number.
+    /// </summary>
+    /// <param name="mark">A mark with a note.</param>
+    /// <returns>The text, as "Mark 2: the note".</returns>
+    private static string NoteTip(Mark mark) =>
+        string.Create(CultureInfo.InvariantCulture, $"Mark {mark.Number}: {mark.Note}");
 
     /// <summary>
     ///     Adds the cursor of the keyboard: a cross with a white line under it so that it shows on any picture.

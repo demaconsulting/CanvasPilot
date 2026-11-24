@@ -9,7 +9,7 @@ package CanvasPilot_ComposerViewModel {
     private import CanvasPilot_RollingFileLogger::*;
 
     part def ComposerViewModel {
-        doc /* The orchestration of the message being composed, without a window: owns the document, its undo history, the intake of dropped and pasted content, and push-to-talk dictation, connects the marks and the attachments of the open project to the message, and sends it. It makes each action of the user exactly one undo step, offers undo and redo to the Edit menu and the keys, shows the live words while the talk button is held and adds the final words as one dictated block, names what a drop left out, deletes the chips of all marks on request one step each, tells when the editing control shows its placeholder, allows editing only in an open project, and sends the message by putting the attachments into the project and having the message built, keeping the draft when anything fails. The message builder, the undo and redo target, the push-to-talk target, and the picker of files to attach (which the chat panel asks and the main window implements) are interfaces that it owns or implements and are documented as supporting types in this unit's design. */
+        doc /* The orchestration of the message being composed, without a window: owns the document, its undo history, the intake of dropped and pasted content, and push-to-talk dictation, connects the marks and the attachments of the open project to the message, and sends it. It makes each action of the user exactly one undo step, offers undo and redo to the Edit menu and the keys, shows the live words while the talk button is held and adds the final words as one dictated block, names what a drop left out, deletes the chips of all marks on request one step each, gives the note of a mark and tells when it changes, passes on a request to change the note of a mark from its chip without a step of the history, tells when the editing control shows its placeholder, allows editing only in an open project, and sends the message by putting the attachments into the project and having the message built, keeping the draft when anything fails. The message builder, the undo and redo target, the push-to-talk target, and the picker of files to attach (which the chat panel asks and the main window implements) are interfaces that it owns or implements and are documented as supporting types in this unit's design. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -41,7 +41,7 @@ package CanvasPilot_ComposerViewModel {
         // Puts the attachments into the project when the message is sent and removes saved pictures that nothing refers to.
         dependency ComposerViewModel to AttachmentStore;
 
-        // Reads the marks that belong to the message, checks the marks it adds, and empties the marks when the message is sent.
+        // Reads the marks that belong to the message and their notes, follows changes of a note, checks the marks it adds, and empties the marks when the message is sent.
         dependency ComposerViewModel to MarkRegistry;
 
         // Listens while the talk button is held and gives the words, or the reason why it cannot.

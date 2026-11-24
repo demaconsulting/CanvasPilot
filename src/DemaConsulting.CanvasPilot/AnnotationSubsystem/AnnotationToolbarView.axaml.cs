@@ -31,8 +31,9 @@ namespace DemaConsulting.CanvasPilot.AnnotationSubsystem;
 
 /// <summary>
 ///     View of the tool bar of the annotation layer, bound to an <see cref="AnnotationToolbarViewModel" /> by the view
-///     locator: one button per tool, the note of a finished shape with its two buttons, and what is said to the user.
-///     It puts the keyboard focus in the note when a finished shape asks for one, and takes Enter and Escape in it.
+///     locator: one button per tool, the note card with its buttons, and what is said to the user. It puts the keyboard
+///     focus in the note when a finished shape asks for one or the note of a mark is opened for changing, gives the
+///     focus back to where it was when such a change ends, and takes Enter and Escape in the note.
 /// </summary>
 public sealed partial class AnnotationToolbarView : UserControl
 {
@@ -40,6 +41,16 @@ public sealed partial class AnnotationToolbarView : UserControl
     ///     The layer's view model the view is following, or null.
     /// </summary>
     private AnnotationOverlayViewModel? _annotation;
+
+    /// <summary>
+    ///     Whether the note card was open when the view model last reported its state.
+    /// </summary>
+    private bool _wasNoteEditing;
+
+    /// <summary>
+    ///     The element that had the keyboard focus before the note of a mark was opened for changing, or null.
+    /// </summary>
+    private IInputElement? _focusBeforeEdit;
 
     /// <summary>
     ///     The pane that shows the tool bar, whose keys choose the tools, or null.
@@ -132,6 +143,8 @@ public sealed partial class AnnotationToolbarView : UserControl
         }
 
         _annotation = annotation;
+        _wasNoteEditing = _annotation?.IsNoteEditing ?? false;
+        _focusBeforeEdit = null;
         if (_annotation is not null)
         {
             _annotation.PropertyChanged += OnAnnotationPropertyChanged;
@@ -139,27 +152,73 @@ public sealed partial class AnnotationToolbarView : UserControl
     }
 
     /// <summary>
-    ///     Puts the focus in the note when a finished shape starts to wait for it.
+    ///     Puts the focus in the note when a finished shape starts to wait for it, or when the note of a mark is opened
+    ///     for changing; in the latter case the focus goes back to where it was when the card closes.
     /// </summary>
     /// <param name="sender">The layer's view model.</param>
     /// <param name="e">The change details.</param>
     private void OnAnnotationPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(AnnotationOverlayViewModel.IsNoteEditing) && _annotation is { IsNoteEditing: true })
+        if (e.PropertyName != nameof(AnnotationOverlayViewModel.IsNoteEditing) || _annotation is null)
         {
+            return;
+        }
+
+        // The view model raises the property on every change of its state, so only a real change counts
+        var isEditing = _annotation.IsNoteEditing;
+        var opened = isEditing && !_wasNoteEditing;
+        var closed = !isEditing && _wasNoteEditing;
+        _wasNoteEditing = isEditing;
+
+        if (isEditing)
+        {
+            // Remember where the focus was before the note of a mark was opened, to give it back when the card closes
+            if (opened && _annotation.IsEditingMarkNote && _focusBeforeEdit is null)
+            {
+                var focused = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement();
+                if (!ReferenceEquals(focused, NoteBox))
+                {
+                    _focusBeforeEdit = focused;
+                }
+            }
+
             // The note becomes visible in this pass, so the focus is moved after the layout has made it focusable
+            var putCaretAtEnd = opened && _annotation.IsEditingMarkNote;
             Dispatcher.UIThread.Post(() =>
             {
                 if (_annotation is { IsNoteEditing: true })
                 {
                     NoteBox.Focus();
+                    if (putCaretAtEnd)
+                    {
+                        NoteBox.CaretIndex = NoteBox.Text?.Length ?? 0;
+                    }
+                }
+            });
+        }
+        else if (closed && _focusBeforeEdit is not null)
+        {
+            // Give the focus back once the card is gone, unless another note was opened at once
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_annotation is { IsNoteEditing: true } || _focusBeforeEdit is null)
+                {
+                    return;
+                }
+
+                var target = _focusBeforeEdit;
+                _focusBeforeEdit = null;
+                if (target is Visual visual && TopLevel.GetTopLevel(visual) is not null)
+                {
+                    target.Focus();
                 }
             });
         }
     }
 
     /// <summary>
-    ///     Makes the mark on Enter and throws the shape away on Escape while the focus is in the note.
+    ///     Confirms the note on Enter and cancels on Escape while the focus is in the note: for a new shape that makes
+    ///     the mark or throws the shape away; for an existing mark that saves the note or keeps the old one.
     /// </summary>
     /// <param name="sender">The note.</param>
     /// <param name="e">The key.</param>

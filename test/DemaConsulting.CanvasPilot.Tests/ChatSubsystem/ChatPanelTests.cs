@@ -331,6 +331,40 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a request from a mark's chip in the message opens the mark's note for changing on the layer, and
+    ///     that the note confirmed there is the one the composer gives for the chip.
+    /// </summary>
+    [Fact]
+    public void ChatPanelViewModel_MarkNoteEditRequested_OpensTheNoteOnTheLayer()
+    {
+        // Arrange: a mark with a note drawn on the layer, whose chip the panel put in the message
+        _annotation.SelectTool(AnnotationTool.Rectangle);
+        _annotation.BeginStroke(new RenderPoint(10, 10));
+        _annotation.EndStroke(new RenderPoint(50, 40));
+        _annotation.NoteText = "first";
+        _annotation.CommitNote();
+        _annotation.SelectTool(AnnotationTool.None);
+        var chip = Assert.Single(_composer.Document.Chips.OfType<MarkChip>());
+
+        // Act: ask from the chip to change the note
+        var requested = _composer.RequestMarkNoteEdit(chip.MarkId);
+
+        // Assert: the layer opened the note of that mark, filled with it
+        Assert.True(requested);
+        Assert.True(_annotation.IsEditingMarkNote);
+        Assert.Equal(chip.MarkId, _annotation.EditingMarkId);
+        Assert.Equal("first", _annotation.NoteText);
+
+        // Act: change the note on the layer and confirm it
+        _annotation.NoteText = "second";
+        _annotation.CommitNote();
+
+        // Assert: the composer gives the changed note for the chip, and the message is unchanged
+        Assert.Equal("second", _composer.GetMarkNote(chip.MarkId));
+        Assert.Equal(chip, Assert.Single(_composer.Document.Chips.OfType<MarkChip>()));
+    }
+
+    /// <summary>
     ///     Test that the rows that open a group are the first row and the first row of the copilot after a notice, so that the
     ///     name of the copilot is shown once for a run of replies and tools.
     /// </summary>
@@ -687,7 +721,8 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a disposed panel no longer follows the composer, so a message sent afterwards is not added.
+    ///     Test that a disposed panel no longer follows the composer, so a message sent afterwards is not added and a
+    ///     request from a mark's chip to change its note opens nothing on the layer.
     /// </summary>
     [Fact]
     public async Task ChatPanelViewModel_Dispose_StopsFollowingTheComposer()
@@ -695,8 +730,19 @@ public sealed class ChatPanelTests : IDisposable
         // Arrange: a panel that is disposed
         using var composer = new ComposerViewModel(_builder, _marks, _dictation);
         composer.SetProject(_project);
-        var panel = new ChatPanelViewModel(composer, _marks, new AnnotationOverlayViewModel(_marks, _source, _ => { }), _markImages);
+        var annotation = new AnnotationOverlayViewModel(_marks, _source, _ => { });
+        var panel = new ChatPanelViewModel(composer, _marks, annotation, _markImages);
         panel.Dispose();
+
+        // Act: ask to change the note of a mark from its chip
+        var mark = _marks.Add(_source.CurrentImage!, MarkKind.Rectangle, [new RenderPoint(5, 5), new RenderPoint(40, 30)], "note");
+        composer.AddMark(mark);
+        annotation.SetActiveMarkIds(composer.MarkChipIds);
+        var requested = composer.RequestMarkNoteEdit(mark.Id);
+
+        // Assert: the composer passed the request on, but the layer did not follow
+        Assert.True(requested);
+        Assert.False(annotation.IsNoteEditing);
 
         // Act: send a message in the composer
         composer.InsertTyped("later");
