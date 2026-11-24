@@ -330,6 +330,18 @@ public class AgentKitTests
         var windowProblems = tooLarge.Validate(good, ModelCapabilities.ToolCalls);
         var toolProblems = new ModelSettings("plain:latest").Validate(noTools, ModelCapabilities.ToolCalls);
         var disabledProblems = new ModelSettings("off:latest").Validate(disabled, ModelCapabilities.ToolCalls);
+
+        // Act: a model that offers two context sizes (tiers), the larger one, a size that it does not offer, and a model with none
+        var tiered = Model("opus:latest", ModelCapabilities.ToolCalls, [], 1_000_000) with
+        {
+            Adjustments = ModelAdjustments.ContextWindow | ModelAdjustments.ContextTier,
+            ContextTiers = [new ModelContextTier("default", "Standard", 328_000), new ModelContextTier("long_context", "Long context", 1_000_000)],
+            DefaultContextTier = "default",
+        };
+        var largerTierProblems = new ModelSettings("opus:latest") { ContextTier = "long_context" }.Validate(tiered, ModelCapabilities.ToolCalls);
+        var badTierProblems = new ModelSettings("opus:latest") { ContextTier = "huge" }.Validate(tiered, ModelCapabilities.ToolCalls);
+        var noTierProblems = new ModelSettings("gemma3:latest") { ContextTier = "long_context" }.Validate(good, ModelCapabilities.ToolCalls);
+        var tierSelection = new ModelSettings("opus:latest") { ContextTier = "long_context" }.Bind(tiered, ModelCapabilities.ToolCalls);
         var selection = await catalog.SelectAsync(new ModelSettings("gemma3") { ReasoningEffort = "low" }, ModelCapabilities.ToolCalls, TestContext.Current.CancellationToken);
         var missing = await Assert.ThrowsAsync<ModelSettingsException>(
             () => catalog.SelectAsync(new ModelSettings("absent"), ModelCapabilities.ToolCalls, TestContext.Current.CancellationToken));
@@ -344,6 +356,13 @@ public class AgentKitTests
         Assert.Contains("is not available from provider 'test'", missing.Problems.Single(), StringComparison.Ordinal);
         Assert.Throws<ModelSettingsException>(() => badEffort.Bind(good, ModelCapabilities.ToolCalls));
         Assert.Throws<ArgumentException>(() => new ModelSettings(" "));
+
+        // Assert: a context size that the model offers is accepted and kept by the selection; one that it does not offer, and
+        // one for a model with no sizes, are refused with a sentence
+        Assert.Empty(largerTierProblems);
+        Assert.Contains("huge", Assert.Single(badTierProblems), StringComparison.Ordinal);
+        Assert.Single(noTierProblems);
+        Assert.Equal("long_context", tierSelection.Settings.ContextTier);
     }
 
     /// <summary>

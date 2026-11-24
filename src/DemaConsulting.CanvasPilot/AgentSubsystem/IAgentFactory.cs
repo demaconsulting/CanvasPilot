@@ -163,4 +163,29 @@ public interface IAgentFactory : IAsyncDisposable
     /// <param name="cancellationToken">A token that cancels the deletion.</param>
     /// <returns>A task that completes when the session is deleted.</returns>
     Task DeleteSessionAsync(AgentSession session, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    ///     Tells what the provider calls the session of a conversation and where it keeps what it recorded of it, for the log
+    ///     and for the notice of an error. A provider that has no session of its own, and a session that has not run yet,
+    ///     give <see cref="AgentSessionInfo.None" />.
+    /// </summary>
+    /// <param name="session">The session of the conversation.</param>
+    /// <returns>The identifier of the session at the provider and the file where the provider records its events.</returns>
+    AgentSessionInfo DescribeSession(AgentSession session) => AgentSessionInfo.None;
+}
+
+/// <summary>
+///     What the provider calls the session of a conversation, which ties the lines of the log to what the provider recorded.
+/// </summary>
+/// <param name="Id">The identifier of the session at the provider, or <see langword="null" /> when it has none (yet).</param>
+/// <param name="EventsFile">
+///     The full path of the file where the provider records the events of the session, or <see langword="null" /> when it
+///     records none; the file exists until the session is deleted, which is when the conversation is dropped.
+/// </param>
+public sealed record AgentSessionInfo(string? Id, string? EventsFile)
+{
+    /// <summary>
+    ///     Gets the description of a session that has no identity at the provider.
+    /// </summary>
+    public static AgentSessionInfo None { get; } = new(null, null);
 }

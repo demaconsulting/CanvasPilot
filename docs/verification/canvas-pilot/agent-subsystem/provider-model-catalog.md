@@ -53,6 +53,12 @@ notes of the three kinds. The mapped model has the id and name, the three capabi
 order, the default effort, is usable, and has the two warnings (the information note is dropped). This scenario is
 tested by `ProviderModelCatalog_Map_Model_CarriesCapabilitiesEffortsWindowAndWarnings`.
 
+**ProviderModelCatalog_Map_ModelWithContextTiers_CarriesTheSizesAndTheDefault**: A model with the sizes `default`
+(Standard, 328,000 tokens) and `long_context` (Long context, 1,000,000), the same sizes on a model whose size cannot be
+adjusted, and a model with none. The first maps both sizes with their names and windows and the default `default`; the
+other two map no sizes and no default. This scenario is tested by
+`ProviderModelCatalog_Map_ModelWithContextTiers_CarriesTheSizesAndTheDefault`.
+
 **ProviderModelCatalog_Map_PlainAndUnusableModels_AreMappedWithTheirLimits**: A model without tools, pictures, window,
 and efforts; a model that cannot be used with its reason; and a model that lists an effort but whose effort cannot be
 adjusted. They are mapped as they are, the last one with no efforts, and a missing model is refused. This scenario is

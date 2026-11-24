@@ -84,17 +84,47 @@
                      AutomationProperties.AutomationId="AiReasoningEffortNote"
                      IsVisible="{Binding HasReasoningNote}"
                      Text="{Binding ReasoningNote}" />
+          <TextBlock Classes="caution"
+                     AutomationProperties.AutomationId="AiEffortCostWarning"
+                     IsVisible="{Binding HasEffortCostWarning}"
+                     Text="{Binding EffortCostWarning}" />
+
+          <!-- GitHub Copilot only, and only for a model that offers more than one size -->
+          <TextBlock Classes="label"
+                     AutomationProperties.AutomationId="AiContextTierLabel"
+                     Text="Context size"
+                     Margin="0,8,0,0"
+                     IsVisible="{Binding HasContextTierChoice}" />
+          <ComboBox AutomationProperties.AutomationId="AiContextTierComboBox"
+                    AutomationProperties.Name="Context size"
+                    HorizontalAlignment="Stretch"
+                    IsVisible="{Binding HasContextTierChoice}"
+                    ItemsSource="{Binding ContextTiers}"
+                    SelectedItem="{Binding SelectedContextTier}" />
+          <TextBlock Classes="hint"
+                     AutomationProperties.AutomationId="AiContextTierNote"
+                     IsVisible="{Binding HasContextTierNote}"
+                     Text="{Binding ContextTierNote}" />
+          <TextBlock Classes="caution"
+                     AutomationProperties.AutomationId="AiContextTierCostNote"
+                     IsVisible="{Binding HasContextTierCostNote}"
+                     Text="{Binding ContextTierCostNote}" />
         </StackPanel>
       </Border>
 
-      <!-- Where the provider is -->
+      <!-- Where the provider is: each entry is shown only while the provider that it belongs to is selected -->
       <Border Classes="card">
         <StackPanel Spacing="6">
           <TextBlock Classes="sectionTitle" Text="Connection" Margin="0,0,0,6" />
 
-          <TextBlock Classes="label" Text="Context window (tokens, Ollama only)" />
+          <!-- Ollama only -->
+          <TextBlock Classes="label"
+                     AutomationProperties.AutomationId="AiContextWindowLabel"
+                     Text="Context window (tokens)"
+                     IsVisible="{Binding IsOllamaSelected}" />
           <TextBox AutomationProperties.AutomationId="AiContextWindowTextBox"
                    AutomationProperties.Name="Context window in tokens"
+                   IsVisible="{Binding IsOllamaSelected}"
                    Text="{Binding ContextWindowText}" />
           <TextBlock Classes="error"
                      AutomationProperties.AutomationId="AiContextWindowError"
@@ -104,25 +134,29 @@
                      AutomationProperties.AutomationId="AiContextWindowWarning"
                      IsVisible="{Binding ContextWindowWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                      Text="{Binding ContextWindowWarning}" />
-          <TextBlock Classes="hint"
-                     AutomationProperties.AutomationId="AiContextWindowNote"
-                     IsVisible="{Binding ContextWindowNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                     Text="{Binding ContextWindowNote}" />
 
-          <TextBlock Classes="label" Text="Ollama endpoint" Margin="0,8,0,0" />
+          <TextBlock Classes="label"
+                     AutomationProperties.AutomationId="AiOllamaEndpointLabel"
+                     Text="Ollama endpoint"
+                     Margin="0,8,0,0"
+                     IsVisible="{Binding IsOllamaSelected}" />
           <TextBox AutomationProperties.AutomationId="AiOllamaEndpointTextBox"
                    AutomationProperties.Name="Ollama endpoint"
-                   IsEnabled="{Binding IsOllamaSelected}"
+                   IsVisible="{Binding IsOllamaSelected}"
                    Text="{Binding OllamaEndpoint}" />
           <TextBlock Classes="error"
                      AutomationProperties.AutomationId="AiOllamaEndpointError"
                      IsVisible="{Binding OllamaEndpointError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                      Text="{Binding OllamaEndpointError}" />
 
-          <TextBlock Classes="label" Text="GitHub Copilot command-line tool path" Margin="0,8,0,0" />
+          <!-- GitHub Copilot only -->
+          <TextBlock Classes="label"
+                     AutomationProperties.AutomationId="AiCopilotCliPathLabel"
+                     Text="GitHub Copilot command-line tool path"
+                     IsVisible="{Binding IsCopilotSelected}" />
           <TextBox AutomationProperties.AutomationId="AiCopilotCliPathTextBox"
                    AutomationProperties.Name="GitHub Copilot command-line tool path"
-                   IsEnabled="{Binding IsCopilotSelected}"
+                   IsVisible="{Binding IsCopilotSelected}"
                    PlaceholderText="Leave empty to locate the tool automatically"
                    Text="{Binding CopilotCliPath}" />
           <TextBlock Classes="error"
@@ -131,6 +165,7 @@
                      Text="{Binding CopilotCliPathError}" />
           <TextBlock Classes="hint"
                      AutomationProperties.AutomationId="AiCopilotCliPathNote"
+                     IsVisible="{Binding IsCopilotSelected}"
                      Text="{x:Static vm:AiProviderSettingsPageViewModel.CopilotCliPathNoteText}" />
         </StackPanel>
       </Border>

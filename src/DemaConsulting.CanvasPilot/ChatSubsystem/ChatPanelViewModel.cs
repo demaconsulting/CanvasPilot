@@ -21,6 +21,7 @@
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
@@ -106,35 +107,35 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public const string EmptyTranscriptText = "What would you like to draw?";
 
     /// <summary>
-    ///     The tip under the example prompts of the empty conversation.
+    ///     The format of the tip under the example prompts of the empty conversation; the argument is the talk key.
     /// </summary>
-    public const string EmptyTipText = "Drop a picture, or hold F8 and speak";
+    public const string EmptyTipFormat = "Drop a picture, or hold {0} and speak";
 
     /// <summary>
-    ///     The prompts that the empty conversation offers; choosing one writes it in the message.
+    ///     Tells which files are drawings when the panel was not given a filter, for the files that the copilot writes.
     /// </summary>
-    public static IReadOnlyList<string> ExamplePrompts { get; } =
-    [
-        "Draw our release flow",
-        "Chart downloads by month",
-        "Put both on one page",
-        "Make it match my style kit",
-    ];
+    private static readonly CanvasNetImageSourceFilter DefaultPictureFilter = new();
 
     /// <summary>
-    ///     The follow-up prompts that are offered above the message while a conversation is going on and the copilot is idle.
+    ///     The prompts that are offered now.
     /// </summary>
-    public static IReadOnlyList<string> SuggestedPrompts { get; } =
-    [
-        "Add a legend",
-        "Make title larger",
-        "Export as PNG",
-    ];
+    private IReadOnlyList<string> _suggestions = [];
+
+    /// <summary>
+    ///     Whether the copilot wrote a drawing during this session of the project; set from any thread.
+    /// </summary>
+    private volatile bool _drawingWritten;
+
+    /// <summary>
+    ///     Tells which files are drawings, so that the project folder can be searched for one, or <see langword="null" /> for
+    ///     no search.
+    /// </summary>
+    private readonly IImageSourceFilter? _pictureFilter;
 
     /// <summary>
     ///     The words of the indicator that shows while the copilot works on a message.
     /// </summary>
-    public const string WorkingText = "The copilot is working...";
+    public const string WorkingText = ChatTurnRunner.WorkingText;
 
     /// <summary>
     ///     The notice that says that the chat history was cleared, which is not saved.
@@ -185,6 +186,11 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     The open project, which tells where its history is kept, or <see langword="null" /> for none.
     /// </summary>
     private readonly IProjectService? _projects;
+
+    /// <summary>
+    ///     The talk key that is in effect, which the hints show.
+    /// </summary>
+    private readonly PushToTalkSetting _talkKey;
 
     /// <summary>
     ///     The clock that dates the rows of a turn.
@@ -271,7 +277,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     /// <param name="clock">The clock and timers of the turns, or <see langword="null" /> for the system's.</param>
     /// <param name="history">Where the text of the conversation is kept on this computer, or <see langword="null" /> for nowhere: the transcript is then only in memory.</param>
     /// <param name="projects">The project service, which tells which project is open and so where its history is kept, or <see langword="null" /> for none: nothing is then saved or restored.</param>
-    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, the clock, the history store, and the project service is <see langword="null" />.</exception>
+    /// <param name="talkKey">The talk key that the hints show, or <see langword="null" /> for the default key.</param>
+    /// <param name="pictureFilter">Tells which files are drawings, so that the prompts can follow whether the project folder holds one, or <see langword="null" /> for no search of the folder: a picture that is shown, or a drawing that the copilot wrote, still counts.</param>
+    /// <exception cref="ArgumentNullException">Thrown when an argument other than the dictation service, the logger, the copilot, the clock, the history store, the project service, the talk key, and the picture filter is <see langword="null" />.</exception>
     public ChatPanelViewModel(
         ComposerViewModel composer,
         MarkRegistry marks,
@@ -282,7 +290,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         IAgentService? agent = null,
         TimeProvider? clock = null,
         IChatHistoryStore? history = null,
-        IProjectService? projects = null)
+        IProjectService? projects = null,
+        PushToTalkSetting? talkKey = null,
+        IImageSourceFilter? pictureFilter = null)
     {
         ArgumentNullException.ThrowIfNull(composer);
         ArgumentNullException.ThrowIfNull(marks);
@@ -296,6 +306,9 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _logger = logger;
         _history = history;
         _projects = projects;
+        _pictureFilter = pictureFilter;
+        _talkKey = talkKey ?? PushToTalkSetting.Fixed();
+        _talkKey.PropertyChanged += OnTalkKeyChanged;
         _clock = clock ?? TimeProvider.System;
         Transcript = [];
         _sink = new TranscriptSink(Transcript);
@@ -306,7 +319,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         };
         Thumbnails = new ChipThumbnailProvider(chip => CropOfDraftMark(marks, markImages, chip));
         _transcriptProject = composer.ProjectFolder;
-        StopCommand = new RelayCommand(Stop, () => IsCopilotBusy);
+        StopCommand = new RelayCommand(Stop, () => IsCopilotBusy && !IsStopping);
         OpenSettingsCommand = new RelayCommand(RaiseOpenSettings);
         CheckAgainCommand = new AsyncRelayCommand(RefreshReadinessAsync);
         ClearHistoryCommand = new RelayCommand(ClearHistory);
@@ -317,6 +330,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         {
             _runner = new ChatTurnRunner(agent, _sink, clock, logger, RaiseOpenSettings);
             _runner.BusyChanged += OnBusyChanged;
+            _runner.StatusChanged += OnStatusChanged;
         }
 
         // The panel follows the composer: what depends on it is announced again, a changed project drops the transcript,
@@ -331,10 +345,17 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer.Changed += _composerChanged;
         _annotation.MarkAdded += _markAdded;
         _annotation.ClearMarksRequested += _clearMarks;
+        _annotation.PropertyChanged += OnAnnotationPropertyChanged;
+        if (_agent is not null)
+        {
+            _agent.FileWritten += OnFileWritten;
+        }
+
         JoinAnnotationToComposer();
 
         // A project that is already open has a saved conversation
         BeginHistory();
+        RefreshSuggestions();
     }
 
     /// <summary>
@@ -406,20 +427,85 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     public IRelayCommand CollapseCommand { get; }
 
     /// <summary>
-    ///     Gets a value indicating whether the follow-up prompts are offered: a conversation is going on and the copilot is
-    ///     idle.
+    ///     Gets the prompts that are offered now, from what the project has: ways to start while it has no drawing, ways to
+    ///     refine while it has one, and none while the copilot works (see <see cref="FollowUpSuggestions" />). The empty
+    ///     conversation shows them as examples, and a conversation that is going on shows them above the message.
     /// </summary>
-    public bool ShowSuggestions => HasTranscript && !IsCopilotBusy;
+    public IReadOnlyList<string> Suggestions => _suggestions;
+
+    /// <summary>
+    ///     Gets a value indicating whether there are prompts to offer.
+    /// </summary>
+    public bool HasSuggestions => _suggestions.Count > 0;
+
+    /// <summary>
+    ///     Gets a value indicating whether the prompts are offered above the message: a conversation is going on, the copilot
+    ///     is idle, and there is something to offer.
+    /// </summary>
+    public bool ShowSuggestions => HasTranscript && HasSuggestions;
 
     /// <inheritdoc />
     protected override void OnPropertyChanged(PropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
 
-        // The follow-up prompts depend on both of these
-        if (e.PropertyName is nameof(HasTranscript) or nameof(IsCopilotBusy))
+        // The prompts above the message depend on both of these
+        if (e.PropertyName is nameof(HasTranscript) or nameof(Suggestions))
         {
             base.OnPropertyChanged(new PropertyChangedEventArgs(nameof(ShowSuggestions)));
+        }
+    }
+
+    /// <summary>
+    ///     Plans the prompts again from what the project has now, and announces them when they changed. A project has a
+    ///     drawing when a picture is shown, when the copilot wrote one during this session, or, when the panel was given a
+    ///     filter, when its folder holds one; nothing is looked for while the copilot works, because nothing is offered then.
+    /// </summary>
+    private void RefreshSuggestions()
+    {
+        var busy = IsCopilotBusy;
+        var hasPicture = _annotation.HasPicture;
+        var hasDrawing = !busy
+            && (hasPicture
+                || _drawingWritten
+                || (_pictureFilter is not null
+                    && _composer.ProjectFolder is { Length: > 0 } folder
+                    && ProjectDrawingProbe.HasDrawing(folder, _pictureFilter)));
+        var plan = FollowUpSuggestions.Plan(hasDrawing, hasPicture, busy);
+        if (_suggestions.SequenceEqual(plan))
+        {
+            return;
+        }
+
+        _suggestions = plan;
+        OnPropertyChanged(nameof(Suggestions));
+        OnPropertyChanged(nameof(HasSuggestions));
+    }
+
+    /// <summary>
+    ///     Notes that the copilot wrote a drawing. The event may come from any thread, so only a flag is set; the prompts are
+    ///     planned again when the turn ends.
+    /// </summary>
+    /// <param name="sender">The copilot.</param>
+    /// <param name="e">The file that was written.</param>
+    private void OnFileWritten(object? sender, FileWrittenEventArgs e)
+    {
+        if ((_pictureFilter ?? DefaultPictureFilter).IsImageSource(e.RelativePath))
+        {
+            _drawingWritten = true;
+        }
+    }
+
+    /// <summary>
+    ///     Plans the prompts again when a picture appears or goes away.
+    /// </summary>
+    /// <param name="sender">The annotation layer.</param>
+    /// <param name="e">The change details.</param>
+    private void OnAnnotationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AnnotationOverlayViewModel.HasPicture))
+        {
+            RefreshSuggestions();
         }
     }
 
@@ -439,6 +525,34 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     Gets a value indicating whether a turn of the copilot runs.
     /// </summary>
     public bool IsCopilotBusy => _runner?.IsBusy == true;
+
+    /// <summary>
+    ///     Gets a value indicating whether the running turn was asked to stop and has not ended yet: the busy row says so and
+    ///     the Stop button cannot be used again.
+    /// </summary>
+    public bool IsStopping => _runner?.IsStopping == true;
+
+    /// <summary>
+    ///     Gets what the copilot is doing now, in words, for the busy row: <see cref="WorkingText" /> when a turn starts,
+    ///     then what the copilot reports (thinking, writing a file with the bytes so far, running a tool, waiting for the
+    ///     model). Empty when no turn runs.
+    /// </summary>
+    public string BusyText => _runner?.StatusText ?? string.Empty;
+
+    /// <summary>
+    ///     Gets how long the running turn has lasted, as <c>m:ss</c>, for the busy row. Empty when no turn runs.
+    /// </summary>
+    public string BusyElapsedText => _runner?.ElapsedText ?? string.Empty;
+
+    /// <summary>
+    ///     Gets the hint that explains a long wait for the model, or an empty string when there is nothing to explain.
+    /// </summary>
+    public string BusyHintText => _runner?.HintText ?? string.Empty;
+
+    /// <summary>
+    ///     Gets a value indicating whether <see cref="BusyHintText" /> is shown.
+    /// </summary>
+    public bool HasBusyHint => BusyHintText.Length > 0;
 
     /// <summary>
     ///     Gets a value indicating whether the banner of the readiness of the copilot is shown: the latest check found that
@@ -483,6 +597,22 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     finishing.
     /// </summary>
     public bool IsTalking => _composer.IsDictating;
+
+    /// <summary>
+    ///     Gets the name of the key that is held to talk, which the key cap of the composer shows. It follows the setting.
+    /// </summary>
+    public string TalkKeyText => _talkKey.Text;
+
+    /// <summary>
+    ///     Gets the tooltip of the talk button, which names the talk key as another way to talk.
+    /// </summary>
+    public string TalkToolTip =>
+        $"Hold this button, or hold {_talkKey.Text}, speak, and let go to add what you said to the message";
+
+    /// <summary>
+    ///     Gets the tip under the example prompts of the empty conversation, which names the talk key that is in effect.
+    /// </summary>
+    public string EmptyTipText => string.Format(CultureInfo.InvariantCulture, EmptyTipFormat, _talkKey.Text);
 
     /// <summary>
     ///     Gets the label of the talk button, which says what the button is doing.
@@ -639,22 +769,44 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     }
 
     /// <summary>
+    ///     Says that the hints that name the talk key changed when the talk key changed.
+    /// </summary>
+    /// <param name="sender">The setting of the talk key.</param>
+    /// <param name="e">The change details.</param>
+    private void OnTalkKeyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PushToTalkSetting.Text))
+        {
+            OnPropertyChanged(nameof(TalkKeyText));
+            OnPropertyChanged(nameof(TalkToolTip));
+            OnPropertyChanged(nameof(EmptyTipText));
+        }
+    }
+
+    /// <summary>
     ///     Stops following the composer and the annotation layer and releases the pictures of the transcript and the
     ///     draft's chips. It does not dispose the composer, the registry, or the layer.
     /// </summary>
     public void Dispose()
     {
         _disposed = true;
+        _talkKey.PropertyChanged -= OnTalkKeyChanged;
         _composer.PropertyChanged -= _composerPropertyChanged;
         _composer.MessageSent -= _messageSent;
         _composer.Changed -= _composerChanged;
         _annotation.MarkAdded -= _markAdded;
         _annotation.ClearMarksRequested -= _clearMarks;
+        _annotation.PropertyChanged -= OnAnnotationPropertyChanged;
+        if (_agent is not null)
+        {
+            _agent.FileWritten -= OnFileWritten;
+        }
         if (_runner is not null)
         {
             // Nothing is added to a transcript that is dropped, and a turn that is still running is stopped
             _sink.Discarding = true;
             _runner.BusyChanged -= OnBusyChanged;
+            _runner.StatusChanged -= OnStatusChanged;
             _runner.Dispose();
         }
 
@@ -739,8 +891,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
 
                     ClearTranscript();
 
+                    // A drawing that the copilot wrote belongs to the project that it wrote it in
+                    _drawingWritten = false;
+
                     // The conversation of the new project, if it was saved, takes the place of the old one
                     BeginHistory();
+                    RefreshSuggestions();
                 }
 
                 break;
@@ -905,6 +1061,26 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
 
         OnPropertyChanged(nameof(IsCopilotBusy));
+        OnStatusChanged(sender, e);
+        StopCommand.NotifyCanExecuteChanged();
+
+        // Nothing is offered while the copilot works; when it is done, what it wrote may have given the project a drawing
+        RefreshSuggestions();
+    }
+
+    /// <summary>
+    ///     Follows the status of the turn: what the copilot is doing, how long the turn has lasted, and the hint about a long
+    ///     wait.
+    /// </summary>
+    /// <param name="sender">The runner.</param>
+    /// <param name="e">The event data.</param>
+    private void OnStatusChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(BusyText));
+        OnPropertyChanged(nameof(BusyElapsedText));
+        OnPropertyChanged(nameof(BusyHintText));
+        OnPropertyChanged(nameof(HasBusyHint));
+        OnPropertyChanged(nameof(IsStopping));
         StopCommand.NotifyCanExecuteChanged();
     }
 

@@ -25,6 +25,7 @@ using System.Globalization;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -78,9 +79,16 @@ public sealed class WelcomeViewModel : ObservableObject, IDisposable
         Cards = new ReadOnlyObservableCollection<RecentProjectItem>(_cards);
         ((INotifyCollectionChanged)_shell.RecentProjects).CollectionChanged += OnRecentChanged;
         _shell.PropertyChanged += OnShellPropertyChanged;
+        _shell.TalkKey.PropertyChanged += OnTalkKeyChanged;
         FollowPill();
         RebuildCards();
     }
+
+    /// <summary>
+    ///     Gets the sentence of the first step of how it works, which names the talk key that is in effect, for example
+    ///     <c>Type a request, or hold F9 and speak it. The copilot draws the picture.</c>
+    /// </summary>
+    public string DescribeStepText => $"Type a request, or hold {_shell.TalkKey.Text} and speak it. The copilot draws the picture.";
 
     /// <summary>
     ///     Gets the cards of the most recent projects, the most recent first, at most <see cref="MaximumCards" />.
@@ -140,10 +148,24 @@ public sealed class WelcomeViewModel : ObservableObject, IDisposable
     {
         ((INotifyCollectionChanged)_shell.RecentProjects).CollectionChanged -= OnRecentChanged;
         _shell.PropertyChanged -= OnShellPropertyChanged;
+        _shell.TalkKey.PropertyChanged -= OnTalkKeyChanged;
         if (_pill is not null)
         {
             _pill.PropertyChanged -= OnPillPropertyChanged;
             _pill = null;
+        }
+    }
+
+    /// <summary>
+    ///     Says that the sentence of the first step changed when the talk key changed.
+    /// </summary>
+    /// <param name="sender">The setting of the talk key.</param>
+    /// <param name="e">The change details.</param>
+    private void OnTalkKeyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PushToTalkSetting.Text))
+        {
+            OnPropertyChanged(nameof(DescribeStepText));
         }
     }
 

@@ -19,7 +19,9 @@
 // SOFTWARE.
 
 using System.ComponentModel;
+using Avalonia.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.Speech.ModelManagementSubsystem;
 
@@ -37,6 +39,16 @@ public sealed class SpeechSettingsPageViewModel : ObservableObject, ISettingsPag
     ///     The parameter values being edited: model identifier, then parameter identifier, then the value.
     /// </summary>
     private Dictionary<string, Dictionary<string, string>> _parameterValues = new(StringComparer.Ordinal);
+
+    /// <summary>
+    ///     The talk key that is chosen.
+    /// </summary>
+    private PushToTalkBinding _binding = PushToTalkBinding.Default;
+
+    /// <summary>
+    ///     The sentence that says why the key that was pressed was refused, or an empty string.
+    /// </summary>
+    private string _pushToTalkProblem = string.Empty;
 
     /// <summary>
     ///     Creates the page.
@@ -60,19 +72,93 @@ public sealed class SpeechSettingsPageViewModel : ObservableObject, ISettingsPag
         SttParameters = new ModelParameterEditorViewModel("Speech-to-text model settings");
         TtsParameters = new ModelParameterEditorViewModel("Text-to-speech model settings");
         Models.PropertyChanged += OnModelsPropertyChanged;
+        ResetPushToTalkCommand = new RelayCommand(() => SetPushToTalk(PushToTalkBinding.Default), () => !IsPushToTalkDefault);
     }
 
     /// <inheritdoc />
     public string Title => "Speech";
 
     /// <inheritdoc />
-    public string Description => "The microphone and speakers, and the models that turn speech into text and text into speech.";
+    public string Description => "The microphone and speakers, the key you hold to talk, and the models that turn speech into text and text into speech.";
 
     /// <inheritdoc />
     public string IconKey => "CpIconMic";
 
     /// <inheritdoc />
     public bool IsValid => true;
+
+    /// <summary>
+    ///     Gets the text of the push-to-talk key that is chosen, for example <c>F9</c> or <c>Ctrl+Shift+Space</c>.
+    /// </summary>
+    public string PushToTalkKeyText => _binding.Display;
+
+    /// <summary>
+    ///     Gets the sentence that says why the key that was pressed cannot be the talk key and what to do, or an empty
+    ///     string when the last key was accepted or none was pressed.
+    /// </summary>
+    public string PushToTalkProblem
+    {
+        get => _pushToTalkProblem;
+        private set
+        {
+            if (SetProperty(ref _pushToTalkProblem, value))
+            {
+                OnPropertyChanged(nameof(HasPushToTalkProblem));
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether there is a <see cref="PushToTalkProblem" /> to show.
+    /// </summary>
+    public bool HasPushToTalkProblem => _pushToTalkProblem.Length > 0;
+
+    /// <summary>
+    ///     Gets a value indicating whether the talk key is the default, <c>F9</c>.
+    /// </summary>
+    public bool IsPushToTalkDefault => _binding == PushToTalkBinding.Default;
+
+    /// <summary>
+    ///     Gets the command that puts the default talk key back.
+    /// </summary>
+    public IRelayCommand ResetPushToTalkCommand { get; }
+
+    /// <summary>
+    ///     Gets the text of the button that puts the default talk key back, which names the key.
+    /// </summary>
+    public static string ResetPushToTalkText => $"Reset to default ({PushToTalkBinding.Default.Display})";
+
+    /// <summary>
+    ///     Takes a key that the user pressed in the box that captures the talk key. A modifier alone is not a choice: the
+    ///     box waits for the key that goes with it. Esc cancels the capture and leaves the key as it was. A key that is not
+    ///     safe is refused with a sentence that says why, and leaves the key as it was.
+    /// </summary>
+    /// <param name="key">The key that went down.</param>
+    /// <param name="modifiers">The modifiers that were held with it.</param>
+    /// <returns><see langword="true" /> when the key was taken as the new talk key.</returns>
+    public bool TryCapturePushToTalk(Key key, KeyModifiers modifiers)
+    {
+        if (PushToTalkBinding.IsModifierKey(key))
+        {
+            return false;
+        }
+
+        if (key == Key.Escape && modifiers == KeyModifiers.None)
+        {
+            PushToTalkProblem = string.Empty;
+            return false;
+        }
+
+        var binding = PushToTalkBinding.TryCreate(key, modifiers, out var problem);
+        if (binding is null)
+        {
+            PushToTalkProblem = problem ?? string.Empty;
+            return false;
+        }
+
+        SetPushToTalk(binding);
+        return true;
+    }
 
     /// <summary>
     ///     Gets the audio device pickers.
@@ -112,6 +198,8 @@ public sealed class SpeechSettingsPageViewModel : ObservableObject, ISettingsPag
 
         Devices.Load(speech.CaptureDevice, speech.PlaybackDevice);
         Models.Load(speech.SttModelId, speech.TtsModelId);
+        PushToTalkProblem = string.Empty;
+        SetPushToTalk(PushToTalkBinding.FromStored(speech.PushToTalkKey));
     }
 
     /// <inheritdoc />
@@ -136,6 +224,7 @@ public sealed class SpeechSettingsPageViewModel : ObservableObject, ISettingsPag
                 PlaybackDevice = Devices.PlaybackDeviceName,
                 SttModelId = Models.SttModelId,
                 TtsModelId = Models.TtsModelId,
+                PushToTalkKey = PushToTalkBinding.ToStored(_binding),
                 ModelParameters = parameters,
             },
         };
@@ -145,6 +234,19 @@ public sealed class SpeechSettingsPageViewModel : ObservableObject, ISettingsPag
     public void OnClosed()
     {
         Models.CancelAllDownloads();
+    }
+
+    /// <summary>
+    ///     Makes a binding the chosen talk key and says so.
+    /// </summary>
+    /// <param name="binding">The binding.</param>
+    private void SetPushToTalk(PushToTalkBinding binding)
+    {
+        _binding = binding;
+        PushToTalkProblem = string.Empty;
+        OnPropertyChanged(nameof(PushToTalkKeyText));
+        OnPropertyChanged(nameof(IsPushToTalkDefault));
+        ResetPushToTalkCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>

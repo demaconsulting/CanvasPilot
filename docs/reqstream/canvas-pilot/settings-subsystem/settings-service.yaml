@@ -115,11 +115,11 @@ sections:
 
               - id: CanvasPilot-SettingsService-MigrateReasoningLevel
                 title: >-
-                  The SettingsService shall store the reasoning effort of the AI provider as text (the id that the provider
-                  uses, trimmed, empty when the provider chooses), read the reasoning level that files of earlier builds
-                  stored (low, medium, or high, in any letter case) as that effort when the file states none, treat the old
-                  value auto or an unknown one as no effort, let an effort that the file states win over the old key, and
-                  no longer write the old key, all without changing the version of the file.
+                  The SettingsService shall store the reasoning effort and the context size (tier) of the AI provider as text
+                  (the id that the provider uses, trimmed, empty when the provider chooses), read the reasoning level that
+                  files of earlier builds stored (low, medium, or high, in any letter case) as that effort when the file
+                  states none, treat the old value auto or an unknown one as no effort, let an effort that the file states
+                  win over the old key, and no longer write the old key, all without changing the version of the file.
                 justification: |
                   The efforts that exist depend on the model (none, xhigh, and max among them), so an enumeration cannot
                   hold them and the setting is the provider's own text. A file written before that must keep its meaning
@@ -130,6 +130,7 @@ sections:
                   - SettingsService_Load_LegacyReasoningLevel_BecomesTheReasoningEffort
                   - SettingsService_Load_ReasoningEffortAndLegacyLevel_EffortWins
                   - SettingsService_SaveLoad_ReasoningEffort_RoundTripsAndDefaultsToEmpty
+                  - SettingsService_SaveLoad_ContextTier_RoundTripsDefaultsToEmptyAndIsTrimmed
                   - SettingsService_Load_UnknownEnumValue_UsesFirstValue
                   - SettingsService_Save_Settings_WritesVersionedCamelCaseJson
 
@@ -203,3 +204,14 @@ sections:
                 tests:
                   - SettingsService_SaveLoad_WindowAppearanceAndOpenedTimes_RoundTrips
                   - SettingsService_Load_RecentProjectOpened_KeepsOnlyListedProjects
+
+              - id: CanvasPilot-SettingsService-NormalizeTalkKey
+                title: >-
+                  The SettingsService shall keep the talk key of the speech settings as text, read a missing value, a value
+                  that is not a safe key, and the old default F8 as the default (stored as nothing, so that F9 is in effect),
+                  and write a safe key in its normal form such as Ctrl+Shift+Space.
+                justification: |
+                  F8 was never usable on many laptops, so a file that holds it must not keep the user without a talk key, and
+                  a file that was edited by hand must never give the window a key that takes away typing.
+                tests:
+                  - SettingsService_Load_PushToTalkKey_IsNormalizedAndUnsafeOrOldF8BecomesTheDefault

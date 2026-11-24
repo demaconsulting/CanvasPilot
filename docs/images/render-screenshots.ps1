@@ -12,14 +12,16 @@
 
       main-window.png        the main window, dark, in a conversation with a picture, two marks, and tool chips (1600 x 1000)
       main-window-light.png  the same window in the light theme
+      main-window-example.png  the main window with a real picture that the copilot drew from one request (a continuous-compliance pipeline overview), its tool rows, and the cost of the turn (1600 x 1000)
       welcome.png            the welcome screen with four recent projects and their small pictures (1600 x 1000)
       style-kits.png         the Style Kits manager with the kits of the program and of the user (1180 x 1000)
 
     The pictures do not depend on the computer: the content is made by the tests, the culture is US English, and the
     fonts are embedded. The demonstration projects are made in C:\CanvasPilot (or the same place at the root of the
     drive on another system) when that folder does not exist, so that the paths on the cards are neutral, and in a
-    temporary folder otherwise; everything is removed at the end. A drawing is repeatable except for the render time
-    that the status bar of the main window tells.
+    temporary folder otherwise; everything is removed at the end. The two texts of the status bar that depend on the clock
+    are fixed by the demonstration (the project file was saved 3/12/2026, 2:32 PM, and the preview was rendered in 84 ms), so
+    a drawing is repeatable except for the anti-aliasing of the platform.
 
     Without -Check it writes the pictures over the ones in docs/images. Review them (the whole window, the text, no
     clipping), and commit the changed pictures with the change to the application that made them differ. Pictures with

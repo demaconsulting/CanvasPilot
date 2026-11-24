@@ -964,7 +964,7 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that the talk key is F8 and that pressing and releasing it starts and stops the push-to-talk target once.
+    ///     Test that the talk key is F9 by default and that pressing and releasing it starts and stops the push-to-talk target once.
     /// </summary>
     [Fact]
     public async Task MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget()
@@ -984,8 +984,8 @@ public sealed class MainWindowShellTests : IDisposable
         await shell.EndPushToTalkAsync();
         await shell.EndPushToTalkAsync();
 
-        // Assert: the target was started once and stopped once, and the key is F8
-        Assert.Equal(Avalonia.Input.Key.F8, MainWindowShell.PushToTalkKey);
+        // Assert: the target was started once and stopped once, and the key is the default, F9
+        Assert.Equal(("F9", Avalonia.Input.Key.F9, Avalonia.Input.KeyModifiers.None), (shell.TalkKey.Text, shell.TalkKey.Binding.Key, shell.TalkKey.Binding.Modifiers));
         Assert.True(activeWhileHeld);
         Assert.False(shell.IsPushToTalkActive);
         await target.Received(1).BeginPushToTalkAsync();
@@ -1042,6 +1042,88 @@ public sealed class MainWindowShellTests : IDisposable
         var settings = new SettingsService(Path.Combine(_tempRoot, "settings"), logger);
         var explorer = new ProjectExplorerViewModel(new FakeImageSourceFilter(".svg"), new FakeRefreshScheduler(), logger: logger);
         return new ShellParts(new ProjectService(logger), new RecentProjects(settings), settings, new ProjectWorkspaceViewModel(explorer));
+    }
+
+    /// <summary>
+    ///     Test that Open Log Folder asks the launcher to show the folder that the logger writes to, and that it can be used
+    ///     with no project open.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenLogFolder_ShowsTheFolderOfTheLogger()
+    {
+        // Arrange: a shell with a logger on a temporary folder and a launcher that records what it was asked
+        var root = Directory.CreateTempSubdirectory("canvaspilot-log-folder-").FullName;
+        try
+        {
+            var logger = new RollingFileLogger(Path.Combine(root, "logs"));
+            var launcher = new FakeFolderLauncher();
+            var shell = CreateLogShell(launcher, logger);
+
+            // Act
+            var usable = shell.OpenLogFolderCommand.CanExecute(null);
+            await shell.OpenLogFolderCommand.ExecuteAsync(null);
+
+            // Assert
+            Assert.True(usable);
+            Assert.Equal([logger.LogDirectory], launcher.Opened);
+            Assert.Empty(_dialogs.Messages);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    /// <summary>
+    ///     Test that without a logger the folder of the default log is shown, and that a launcher that cannot show the folder
+    ///     gives the user a message with the reason and the path.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenLogFolder_NoLoggerOrLauncherFails_UsesTheDefaultFolderAndTellsTheUser()
+    {
+        // Arrange: a launcher that fails, and a shell without a logger
+        var launcher = new FakeFolderLauncher { Failure = "No file manager." };
+        var shell = CreateLogShell(launcher, logger: null);
+
+        // Act
+        await shell.OpenLogFolderCommand.ExecuteAsync(null);
+
+        // Assert: the default folder was tried and the user was told, with the path
+        Assert.Equal([RollingFileLogger.DefaultLogDirectory], launcher.Opened);
+        var (title, message) = Assert.Single(_dialogs.Messages);
+        Assert.Equal("Open Log Folder", title);
+        Assert.Contains("No file manager.", message, StringComparison.Ordinal);
+        Assert.Contains(RollingFileLogger.DefaultLogDirectory, message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that a shell without a launcher cannot open the folder of the log, and that the command then does nothing.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenLogFolder_WithoutLauncher_IsDisabledAndDoesNothing()
+    {
+        // Arrange
+        var shell = CreateShell(CreateParts());
+
+        // Act and assert
+        Assert.False(shell.OpenLogFolderCommand.CanExecute(null));
+        await shell.OpenLogFolderCommand.ExecuteAsync(null);
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Creates a shell with a launcher of folders and the dialog service attached.
+    /// </summary>
+    /// <param name="launcher">The launcher.</param>
+    /// <param name="logger">The logger, or <see langword="null" />.</param>
+    /// <returns>The shell, disposed with the fixture.</returns>
+    private MainWindowShell CreateLogShell(IFolderLauncher launcher, RollingFileLogger? logger)
+    {
+        var parts = CreateParts();
+        var shell = new MainWindowShell(parts.Projects, parts.Recent, parts.Settings, parts.Workspace, [], logger: logger, folderLauncher: launcher);
+        shell.AttachDialogService(_dialogs);
+        _shells.Add(shell);
+        return shell;
     }
 
     /// <summary>

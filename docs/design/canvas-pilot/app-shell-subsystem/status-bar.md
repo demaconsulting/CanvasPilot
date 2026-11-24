@@ -5,8 +5,9 @@
 #### Purpose
 
 `StatusBar` is the bar at the bottom of the main window. It follows the workspace and its preview pane and says what
-picture is shown and in what state it is, with words as well as with an icon, and, while a project is open, that the
-project is saved and which key is held to talk. The bar is always there; with no project open it says so.
+picture is shown and in what state it is, with words as well as with an icon, and, while a project is open, when its
+project file was last saved (when that is known) and which key is held to talk. The bar is always there; with no project
+open it says so.
 
 #### Data Model
 
@@ -25,16 +26,24 @@ the workspace.
   (such as `SVG`), and `RenderTimeText` (such as `Rendered in 84 ms`) are read from the pane only while the state is
   `Ready` and are empty otherwise. `NotesText` is the header of the diagnostics of the pane (such as `1 note`) while the
   state is `Ready` and the render has notes; `HasNotes` tells whether it is not empty.
-- *Project*: `HasProject` mirrors the workspace. `ProjectSavedText` is the constant "Project saved" and `TalkKeyText` is
-  the name of the push-to-talk key of `MainWindowShell`, `F8`.
+- *Project*: `HasProject` mirrors the workspace. `SavedText` is "Project file saved" followed by the time of the last
+  save of the project file (`ModifiedUtc` of the document of the open project, read from the `IProjectService` that
+  the shell gives the bar): the time of day when it was today, and otherwise the date and the time, in the culture and
+  the time zone of the user. `HasSavedText` is false, and nothing is shown, while no project is open or the file has no
+  saved time (a new project, or a file of an earlier build). `TalkKeyText` is the text of the push-to-talk key in effect
+  (`F9` by default), which follows the `PushToTalkSetting` of the shell.
 
 The inputs of the facts are the view model properties `FileName`, `ImageSizeText`, `FormatText`, `RenderTimeText`,
 `RenderMilliseconds`, `StatusText`, `HasDiagnostics`, and `DiagnosticsHeader` of the preview pane, which the
 *PreviewPane* unit documents.
 
-**"Project saved" is static text.** The application has no dirty tracking: no state of the project says that there are
-unsaved changes. The words are therefore shown whenever a project is open and are not bound to any state of the project.
-If dirty tracking is ever added, the words are to be bound to it.
+**The saved text says only what is true.** The application has no dirty tracking, so the bar does not claim that the
+work is saved. The project file holds only the metadata of the project (and is written when the project is created or
+the style kit changes, and by File ▸ Save), the drawings are files that the copilot writes, and the chat history is
+saved apart; none of those is claimed. The time is the `ModifiedUtc` of the document, and the bar follows
+`CurrentChanged` of the project service, which the service raises after every save, so a save updates the time. The
+service may raise the event on another thread, so the bar announces the change on the synchronization context that it
+was made on.
 
 **StatusBarView** (`AppShellSubsystem/StatusBarView.axaml` and `.axaml.cs`): a user control whose data context is the
 view model. Its only code is the call that loads the XAML.
@@ -49,8 +58,9 @@ view model. Its only code is the call that loads the XAML.
   progress bar, the word "Rendering...", and the file name), `StatusBarFailed` (a red error icon, the words "Render
   failed", and the file name), and `StatusBarIdle` (the summary sentence in the tertiary text color). The state is told
   by words and by an icon or a progress bar, never by color alone.
-- *Right side*: shown only while `HasProject`; the check icon with the "Project saved" words (`StatusBarProjectSaved`)
-  and the hint "Hold F8 to talk" (`StatusBarTalkHint`), in which the key name is drawn as a key cap.
+- *Right side*: shown only while `HasProject`; the check icon with the "Project file saved 14:32" words
+  (`StatusBarProjectSaved`, shown only while `HasSavedText`) and the hint "Hold F9 to talk" (`StatusBarTalkHint`), in
+  which the key name is drawn as a key cap.
 - *Screen reader*: the `PreviewStatus` panel has the `Summary` sentence as its automation name and the live setting
   `Polite`, so a screen reader is told when the sentence changes without being interrupted.
 
@@ -61,8 +71,16 @@ here from the preview pane view, whose automation name is the summary sentence),
 
 #### Key Methods
 
-**Constructor**: refuses a missing workspace, subscribes to the property changes of the workspace, and follows the
-preview pane that the workspace holds.
+**Constructor**: refuses a missing workspace and subscribes to the property changes of the workspace, to the changes of
+the talk key, and, when there is a project service, to its `CurrentChanged`; then it follows the preview pane that the
+workspace holds. The talk key (`PushToTalkSetting`) is optional and defaults to a fixed setting that holds the default
+key, the project service is optional (without it nothing is said about saving), and the clock (`TimeProvider`, the
+system's by default) tells what day it is for the text of the time; the shell passes its own talk key and project
+service.
+
+**FormatSavedTime**: a public static function that writes the time of a save: `ToLocalTime`, then the short time pattern
+(`t`) of the culture when the save was on the same local day as now, and otherwise the general short date and time
+pattern (`g`).
 
 **FollowPreview**: compares the preview of the workspace with the one that is followed. When they differ it drops the
 subscription to the old pane and subscribes to the new one. A pane that is not a `PreviewPaneViewModel` is treated as no
@@ -74,7 +92,14 @@ same few facts.
 
 **OnPreviewPropertyChanged**: announces a change of every property whenever the followed pane changes anything.
 
-**Dispose**: unsubscribes from the workspace and from the pane and drops the pane. After it nothing is announced.
+**OnProjectsChanged**: when the project service announces that the open project changed or was saved, announces
+`SavedText` and `HasSavedText` on the synchronization context that the bar was made on (directly when there was none),
+because the service may raise the event on another thread.
+
+**OnTalkKeyChanged**: when the text of the talk key changes, announces `TalkKeyText`.
+
+**Dispose**: unsubscribes from the workspace, the talk key, the project service, and the pane and drops the pane. After
+it nothing is announced.
 
 #### Error Handling
 
@@ -82,9 +107,9 @@ The view model has no operation that can fail. A missing workspace is refused wi
 that fails is not an error of the bar: it is one of its states, shown with the words "Render failed" and the danger
 color, and the sentence of the pane is passed to the screen reader.
 
-**Known limitations**: The text "Project saved" is fixed while a project is open. The application keeps no record of
-unsaved changes, so the bar cannot tell when the project has some. The sentence of the marking tools is not part of the
-bar; it is read out from the overlay of the picture.
+**Known limitations**: The time is that of the last save of the project file, which holds only the metadata of the
+project; the bar cannot tell whether the drawings or the chat have unsaved changes, and says nothing about them. The
+sentence of the marking tools is not part of the bar; it is read out from the overlay of the picture.
 
 #### Dependencies
 
@@ -92,11 +117,16 @@ bar; it is read out from the overlay of the picture.
   notifications.
 - **PreviewPane** — `PreviewPaneViewModel` supplies the busy, error, and image flags, the file name, the size, the
   format, the render time, the sentence, and the diagnostics header.
-- **MainWindowShell** — the name of the push-to-talk key, which the hint shows.
+- **ProjectService** (through `IProjectService`) — the open project, whose document says when the project file was saved
+  (`ModifiedUtc`), and `CurrentChanged`, which the service raises after the project is created, opened, closed, or
+  saved.
+- **PushToTalkBinding** (the `PushToTalkSetting` of the `Speech` subsystem, which `MainWindowShell` passes) — the text
+  of the push-to-talk key in effect, which the hint shows and which follows the settings.
 - **ThemeResources** — the surface, line, text, and state colors, the type size, and the check and error icons.
 - **CommunityToolkit.Mvvm** — `ObservableObject`, the base of the view model.
 
 #### Callers
 
-- **MainWindowShell** creates the view model, exposes it as its `StatusBar` property, and disposes it.
+- **MainWindowShell** creates the view model over its workspace, its talk key, and its project service, exposes it as
+  its `StatusBar` property, and disposes it.
 - **MainWindowView** places the `StatusBarView` at the bottom of the window with the view model as its data context.

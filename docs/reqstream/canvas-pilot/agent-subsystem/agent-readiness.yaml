@@ -65,17 +65,21 @@ sections:
                   The AgentReadiness shall add to the sentence of a GitHub Copilot that can be used (ready, ready with a
                   model, or a model that cannot take pictures) a sentence that names the account, the host without its
                   scheme, and the kind of sign-in that the runtime reports, shall add nothing when the runtime does not
-                  say how it signed in, and shall never show a token.
+                  say how it signed in, and shall never show a token; and shall name in the sentence of a ready Copilot
+                  the context size (with its window) that the settings chose for the model, and nothing when none was
+                  chosen.
                 justification: |
                   A machine can offer several accounts (a token variable, the Copilot CLI, the GitHub CLI), and the one
                   that the agents use may not be the one that the user expects. The sentence of the check is what Check
                   connection and the tooltip of the provider pill show, so the account is seen exactly where the user
                   looks. The runtime reports the login, the host, and the kind of sign-in without a secret, so the
-                  check shows them without ever handling a token.
+                  check shows them without ever handling a token. The same tooltip is where the user looks for which
+                  context size the model runs with.
                 tests:
                   - AgentReadiness_Copilot_Ready_NamesTheAccountTheHostAndTheKindOfSignIn
                   - AgentReadiness_Copilot_Ready_SignInUnknown_AddsNothing
                   - AgentReadiness_Copilot_ModelOfTheSettings_IsValidatedByTheRuntimeCatalogAndNamedWhenReady
+                  - AgentReadiness_Copilot_ContextTierChosen_IsNamedInTheReadySentence
                   - AgentReadiness_Copilot_ModelWithoutVisionAndUnreadableCatalog_WarnsAndReportsTheRuntime
 
               - id: CanvasPilot-AgentReadiness-ValidateModelSettings

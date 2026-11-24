@@ -160,7 +160,7 @@ public sealed class MainWindowViewTests : IDisposable
     [Theory]
     [InlineData(false, true, false, 0, 0)]
     [InlineData(false, false, true, 0, 0)]
-    [InlineData(true, true, false, 0, 138)]
+    [InlineData(true, true, false, 0, 140)]
     [InlineData(true, false, true, 78, 0)]
     [InlineData(true, false, false, 0, 0)]
     public void MainWindowView_CaptionReserve_FollowsPlatformAndExtension(bool isExtended, bool isWindows, bool isMacOs, double left, double right)
@@ -192,7 +192,7 @@ public sealed class MainWindowViewTests : IDisposable
         MainWindowView.ApplyCaptionReserve(leading, null, false, true, false);
 
         // Assert: nothing threw, the widths follow the platform, and a window that is not extended keeps none
-        Assert.Equal((0d, 138d), windowsWidths);
+        Assert.Equal((0d, 140d), windowsWidths);
         Assert.Equal((78d, 0d), macWidths);
         Assert.Equal(0, leading.Width);
     }
@@ -286,8 +286,17 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal("SVG", shown.Item4);
         Assert.StartsWith("Rendered in ", shown.Item5, StringComparison.Ordinal);
         Assert.Equal("red.svg: 40 x 20 px, svg", shown.Item6);
-        Assert.True(saved.IsEffectivelyVisible);
         Assert.Equal((true, false, "broken.svg: render failed"), failed);
+
+        // Act: the project was only opened, so nothing is claimed about saving; then the user saves it
+        var beforeSave = saved.IsEffectivelyVisible;
+        await composition.Shell.SaveProjectCommand.ExecuteAsync(null);
+        AppShellUiHelpers.Flush();
+
+        // Assert: after the save the bar says when the project file was saved
+        Assert.False(beforeSave);
+        Assert.True(saved.IsEffectivelyVisible);
+        Assert.StartsWith(StatusBarViewModel.SavedPrefix, saved.Text, StringComparison.Ordinal);
 
         window.Close();
     }
@@ -365,7 +374,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal(["UndoMenuItem", "RedoMenuItem"], structure[1].Children);
         Assert.Equal(["ExportPngMenuItem", "CopyImageMenuItem", "CheckAgainstStyleMenuItem"], structure[2].Children);
         Assert.Equal(["StyleKitsMenuItem", "SettingsMenuItem"], structure[3].Children);
-        Assert.Equal(["DrawingKnowledgeMenuItem", "AboutMenuItem"], structure[4].Children);
+        Assert.Equal(["DrawingKnowledgeMenuItem", "OpenLogFolderMenuItem", "AboutMenuItem"], structure[4].Children);
         foreach (var item in structure.SelectMany(top => top.Children.Prepend(top.Id)))
         {
             var found = window.FindControl<MenuItem>(item);
@@ -380,6 +389,7 @@ public sealed class MainWindowViewTests : IDisposable
         Assert.Equal(OperatingSystem.IsMacOS() ? new KeyGesture(Key.Z, KeyModifiers.Meta | KeyModifiers.Shift) : new KeyGesture(Key.Y, KeyModifiers.Control), window.FindControl<MenuItem>("RedoMenuItem")!.InputGesture);
         Assert.Equal("_Drawing Knowledge...", window.FindControl<MenuItem>("DrawingKnowledgeMenuItem")!.Header);
         Assert.Equal("Style _Kits...", window.FindControl<MenuItem>("StyleKitsMenuItem")!.Header);
+        Assert.Equal("Open _Log Folder", window.FindControl<MenuItem>("OpenLogFolderMenuItem")!.Header);
         Assert.Single(window.FindControl<MenuItem>("HelpMenu")!.Items.OfType<Separator>());
 
         window.Close();
@@ -396,7 +406,7 @@ public sealed class MainWindowViewTests : IDisposable
         window.Show();
 
         // Act & Assert: read which items are enabled
-        foreach (var enabled in new[] { "NewProjectMenuItem", "OpenProjectMenuItem", "ExitMenuItem", "StyleKitsMenuItem", "SettingsMenuItem", "DrawingKnowledgeMenuItem", "AboutMenuItem" })
+        foreach (var enabled in new[] { "NewProjectMenuItem", "OpenProjectMenuItem", "ExitMenuItem", "StyleKitsMenuItem", "SettingsMenuItem", "DrawingKnowledgeMenuItem", "OpenLogFolderMenuItem", "AboutMenuItem" })
         {
             Assert.True(IsUsable(window.FindControl<MenuItem>(enabled)!), enabled);
         }
@@ -406,6 +416,28 @@ public sealed class MainWindowViewTests : IDisposable
             Assert.False(IsUsable(window.FindControl<MenuItem>(disabled)!), disabled);
         }
 
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the Open Log Folder menu item asks the launcher to show the folder that the application logs to, with no
+    ///     project open.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog()
+    {
+        // Arrange: a shown main window over a launcher that records what it is asked
+        var launcher = new RecordingFolderLauncher();
+        var (_, window) = CreateWindow(folderLauncher: launcher);
+        window.Show();
+        var item = window.FindControl<MenuItem>("OpenLogFolderMenuItem")!;
+
+        // Act
+        await ((IAsyncRelayCommand)item.Command!).ExecuteAsync(null);
+
+        // Assert: the item is usable and the launcher got the log folder
+        Assert.True(IsUsable(item));
+        Assert.Equal([Path.Combine(_root, "logs")], launcher.Opened);
         window.Close();
     }
 
@@ -1214,7 +1246,7 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that holding F8 starts the push-to-talk target once, even when the key repeats, that releasing it stops the
+    ///     Test that holding F9 starts the push-to-talk target once, even when the key repeats, that releasing it stops the
     ///     target, and that other keys do nothing.
     /// </summary>
     [AvaloniaFact]
@@ -1226,14 +1258,14 @@ public sealed class MainWindowViewTests : IDisposable
         composition.Shell.PushToTalk = target;
         window.Show();
 
-        // Act: press F8 and let it repeat, press another key, release F8, and release it again
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
-        var heldBegins = target.Begins;
+        // Act: press F9 and let it repeat, press another key, release F9, and release it again
         window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        var heldBegins = target.Begins;
+        window.KeyPressQwerty(PhysicalKey.F7, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F7, RawInputModifiers.None);
         window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
-        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
-        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
 
         // Assert: one start while held, one stop at the release, and nothing for the other key
         Assert.Equal(1, heldBegins);
@@ -1245,7 +1277,42 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that F8 does nothing while the shell has no push-to-talk target.
+    ///     Test that the key the user chose on the Speech page is the talk key at once: the old key does nothing, the chord
+    ///     starts the target once however it repeats, and letting go of a modifier of the chord ends the talking.
+    /// </summary>
+    [AvaloniaFact]
+    public void MainWindowView_PushToTalkKey_ChosenChord_StartsOnTheChordAndStopsWhenAnyKeyOfItIsReleased()
+    {
+        // Arrange: a shown window, a target, and the chord chosen in the settings
+        var (composition, window) = CreateWindow();
+        var target = new RecordingTalkTarget();
+        composition.Shell.PushToTalk = target;
+        window.Show();
+        composition.Settings.Update(current => current with { Speech = current.Speech with { PushToTalkKey = "Ctrl+Shift+Space" } });
+
+        // Act: the old key, the key alone, then the chord with a repeat, the release of Ctrl, and a second release
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.None);
+        var beginsBefore = target.Begins;
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.Control | RawInputModifiers.Shift);
+        window.KeyPressQwerty(PhysicalKey.Space, RawInputModifiers.Control | RawInputModifiers.Shift);
+        var held = (target.Begins, composition.Shell.IsPushToTalkActive);
+        window.KeyReleaseQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Shift);
+        window.KeyReleaseQwerty(PhysicalKey.Space, RawInputModifiers.Shift);
+
+        // Assert: the old key and the key alone did nothing, the chord started once, and the release of Ctrl stopped it once
+        Assert.Equal(0, beginsBefore);
+        Assert.Equal((1, true), held);
+        Assert.Equal(1, target.Ends);
+        Assert.False(composition.Shell.IsPushToTalkActive);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that F9 does nothing while the shell has no push-to-talk target.
     /// </summary>
     [AvaloniaFact]
     public void MainWindowView_PushToTalkKey_NoTarget_IsIgnored()
@@ -1255,10 +1322,10 @@ public sealed class MainWindowViewTests : IDisposable
         composition.Shell.PushToTalk = null;
         window.Show();
 
-        // Act: press and release F8
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        // Act: press and release F9
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
         var active = composition.Shell.IsPushToTalkActive;
-        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
 
         // Assert: nothing started
         Assert.False(active);
@@ -1277,7 +1344,7 @@ public sealed class MainWindowViewTests : IDisposable
         var target = new RecordingTalkTarget();
         composition.Shell.PushToTalk = target;
         window.Show();
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
 
         // Act: close the window
         window.Close();
@@ -1299,7 +1366,7 @@ public sealed class MainWindowViewTests : IDisposable
         composition.Shell.PushToTalk = target;
         window.Show();
         window.Activate();
-        window.KeyPressQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
 
         // Act: the platform tells the window that another window became the active one (the headless platform never does)
         var deactivated = (Action?)typeof(Avalonia.Platform.IWindowBaseImpl)
@@ -1310,7 +1377,7 @@ public sealed class MainWindowViewTests : IDisposable
 
         // Assert: the target was stopped once when the window was deactivated, and the release that follows changes nothing
         var endsAfterDeactivation = target.Ends;
-        window.KeyReleaseQwerty(PhysicalKey.F8, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F9, RawInputModifiers.None);
         Assert.Equal(1, target.Begins);
         Assert.Equal(1, endsAfterDeactivation);
         Assert.Equal(1, target.Ends);
@@ -1419,10 +1486,11 @@ public sealed class MainWindowViewTests : IDisposable
     ///     Creates the application on the temporary root and a window over its shell.
     /// </summary>
     /// <param name="exporter">What the Image menu exports, or <see langword="null" /> for none.</param>
+    /// <param name="folderLauncher">What shows a folder for the Help menu, or <see langword="null" /> for one that shows nothing.</param>
     /// <returns>The composition and the window.</returns>
-    private (ApplicationComposition Composition, MainWindowView Window) CreateWindow(IImageExporter? exporter = null)
+    private (ApplicationComposition Composition, MainWindowView Window) CreateWindow(IImageExporter? exporter = null, IFolderLauncher? folderLauncher = null)
     {
-        var composition = AppShellUiHelpers.Compose(_root, exporter);
+        var composition = AppShellUiHelpers.Compose(_root, exporter, folderLauncher: folderLauncher);
         _compositions.Add(composition);
         return (composition, new MainWindowView(composition.Shell));
     }

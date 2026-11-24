@@ -19,8 +19,11 @@
 // SOFTWARE.
 
 using System.ComponentModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
+using DemaConsulting.CanvasPilot.ProjectSubsystem;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 
@@ -58,14 +61,29 @@ public enum StatusBarState
 public sealed class StatusBarViewModel : ObservableObject, IDisposable
 {
     /// <summary>
-    ///     The words that say the project is saved. They are shown while a project is open.
+    ///     The words that start the text that says when the project file was saved.
     /// </summary>
-    public const string ProjectSavedText = "Project saved";
+    public const string SavedPrefix = "Project file saved";
 
     /// <summary>
-    ///     The name of the key that is held to talk, shown as a key cap in the hint.
+    ///     The talk key that is in effect, which the hint shows.
     /// </summary>
-    public static readonly string TalkKeyText = MainWindowShell.PushToTalkKey.ToString();
+    private readonly PushToTalkSetting _talkKey;
+
+    /// <summary>
+    ///     The project service whose open project says when its file was last saved, or <see langword="null" /> for none.
+    /// </summary>
+    private readonly IProjectService? _projects;
+
+    /// <summary>
+    ///     The clock that tells what day it is now, for the text of the time.
+    /// </summary>
+    private readonly TimeProvider _clock;
+
+    /// <summary>
+    ///     The synchronization context of the thread that made the bar, which owns the user interface, or null.
+    /// </summary>
+    private readonly SynchronizationContext? _context = SynchronizationContext.Current;
 
     /// <summary>
     ///     The workspace whose project and preview the bar follows.
@@ -81,14 +99,78 @@ public sealed class StatusBarViewModel : ObservableObject, IDisposable
     ///     Creates the status bar over a workspace. The bar does not own the workspace.
     /// </summary>
     /// <param name="workspace">The workspace whose project and preview the bar follows.</param>
-    public StatusBarViewModel(ProjectWorkspaceViewModel workspace)
+    /// <param name="talkKey">The talk key that the hint shows; <see langword="null" /> for the default key.</param>
+    /// <param name="projects">
+    ///     The project service whose open project says when its file was saved; <see langword="null" /> for none, when no
+    ///     time is shown.
+    /// </param>
+    /// <param name="clock">The clock that tells what day it is now; <see langword="null" /> for the system's.</param>
+    public StatusBarViewModel(
+        ProjectWorkspaceViewModel workspace,
+        PushToTalkSetting? talkKey = null,
+        IProjectService? projects = null,
+        TimeProvider? clock = null)
     {
         ArgumentNullException.ThrowIfNull(workspace);
 
         _workspace = workspace;
+        _talkKey = talkKey ?? PushToTalkSetting.Fixed();
+        _projects = projects;
+        _clock = clock ?? TimeProvider.System;
         _workspace.PropertyChanged += OnWorkspacePropertyChanged;
+        _talkKey.PropertyChanged += OnTalkKeyChanged;
+        if (_projects is not null)
+        {
+            _projects.CurrentChanged += OnProjectsChanged;
+        }
+
         FollowPreview();
     }
+
+    /// <summary>
+    ///     Gets the text that says when the file of the open project was last saved, such as
+    ///     <c>Project file saved 14:32</c> (the time alone for today, otherwise with the date), or an empty string when
+    ///     nothing was saved: no project is open, or the file has no time. Only what is true is said: the drawings are files
+    ///     that the copilot writes and the chat history is saved apart, so neither is claimed.
+    /// </summary>
+    public string SavedText
+    {
+        get
+        {
+            if (_projects?.Current?.Document.ModifiedUtc is not { } modified)
+            {
+                return string.Empty;
+            }
+
+            return $"{SavedPrefix} {FormatSavedTime(modified, _clock.GetUtcNow(), CultureInfo.CurrentCulture)}";
+        }
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether there is a <see cref="SavedText" /> to show.
+    /// </summary>
+    public bool HasSavedText => SavedText.Length > 0;
+
+    /// <summary>
+    ///     Writes the time of a save for the status bar: the time of day when it was today, and otherwise the date and the
+    ///     time, in the local time zone.
+    /// </summary>
+    /// <param name="modified">When the file was saved.</param>
+    /// <param name="now">The present time.</param>
+    /// <param name="culture">The culture of the user.</param>
+    /// <returns>The text, for example <c>14:32</c> or <c>11/21/2026 14:32</c>.</returns>
+    public static string FormatSavedTime(DateTimeOffset modified, DateTimeOffset now, CultureInfo culture)
+    {
+        var local = modified.ToLocalTime();
+        return local.Date == now.ToLocalTime().Date
+            ? local.ToString("t", culture)
+            : local.ToString("g", culture);
+    }
+
+    /// <summary>
+    ///     Gets the name of the key that is held to talk, shown as a key cap in the hint. It follows the setting.
+    /// </summary>
+    public string TalkKeyText => _talkKey.Text;
 
     /// <summary>
     ///     Gets the state of the picture that the bar reports.
@@ -192,10 +274,52 @@ public sealed class StatusBarViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _workspace.PropertyChanged -= OnWorkspacePropertyChanged;
+        _talkKey.PropertyChanged -= OnTalkKeyChanged;
+        if (_projects is not null)
+        {
+            _projects.CurrentChanged -= OnProjectsChanged;
+        }
         if (_preview is not null)
         {
             _preview.PropertyChanged -= OnPreviewPropertyChanged;
             _preview = null;
+        }
+    }
+
+    /// <summary>
+    ///     Says that the text of the time of the save changed when the open project changed or was saved. The service may
+    ///     raise the event on another thread, so the announcement goes to the thread of the user interface.
+    /// </summary>
+    /// <param name="sender">The project service.</param>
+    /// <param name="e">The event data.</param>
+    private void OnProjectsChanged(object? sender, EventArgs e)
+    {
+        void Announce()
+        {
+            OnPropertyChanged(nameof(SavedText));
+            OnPropertyChanged(nameof(HasSavedText));
+        }
+
+        if (_context is null)
+        {
+            Announce();
+        }
+        else
+        {
+            _context.Post(_ => Announce(), null);
+        }
+    }
+
+    /// <summary>
+    ///     Says that the talk key changed.
+    /// </summary>
+    /// <param name="sender">The setting of the talk key.</param>
+    /// <param name="e">The change details.</param>
+    private void OnTalkKeyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PushToTalkSetting.Text))
+        {
+            OnPropertyChanged(nameof(TalkKeyText));
         }
     }
 

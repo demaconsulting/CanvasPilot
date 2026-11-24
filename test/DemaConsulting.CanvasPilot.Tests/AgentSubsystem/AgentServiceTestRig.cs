@@ -84,6 +84,69 @@ internal sealed class ProgrammableChatClient : IChatClient
         yield return new ChatResponseUpdate(ChatRole.Assistant, text);
     }
 
+    /// <summary>
+    ///     Makes an answer that waits until it is released or canceled before it says anything.
+    /// </summary>
+    /// <param name="entered">Completed when the answer started.</param>
+    /// <param name="release">Completes when the answer may go on.</param>
+    /// <param name="text">The text to give after the release.</param>
+    /// <param name="cancellationToken">The token of the request.</param>
+    /// <returns>The updates.</returns>
+    internal static async IAsyncEnumerable<ChatResponseUpdate> HangBeforeFirstUpdate(
+        TaskCompletionSource entered,
+        Task release,
+        string text,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        entered.TrySetResult();
+        await release.WaitAsync(cancellationToken);
+        yield return new ChatResponseUpdate(ChatRole.Assistant, text);
+    }
+
+    /// <summary>
+    ///     Makes an answer that says something, tells that it started, and then waits until it is released without ever
+    ///     looking at the token, as a provider that cannot be canceled does.
+    /// </summary>
+    /// <param name="entered">Completed when the answer started.</param>
+    /// <param name="release">Completes when the answer may go on.</param>
+    /// <returns>The updates.</returns>
+    internal static async IAsyncEnumerable<ChatResponseUpdate> HangIgnoringCancellation(TaskCompletionSource entered, Task release)
+    {
+        yield return new ChatResponseUpdate(ChatRole.Assistant, "working ");
+        entered.TrySetResult();
+        await release;
+        yield return new ChatResponseUpdate(ChatRole.Assistant, "late");
+    }
+
+    /// <summary>
+    ///     Makes an answer that fails before it says anything, as a provider does that cannot use a session.
+    /// </summary>
+    /// <param name="exception">The exception.</param>
+    /// <returns>The updates.</returns>
+    internal static async IAsyncEnumerable<ChatResponseUpdate> Fail(Exception exception)
+    {
+        await Task.Yield();
+        if (exception is not null)
+        {
+            throw exception;
+        }
+
+        yield return new ChatResponseUpdate(ChatRole.Assistant, string.Empty);
+    }
+
+    /// <summary>
+    ///     Makes an answer that asks to call a tool, as a model does, so that the next request of the same turn carries the
+    ///     result of the call.
+    /// </summary>
+    /// <param name="callId">The id of the call.</param>
+    /// <param name="tool">The name of the tool.</param>
+    /// <returns>The updates.</returns>
+    internal static async IAsyncEnumerable<ChatResponseUpdate> CallTool(string callId, string tool)
+    {
+        await Task.Yield();
+        yield return new ChatResponseUpdate(ChatRole.Assistant, [new FunctionCallContent(callId, tool, new Dictionary<string, object?>())]);
+    }
+
     /// <inheritdoc />
     public async Task<ChatResponse> GetResponseAsync(
         IEnumerable<ChatMessage> messages,
@@ -144,12 +207,14 @@ internal sealed class AgentServiceRig : IDisposable
     /// </param>
     /// <param name="factory">The factory that the service uses; the scripted factory of the rig when <see langword="null" />.</param>
     /// <param name="settings">The AI provider settings; Ollama on the default address when <see langword="null" />.</param>
+    /// <param name="clock">The clock of the service; the system's when <see langword="null" />.</param>
     internal AgentServiceRig(
         IChatClient client,
         FakeOllamaProbe? fakeProbe = null,
         bool nestLocalDataRoot = false,
         IAgentFactory? factory = null,
-        AiProviderSettings? settings = null)
+        AiProviderSettings? settings = null,
+        TimeProvider? clock = null)
     {
         Root = Directory.CreateTempSubdirectory("canvaspilot-agent-service-").FullName;
         ProjectFolder = Directory.CreateDirectory(Path.Combine(Root, "project")).FullName;
@@ -190,7 +255,8 @@ internal sealed class AgentServiceRig : IDisposable
             Tools,
             null,
             Logger,
-            LocalDataRoot);
+            LocalDataRoot,
+            clock: clock);
     }
 
     /// <summary>Gets the temporary folder that holds everything of the rig.</summary>
@@ -291,6 +357,19 @@ internal sealed class AgentServiceRig : IDisposable
             using var reader = new StreamReader(stream);
             return reader.ReadToEnd();
         }));
+    }
+
+    /// <summary>
+    ///     Reads the log after every release of a conversation has finished. A release runs in the background and writes its
+    ///     line (<c>Conversation released: ... reason=...</c>) last, after it deleted the provider session, so seeing the
+    ///     session deleted does not mean that the line is in the log. The service waits for every pending release when it is
+    ///     disposed, so the log is complete when this returns. The service cannot be used afterwards.
+    /// </summary>
+    /// <returns>The text of the log.</returns>
+    internal string ReadLogAfterReleases()
+    {
+        Service.Dispose();
+        return ReadLog();
     }
 
     /// <summary>

@@ -363,3 +363,67 @@ sections:
               - CanvasPilot-CopilotCliLocator-RunProbeSafely
             tests:
               - AgentSubsystem_LocateCopilotCli_MachinesWithShim_FindsRealCliAndExplainsShimOnly
+
+          - id: CanvasPilot-Agent-ReportLiveProgress
+            title: >-
+              The Agent subsystem shall report what the model does while a turn runs as progress events that carry only
+              counts of bytes and the name of the file, never the words of a message or the content of a file, and shall
+              reduce a burst of events of the provider to what a consumer can show, without losing a fact, whatever the
+              speed of the consumer.
+            justification: |
+              A turn that writes a large drawing takes minutes, and the user must see that the copilot is alive and what
+              it is doing. Some providers send thousands of small pieces in a burst, and the user's drawing is the user's
+              data, so the subsystem passes on counts and a file name only and keeps the stream of the provider flowing
+              whatever the window can keep up with.
+            children:
+              - CanvasPilot-AgentEventMapper-MapProgress
+              - CanvasPilot-AgentService-CoalesceAndThrottleEvents
+
+          - id: CanvasPilot-Agent-KeepConversationUsableAfterStop
+            title: >-
+              The Agent subsystem shall let a turn be stopped at any point, including in the middle of a tool call and
+              before the provider has said anything, end it without a failure and without waiting for a provider that does
+              not react, and leave the conversation so that the next message is answered, replacing a conversation that a
+              stop left unusable once and visibly.
+            justification: |
+              A user stops a turn that is slow or on a wrong path and then writes the next message, so a stop that leaves
+              the conversation in an unknown state, or that sends the earlier words to the provider twice, makes the
+              application worse than starting again.
+            children:
+              - CanvasPilot-AgentService-StopLeavesConversationUsable
+
+          - id: CanvasPilot-Agent-TellCompletedTurnFromStoppedTurn
+            title: >-
+              The Agent subsystem shall treat a turn that ended with its answer as completed and not as stopped, whether
+              or not the consumer reads the stream to its end, so that a failure of the next message is reported to the
+              user and is not hidden by a replacement of the conversation.
+            justification: |
+              A failure that is hidden is a failure that the user cannot report. Only a turn that was really interrupted
+              may have its next failure recovered, and only once.
+            children:
+              - CanvasPilot-AgentService-KeepCompletedTurnComplete
+
+          - id: CanvasPilot-Agent-LogTurns
+            title: >-
+              The Agent subsystem shall write for every turn a log of the facts that explain it (the number of the turn,
+              the provider, the model, the reasoning effort, the session of the provider and how it was opened, each tool
+              call with its outcome, size, and time, the outcome of the turn, who ended it, its times and longest silence,
+              and its usage) and the place where the provider recorded the events of a turn that failed or was stopped,
+              and never any word of a message, an answer, or a file.
+            justification: |
+              A turn of minutes that ends in a failure or a stop must be diagnosable from the log alone, and the log is a
+              file that people attach to a bug report. The facts are the evidence; the words belong to the user.
+            children:
+              - CanvasPilot-AgentService-LogTurnLifecycle
+              - CanvasPilot-AgentEventMapper-LogToolCalls
+
+          - id: CanvasPilot-Agent-ReportTurnUsage
+            title: >-
+              The Agent subsystem shall report the usage of each model call of a turn (the tokens sent, written, and spent
+              on reasoning) and, for GitHub Copilot, the multiplier of the model and the model that the provider reports,
+              and shall report no multiplier for a provider that sends none.
+            justification: |
+              What a message costs depends on the model, and the user can see it only if the provider's figures reach the
+              chat. A figure that the provider did not send must not be made up.
+            children:
+              - CanvasPilot-AgentEventMapper-MapUsage

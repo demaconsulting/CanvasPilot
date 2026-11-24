@@ -243,7 +243,7 @@
                    Text="{x:Static vm:ChatPanelViewModel.EmptyTranscriptText}" />
         <ItemsControl Name="ExamplePromptList"
                       Margin="0,8,0,0"
-                      ItemsSource="{x:Static vm:ChatPanelViewModel.ExamplePrompts}">
+                      ItemsSource="{Binding Suggestions}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <StackPanel Spacing="8" />
@@ -267,7 +267,7 @@
                    TextWrapping="Wrap"
                    FontSize="{DynamicResource CpFontSmall}"
                    Foreground="{DynamicResource CpTextTertiary}"
-                   Text="{x:Static vm:ChatPanelViewModel.EmptyTipText}" />
+                   Text="{Binding EmptyTipText}" />
       </StackPanel>
     </Grid>
 
@@ -287,13 +287,32 @@
         <Ellipse Classes="dot second" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
         <Ellipse Classes="dot third" Width="6" Height="6" Fill="{DynamicResource CpAccentText}" />
       </StackPanel>
-      <TextBlock Name="BusyText"
-                 Grid.Column="1"
-                 AutomationProperties.AutomationId="ChatBusyText"
-                 VerticalAlignment="Center"
-                 FontSize="{DynamicResource CpFontSmall}"
-                 Foreground="{DynamicResource CpTextSecondary}"
-                 Text="{x:Static vm:ChatPanelViewModel.WorkingText}" />
+      <StackPanel Grid.Column="1"
+                  VerticalAlignment="Center"
+                  Spacing="2">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <TextBlock Name="BusyText"
+                     AutomationProperties.AutomationId="ChatBusyText"
+                     VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis"
+                     FontSize="{DynamicResource CpFontSmall}"
+                     Foreground="{DynamicResource CpTextSecondary}"
+                     Text="{Binding BusyText}" />
+          <TextBlock Name="BusyElapsedText"
+                     AutomationProperties.AutomationId="ChatBusyElapsed"
+                     VerticalAlignment="Center"
+                     FontSize="{DynamicResource CpFontSmall}"
+                     Foreground="{DynamicResource CpTextTertiary}"
+                     Text="{Binding BusyElapsedText}" />
+        </StackPanel>
+        <TextBlock Name="BusyHint"
+                   AutomationProperties.AutomationId="ChatBusyHint"
+                   TextWrapping="Wrap"
+                   FontSize="{DynamicResource CpFontSmall}"
+                   Foreground="{DynamicResource CpTextTertiary}"
+                   IsVisible="{Binding HasBusyHint}"
+                   Text="{Binding BusyHintText}" />
+      </StackPanel>
       <Button Name="StopButton"
               Grid.Column="2"
               AutomationProperties.AutomationId="ChatStopButton"
@@ -308,7 +327,7 @@
     <ItemsControl Name="SuggestionList"
                   Grid.Row="4"
                   Margin="16,8,16,0"
-                  ItemsSource="{x:Static vm:ChatPanelViewModel.SuggestedPrompts}"
+                  ItemsSource="{Binding Suggestions}"
                   IsVisible="{Binding ShowSuggestions}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
@@ -366,7 +385,7 @@
                   Theme="{DynamicResource IconButton}"
                   Classes.talking="{Binding IsTalking}"
                   IsEnabled="{Binding CanTalk}"
-                  ToolTip.Tip="Hold this button, speak, and let go to add what you said to the message">
+                  ToolTip.Tip="{Binding TalkToolTip}">
             <PathIcon Classes="icon" Data="{DynamicResource CpIconMic}" />
           </Button>
           <Border Grid.Column="2"
@@ -379,7 +398,7 @@
                   BorderBrush="{DynamicResource CpBorderStrong}">
             <TextBlock FontSize="{DynamicResource CpFontCaption}"
                        Foreground="{DynamicResource CpTextSecondary}"
-                       Text="F8" />
+                       Text="{Binding TalkKeyText}" />
           </Border>
 
           <TextBlock Name="SendHintText"

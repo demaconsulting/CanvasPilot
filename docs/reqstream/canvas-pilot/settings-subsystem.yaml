@@ -105,6 +105,28 @@ sections:
             tests:
               - SettingsSubsystem_RememberLayoutAndAppearance_SavedWithOthers_SurviveRestartAndDialogChanges
 
+          - id: CanvasPilot-Settings-RememberTalkKey
+            title: >-
+              The Settings subsystem shall remember the key that is held to talk with the other settings, read a missing
+              or unsafe value, and the old default F8, as the default, and never let a stored value take away a key that
+              people need to type.
+            justification: |
+              F8 was never usable on many laptops, so a file that holds it must not keep the user without a talk key, and
+              a file that was edited by hand must never give the window a key that takes away typing.
+            children:
+              - CanvasPilot-SettingsService-NormalizeTalkKey
+
+          - id: CanvasPilot-Settings-WarnAboutCostlyEffort
+            title: >-
+              The Settings subsystem shall warn, where the reasoning level is chosen, that a high level on a large GitHub
+              Copilot model is slow and costly, and shall show no warning otherwise.
+            justification: |
+              A high reasoning level on a large model took more than three minutes for one drawing and counted many
+              premium requests for each message, stopped or not. The user must be able to see this where the level is
+              chosen, and only where it applies, so that the warning keeps its meaning.
+            children:
+              - CanvasPilot-AiProviderSettingsPage-WarnAboutCostlyEffort
+
           - id: CanvasPilot-Settings-ChooseAppearance
             title: >-
               The Settings subsystem shall let the user choose the theme of the application and the options of the project
@@ -122,7 +144,8 @@ sections:
             title: >-
               The Settings subsystem shall let the user choose and store the AI provider, the model from the list that the
               provider offers (or typed when it cannot be listed), the reasoning level that the model offers, the context
-              window of Ollama, the endpoint, and the Copilot tool path, show what each model can do and warn about what it
+              size that a Copilot model offers, the context
+              window of Ollama, the endpoint, and the Copilot tool path, show only the entries of the selected provider, show what each model can do and warn about what it
               lacks, not offer the unrestricted agent tools but keep the stored value, warn about a small context window,
               and check the connection to the provider that the entries describe.
             justification: |
@@ -133,6 +156,7 @@ sections:
               Settings that the user cannot act on are not offered, so the user is not offered a choice that does nothing.
             children:
               - CanvasPilot-AiProviderSettingsPage-EditProviderChoices
+              - CanvasPilot-AiProviderSettingsPage-ShowOnlySelectedProviderEntries
               - CanvasPilot-AiProviderSettingsPage-ValidateContextWindow
               - CanvasPilot-AiProviderSettingsPage-ValidateOllamaEndpoint
               - CanvasPilot-AiProviderSettingsPage-CopilotCliPathOverride
@@ -141,6 +165,7 @@ sections:
               - CanvasPilot-AiProviderSettingsPage-ListModels
               - CanvasPilot-AiProviderSettingsPage-FallBackToTypingTheModel
               - CanvasPilot-AiProviderSettingsPage-ChooseReasoningEffort
+              - CanvasPilot-AiProviderSettingsPage-ChooseContextSize
               - CanvasPilot-AiProviderSettingsPage-WarnBelowRecommendedContext
               - CanvasPilot-AiProviderSettingsPage-CheckConnection
               - CanvasPilot-SettingsService-DefaultContextWindow32768

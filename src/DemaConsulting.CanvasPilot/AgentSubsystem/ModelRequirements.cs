@@ -51,7 +51,8 @@ internal static class ModelRequirements
     /// </param>
     /// <returns>
     ///     The model settings, or <see langword="null" /> when no model is named, which means the default model of the
-    ///     provider and no choice to validate; a reasoning effort cannot be checked without a model and is not used then.
+    ///     provider and no choice to validate; a reasoning effort or a context size cannot be checked without a model and
+    ///     is not used then. The context size (tier) belongs to GitHub Copilot and is stated only for it.
     /// </returns>
     internal static ModelSettings? ToModelSettings(AiProviderSettings settings, bool withContextWindow)
     {
@@ -64,9 +65,11 @@ internal static class ModelRequirements
         }
 
         var effort = settings.ReasoningEffort?.Trim();
+        var tier = settings.Provider == AiProviderKind.GitHubCopilot ? settings.ContextTier?.Trim() : null;
         return new ModelSettings(model)
         {
             ReasoningEffort = string.IsNullOrEmpty(effort) ? null : effort,
+            ContextTier = string.IsNullOrEmpty(tier) ? null : tier,
             ContextWindowTokens = withContextWindow ? settings.ContextWindowTokens : null,
         };
     }

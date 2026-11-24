@@ -107,6 +107,32 @@ public sealed class ProviderModelCatalogTests
     }
 
     /// <summary>
+    ///     Test that the context sizes (tiers) of a model are mapped with the default one, but only when the model says that
+    ///     the size can be chosen.
+    /// </summary>
+    [Fact]
+    public void ProviderModelCatalog_Map_ModelWithContextTiers_CarriesTheSizesAndTheDefault()
+    {
+        // Arrange: a model with two sizes, the same sizes on a model that cannot adjust them, and a model with none
+        var tiered = TestModels.Make("copilot", "claude-opus-5.5", tiers: [("default", "Standard", 328_000), ("long_context", "Long context", 1_000_000)]);
+        var notAdjustable = tiered with { Adjustments = ModelAdjustments.ContextWindow };
+        var plain = TestModels.Make("copilot", "plain");
+
+        // Act
+        var mapped = ProviderModelCatalog.Map(tiered);
+        var notOffered = ProviderModelCatalog.Map(notAdjustable);
+        var none = ProviderModelCatalog.Map(plain);
+
+        // Assert: the sizes and the default are carried, and a size that cannot be chosen is not offered
+        Assert.Equal(["default:328000", "long_context:1000000"], mapped.ContextTiers!.Select(tier => $"{tier.Id}:{tier.WindowTokens}").ToArray());
+        Assert.Equal("Long context", mapped.ContextTiers![1].DisplayName);
+        Assert.Equal("default", mapped.DefaultContextTier);
+        Assert.Empty(notOffered.ContextTiers!);
+        Assert.Empty(none.ContextTiers!);
+        Assert.Null(none.DefaultContextTier);
+    }
+
+    /// <summary>
     ///     Test that a model without tool calling, vision, or efforts, and one that cannot be used, are mapped as they are,
     ///     so that the page can warn about them, and that efforts of a model that cannot adjust them are not offered.
     /// </summary>

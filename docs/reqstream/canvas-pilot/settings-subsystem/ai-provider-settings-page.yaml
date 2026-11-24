@@ -16,21 +16,38 @@ sections:
               - id: CanvasPilot-AiProviderSettingsPage-EditProviderChoices
                 title: >-
                   The AiProviderSettingsPage shall let the user choose the provider, model name,
-                  context window, and reasoning effort, enable only the entry that belongs to the
-                  selected provider, and merge the choices into the settings without changing values
-                  it does not own.
+                  context window, and reasoning effort, and merge the choices into the settings
+                  without changing values it does not own.
                 justification: |
                   The user configures the AI provider once, and the choices must reach the stored
-                  settings exactly. Showing only the relevant provider entry avoids asking for values
-                  that will not be used, and leaving other values alone keeps pages independent.
+                  settings exactly. Leaving other values alone keeps pages independent.
                 tests:
                   - AiProviderSettingsPageViewModel_Load_DefaultSettings_ShowsDefaults
                   - AiProviderSettingsPageViewModel_LoadApply_AllValues_RoundTrips
                   - AiProviderSettingsPageViewModel_Apply_EditedValues_AreAppliedTrimmed
                   - AiProviderSettingsPageViewModel_Apply_OtherSettings_AreUnchanged
                   - AiProviderSettingsPageViewModel_SelectedProvider_Switched_EnablesMatchingEntry
-                  - AiProviderSettingsPageView_SelectProvider_EnablesMatchingEntry
                   - AiProviderSettingsPageView_LoadedSettings_AreShownInControls
+
+              - id: CanvasPilot-AiProviderSettingsPage-ShowOnlySelectedProviderEntries
+                title: >-
+                  The AiProviderSettingsPage shall show only the entries, labels, notes, and messages that belong to the
+                  selected provider and hide those of the other provider (not just disable them): while GitHub Copilot is
+                  selected the path of the command-line tool and the cost warning, and while Ollama is selected the context
+                  window and the endpoint; and an entry that is hidden shall neither show a message nor make the page
+                  invalid, and shall keep its stored value when the page is applied.
+                justification: |
+                  A page that shows the endpoint of a server the user does not use, or the path of a tool that Ollama does
+                  not need, makes the user wonder what to fill in and what applies. A hidden entry that could still block
+                  the dialog with an error nobody can see would be worse, so a hidden entry is also inert.
+                tests:
+                  - AiProviderSettingsPageViewModel_SelectedProvider_Switched_EnablesMatchingEntry
+                  - AiProviderSettingsPageViewModel_ContextWindowText_InvalidWhileCopilotSelected_IsIgnoredAndStoredValueKept
+                  - AiProviderSettingsPageViewModel_ContextWindowWarning_InvalidOrCopilot_GivesNoWarning
+                  - AiProviderSettingsPageView_SelectProvider_ShowsMatchingEntry
+                  - AiProviderSettingsPageView_CopilotSelected_ShowsOnlyCopilotControls
+                  - AiProviderSettingsPageView_OllamaSelected_ShowsOnlyOllamaControls
+                  - AiProviderSettingsPageView_ProviderSelected_ShowsNoLabelOfTheOtherProvidersEntries
 
               - id: CanvasPilot-AiProviderSettingsPage-ValidateContextWindow
                 title: >-
@@ -89,18 +106,16 @@ sections:
 
               - id: CanvasPilot-AiProviderSettingsPage-ExplainEntries
                 title: >-
-                  The AiProviderSettingsPage shall show the context window as an Ollama setting, with a note while GitHub
-                  Copilot is selected, and the path of the Copilot command-line tool with a note that the installed
-                  copilot.exe of version 1.0.113 or later is used, that a path set here wins, and that shims are ignored.
+                  The AiProviderSettingsPage shall show the path of the Copilot command-line tool with a note that the
+                  installed copilot.exe of version 1.0.113 or later is used, that a path set here wins, and that shims are
+                  ignored.
                 justification: |
-                  Which provider the context window belongs to, and which executable is used, are not obvious from the
-                  entries alone. Saying so keeps the page honest and saves the user from setting a value that has no
-                  effect.
+                  Which executable is used is not obvious from the entry alone. Saying so keeps the page honest and saves
+                  the user from setting a path that has no effect.
                 tests:
                   - AiProviderSettingsPageViewModel_Notes_CliPath_ExplainTheLimits
                   - AiProviderSettingsPageViewModel_CopilotCliPathNote_MinimumVersion_IsTheLocatorsMinimum
                   - AiProviderSettingsPageView_CopilotCliPath_ShowsNoteOnInstalledExecutable
-                  - AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum
 
               - id: CanvasPilot-AiProviderSettingsPage-ListModels
                 title: >-
@@ -168,6 +183,27 @@ sections:
                   - AiProviderSettingsPageView_ReasoningEffort_IsDisabledWhileTheModelIsNotKnown
                   - AiProviderSettingsPageView_ModelList_ShowsCapabilitiesWarningsAndReasoningLevels
 
+              - id: CanvasPilot-AiProviderSettingsPage-ChooseContextSize
+                title: >-
+                  The AiProviderSettingsPage shall, while GitHub Copilot is the provider and the chosen model offers more
+                  than one context size, offer a Context size choice with the sizes that the model lists, named and with
+                  their windows as the provider gives them (for example Standard and Long context of 1M tokens), list them
+                  among the details of the model, store the id of the chosen size (nothing for the standard size), reset a
+                  stored size that the known model does not offer to the provider's own size with a note, keep a stored
+                  size while nothing is known about the model, show a note that a larger size is billed and served
+                  separately while one is chosen, and hide the choice, its label, and its notes for a model with one size
+                  and for Ollama.
+                justification: |
+                  A user who wants the one-million-token window of a model such as Claude Opus 5.5 could not find where to
+                  choose it. The sizes differ by model, so they come from the catalog and are not a fixed list. A size that
+                  the model does not offer would be refused only when the conversation starts, so the page resets it where
+                  the user can see why; and a larger size is billed and served separately, so the choice says so where it is
+                  made, as the choice of a high reasoning level does.
+                tests:
+                  - AiProviderSettingsPageViewModel_ContextTier_OfferedForAModelWithSeveralSizes_IsChosenAndApplied
+                  - AiProviderSettingsPageViewModel_ContextTier_StoredSizeTheModelDoesNotOffer_FallsBackWithANote
+                  - AiProviderSettingsPageView_ContextSize_IsShownOnlyForACopilotModelWithSeveralSizes
+
               - id: CanvasPilot-AiProviderSettingsPage-WarnBelowRecommendedContext
                 title: >-
                   The AiProviderSettingsPage shall, while Ollama is selected and the context window is a valid number below
@@ -220,3 +256,18 @@ sections:
                   cannot be reached by the keyboard.
                 tests:
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+              - id: CanvasPilot-AiProviderSettingsPage-WarnAboutCostlyEffort
+                title: >-
+                  The AiProviderSettingsPage shall, while GitHub Copilot is the provider and the chosen model is a large one
+                  (a billing multiplier of three or more, or a powerful or high-priced model) with a high reasoning level
+                  (high, xhigh, or max, the level that the provider chooses included), show a warning that the choice is slow
+                  and costly with the premium requests that a message counts, and shall show none otherwise.
+                justification: |
+                  A high reasoning level on a large model took more than three minutes for one drawing and counted fifteen
+                  premium requests for each message, stopped or not. The user must be able to see this where the level is
+                  chosen, and only where it applies, so that the warning keeps its meaning.
+                tests:
+                  - AiProviderSettingsPageViewModel_EffortCostWarning_AppearsOnlyForHighEffortOnLargeModels
+                  - AiProviderSettingsPageViewModel_BuildEffortCostWarning_UsesTheDefaultEffortAndNeedsAModel
+                  - AiProviderSettingsPageView_HighEffortOnLargeModel_ShowsTheCostWarning

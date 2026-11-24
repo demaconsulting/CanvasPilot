@@ -26,6 +26,21 @@ passed against a real Copilot CLI 1.0.114 in two runs (with the GitHub CLI avail
 variables cleared): the runtime signed in through the sign-in of the Copilot CLI and reported the source, the login, and
 the host without a token (see check 10, item 10, of the manual verification in the system verification).
 
+The opt-in live tests of long turns (`LiveCopilotLongTurnTests.cs`, recorded in the manual verification of the system)
+also showed what AgentKit forwards from a real Copilot runtime, which the OTS tests above cannot show because they use
+no runtime. On 2026-11-23, in three runs against a real Copilot CLI 1.0.114 with AgentKit 0.1.0-beta.5 and the model
+`claude-opus-5.5`, the updates that the application received from the Copilot agent were whole messages, tool calls and
+their results, and usage; no delta of the response or of the arguments of a call was forwarded, which is what the source
+of the library showed. Of 109 updates in the long first turn, 86 were text pieces of the final answers, 8 were calls, 8
+were results, 6 were usage, and 6 were of other kinds; the longest gap between updates seen by the application was 66
+seconds, and the longest gap between the events that the runtime itself recorded for the same turn was 125 seconds,
+because a Claude model on this runtime buffers its answer. The usage content carried the raw event of the
+runtime, from which the model multiplier of each call (15 for the model of the runs) was read. One conversation kept one
+runtime session, created by its first run and resumed by the next, and the runtime logged the release of the session
+handle after every run, as the library documents. These findings are the basis of *Known Limits and Upstream Requests*
+in the design of this item; the application's mapper for the progress events is verified on hand-built events of the SDK
+and works unchanged when the library forwards them.
+
 Two checks complement these tests. The FileAssert test `Copilot_RuntimeNotPublished` asserts, on the published win-x64
 output that the installer harvests whole, that no file whose name starts with `copilot` or `libcopilot`, no
 `runtime.node`, no `.copilot-explicit-cli`, and nothing under `runtimes\*\native\copilot*` exists, and that the
@@ -134,7 +149,9 @@ catalog then selects the settings for `gemma3` with the effort `low`, and a mode
 the cause (the efforts that the model offers, the largest window, tool calling, and the reason that the model is
 disabled); the selection has the catalog's id `gemma3:latest`, the effort `low`, and the standard effort low; the
 missing model is a refusal with a problem that names the provider; binding the bad effort is refused, and a blank model
-id is refused.
+id is refused. A model that offers the context sizes `default` and `long_context` accepts the settings that choose
+`long_context` (no problem) and the selection that binds them keeps the size; a size `huge` has exactly one problem that
+names it, and the size for a model that offers none has exactly one problem.
 
 **Requirement coverage**: `CanvasPilot-OTS-AgentKit-ValidateModelSettings`.
 

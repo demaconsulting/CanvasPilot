@@ -21,10 +21,12 @@ standalone picture for email, presentations, and other media. There is no Markdo
 The workflow runs from a project folder to a picture you can export, copy, or drag into another program. When the
 picture is not right, you mark the problems on it or ask for changes, and go around again.
 
-![The main window of CanvasPilot in the dark theme, open on the project Release Overview: the explorer tree of the
-project's pictures at the left; in the middle the picture overview.svg on the stage with the floating marking tools,
-two numbered marks, and the zoom pill; and at the right the conversation with the copilot, with tool chips, suggested
-prompts, and the message box][main-window]
+![The main window of CanvasPilot in the dark theme, open on the project Continuous Compliance: the explorer lists
+compliance-pipeline.svg; on the stage is the picture the copilot made from one request, a one-slide overview of a
+continuous-compliance pipeline with five stage cards (code commit, build and test, requirements trace, review evidence,
+release documents) and a legend of four tools; and the conversation at the right shows the request, the tool rows of
+the copilot, its short answer, and a line with the tokens, the premium multiplier, and the time of the
+turn][main-window-example]
 
 ![Workflow of CanvasPilot in five steps: open a project, describe the picture by typing or speaking and drop in files,
 the AI copilot drafts it with CanvasNet, a live preview shows the result, and you export or share the PNG; a
@@ -45,8 +47,8 @@ Available now:
   (fit, 1:1, steps, and Ctrl+mouse wheel), and error codes, hints, and notes explained
 - **Export and share**: Export the picture as a PNG file, copy the image, or drag the picture into other applications
 - **Chat composer**: Press Enter to send and Shift+Enter for a new line, write a message by typing or by push-to-talk
-  dictation (hold F8), attach files by drag and drop, paste, or the paperclip, with folders and images as inline chips,
-  and undo and redo in fine-grained steps
+  dictation (hold F9 by default; you can choose another key on the Speech page), attach files by drag and drop, paste,
+  or the paperclip, with folders and images as inline chips, and undo and redo in fine-grained steps
 - **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows from a
   floating tool bar, numbered and with notes; the marks are embedded in the message with crops and the source elements
   under each mark
@@ -55,15 +57,24 @@ Available now:
   or a team folder; export at preset sizes and check a picture against the style
 - **AI copilot chat**: An AI copilot answers your messages in the conversation pane. It writes, renders, looks at, and
   fixes drawings in a self-checking loop, sees the pictures you attach and the marks you draw, and streams its answer,
-  with a chip for each tool it uses and a Stop button, and suggests the next prompts. **Ollama** is supported and
-  covered by automated tests (live checks against a running server are pending); **GitHub Copilot** runs through your
-  installed GitHub Copilot CLI (CanvasPilot never bundles or downloads it). The text of the conversation is kept on your
-  computer, outside the project, and you can clear it from the conversation menu
+  with a chip for each tool it uses, and suggests prompts that fit what your project has. A busy row shows what the
+  copilot is doing and an elapsed timer, a Stop button works at any point and leaves the conversation usable, and a
+  quiet line under each reply says what the turn used (tokens, the model's premium multiplier, and the time). Large
+  models can be slow and costly, and some send a drawing only when it is whole, so the timer, not a size, is what you
+  see while they work. **Ollama** is supported and covered by automated tests (live checks against a running server are
+  pending); **GitHub Copilot** runs through your installed GitHub Copilot CLI (CanvasPilot never bundles or downloads
+  it). The text of the conversation is kept on your computer, outside the project, and you can clear it from the
+  conversation menu. **Help > Open Log Folder** opens the log files, which hold facts about each turn and never your
+  words
 - **Safe by default**: The copilot has only CanvasPilot's own tools, confined to the project folder. It overwrites the
   files it changes directly, with no backup and no question, so keep your projects under source control
-- **Settings**: Choose the AI provider (with a connection check), pick its model from the list that the provider
-  offers, with what each model can do and a warning for what it lacks, and set the model's reasoning level; the speech
-  devices and models, with model downloads; and the theme and explorer choices
+- **Honest status**: The status bar says when the project file was saved, and only after it was, and the window has no
+  full-screen mode, so the title bar and the window buttons are always there
+- **Settings**: Choose the AI provider (with a connection check), pick its model from the list that the provider offers,
+  with what each model can do and a warning for what it lacks, and set the model's reasoning level and, for a Copilot
+  model that offers one (such as the 1M-token size of Claude Opus 5.5), its context size; the page shows only the
+  options of the chosen provider; the speech devices and models, with model downloads; and the theme and explorer
+  choices
 - **Windows installer**: One MSI package for 64-bit Windows
 
 Planned:
@@ -72,6 +83,7 @@ Planned:
 - **Spoken replies**: Text-to-speech for the copilot's answers
 - **Variations**: Compare alternative drafts side by side
 - **Export profiles and batch export**: Export many pictures at once, in the sizes and formats each use needs
+- **Undo a copilot turn**: Restore the files it changed and tell the copilot
 - **Linux and macOS builds**
 
 ## Getting started
@@ -98,6 +110,10 @@ CanvasPilot needs 64-bit Windows. Nothing else is required to render pictures.
 4. Choose **New project** on the welcome screen (or **File > New Project...**), then start describing a picture in the
    conversation pane.
 
+![The welcome screen of CanvasPilot in the dark theme: the New project and Open project buttons and the three steps
+Describe, Mark, and Share at the left, and at the right four recent projects, each with a small picture of its first
+drawing, its folder, when it was opened, and how many pictures it holds][welcome]
+
 ## Learn more
 
 - [User Guide][link-guide]: Installation, the window, projects, the explorer and the stage, the conversation, marking
@@ -114,7 +130,8 @@ Copyright (c) DEMA Consulting. Licensed under the MIT License. See [LICENSE][lin
 <!-- Image References -->
 [hero]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/hero.png
 [workflow]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/workflow.png
-[main-window]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/main-window.png
+[main-window-example]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/main-window-example.png
+[welcome]: https://raw.githubusercontent.com/demaconsulting/CanvasPilot/main/docs/images/welcome.png
 
 <!-- Badge References -->
 [badge-forks]: https://img.shields.io/github/forks/demaconsulting/CanvasPilot?style=plastic

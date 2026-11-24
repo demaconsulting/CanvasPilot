@@ -45,6 +45,12 @@ namespace DemaConsulting.CanvasPilot.UiTests;
 public sealed class ChatPanelViewTests
 {
     /// <summary>
+    ///     The prompts that the panel offers in the harness, whose project has a drawing (a picture is shown): the
+    ///     refinements and the export.
+    /// </summary>
+    private static readonly IReadOnlyList<string> Offered = FollowUpSuggestions.Plan(hasDrawing: true, hasPictureShown: true, busy: false);
+
+    /// <summary>
     ///     Test that a new panel shows a hint instead of a transcript, the editing control, a send button that cannot be
     ///     used yet, and a talk button that can.
     /// </summary>
@@ -489,8 +495,8 @@ public sealed class ChatPanelViewTests
     }
 
     /// <summary>
-    ///     Test that the empty conversation offers the example prompts, that choosing one writes it in the message, and that
-    ///     the follow-up prompts only show once there is a conversation.
+    ///     Test that the empty conversation offers the prompts that fit the project (the harness shows a picture, so the refinements and the export), that choosing one writes it in the message, and that
+    ///     the prompts above the message only show once there is a conversation.
     /// </summary>
     [AvaloniaFact]
     public void ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation()
@@ -498,7 +504,7 @@ public sealed class ChatPanelViewTests
         // Arrange: a new panel
         using var harness = new ChatHarness();
         var prompts = harness.FindAll<Button>("ChatExamplePrompt");
-        Assert.Equal(ChatPanelViewModel.ExamplePrompts, prompts.Select(button => (string)button.Content!));
+        Assert.Equal(Offered, prompts.Select(button => (string)button.Content!));
         Assert.DoesNotContain(harness.FindAll<Button>("ChatSuggestion"), button => button.IsEffectivelyVisible);
 
         // Act: choose the first example
@@ -506,7 +512,7 @@ public sealed class ChatPanelViewTests
         harness.Layout();
 
         // Assert: the words are in the message, ready to send, and the examples are still there to change one's mind
-        Assert.Equal(ChatPanelViewModel.ExamplePrompts[0], harness.Composer.Document.FlatText);
+        Assert.Equal(Offered[0], harness.Composer.Document.FlatText);
         Assert.True(harness.SendButton.IsEffectivelyEnabled);
 
         // Act: send it
@@ -514,7 +520,7 @@ public sealed class ChatPanelViewTests
 
         // Assert: the examples give way to the conversation and the follow-ups appear
         Assert.False(harness.Find<TextBlock>("ChatTranscriptEmpty").IsEffectivelyVisible);
-        Assert.Equal(ChatPanelViewModel.SuggestedPrompts.Count, harness.FindAll<Button>("ChatSuggestion").Count(button => button.IsEffectivelyVisible));
+        Assert.Equal(Offered.Count, harness.FindAll<Button>("ChatSuggestion").Count(button => button.IsEffectivelyVisible));
     }
 
     /// <summary>

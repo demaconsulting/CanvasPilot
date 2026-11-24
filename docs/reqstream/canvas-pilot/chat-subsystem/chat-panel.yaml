@@ -150,6 +150,7 @@ sections:
                   - ChatPanelView_HoldToTalk_PointerCaptureLost_EndsListening
                   - ChatPanelView_HoldToTalk_SpaceKeyHeldOnFocusedButton_ListensUntilReleased
                   - ChatPanelView_HoldToTalk_PanelRemovedWhileHeld_EndsListening
+                  - PushToTalkHints_ChatPanel_KeyCapTooltipAndTipFollowTheSetting
 
               - id: CanvasPilot-ChatPanel-ShowWhyDictationCannotWork
                 title: >-
@@ -369,17 +370,27 @@ sections:
 
               - id: CanvasPilot-ChatPanel-OfferPrompts
                 title: >-
-                  The ChatPanel shall, while the conversation is empty, ask "What would you like to draw?", offer four
-                  example prompts and a tip, and write the prompt that the user chooses into the message, ready to be
-                  sent; and shall offer a few follow-up prompts, which work the same way, only once a conversation exists.
+                  The ChatPanel shall, while the conversation is empty, ask "What would you like to draw?", offer example
+                  prompts and a tip that names the talk key, and write the prompt that the user chooses into the message,
+                  ready to be sent; shall offer the prompts that fit the project (ways to start while it has no drawing,
+                  ways to refine once a picture is shown, the copilot wrote a drawing, or the project folder holds one, and
+                  the export only while a picture is shown), judged again when the project, the picture, or a turn changes;
+                  and shall offer none while the copilot works, and shall show them above the message only once a
+                  conversation exists.
                 justification: |
                   A blank panel does not tell a new user what the assistant can do. Examples that fill in the message
                   show it and save typing, and because the prompt lands in the message and is not sent, the user can
-                  change it first. Follow-ups are only useful when there is something to follow up, so they wait for the
-                  first message.
+                  change it first. "Add a legend" means nothing in a project with no drawing, and "Draw a flowchart" is no
+                  help to someone who has one, so the prompts follow what the project has. Follow-ups are only useful
+                  when there is something to follow up, so they wait for the first message.
                 tests:
                   - ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation
                   - ChatPanelViewModel_PromptsAndCollapse_WriteTheMessageAndAnnounce
+                  - ChatPanelViewModel_EmptyProject_OffersStarterPrompts
+                  - ChatPanelViewModel_TurnWritesDrawing_SuggestionsHideWhileBusyThenBecomeRefinements
+                  - ChatPanelViewModel_TurnWritesNotes_StillOffersStarterPrompts
+                  - ChatPanelViewModel_OpenProject_WithDrawingOffersRefinementsAndEachProjectIsJudgedAlone
+                  - ChatPanelViewModel_PictureShown_OffersRefinementsWithExport
 
               - id: CanvasPilot-ChatPanel-HideConversation
                 title: >-
@@ -406,3 +417,25 @@ sections:
                 tests:
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
                   - ChatPanelView_ComposerCard_PlaceholderNamesAndHint
+
+              - id: CanvasPilot-ChatPanel-ShowBusyStatus
+                title: >-
+                  The ChatPanel shall show, in the row that tells that the copilot works, what the copilot is doing, the
+                  time that the turn has lasted, and the hint about a long wait when there is one, shall announce each of
+                  them when it changes, and shall show nothing of them when no turn runs.
+                justification: |
+                  The user decides whether to wait or to stop from what the busy row says, so it must follow the status of
+                  the turn that the runner keeps and not a constant sentence.
+                tests:
+                  - ChatPanelViewModel_TurnRuns_BusyRowShowsPhaseElapsedTimeAndHint
+                  - ChatPanelView_CopilotProgress_BusyRowShowsElapsedTimeAndWhatIsReported
+
+              - id: CanvasPilot-ChatPanel-ShowStopping
+                title: >-
+                  The ChatPanel shall, from the moment that Stop is pressed until the turn has ended, say in the busy row
+                  that the copilot is stopping and not allow Stop to be pressed again, and shall announce the change.
+                justification: |
+                  The user must see within one moment that Stop was heard, and a second press must not do anything else.
+                tests:
+                  - ChatPanelViewModel_Stop_ShowsStoppingAndDisablesStopUntilTheTurnEnds
+                  - ChatPanelView_Stop_ShowsStoppingUntilTheTurnEnds

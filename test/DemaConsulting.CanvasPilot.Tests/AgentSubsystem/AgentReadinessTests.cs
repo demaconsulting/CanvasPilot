@@ -401,6 +401,31 @@ public sealed class AgentReadinessTests
     }
 
     /// <summary>
+    ///     Test that the sentence that says that Copilot is ready names the context size that was chosen, with its window,
+    ///     which is also the tooltip of the provider pill, and names none when no size was chosen.
+    /// </summary>
+    [Fact]
+    public async Task AgentReadiness_Copilot_ContextTierChosen_IsNamedInTheReadySentence()
+    {
+        // Arrange: a runtime whose catalog offers a model with two sizes
+        var catalog = new FakeModelCatalog("copilot", TestModels.Make("copilot", "claude-opus-5.5", tiers: [("default", "Standard", 328_000), ("long_context", "Long context", 1_000_000)]));
+        var readiness = Create(starter: StartedStarter(CliSignIn, catalog));
+        var token = TestContext.Current.CancellationToken;
+
+        // Act: the larger size, the standard size by name, a size that the model does not offer, and no size
+        var larger = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "claude-opus-5.5", ContextTier = "long_context" }, cancellationToken: token);
+        var standard = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "claude-opus-5.5", ContextTier = "default" }, cancellationToken: token);
+        var refused = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "claude-opus-5.5", ContextTier = "huge" }, cancellationToken: token);
+        var noSize = await readiness.GetReportAsync(new AiProviderSettings { ModelName = "claude-opus-5.5" }, cancellationToken: token);
+
+        // Assert: the sizes are named with their windows, a size that is not offered is invalid, and no size adds nothing
+        Assert.Equal($"GitHub Copilot CLI 1.0.114 is ready with the model claude-opus-5.5 at the Long context size (1,000,000 tokens). {CliSignInSentence}", larger.Message);
+        Assert.Contains("at the Standard size (328,000 tokens)", standard.Message, StringComparison.Ordinal);
+        Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, refused.Status);
+        Assert.Equal($"GitHub Copilot CLI 1.0.114 is ready with the model claude-opus-5.5. {CliSignInSentence}", noSize.Message);
+    }
+
+    /// <summary>
     ///     Test that model settings that the catalog of the runtime refuses are reported as invalid, with the sentence of
     ///     the library, and are not usable.
     /// </summary>

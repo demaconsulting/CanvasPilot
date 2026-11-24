@@ -29,6 +29,7 @@ using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
+using DemaConsulting.CanvasPilot.SpeechSubsystem;
 using DemaConsulting.CanvasPilot.StyleSubsystem;
 
 namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
@@ -47,11 +48,6 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     The application name shown in the window title.
     /// </summary>
     public const string ApplicationName = "CanvasPilot";
-
-    /// <summary>
-    ///     The key that is held to talk: while it is down the message is dictated.
-    /// </summary>
-    public const Key PushToTalkKey = Key.F8;
 
     /// <summary>
     ///     Creates and opens projects.
@@ -107,6 +103,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Draws the picture of the recent project cards of the welcome screen, or null for none.
     /// </summary>
     private readonly RecentThumbnailLoader? _recentThumbnails;
+
+    /// <summary>
+    ///     Shows a folder in the file manager, which the Help menu uses for the folder of the log, or null for none.
+    /// </summary>
+    private readonly IFolderLauncher? _folderLauncher;
 
     /// <summary>
     ///     Tells which files of a project are pictures.
@@ -204,6 +205,10 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Draws the pictures on the cards of the recent projects of the welcome screen, or <see langword="null" /> for none, which
     ///     leaves the cards without a picture. The shell does not dispose it.
     /// </param>
+    /// <param name="folderLauncher">
+    ///     Shows a folder in the file manager for the Open Log Folder item of the Help menu, or <see langword="null" /> for
+    ///     none, which leaves the item disabled.
+    /// </param>
     public MainWindowShell(
         IProjectService projectService,
         IRecentProjects recentProjects,
@@ -217,7 +222,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         ICheckAgainstStyle? checkAgainstStyle = null,
         Func<IStyleKitDialogs, StyleKitManagerViewModel>? styleKits = null,
         RollingFileLogger? logger = null,
-        IThumbnailSource? recentThumbnails = null)
+        IThumbnailSource? recentThumbnails = null,
+        IFolderLauncher? folderLauncher = null)
     {
         ArgumentNullException.ThrowIfNull(projectService);
         ArgumentNullException.ThrowIfNull(recentProjects);
@@ -235,9 +241,11 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         _styleCheck = checkAgainstStyle;
         _styleKits = styleKits;
         _logger = logger;
+        _folderLauncher = folderLauncher;
         _recentThumbnails = recentThumbnails is null ? null : new RecentThumbnailLoader(recentThumbnails, RunOnOwnerThread, logger);
         Workspace = workspace;
-        StatusBar = new StatusBarViewModel(workspace);
+        TalkKey = new PushToTalkSetting(settingsService);
+        StatusBar = new StatusBarViewModel(workspace, TalkKey, projectService);
         ImageExporter = imageExporter ?? new NullImageExporter();
         RecentProjects = new ReadOnlyObservableCollection<RecentProjectItem>(_recentItems);
         Welcome = new WelcomeViewModel(this);
@@ -282,6 +290,12 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     ///     Gets the status bar at the bottom of the window, which is always there and reports on the shown picture.
     /// </summary>
     public StatusBarViewModel StatusBar { get; }
+
+    /// <summary>
+    ///     Gets the talk key that is in effect, which follows the settings. The window listens for it, and the status bar,
+    ///     the welcome screen, and the chat panel show it; this is the one place that knows it.
+    /// </summary>
+    public PushToTalkSetting TalkKey { get; }
 
     /// <summary>
     ///     Gets the welcome screen, which is shown instead of the workspace while no project is open.
@@ -412,7 +426,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     public bool HasRecentProjects => _recentItems.Count > 0;
 
     /// <summary>
-    ///     Gets or sets what listens while <see cref="PushToTalkKey" /> is held, normally the chat panel, or null when
+    ///     Gets or sets what listens while the talk key (<see cref="TalkKey" />) is held, normally the chat panel, or null when
     ///     nothing does, in which case the key does nothing.
     /// </summary>
     public IPushToTalkTarget? PushToTalk { get; set; }
@@ -492,6 +506,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         }
 
         StatusBar.Dispose();
+        TalkKey.Dispose();
         ProviderPill?.Dispose();
         _settingsService.Changed -= OnSettingsChanged;
         Workspace.LayoutChanged -= OnWorkspaceLayoutChanged;
@@ -749,6 +764,37 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
             dialog.NotifyClosed();
         }
     }
+
+    /// <summary>
+    ///     Shows the folder of the log in the file manager, so that the user can attach the log to a report. The folder is the
+    ///     one that the logger writes to; when the file manager cannot be started the user is told, with the path.
+    /// </summary>
+    /// <returns>A task that completes when the folder was shown, or the problem was shown.</returns>
+    [RelayCommand(CanExecute = nameof(CanOpenLogFolder))]
+    private async Task OpenLogFolderAsync()
+    {
+        if (_folderLauncher is null)
+        {
+            return;
+        }
+
+        var folder = _logger?.LogDirectory ?? RollingFileLogger.DefaultLogDirectory;
+        if (_folderLauncher.TryOpen(folder, out var failure))
+        {
+            return;
+        }
+
+        _logger?.Log(LogLevel.Warning, "The folder of the log could not be shown in the file manager.");
+        if (_dialogs is not null)
+        {
+            await _dialogs.ShowMessageAsync("Open Log Folder", $"The folder of the log could not be shown: {failure} The log is in {folder}");
+        }
+    }
+
+    /// <summary>
+    ///     Gets a value indicating whether the application can show the folder of the log.
+    /// </summary>
+    private bool CanOpenLogFolder => _folderLauncher is not null;
 
     /// <summary>
     ///     Opens the About dialog.

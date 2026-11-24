@@ -30,6 +30,17 @@ the created file while the drawing is in the project. The other makes the Copilo
 the runtime and through a fake starter, with the real tools of a project, and shows that the refusal gives no agent and
 that the runtime gets exactly the tools and the folder of the project.
 
+The description of a session (`DescribeSession`) is a default member of `IAgentFactory` that answers nothing, and the
+Copilot implementation reads the identifier that the library gives a session once its first run has created it at the
+runtime. That identifier exists only on a real runtime, so no test that runs everywhere makes a described Copilot
+session. The consumer of the description, the log of the `AgentService` unit, is verified with the scripted factory of
+the tests, which answers with an identifier and an events file of its own (the scenarios of the unit verification of
+`AgentService` that name the provider session). The real implementation is exercised by the opt-in live
+tests (`LiveCopilotLongTurnTests.cs`): they read the lines `Provider session` of the application log, which the service
+writes from the identifier that the real factory describes, and check that one conversation keeps one provider session,
+created by its first turn and resumed by the next; they are recorded in the manual verification of the system and belong
+to no requirement.
+
 #### Test Environment
 
 The unit tests use no network and no process; the locator works on a fake file system and a fake process runner. The
@@ -85,6 +96,11 @@ is used.
 - Deleting a session reaches the started runtime only for a Copilot session that has an id (`session-42` here); an
   Ollama session, a Copilot session without an id, a Copilot session on a factory whose runtime was never started, and
   the call with a missing session each delete nothing, and the missing session is refused.
+- A factory that does not describe a session (the default of `IAgentFactory`, which the scripted factory of the tests
+  uses unless it is given a description) answers with no identifier and no events file; a session that the scripted
+  factory describes reaches the log of the service with its identifier and its file (see the unit verification of
+  `AgentService`). On a real runtime, the live tests show an identifier for the session after its first run (the first
+  turn of a conversation `created` the session and the next turn `resumed` it).
 
 #### Test Scenarios
 
@@ -125,6 +141,18 @@ Each gives the matching status, that sentence, and no agent. This scenario is te
 whose request carries a selection with that model, that effort, and no window; settings with an effort and no model make
 an agent with no selection. This scenario is tested by
 `AgentProviderFactory_Create_Copilot_ModelAndEffort_ReachTheAgentAsTheSelection`.
+
+**AgentProviderFactory_Create_Copilot_ContextTier_ReachesTheAgentAsTheSelectionAndIsValidated**: A runtime whose catalog
+offers `claude-opus-5.5` with the sizes `default` (Standard, 328,000 tokens) and `long_context` (Long context,
+1,000,000) and a model `single` with none. Settings with the Opus model and `long_context` make an agent whose selection
+carries that size; `huge` (not offered by the model) and `long_context` for the model with none are each
+`ModelSettingsInvalid` with a sentence of the library and no agent; the Opus model with no size makes a selection with
+no size. This scenario is tested by
+`AgentProviderFactory_Create_Copilot_ContextTier_ReachesTheAgentAsTheSelectionAndIsValidated`.
+
+**ModelRequirements_ToModelSettings_ContextTier_IsStatedForCopilotOnly**: The same choices (a model and `long_context`)
+for GitHub Copilot give a context size of `long_context` (trimmed), for Ollama none, and with no model named the result
+is `null`. This scenario is tested by `ModelRequirements_ToModelSettings_ContextTier_IsStatedForCopilotOnly`.
 
 **AgentProviderFactory_Create_Copilot_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid**: Five settings against a
 catalog of four models: a model without tool calling, a model that the catalog does not have, an effort `bogus` (the

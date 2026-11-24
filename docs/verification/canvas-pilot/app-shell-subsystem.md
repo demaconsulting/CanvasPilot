@@ -10,7 +10,10 @@ at each dialog because a real window and platform pickers are not part of these 
 test waits for a delay. The tests of the AI copilot also use a scripted chat model, a stand-in Ollama probe, and the
 processes, files, and environment of a fake machine, so that nothing of the computer of the person who runs them is
 started or read. The views themselves are verified by the headless UI tests described in the unit verification
-documents.
+documents. The behavior that needs no composition to show (the talk key and the chord that starts it, Help ▸ Open Log
+Folder with a fake launcher, the window buttons and the full-screen rule, the time of the last save in the status bar,
+and the talk key in the hints) is verified in the unit and the headless UI tests of `MainWindowShell`, `StatusBar`, and
+`Welcome`; the subsystem tests check that the composition joins the units so that the talk key reaches the chat panel.
 
 ### Test Environment
 
@@ -63,7 +66,14 @@ services, or display are required.
 - The main window has a title bar that holds the menu, the project name, and the provider pill, opens at the design
   size, and keeps its size, place, state, and column widths for the next window; the layout is fitted to the screens
   and never crops the stage below 360 pixels.
-- The status bar is always shown and reports the picture that is shown, rendering, and failure in words.
+- The status bar is always shown and reports the picture that is shown, rendering, and failure in words, and, while a
+  project is open, when the project file was saved (only once it has been) and the talk key that is in effect.
+- The talk key is F9 until the user chooses another on the Speech page; the window, the status bar, the welcome screen,
+  and the chat panel name the key that works, and the talk key of the composed shell reaches the chat panel.
+- The Help menu shows the folder of the log in the file manager (Open Log Folder), also with no project open, and tells
+  the user when it cannot.
+- The window has no full-screen button and no full-screen mode, and the provider pill in the title bar stays clear of
+  the window buttons at every window width.
 - The welcome screen is shown while no project is open and lists the recent projects as cards; the workspace is not
   built until a project is open.
 - Every icon-only button of the main window, the workspace of an open project, and the dialogs has a name, a tooltip,
@@ -248,10 +258,17 @@ The pictures of the README and the user guide are drawn from the real applicatio
 project, so that they cannot drift from what the program shows. `ScreenshotSupport` shows a window at a fixed size and
 theme in the headless Avalonia platform with Skia and the embedded Inter font, lets it settle, and saves the drawn frame
 as a PNG. The screenshot tests carry the category `Screenshots` and skip themselves unless the environment variable
-`CANVASPILOT_SCREENSHOT_DIR` names an output folder, so the normal run of `build.ps1` writes nothing. The script
-`docs/images/render-screenshots.ps1` sets the variable and runs only those tests; with `-Check` it compares fresh
-pictures with the committed ones using a tolerance, and it is not part of the continuous integration because text
-hinting is not bit-for-bit the same on every operating system. The tool is not linked to a requirement; two tests keep
-it honest in every run: `ScreenshotSupport_Capture_WritesPngOfRequestedSize` proves that a drawn window is saved as a
-PNG of exactly the requested size that is not a single flat color, in both theme variants, and
+`CANVASPILOT_SCREENSHOT_DIR` names an output folder, so the normal run of `build.ps1` writes nothing. The pictures are
+the main window in a conversation (dark and light), the main window with the picture that the copilot drew in a real
+session (a continuous-compliance pipeline overview, kept as the data `ScreenshotData/compliance-pipeline.svg` of the
+test assembly, with its tool rows and the cost line of the turn), the welcome screen, and the Style Kits manager; the
+card of a project on the welcome screen shows the picture that was changed last, so the demonstration writes the main
+picture after the plain ones. The two texts of the status bar that depend on the clock are fixed by the demonstration,
+so that `-Check` is repeatable: the modified time of the project is rewritten in the project file (and the project is
+opened again), and the render time of the preview pane is set. The script `docs/images/render-screenshots.ps1` sets the
+variable and runs only those tests; with `-Check` it compares fresh pictures with the committed ones using a tolerance,
+and it is not part of the continuous integration because text hinting is not bit-for-bit the same on every operating
+system. The tool is not linked to a requirement; two tests keep it honest in every run:
+`ScreenshotSupport_Capture_WritesPngOfRequestedSize` proves that a drawn window is saved as a PNG of exactly the
+requested size that is not a single flat color, in both theme variants, and
 `ScreenshotSmoke_MainWindow_WritesBothThemes` is the opt-in smoke test of the whole route.

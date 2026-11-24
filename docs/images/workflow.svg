@@ -32,7 +32,7 @@
   <text x="328" y="103" font-size="16" font-weight="700" fill="#4c1d95">Describe it</text>
   <g font-size="14" fill="#3b0764">
     <text x="290" y="138">Type your request, or hold</text>
-    <text x="290" y="160">F8 and speak it. Drop in</text>
+    <text x="290" y="160">F9 and speak it. Drop in</text>
     <text x="290" y="182">files, folders, and pictures</text>
     <text x="290" y="204">as references; they show as</text>
     <text x="290" y="226">chips in your message.</text>

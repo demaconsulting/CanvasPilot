@@ -74,9 +74,40 @@ public sealed partial class MainWindowView : Window, IDialogService
     };
 
     /// <summary>
-    ///     The width of the three window buttons that Windows draws over the right end of the title bar.
+    ///     The width of one window button that the window draws over the right end of the title bar (the theme's
+    ///     <c>CaptionButtonWidth</c>).
     /// </summary>
-    private const double WindowsCaptionButtonsWidth = 138;
+    private const double CaptionButtonWidth = 45;
+
+    /// <summary>
+    ///     The space between two window buttons (the <c>Spacing</c> of the panel that holds them in the template of the
+    ///     drawn decorations).
+    /// </summary>
+    private const double CaptionButtonSpacing = 2;
+
+    /// <summary>
+    ///     The number of window buttons that remain once the full-screen button is removed: minimize, maximize or restore,
+    ///     and close.
+    /// </summary>
+    private const int CaptionButtonCount = 3;
+
+    /// <summary>
+    ///     The thickness of the frame line that the drawn decorations keep at the right of the buttons.
+    /// </summary>
+    private const double CaptionFrameThickness = 1;
+
+    /// <summary>
+    ///     The width of the window buttons that Windows draws over the right end of the title bar: three buttons of 45 with
+    ///     the space between them and the frame line, which is 140 device-independent pixels. It is the fallback for the
+    ///     time before the buttons are laid out; the width that is measured wins.
+    /// </summary>
+    internal const double WindowsCaptionButtonsWidth =
+        (CaptionButtonCount * CaptionButtonWidth) + ((CaptionButtonCount - 1) * CaptionButtonSpacing) + CaptionFrameThickness;
+
+    /// <summary>
+    ///     The name of the panel in the drawn decorations that holds the window buttons.
+    /// </summary>
+    private const string CaptionButtonsPanelName = "PART_OverlayPanel";
 
     /// <summary>
     ///     The width of the traffic lights that macOS draws over the left end of the title bar.
@@ -184,6 +215,13 @@ public sealed partial class MainWindowView : Window, IDialogService
         }
         else if (change.Property == WindowStateProperty)
         {
+            // The window has no full-screen mode: its button is removed, and nothing else may take it there, because the
+            // only way back from full screen is a pop-up bar that is hard to find
+            if (WindowState == WindowState.FullScreen)
+            {
+                WindowState = WindowState.Normal;
+            }
+
             RequestCaptionReserveUpdate();
         }
     }
@@ -510,7 +548,7 @@ public sealed partial class MainWindowView : Window, IDialogService
     /// <param name="e">The event data.</param>
     private void OnKeyDownTunnel(object? sender, KeyEventArgs e)
     {
-        if (_shell is not { PushToTalk: not null } || e.Key != MainWindowShell.PushToTalkKey)
+        if (_shell is not { PushToTalk: not null } || !_shell.TalkKey.Binding.Matches(e.Key, e.KeyModifiers))
         {
             return;
         }
@@ -520,13 +558,14 @@ public sealed partial class MainWindowView : Window, IDialogService
     }
 
     /// <summary>
-    ///     Stops listening when the talk key goes up.
+    ///     Stops listening when the talk key goes up, or when any key of the chord does: letting go of Ctrl, Alt, or Shift
+    ///     of a chord ends the talking as well.
     /// </summary>
     /// <param name="sender">The window.</param>
     /// <param name="e">The event data.</param>
     private void OnKeyUpTunnel(object? sender, KeyEventArgs e)
     {
-        if (_shell is null || e.Key != MainWindowShell.PushToTalkKey)
+        if (_shell is null || !_shell.TalkKey.Binding.IsPartOf(e.Key))
         {
             return;
         }
@@ -639,11 +678,25 @@ public sealed partial class MainWindowView : Window, IDialogService
     /// </summary>
     private void UpdateCaptionReserve()
     {
-        ApplyCaptionReserve(TitleBarLeadingReserve, TitleBarCaptionReserve, IsExtendedIntoWindowDecorations, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
+        UpdateCaptionReserve(IsExtendedIntoWindowDecorations, OperatingSystem.IsWindows(), OperatingSystem.IsMacOS());
+    }
 
-        // The window draws its own buttons, whose number, size, and margin (the shadow and the frame) are the theme's, so
-        // the room is taken from where they really are as soon as there is a layout; the constant is the fallback
-        if (IsExtendedIntoWindowDecorations && OperatingSystem.IsWindows() && MeasureCaptionButtonsReserve() is { } measured)
+    /// <summary>
+    ///     Keeps the room free at the ends of the title bar for the facts of a platform; the facts are given so that a test
+    ///     can say what a window on Windows would do, which the headless platform cannot be.
+    /// </summary>
+    /// <param name="isExtended">Whether the window extends into its frame.</param>
+    /// <param name="isWindows">Whether the platform is Windows.</param>
+    /// <param name="isMacOs">Whether the platform is macOS.</param>
+    internal void UpdateCaptionReserve(bool isExtended, bool isWindows, bool isMacOs)
+    {
+        ApplyCaptionReserve(TitleBarLeadingReserve, TitleBarCaptionReserve, isExtended, isWindows, isMacOs);
+
+        // The window draws its own buttons, whose size and spacing are the theme's, so the room is taken from where they
+        // really are as soon as there is a layout; the constant is the fallback. The buttons are not on every platform
+        // (macOS draws its own at the left), so only a platform that reserves room on the right is measured
+        if (isExtended && CaptionReserve(true, isWindows, isMacOs).Right > 0
+            && MeasureCaptionButtonsReserve(this) is { } measured)
         {
             TitleBarCaptionReserve.Width = measured;
         }
@@ -653,14 +706,26 @@ public sealed partial class MainWindowView : Window, IDialogService
     ///     Measures how much of the right end of the window the buttons that the window draws over its title bar cover,
     ///     from their left edge to the edge of the window, so that the pill next to them is never under a button.
     /// </summary>
+    /// <remarks>
+    ///     The drawn decorations are not part of the visual tree of the window: the host of the window holds the window
+    ///     and, as siblings of it, the layers of the decorations. The buttons are therefore searched from the top of the
+    ///     visual tree and not from the window, and their place is taken relative to the window.
+    /// </remarks>
+    /// <param name="window">The window.</param>
     /// <returns>The width in device-independent pixels, or <see langword="null" /> when the buttons are not laid out.</returns>
-    private double? MeasureCaptionButtonsReserve()
+    internal static double? MeasureCaptionButtonsReserve(Control window)
     {
-        var buttons = this.GetVisualDescendants()
+        Visual top = window;
+        while (top.GetVisualParent() is { } parent)
+        {
+            top = parent;
+        }
+
+        var buttons = top.GetVisualDescendants()
             .OfType<StackPanel>()
-            .FirstOrDefault(panel => panel.Name == "PART_OverlayPanel" && panel.IsEffectivelyVisible && panel.Bounds.Width > 0);
-        return buttons?.TranslatePoint(new Point(0, 0), this) is { } origin
-            ? Math.Max(0, Bounds.Width - origin.X)
+            .FirstOrDefault(panel => panel.Name == CaptionButtonsPanelName && panel.IsEffectivelyVisible && panel.Bounds.Width > 0);
+        return buttons?.TranslatePoint(new Point(0, 0), window) is { } origin
+            ? Math.Max(0, window.Bounds.Width - origin.X)
             : null;
     }
 

@@ -76,15 +76,32 @@ sections:
 
               - id: CanvasPilot-StatusBar-ShowProjectHints
                 title: >-
-                  The StatusBar shall show, while a project is open and not otherwise, the words "Project saved" and the hint
-                  that the F8 key is held to talk.
+                  The StatusBar shall show, while a project is open and not otherwise, the hint that the talk key (F9 until
+                  the user chooses another) is held to talk, naming the key that is in effect.
                 justification: |
-                  The user is told that their work is kept and how to speak a request without searching the menus. Neither
-                  statement means anything while no project is open, so neither is shown then.
+                  The user is told how to speak a request without searching the menus, and the hint must name the key that
+                  really works, so it follows the choice on the Speech page. It means nothing while no project is open, so
+                  it is not shown then.
                 tests:
                   - StatusBar_NoProject_IsIdleAndSaysNoProjectIsOpen
                   - StatusBar_ProjectOpenNoSelection_SaysNoPictureSelected
+                  - PushToTalkHints_StatusBarAndWelcome_FollowTheSettings
                   - MainWindowView_StatusBar_AlwaysShownAndReportsThePicture
+
+              - id: CanvasPilot-StatusBar-ShowSavedTime
+                title: >-
+                  The StatusBar shall show, only while the project file of the open project has a saved time, the words
+                  "Project file saved" with that time (the time of day for today, otherwise the date and the time), update
+                  it when the project is saved, and show nothing about saving when no project is open or the file has no
+                  time.
+                justification: |
+                  The user is told when the project file was really saved, from the modified time of the file. The
+                  application cannot tell whether the drawings or the chat have unsaved changes, so it must not claim that
+                  the work is saved; a fixed "Project saved" said so even for a project that had never been saved.
+                tests:
+                  - StatusBar_SavedText_FollowsTheModifiedTimeOfTheOpenProject
+                  - StatusBar_FormatSavedTime_TimeOfDayForTodayAndDateOtherwise
+                  - StatusBar_WithoutProjectService_SaysNothingAboutSaving
 
               - id: CanvasPilot-StatusBar-AnnounceToScreenReader
                 title: >-

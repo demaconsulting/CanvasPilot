@@ -6,13 +6,14 @@
 a fixed present time, count the pictures of a project (`ProjectPictureCounter`) over real files in a temporary folder
 with a fake image filter, and drive the view model over a real main window shell, real recent projects, and real
 settings on temporary folders; for the notice about the AI provider, a real chat panel and provider pill are built over
-a hand-written controlled agent whose readiness the test chooses. Headless UI tests in `WelcomeViewTests.cs` show the
-real `MainWindowView` over a real composition on temporary folders, find controls by automation identifier, and click,
-press keys, and read what the user sees. The window tests in `MainWindowViewTests.cs` check that the welcome screen
-comes back when a project is closed and that the workspace is not built before a project is open. The pictures on the
-cards are drawn by the thumbnail source and are not asserted by these tests (they are seen in the screenshot of the
-welcome screen); the loader that gives them to the cards has no test of its own. The real file pickers cannot be shown
-headless and are not part of these tests.
+a hand-written controlled agent whose readiness the test chooses; `PushToTalkHintsTests.cs` checks, over a real shell
+and a real settings service, that the talk key that the screen names follows the settings. Headless UI tests in
+`WelcomeViewTests.cs` show the real `MainWindowView` over a real composition on temporary folders, find controls by
+automation identifier, and click, press keys, and read what the user sees. The window tests in `MainWindowViewTests.cs`
+check that the welcome screen comes back when a project is closed and that the workspace is not built before a project
+is open. The pictures on the cards are drawn by the thumbnail source and are not asserted by these tests (they are seen
+in the screenshot of the welcome screen); the loader that gives them to the cards has no test of its own. The real file
+pickers cannot be shown headless and are not part of these tests.
 
 #### Test Environment
 
@@ -42,6 +43,8 @@ with the Skia renderer, serialized with test parallelization disabled; no displa
   before a project is open.
 - The right arrow moves the focus to the next card, and Delete removes the focused card from the list and not from the
   disk.
+- The first step of "How it works" names the talk key that is in effect, `F9` by default, and the key that the user
+  chose once the settings change, announced, and never the old `F8`.
 
 #### Test Scenarios
 
@@ -85,6 +88,12 @@ scenario is tested by `WelcomeViewModel_ProviderBanner_FollowsTheCheckOfTheProvi
 **WelcomeViewModel_Constructor_NullShell_Throws**: A missing shell is refused. This scenario is tested by
 `WelcomeViewModel_Constructor_NullShell_Throws`.
 
+**PushToTalkHints_StatusBarAndWelcome_FollowTheSettings**: A shell over a real settings service gives the welcome screen
+the sentence "Type a request, or hold F9 and speak it. The copilot draws the picture."; after the settings take the key
+`Ctrl+Shift+Space` the sentence names that key, the change of `DescribeStepText` is announced, and the sentence never
+contains `F8`. The same scenario checks the status bar; see *StatusBar Verification*. This scenario is tested by
+`PushToTalkHints_StatusBarAndWelcome_FollowTheSettings` in `PushToTalkHintsTests.cs`.
+
 **WelcomeView_NoProject_ShowsStartButtonsStepsAndEmptyCard**: A window with no project shows the welcome host and not
 the workspace host, the buttons `New project` and `Open project`, the empty card, no list, and the three steps. This
 scenario is tested by `WelcomeView_NoProject_ShowsStartButtonsStepsAndEmptyCard`.
@@ -122,4 +131,4 @@ cards, the card words, the recent-projects, and the null-shell scenarios; *TellO
 *CountPictures* by the plural and the two counter scenarios; *OpenProjectFromCard* by the recent-projects scenario;
 *MoveBetweenCardsByKeyboard* by the keyboard scenario; *RemoveCardFromList* by the remove and the keyboard scenarios;
 *InviteFirstProject* by the no-project and the cards scenarios; and *NoticeAiProviderProblem* by the banner and the
-provider scenarios.
+provider scenarios. The talk key of the first step is verified by the talk key scenario.

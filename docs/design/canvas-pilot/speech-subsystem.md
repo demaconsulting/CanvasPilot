@@ -8,13 +8,17 @@ The `Speech` subsystem lets the user choose the audio devices and speech models 
 speaking and listening, download the models, and dictate: turn what the user says while holding a talk control into
 text. Its boundary starts with the audio system, the model store, and the recognition engine of the
 DemaConsulting.Speech library and ends with the "Speech" page of the settings dialog, the speech section of the
-settings file, and the text that dictation returns. It contains seven units: `AudioDeviceService`, which lists the audio
+settings file, and the text that dictation returns. It contains eight units: `AudioDeviceService`, which lists the audio
 devices and creates the capture device of the chosen microphone; `SpeechModelService`, which lists and downloads the
 speech models and loads the engine of an installed speech-to-text model; `DictationService`, which listens while the
-talk control is held and returns the text; and four units that make up the page, `DeviceSelection` (the device
+talk control is held and returns the text; `PushToTalkBinding`, which is the key or chord that is held to talk, with the
+rules that keep it safe, how it is written and read, and the setting that holds the key in effect; and four units that
+make up the page, `DeviceSelection` (the device
 pickers), `ModelCatalogPanel` (the model lists and downloads), `ModelParameterEditor` (the tunable settings of a
-model), and `SpeechSettingsPage`, which composes the other three and plugs into the settings dialog. The talk button
-of the chat panel and the talk key (F8) of the main window call the dictation service and show the words. This
+model), and `SpeechSettingsPage`, which composes the other three, lets the user choose the talk key, and plugs into the
+settings dialog. The talk button
+of the chat panel and the talk key of the main window (F9 until the user chooses another on the Speech page) call the
+dictation service and show the words. This
 subsystem provides what they call. The native speech runtime, which the speech engine needs, arrives with the library's
 packages and is shipped beside the application and in the installer; `DictationService` checks that it is there before
 it loads an engine, because an engine started without it can crash the process. The speech library is used in exactly
@@ -57,13 +61,26 @@ three units, the two services and `DictationService`, so the page and its tests 
 - *Constraints*: Nothing throws except a cancellation by the caller. A request to begin while a session is listening is
   ignored. The recognized text is never written to the log.
 
+**Talk Key**: How the window and the hints learn which key is held to talk.
+
+- *Type*: In-process .NET API (`PushToTalkBinding`, an immutable value, and `PushToTalkSetting`, an observable holder of
+  the binding in effect).
+- *Role*: Provider.
+- *Contract*: `PushToTalkBinding.Default` is F9; `Validate`, `TryCreate`, `Parse`, `FromStored`, `ToStored`, and
+  `Normalize` apply the rules and the text forms; `Matches(key, modifiers)` tells whether a key press is the binding,
+  and `IsPartOf(key)` whether a key release belongs to its chord. `PushToTalkSetting` reads
+  `Current.Speech.PushToTalkKey` from the settings, follows `Changed`, and announces `Binding` and `Text` when the key
+  in effect changes. The main window matches its key presses against it, and the status bar, the welcome screen, and the
+  chat panel show its text.
+- *Constraints*: A key that is not safe is never in effect: it is the default. Nothing throws for a bad text.
+
 **Speech Settings Read**: How dictation learns the user's choices.
 
 - *Type*: In-process .NET API (`ISettingsService` of the `Settings` subsystem).
 - *Role*: Consumer.
 - *Contract*: `Current.Speech` gives the chosen speech-to-text model, its stored parameter values, and the chosen
   microphone, which `DictationService` reads for every request, so a change made in the settings dialog is used by the
-  next hold.
+  next hold. It also gives the talk key (`PushToTalkKey`), which `PushToTalkSetting` reads and follows.
 
 **Native Speech Runtime**: The native files that the speech engine runs on.
 
@@ -104,9 +121,11 @@ three units, the two services and `DictationService`, so the page and its tests 
 
 - *Type*: Avalonia control (`SpeechSettingsPageView`) shown by the settings dialog.
 - *Role*: Provider.
-- *Contract*: Two named drop-down lists for the microphone and speakers with a Refresh devices button; a list of
+- *Contract*: A raised card, first on the page, for the push-to-talk key (a read-only box in which the user presses the
+  key or keys that they want, a button that puts the default back, and a sentence that says why a refused key was
+  refused); two named drop-down lists for the microphone and speakers with a Refresh devices button; a list of
   speech-to-text models and a list of text-to-speech models, each row with its state, a Download button, a
-  progress bar, and a Cancel button while downloading; and the settings of the chosen model of each kind. The four
+  progress bar, and a Cancel button while downloading; and the settings of the chosen model of each kind. The five
   parts are raised cards on the page, which has an icon and a sentence in the list of pages of the dialog.
 
 ### Design
@@ -131,6 +150,13 @@ three units, the two services and `DictationService`, so the page and its tests 
    listening for a moment, finishes the audio already heard, releases the microphone, and returns the final text.
 7. When the user changes the model or its settings, the next hold or preparation loads a new engine and releases the old
    one; a hold in progress keeps the engine it started with.
+8. The talk key is a setting. The shell makes one `PushToTalkSetting` over the settings service; it holds the key in
+   effect, F9 by default, and follows `Changed`. In the Speech page the user clicks the box and presses the key or chord
+   that they want (a modifier alone is waited out, and Esc cancels); `PushToTalkBinding` accepts it or refuses it with a
+   sentence, and the page keeps the key it had when it is refused. The key is stored with the other speech choices on OK
+   or Apply, and then the window, the status bar, the welcome screen, and the chat panel all use and show it at once.
+   The main window starts dictation when the chord goes down and ends it when any key of the chord goes up (see
+   *MainWindowShell Design*).
 
 A choice that the page cannot show, for example a stored device that is not connected or a stored model while the
 catalog cannot be read, is kept and stored again rather than erased.
@@ -153,7 +179,10 @@ The dependencies of the units come from the SysML2 model (`sysml2tools query dep
 - `DeviceSelection` depends on `AudioDeviceService`.
 - `ModelCatalogPanel` depends on `SpeechModelService` and the Speech library.
 - `ModelParameterEditor` depends on the Speech library.
-- `SpeechSettingsPage` depends on `DeviceSelection`, `ModelCatalogPanel`, `ModelParameterEditor`, and
-  `SettingsDialog` (`Settings`).
+- `PushToTalkBinding` depends only on Avalonia (the types of keys and modifiers); `PushToTalkSetting`, which is part of
+  the unit, depends on `SettingsService` (`Settings`).
+- `SpeechSettingsPage` depends on `DeviceSelection`, `ModelCatalogPanel`, `ModelParameterEditor`, `PushToTalkBinding`,
+  and `SettingsDialog` (`Settings`).
+- `SettingsService` (`Settings`) depends on `PushToTalkBinding`, for the rule that cleans the stored key.
 
 ![Speech dependencies](SpeechSubsystemDependencyView.svg)

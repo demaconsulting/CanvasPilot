@@ -101,7 +101,7 @@ public sealed class StatusBarTests : IDisposable
         Assert.False(_bar.HasProject);
         Assert.Equal(string.Empty, _bar.FileName);
         Assert.Equal(string.Empty, _bar.SizeText);
-        Assert.Equal("F8", StatusBarViewModel.TalkKeyText);
+        Assert.Equal("F9", _bar.TalkKeyText);
     }
 
     /// <summary>
@@ -121,7 +121,7 @@ public sealed class StatusBarTests : IDisposable
         Assert.Equal(StatusBarState.Idle, _bar.State);
         Assert.Equal("No picture selected", _bar.Summary);
         Assert.True(_bar.HasProject);
-        Assert.Equal("Project saved", StatusBarViewModel.ProjectSavedText);
+        Assert.Equal(string.Empty, _bar.SavedText);
         Assert.Contains(string.Empty, changed);
     }
 

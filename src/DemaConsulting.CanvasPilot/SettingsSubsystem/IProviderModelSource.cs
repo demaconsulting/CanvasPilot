@@ -28,6 +28,14 @@ namespace DemaConsulting.CanvasPilot.SettingsSubsystem;
 public sealed record ProviderEffortChoice(string Id, string DisplayName);
 
 /// <summary>
+///     One context size (context tier) that a model offers.
+/// </summary>
+/// <param name="Id">The id that the provider uses and the settings store, for example <c>default</c> or <c>long_context</c>.</param>
+/// <param name="DisplayName">The name to show to the user, for example <c>Standard</c> or <c>Long context</c>.</param>
+/// <param name="WindowTokens">The total context window of the size in tokens, or <see langword="null" /> when not known.</param>
+public sealed record ProviderContextTier(string Id, string DisplayName, int? WindowTokens);
+
+/// <summary>
 ///     What a provider says about one of its models, in the terms that the settings page needs. The record is plain data of
 ///     the Settings subsystem so that the page names no type of the AI library.
 /// </summary>
@@ -42,6 +50,11 @@ public sealed record ProviderEffortChoice(string Id, string DisplayName);
 /// <param name="IsUsable"><see langword="false" /> when the provider lists the model but it cannot be used.</param>
 /// <param name="UnusableReason">Why the model cannot be used; <see langword="null" /> when it can.</param>
 /// <param name="Warnings">Further sentences that the provider gives with the model, such as a note about its terms.</param>
+/// <param name="BillingMultiplier">The premium requests that one message with the model counts, or <see langword="null" /> when not published.</param>
+/// <param name="Category">The grouping that the provider gives the model, for example <c>powerful</c>, or <see langword="null" />.</param>
+/// <param name="PriceCategory">The price band that the provider gives the model, or <see langword="null" />.</param>
+/// <param name="ContextTiers">The context sizes that the model offers, standard first; empty when the size cannot be chosen.</param>
+/// <param name="DefaultContextTier">The id of the context size that the provider uses when none is chosen, or <see langword="null" />.</param>
 public sealed record ProviderModelInfo(
     string Id,
     string DisplayName,
@@ -53,7 +66,12 @@ public sealed record ProviderModelInfo(
     string? DefaultReasoningEffort,
     bool IsUsable,
     string? UnusableReason,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<string> Warnings,
+    double? BillingMultiplier = null,
+    string? Category = null,
+    string? PriceCategory = null,
+    IReadOnlyList<ProviderContextTier>? ContextTiers = null,
+    string? DefaultContextTier = null);
 
 /// <summary>
 ///     The answer of a provider to the question which models it has.

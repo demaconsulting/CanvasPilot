@@ -11,14 +11,18 @@ because speech needs a model and a microphone (the hand-written fake that the co
 says words and ends with a text), and, for the tests of the copilot's turn and of the readiness, the copilot itself (a
 scripted implementation of `IAgentService` that streams the events that the test gives it, when it gives them, and
 reports the readiness that the test chooses) and the clock of the turn runner (a manual one), because a real model is
-not deterministic; the real `ChatTurnRunner`, the real panel, and the real composer are used. The history test uses the
-real project service and the real `ChatHistoryStore` over a temporary folder that stands for the user's computer. The
-tests check the observable result: what the transcript holds, which files are in the project, what the payload and the
-inspector hold, and that the draft is empty or kept. The views are verified by the headless UI tests described in the
-unit verification documents; the subsystem requirements about what the panel offers in its view (prompts, hiding, the
-attach button, and the names of the buttons) are linked to those UI tests, which run the real panel with the real
-composer and editing view, and the system test that composes the whole application is described in the system
-verification.
+not deterministic; the real `ChatTurnRunner`, the real panel, and the real composer are used. The same substitutes serve
+the tests of the live status of a turn (the words, the elapsed time, the hint, and the stopping state) and of the usage
+caption, which are written in the tests of the `ChatTurnRunner` and `ChatPanel` units: the manual clock times the
+elapsed time and the wait before the hint, so those tests move the time by advancing it and none waits. The prompts that
+follow what the project has are verified, in the tests of the `FollowUpSuggestions` unit, over the real panel, real
+temporary project folders, and the real filter of drawings. The history test uses the real project service and the real
+`ChatHistoryStore` over a temporary folder that stands for the user's computer. The tests check the observable result:
+what the transcript holds, which files are in the project, what the payload and the inspector hold, and that the draft
+is empty or kept. The views are verified by the headless UI tests described in the unit verification documents; the
+subsystem requirements about what the panel offers in its view (prompts, hiding, the attach button, and the names of the
+buttons) are linked to those UI tests, which run the real panel with the real composer and editing view, and the system
+test that composes the whole application is described in the system verification.
 
 ### Test Environment
 
@@ -29,7 +33,8 @@ microphone, speech model, or special permission is needed.
 a requirement):
 
 1. *Real dictation.* With a speech model downloaded and chosen on the Speech page and a microphone connected, open a
-   project in the installed application, hold the talk button or the F8 key, say a sentence, and
+   project in the installed application, hold the talk button or the talk key (F9 unless another key was chosen on the
+   Speech page), say a sentence, and
    let go: the words appear while holding, one dictated block is added at the caret on release, one Ctrl+Z removes it,
    and the sent message shows the words with the dictated background.
 2. *Windows microphone privacy.* Turn off "Let desktop apps access your microphone" in the Windows privacy settings and
@@ -48,7 +53,11 @@ a requirement):
    in it; the name of the copilot and its avatar show once for a run of replies and tool lines; a tool line shows a
    spinner while it runs and then a check, or a cross with a red outline when it failed, with the time when it took a
    tenth of a second or more; the restored messages are dimmed and the first one has the divider "Earlier"; three dots
-   pulse while the copilot works; the talk button is red and pulses while it listens; a mark chip is tinted like the
+   pulse while the copilot works, next to the words of what it does and the elapsed time, which counts up every second
+   (the hint about a long wait shows after 30 seconds without a sign from the copilot), and the row says
+   "Stopping..." at once when Stop is pressed; the caption of what a turn cost is small and quiet under the last reply;
+   the talk button is red
+   and pulses while it listens; a mark chip is tinted like the
    mark; the card of the message has the colored outline and glow while the editing control has the focus.
 6. *The copilot panel.* With Copilot chosen in the settings on a machine that is not signed in for CanvasPilot, the
    banner above the transcript says how to sign in (run `copilot` and type `/login`, or use `gh auth login` or a token
@@ -63,6 +72,17 @@ a requirement):
    holds `history.json` and `project.json`, and the project folder holds no history file; "Clear chat history" empties
    the panel and removes the folder; a project that is moved or renamed starts with an empty history. (The composition
    root gives the panel the store; the live run is the Ollama item of *Manual Verification* in the system verification.)
+8. *A long turn with a real model.* With GitHub Copilot signed in and a model that writes a large drawing, send a
+   request for a detailed drawing and watch the busy row: it shows the working text and an elapsed time that counts up
+   every second from the start, the words change as the copilot reports (the tools, the wait for the model, the writing
+   of the file), the row of a file that is written shows the bytes so far when the provider reports them (some models,
+   such as the Claude models on the Copilot runtime at the time of writing, send nothing until the drawing is whole, and
+   then only the elapsed time and the hint show), the hint appears after 30 seconds without a sign, Stop shows
+   "Stopping..." within a moment and the panel is idle a moment later, a follow-up message is answered, and the last
+   reply shows the caption of what the turn cost. The opt-in live tests of long turns (skipped unless
+   `CANVASPILOT_LIVE_COPILOT` is `1`) do this through the composed application; their results are in *Manual
+   Verification* of the system verification. They count premium requests of the account, are not evidence for a
+   requirement, and are not run by the build.
 
 ### Acceptance Criteria
 
@@ -84,6 +104,14 @@ a requirement):
 - Stopping a turn keeps the text written so far, marked as stopped, and frees the composer; a failure ends with an error
   notice with the message, a remedy, and the offer of the settings when they can help, which raises a request to open
   them.
+- While a turn runs the busy row says what the copilot is doing, for how long, and, after 30 seconds without a sign from
+  it, why a long wait is not a fault; a file that the model is writing is one running row with the bytes so far; from
+  the Stop until the turn has ended the row says that the copilot is stopping and Stop cannot be pressed again; and when
+  the turn has ended the last reply shows what the turn cost, with only the figures that the provider reported. These
+  are verified by the unit tests of the turn runner and the panel and by the headless UI tests of the panel.
+- The prompts that the panel offers follow what the project has (ways to start without a drawing, ways to refine with
+  one, the export only while a picture is shown, none while the copilot works), and the hints that name the talk key
+  follow the setting. These are verified by the unit tests of `FollowUpSuggestions`, of the panel, and of the hints.
 - The banner shows the sentence of the readiness of the provider (the sign-in sentence of GitHub Copilot included), a
   warning does not block sending, and the banner is empty when the provider is ready.
 - After a full scripted turn in a project made by the real project service, the words of the conversation are saved
@@ -91,8 +119,9 @@ a requirement):
   project folder holds exactly the project file, its empty data folder, and the file that the copilot created; a second
   panel in the same project shows the conversation as text and gives the copilot the saved words with the next message;
   Clear deletes the history and resets the copilot; and through all of it no history file is in the project.
-- The empty conversation offers example prompts that fill in the message, follow-up prompts show once there is a
-  conversation, the header button asks for the panel to be hidden, the attach button adds the picked files as chips,
+- The empty conversation offers prompts that fit the project and fill in the message, the same prompts show above the
+  message once there is a conversation and the copilot is idle, the header button asks for the panel to be hidden, the
+  attach button adds the picked files as chips,
   and every button that shows only an icon has a name, a tooltip, and a target of at least 28 by 28 pixels. These are
   verified by the headless UI tests of the panel.
 
@@ -153,9 +182,34 @@ text "Please " and the dictated text "turn the arrow red", in that order. This s
 `ChatSubsystem_HoldToTalk_DictatedWords_AreKeptAsDictatedInTheSentPayload`.
 
 **ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation**: This UI test, which runs
-the real panel, composer, and editing view, shows that the empty conversation offers the four example prompts and no
-follow-up, that an example becomes the message, and that the follow-ups appear once the message is sent. It stands as
-the evidence of the guidance of a new conversation and is described in the verification of the `ChatPanel` unit.
+the real panel, composer, and editing view, shows that the empty conversation offers the prompts that the panel plans
+for its project (the harness shows a picture, so the refinements and the export) and no prompts above the message, that
+an example becomes the message, and that the prompts appear above the message once the message is sent. It stands as the
+evidence of the guidance of a new conversation and is described in the verification of the `ChatPanel` unit.
+
+**FollowUpSuggestions_Plan_FollowsDrawingPictureAndBusy** and the five panel scenarios of `FollowUpSuggestionsTests.cs`
+(`ChatPanelViewModel_EmptyProject_OffersStarterPrompts`,
+`ChatPanelViewModel_TurnWritesDrawing_SuggestionsHideWhileBusyThenBecomeRefinements`,
+`ChatPanelViewModel_TurnWritesNotes_StillOffersStarterPrompts`,
+`ChatPanelViewModel_OpenProject_WithDrawingOffersRefinementsAndEachProjectIsJudgedAlone`, and
+`ChatPanelViewModel_PictureShown_OffersRefinementsWithExport`): These show that the prompts follow what the project has
+and the state of the copilot, as described in the verification of the `FollowUpSuggestions` unit.
+
+**ChatPanelViewModel_TurnRuns_BusyRowShowsPhaseElapsedTimeAndHint** and
+**ChatPanelView_CopilotProgress_BusyRowShowsElapsedTimeAndWhatIsReported**: These show, in the panel and in the view,
+that the busy row follows the status of the turn that the runner keeps: the working text and `0:00` at the start, the
+elapsed time from the clock, the words that the copilot's reports give (thinking, the size and the file that is being
+written), and the hint after a long silence, and that everything is empty when the turn has ended. They are described in
+the verification of the `ChatPanel` unit and of the `ChatTurnRunner` unit.
+
+**ChatPanelViewModel_Stop_ShowsStoppingAndDisablesStopUntilTheTurnEnds** and
+**ChatPanelView_Stop_ShowsStoppingUntilTheTurnEnds**: These show, on a copilot that is slow to stop, that from the Stop
+until the turn has ended the busy row says "Stopping...", Stop cannot be pressed again, and afterwards the reply is
+stopped, Send can be used, and the row is hidden. They are described in the verification of the `ChatPanel` unit.
+
+**ChatPanelView_CompletedTurn_ShowsTheUsageCaptionUnderTheLastReply**: This UI test shows that the last reply of a
+completed turn shows the caption of what the turn cost. It is described in the verification of the `ChatPanel` unit, and
+the sums and the wording of the caption in the verification of the `ChatTurnRunner` unit.
 
 **ChatPanelView_CollapseButton_RaisesCollapseRequested**: This UI test shows that the button of the header raises the
 request to hide the panel, which the workspace of the shell handles (see the verification of the `AppShell`

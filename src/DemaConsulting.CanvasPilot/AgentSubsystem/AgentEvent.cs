@@ -213,7 +213,83 @@ public abstract record AgentEvent
     /// </summary>
     /// <param name="InputTokens">The tokens sent to the model, or <see langword="null" /> when not reported.</param>
     /// <param name="OutputTokens">The tokens the model wrote, or <see langword="null" /> when not reported.</param>
-    public sealed record Usage(long? InputTokens, long? OutputTokens) : AgentEvent;
+    /// <param name="ReasoningTokens">The tokens the model spent on reasoning, or <see langword="null" /> when not reported.</param>
+    /// <param name="Multiplier">
+    ///     The model multiplier that the provider bills a message with (the premium requests that it counts), or
+    ///     <see langword="null" /> when the provider does not report one.
+    /// </param>
+    /// <param name="Model">The model that served the call, or <see langword="null" /> when not reported.</param>
+    /// <param name="ContextSize">
+    ///     The words for the context size (tier) that the settings chose for the turn, for example <c>long context</c>, or
+    ///     <see langword="null" /> when none was chosen (the provider's own size applies). It comes from the settings, not
+    ///     from the provider's report, which does not name the size.
+    /// </param>
+    public sealed record Usage(
+        long? InputTokens,
+        long? OutputTokens,
+        long? ReasoningTokens = null,
+        double? Multiplier = null,
+        string? Model = null,
+        string? ContextSize = null) : AgentEvent;
+
+    /// <summary>
+    ///     The model is thinking: the provider reports reasoning that is not shown. It says that the turn is alive and what
+    ///     phase it is in; it carries no text.
+    /// </summary>
+    public sealed record Thinking : AgentEvent;
+
+    /// <summary>
+    ///     The model is writing the arguments of a tool call, which the provider streams before it runs the tool. Only the
+    ///     count of bytes and the name of the file are carried; never the content.
+    /// </summary>
+    public sealed record ToolProgress : AgentEvent
+    {
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="ToolProgress" /> record.
+        /// </summary>
+        /// <param name="callId">The id of the call, the same as that of its <see cref="ToolStarted" />.</param>
+        /// <param name="name">The name of the tool.</param>
+        /// <param name="argumentBytes">The bytes of the arguments received so far.</param>
+        /// <param name="path">The path that the arguments name, once it is known; <see langword="null" /> before.</param>
+        /// <exception cref="ArgumentException">Thrown when the call id or the name is empty.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when the call id or the name is <see langword="null" />.</exception>
+        public ToolProgress(string callId, string name, long argumentBytes, string? path)
+        {
+            ArgumentException.ThrowIfNullOrEmpty(callId);
+            ArgumentException.ThrowIfNullOrEmpty(name);
+
+            CallId = callId;
+            Name = name;
+            ArgumentBytes = Math.Max(0, argumentBytes);
+            Path = string.IsNullOrWhiteSpace(path) ? null : Summarize(path);
+        }
+
+        /// <summary>
+        ///     Gets the id of the call.
+        /// </summary>
+        public string CallId { get; }
+
+        /// <summary>
+        ///     Gets the name of the tool.
+        /// </summary>
+        public string Name { get; }
+
+        /// <summary>
+        ///     Gets the bytes of the arguments received so far.
+        /// </summary>
+        public long ArgumentBytes { get; }
+
+        /// <summary>
+        ///     Gets the path that the arguments name, or <see langword="null" /> while it is not known.
+        /// </summary>
+        public string? Path { get; }
+    }
+
+    /// <summary>
+    ///     The model is writing its answer, and the provider says how many bytes of it were received so far.
+    /// </summary>
+    /// <param name="BytesReceived">The bytes of the response received so far.</param>
+    public sealed record ModelWorking(long BytesReceived) : AgentEvent;
 
     /// <summary>
     ///     The turn ended normally; no event follows.

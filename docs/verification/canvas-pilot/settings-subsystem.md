@@ -30,6 +30,12 @@ external services, or display are required.
   technology and every button can be reached with the keyboard.
 - A corrupt settings file does not prevent the dialog from opening and saving; the corrupt file is kept aside
   as `settings.json.bad` and the new choices are stored.
+- The talk key of the speech settings is stored as text, a file without one, with the old default F8, or with a key that
+  is not safe gives the default (stored as nothing), and a safe key is kept in its normal form; this is verified by the
+  unit test of `SettingsService` (see *SettingsService Verification*), because it needs no dialog.
+- The page of the AI provider warns, with the cost of a message, that a high reasoning level on a large model of GitHub
+  Copilot is slow and costly, and only then; this is verified by the unit and the headless UI tests of the page (see
+  *AiProviderSettingsPage Verification*).
 
 ### Test Scenarios
 

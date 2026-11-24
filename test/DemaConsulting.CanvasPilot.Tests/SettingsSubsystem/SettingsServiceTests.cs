@@ -233,6 +233,34 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the talk key is empty (the default, F9) when the file has none, that a safe key is kept in its normal
+    ///     form and survives a save, and that an unsafe one, the old default F8 among them, becomes the default.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_PushToTalkKey_IsNormalizedAndUnsafeOrOldF8BecomesTheDefault()
+    {
+        // Arrange and act: files with no key, a chord in another form, the old default, and a key that cannot be used
+        WriteSettingsFile("""{ "version": 1 }""");
+        var none = new SettingsService(SettingsFolder).Load().Speech.PushToTalkKey;
+        WriteSettingsFile("""{ "version": 1, "speech": { "pushToTalkKey": "shift+ctrl+space" } }""");
+        var service = new SettingsService(SettingsFolder);
+        var chord = service.Load();
+        service.Save(chord);
+        var reloaded = new SettingsService(SettingsFolder).Load().Speech.PushToTalkKey;
+        WriteSettingsFile("""{ "version": 1, "speech": { "pushToTalkKey": "F8" } }""");
+        var oldDefault = new SettingsService(SettingsFolder).Load().Speech.PushToTalkKey;
+        WriteSettingsFile("""{ "version": 1, "speech": { "pushToTalkKey": "Escape" } }""");
+        var unsafeKey = new SettingsService(SettingsFolder).Load().Speech.PushToTalkKey;
+
+        // Assert
+        Assert.Equal(string.Empty, none);
+        Assert.Equal("Ctrl+Shift+Space", chord.Speech.PushToTalkKey);
+        Assert.Equal("Ctrl+Shift+Space", reloaded);
+        Assert.Equal(string.Empty, oldDefault);
+        Assert.Equal(string.Empty, unsafeKey);
+    }
+
+    /// <summary>
     ///     Test that properties missing from the file take their default values.
     /// </summary>
     [Fact]
@@ -452,6 +480,30 @@ public sealed class SettingsServiceTests : IDisposable
         // Assert: nothing was invented, and the effort came back
         Assert.Equal(string.Empty, withoutKey);
         Assert.Equal("max", reloaded.AiProvider.ReasoningEffort);
+    }
+
+    /// <summary>
+    ///     Test that a file without the context size loads with the size that leaves the choice to the provider, that a size
+    ///     survives a save and a load, and that a size is trimmed when it is loaded.
+    /// </summary>
+    [Fact]
+    public void SettingsService_SaveLoad_ContextTier_RoundTripsDefaultsToEmptyAndIsTrimmed()
+    {
+        // Arrange: a file without the key, loaded first
+        WriteSettingsFile("""{ "aiProvider": { "modelName": "m" } }""");
+        var service = new SettingsService(SettingsFolder);
+        var withoutKey = service.Load().AiProvider.ContextTier;
+
+        // Act: save a size, load it with a new service, and load a file with a padded size
+        service.Save(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "m", ContextTier = "long_context" } });
+        var reloaded = new SettingsService(SettingsFolder).Load();
+        WriteSettingsFile("""{ "aiProvider": { "modelName": "m", "contextTier": "  long_context  " } }""");
+        var trimmed = new SettingsService(SettingsFolder).Load();
+
+        // Assert: nothing was invented, the size came back, and the padded one was trimmed
+        Assert.Equal(string.Empty, withoutKey);
+        Assert.Equal("long_context", reloaded.AiProvider.ContextTier);
+        Assert.Equal("long_context", trimmed.AiProvider.ContextTier);
     }
 
     /// <summary>

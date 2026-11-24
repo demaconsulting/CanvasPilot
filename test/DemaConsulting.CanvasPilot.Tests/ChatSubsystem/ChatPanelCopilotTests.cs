@@ -68,6 +68,11 @@ public sealed class ChatPanelCopilotTests : IDisposable
     private readonly ChatPanelViewModel _panel;
 
     /// <summary>
+    ///     The clock of the panel and its turns, which moves when a test says so.
+    /// </summary>
+    private readonly ManualTimeProvider _clock = new();
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ChatPanelCopilotTests" /> class with a chat panel that has a copilot,
     ///     in an open project.
     /// </summary>
@@ -82,7 +87,7 @@ public sealed class ChatPanelCopilotTests : IDisposable
             _annotation,
             Substitute.For<IMarkImageComposer>(),
             agent: _agent,
-            clock: new ManualTimeProvider());
+            clock: _clock);
         _composer.SetProject(Directory.CreateDirectory(Path.Combine(_root, "project")).FullName);
     }
 
@@ -97,6 +102,70 @@ public sealed class ChatPanelCopilotTests : IDisposable
         {
             Directory.Delete(_root, recursive: true);
         }
+    }
+
+    /// <summary>
+    ///     Test that the busy row says that the copilot is stopping from the moment of the Stop until the turn has ended, and
+    ///     that Stop cannot be pressed again meanwhile.
+    /// </summary>
+    [Fact]
+    public async Task ChatPanelViewModel_Stop_ShowsStoppingAndDisablesStopUntilTheTurnEnds()
+    {
+        // Arrange: a turn on a copilot that is slow to stop
+        var token = TestContext.Current.CancellationToken;
+        _agent.IgnoreCancellation = true;
+        var announced = new List<string?>();
+        _panel.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
+        _composer.InsertTyped("Draw");
+        await _panel.SendCommand.ExecuteAsync(null);
+        var before = (_panel.IsStopping, _panel.StopCommand.CanExecute(null));
+
+        // Act: Stop
+        _panel.StopCommand.Execute(null);
+        var during = (_panel.IsCopilotBusy, _panel.IsStopping, _panel.BusyText, _panel.StopCommand.CanExecute(null));
+        _agent.EndStream();
+        await _panel.WaitForTurnAsync().WaitAsync(TurnTimeout, token);
+
+        // Assert
+        Assert.Equal((false, true), before);
+        Assert.Equal((true, true, ChatTurnRunner.StoppingText, false), during);
+        Assert.Contains(nameof(ChatPanelViewModel.IsStopping), announced);
+        Assert.Equal((false, false, false), (_panel.IsCopilotBusy, _panel.IsStopping, _panel.StopCommand.CanExecute(null)));
+    }
+
+    /// <summary>
+    ///     Test that the busy row says what the copilot is doing, how long the turn has lasted, and, after a long silence,
+    ///     the hint about a long wait, that the panel announces each change, and that all of it is empty when the turn
+    ///     has ended.
+    /// </summary>
+    [Fact]
+    public async Task ChatPanelViewModel_TurnRuns_BusyRowShowsPhaseElapsedTimeAndHint()
+    {
+        // Arrange: the changes that the panel announces
+        var token = TestContext.Current.CancellationToken;
+        var announced = new List<string?>();
+        _panel.PropertyChanged += (_, e) => announced.Add(e.PropertyName);
+        _composer.InsertTyped("Draw");
+
+        // Act: send, let the time pass, and let the copilot report that it thinks
+        await _panel.SendCommand.ExecuteAsync(null);
+        var atStart = (_panel.BusyText, _panel.BusyElapsedText, _panel.HasBusyHint);
+        _clock.Advance(ChatTurnRunner.HintDelay);
+        var silent = (_panel.BusyElapsedText, _panel.BusyHintText, _panel.HasBusyHint);
+        _agent.Emit(new AgentEvent.Thinking());
+        var thinking = (_panel.BusyText, _panel.HasBusyHint);
+        _agent.Emit(new AgentEvent.Completed());
+        await _panel.WaitForTurnAsync().WaitAsync(TurnTimeout, token);
+
+        // Assert
+        Assert.Equal((ChatPanelViewModel.WorkingText, "0:00", false), atStart);
+        Assert.Equal(("0:30", ChatTurnRunner.LongWaitHint, true), silent);
+        Assert.Equal((ChatTurnRunner.ThinkingText, false), thinking);
+        Assert.Contains(nameof(ChatPanelViewModel.BusyText), announced);
+        Assert.Contains(nameof(ChatPanelViewModel.BusyElapsedText), announced);
+        Assert.Contains(nameof(ChatPanelViewModel.BusyHintText), announced);
+        Assert.Contains(nameof(ChatPanelViewModel.HasBusyHint), announced);
+        Assert.Equal((string.Empty, string.Empty, string.Empty, false), (_panel.BusyText, _panel.BusyElapsedText, _panel.BusyHintText, _panel.HasBusyHint));
     }
 
     /// <summary>

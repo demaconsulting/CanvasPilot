@@ -147,9 +147,9 @@ public sealed class AiProviderSettingsPageTests
     [InlineData("8,192")]
     public void AiProviderSettingsPageViewModel_ContextWindowText_OutOfBounds_IsInvalid(string text)
     {
-        // Arrange: a loaded page
+        // Arrange: a loaded page with Ollama selected, the provider that the context window belongs to
         var page = new AiProviderSettingsPageViewModel();
-        page.Load(new AppSettings());
+        page.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama } });
 
         // Act: type the text
         page.ContextWindowText = text;
@@ -187,9 +187,9 @@ public sealed class AiProviderSettingsPageTests
     [Fact]
     public void AiProviderSettingsPageViewModel_Apply_InvalidEntries_ThrowsInvalidOperationException()
     {
-        // Arrange: a page with an invalid context window
+        // Arrange: a page with Ollama selected and an invalid context window
         var page = new AiProviderSettingsPageViewModel();
-        page.Load(new AppSettings());
+        page.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama } });
         page.ContextWindowText = "1";
 
         // Act / Assert: applying is refused
@@ -202,9 +202,9 @@ public sealed class AiProviderSettingsPageTests
     [Fact]
     public void AiProviderSettingsPageViewModel_ContextWindowText_Edited_RaisesIsValidChanged()
     {
-        // Arrange: a loaded page and a listener
+        // Arrange: a loaded page with Ollama selected and a listener
         var page = new AiProviderSettingsPageViewModel();
-        page.Load(new AppSettings());
+        page.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama } });
         var names = new List<string?>();
         page.PropertyChanged += (_, e) => names.Add(e.PropertyName);
 
@@ -429,8 +429,8 @@ public sealed class AiProviderSettingsPageTests
     }
 
     /// <summary>
-    ///     Test that an invalid context window gets an error and no warning, and that the context window is explained as
-    ///     Ollama only: no warning while GitHub Copilot is selected, and a note instead.
+    ///     Test that an invalid context window gets an error and no warning while Ollama is selected, and that while GitHub
+    ///     Copilot is selected, which the entry does not belong to, there is neither a warning nor an error.
     /// </summary>
     [Fact]
     public void AiProviderSettingsPageViewModel_ContextWindowWarning_InvalidOrCopilot_GivesNoWarning()
@@ -441,18 +441,41 @@ public sealed class AiProviderSettingsPageTests
         page.ContextWindowText = "0";
         var invalidWarning = page.ContextWindowWarning;
         var invalidError = page.ContextWindowError;
-        var ollamaNote = page.ContextWindowNote;
 
         // Act: a small valid window, with GitHub Copilot selected
         page.ContextWindowText = "8192";
         page.SelectedProvider = page.Providers[0];
 
-        // Assert: the invalid entry is an error only, the Ollama page has no note, and Copilot has the note and no warning
+        // Assert: the invalid entry is an error only, and Copilot has no warning for it
         Assert.Equal(string.Empty, invalidWarning);
         Assert.NotEmpty(invalidError);
-        Assert.Equal(string.Empty, ollamaNote);
         Assert.Equal(string.Empty, page.ContextWindowWarning);
-        Assert.Contains("Ollama only", page.ContextWindowNote, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, page.ContextWindowError);
+    }
+
+    /// <summary>
+    ///     Test that entries that belong to the provider that is not selected never block the page: a context window that is
+    ///     not valid while GitHub Copilot is selected is not an error, and applying keeps the stored value.
+    /// </summary>
+    [Fact]
+    public void AiProviderSettingsPageViewModel_ContextWindowText_InvalidWhileCopilotSelected_IsIgnoredAndStoredValueKept()
+    {
+        // Arrange: a page with GitHub Copilot selected, a stored window, and junk typed in the hidden window entry
+        var stored = new AppSettings { AiProvider = new AiProviderSettings { ContextWindowTokens = 65536 } };
+        var page = new AiProviderSettingsPageViewModel();
+        page.Load(stored);
+        page.ContextWindowText = "junk";
+
+        // Act: apply, then choose Ollama, for which the same text is an error
+        var applied = page.Apply(stored);
+        var validForCopilot = page.IsValid;
+        page.SelectedProvider = page.Providers[1];
+
+        // Assert: the page was valid and kept the stored window, and the entry blocks the page for Ollama only
+        Assert.True(validForCopilot);
+        Assert.Equal(65536, applied.AiProvider.ContextWindowTokens);
+        Assert.False(page.IsValid);
+        Assert.NotEmpty(page.ContextWindowError);
     }
 
     /// <summary>
@@ -518,7 +541,7 @@ public sealed class AiProviderSettingsPageTests
         // Arrange: a page over a check that fails, and a gate that holds the answer back
         var check = new RecordingCheck(new ProviderCheckResult(false, "Not signed in."));
         var page = new AiProviderSettingsPageViewModel(check);
-        page.Load(new AppSettings());
+        page.Load(new AppSettings { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama } });
 
         // Act: check, then make the entries invalid, then restore them and start a check that is held
         await page.CheckConnectionCommand.ExecuteAsync(null);
@@ -903,6 +926,149 @@ public sealed class AiProviderSettingsPageTests
         Assert.Equal(string.Empty, refused.SelectedReasoningEffort!.Value);
         Assert.Equal(string.Empty, refused.Apply(new AppSettings()).AiProvider.ReasoningEffort);
         Assert.Contains("does not offer the reasoning level xhigh", refused.ReasoningNote, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    ///     Test that the page warns that a high reasoning level on a large model is slow and costly, with the multiplier of
+    ///     the model, and that a lower level, a small model, and another provider show no warning.
+    /// </summary>
+    [Fact]
+    public async Task AiProviderSettingsPageViewModel_EffortCostWarning_AppearsOnlyForHighEffortOnLargeModels()
+    {
+        // Arrange: a large model (15 premium requests per message) and a small one, both with levels
+        var large = Model("opus", efforts: ["low", "high"]) with { BillingMultiplier = 15, Category = "powerful" };
+        var small = Model("mini", efforts: ["low", "high"]) with { BillingMultiplier = 0.33, Category = "lightweight" };
+        var source = new FakeModelSource { Models = [large, small] };
+        var page = await LoadedPage(source, new AiProviderSettings { ModelName = "opus", ReasoningEffort = "low" });
+        var atLow = (page.HasEffortCostWarning, page.EffortCostWarning);
+
+        // Act: choose the high level, then the small model, then back to the large model with the default level
+        page.SelectedReasoningEffort = page.ReasoningEfforts.Single(choice => choice.Value == "high");
+        var atHigh = (page.HasEffortCostWarning, page.EffortCostWarning);
+        page.SelectedModel = page.Models.Single(choice => choice.Id == "mini");
+        var onSmall = page.HasEffortCostWarning;
+
+        // Assert
+        Assert.Equal((false, string.Empty), atLow);
+        Assert.True(atHigh.HasEffortCostWarning);
+        Assert.Contains("slow", atHigh.EffortCostWarning, StringComparison.Ordinal);
+        Assert.Contains("costly", atHigh.EffortCostWarning, StringComparison.Ordinal);
+        Assert.Contains("15 premium requests", atHigh.EffortCostWarning, StringComparison.Ordinal);
+        Assert.False(onSmall);
+    }
+
+    /// <summary>
+    ///     Makes a model that offers the standard context size and a larger one.
+    /// </summary>
+    /// <param name="id">The id of the model.</param>
+    /// <returns>The model.</returns>
+    private static ProviderModelInfo TieredModel(string id)
+    {
+        return Model(id, efforts: ["low", "high"]) with
+        {
+            ContextTiers = [new ProviderContextTier("default", "Standard", 328_000), new ProviderContextTier("long_context", "Long context", 1_000_000)],
+            DefaultContextTier = "default",
+        };
+    }
+
+    /// <summary>
+    ///     Test that the context size is offered only while GitHub Copilot is selected and the chosen model offers more than
+    ///     one, with the sizes of the catalog and their windows; that the standard size is stored as no choice and another
+    ///     size by its id; that the sizes are listed with the model; and that a size other than the standard one shows the
+    ///     note about its cost.
+    /// </summary>
+    [Fact]
+    public async Task AiProviderSettingsPageViewModel_ContextTier_OfferedForAModelWithSeveralSizes_IsChosenAndApplied()
+    {
+        // Arrange: a model with two sizes and a model with none, with the larger size stored for the first
+        var source = new FakeModelSource { Models = [TieredModel("opus"), Model("plain")] };
+        var page = await LoadedPage(source, new AiProviderSettings { ModelName = "opus", ContextTier = "long_context" });
+        var names = new List<string?>();
+        page.PropertyChanged += (_, e) => names.Add(e.PropertyName);
+        var offered = (page.HasContextTierChoice, page.ContextTiers.Select(tier => tier.Label).ToArray(), page.SelectedContextTier?.Value);
+        var appliedLarger = page.Apply(new AppSettings()).AiProvider.ContextTier;
+        var costNoteAtLarger = page.ContextTierCostNote;
+        var details = page.ModelDetails;
+
+        // Act: choose the standard size, then the larger one again, then a model with a single size
+        page.SelectedContextTier = page.ContextTiers[0];
+        var appliedStandard = page.Apply(new AppSettings()).AiProvider.ContextTier;
+        var costNoteAtStandard = page.HasContextTierCostNote;
+        page.SelectedContextTier = page.ContextTiers[1];
+        var appliedAgain = page.Apply(new AppSettings()).AiProvider.ContextTier;
+        page.SelectedModel = page.Models.Single(choice => choice.Id == "plain");
+        var onPlain = (page.HasContextTierChoice, page.Apply(new AppSettings()).AiProvider.ContextTier);
+
+        // Assert: the sizes of the catalog are offered with their windows and the stored one is chosen
+        Assert.True(offered.HasContextTierChoice);
+        Assert.Equal(["Standard (328K tokens)", "Long context (1M tokens)"], offered.Item2);
+        Assert.Equal("long_context", offered.Item3);
+        Assert.Contains("Context sizes: Standard (328K tokens), Long context (1M tokens)", details, StringComparison.Ordinal);
+
+        // Assert: the id is stored for the larger size and nothing for the standard one, and only the larger one has the note
+        Assert.Equal("long_context", appliedLarger);
+        Assert.Equal(AiProviderSettingsPageViewModel.ContextTierCostNoteText, costNoteAtLarger);
+        Assert.Equal(string.Empty, appliedStandard);
+        Assert.False(costNoteAtStandard);
+        Assert.Equal("long_context", appliedAgain);
+
+        // Assert: a model with a single size has no choice and no stored size, and the change was announced
+        Assert.Equal((false, string.Empty), onPlain);
+        Assert.Contains(nameof(AiProviderSettingsPageViewModel.HasContextTierChoice), names);
+    }
+
+    /// <summary>
+    ///     Test that a stored context size that the known model does not offer falls back to the provider's own size with a
+    ///     note, that the standard size stored by its id is the same as no choice, that a size that is stored while nothing is
+    ///     known about the model is kept without a choice being shown, and that choosing another provider starts again.
+    /// </summary>
+    [Fact]
+    public async Task AiProviderSettingsPageViewModel_ContextTier_StoredSizeTheModelDoesNotOffer_FallsBackWithANote()
+    {
+        // Arrange: a model with two sizes, and a size that it does not offer stored for it
+        var source = new FakeModelSource { Models = [TieredModel("opus")] };
+        var page = await LoadedPage(source, new AiProviderSettings { ModelName = "opus", ContextTier = "huge" });
+        var reset = (page.Apply(new AppSettings()).AiProvider.ContextTier, page.ContextTierNote, page.HasContextTierNote, page.SelectedContextTier?.Value);
+
+        // Act: the standard size stored by its id, a typed model that is not listed, a page without a source, and Ollama
+        var byId = await LoadedPage(source, new AiProviderSettings { ModelName = "opus", ContextTier = "default" });
+        var byIdApplied = byId.Apply(new AppSettings()).AiProvider.ContextTier;
+        var unknown = await LoadedPage(source, new AiProviderSettings { ModelName = "typed-model", ContextTier = "long_context" });
+        var unknownState = (unknown.HasContextTierChoice, unknown.Apply(new AppSettings()).AiProvider.ContextTier);
+        var withoutSource = new AiProviderSettingsPageViewModel();
+        withoutSource.Load(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "opus", ContextTier = "long_context" } });
+        var withoutSourceState = (withoutSource.HasContextTierChoice, withoutSource.Apply(new AppSettings()).AiProvider.ContextTier);
+        page.SelectedProvider = page.Providers[1];
+        await page.ModelListLoaded;
+
+        // Assert: the size fell back to the provider's own with the note, and the standard size by id is no choice
+        Assert.Equal((string.Empty, true, string.Empty), (reset.Item1, reset.HasContextTierNote, reset.Item4));
+        Assert.Contains("does not offer the context size huge", reset.ContextTierNote, StringComparison.Ordinal);
+        Assert.Equal(string.Empty, byIdApplied);
+
+        // Assert: nothing is known about a model that is not listed, so its stored size is kept and no choice is shown
+        Assert.Equal((false, "long_context"), unknownState);
+        Assert.Equal((false, "long_context"), withoutSourceState);
+
+        // Assert: another provider has no choice and starts without a size
+        Assert.False(page.HasContextTierChoice);
+        Assert.Equal(string.Empty, page.Apply(new AppSettings()).AiProvider.ContextTier);
+    }
+
+    /// <summary>
+    ///     Test that the effort that the provider chooses counts when none was chosen, and that a model that the provider
+    ///     does not describe gets no warning.
+    /// </summary>
+    [Fact]
+    public void AiProviderSettingsPageViewModel_BuildEffortCostWarning_UsesTheDefaultEffortAndNeedsAModel()
+    {
+        // Arrange
+        var large = Model("opus", efforts: ["low", "high"]) with { BillingMultiplier = 10, DefaultReasoningEffort = "high" };
+
+        // Act and assert
+        Assert.NotEqual(string.Empty, AiProviderSettingsPageViewModel.BuildEffortCostWarning(large, string.Empty));
+        Assert.Equal(string.Empty, AiProviderSettingsPageViewModel.BuildEffortCostWarning(large, "low"));
+        Assert.Equal(string.Empty, AiProviderSettingsPageViewModel.BuildEffortCostWarning(null, "high"));
     }
 
     /// <summary>

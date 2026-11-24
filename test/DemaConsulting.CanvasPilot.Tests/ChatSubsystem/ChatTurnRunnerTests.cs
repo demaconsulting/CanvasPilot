@@ -151,9 +151,10 @@ public sealed class ChatTurnRunnerTests : IDisposable
         _agent.Emit(new AgentEvent.Completed());
         await run.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
-        // Assert: nothing was added within the interval, and the waiting pieces were added together by the timer
-        Assert.Equal(("a", 0, 1), beforeTheInterval);
-        Assert.Equal(("a" + new string('b', 19), 1, 0), afterTheInterval);
+        // Assert: nothing was added within the interval, and the waiting pieces were added together by the timer (the
+        // other timer that is set is the one-second tick of the elapsed time of the turn)
+        Assert.Equal(("a", 0, 2), beforeTheInterval);
+        Assert.Equal(("a" + new string('b', 19), 1, 1), afterTheInterval);
         Assert.Equal(("a" + new string('b', 19) + "c", 2), afterLongPause);
     }
 

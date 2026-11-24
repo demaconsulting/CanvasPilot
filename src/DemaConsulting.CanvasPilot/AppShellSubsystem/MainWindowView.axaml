@@ -12,7 +12,8 @@
         MinHeight="600"
         Background="{DynamicResource CpSurfaceWindow}"
         ExtendClientAreaToDecorationsHint="True"
-        ExtendClientAreaTitleBarHeightHint="44">
+        ExtendClientAreaTitleBarHeightHint="44"
+        WindowDrawnDecorations.TitleBarDecorations="Title, MinimizeButton, MaximizeButton, CloseButton">
 
   <Window.Resources>
     <!-- Each recent project becomes a menu item that shows its name and opens the project. -->
@@ -172,6 +173,10 @@
                   AutomationProperties.AutomationId="DrawingKnowledgeMenuItem"
                   Header="_Drawing Knowledge..."
                   Command="{Binding ShowDrawingKnowledgeCommand}" />
+        <MenuItem Name="OpenLogFolderMenuItem"
+                  AutomationProperties.AutomationId="OpenLogFolderMenuItem"
+                  Header="Open _Log Folder"
+                  Command="{Binding OpenLogFolderCommand}" />
         <Separator />
         <MenuItem Name="AboutMenuItem"
                   AutomationProperties.AutomationId="AboutMenuItem"

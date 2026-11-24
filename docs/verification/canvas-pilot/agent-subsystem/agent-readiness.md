@@ -141,6 +141,13 @@ ready with "GitHub Copilot CLI 1.0.114 is ready with the model claude-haiku-5.5.
 ready sentence. This scenario is tested by
 `AgentReadiness_Copilot_ModelOfTheSettings_IsValidatedByTheRuntimeCatalogAndNamedWhenReady`.
 
+**AgentReadiness_Copilot_ContextTierChosen_IsNamedInTheReadySentence**: A runtime whose catalog offers `claude-opus-5.5`
+with the sizes `default` (Standard, 328,000 tokens) and `long_context` (Long context, 1,000,000). Settings with the
+larger size give "GitHub Copilot CLI 1.0.114 is ready with the model claude-opus-5.5 at the Long context size (1,000,000
+tokens)." followed by the sign-in sentence; the standard size by its id names the Standard size with 328,000 tokens; a
+size that the model does not offer is `ModelSettingsInvalid`; no size gives the sentence without a size. This scenario
+is tested by `AgentReadiness_Copilot_ContextTierChosen_IsNamedInTheReadySentence`.
+
 **AgentReadiness_Copilot_ModelSettingsTheCatalogRefuses_ReportModelSettingsInvalid**: Four settings against a catalog of
 three models: a model that cannot call tools ("does not support tool calling"), a model that the catalog does not have
 ("is not available from provider 'copilot'"), an effort that a model does not offer ("does not support reasoning effort

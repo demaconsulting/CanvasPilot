@@ -53,18 +53,21 @@ sections:
 
               - id: CanvasPilot-MainWindowShell-StartDictationFromKey
                 title: >-
-                  The MainWindowShell shall start listening on the push-to-talk target when the F8 key goes down, ignore
-                  the repeats of a key that is held, stop listening on the target that was started when the key goes up,
-                  when the window closes, or when the window stops being the active one, and do nothing while there
-                  is no target.
+                  The MainWindowShell shall start listening on the push-to-talk target when the talk key (F9 until the user
+                  chooses another key or chord on the Speech page, which takes effect at once) goes down, ignore the
+                  repeats of a key that is held, stop listening on the target that was started when the key, or any key
+                  of the chord, goes up, when the window closes, or when the window stops being the active one, and do
+                  nothing while there is no target.
                 justification: |
                   Holding a key lets the user dictate while the hands stay on the keyboard or pointer. The keyboard
                   repeats a held key, which must not start the dictation again, and a key that is released in another
-                  window or after the window is gone would never be heard, which would leave the microphone open.
+                  window or after the window is gone would never be heard, which would leave the microphone open. F8, the
+                  first default, never reached the window on laptops whose function keys do other things.
                 tests:
                   - MainWindowShell_PushToTalk_BeginEnd_DelegatesToTarget
                   - MainWindowShell_PushToTalk_NoTargetOrTargetReplaced_IsIgnoredOrStopsStartedTarget
                   - MainWindowView_PushToTalkKey_DownAndUp_DrivesTarget
+                  - MainWindowView_PushToTalkKey_ChosenChord_StartsOnTheChordAndStopsWhenAnyKeyOfItIsReleased
                   - MainWindowView_PushToTalkKey_NoTarget_IsIgnored
                   - MainWindowView_PushToTalkKey_WindowClosedWhileHeld_StopsTarget
                   - MainWindowView_PushToTalkKey_WindowDeactivatedWhileHeld_StopsTarget
@@ -287,17 +290,38 @@ sections:
 
               - id: CanvasPilot-MainWindowShell-KeepRoomForSystemButtons
                 title: >-
-                  The MainWindowShell shall, when the window extends into its frame, keep 138 pixels free at the right end of
-                  the title bar on Windows and 78 pixels free at its left end on macOS for the buttons that the system draws
-                  there, and shall keep nothing free on another platform or while the window does not extend into its frame.
+                  The MainWindowShell shall, when the window extends into its frame, keep free at the right end of the title
+                  bar on Windows the width that the buttons it draws there really cover (measured from the buttons, which
+                  are minimize, maximize or restore, and close; 140 pixels until they are laid out) so that the provider pill
+                  ends clear of the first button, in the normal and in the maximized state, and 78 pixels at its left end on
+                  macOS for the buttons that the system draws there, and shall keep nothing free on another platform or while
+                  the window does not extend into its frame.
                 justification: |
                   The system draws the buttons that minimize, maximize, and close the window over the strip when the window
-                  takes over the frame. If the title or the pills lay under them, they could not be seen or used, and a window
-                  that does not take over the frame must not waste room.
+                  takes over the frame. If the title or the pills lay under them, they could not be seen or used (the pill
+                  was drawn under an invisible button and its gear was garbled), and a window that does not take over the
+                  frame must not waste room. The buttons are drawn by the host of the window and not by the window, so the
+                  width is measured from the top of the visual tree.
                 tests:
                   - MainWindowView_CaptionReserve_FollowsPlatformAndExtension
                   - MainWindowView_ApplyCaptionReserve_ToleratesMissingControls
                   - MainWindowView_Show_HasTitleBarWithMenuAndTheDesignSizes
+                  - MainWindowView_TitleBar_PillEndsClearOfTheWindowButtons
+                  - MainWindowView_CaptionReserve_FallsBackToTheConstantUntilTheButtonsAreMeasured
+
+              - id: CanvasPilot-MainWindowShell-HaveNoFullScreenMode
+                title: >-
+                  The MainWindowShell shall not offer a full-screen button among the window buttons, shall not bind a key to
+                  full screen, and shall turn a window that is put into full screen by any other means back to the normal
+                  state.
+                justification: |
+                  A window in full screen has no title bar and no buttons; the only way back is a bar that appears when the
+                  pointer rests at the top edge, which users do not find. A drawing tool has no use for it, and a user who
+                  is stuck in it has lost the window.
+                tests:
+                  - MainWindowView_TitleBarDecorations_AskForNoFullScreenButton
+                  - MainWindowView_WindowState_FullScreenIsTurnedBackToNormal
+                  - MainWindowView_KeyF11_DoesNotEnterFullScreen
 
               - id: CanvasPilot-MainWindowShell-OpenWithDesignSizes
                 title: >-
@@ -378,3 +402,18 @@ sections:
                   only an icon must therefore say in words what it does.
                 tests:
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+              - id: CanvasPilot-MainWindowShell-OpenLogFolder
+                title: >-
+                  The MainWindowShell shall offer Open Log Folder in the Help menu, usable with no project open, which shows
+                  the folder that the application logs to (the default folder when there is no logger) in the file manager
+                  of the system, and shall tell the user with the reason and the path when the file manager could not be
+                  started; the item shall be disabled when the application has no way to show a folder.
+                justification: |
+                  A person who reports a problem has to attach the log, and the log is in a folder that is not in the project
+                  and that they cannot be expected to know.
+                tests:
+                  - MainWindowShell_OpenLogFolder_ShowsTheFolderOfTheLogger
+                  - MainWindowShell_OpenLogFolder_NoLoggerOrLauncherFails_UsesTheDefaultFolderAndTellsTheUser
+                  - MainWindowShell_OpenLogFolder_WithoutLauncher_IsDisabledAndDoesNothing
+                  - MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog

@@ -38,6 +38,7 @@ includes:
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-panel.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-history-store.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-turn-runner.yaml
+  - docs/reqstream/canvas-pilot/chat-subsystem/follow-up-suggestions.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/payload-inspector.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-document.yaml
@@ -86,6 +87,7 @@ includes:
   - docs/reqstream/canvas-pilot/speech-subsystem/model-catalog-panel.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/model-parameter-editor.yaml
   - docs/reqstream/canvas-pilot/speech-subsystem/speech-settings-page.yaml
+  - docs/reqstream/canvas-pilot/speech-subsystem/push-to-talk-binding.yaml
   - docs/reqstream/canvas-pilot/style-subsystem.yaml
   - docs/reqstream/canvas-pilot/style-subsystem/style-kit-document.yaml
   - docs/reqstream/canvas-pilot/style-subsystem/style-kit-catalog.yaml

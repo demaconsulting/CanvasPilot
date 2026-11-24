@@ -85,7 +85,8 @@ sections:
 
           - id: CanvasPilot-AppShell-PushToTalkKey
             title: >-
-              The AppShell subsystem shall let the user dictate into the message by holding the F8 key anywhere in the
+              The AppShell subsystem shall let the user dictate into the message by holding the talk key (F9 unless the user
+              chose another on the Speech page) anywhere in the
               main window: dictation starts when the key goes down, ignores the repeats of the key, and ends when the
               key is released, the window is closed, or the window is no longer active.
             justification: |
@@ -185,15 +186,14 @@ sections:
           - id: CanvasPilot-AppShell-ProvideTitleBar
             title: >-
               The AppShell subsystem shall show a title bar that holds the menu, the name of the open project, the style
-              list, and the AI provider pill, keep room for the buttons of the system, and open the window at a size that
-              shows the explorer, the picture, and the chat.
+              list, and the AI provider pill, and open the window at a size that shows the explorer, the picture, and the
+              chat.
             justification: |
               The title bar is the first thing the user sees and carries the two pills that decide whether work can
               proceed: the style of the drawings and the provider that answers. Keeping the menu there saves a row of the
-              window for the picture, and the system buttons must stay usable.
+              window for the picture.
             children:
               - CanvasPilot-MainWindowShell-ShowTitleBar
-              - CanvasPilot-MainWindowShell-KeepRoomForSystemButtons
               - CanvasPilot-MainWindowShell-OpenWithDesignSizes
               - CanvasPilot-MainWindowShell-HostProviderPillInTitleBar
             tests:
@@ -201,12 +201,50 @@ sections:
               - MainWindowView_TitleBar_ShowsProjectNameThenApplicationName
               - MainWindowView_ProviderPill_InTheTitleBar_OpensTheSettingsOnTheProviderPage
 
+          - id: CanvasPilot-AppShell-KeepWindowButtonsClear
+            title: >-
+              The AppShell subsystem shall keep the buttons that the system draws at the edge of the window (minimize,
+              maximize or restore, and close) clear of the menu, the pills, and the title, offer no full-screen mode, and
+              turn a window that is put into full screen by any other means back to the normal state.
+            justification: |
+              A title bar that lies under the buttons of the system hides what the user needs and cannot be used, and a
+              window in full screen has no title bar and no buttons, so a user who is stuck in it has lost the window.
+            children:
+              - CanvasPilot-MainWindowShell-KeepRoomForSystemButtons
+              - CanvasPilot-MainWindowShell-HaveNoFullScreenMode
+            tests:
+              - MainWindowView_TitleBar_PillEndsClearOfTheWindowButtons
+              - MainWindowView_TitleBarDecorations_AskForNoFullScreenButton
+
+          - id: CanvasPilot-AppShell-OpenLogFolder
+            title: >-
+              The AppShell subsystem shall let the user open the folder that holds the log files of the application from
+              the Help menu, with or without a project, so that a problem can be reported with its log.
+            justification: |
+              A person who reports a problem has to attach the log, and the log is in a folder that is not in the project
+              and that they cannot be expected to know.
+            children:
+              - CanvasPilot-MainWindowShell-OpenLogFolder
+            tests:
+              - MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog
+
+          - id: CanvasPilot-AppShell-ReportSaveHonestly
+            title: >-
+              The AppShell subsystem shall say in the status bar that the project file was saved, and when, only after the
+              project file has a saved time, and shall say nothing about saving while no project is open or when the file
+              was never saved.
+            justification: |
+              The application cannot tell whether the drawings or the chat have unsaved changes, so it must not claim that
+              the work is saved. A fixed claim was false for a project that had never been saved.
+            children:
+              - CanvasPilot-StatusBar-ShowSavedTime
+
           - id: CanvasPilot-AppShell-ShowStatusBar
             title: >-
               The AppShell subsystem shall show a status bar at the bottom of the main window, always and at one height,
               that says whether a project is open, whether a picture is selected, and, for the picture that is shown, its
               file, size, format, render time, and notes, or that it is being rendered or failed, with words and not color
-              alone, and, while a project is open, that the project is saved and which key is held to talk.
+              alone, and, while a project is open, which key is held to talk.
             justification: |
               The user needs to know at a glance what is on the screen and in what state, and a bar that comes and goes
               moves the window. Words as well as colors let people who cannot tell the colors apart, and screen readers,
@@ -266,6 +304,7 @@ sections:
               - CanvasPilot-Welcome-RemoveCardFromList
               - CanvasPilot-Welcome-InviteFirstProject
               - CanvasPilot-Welcome-NoticeAiProviderProblem
+              - CanvasPilot-Welcome-NameTheTalkKey
             tests:
               - WelcomeView_RecentProjects_ListCardsAndOpenAProject
               - MainWindowView_RecentProject_Open_ListsFilesAndCloseProjectResetsWindow

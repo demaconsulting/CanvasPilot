@@ -104,6 +104,25 @@ internal sealed class SwitchableImageExporter : IImageExporter
 }
 
 /// <summary>
+///     A folder launcher for the headless tests that shows nothing and records the folders that it was asked to show.
+/// </summary>
+internal sealed class RecordingFolderLauncher : IFolderLauncher
+{
+    /// <summary>
+    ///     Gets the folders that were asked for, in order.
+    /// </summary>
+    public List<string> Opened { get; } = [];
+
+    /// <inheritdoc />
+    public bool TryOpen(string folder, out string? failure)
+    {
+        Opened.Add(folder);
+        failure = null;
+        return true;
+    }
+}
+
+/// <summary>
 ///     Helpers shared by the headless tests of the main window and its dialogs.
 /// </summary>
 internal static class AppShellUiHelpers
@@ -116,8 +135,9 @@ internal static class AppShellUiHelpers
     /// <param name="exporter">What the Image menu exports, or <see langword="null" /> for none.</param>
     /// <param name="application">The application whose theme the composition follows the settings for, or <see langword="null" />.</param>
     /// <param name="styleFolder">The folder of the style kits of the user, or <see langword="null" /> for the <c>styles</c> folder of the root.</param>
+    /// <param name="folderLauncher">What shows a folder for the Help menu, or <see langword="null" /> for one that shows nothing, so that no test opens a file manager.</param>
     /// <returns>The composition.</returns>
-    public static ApplicationComposition Compose(string root, IImageExporter? exporter = null, Application? application = null, string? styleFolder = null)
+    public static ApplicationComposition Compose(string root, IImageExporter? exporter = null, Application? application = null, string? styleFolder = null, IFolderLauncher? folderLauncher = null)
     {
         var projects = Directory.CreateDirectory(Path.Combine(root, "projects")).FullName;
         var logger = new RollingFileLogger(Path.Combine(root, "logs"));
@@ -131,6 +151,7 @@ internal static class AppShellUiHelpers
             audioDevices: new FakeAudioDeviceService(),
             speechModels: new FakeSpeechModelService(),
             styleUserFolder: styleFolder ?? Path.Combine(root, "styles"),
+            folderLauncher: folderLauncher ?? new RecordingFolderLauncher(),
             application: application);
     }
 

@@ -70,6 +70,11 @@ public sealed class AssistantReplyViewModel : TranscriptRowViewModel
     private AssistantReplyState _state;
 
     /// <summary>
+    ///     The line that says what the turn cost, or an empty string.
+    /// </summary>
+    private string _usageCaption = string.Empty;
+
+    /// <summary>
     ///     The Markdown blocks of the text, read when they are first asked for.
     /// </summary>
     private IReadOnlyList<MarkdownBlock>? _blocks;
@@ -143,6 +148,37 @@ public sealed class AssistantReplyViewModel : TranscriptRowViewModel
         AssistantReplyState.Failed => "Failed",
         _ => string.Empty,
     };
+
+    /// <summary>
+    ///     Gets the line under the reply that says what the turn cost (tokens, premium requests, time), or an empty string
+    ///     for a reply that has none. Only the last reply of a turn has one.
+    /// </summary>
+    public string UsageCaption => _usageCaption;
+
+    /// <summary>
+    ///     Gets a value indicating whether the reply has a <see cref="UsageCaption" />.
+    /// </summary>
+    public bool HasUsageCaption => _usageCaption.Length > 0;
+
+    /// <summary>
+    ///     Sets the line under the reply that says what the turn cost. The caption is not part of the text, is not saved with
+    ///     the chat history, and can be set after the reply has ended.
+    /// </summary>
+    /// <param name="caption">The caption; empty for none.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="caption" /> is <see langword="null" />.</exception>
+    public void SetUsageCaption(string caption)
+    {
+        ArgumentNullException.ThrowIfNull(caption);
+
+        if (string.Equals(_usageCaption, caption, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _usageCaption = caption;
+        OnPropertyChanged(nameof(UsageCaption));
+        OnPropertyChanged(nameof(HasUsageCaption));
+    }
 
     /// <summary>
     ///     Adds a piece of text to the end of the reply. Nothing happens when the piece is empty or the reply has ended.

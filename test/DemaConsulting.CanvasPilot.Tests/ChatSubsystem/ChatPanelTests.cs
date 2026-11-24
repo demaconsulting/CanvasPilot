@@ -402,15 +402,16 @@ public sealed class ChatPanelTests : IDisposable
         Assert.False(_panel.ShowSuggestions);
 
         // Act
-        var written = _panel.UsePrompt(ChatPanelViewModel.ExamplePrompts[1]);
+        var prompt = _panel.Suggestions[1];
+        var written = _panel.UsePrompt(prompt);
         _panel.CollapseCommand.Execute(null);
 
-        // Assert: the prompt is the message, and the collapse was requested once
+        // Assert: the prompt is the message, and the collapse was requested once; the picture of the fixture is shown, so
+        // the project has a drawing and the prompts are the refinements with the export
         Assert.True(written);
-        Assert.Equal(ChatPanelViewModel.ExamplePrompts[1], _composer.Document.FlatText);
+        Assert.Equal(prompt, _composer.Document.FlatText);
         Assert.Equal(1, collapses);
-        Assert.Equal(4, ChatPanelViewModel.ExamplePrompts.Count);
-        Assert.NotEmpty(ChatPanelViewModel.SuggestedPrompts);
+        Assert.Equal(FollowUpSuggestions.Plan(hasDrawing: true, hasPictureShown: true, busy: false), _panel.Suggestions);
         Assert.Throws<ArgumentNullException>(() => _panel.UsePrompt(null!));
     }
     /// <summary>

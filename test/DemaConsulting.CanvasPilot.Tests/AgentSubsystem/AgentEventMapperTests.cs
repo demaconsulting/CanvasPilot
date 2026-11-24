@@ -420,11 +420,11 @@ public sealed class AgentEventMapperTests
     }
 
     /// <summary>
-    ///     Test that usage is mapped with the counts that the provider reported, and that reasoning and pictures outside a
-    ///     tool result are not shown.
+    ///     Test that usage is mapped with the counts that the provider reported, that reasoning is reported as thinking
+    ///     without its words, and that pictures outside a tool result are not shown.
     /// </summary>
     [Fact]
-    public void AgentEventMapper_Map_UsageAndOtherContent_UsageIsMappedOthersAreIgnored()
+    public void AgentEventMapper_Map_UsageAndOtherContent_UsageIsMappedReasoningIsThinkingOthersAreIgnored()
     {
         // Arrange
         var mapper = Create();
@@ -439,8 +439,9 @@ public sealed class AgentEventMapperTests
         // Assert
         Assert.Collection(
             events,
-            first => Assert.Equal(new AgentEvent.Usage(120, 30), first),
-            second => Assert.Equal(new AgentEvent.Usage(null, null), second));
+            first => Assert.Equal(new AgentEvent.Thinking(), first),
+            second => Assert.Equal(new AgentEvent.Usage(120, 30), second),
+            third => Assert.Equal(new AgentEvent.Usage(null, null), third));
     }
 
     /// <summary>

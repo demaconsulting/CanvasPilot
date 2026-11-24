@@ -21,8 +21,9 @@ sections:
                   The AgentService shall make nothing before the first turn, then make for the open project one agent
                   (with the tools of the project, the instructions that describe it, and its folder) and one provider
                   session through the factory, keep them for the next turns, and make them again when the open project
-                  changes or closes or when the provider, the model, the Ollama address, the context window, or the
-                  path of the Copilot CLI changes, and not when any other setting changes.
+                  changes or closes or when the provider, the model, the reasoning effort, the context size, the Ollama
+                  address, the context window, or the path of the Copilot CLI changes, and not when any other setting
+                  changes.
                 justification: |
                   Starting a provider is slow and may start a process, so it waits until the user asks for something, and
                   a conversation that is kept remembers what was said. The agent is built for one project folder, so
@@ -35,6 +36,8 @@ sections:
                   - AgentService_RunTurn_ProjectChanges_MakesAgentPerProjectAndDeletesTheOldSession
                   - AgentService_ProjectClosed_DropsTheConversationAndTheNextTurnNeedsAProject
                   - AgentService_SettingsChanged_ByKind_RebuildsOnlyForTheSettingsThatDecideTheAgent
+                  - AgentService_RunTurn_CopilotContextTier_IsOnTheUsageAndInTheLog
+                  - AgentService_RunTurn_ContextTierOfAnotherProviderOrNoModel_IsNotOnTheUsage
                   - AgentService_RunTurn_FactoryHasNoAgent_FailsNotReadyWithTheSentenceAndAsksAgain
                   - AgentService_RunTurn_NoProjectOpen_FailsNotReady
                   - AgentService_GetReadiness_OllamaSettings_ReportsWhatTheProbeSees
@@ -130,3 +133,87 @@ sections:
                   - AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly
                   - AgentService_Logging_ExceptionWhileMakingTheAgent_LogsTheTypeAndNotTheMessage
                   - RuntimeLogAdapter_Log_MessageStateAndScope_AreNeverWritten
+
+              - id: CanvasPilot-AgentService-CoalesceAndThrottleEvents
+                title: >-
+                  The AgentService shall read the stream of the provider and map it on a thread of the pool, off the
+                  thread that shows the events, hand the events to the caller through a queue in which the pieces of text
+                  that wait are joined and the progress that waits is reduced to the latest of its kind, never merging,
+                  dropping, or reordering the events that carry facts (a tool that started or finished, a file that was
+                  written, the usage, the end of the turn), and shall dispose the stream of the provider before the next
+                  turn can start, whatever ended the caller's reading.
+                justification: |
+                  Some providers send thousands of small events in one burst, and a consumer on the user interface thread
+                  that cannot keep up must not make the provider's stream overflow or the window freeze. Merging what says
+                  the same thing again loses nothing the user can see, and a fact must reach the chat exactly once and in
+                  order. A turn that is not over for the provider must not be followed by another on the same session.
+                tests:
+                  - AgentService_RunTurn_SlowConsumer_TheProviderIsReadToItsEndAndTheTextIsMerged
+                  - AgentService_RunTurn_ConsumerDisposed_EndsTheProviderStreamBeforeTheNextTurn
+                  - AgentEventCoalescer_Add_AdjacentText_IsJoined
+                  - AgentEventCoalescer_Add_Progress_KeepsOnlyTheLatestOfTheSameKind
+                  - AgentEventCoalescer_Add_FactsAndTextAroundThem_AreKeptInOrder
+                  - AgentEventCoalescer_ReadAll_WaitsForEventsAndEndsWithTheStream
+                  - AgentEventCoalescer_Complete_WithAFault_ThrowsAfterTheEventsBeforeIt
+                  - AgentEventCoalescer_ReadAll_TokenCanceled_EndsTheWait
+
+              - id: CanvasPilot-AgentService-StopLeavesConversationUsable
+                title: >-
+                  The AgentService shall record who canceled a turn (the caller, a reset, a change of the project, the end
+                  of the service, or a caller that stopped reading) and log it, shall end the turn of a provider that does
+                  not end its stream within five seconds of the cancellation without a failure and drop its conversation,
+                  shall drop the conversation of a turn that was stopped before the provider said anything so that the next
+                  turn starts on a new provider session that gets the digest of the history once, shall keep the
+                  conversation of a turn that was stopped later and mark it as interrupted, and shall, when the next turn
+                  on an interrupted conversation fails with a lost connection or an unexpected error before it says
+                  anything, replace the conversation and run the turn once more with a line in the log, and never otherwise.
+                justification: |
+                  Stop must work at any point, including in the middle of a tool call, and the conversation must be usable
+                  afterwards. A provider that cannot be canceled must not hold the window, a session whose state is unknown
+                  must not receive the history a second time, and a session that a Stop left unusable is replaced exactly
+                  once and visibly instead of showing the user an error for a message that they could send again.
+                tests:
+                  - AgentService_Stop_MidToolCall_EndsTheTurnAndTheNextTurnAnswersOnTheSameConversation
+                  - AgentService_Stop_BeforeTheFirstUpdate_DropsTheSessionAndTheNextTurnGetsTheDigestOnce
+                  - AgentService_Stop_ProviderIgnoresTheToken_EndsAfterTheGraceAndDropsTheConversation
+                  - AgentService_NextTurnAfterStop_FailsBeforeAnyUpdate_IsRecoveredOnceOnANewConversation
+                  - AgentService_Recovery_IsOnlyOnceAndOnlyAfterAStop
+                  - AgentService_Cancel_ByAResetOrAProjectChange_LogsItsSource
+
+              - id: CanvasPilot-AgentService-LogTurnLifecycle
+                title: >-
+                  The AgentService shall number each turn and give every line of its log the number, shall log for the start
+                  of a turn the provider, the model, the reasoning effort, the context size, the count of earlier turns that the caller handed
+                  over (historyTurns) and whether the digest of them was added, shall log the lifecycle of the provider
+                  session with its identifier (whether the run created or resumed it, and whether its handle was released
+                  after the run), shall log for the end of a turn the outcome, the cancel source, the times (the whole turn,
+                  the first event, the longest gap), the length of the answer text, whether the provider reasoned, and the
+                  usage when the provider reported it, shall log the file where the provider recorded the events of a session
+                  whose turn failed or was canceled, and shall name the reason when it releases a conversation, and never
+                  write the words of a message, an answer, or a file.
+                justification: |
+                  A turn of several minutes that ends in a failure or a Stop must be diagnosable from the log alone: which
+                  turn, on which model and effort, how long the provider was silent, what it cost in tokens, who canceled it,
+                  and where the provider's own record is. The words belong to the user and stay out of the log.
+                tests:
+                  - AgentService_Logging_Turn_CarriesIdsToolFactsAndAnswerFactsWithoutContent
+                  - AgentService_RunTurn_CopilotContextTier_IsOnTheUsageAndInTheLog
+                  - AgentService_Logging_TurnNumbers_CountUpForTheLifeOfTheService
+                  - AgentService_Logging_Reasoning_IsAFlagWithoutWords
+                  - AgentService_Logging_ProviderSession_HasIdsRunKindsEventsFileAndReleaseReason
+                  - AgentService_Logging_CanceledTurn_NamesTheSourceAndTheEventsFile
+                  - AgentService_Logging_TurnWithSentinelTexts_WritesMetadataOnly
+
+              - id: CanvasPilot-AgentService-KeepCompletedTurnComplete
+                title: >-
+                  The AgentService shall record a turn whose answer ended with its completion as completed with no cancel
+                  source, also when the caller stopped reading at the completion event, shall not mark the conversation as
+                  interrupted for it, and shall therefore show the failure of a later turn that fails before it says
+                  anything instead of replacing the conversation and running that turn again.
+                justification: |
+                  The chat stops reading at the completion of a turn. A service that took that for a cancellation recorded
+                  every finished turn as interrupted, and then hid a real connection failure of the next message behind a
+                  silent replacement of the conversation that sent the history again. A turn that has ended with its
+                  answer has nothing left to cancel.
+                tests:
+                  - AgentService_CompletedTurnReadOnlyToItsCompletion_IsNotInterruptedAndTheNextFailureIsShown

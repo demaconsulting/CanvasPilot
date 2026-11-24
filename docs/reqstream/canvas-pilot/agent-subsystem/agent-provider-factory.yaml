@@ -67,24 +67,28 @@ sections:
 
               - id: CanvasPilot-AgentProviderFactory-ValidateModelSettings
                 title: >-
-                  The AgentProviderFactory shall validate the model, the reasoning effort, and (for Ollama) the context
-                  window of the settings against the catalog of the provider before it makes an agent, and shall make the
-                  agent with the validated selection (the model as the catalog spells it, with the chosen reasoning
-                  effort, and for Ollama the context window and the thinking level on every request); shall answer a
+                  The AgentProviderFactory shall validate the model, the reasoning effort, the context size (tier, for
+                  GitHub Copilot) and (for Ollama) the context window of the settings against the catalog of the provider
+                  before it makes an agent, and shall make the agent with the validated selection (the model as the
+                  catalog spells it, with the chosen reasoning effort and context size, and for Ollama the context window
+                  and the thinking level on every request); shall not state a context size for Ollama; shall answer a
                   model that is not offered, cannot be used, cannot call tools, does not offer the chosen reasoning
-                  effort, or is asked for more context than it was trained for with the typed status ModelSettingsInvalid,
-                  the sentence of the AI library, and no agent; shall answer a Copilot catalog that cannot be read with the
-                  status that the runtime is not usable; and shall try the typed Ollama model without a check when the
-                  server does not describe its models.
+                  effort or context size, or is asked for more context than it was trained for with the typed status
+                  ModelSettingsInvalid, the sentence of the AI library, and no agent; shall answer a Copilot catalog that
+                  cannot be read with the status that the runtime is not usable; and shall try the typed Ollama model
+                  without a check when the server does not describe its models.
                 justification: |
-                  A wrong model or effort that is found in the middle of the first turn looks like a broken application,
-                  and a model that cannot call tools cannot draw at all. Validating when the conversation starts puts the
-                  explanation of the library, which names what is supported, in front of the user before anything runs.
-                  The selection is what makes the effort and the window real: the library sends the level of thinking and
-                  the window with each request. A server that is not reachable must not stop a user who typed a model name
-                  that may be right, so the typed name is tried as it was before.
+                  A wrong model, effort, or context size that is found in the middle of the first turn looks like a broken
+                  application, and a model that cannot call tools cannot draw at all. Validating when the conversation
+                  starts puts the explanation of the library, which names what is supported, in front of the user before
+                  anything runs. The selection is what makes the effort, the size, and the window real: the library sends
+                  the level of thinking and the window with each request, and the size to the Copilot session. A server
+                  that is not reachable must not stop a user who typed a model name that may be right, so the typed name is
+                  tried as it was before.
                 tests:
                   - AgentProviderFactory_Create_Copilot_ModelAndEffort_ReachTheAgentAsTheSelection
+                  - AgentProviderFactory_Create_Copilot_ContextTier_ReachesTheAgentAsTheSelectionAndIsValidated
+                  - ModelRequirements_ToModelSettings_ContextTier_IsStatedForCopilotOnly
                   - AgentProviderFactory_Create_Copilot_ModelSettingsTheCatalogRefuses_AreModelSettingsInvalid
                   - AgentProviderFactory_Create_Copilot_CatalogCannotBeRead_IsRuntimeUnavailable
                   - AgentProviderFactory_Create_Ollama_ModelEffortAndWindow_ReachTheWire

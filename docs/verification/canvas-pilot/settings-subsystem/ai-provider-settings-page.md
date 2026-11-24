@@ -52,17 +52,35 @@ network, or external services are required.
   the provider's own ids (`none`, `low`, `xhigh`, `max` among them) after the entry that leaves the choice to the
   provider; the chosen id is applied; choosing a model without levels clears it, and a stored level that the known model
   does not offer is reset with a note; a change of the model or the level removes the answer of a connection check.
-- The context window is labeled as an Ollama setting; while Ollama is selected a valid value below 16,384 shows a
-  warning that recommends 32,768 and leaves the page valid, 16,384 and an invalid entry show none, and while GitHub
-  Copilot is selected a note replaces the warning.
+- While GitHub Copilot is selected and the chosen model is a large one (a multiplier of 3 or more, or a powerful or
+  high-priced model) with a high reasoning level (`high`, `xhigh`, or `max`, the default level of the model included
+  when none is chosen), the page shows a warning that the choice is slow and costly with the premium requests that a
+  message counts (for example 15); a lower level, a small model, a model that the provider does not describe, and
+  another provider show none, and the warning never makes the page invalid.
+- While GitHub Copilot is selected and the chosen model, as the provider lists it, offers more than one context size,
+  the page offers a Context size choice with the sizes and windows of the catalog (for example "Standard (328K tokens)"
+  and "Long context (1M tokens)"), lists them among the details of the model, stores the id of the chosen size and
+  nothing for the standard one, and shows the note about the cost of a larger size only while one is chosen; a stored
+  size that the known model does not offer is reset to the standard one with a note, a stored size is kept (no choice
+  shown) while nothing is known about the model, the standard size stored by its id counts as no choice, and the choice,
+  its label, and its notes are hidden for a model with one size, a model that is not listed, a page without a source,
+  and Ollama.
+- The context window belongs to Ollama: while Ollama is selected a valid value below 16,384 shows a warning that
+  recommends 32,768 and leaves the page valid, and 16,384 and an invalid entry show none; while GitHub Copilot is
+  selected the window is hidden, shows neither a warning nor an error, never makes the page invalid, and keeps its
+  stored value.
+- Only the entries of the selected provider are shown (their `IsVisible` and `IsEffectivelyVisible`), the others are
+  hidden, not disabled: with GitHub Copilot the label, entry, note, and error of the tool path and the cost warning are
+  shown and the labels, entries, errors, and warning of the context window and the endpoint are hidden, even when the
+  hidden entries hold values that would produce an error; with Ollama the reverse holds, even while the Copilot entries
+  hold an invalid path and the model is large with a high level; no text of the other provider's labels is visible.
 - Check connection gives the entries of the page, merged into the loaded settings, to the provider check, shows the
   answer (in red for a provider that cannot be used), is unavailable while the entries are invalid or a check runs,
   drops an answer that an edit or the closing of the dialog overtook, shows an exception as a sentence, and is not
   offered without a check.
-- In the view, the Ollama endpoint entry is enabled only for Ollama and the Copilot path entry only for GitHub
-  Copilot, and the error line is visible only while the entry is invalid. The model list is shown only while there are
-  models, the typed name is always shown, the capabilities, the warning, and the message are shown only when they have
-  text, the reasoning level is enabled by the model, and Refresh models asks again and shows the new list.
+- In the view the error line of an entry is visible only while the entry is invalid. The model list is shown only while
+  there are models, the typed name is always shown, the capabilities, the warning, and the message are shown only when
+  they have text, the reasoning level is enabled by the model, and Refresh models asks again and shows the new list.
 - The page is titled `AI Provider` with a non-empty sentence and an icon in the list of pages of the settings dialog.
 - In the accessibility sweep of the windows of the application, in both theme variants, every entry of the page has a
   name, every button that shows no text has a name and a tooltip, and every enabled button can take the keyboard focus.
@@ -91,8 +109,8 @@ This scenario is tested by `AiProviderSettingsPageViewModel_Apply_OtherSettings_
 Copilot selected, then Ollama is selected; the Ollama entry becomes the enabled one and the Copilot entry does
 not. This scenario is tested by `AiProviderSettingsPageViewModel_SelectedProvider_Switched_EnablesMatchingEntry`.
 
-**AiProviderSettingsPageViewModel_ContextWindowText_OutOfBounds_IsInvalid**: Each of 511, 2000001, abc, empty,
--5, 1.5, and 8,192 is entered; the page is invalid and the message names 512 and 2000000. This scenario is
+**AiProviderSettingsPageViewModel_ContextWindowText_OutOfBounds_IsInvalid**: With Ollama selected, each of 511, 2000001,
+abc, empty, -5, 1.5, and 8,192 is entered; the page is invalid and the message names 512 and 2000000. This scenario is
 tested by `AiProviderSettingsPageViewModel_ContextWindowText_OutOfBounds_IsInvalid`.
 
 **AiProviderSettingsPageViewModel_ContextWindowText_AtBounds_IsValid**: 512 and 2000000 are entered; the page
@@ -221,9 +239,40 @@ change is announced. This scenario is tested by
 `AiProviderSettingsPageViewModel_ContextWindowWarning_BelowRecommendedMinimum_WarnsWithoutInvalidating`.
 
 **AiProviderSettingsPageViewModel_ContextWindowWarning_InvalidOrCopilot_GivesNoWarning**: An invalid window has the
-error and no warning; a small valid window with GitHub Copilot selected has no warning and the Ollama-only note, and
-the page with Ollama selected has no note. This scenario is tested by
+error and no warning with Ollama selected; with GitHub Copilot selected a small valid window has no warning and an
+invalid one no error. This scenario is tested by
 `AiProviderSettingsPageViewModel_ContextWindowWarning_InvalidOrCopilot_GivesNoWarning`.
+
+**AiProviderSettingsPageViewModel_ContextWindowText_InvalidWhileCopilotSelected_IsIgnoredAndStoredValueKept**: With
+GitHub Copilot selected and a stored window of 65536, `junk` is typed in the hidden window entry; the page is valid and
+applying keeps 65536; choosing Ollama makes the same text an error. This scenario is tested by
+`AiProviderSettingsPageViewModel_ContextWindowText_InvalidWhileCopilotSelected_IsIgnoredAndStoredValueKept`.
+
+**AiProviderSettingsPageViewModel_EffortCostWarning_AppearsOnlyForHighEffortOnLargeModels**: A source lists a large
+model (15 premium requests per message, `powerful`) and a small one (0.33, `lightweight`), both with the levels `low`
+and `high`. With the large model and `low` chosen there is no warning; choosing `high` shows the warning, which contains
+"slow", "costly", and "15 premium requests"; choosing the small model removes it. This scenario is tested by
+`AiProviderSettingsPageViewModel_EffortCostWarning_AppearsOnlyForHighEffortOnLargeModels`.
+
+**AiProviderSettingsPageViewModel_BuildEffortCostWarning_UsesTheDefaultEffortAndNeedsAModel**: For a model with a
+multiplier of 10 whose default level is `high`, an empty choice (the provider chooses) gives the warning and `low` gives
+none; for no model information the answer is empty whatever the level. This scenario is tested by
+`AiProviderSettingsPageViewModel_BuildEffortCostWarning_UsesTheDefaultEffortAndNeedsAModel`.
+
+**AiProviderSettingsPageViewModel_ContextTier_OfferedForAModelWithSeveralSizes_IsChosenAndApplied**: A source lists
+`opus` with the sizes Standard (328,000 tokens, the default) and Long context (1,000,000) and `plain` with none; the
+page is loaded with `opus` and `long_context`. The choice is offered with the entries "Standard (328K tokens)" and "Long
+context (1M tokens)" and the larger one chosen, the details have the line "Context sizes: ...", applying stores
+`long_context` and the cost note is the documented sentence. Choosing the standard size stores nothing and hides the
+note; choosing the larger one again stores `long_context`; choosing `plain` hides the choice and stores nothing; the
+change of `HasContextTierChoice` was announced. This scenario is tested by
+`AiProviderSettingsPageViewModel_ContextTier_OfferedForAModelWithSeveralSizes_IsChosenAndApplied`.
+
+**AiProviderSettingsPageViewModel_ContextTier_StoredSizeTheModelDoesNotOffer_FallsBackWithANote**: `opus` with the
+stored size `huge` is applied as no size, with the note "does not offer the context size huge" and the standard size
+chosen; the stored `default` is applied as no size; a typed model that is not listed, and a page without a source, keep
+the stored `long_context` and show no choice; choosing Ollama shows no choice and applies no size. This scenario is
+tested by `AiProviderSettingsPageViewModel_ContextTier_StoredSizeTheModelDoesNotOffer_FallsBackWithANote`.
 
 **AiProviderSettingsPageViewModel_CheckConnection_NoProviderCheck_IsNotOffered**: A page without a check has no
 connection check and its command cannot run. This scenario is tested by
@@ -245,12 +294,37 @@ throws gives the sentence with the message; a held check whose page is closed be
 late answer is not shown. This scenario is tested by
 `AiProviderSettingsPageViewModel_CheckConnection_ThrowsOrIsOvertaken_ShowsSentenceOrDropsAnswer`.
 
-**AiProviderSettingsPageView_SelectProvider_EnablesMatchingEntry**: The view is shown with GitHub Copilot
-selected, so only the path entry is enabled; Ollama is chosen in the combo box and only the endpoint entry is
-enabled. This scenario is tested by `AiProviderSettingsPageView_SelectProvider_EnablesMatchingEntry`.
+**AiProviderSettingsPageView_SelectProvider_ShowsMatchingEntry**: The view is shown with GitHub Copilot
+selected, so only the path entry is visible; Ollama is chosen in the combo box and only the endpoint entry is
+visible (and enabled). This scenario is tested by `AiProviderSettingsPageView_SelectProvider_ShowsMatchingEntry`.
 
-**AiProviderSettingsPageView_InvalidContextWindow_ShowsError**: The error line starts hidden; typing 100 shows
-it with the bounds, and typing 16384 hides it and updates the view model. This scenario is tested by
+**AiProviderSettingsPageView_CopilotSelected_ShowsOnlyCopilotControls**: A page with GitHub Copilot selected, a large
+model at a high level, and junk typed in the Ollama endpoint and the context window: each of the seven Ollama controls
+(`AiContextWindowLabel`, `...TextBox`, `...Error`, `...Warning`, `AiOllamaEndpointLabel`, `...TextBox`, `...Error`) has
+`IsVisible` and `IsEffectivelyVisible` false; the Copilot label, entry, note, and cost warning are visible and
+effectively visible and the Copilot error is hidden; the page is valid. This scenario is tested by
+`AiProviderSettingsPageView_CopilotSelected_ShowsOnlyCopilotControls`.
+
+**AiProviderSettingsPageView_OllamaSelected_ShowsOnlyOllamaControls**: A page with GitHub Copilot selected that shows
+the cost warning and the error of an invalid tool path is switched to Ollama and a bad endpoint is typed: none of the
+five Copilot controls (`AiCopilotCliPathLabel`, `...TextBox`, `...Error`, `...Note`, `AiEffortCostWarning`) is visible
+or effectively visible; the Ollama labels and entries and the endpoint error are effectively visible, and the page is
+invalid. This scenario is tested by `AiProviderSettingsPageView_OllamaSelected_ShowsOnlyOllamaControls`.
+
+**AiProviderSettingsPageView_ContextSize_IsShownOnlyForACopilotModelWithSeveralSizes**: A shown page over `opus`
+(Standard and Long context) and `plain` (one size), with `opus` chosen: the label, the combo box (two entries), and no
+cost note are visible; choosing Long context stores `long_context` and shows the documented cost note; choosing `plain`
+hides the label, the combo box, and both notes (`IsVisible` and `IsEffectivelyVisible` false); choosing `opus` shows the
+choice again; choosing Ollama hides all four controls. This scenario is tested by
+`AiProviderSettingsPageView_ContextSize_IsShownOnlyForACopilotModelWithSeveralSizes`.
+
+**AiProviderSettingsPageView_ProviderSelected_ShowsNoLabelOfTheOtherProvidersEntries**: The effectively visible texts of
+the page with GitHub Copilot selected include the label of the tool path and none of the endpoint or the context window;
+with Ollama selected they include both of those labels and neither the tool path nor the note about `copilot.exe`. This
+scenario is tested by `AiProviderSettingsPageView_ProviderSelected_ShowsNoLabelOfTheOtherProvidersEntries`.
+
+**AiProviderSettingsPageView_InvalidContextWindow_ShowsError**: With Ollama selected the error line starts hidden;
+typing 100 shows it with the bounds, and typing 16384 hides it and updates the view model. This scenario is tested by
 `AiProviderSettingsPageView_InvalidContextWindow_ShowsError`.
 
 **AiProviderSettingsPageView_UnrestrictedAgentTools_IsNotOffered**: A page loaded with the flag on is shown; it has no
@@ -274,10 +348,15 @@ is shown with the typed name chosen and the model that cannot be used disabled, 
 refresh flag. This scenario is tested by
 `AiProviderSettingsPageView_ModelListFails_KeepsTheTypedNameAndShowsTheMessage`.
 
-**AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum**: The label says "Ollama
-only"; with GitHub Copilot selected the note is visible; choosing Ollama hides it, 16383 shows the warning, and 16384
-hides it. This scenario is tested by
+**AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum**: With GitHub Copilot
+selected the label and the entry of the context window are hidden; choosing Ollama shows them under the label "Context
+window (tokens)", 16383 shows the warning, and 16384 hides it. This scenario is tested by
 `AiProviderSettingsPageView_ContextWindow_IsOllamaOnlyAndWarnsBelowTheRecommendedMinimum`.
+
+**AiProviderSettingsPageView_HighEffortOnLargeModel_ShowsTheCostWarning**: A shown page over a large model with the
+levels `low` and `high`, loaded with `low`, hides the warning (`AiEffortCostWarning`); when the user chooses `high` in
+the reasoning-level box the warning becomes visible and contains "15 premium requests". This scenario is tested by
+`AiProviderSettingsPageView_HighEffortOnLargeModel_ShowsTheCostWarning`.
 
 **AiProviderSettingsPageView_CopilotCliPath_ShowsNoteOnInstalledExecutable**: The note under the path names
 `copilot.exe`, 1.0.113, and shims. This scenario is tested by

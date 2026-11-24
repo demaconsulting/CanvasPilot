@@ -22,21 +22,27 @@ Constants: `OllamaListTimeout` (15 seconds), `NoOllamaModelsMessage`, and the tw
 agents answers with as well (`InvalidEndpointMessage` and `NoAgentSourceMessage`; the factory takes them from here, so
 this unit depends on no other unit of the subsystem that depends on it).
 
-**ProviderModelList / ProviderModelInfo / ProviderEffortChoice** (in the Settings subsystem): plain data. A
-`ProviderModelInfo` has the id, the name, `SupportsToolCalls`, `SupportsVision`, `SupportsReasoning`, the largest
-context window, the reasoning efforts (id and name) that the model offers, the default effort, `IsUsable` and the reason
-when not, and the warnings. `ProviderModelCatalog.Map` makes one from the `ModelInfo` of the AI library: the
-capabilities come from `ModelInfo.Supports`, the efforts are copied only when the model says that its effort can be
-adjusted (`ModelAdjustments.ReasoningEffort`), and the notes of the library that ask for attention (a warning, or
-something the user must do first, such as accepting terms) become the warnings; plain information notes are dropped.
+**ProviderModelList / ProviderModelInfo / ProviderEffortChoice / ProviderContextTier** (in the Settings subsystem):
+plain data. A `ProviderModelInfo` has the id, the name, `SupportsToolCalls`, `SupportsVision`, `SupportsReasoning`, the
+largest context window, the reasoning efforts (id and name) that the model offers, the default effort, `IsUsable` and
+the reason when not, the warnings, and, as optional last fields, the cost facts and the context sizes: `ContextTiers`
+(id, name, and window of each size, standard first) and `DefaultContextTier`. `ProviderModelCatalog.Map` makes one from
+the `ModelInfo` of the AI library: the capabilities come from `ModelInfo.Supports`, the efforts are copied only when the
+model says that its effort can be adjusted (`ModelAdjustments.ReasoningEffort`), the context sizes only when it says
+that the size can be chosen (`ModelAdjustments.ContextTier`; the library derives them from the billing of the model, so
+Claude Opus 5.5 lists `default` at 328,000 tokens and `long_context` at 1,000,000), and the notes of the library that
+ask for attention (a warning, or something the user must do first, such as accepting terms) become the warnings; plain
+information notes are dropped.
 
 **ModelRequirements**: `internal static class`. `Required` is `ModelCapabilities.ToolCalls`: every drawing is made by
 calling tools, so a model that cannot call them cannot be used and fails the validation. Vision is wanted and not
 required (`VisionWarning`): a model that cannot take pictures still works for text and files, so it is a warning that
 never blocks. `ToModelSettings(settings, withContextWindow)` makes the `ModelSettings` of the AI library from the stored
-choices: `null` when no model is named (the default model of the provider; an effort cannot be validated without a model
-and is not used), otherwise the trimmed id, the reasoning effort (`null` when empty), and, for Ollama only, the context
-window of the settings. `Describe` joins the problems of a `ModelSettingsException` with a space.
+choices: `null` when no model is named (the default model of the provider; an effort or a context size cannot be
+validated without a model and is not used), otherwise the trimmed id, the reasoning effort (`null` when empty), the
+context size (`ContextTier`, `null` when empty, and stated for GitHub Copilot only, because a size of another provider
+would be refused by its catalog), and, for Ollama only, the context window of the settings. `Describe` joins the
+problems of a `ModelSettingsException` with a space.
 
 **IOllamaModelCatalogs / OllamaModelCatalogs**: `For(Uri endpoint)` gives the `OllamaModelCatalog` of the server at the
 address. The real class keeps the catalog of the address that was asked for last (a new one for another address), so the

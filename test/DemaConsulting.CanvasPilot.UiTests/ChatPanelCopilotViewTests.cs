@@ -105,6 +105,74 @@ public sealed class ChatPanelCopilotViewTests
     }
 
     /// <summary>
+    ///     Test that the busy row follows what the copilot reports: the elapsed time shows from the start, the words follow
+    ///     thinking and the progress of a file that is written (with the bytes so far), and the hint about a long wait is
+    ///     not shown while the copilot is heard from.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_CopilotProgress_BusyRowShowsElapsedTimeAndWhatIsReported()
+    {
+        // Arrange: a turn that runs
+        var agent = new ScriptedAgentService();
+        using var harness = new ChatHarness(agent: agent);
+        harness.Type("Draw a flowchart");
+        harness.ClickSend();
+        Assert.True(harness.WaitFor(() => harness.BusyRow.IsEffectivelyVisible));
+
+        // Assert: the elapsed time starts at zero and there is no hint
+        Assert.Equal("0:00", harness.Find<TextBlock>("ChatBusyElapsed").Text);
+        Assert.False(harness.Find<TextBlock>("ChatBusyHint").IsEffectivelyVisible);
+
+        // Act: the copilot thinks, and then writes a file
+        agent.Emit(new AgentEvent.Thinking());
+        Assert.True(harness.WaitFor(() => harness.Find<TextBlock>("ChatBusyText").Text == ChatTurnRunner.ThinkingText));
+        agent.Emit(new AgentEvent.ToolProgress("c1", "project_write", 2048, "flow.svg"));
+        Assert.True(harness.WaitFor(() => harness.Find<TextBlock>("ChatBusyText").Text?.StartsWith("Writing `flow.svg`...", StringComparison.Ordinal) == true));
+
+        // Assert: the words name the file and the bytes so far, and the hint is still hidden
+        Assert.Contains("KB", harness.Find<TextBlock>("ChatBusyText").Text, StringComparison.Ordinal);
+        Assert.False(harness.Find<TextBlock>("ChatBusyHint").IsEffectivelyVisible);
+
+        // Act: the turn ends
+        agent.Emit(new AgentEvent.Completed());
+        Assert.True(harness.WaitFor(() => !harness.BusyRow.IsEffectivelyVisible));
+    }
+
+    /// <summary>
+    ///     Test that pressing Stop shows at once that the copilot is stopping, and that the Stop button cannot be pressed
+    ///     again, until the provider has ended its stream; then the turn is stopped and Send can be used.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_Stop_ShowsStoppingUntilTheTurnEnds()
+    {
+        // Arrange: a turn on a copilot that is slow to stop
+        var agent = new ScriptedAgentService { IgnoreCancellation = true };
+        using var harness = new ChatHarness(agent: agent);
+        harness.Type("Draw a box");
+        harness.ClickSend();
+        agent.Emit(new AgentEvent.TextDelta("Let me think about"));
+        Assert.True(harness.WaitFor(() => harness.Replies.Count == 1));
+        harness.Type("Never mind");
+
+        // Act: press Stop
+        SettingsUiHelpers.Click(harness.Window, harness.StopButton);
+
+        // Assert: the busy row says so and the Stop button cannot be used again, while the turn is still not over
+        Assert.True(harness.WaitFor(() => harness.Find<TextBlock>("ChatBusyText").Text == ChatTurnRunner.StoppingText));
+        Assert.True(harness.Chat.IsCopilotBusy);
+        Assert.False(harness.StopButton.IsEffectivelyEnabled);
+
+        // Act: the provider ends its stream
+        agent.EndStream();
+        Assert.True(harness.WaitFor(() => !harness.Chat.IsCopilotBusy));
+
+        // Assert: the turn is stopped, and Send can be used again
+        Assert.Equal("Stopped", Assert.Single(harness.Replies).FindControl<TextBlock>("StatusLabelText")!.Text);
+        Assert.True(harness.SendButton.IsEffectivelyEnabled);
+        Assert.False(harness.BusyRow.IsEffectivelyVisible);
+    }
+
+    /// <summary>
     ///     Test that pressing Stop cancels the turn, keeps the text that was written marked as stopped, and enables Send
     ///     again.
     /// </summary>
@@ -240,6 +308,29 @@ public sealed class ChatPanelCopilotViewTests
         // Assert: the check was repeated and the banner is gone
         Assert.True(harness.WaitFor(() => !harness.Banner.IsEffectivelyVisible));
         Assert.Equal(calls + 1, agent.ReadinessCalls);
+    }
+
+    /// <summary>
+    ///     Test that the last reply of a turn shows a quiet caption with what the turn cost once the turn has ended.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_CompletedTurn_ShowsTheUsageCaptionUnderTheLastReply()
+    {
+        // Arrange: a turn that answers and reports its usage
+        var agent = new ScriptedAgentService();
+        using var harness = new ChatHarness(agent: agent);
+        harness.Type("Draw a box");
+        harness.ClickSend();
+
+        // Act
+        agent.Emit(new AgentEvent.TextDelta("Done."), new AgentEvent.Usage(12_400, 7_200, null, 15, "model"), new AgentEvent.Completed());
+        Assert.True(harness.WaitFor(() => !harness.Chat.IsCopilotBusy));
+
+        // Assert: the caption is visible and says what was reported
+        var reply = Assert.Single(harness.Replies);
+        var caption = reply.FindControl<TextBlock>("UsageCaptionText")!;
+        Assert.True(caption.IsEffectivelyVisible);
+        Assert.StartsWith("12.4k in, 7.2k out, model x15 premium", caption.Text, StringComparison.Ordinal);
     }
 
     /// <summary>

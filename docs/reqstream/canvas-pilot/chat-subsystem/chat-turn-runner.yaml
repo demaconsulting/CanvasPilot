@@ -116,3 +116,58 @@ sections:
                   - ChatTurnRunner_RunTurn_Failure_KeepsPartialTextAndAddsErrorNoticeWithRemedy
                   - ChatTurnRunner_RunTurn_StreamThrowsOrEndsEarly_IsAFailureRowAndNeverThrows
                   - ChatTurnRunner_RunTurn_FailureAndException_LogFactsOnly
+
+              - id: CanvasPilot-ChatTurnRunner-ShowLiveStatus
+                title: >-
+                  The ChatTurnRunner shall, while a turn runs, keep the words of what the copilot is doing (working,
+                  thinking, the size of the response, the file that is being written with the bytes so far, the tool that
+                  runs, the wait for the model, the answer), show the progress of a file that is being written on one
+                  running row that the start and the end of the call go on to update, tick the elapsed time of the turn
+                  once a second by a timer of its clock, and, when nothing was heard from the copilot for 30 seconds and no
+                  tool runs, give a hint that says that large drawings can take minutes and that the provider may still
+                  count a stopped request, and shall show nothing of this when no turn runs.
+                justification: |
+                  A turn with a large drawing takes minutes, and a window that says nothing looks dead. Only what the
+                  provider really reports may be shown, so the words follow the events, the elapsed time is the one thing
+                  that is true for every model, and the hint is the honest explanation of a wait that some models cause
+                  by sending a drawing only when it is whole.
+                tests:
+                  - ChatTurnRunner_Status_Elapsed_IsTickedOnceASecondAndClearedAtTheEnd
+                  - ChatTurnRunner_FormatElapsed_WritesMinutesAndSeconds
+                  - ChatTurnRunner_Status_FollowsWhatTheCopilotReports
+                  - ChatTurnRunner_Progress_MakesOneRowThatTheCallUpdatesAndFinishes
+                  - ChatTurnRunner_Hint_AppearsAfterALongSilenceAndIsClearedByAnEvent
+                  - ChatTurnRunner_Status_FailureAndStop_ClearTheStatus
+
+              - id: CanvasPilot-ChatTurnRunner-ShowStopping
+                title: >-
+                  The ChatTurnRunner shall, from the moment the turn is asked to stop until it has ended, say that it is
+                  stopping, keep saying so whatever the copilot still reports, show no hint about a long wait, and ignore a
+                  second request to stop, and shall end the turn as stopped with an empty status.
+                justification: |
+                  A provider needs a moment to end what it was doing, and a Stop that shows nothing looks like a button that
+                  does not work, so the user would press it again or give up on the window.
+                tests:
+                  - ChatTurnRunner_Stop_ShowsStoppingUntilTheStreamEnds
+
+              - id: CanvasPilot-ChatTurnRunner-ShowTurnUsage
+                title: >-
+                  The ChatTurnRunner shall sum the tokens that the provider reported for the model calls of a turn, keep the
+                  largest model multiplier (a message is billed once, whatever the number of calls), name in the caption the
+                  context size that the settings chose for the turn (when one was chosen), and, when the turn has
+                  ended, show one quiet caption with only the figures that were reported and the time under the last reply
+                  of the turn (or as an information notice when the turn wrote no reply), say in it that a stopped turn
+                  may still be counted, and show nothing when no figure was reported and the turn was not stopped.
+                justification: |
+                  A model such as Claude Opus counts many premium requests for one message, and a stopped turn is not given
+                  back, so the user needs to see what a turn cost without being nagged during it. Nothing is made up: a
+                  provider that reports no multiplier (Ollama) gets tokens only. A larger context size is billed and
+                  served separately, so the caption says which size the turn ran with.
+                tests:
+                  - TurnUsage_Format_SumsTokensKeepsTheLargestMultiplier
+                  - TurnUsage_Format_ContextSize_IsNamedAfterTheMultiplier
+                  - TurnUsage_Format_LeavesOutWhatWasNotReportedAndNotesAStop
+                  - ChatTurnRunner_Completed_PutsTheUsageCaptionOnTheLastReply
+                  - ChatTurnRunner_Stopped_SaysThatTheRequestMayStillCount
+                  - ChatTurnRunner_CompletedWithoutUsage_HasNoCaption
+                  - ChatPanelView_CompletedTurn_ShowsTheUsageCaptionUnderTheLastReply

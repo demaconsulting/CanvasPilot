@@ -59,11 +59,12 @@ This document covers the verification design for the following software items:
   - **Chat** subsystem
     - **ChatPanel** — the transcript of the sent messages, the composer with its send and hold-to-talk buttons, and the
       joining of marks to the message
-    - **ChatTurnRunner** — one turn of the conversation: the events of the AI copilot as rows of the transcript, stop,
-      and failure
+    - **ChatTurnRunner** — one turn of the conversation: the events of the AI copilot as rows of the transcript, the
+      live status and elapsed time, stop, the usage caption, and failure
     - **ChatHistoryStore** — the words of the conversation of each project kept on this computer outside the project,
       restored when the project is opened and cleared on request
     - **PayloadInspector** — the window that shows exactly what the assistant would receive for a sent message
+    - **FollowUpSuggestions** — the example prompts that fit what the project has
   - **Composer** subsystem
     - **ComposerDocument** — the message being composed as ordered segments of text and chips
     - **ComposerHistory** — undo and redo of the user's changes, one action at a time
@@ -113,6 +114,7 @@ This document covers the verification design for the following software items:
     - **ModelCatalogPanel** — speech model lists with downloads
     - **ModelParameterEditor** — editors for the tunable settings of a model
     - **SpeechSettingsPage** — speech settings page
+    - **PushToTalkBinding** — the key that is held to talk, its safety rules, its text, and the setting that follows it
   - **Style** subsystem
     - **StyleKitDocument** — the values and the file format of a style kit, with a message for each wrong property
     - **StyleKitCatalog** — the kits in the program, user, project, and shared places, and the choice by precedence

@@ -1,0 +1,70 @@
+---
+# Software Unit Requirements for the PushToTalkBinding Unit
+#
+# The PushToTalkBinding unit is the key, or the chord of Ctrl, Alt, or Shift and a key, that is held to talk: the rules that
+# say which keys are safe to take over, the text in which a key is shown and stored, the test of whether a key press is the
+# chord, and the observable setting that follows the choice in the settings so that every part of the window names and
+# listens for the key that is in effect.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Speech Subsystem Requirements
+        sections:
+          - title: PushToTalkBinding Requirements
+            requirements:
+              - id: CanvasPilot-PushToTalkBinding-RefuseUnsafeKeys
+                title: >-
+                  The PushToTalkBinding shall have F9 as its default and shall refuse, with a sentence that says why and
+                  what to do, a modifier alone, a key of editing or moving (Esc, Enter, Tab, Backspace, Delete, the cursor
+                  keys, and the like), a letter, a digit, or a space without Ctrl or Alt, Ctrl+Space, Alt+Space, Alt with a
+                  letter or a digit alone, Ctrl+Alt, any chord with the Windows key, the shortcuts of editing and of the
+                  application, Alt+F4, and the function keys F1, F8, F10, F11, and F12, and shall accept the other function
+                  keys alone or with Ctrl, Alt, or Shift and a character key with Ctrl or Alt that is not refused.
+                justification: |
+                  No key is free on every computer. F8, the first default, is swallowed by the function keys of many
+                  laptops, F9 is not claimed by Windows or by the usual tools, and other keys belong to typing, to the
+                  system, or to tools such as PowerToys and the Windows Game Bar. A key that is refused never takes effect,
+                  so a bad choice cannot take away a key that people need.
+                tests:
+                  - PushToTalkBinding_Default_IsF9AndSafe
+                  - PushToTalkBinding_Validate_SafeKeys_AreAccepted
+                  - PushToTalkBinding_Validate_UnsafeKeys_AreRefusedWithASentence
+
+              - id: CanvasPilot-PushToTalkBinding-WriteAndReadKeys
+                title: >-
+                  The PushToTalkBinding shall write a key as text with the modifiers in the order Ctrl, Alt, Shift and then
+                  the key (for example F9 or Ctrl+Shift+Space), read that text back whatever its case or spacing, read
+                  nothing from a text that is empty, is not a key, repeats a modifier, has no key after its modifiers, or is
+                  not safe, and keep nothing for the default so that it can follow a later release, with the old default F8
+                  read as the default.
+                justification: |
+                  The key is stored in the settings file, which a person can edit and an older release may have written, so
+                  the text must read back to the same key and a bad value must never take effect or stop the application
+                  from starting.
+                tests:
+                  - PushToTalkBinding_DisplayAndParse_RoundTripAndRefuseUnsafeText
+                  - PushToTalkBinding_Stored_DefaultIsEmptyAndOldF8MeansTheDefault
+
+              - id: CanvasPilot-PushToTalkBinding-MatchTheChord
+                title: >-
+                  The PushToTalkBinding shall tell that a key press is the key when the key is the chosen one with exactly
+                  the chosen modifiers, ignoring the other keys that are held, and shall tell that letting go of the chosen
+                  key or of any modifier of the chord ends the talking and letting go of another key does not.
+                justification: |
+                  Dictation starts when the chord goes down and must end the moment it is broken, or the microphone would
+                  stay open; a key that is not part of the chord must not end it.
+                tests:
+                  - PushToTalkBinding_MatchesAndIsPartOf_FollowTheChord
+
+              - id: CanvasPilot-PushToTalkBinding-FollowTheSettings
+                title: >-
+                  The PushToTalkBinding shall give the key that is in effect as an observable value that follows the talk key
+                  of the settings (the default for a missing or unsafe value), announce its change, and stop following when
+                  it is disposed.
+                justification: |
+                  The window listens for the key, and the status bar, the welcome screen, and the chat panel tell the user
+                  which key to hold, so all of them must name the key that really works at every moment, including right
+                  after the user changes it.
+                tests:
+                  - PushToTalkSetting_FollowsTheSettingsAndStopsWhenDisposed

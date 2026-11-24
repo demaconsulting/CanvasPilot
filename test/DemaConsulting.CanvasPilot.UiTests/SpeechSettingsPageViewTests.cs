@@ -20,7 +20,9 @@
 
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
@@ -92,6 +94,101 @@ public sealed class SpeechSettingsPageViewTests : IDisposable
         Assert.Equal(["Installed", "Not downloaded"], StatusTexts(window));
         var voice = SettingsUiHelpers.Find<ComboBox>(window, "SpeechParameterComboBox");
         Assert.Equal("b", ((ChoiceParameterOption)voice.SelectedItem!).Value);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the box of the talk key captures the key that is pressed in it: a chord is shown and stored, a key that
+    ///     is not safe is refused with a sentence and leaves the key as it was, Esc cancels, and the reset button puts the
+    ///     default back.
+    /// </summary>
+    [AvaloniaFact]
+    public void SpeechSettingsPageView_PushToTalkKeyBox_CapturesValidatesAndResets()
+    {
+        // Arrange: a shown page with the default key
+        var page = new SpeechSettingsPageViewModel(_audio, _models);
+        var window = ShowPage(page, new AppSettings());
+        var box = SettingsUiHelpers.Find<TextBox>(window, "SpeechPushToTalkKeyBox");
+        var problem = SettingsUiHelpers.Find<TextBlock>(window, "SpeechPushToTalkProblem");
+        var reset = SettingsUiHelpers.Find<Button>(window, "SpeechPushToTalkResetButton");
+        box.Focus();
+        Dispatcher.UIThread.RunJobs();
+        var atStart = (box.Text, problem.IsVisible, reset.IsEffectivelyEnabled);
+
+        // Act: press a key that would type, then a chord, then Esc, then a modifier alone
+        window.KeyPressQwerty(PhysicalKey.A, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        var afterUnsafe = (box.Text, problem.IsVisible, problem.Text);
+        window.KeyPressQwerty(PhysicalKey.T, RawInputModifiers.Control | RawInputModifiers.Shift);
+        Dispatcher.UIThread.RunJobs();
+        var afterChord = (box.Text, problem.IsVisible, reset.IsEffectivelyEnabled, page.Apply(new AppSettings()).Speech.PushToTalkKey);
+        window.KeyPressQwerty(PhysicalKey.Escape, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.ControlLeft, RawInputModifiers.Control);
+        Dispatcher.UIThread.RunJobs();
+        var afterEscape = box.Text;
+        SettingsUiHelpers.Click(window, reset);
+        var afterReset = (box.Text, reset.IsEffectivelyEnabled);
+
+        // Assert
+        Assert.Equal(("F9", false, false), atStart);
+        Assert.Equal("F9", afterUnsafe.Item1);
+        Assert.True(afterUnsafe.IsVisible);
+        Assert.Contains("Ctrl or Alt", afterUnsafe.Item3, StringComparison.Ordinal);
+        Assert.Equal(("Ctrl+Shift+T", false, true, "Ctrl+Shift+T"), afterChord);
+        Assert.Equal("Ctrl+Shift+T", afterEscape);
+        Assert.Equal(("F9", false), afterReset);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that Tab and Shift+Tab move the focus out of the box of the talk key and leave the key as it was, while
+    ///     other keys, such as a letter and F9, are still captured.
+    /// </summary>
+    [AvaloniaFact]
+    public void SpeechSettingsPageView_PushToTalkKeyBox_TabMovesTheFocusOutAndOtherKeysAreCaptured()
+    {
+        // Arrange: a shown page with a chosen chord, so that the reset button can take the focus
+        var page = new SpeechSettingsPageViewModel(_audio, _models);
+        var window = ShowPage(page, new AppSettings());
+        var box = SettingsUiHelpers.Find<TextBox>(window, "SpeechPushToTalkKeyBox");
+        var problem = SettingsUiHelpers.Find<TextBlock>(window, "SpeechPushToTalkProblem");
+        var reset = SettingsUiHelpers.Find<Button>(window, "SpeechPushToTalkResetButton");
+        box.Focus();
+        Dispatcher.UIThread.RunJobs();
+        window.KeyPressQwerty(PhysicalKey.T, RawInputModifiers.Control | RawInputModifiers.Shift);
+        Dispatcher.UIThread.RunJobs();
+        var focusManager = TopLevel.GetTopLevel(box)!.FocusManager;
+
+        // Act: Tab out of the box, back into it, Shift+Tab out of it, back into it, then a letter and F9
+        window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        var afterTab = (Focused: focusManager.GetFocusedElement(), box.Text, problem.IsVisible);
+        box.Focus();
+        Dispatcher.UIThread.RunJobs();
+        window.KeyPressQwerty(PhysicalKey.Tab, RawInputModifiers.Shift);
+        Dispatcher.UIThread.RunJobs();
+        var afterShiftTab = (Focused: focusManager.GetFocusedElement(), box.Text, problem.IsVisible);
+        box.Focus();
+        Dispatcher.UIThread.RunJobs();
+        window.KeyPressQwerty(PhysicalKey.A, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        var afterLetter = (box.Text, problem.IsVisible);
+        window.KeyPressQwerty(PhysicalKey.F9, RawInputModifiers.None);
+        Dispatcher.UIThread.RunJobs();
+        var afterF9 = (box.Text, problem.IsVisible);
+
+        // Assert: Tab moved the focus to the reset button, Shift+Tab moved it away from the box, the chord stayed, and the
+        // letter and F9 were still captured
+        Assert.Same(reset, afterTab.Focused);
+        Assert.Equal("Ctrl+Shift+T", afterTab.Text);
+        Assert.False(afterTab.IsVisible);
+        Assert.NotSame(box, afterShiftTab.Focused);
+        Assert.Equal("Ctrl+Shift+T", afterShiftTab.Text);
+        Assert.False(afterShiftTab.IsVisible);
+        Assert.Equal(("Ctrl+Shift+T", true), afterLetter);
+        Assert.Equal(("F9", false), afterF9);
 
         window.Close();
     }

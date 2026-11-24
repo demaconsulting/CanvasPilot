@@ -94,6 +94,18 @@ public sealed record AiProviderSettings
     public string ReasoningEffort { get; init; } = string.Empty;
 
     /// <summary>
+    ///     Gets the id of the context size (context tier) that a GitHub Copilot model is asked to run with, as the provider
+    ///     spells it (for example <c>default</c> or <c>long_context</c>), or an empty string to leave the choice to the
+    ///     provider, which is the standard size.
+    /// </summary>
+    /// <remarks>
+    ///     Only some Copilot models offer more than one size, and which ids exist depends on the model, so the value is
+    ///     text. The settings page offers the choice only for such a model and resets a value that the chosen model does not
+    ///     offer. The value is additive: a file without it, and Ollama, get the provider's own size.
+    /// </remarks>
+    public string ContextTier { get; init; } = string.Empty;
+
+    /// <summary>
     ///     Gets the Ollama server endpoint.
     /// </summary>
     public string OllamaEndpoint { get; init; } = DefaultOllamaEndpoint;
@@ -156,6 +168,13 @@ public sealed record SpeechSettings
     ///     Gets the selected text-to-speech model identifier.
     /// </summary>
     public string TtsModelId { get; init; } = string.Empty;
+
+    /// <summary>
+    ///     Gets the key, or the chord of modifiers and a key, that is held to dictate a message, written as
+    ///     <c>F9</c> or <c>Ctrl+Shift+Space</c>. An empty string means the default (<c>F9</c>); a value that is not a safe
+    ///     binding (including the old default <c>F8</c>) is replaced by an empty string when the settings are loaded.
+    /// </summary>
+    public string PushToTalkKey { get; init; } = string.Empty;
 
     /// <summary>
     ///     Gets the per-model parameter values: model identifier, then parameter identifier, then the value as an

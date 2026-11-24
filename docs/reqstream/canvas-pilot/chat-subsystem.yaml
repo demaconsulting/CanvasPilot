@@ -133,15 +133,56 @@ sections:
           - id: CanvasPilot-Chat-GuideNewConversation
             title: >-
               The Chat subsystem shall, while there is no conversation, ask the user what to draw and offer example
-              prompts that write themselves into the message when chosen, and shall offer follow-up prompts once a
-              conversation exists.
+              prompts that write themselves into the message when chosen, and shall offer prompts once a conversation
+              exists that fit what the project has (ways to start while it has no drawing, ways to refine once it has one,
+              the export only while a picture is shown) and none while the copilot works.
             justification: |
               A new user who sees a blank panel does not know what to say, so the panel gives ways to start and then
-              ways to go on. A prompt only fills in the message, so the user stays in control of what is sent.
+              ways to go on. A prompt only fills in the message, so the user stays in control of what is sent. A prompt
+              that does not fit, such as asking for a legend in a project with no drawing, teaches the user that the
+              suggestions mean nothing, so they follow what the project has.
             children:
               - CanvasPilot-ChatPanel-OfferPrompts
+              - CanvasPilot-FollowUpSuggestions-PlanStarterPrompts
+              - CanvasPilot-FollowUpSuggestions-PlanRefinements
+              - CanvasPilot-FollowUpSuggestions-OfferNothingWhileBusy
+              - CanvasPilot-FollowUpSuggestions-FindDrawingInProject
             tests:
               - ChatPanelView_EmptyState_ExamplePromptFillsTheMessageAndSuggestionsWaitForAConversation
+
+          - id: CanvasPilot-Chat-ShowLiveStatus
+            title: >-
+              The Chat subsystem shall show, while the copilot works on a message, what the copilot is doing, how long the
+              turn has lasted, the file that is being written with the bytes so far on one row, and a plain hint when
+              nothing was heard for a long time, and nothing of it when no turn runs.
+            justification: |
+              A turn with a large drawing takes minutes, and a window that says nothing looks dead. The user decides
+              whether to wait or to stop from what the panel says, and only what the provider really reports may be shown.
+            children:
+              - CanvasPilot-ChatTurnRunner-ShowLiveStatus
+              - CanvasPilot-ChatPanel-ShowBusyStatus
+
+          - id: CanvasPilot-Chat-ShowStopping
+            title: >-
+              The Chat subsystem shall say from the moment that Stop is pressed until the turn has ended that the copilot
+              is stopping, and not allow Stop to be pressed again.
+            justification: |
+              A provider needs a moment to end what it was doing, and a Stop that shows nothing looks like a button that
+              does not work.
+            children:
+              - CanvasPilot-ChatTurnRunner-ShowStopping
+              - CanvasPilot-ChatPanel-ShowStopping
+
+          - id: CanvasPilot-Chat-ShowTurnUsage
+            title: >-
+              The Chat subsystem shall show under the last reply of a turn what the provider reported the turn used (the
+              tokens, the multiplier of the model, and the time), and that a stopped turn may still be counted, and shall
+              show nothing that the provider did not report.
+            justification: |
+              A model such as Claude Opus counts many premium requests for one message, and a stopped turn is not given
+              back, so the user needs to see what a turn cost without being told during it.
+            children:
+              - CanvasPilot-ChatTurnRunner-ShowTurnUsage
 
           - id: CanvasPilot-Chat-HideConversation
             title: >-

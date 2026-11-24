@@ -137,6 +137,11 @@ public sealed class ProviderModelCatalog : IProviderModelSource
             .Select(notice => notice.Message)
             .ToList();
 
+        // The context sizes are offered only when the model says that one can be chosen
+        var tiers = model.Adjustments.HasFlag(ModelAdjustments.ContextTier)
+            ? model.ContextTiers.Select(tier => new ProviderContextTier(tier.Id, tier.DisplayName, tier.WindowTokens)).ToList()
+            : [];
+
         return new ProviderModelInfo(
             model.Id,
             string.IsNullOrWhiteSpace(model.DisplayName) ? model.Id : model.DisplayName,
@@ -148,7 +153,12 @@ public sealed class ProviderModelCatalog : IProviderModelSource
             model.DefaultReasoningEffort,
             model.IsUsable,
             model.UnusableReason,
-            warnings);
+            warnings,
+            model.BillingMultiplier,
+            model.Category,
+            model.PriceCategory,
+            tiers,
+            model.DefaultContextTier);
     }
 
     /// <summary>

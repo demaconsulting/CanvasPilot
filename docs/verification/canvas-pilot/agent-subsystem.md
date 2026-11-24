@@ -22,15 +22,29 @@ tests.
 The service that implements the contract (`AgentService`) is also verified here as the application will use it: one test
 runs it over the real factory and a stand-in Ollama server with the real tools of a project, and one runs it for GitHub
 Copilot with the real starter over a start function that says the runtime is not signed in. Its lifecycle, its turn, its
-data folders, and its log are verified in the unit verification document of `AgentService`. A turn of a real Copilot
-runtime cannot be part of the tests that run everywhere, because it needs the installed CLI and a sign-in; it is
-verified by opt-in tests (`LiveCopilotTurnTests.cs`, skipped unless the variable `CANVASPILOT_LIVE_COPILOT` is `1`)
-whose runs are recorded in the manual verification of the system.
+data folders, and its log are verified in the unit verification document of `AgentService`. The behavior that a long
+turn of a real provider needs is verified at the level of that unit, on a scripted model that is made to misbehave, with
+the real mapper, tools, and instructions: the pipeline that reads the provider off the thread of the caller and merges
+what says the same thing again (with the coalescer verified on its own), the Stop at any point of a turn (inside a tool
+call, before the provider said anything, and with a provider that ignores the token, on a manual clock), the recovery of
+a conversation that a Stop left unusable, the rule that a completed turn is not a canceled one, the log of the lifecycle
+of a turn and of the provider session, and the mapping of the progress and of the usage (verified in the unit
+verification of `AgentEventMapper`, on hand-built events of the Copilot SDK, because the release of AgentKit in use does
+not forward the delta events). A turn of a real Copilot runtime cannot be part of the tests that run everywhere, because
+it needs the installed CLI and a sign-in; it is verified by opt-in tests (`LiveCopilotTurnTests.cs` and
+`LiveCopilotLongTurnTests.cs`, skipped unless the variable `CANVASPILOT_LIVE_COPILOT` is `1`) whose runs are recorded in
+the manual verification of the system. The long-turn tests compose the application (the real service, factory, and
+runtime, with the renderer, the preview, and the chat panel), run a long drawing turn, a Stop followed by a follow-up
+message, and two refinement turns, and observe the user interface, the updates of the provider, the application log, and
+the events file of the runtime; they belong to no requirement and cost real premium requests.
 
 ### Test Environment
 
 N/A - standard test environment. The tests use no network, display, or external services. The tests of the tools make a
-temporary project folder and delete it.
+temporary project folder and delete it. The opt-in live tests (`LiveCopilotTurnTests.cs` and
+`LiveCopilotLongTurnTests.cs`) are skipped unless the variable `CANVASPILOT_LIVE_COPILOT` is `1`; when run they need the
+installed Copilot CLI, a sign-in, and a network connection, spend real premium requests, and print no token and no
+prompt (see the manual verification of the system).
 
 ### Acceptance Criteria
 
@@ -75,6 +89,27 @@ temporary project folder and delete it.
 - Through the agent service with the real starter over a start function that says the runtime is not signed in, a turn
   for GitHub Copilot is one failed event of kind not ready with the sign-in sentence of the starter, and the log holds
   no word of the message.
+- A turn on a provider that sends a burst of events and a consumer that lags is not held back: the provider is read to
+  its end, the text arrives complete and in order in fewer events, the events that carry facts are neither merged nor
+  reordered, and the turn ends with `Completed`.
+- A Stop ends a turn at any point without a failure and leaves the conversation usable: the next message is answered on
+  the same conversation, or on a new provider session that gets the digest of the history once when the Stop came before
+  the provider said anything or the provider did not honor it within the grace period; a conversation that a Stop left
+  unusable is replaced once, visibly in the log, and a failure that is not that is shown. A turn that completed is never
+  treated as a canceled one.
+- The progress of a turn that the provider reports (reasoning, the arguments of the call that is being written, the size
+  of the response) reaches the chat as events that carry counts and a file name and never the content, spaced by the
+  clock; the usage of each model call carries the model multiplier when the provider reports one.
+- The log of a turn carries its number, the model, the effort, the history count, the start and the end of each tool
+  call, the times, the usage, the cancel source, and the identifier of the provider session and the file of its events
+  for a failed or canceled turn, and never a word of a message, an answer, a tool, or a file.
+- Against a real Copilot runtime (opt-in, not part of the tests that run everywhere), a long drawing turn shows a status
+  that changes at least every five seconds through the elapsed time and the phase even while the provider is silent,
+  ends with the file created, rendered, and previewed; a Stop about a minute into a turn shows the stopping text at once
+  and leaves the panel idle within ten seconds, and the next message is answered without an error within two minutes, on
+  the same provider session (or with the reason for a new one in the log); and two refinement turns share one provider
+  session, created by the first and resumed by the second, with no recovery, release, or drop between them (see the
+  manual verification of the system).
 
 ### Test Scenarios
 
@@ -183,3 +218,56 @@ with the library's "not signed in" message, and settings that choose GitHub Copi
 The stream is one failed event of kind not ready with the sign-in sentence of the starter, and the log holds no word of
 the message. This scenario is tested by
 `AgentSubsystem_ConverseWithCopilot_ServiceWithNotSignedInStarter_TurnFailsWithTheSignInSentence`.
+
+The scenarios below are the behavior of a long turn that the subsystem owes the chat. They are run through the real
+service, mapper, tools, and instructions on a scripted model, and are described in the unit verification of
+`AgentService` and `AgentEventMapper`; the live scenarios at the end are opt-in.
+
+**AgentService_RunTurn_SlowConsumer_TheProviderIsReadToItsEndAndTheTextIsMerged**: A burst of 2,000 pieces of text and a
+consumer that lags. The provider is read to its end, the text arrives complete and in order in fewer events, and the
+turn completes. This scenario is tested by
+`AgentService_RunTurn_SlowConsumer_TheProviderIsReadToItsEndAndTheTextIsMerged`.
+
+**AgentService_Stop_MidToolCall_EndsTheTurnAndTheNextTurnAnswersOnTheSameConversation**: A Stop while the model writes
+after a tool call, and the next message. The turn ends without a failure and the next message is answered on the same
+conversation. This scenario is tested by
+`AgentService_Stop_MidToolCall_EndsTheTurnAndTheNextTurnAnswersOnTheSameConversation`.
+
+**AgentService_Stop_BeforeTheFirstUpdate_DropsTheSessionAndTheNextTurnGetsTheDigestOnce**: A Stop before the provider
+said anything. The next message is on a new provider session with the digest of the history in one message only. This
+scenario is tested by `AgentService_Stop_BeforeTheFirstUpdate_DropsTheSessionAndTheNextTurnGetsTheDigestOnce`.
+
+**AgentService_Stop_ProviderIgnoresTheToken_EndsAfterTheGraceAndDropsTheConversation**: A provider that never looks at
+the token, on a manual clock. The turn ends when the grace period has passed and the next message runs on a new session.
+This scenario is tested by `AgentService_Stop_ProviderIgnoresTheToken_EndsAfterTheGraceAndDropsTheConversation`.
+
+**AgentService_NextTurnAfterStop_FailsBeforeAnyUpdate_IsRecoveredOnceOnANewConversation**: A conversation that a Stop
+left unusable. The failure of the next turn is not shown, the message is sent once more on a new conversation, and the
+log says so. This scenario is tested by
+`AgentService_NextTurnAfterStop_FailsBeforeAnyUpdate_IsRecoveredOnceOnANewConversation`.
+
+**AgentService_CompletedTurnReadOnlyToItsCompletion_IsNotInterruptedAndTheNextFailureIsShown**: A turn that the consumer
+reads only up to `Completed`, as the chat does. It ends with no cancel source, and the failure of the next turn is shown
+and not recovered. This scenario is tested by
+`AgentService_CompletedTurnReadOnlyToItsCompletion_IsNotInterruptedAndTheNextFailureIsShown`.
+
+**AgentEventMapper_Map_ToolCallDeltas_CountBytesAndFindThePathWithoutTheContent**: The arguments of a call that the
+model is writing, with a sentinel as their content. Progress events carry the bytes and the file name and not the
+sentinel. This scenario is tested by `AgentEventMapper_Map_ToolCallDeltas_CountBytesAndFindThePathWithoutTheContent`.
+
+**AgentEventMapper_Map_UsageWithRawCopilotEvent_CarriesMultiplierReasoningAndModel**: The usage of a call of GitHub
+Copilot. The event carries the tokens, the multiplier, and the model. This scenario is tested by
+`AgentEventMapper_Map_UsageWithRawCopilotEvent_CarriesMultiplierReasoningAndModel`.
+
+**AgentService_Logging_ProviderSession_HasIdsRunKindsEventsFileAndReleaseReason**: Three turns on a provider with
+session identifiers, the third failing, and a reset. The log names the session, how each run used it, the events file of
+the failed turn only, and the reason for the release. This scenario is tested by
+`AgentService_Logging_ProviderSession_HasIdsRunKindsEventsFileAndReleaseReason`.
+
+**LiveCopilotLongTurn_EmptyProject_MarketingImage_ShowsProgressCreatesFileRendersAndPreviews**,
+**LiveCopilotLongTurn_StopAboutAMinuteIn_FollowUpIsAnswered**, and
+**LiveCopilotLongTurn_TwoRefinementTurns_ShareOneProviderSessionWithoutRecovery**: The three live scenarios of the
+acceptance criteria, run against a real Copilot runtime when `CANVASPILOT_LIVE_COPILOT` is `1` and skipped otherwise: a
+long first turn for a marketing image in an empty project, a Stop about a minute into such a turn followed by a
+question, and two refinement turns in one conversation. They belong to no requirement; their runs are recorded in the
+manual verification of the system. These scenarios are tested by the tests of the same names.

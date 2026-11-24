@@ -52,6 +52,23 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         so Stop, closing the project, and closing the application all end the turn the same way, with no failure.
 ///     </para>
 ///     <para>
+///         <b>Stop.</b> The turn records who canceled it (the caller, a reset, a change of the project, the end of the
+///         service, or a caller that stopped reading) and logs it. The token of the turn is the provider's token, so a Stop
+///         ends the provider's stream, which is disposed before the next turn can begin. A provider that does not end its
+///         stream within <see cref="StopGrace" /> is left to finish in the background and its conversation is dropped, so the
+///         caller is never held by it. A Stop that arrives before the provider said anything also drops the conversation (what
+///         the provider session holds is not known, and a new one gets the digest of the history once); a Stop after that
+///         marks the conversation as interrupted, and if the next turn on it fails before it says anything with a lost
+///         connection or an unexpected error, the conversation is replaced and the turn is run once more, with a line in
+///         the log. Nothing else is retried.
+///     </para>
+///     <para>
+///         <b>Off the user interface thread.</b> The provider's stream is read, mapped, and merged into a queue on a thread
+///         of the pool (see <see cref="AgentEventCoalescer" />); the caller reads the queue at its own pace. A consumer that
+///         lags therefore never holds the provider back, and what it missed is merged (the pieces of text are joined and
+///         progress is reduced to the latest), never reordered or dropped (tools, files, usage, the end).
+///     </para>
+///     <para>
 ///         <b>Restored history.</b> The text of the earlier turns in the request becomes one block of at most
 ///         <see cref="RestoredHistoryDigest.MaxCharacters" /> characters at the start of the first message of a new provider
 ///         session, once. It lives in memory only; it is never written to a file or to the log.
@@ -63,9 +80,19 @@ namespace DemaConsulting.CanvasPilot.AgentSubsystem;
 ///         history, lies inside the project folder.
 ///     </para>
 ///     <para>
-///         <b>Logging.</b> The log gets the metadata of the lifecycle (provider, model, tier, counts, outcome, duration, the
-///         type of an exception) and never the words of a message, a tool's arguments or result, or a file's content; the
-///         runtime of Copilot logs through <see cref="RuntimeLogAdapter" />, which drops message text too.
+///         <b>Logging.</b> The log gets the metadata of the lifecycle and never the words of a message, a tool's arguments
+///         or result, or a file's content. Each line of a turn carries its number (<c>turn=N</c>, counted for the life of
+///         the service): the start (provider, model, effort, <c>historyTurns</c> = the earlier turns that the caller handed
+///         over, which is its whole saved conversation, and whether the digest of them was added because the provider
+///         session is new), each tool call (name, the path it works on, the bytes of its arguments and result, its time, and
+///         its outcome), the provider session (its identifier, whether the run created or resumed it, and that the handle
+///         was released after the run), and the end (outcome, cancel source, time, the time to the first event and the
+///         longest gap between events, the length of the text, whether the provider reasoned, the usage when it was
+///         reported, and the merged events). A turn that failed or was canceled also names the file where the provider
+///         recorded the events of its session, which exists until the conversation is dropped. The conversation is
+///         released with the reason: reset, changed, settings, project, dispose, unused, stopped-early, stop-timeout, or
+///         recovered. A path is the name of a file of the project, with control characters made safe and cut to 120
+///         characters; the runtime of Copilot logs through <see cref="RuntimeLogAdapter" />, which drops message text too.
 ///     </para>
 ///     <para>
 ///         The service is safe for concurrent use. The events of the project tools and of the settings may arrive on any
@@ -125,6 +152,12 @@ public sealed class AgentService : IAgentService
     ///     The longest time that releasing a conversation waits for its running turn to end.
     /// </summary>
     private static readonly TimeSpan ReleaseWait = TimeSpan.FromSeconds(10);
+
+    /// <summary>
+    ///     The longest time that a turn waits for the provider to end its stream after the turn was canceled, before it is
+    ///     given up and its conversation is dropped.
+    /// </summary>
+    internal static readonly TimeSpan StopGrace = TimeSpan.FromSeconds(5);
 
     /// <summary>
     ///     The longest time that disposing the service waits for the conversations to be released and the factory to stop.
@@ -203,6 +236,11 @@ public sealed class AgentService : IAgentService
     private readonly string _historyDirectory;
 
     /// <summary>
+    ///     The clock that spaces the progress events of a turn.
+    /// </summary>
+    private readonly TimeProvider _time;
+
+    /// <summary>
     ///     Cancels every turn when the service ends.
     /// </summary>
     private readonly CancellationTokenSource _lifetime = new();
@@ -221,6 +259,11 @@ public sealed class AgentService : IAgentService
     ///     The running turn, or <see langword="null" /> when none runs.
     /// </summary>
     private TurnState? _turn;
+
+    /// <summary>
+    ///     The number of turns that were started for the life of the service; guarded by the lock.
+    /// </summary>
+    private int _turnCounter;
 
     /// <summary>
     ///     Whether the service was disposed.
@@ -250,6 +293,7 @@ public sealed class AgentService : IAgentService
     ///     The folder of the chat history, which is checked to lie outside the project; <see langword="null" /> for the
     ///     folder below <paramref name="localDataRoot" />.
     /// </param>
+    /// <param name="clock">The clock that spaces the progress events of a turn; <see langword="null" /> for the system's.</param>
     /// <exception cref="ArgumentNullException">Thrown when a required argument is <see langword="null" />.</exception>
     public AgentService(
         IProjectService projects,
@@ -262,7 +306,8 @@ public sealed class AgentService : IAgentService
         IActiveStyle? activeStyle = null,
         RollingFileLogger? logger = null,
         string? localDataRoot = null,
-        string? historyRoot = null)
+        string? historyRoot = null,
+        TimeProvider? clock = null)
     {
         ArgumentNullException.ThrowIfNull(projects);
         ArgumentNullException.ThrowIfNull(settings);
@@ -279,6 +324,7 @@ public sealed class AgentService : IAgentService
         _readiness = readiness;
         _projectTools = projectTools;
         _activeStyle = activeStyle;
+        _time = clock ?? TimeProvider.System;
         _logger = logger;
         _runtimeLogger = logger is null ? null : new RuntimeLogAdapter(logger, "CopilotRuntime");
         _copilotDataDirectory = GetCopilotDataDirectory(localDataRoot);
@@ -383,46 +429,178 @@ public sealed class AgentService : IAgentService
         }
 
         var clock = Stopwatch.StartNew();
-        var outcome = "Canceled";
-        var events = 0;
+        var stats = new TurnStats(_time);
+        try
+        {
+            await foreach (var item in RunAttemptAsync(request, turn, stats, canRecover: true).ConfigureAwait(false))
+            {
+                yield return item;
+            }
+
+            // A conversation that a Stop left behind and that the provider can no longer use is replaced once, with the
+            // digest of the history, and the message is sent again; the failure was not shown because nothing was
+            if (stats.RecoveryReason is { } reason)
+            {
+                Write(LogLevel.Warning, $"Session recovered: turn={turn.Number} reason={reason}");
+                await foreach (var item in RunAttemptAsync(request, turn, stats, canRecover: false).ConfigureAwait(false))
+                {
+                    yield return item;
+                }
+            }
+        }
+        finally
+        {
+            LogSessionEvents(turn, stats);
+            EndTurn(turn);
+            var usage = stats.Usage;
+            var cost = stats.Cost;
+            Write(
+                LogLevel.Info,
+                $"Turn ended: turn={turn.Number} outcome={stats.Outcome} cancelSource={turn.CancelSource} milliseconds={clock.ElapsedMilliseconds} "
+                + $"events={stats.Events} merged={stats.Merged} firstEventMs={stats.FirstEventMilliseconds} maxGapMs={stats.MaxGapMilliseconds} "
+                + $"textChars={stats.TextCharacters} reasoning={stats.SawReasoning} usageIn={usage.Input} usageOut={usage.Output} "
+                + $"reasoningTokens={cost.Reasoning} premiumMultiplier={cost.Multiplier}");
+        }
+    }
+
+    /// <summary>
+    ///     Tells the log where the provider recorded the events of a session whose turn failed or was canceled, so that the
+    ///     file can be found while it lasts: the provider deletes it when the conversation is dropped.
+    /// </summary>
+    /// <param name="turn">The turn.</param>
+    /// <param name="stats">What the turn counted, which names the conversation that it ran on.</param>
+    private void LogSessionEvents(TurnState turn, TurnStats stats)
+    {
+        if (stats.Conversation is not { } conversation
+            || !(stats.Outcome.StartsWith("Failed", StringComparison.Ordinal) || stats.Outcome == "Canceled"))
+        {
+            return;
+        }
+
+        var info = _factory.DescribeSession(conversation.Session);
+        if (info.EventsFile is not null)
+        {
+            Write(LogLevel.Warning, $"Provider session events: turn={turn.Number} id={info.Id} file={info.EventsFile} (kept until the conversation is dropped)");
+        }
+    }
+
+    /// <summary>
+    ///     Runs one attempt of a turn on the conversation of the project: the provider is read on a thread of the pool into
+    ///     a queue that the caller reads, and when the attempt ends the provider's stream has been disposed, so that the next
+    ///     turn never starts on a session whose turn is still running.
+    /// </summary>
+    /// <remarks>
+    ///     A Stop (or any cancellation) ends the attempt when the provider's stream ends, which is soon because the token of
+    ///     the turn is the provider's token. A provider that does not honor it within <see cref="StopGrace" /> is left to
+    ///     finish in the background: the attempt ends, and the conversation is dropped, so the next turn starts on a new
+    ///     provider session instead of waiting behind the old one. A Stop that arrives before the provider said anything
+    ///     also drops the conversation, because then it is not known what the provider session holds, and the new session
+    ///     gets the digest of the history once. A conversation that was interrupted and that fails before it says anything
+    ///     on the next turn is dropped and the turn is run once more (see <paramref name="canRecover" />).
+    /// </remarks>
+    /// <param name="request">The request.</param>
+    /// <param name="turn">The turn.</param>
+    /// <param name="stats">What is counted for the log and decides the recovery.</param>
+    /// <param name="canRecover">Whether a failure before the first event of an interrupted conversation may be recovered from.</param>
+    /// <returns>The events of the attempt.</returns>
+    private async IAsyncEnumerable<AgentEvent> RunAttemptAsync(AgentTurnRequest request, TurnState turn, TurnStats stats, bool canRecover)
+    {
+        Task pump = Task.CompletedTask;
+        Conversation? conversation = null;
+        var coalescer = new AgentEventCoalescer();
+        var drained = false;
+        var abandoned = false;
+        var recoveryTriggered = false;
+        string? sessionBefore = null;
+
+        // After a cancellation the provider has StopGrace to end its stream; then the caller stops waiting for it
+        using var grace = new CancellationTokenSource(Timeout.InfiniteTimeSpan, _time);
+        using var graceRegistration = turn.Token.Register(static state => ((CancellationTokenSource)state!).CancelAfter(StopGrace), grace);
         try
         {
             var prepared = await PrepareAsync(request, turn).ConfigureAwait(false);
             if (prepared.Failure is not null)
             {
-                outcome = $"Failed:{prepared.Failure.Kind}";
+                stats.Outcome = $"Failed:{prepared.Failure.Kind}";
+                drained = true;
                 yield return prepared.Failure;
                 yield break;
             }
 
             if (prepared.Conversation is null)
             {
+                drained = true;
                 yield break;
             }
 
-            var conversation = prepared.Conversation;
+            conversation = prepared.Conversation;
+            stats.Conversation = conversation;
+            sessionBefore = _factory.DescribeSession(conversation.Session).Id;
             var model = _settings.Current.AiProvider.ModelName;
-            var mapper = new AgentEventMapper(conversation.Provider, model, _logger, turn.Token);
+            var contextSize = ContextSizeOf(conversation.Provider, _settings.Current.AiProvider);
+            var mapper = new AgentEventMapper(conversation.Provider, model, _logger, turn.Token, _time, turn.Number);
             var updates = conversation.Agent.RunStreamingAsync(prepared.Message!, conversation.Session, cancellationToken: turn.Token);
+
+            // The provider is read on a thread of the pool and its events wait in the coalescer, so that a consumer that is
+            // slow (the user interface) never holds the provider's stream back, and a burst of progress events reaches it as
+            // one
+            pump = Task.Run(() => PumpAsync(mapper, updates, turn, coalescer, stats), CancellationToken.None);
             var digestPending = prepared.DigestAdded;
-            await foreach (var mapped in mapper.MapAsync(updates).ConfigureAwait(false))
+            await using var reader = coalescer.ReadAllAsync(grace.Token).GetAsyncEnumerator(grace.Token);
+            while (true)
             {
-                // A file that a tool wrote while the model was working comes before the answer of the tool
-                while (turn.Writes.TryDequeue(out var written))
+                bool more;
+                try
                 {
-                    events++;
-                    yield return written;
+                    more = await reader.MoveNextAsync().ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (grace.IsCancellationRequested)
+                {
+                    abandoned = true;
+                    break;
                 }
 
-                // The provider has the digest once something other than a failure came back
-                if (digestPending && mapped is not AgentEvent.Failed)
+                if (!more)
                 {
-                    conversation.HistoryPrefixed = true;
-                    digestPending = false;
+                    drained = true;
+                    break;
                 }
 
-                events++;
-                outcome = mapped switch
+                var mapped = reader.Current;
+
+                // The provider does not name the context size, so the usage of the turn carries the one that was asked for
+                if (contextSize is not null && mapped is AgentEvent.Usage usage)
+                {
+                    mapped = usage with { ContextSize = contextSize };
+                }
+                if (canRecover && stats.Events == 0 && conversation.Interrupted && mapped is AgentEvent.Failed { Kind: AgentFailureKind.ConnectionLost or AgentFailureKind.Unexpected } failure)
+                {
+                    stats.RecoveryReason = failure.Kind;
+                    recoveryTriggered = true;
+                    drained = true;
+                    break;
+                }
+
+                if (mapped is not AgentEvent.Failed)
+                {
+                    // The provider has the digest once something other than a failure came back, and it works again
+                    conversation.Interrupted = false;
+                    if (digestPending)
+                    {
+                        conversation.HistoryPrefixed = true;
+                        digestPending = false;
+                    }
+                }
+
+                // Nothing follows the completion, so a consumer that stops reading there has read the whole turn: it is not
+                // a turn that the consumer canceled, and the conversation is not marked as interrupted
+                if (mapped is AgentEvent.Completed)
+                {
+                    drained = true;
+                }
+
+                stats.Events++;
+                stats.Outcome = mapped switch
                 {
                     AgentEvent.Completed => "Completed",
                     AgentEvent.Failed failed => $"Failed:{failed.Kind}",
@@ -433,20 +611,190 @@ public sealed class AgentService : IAgentService
 
             if (turn.Token.IsCancellationRequested)
             {
-                outcome = "Canceled";
+                stats.Outcome = "Canceled";
             }
         }
         finally
         {
-            EndTurn(turn);
-            Write(LogLevel.Info, $"Turn ended: outcome={outcome} events={events} milliseconds={clock.ElapsedMilliseconds}");
+            // Whatever ended the consumer, the provider is not read any longer: the turn is canceled, and the next turn
+            // begins only after the provider's stream was disposed, which the pump does when it ends
+            if (!drained)
+            {
+                turn.Cancel(TurnCancelSource.Consumer);
+            }
+
+            var ended = !abandoned && await EndedAsync(pump, turn).ConfigureAwait(false);
+            stats.Merged += coalescer.Merged;
+            if (conversation is not null)
+            {
+                LogSessionRun(conversation, turn, sessionBefore, ended);
+                AfterAttempt(conversation, turn, stats, ended, recoveryTriggered);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Waits for the pump of an attempt to end: without a limit when the turn was not canceled, because the provider's
+    ///     stream then ends by itself, and for at most <see cref="StopGrace" /> after a cancellation.
+    /// </summary>
+    /// <param name="pump">The pump.</param>
+    /// <param name="turn">The turn.</param>
+    /// <returns><see langword="true" /> when the pump ended, <see langword="false" /> when the provider did not stop in time.</returns>
+    private async Task<bool> EndedAsync(Task pump, TurnState turn)
+    {
+        if (pump.IsCompleted || !turn.Token.IsCancellationRequested)
+        {
+            await pump.ConfigureAwait(false);
+            return true;
+        }
+
+        using var limit = new CancellationTokenSource(StopGrace, _time);
+        try
+        {
+            await pump.WaitAsync(limit.Token).ConfigureAwait(false);
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     Writes what the provider did with its session for the attempt: whether the run created the session or resumed it,
+    ///     under which identifier, and whether the handle was released after the run, which the Copilot agent does after
+    ///     every run (the session itself stays, and is resumed by the next turn without replaying anything).
+    /// </summary>
+    /// <param name="conversation">The conversation of the attempt.</param>
+    /// <param name="turn">The turn.</param>
+    /// <param name="idBefore">The identifier of the session before the run, or <see langword="null" /> when it had none.</param>
+    /// <param name="providerEnded">Whether the provider's stream ended and was disposed, which releases the handle.</param>
+    private void LogSessionRun(Conversation conversation, TurnState turn, string? idBefore, bool providerEnded)
+    {
+        var id = _factory.DescribeSession(conversation.Session).Id;
+        if (id is null)
+        {
+            return;
+        }
+
+        var run = idBefore is null ? "created" : "resumed";
+        Write(LogLevel.Info, $"Provider session: turn={turn.Number} id={id} run={run} handleReleased={providerEnded}");
+    }
+
+    /// <summary>
+    ///     Words a setting for the log: the value, or <c>(default)</c> when none is chosen.
+    /// </summary>
+    /// <param name="value">The value; may be <see langword="null" /> or white space.</param>
+    /// <returns>The value, trimmed, or <c>(default)</c>.</returns>
+    private static string Describe(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "(default)" : value.Trim();
+    }
+
+    /// <summary>
+    ///     Words the context size (tier) that the settings ask GitHub Copilot for, for the usage line of a turn.
+    /// </summary>
+    /// <param name="provider">The provider of the conversation.</param>
+    /// <param name="settings">The provider settings.</param>
+    /// <returns>
+    ///     The words, for example <c>long context</c>; <see langword="null" /> for another provider, for no model named (the
+    ///     size belongs to a chosen model), and for no size chosen (the provider's own size applies).
+    /// </returns>
+    private static string? ContextSizeOf(AiProviderKind provider, AiProviderSettings settings)
+    {
+        var tier = settings.ContextTier?.Trim();
+        if (provider != AiProviderKind.GitHubCopilot || string.IsNullOrEmpty(tier) || string.IsNullOrWhiteSpace(settings.ModelName))
+        {
+            return null;
+        }
+
+        return tier.ToLowerInvariant() switch
+        {
+            "default" => "standard context",
+            "long_context" => "long context",
+            _ => $"{tier.Replace('_', ' ')} context",
+        };
+    }
+
+    /// <summary>
+    ///     Decides what the conversation is after an attempt: kept, marked as interrupted, or dropped so that the next turn
+    ///     starts on a new provider session.
+    /// </summary>
+    /// <param name="conversation">The conversation of the attempt.</param>
+    /// <param name="turn">The turn.</param>
+    /// <param name="stats">What was counted.</param>
+    /// <param name="providerEnded">Whether the provider's stream ended and was disposed.</param>
+    /// <param name="recoveryTriggered">Whether this attempt ended because the conversation has to be replaced.</param>
+    private void AfterAttempt(Conversation conversation, TurnState turn, TurnStats stats, bool providerEnded, bool recoveryTriggered)
+    {
+        if (!providerEnded)
+        {
+            Write(LogLevel.Warning, $"The provider did not stop within {StopGrace.TotalSeconds:0} seconds; its session is dropped: cancelSource={turn.CancelSource}");
+            DropConversation(existing => ReferenceEquals(existing, conversation), TurnCancelSource.None, "stop-timeout");
+        }
+        else if (recoveryTriggered)
+        {
+            // The conversation could not be used after it was interrupted; the next attempt makes a new one
+            DropConversation(existing => ReferenceEquals(existing, conversation), TurnCancelSource.None, "recovered");
+        }
+        else if (turn.CancelSource != TurnCancelSource.None)
+        {
+            if (stats.Events == 0)
+            {
+                // Nothing came back, so it is not known what the provider session holds; a new one gets the digest once
+                DropConversation(existing => ReferenceEquals(existing, conversation), TurnCancelSource.None, "stopped-early");
+            }
+            else
+            {
+                conversation.Interrupted = true;
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Reads the events of the provider into the coalescer, on a thread of the pool, and ends it. A file that a tool
+    ///     wrote while the model was working is put in before the event that follows it, so a file comes before the answer
+    ///     of the tool call that wrote it. Nothing is thrown; a fault of the mapper ends the coalescer with it.
+    /// </summary>
+    /// <param name="mapper">The mapper of the turn.</param>
+    /// <param name="updates">The updates of the agent.</param>
+    /// <param name="turn">The turn.</param>
+    /// <param name="coalescer">What receives the events.</param>
+    /// <param name="stats">What the turn counts for the log; the pump observes every event as it comes from the provider.</param>
+    /// <returns>A task that completes when the provider's stream was read to its end and disposed.</returns>
+    private static async Task PumpAsync(
+        AgentEventMapper mapper,
+        IAsyncEnumerable<AgentResponseUpdate> updates,
+        TurnState turn,
+        AgentEventCoalescer coalescer,
+        TurnStats stats)
+    {
+        try
+        {
+            await foreach (var mapped in mapper.MapAsync(updates).ConfigureAwait(false))
+            {
+                while (turn.Writes.TryDequeue(out var written))
+                {
+                    stats.Observe(written);
+                    coalescer.Add(written);
+                }
+
+                stats.Observe(mapped);
+                coalescer.Add(mapped);
+            }
+
+            coalescer.Complete();
+        }
+        catch (Exception ex)
+        {
+            coalescer.Complete(ex);
         }
     }
 
     /// <inheritdoc />
     public void ResetConversation()
     {
-        DropConversation(_ => true, cancelTurn: true, "reset");
+        DropConversation(_ => true, TurnCancelSource.Reset, "reset");
     }
 
     /// <inheritdoc />
@@ -472,7 +820,7 @@ public sealed class AgentService : IAgentService
 
         // End the running turn, release the conversation, and then stop what the factory started
         _lifetime.Cancel();
-        DropConversation(_ => true, cancelTurn: true, "dispose");
+        DropConversation(_ => true, TurnCancelSource.Dispose, "dispose");
         lock (_sync)
         {
             pending = [.. _cleanups];
@@ -512,6 +860,7 @@ public sealed class AgentService : IAgentService
             settings.Provider,
             settings.ModelName?.Trim() ?? string.Empty,
             settings.ReasoningEffort?.Trim() ?? string.Empty,
+            settings.ContextTier?.Trim() ?? string.Empty,
             settings.OllamaEndpoint?.Trim() ?? string.Empty,
             settings.ContextWindowTokens,
             settings.CopilotCliPath?.Trim() ?? string.Empty);
@@ -579,7 +928,7 @@ public sealed class AgentService : IAgentService
                 return null;
             }
 
-            _turn = new TurnState(CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _lifetime.Token));
+            _turn = new TurnState(cancellationToken, _lifetime.Token, ++_turnCounter);
             refusal = null;
             return _turn;
         }
@@ -631,7 +980,7 @@ public sealed class AgentService : IAgentService
             var signature = SignatureOf(settings);
             DropConversation(
                 existing => !string.Equals(existing.ProjectFile, project.FilePath, StringComparison.OrdinalIgnoreCase) || existing.Signature != signature,
-                cancelTurn: false,
+                TurnCancelSource.None,
                 "changed");
 
             Conversation? conversation;
@@ -679,7 +1028,12 @@ public sealed class AgentService : IAgentService
                 }
             }
 
-            Write(LogLevel.Info, $"Turn started: provider={conversation.Provider} restoredTurns={request.RestoredHistory.Count} digestAdded={digestAdded}");
+            // historyTurns is the number of earlier turns that the caller handed over, which is its whole saved
+            // conversation; the provider only gets them, as one digest, when its session is new (digestAdded)
+            Write(
+                LogLevel.Info,
+                $"Turn started: turn={turn.Number} provider={conversation.Provider} model={Describe(settings.ModelName)} effort={Describe(settings.ReasoningEffort)} "
+                + $"contextTier={Describe(settings.ContextTier)} historyTurns={request.RestoredHistory.Count} digestAdded={digestAdded}");
             return new PreparedTurn(conversation, message, digestAdded, null);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -689,7 +1043,7 @@ public sealed class AgentService : IAgentService
         catch (Exception ex)
         {
             // The details of the exception may hold paths or words, so only its type goes to the log
-            Write(LogLevel.Error, $"Turn could not start: exception={ex.GetType().Name}");
+            Write(LogLevel.Error, $"Turn could not start: exception={ex.GetType().Name} turn={turn.Number}");
             return PreparedTurn.Fail(AgentFailureKind.Unexpected, $"The copilot could not be started: {ex.Message}");
         }
     }
@@ -763,9 +1117,9 @@ public sealed class AgentService : IAgentService
     ///     Drops the current conversation when it matches, and releases it in the background once its turn is over.
     /// </summary>
     /// <param name="stale">Tells whether the conversation must go.</param>
-    /// <param name="cancelTurn">Whether to cancel the turn that runs on the conversation.</param>
+    /// <param name="cancelSource">Why to cancel the turn that runs on the conversation, or <see cref="TurnCancelSource.None" /> to leave it running.</param>
     /// <param name="reason">The reason, for the log.</param>
-    private void DropConversation(Func<Conversation, bool> stale, bool cancelTurn, string reason)
+    private void DropConversation(Func<Conversation, bool> stale, TurnCancelSource cancelSource, string reason)
     {
         Conversation? dropped;
         Task done = Task.CompletedTask;
@@ -786,9 +1140,9 @@ public sealed class AgentService : IAgentService
             }
         }
 
-        if (cancelTurn)
+        if (cancelSource != TurnCancelSource.None)
         {
-            running?.Cancel();
+            running?.Cancel(cancelSource);
         }
 
         lock (_sync)
@@ -808,6 +1162,7 @@ public sealed class AgentService : IAgentService
     /// <returns>A task that completes when the conversation is released.</returns>
     private async Task ReleaseAsync(Conversation conversation, Task turnDone, string reason)
     {
+        var sessionId = _factory.DescribeSession(conversation.Session).Id;
         try
         {
             await turnDone.WaitAsync(ReleaseWait, CancellationToken.None).ConfigureAwait(false);
@@ -835,7 +1190,7 @@ public sealed class AgentService : IAgentService
             Write(LogLevel.Warning, $"Conversation could not be disposed: exception={ex.GetType().Name}");
         }
 
-        Write(LogLevel.Info, $"Conversation released: provider={conversation.Provider} reason={reason}");
+        Write(LogLevel.Info, $"Conversation released: provider={conversation.Provider} reason={reason} session={sessionId ?? "none"}");
     }
 
     /// <summary>
@@ -846,7 +1201,7 @@ public sealed class AgentService : IAgentService
     private void OnSettingsChanged(object? sender, SettingsChangedEventArgs e)
     {
         var signature = SignatureOf(e.Settings.AiProvider);
-        DropConversation(existing => existing.Signature != signature, cancelTurn: false, "settings");
+        DropConversation(existing => existing.Signature != signature, TurnCancelSource.None, "settings");
     }
 
     /// <summary>
@@ -860,7 +1215,7 @@ public sealed class AgentService : IAgentService
         var project = _projects.Current;
         DropConversation(
             existing => project is null || !string.Equals(existing.ProjectFile, project.FilePath, StringComparison.OrdinalIgnoreCase),
-            cancelTurn: true,
+            TurnCancelSource.Project,
             "project");
     }
 
@@ -953,6 +1308,221 @@ public sealed class AgentService : IAgentService
 
         /// <summary>Gets or sets a value indicating whether the restored history was given to the provider.</summary>
         internal bool HistoryPrefixed { get; set; }
+
+        /// <summary>
+        ///     Gets or sets a value indicating whether the latest turn on the conversation was canceled after the provider had
+        ///     begun to answer, so that the provider session may not be usable any longer; cleared when the provider answers
+        ///     again.
+        /// </summary>
+        internal bool Interrupted { get; set; }
+    }
+
+    /// <summary>
+    ///     Who canceled a turn.
+    /// </summary>
+    private enum TurnCancelSource
+    {
+        /// <summary>Nobody did.</summary>
+        None = 0,
+
+        /// <summary>The caller did, through its token: the user pressed Stop, or the caller was closed.</summary>
+        User,
+
+        /// <summary>The conversation was reset.</summary>
+        Reset,
+
+        /// <summary>The open project changed or closed.</summary>
+        Project,
+
+        /// <summary>The service ended.</summary>
+        Dispose,
+
+        /// <summary>The caller stopped reading the events of the turn.</summary>
+        Consumer,
+    }
+
+    /// <summary>
+    ///     What a turn counts for the log, and what its attempts share. The provider is read on a thread of the pool, which
+    ///     observes the events as they come from the provider; the rest reads what it saw once the pump has ended.
+    /// </summary>
+    private sealed class TurnStats
+    {
+        /// <summary>Guards what the pump observes.</summary>
+        private readonly Lock _gate = new();
+
+        /// <summary>The clock of the turn.</summary>
+        private readonly TimeProvider _time;
+
+        /// <summary>The time stamp of the start of the turn.</summary>
+        private readonly long _started;
+
+        /// <summary>The time stamp of the latest event, or <see langword="null" /> before the first.</summary>
+        private long? _last;
+
+        /// <summary>The milliseconds from the start of the turn to the first event, or -1 before it.</summary>
+        private long _firstEvent = -1;
+
+        /// <summary>The longest time in milliseconds between two events.</summary>
+        private long _maxGap;
+
+        /// <summary>The number of characters of the answer.</summary>
+        private long _textCharacters;
+
+        /// <summary>Whether the provider reported reasoning.</summary>
+        private bool _sawReasoning;
+
+        /// <summary>The tokens sent to the model, or <see langword="null" /> when none was reported.</summary>
+        private long? _inputTokens;
+
+        /// <summary>The tokens that the model wrote, or <see langword="null" /> when none was reported.</summary>
+        private long? _outputTokens;
+
+        /// <summary>The tokens that the model spent on reasoning, or <see langword="null" /> when none was reported.</summary>
+        private long? _reasoningTokens;
+
+        /// <summary>The model multiplier that the provider reported, or <see langword="null" /> when none was.</summary>
+        private double? _multiplier;
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="TurnStats" /> class and starts the clock of the turn.
+        /// </summary>
+        /// <param name="time">The clock.</param>
+        internal TurnStats(TimeProvider time)
+        {
+            _time = time;
+            _started = time.GetTimestamp();
+        }
+
+        /// <summary>Gets or sets how the turn ended, for the log.</summary>
+        internal string Outcome { get; set; } = "Canceled";
+
+        /// <summary>Gets or sets the number of events that were given to the caller.</summary>
+        internal int Events { get; set; }
+
+        /// <summary>Gets or sets the number of events that were merged into others while the caller lagged.</summary>
+        internal long Merged { get; set; }
+
+        /// <summary>Gets or sets the conversation that the latest attempt of the turn ran on, or <see langword="null" />.</summary>
+        internal Conversation? Conversation { get; set; }
+
+        /// <summary>
+        ///     Gets or sets why the turn is run once more on a new conversation, or <see langword="null" /> when it is not.
+        /// </summary>
+        internal AgentFailureKind? RecoveryReason { get; set; }
+
+        /// <summary>Gets the milliseconds from the start of the turn to the first event of the provider, or -1.</summary>
+        internal long FirstEventMilliseconds
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _firstEvent;
+                }
+            }
+        }
+
+        /// <summary>Gets the longest time in milliseconds between two events of the provider.</summary>
+        internal long MaxGapMilliseconds
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _maxGap;
+                }
+            }
+        }
+
+        /// <summary>Gets the number of characters of the answer.</summary>
+        internal long TextCharacters
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _textCharacters;
+                }
+            }
+        }
+
+        /// <summary>Gets a value indicating whether the provider reported reasoning.</summary>
+        internal bool SawReasoning
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _sawReasoning;
+                }
+            }
+        }
+
+        /// <summary>Gets the tokens that the provider counted for the turn, each <c>n/a</c> when it did not report them.</summary>
+        internal (string Input, string Output) Usage
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return (
+                        _inputTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "n/a",
+                        _outputTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "n/a");
+                }
+            }
+        }
+
+        /// <summary>Gets the tokens of reasoning and the model multiplier that the provider reported, each <c>n/a</c> when it did not.</summary>
+        internal (string Reasoning, string Multiplier) Cost
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return (
+                        _reasoningTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "n/a",
+                        _multiplier?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) ?? "n/a");
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Notes an event as it comes from the provider: when it came, how much text it carries, whether it is reasoning,
+        ///     and the usage that it reports.
+        /// </summary>
+        /// <param name="agentEvent">The event.</param>
+        internal void Observe(AgentEvent agentEvent)
+        {
+            var now = _time.GetTimestamp();
+            lock (_gate)
+            {
+                if (_last is { } last)
+                {
+                    _maxGap = Math.Max(_maxGap, (long)_time.GetElapsedTime(last, now).TotalMilliseconds);
+                }
+                else
+                {
+                    _firstEvent = (long)_time.GetElapsedTime(_started, now).TotalMilliseconds;
+                }
+
+                _last = now;
+                switch (agentEvent)
+                {
+                    case AgentEvent.TextDelta text:
+                        _textCharacters += text.Text.Length;
+                        break;
+                    case AgentEvent.Thinking:
+                        _sawReasoning = true;
+                        break;
+                    case AgentEvent.Usage usage:
+                        _inputTokens = usage.InputTokens is { } input ? (_inputTokens ?? 0) + input : _inputTokens;
+                        _outputTokens = usage.OutputTokens is { } output ? (_outputTokens ?? 0) + output : _outputTokens;
+                        _reasoningTokens = usage.ReasoningTokens is { } reasoning ? (_reasoningTokens ?? 0) + reasoning : _reasoningTokens;
+                        _multiplier = usage.Multiplier is { } multiplier ? Math.Max(_multiplier ?? 0, multiplier) : _multiplier;
+                        break;
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -963,7 +1533,7 @@ public sealed class AgentService : IAgentService
         /// <summary>
         ///     The source of the token of the turn.
         /// </summary>
-        private readonly CancellationTokenSource _cancellation;
+        private readonly CancellationTokenSource _cancellation = new();
 
         /// <summary>
         ///     Completes when the turn is over.
@@ -971,14 +1541,36 @@ public sealed class AgentService : IAgentService
         private readonly TaskCompletionSource _done = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         /// <summary>
+        ///     What ends the link from the token of the caller and the end of the service to the turn.
+        /// </summary>
+        private readonly CancellationTokenRegistration[] _links;
+
+        /// <summary>
+        ///     The first source that canceled the turn, as <see cref="TurnCancelSource" />; zero while nobody did.
+        /// </summary>
+        private int _source;
+
+        /// <summary>
         ///     Initializes a new instance of the <see cref="TurnState" /> class.
         /// </summary>
-        /// <param name="cancellation">The source of the token of the turn; the turn disposes it.</param>
-        internal TurnState(CancellationTokenSource cancellation)
+        /// <param name="caller">The token of the caller, which cancels the turn with the source <see cref="TurnCancelSource.User" />.</param>
+        /// <param name="lifetime">The token of the end of the service, which cancels the turn with the source <see cref="TurnCancelSource.Dispose" />.</param>
+        /// <param name="number">The number of the turn, counted from one for the life of the service.</param>
+        internal TurnState(CancellationToken caller, CancellationToken lifetime, int number)
         {
-            _cancellation = cancellation;
-            Token = cancellation.Token;
+            Number = number;
+            Token = _cancellation.Token;
+
+            // The sources are recorded before the token is canceled, so whoever sees the cancellation sees who asked for it
+            _links =
+            [
+                caller.Register(static state => ((TurnState)state!).Cancel(TurnCancelSource.User), this),
+                lifetime.Register(static state => ((TurnState)state!).Cancel(TurnCancelSource.Dispose), this),
+            ];
         }
+
+        /// <summary>Gets the number of the turn, which ties the lines of the log together.</summary>
+        internal int Number { get; }
 
         /// <summary>Gets the token that stops the turn.</summary>
         internal CancellationToken Token { get; }
@@ -992,11 +1584,16 @@ public sealed class AgentService : IAgentService
         /// <summary>Gets or sets the conversation that the turn runs on.</summary>
         internal Conversation? Conversation { get; set; }
 
+        /// <summary>Gets who canceled the turn first, or <see cref="TurnCancelSource.None" />.</summary>
+        internal TurnCancelSource CancelSource => (TurnCancelSource)Volatile.Read(ref _source);
+
         /// <summary>
-        ///     Stops the turn.
+        ///     Stops the turn. The first source is the one that is kept.
         /// </summary>
-        internal void Cancel()
+        /// <param name="source">Who stops it.</param>
+        internal void Cancel(TurnCancelSource source)
         {
+            Interlocked.CompareExchange(ref _source, (int)source, 0);
             try
             {
                 _cancellation.Cancel();
@@ -1012,6 +1609,11 @@ public sealed class AgentService : IAgentService
         /// </summary>
         internal void Finish()
         {
+            foreach (var link in _links)
+            {
+                link.Dispose();
+            }
+
             _done.TrySetResult();
             _cancellation.Dispose();
         }

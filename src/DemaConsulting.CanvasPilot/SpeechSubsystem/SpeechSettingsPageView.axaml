@@ -7,6 +7,34 @@
   <ScrollViewer>
     <StackPanel Spacing="16" Margin="0,0,12,24">
 
+      <!-- The key that is held to talk: click the box and press the key that you want -->
+      <Border Classes="card">
+        <StackPanel Spacing="6">
+          <TextBlock Classes="sectionTitle" Text="Push-to-talk key" Margin="0,0,0,6" />
+          <TextBlock Classes="hint"
+                     TextWrapping="Wrap"
+                     Text="Hold this key anywhere in the window to dictate a message, and let go to add the words to it. Click the box and press the key, or the keys, that you want." />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <TextBox Name="PushToTalkKeyBox"
+                     AutomationProperties.AutomationId="SpeechPushToTalkKeyBox"
+                     AutomationProperties.Name="Push-to-talk key"
+                     IsReadOnly="True"
+                     Text="{Binding PushToTalkKeyText, Mode=OneWay}" />
+            <Button Name="PushToTalkResetButton"
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="SpeechPushToTalkResetButton"
+                    Theme="{DynamicResource SecondaryButton}"
+                    Content="{x:Static vm:SpeechSettingsPageViewModel.ResetPushToTalkText}"
+                    Command="{Binding ResetPushToTalkCommand}" />
+          </Grid>
+          <TextBlock Classes="caution"
+                     AutomationProperties.AutomationId="SpeechPushToTalkProblem"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding HasPushToTalkProblem}"
+                     Text="{Binding PushToTalkProblem}" />
+        </StackPanel>
+      </Border>
+
       <Border Classes="card">
         <ContentControl AutomationProperties.AutomationId="SpeechDevices"
                         Content="{Binding Devices}" />

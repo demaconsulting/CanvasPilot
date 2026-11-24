@@ -137,20 +137,39 @@ services, or display is required.
 - In the windows of the composed application every icon-only button has a name, a tooltip, and a target of at least 28
   by 28 pixels, every field has a name, the menus have unique access keys, the shared buttons show the focus ring on the
   keyboard only, and the text of notices and of the welcome screen has the contrast that is asked for.
+- While a copilot turn waits for the model, the conversation shows that the turn is busy, what the copilot is doing, an
+  elapsed time in the form m:ss, and the tool that ran as a row, and shows none of it after the turn.
+- A Stop in the middle of a tool call ends the turn at once with the answer so far marked as stopped, the next message
+  is answered on the same conversation without a notice, and no new conversation was made.
+- A turn that completed is logged as completed with no cancel source, and the failure of the next message is shown as a
+  notice and not recovered on a new conversation.
+- The log of a turn holds the number of the turn and its outcome and no word of the message or the answer, and Help,
+  Open Log Folder shows the folder that holds that log.
+- A turn for which the provider reported tokens ends with a caption of them and the time under the last reply, with no
+  model multiplier for a provider that sent none.
+- The prompts that are offered are the starters while the project has no drawing, the refinements once the copilot wrote
+  one, and none are offered while it works.
+- The key that is held to talk is F9 until another is chosen; the status bar and the chat panel name the key in effect,
+  and a stored key that is not safe leaves F9.
+- The status bar says nothing about saving for a project that was never saved, says "Project file saved" with the time
+  after it was saved, and says nothing again when the project is closed.
+- The decorations that the main window asks for hold no full-screen button, and the provider pill ends clear of the
+  window buttons.
 
 ## Manual Verification
 
 These checks need a person, a physical machine, and programs or hardware that the automated tests cannot stand in for.
 They are performed on an installed package before each release and are not evidence for a requirement. **None of them
 has been performed on the machine on which this version was built and tested, except the live GitHub Copilot runs, the
-start of the published application, and the package inspection that check 10 records**: the automated tests prove the
+start of the published application, and the package inspection that check 10 records, and the live agent turns that
+check 12 records**: the automated tests prove the
 application's own behavior with substitutes (a managed recognition backend and a recorded sound file instead of a
 microphone, headless pointer and keyboard events instead of an operating system drag, and Avalonia's own clipboard
 and data objects instead of the Windows ones), so what follows is unverified until someone ticks it off. The detailed
 steps are in the verification of the unit or subsystem named at each check.
 
 1. *Real dictation.* On a machine with a microphone, install the MSI, download a speech-to-text model on the Speech
-   page, choose it and the microphone, open a project, and dictate with both the talk button and the F8 key: the words
+   page, choose it and the microphone, open a project, and dictate with both the talk button and the F9 key: the words
    show while the control is held, one dictated block is added at the caret on release, and one undo removes it. Also
    try the reasons: no model chosen, a model not downloaded, the microphone unplugged. (Verification of the `Speech` and
    `Chat` subsystems.)
@@ -354,11 +373,156 @@ steps are in the verification of the unit or subsystem named at each check.
     3. Zoom: Ctrl+wheel, Ctrl+0, Ctrl+1, Ctrl+plus, Ctrl+minus while the preview has the focus, and panning with the
        middle button; the tool keys V, R, E, F, and A choose a tool while the focus is in the preview and not in a text
        box.
-    4. The chat: Enter sends and Shift+Enter writes a line break; hold the talk button and the F8 key (the button turns
+    4. The chat: Enter sends and Shift+Enter writes a line break; hold the talk button and the F9 key (the button turns
        red and pulses); the Attach button opens the system file dialog; the header menu clears the history; the collapse
        button hides the column and the chip on the stage brings it back.
     5. A screen reader reads the names of the icon buttons, the status bar sentence, and the AI provider pill, and the
        arrow keys move between the cards of the welcome screen and between the rows of the project tree.
+    6. The window buttons: the title bar shows three buttons (minimize, maximize or restore, and close) and no
+       full-screen button, the provider pill ends clear of the first of them, and F11 does nothing, at 100, 125, and 150
+       percent display scale, in the normal and in the maximized state. The headless tests prove the decorations that
+       the window asks for and the reserve that it keeps; the real frame of the system is not drawn headless, so only
+       this check shows the result on a display.
+12. *Live agent turns (done once on the machine on which this version was built; the record is below).* The opt-in tests
+    in `LiveCopilotLongTurnTests.cs` run a long turn, a Stop, two refinement turns, and a turn with the larger context
+    size of the model through the composed application
+    on the real Copilot runtime. They belong to no requirement, cost real premium requests, and are repeated before a
+    release that changes the agent. (Verification of the `Agent` and `Chat` subsystems.)
+
+### Live verification record (agent turns)
+
+**Date and environment.** 2026-11-23. A real Copilot turn through the composed application (real `AgentService`,
+`AgentProviderFactory`, and Copilot runtime, with the renderer, the preview, and the chat panel). Copilot CLI 1.0.114,
+AgentKit 0.1.0-beta.5, Copilot SDK 2.0.1. Sign-in was the existing Copilot CLI login on a ghe.com data-residency account
+(GitHub Enterprise Cloud). Model `claude-opus-5.5`, reasoning effort `high`. One run of each scenario (a) to (c); all
+three passed. Scenario (d) is recorded after them.
+
+**(a) Long first turn, empty project.** A 1200 by 900 marketing SVG (a robot with a monkey). Test time 3 min 20 s, turn
+196.9 s.
+
+- The status changed 155 times by timer tick and 19 times by phase change; the transcript ended with 1 user row, 4
+  assistant rows, and 8 tool rows.
+- The service saw 109 provider updates (86 text, 8 calls, 8 results, 6 usage, 6 other) and logged `events=51 merged=60`,
+  `firstEventMs=3350`, and `maxGapMs=65998`.
+- Gaps: the longest gap between changes of the status that the user sees was **2.0 s** (the limit is 5 s); the longest
+  gap between provider updates was **66 s**; the runtime's own longest gap between events was **125 s**.
+- The model called 8 tools (style, help, write, render, read, write, render, check). The drawing (14,977 bytes) was
+  created, selected in the explorer, and previewed at 1200 by 900 pixels, rendered in 2.6 s.
+- The caption of the turn said "180.3k in, 22.8k out, 5.9k reasoning, model x15 premium, 3:16", and the runtime counted
+  15 premium requests.
+
+**(b) Stop about a minute in, then a follow-up.** Test time 1 min 5 s.
+
+- Two tool calls had finished and the model was waiting to write the SVG. The stopping text appeared at once, and the
+  panel was idle **85 ms** after Stop. The log said `outcome=Canceled cancelSource=User`, and the caption said "stopped,
+  the request may still count".
+- The follow-up was answered in **2.2 s** on the same provider session (the first run created it, the second resumed
+  it), with no recovery, no conversation released, and no error notice. Before the fix of the Stop handling a follow-up
+  waited about 37 s. Both messages counted at x15.
+
+**(c) Two refinement turns.** Test time 40 s.
+
+- Turn 1 (a first drawing) took 20.7 s with 3 tools, a longest provider gap of 11.8 s, and a longest UI gap of 2.0 s.
+  Turn 2 (a refinement) took 16.1 s with 3 tools and a longest UI gap of 2.0 s; the drawing grew from 2,144 to 2,736
+  bytes and the preview showed it.
+- There was one `Conversation started`, one provider session (created by turn 1, resumed by turn 2), no recovery,
+  release, or drop, and one runtime. The runtime recorded 72 events over 36.2 s, premium requests counted 15 then 30,
+  `session.shutdown` twice and `session.resume` once, which is the release and resume after every run that AgentKit
+  documents.
+
+**Premium usage.** About 75 premium requests on Opus 5.5 (a: 15, b: 30, c: 30). A re-check of the fix below on
+`claude-sonnet-5.5` at low effort passed in 23 s and cost 2 more (x1 per message). The model `claude-haiku-5.5` is not
+available to the account; the readiness check said so before any request was spent.
+
+**(d) The larger context size of the model (1M tokens of Claude Opus 5.5).** 2026-11-23, the same machine, account, CLI,
+library, and SDK as above, in the test `LiveCopilotLongTurn_LargerContextSizeOfTheModel_RunsATurnWithIt`; run twice (the
+first run found a wrong assertion about the readiness sentence in the test itself, after the turn had run; the second
+run passed), 15 premium requests each. Model `claude-opus-5.5`, reasoning effort `low`, one message that asks for one
+word.
+
+- *What the catalog said.* The runtime's catalog, read through the application's own `ProviderModelCatalog`, lists
+  `claude-opus-5.5` with a largest window of 1,000,000 tokens, the default size `default` at 328,000 tokens, and
+  `long_context` at 1,000,000. (The figure for the standard size is the prompt budget of the size plus the output limit
+  of the model, as AgentKit derives it; it is not 200K.) The test chose the larger size from that list, as the settings
+  page stores it (`long_context`), and did not name the size itself.
+- *What the application did.* The readiness sentence, which is the tooltip of the provider pill, read "GitHub Copilot
+  CLI 1.0.114 is ready with the model claude-opus-5.5 at the Long context size (1,000,000 tokens). Signed in as ...
+  (Copilot CLI sign-in)." The log said `Agent created: ... model=claude-opus-5.5 effort=low contextTier=long_context`
+  and `Turn started: ... contextTier=long_context`.
+- *The turn.* It completed in 1.7 s and 3.1 s (wall time of the two runs; the first byte of text after 1.5 s and 2.7 s)
+  with the answer of two characters, on one new provider session. The caption said "10.3k in, 4 out, model x15 premium,
+  long context, 0:03", and the runtime counted 15 premium requests for the message. No error notice, no recovery.
+- *Does the runtime confirm the size?* Yes, in its own record: the events file of the session (read only for the names
+  and short values of the properties that mention a tier, a token limit, or the model, never for any text) has
+  `session.start` with `contextTier = long_context` and `selectedModel = claude-opus-5.5`, so the session was created
+  with the larger size that the application asked for. The log of the runtime (the application relays it) had no line
+  that mentions a tier, so the events file is the only confirmation. A baseline session without a size was not run (it
+  would cost another 15 requests), so the events file of a session that asked for none was not compared; the run shows
+  that the choice reaches the session and the runtime accepts it, not that the model answered with a window above the
+  standard one (10.3k tokens of input is far below both).
+
+**(e) The picture of the README screenshot (documentation-image provenance).** 2026-11-23, the same machine, account,
+CLI, library, and SDK, with an opt-in generator that was used once and is not kept in the repository: it ran the
+composed application over an empty project `Demo` with `claude-opus-5.5` at `high` effort and recorded the rows of the
+transcript, the reply, and the usage line. The request was one message: "Create a one-slide overview (16:9, 1600×900) of
+a continuous-compliance pipeline for a regulated software team: code commit → build and test → requirements trace →
+review evidence → release documents (PDF), with a short title, one-line subtitle, clean icons per stage, and a small
+legend of the tools (ReqStream, ReviewMark, BuildMark, SonarMark). Professional, corporate look."
+
+- One turn, **157.7 s**, outcome `Completed`, no error notice, no follow-up needed: the rendered picture
+  (`compliance-pipeline.svg`, 9,664 bytes, 1600 by 900) was viewed and had no overlap, clipping, text overflow, or
+  misaligned icon (the two tool tags of the second card sit closer to its edges than the other cards' tags, which is a
+  style nit, not a defect).
+- The transcript had 5 assistant rows (4 short narrations and the final answer) and 10 tool rows, whose titles were:
+  "Read the style guidance", "Looked up CanvasNet help" three times, "Created compliance-pipeline.svg", "Rendered
+  compliance-pipeline.svg" (2.5 s), "Read compliance-pipeline.svg", "Checked the style", "Replaced
+  compliance-pipeline.svg", and "Rendered compliance-pipeline.svg" (0.3 s).
+- The service saw 137 provider updates (105 text, 10 calls, 10 results, 6 usage, 6 other) and logged
+  `events=84 merged=50`, `firstEventMs=13576`, and `maxGapMs=56408`; the runtime recorded 92 events over 156.4 s with a
+  longest gap of 88.3 s. The longest gap between changes of the status that the user sees was 2.0 s.
+- The caption said "134.1k in, 15.5k out, 5k reasoning, model x15 premium, 2:37", and the runtime counted 15 premium
+  requests. The screenshot `docs/images/main-window-example.png` shows this picture, these rows, and this line; its
+  request and rows are the real ones, its answer is a shortened form of the real answer (which also said that the
+  project had no style kit). The SVG is kept as the data `ScreenshotData/compliance-pipeline.svg` of the `UiTests`
+  project.
+
+**Findings.**
+
+- **A Claude model buffers its answer on this runtime.** It is silent for 45 to 125 s and then sends everything in a
+  burst (about 4,500 events in 0.4 s; the runtime logs that its event stream lagged and skipped events, which are
+  recovered from its own record). Only the elapsed timer and the phase therefore carry progress during that time, and
+  the user never saw the status stand still for more than 2.0 s. The runtime also logs that the model is in neither the
+  picker nor the unfiltered catalog and falls back to the chat-completions wire, which is the likely cause; this is an
+  upstream question (see *Known Limits and Upstream Requests* in the design of the AgentKit item).
+- **Whole messages only.** AgentKit forwards no delta events, so the application received whole messages, and the
+  progress events of the mapper, which are verified with hand-built SDK events, were not produced in a live run. The
+  live progress of a model that streams (an OpenAI model) was verified in a probe outside the repository: about 290
+  events a second and a longest gap of 1.0 s.
+- **A product bug was found and fixed.** The log showed `cancelSource=Consumer` after every completed turn. The chat
+  stops reading at the completion, which disposed the iterator of the service before it counted as drained, so the
+  service canceled the finished turn and marked the conversation interrupted; a connection failure of the next message
+  was then silently recovered on a new session, which replays the history. A yielded completion now counts as drained.
+  The unit test `AgentService_CompletedTurnReadOnlyToItsCompletion_IsNotInterruptedAndTheNextFailureIsShown` failed
+  before the fix and passes after it, scenario (c) asserts `outcome=Completed cancelSource=None` twice, and the check on
+  Sonnet showed `cancelSource=None`, the same session, and no recovery.
+
+**Pass criteria.**
+
+- (a) Every turn completes with no error notice. The status never stands still for more than 5 s. The drawing exists,
+  contains `<svg`, is selected in the explorer, and the preview shows an image without an error. A `project_write` row
+  appears, and the final reply is completed with a usage caption.
+- (b) The turn is still running when Stop is pressed. The stopping text shows at once. The panel is idle within 10 s. The
+  follow-up completes with text and no error within 2 minutes, on the same provider session or with the log explaining
+  the new one.
+- (c) Both turns complete and the second changes the drawing. There is one conversation, with the session created by turn
+  1 and resumed by turn 2, no recovery, release, or drop, `cancelSource=None` for both turns, and one runtime.
+
+**How to repeat it.** The tests are skipped unless `CANVASPILOT_LIVE_COPILOT` is `1`. Optional variables are
+`CANVASPILOT_LIVE_COPILOT_MODEL` (default `claude-opus-5.5`), `CANVASPILOT_LIVE_COPILOT_EFFORT` (default `high`; `low`
+for scenario (d)), and `CANVASPILOT_LIVE_COPILOT_OUT` (a file that receives the record of the run: timings, event
+counts, longest gaps, and usage; never a token, a prompt, or a word of an answer). A full run needs the installed CLI
+and a sign-in and costs real premium requests, about 75 on Opus 5.5 at high effort, and 15 for scenario (d);
+`claude-sonnet-5.5` costs one per message (scenario (d) is skipped for a model that offers no second context size).
 
 ## Test Scenarios
 
@@ -776,6 +940,63 @@ drawing, replace it directly, and draw it at the new size. The project file, a f
 Afterwards the project file and the secret are unchanged, the data folder is still empty, and the project folder holds
 only the data folder, the project file, and the drawing. This scenario is tested by
 `CanvasPilot_ConfineCopilotToProject_ProjectTools_WriteReplaceAndDrawInsideTheProjectAndNothingElse`.
+
+**CanvasPilot_ShowCopilotProgress_TurnThatWaits_ShowsWhatTheCopilotDoesTheElapsedTimeAndTheToolThatRan**: The
+application is composed over a scripted model that calls a tool and then waits. A message is sent and, while the model
+waits, the conversation is busy, the busy row says what the copilot is doing, the elapsed time is written as m:ss, and
+the tool is one row of the conversation. Stop ends the turn, and the busy state, the words, and the time are empty
+again. This scenario is tested by
+`CanvasPilot_ShowCopilotProgress_TurnThatWaits_ShowsWhatTheCopilotDoesTheElapsedTimeAndTheToolThatRan`.
+
+**CanvasPilot_StopCopilotSafely_StopInTheMiddleOfAToolCall_NextMessageIsAnsweredOnTheSameConversation**: The same
+composition over a model that calls a tool, then waits, and answers the next message. Stop is pressed while the model
+waits; the panel is idle, the answer so far is marked as stopped, and no notice was added. The next message is answered
+and completed, and the factory made one agent only. This scenario is tested by
+`CanvasPilot_StopCopilotSafely_StopInTheMiddleOfAToolCall_NextMessageIsAnsweredOnTheSameConversation`.
+
+**CanvasPilot_KeepCompletedTurnCompleted_NextMessageFails_FailureIsShownAndNothingIsReplaced**: The composition over a
+model that answers once and then loses the connection. The first turn completes, and the log says that it ended as
+completed with no cancel source. The second message ends with one notice in the conversation, the log holds no
+recovered session, the factory made one agent, and the model was asked twice. This scenario is tested by
+`CanvasPilot_KeepCompletedTurnCompleted_NextMessageFails_FailureIsShownAndNothingIsReplaced`.
+
+**CanvasPilot_DiagnoseCopilotTurns_OpenLogFolder_ShowsTheFolderThatHoldsTheLogOfTheTurns**: After a turn the Open Log
+Folder command of the shell asks a recording launcher to show a folder; it is the folder of the application log, and the
+log holds the start and the end of the turn as completed. This scenario is tested by
+`CanvasPilot_DiagnoseCopilotTurns_OpenLogFolder_ShowsTheFolderThatHoldsTheLogOfTheTurns`.
+
+**CanvasPilot_DiagnoseCopilotTurns_TurnWithWords_LogHoldsTheLifecycleAndNotTheWords**: A message with a distinctive word
+is sent to a scripted model that writes a drawing. The log holds the start of the turn, the tool that finished, and the
+end of the turn, and neither the word of the message nor the words of the answer. This scenario is tested by
+`CanvasPilot_DiagnoseCopilotTurns_TurnWithWords_LogHoldsTheLifecycleAndNotTheWords`.
+
+**CanvasPilot_ShowCopilotCost_TurnWithReportedUsage_CaptionUnderTheLastReplyHasOnlyWhatWasReported**: A scripted model
+answers and reports 1,200 tokens sent and 300 written. The last reply shows a caption that starts with "1.2k in, 300
+out, " and holds the time and no model multiplier. This scenario is tested by
+`CanvasPilot_ShowCopilotCost_TurnWithReportedUsage_CaptionUnderTheLastReplyHasOnlyWhatWasReported`.
+
+**CanvasPilot_SuggestNextPrompts_ProjectWithoutAndWithADrawing_PromptsFollowWhatTheProjectHas**: A new project offers
+the starter prompts, and still offers them after a turn in which the model only said words. After a turn in which the
+model wrote a drawing the prompts are the refinements and none of the starters is offered. This scenario is tested by
+`CanvasPilot_SuggestNextPrompts_ProjectWithoutAndWithADrawing_PromptsFollowWhatTheProjectHas`.
+
+**CanvasPilot_ChooseTalkKey_DefaultAndChosenKey_EveryHintNamesTheKeyInUse**: With the default settings the status bar
+and the chat panel name F9. After the settings are changed to Ctrl+Shift+Space both name it and the tip of the empty
+chat holds it; after a stored value that is not safe (Ctrl+Space) both name F9 again. This scenario is tested by
+`CanvasPilot_ChooseTalkKey_DefaultAndChosenKey_EveryHintNamesTheKeyInUse`.
+
+**CanvasPilot_ShowHonestStatus_ProjectSaved_StatusBarSaysWhenTheProjectFileWasSaved**: A new project has no saved time
+and the status bar says nothing about saving. After the project is saved the bar says "Project file saved" and a time,
+and after the project is closed it says nothing. This scenario is tested by
+`CanvasPilot_ShowHonestStatus_ProjectSaved_StatusBarSaysWhenTheProjectFileWasSaved`.
+
+**MainWindowView_TitleBar_PillEndsClearOfTheWindowButtons** and
+**MainWindowView_TitleBarDecorations_AskForNoFullScreenButton**: These headless user interface tests of the main window
+are the automated evidence for the window buttons: the provider pill ends clear of the reserve that is kept for the
+three buttons, and the decorations that the window asks for hold the minimize, maximize, and close buttons and no
+full-screen button. Which buttons the system then draws, and where, is checked by hand (check 11, item 6 of *Manual
+Verification*). These scenarios are tested by `MainWindowView_TitleBar_PillEndsClearOfTheWindowButtons` and
+`MainWindowView_TitleBarDecorations_AskForNoFullScreenButton`.
 
 **CanvasPilot_DesktopShell_CreateProject_ExplorerRecentProjectsAndSettingsRoundTrip**: The composed application's user
 creates a project through the New Project dialog; two files are added, one an image; the explorer lists only the

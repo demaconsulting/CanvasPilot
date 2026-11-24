@@ -40,16 +40,20 @@ sections:
                 title: >-
                   The ProviderModelCatalog shall describe each model with its id, its name, whether it can call tools,
                   whether it accepts pictures, whether it can reason, its largest context window, the reasoning efforts
-                  that it offers (only when the effort can be adjusted) with the provider's own ids, the effort that the
-                  provider uses by default, whether it can be used and why not, and the notes of the provider that ask for
-                  attention, in types of the application and not of the AI library.
+                  that it offers (only when the effort can be adjusted) with the provider's own ids, the context sizes
+                  (tiers) that it offers with their windows and the one that the provider uses by default (only when the
+                  size can be chosen), the effort that the provider uses by default, whether it can be used and why not,
+                  and the notes of the provider that ask for attention, in types of the application and not of the AI
+                  library.
                 justification: |
                   The effort ids differ by model and provider (none, low, medium, high, xhigh, max, and others later), so
-                  they are carried as the provider spells them and not as a fixed set. What the application needs of a
-                  model (tool calling, pictures) must be visible to the page, which is owned by another subsystem and must
-                  not depend on the AI library.
+                  they are carried as the provider spells them and not as a fixed set; the same holds for the context
+                  sizes, of which a model such as Claude Opus 5.5 offers a standard one and a one-million-token one. What
+                  the application needs of a model (tool calling, pictures) must be visible to the page, which is owned by
+                  another subsystem and must not depend on the AI library.
                 tests:
                   - ProviderModelCatalog_Map_Model_CarriesCapabilitiesEffortsWindowAndWarnings
+                  - ProviderModelCatalog_Map_ModelWithContextTiers_CarriesTheSizesAndTheDefault
                   - ProviderModelCatalog_Map_PlainAndUnusableModels_AreMappedWithTheirLimits
 
               - id: CanvasPilot-ProviderModelCatalog-AnswerWithAMessage

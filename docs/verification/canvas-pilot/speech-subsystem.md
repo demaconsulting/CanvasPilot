@@ -42,6 +42,10 @@ FileAssert test runs only in the Windows build job after the application is publ
   the next hold can start.
 - Each state in which dictation cannot work has its own reason, and none loads a speech engine, including the state in
   which the native speech files are missing.
+- The talk key is F9 by default and can be chosen on the Speech page; a key that is not safe is refused with a sentence,
+  a key that was stored and is not safe is read as the default, and the key that is stored is the one that is in effect
+  after OK. These rules are verified in the unit tests of `PushToTalkBinding` and `SpeechSettingsPage` (see their
+  verification documents) because they need no dialog and no composition.
 - The published win-x64 folder contains `sherpa-onnx-c-api.dll`, `onnxruntime.dll`, and `portaudio.dll`, and so does the
   installer package.
 
@@ -61,6 +65,13 @@ requirement. They are performed before a release, on a machine with the installe
   the talk control: the application says that no microphone could be used and names the permission. Turn it back on.
 - **No model, no microphone**: With no model chosen, then with a model that is not downloaded, then with the microphone
   unplugged, hold the talk control. Each case gives its own message.
+- **Talk key on a real keyboard**: On a laptop whose function keys have media functions, hold F9 with and without the Fn
+  key and confirm that dictation starts and ends with the key that reaches the window (if the computer swallows F9,
+  choose another key on the Speech page). On the Speech page click the box, press `Ctrl+Shift+Space`, choose OK, and
+  confirm that the hint in the status bar and on the welcome screen names the new key and that holding the chord
+  dictates; let go of `Ctrl` first and confirm that the dictation ends. Press a key that is refused (for example `A`,
+  `Ctrl+Space`, or `F8`) and confirm that the sentence appears and the key stays as it was; use Reset to default and
+  confirm that F9 is back.
 - **Real-engine test**: With a speech-to-text and a text-to-speech model downloaded, set the environment variable
   `CANVASPILOT_SPEECH_INTEGRATION` to `1` and run the OTS test
   `Speech_RecognizerFactory_WavFileDevice_WithInstalledModel_ProducesText`, which has the real engine recognize a

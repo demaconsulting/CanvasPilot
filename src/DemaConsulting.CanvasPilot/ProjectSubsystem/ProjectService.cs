@@ -255,7 +255,7 @@ public sealed class ProjectService : IProjectService
             return Fail("There is no open project to save.", "Save refused: no project is open.");
         }
 
-        return await PersistAsync(project, project.Document, announce: false, cancellationToken).ConfigureAwait(false);
+        return await PersistAsync(project, project.Document, announce: true, cancellationToken).ConfigureAwait(false);
     }
 
     /// <inheritdoc />

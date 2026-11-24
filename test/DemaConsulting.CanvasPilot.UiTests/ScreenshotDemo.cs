@@ -19,10 +19,12 @@
 // SOFTWARE.
 
 using System.Text;
+using System.Text.Json.Nodes;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -57,6 +59,44 @@ internal static class ScreenshotDemo
     public const string MainPicture = "overview.svg";
 
     /// <summary>
+    ///     The name of the project of the example screenshot.
+    /// </summary>
+    public const string ExampleProjectName = "Continuous Compliance";
+
+    /// <summary>
+    ///     The name of the model that the provider pill shows in the example screenshot.
+    /// </summary>
+    public const string ExampleModelName = "claude-opus-5.5";
+
+    /// <summary>
+    ///     The picture of the example project, which the copilot drew in a real session from one request: a one-slide overview
+    ///     of a continuous-compliance pipeline.
+    /// </summary>
+    public const string ExamplePicture = "compliance-pipeline.svg";
+
+    /// <summary>
+    ///     The request of the user in the example screenshot, the same words that were sent to the real copilot.
+    /// </summary>
+    public const string ExampleRequest =
+        "Create a one-slide overview (16:9, 1600×900) of a continuous-compliance pipeline for a regulated software team: "
+        + "code commit → build and test → requirements trace → review evidence → release documents (PDF), with a short title, "
+        + "one-line subtitle, clean icons per stage, and a small legend of the tools (ReqStream, ReviewMark, BuildMark, SonarMark). "
+        + "Professional, corporate look.";
+
+    /// <summary>
+    ///     The time that the status bar of the main windows tells for the save of the project file, as a local wall-clock time
+    ///     so that it is written the same in every time zone. A real save tells the time of the run, which would change the
+    ///     drawing every minute.
+    /// </summary>
+    public static readonly DateTimeOffset SavedTime = new(new DateTime(2026, 3, 12, 14, 32, 0, DateTimeKind.Local));
+
+    /// <summary>
+    ///     The render time in milliseconds that the status bar of the main windows tells for the picture. A real render tells
+    ///     the time that it took, which differs on every run.
+    /// </summary>
+    public const long RenderMilliseconds = 84;
+
+    /// <summary>
     ///     The two marks of the main window, in the pixels of <see cref="MainPicture" />: the ellipse around the decision of
     ///     the flow and the rectangle around the two tallest bars.
     /// </summary>
@@ -84,6 +124,34 @@ internal static class ScreenshotDemo
     }
 
     /// <summary>
+    ///     Fixes the time that the status bar tells for the save of the open project: the modified time in the project file is
+    ///     set to <see cref="SavedTime" /> and the project is opened again, so that the status bar shows the same text on every
+    ///     run. It is called before the explorer and the preview are used, because opening the project again resets them.
+    /// </summary>
+    /// <param name="composition">The application, with the project open.</param>
+    /// <param name="project">The project that is open.</param>
+    /// <param name="cancellationToken">The token of the test.</param>
+    /// <returns>A task that completes when the project is open again.</returns>
+    public static async Task FixSavedTimeAsync(ApplicationComposition composition, ProjectInfo project, CancellationToken cancellationToken)
+    {
+        var node = JsonNode.Parse(await File.ReadAllTextAsync(project.FilePath, cancellationToken))
+            ?? throw new InvalidOperationException("The project file is empty.");
+        node["modifiedUtc"] = SavedTime.ToUniversalTime();
+        await File.WriteAllTextAsync(project.FilePath, node.ToJsonString(), cancellationToken);
+        await composition.Projects.OpenAsync(project.FilePath, cancellationToken);
+    }
+
+    /// <summary>
+    ///     Fixes the render time that the preview pane tells in the status bar to <see cref="RenderMilliseconds" />. It is
+    ///     called after the last render and before the window is drawn.
+    /// </summary>
+    /// <param name="composition">The application.</param>
+    public static void FixRenderTime(ApplicationComposition composition)
+    {
+        composition.Preview.RenderMilliseconds = RenderMilliseconds;
+    }
+
+    /// <summary>
     ///     Writes the files of the main demonstration project: the overview, the two pictures it is made of, a logo, and a
     ///     one-page PDF.
     /// </summary>
@@ -100,6 +168,19 @@ internal static class ScreenshotDemo
     }
 
     /// <summary>
+    ///     Writes the file of the example project: the picture that the copilot drew, read from the resources of the test
+    ///     assembly, where it is kept as the data of the screenshot.
+    /// </summary>
+    /// <param name="folder">The project folder.</param>
+    public static void WriteExampleProject(string folder)
+    {
+        using var resource = typeof(ScreenshotDemo).Assembly.GetManifestResourceStream("ScreenshotData." + ExamplePicture)
+            ?? throw new InvalidOperationException($"The screenshot data {ExamplePicture} is not in the test assembly.");
+        using var file = File.Create(Path.Combine(folder, ExamplePicture));
+        resource.CopyTo(file);
+    }
+
+    /// <summary>
     ///     Writes a project for the welcome screen: one main picture, whose small picture the card shows, and enough small
     ///     pictures behind it for the number of pictures that the card tells.
     /// </summary>
@@ -108,11 +189,20 @@ internal static class ScreenshotDemo
     /// <param name="pictures">The number of pictures that the project holds.</param>
     public static void WriteWelcomeProject(string folder, string mainPicture, int pictures)
     {
-        File.WriteAllText(Path.Combine(folder, "a-main.svg"), mainPicture, Encoding.UTF8);
+        // A card shows the picture that was changed last, so the small pictures get an older time and the main one a newer
+        // time that is set explicitly: a file that is written a moment later can carry the same time stamp, and the card
+        // would then show one of the plain small pictures, which is a blank card
+        var written = DateTime.UtcNow;
         for (var number = 2; number <= pictures; number++)
         {
-            File.WriteAllText(Path.Combine(folder, $"z-{number}.svg"), SmallPicture, Encoding.UTF8);
+            var small = Path.Combine(folder, $"z-{number}.svg");
+            File.WriteAllText(small, SmallPicture, Encoding.UTF8);
+            File.SetLastWriteTimeUtc(small, written.AddMinutes(-10));
         }
+
+        var main = Path.Combine(folder, "a-main.svg");
+        File.WriteAllText(main, mainPicture, Encoding.UTF8);
+        File.SetLastWriteTimeUtc(main, written);
     }
 
     /// <summary>
@@ -131,12 +221,13 @@ internal static class ScreenshotDemo
     ///     that it is.
     /// </summary>
     /// <param name="composition">The application.</param>
+    /// <param name="modelName">The name of the model that the pill shows.</param>
     /// <returns>The things that the pill is built over, which the caller disposes when the window is closed.</returns>
-    public static async Task<IDisposable> ShowReadyProviderAsync(ApplicationComposition composition)
+    public static async Task<IDisposable> ShowReadyProviderAsync(ApplicationComposition composition, string modelName = ModelName)
     {
         composition.Settings.Update(settings => settings with
         {
-            AiProvider = settings.AiProvider with { Provider = AiProviderKind.GitHubCopilot, ModelName = ModelName },
+            AiProvider = settings.AiProvider with { Provider = AiProviderKind.GitHubCopilot, ModelName = modelName },
         });
 
         var marks = new MarkRegistry();
@@ -176,6 +267,44 @@ internal static class ScreenshotDemo
     }
 
     /// <summary>
+    ///     Puts the conversation of the example screenshot into the transcript of the chat, as the real session showed it: one
+    ///     request, the ten tools that the copilot used (with the titles and times that the rows showed), its short answer, and
+    ///     the line under the answer that says what the turn cost, made as the program makes it, from the figures that the
+    ///     provider reported (134,094 tokens in, 15,512 out, 5,032 reasoning, 15 premium requests, 2 min 37 s).
+    /// </summary>
+    /// <param name="chat">The chat panel.</param>
+    /// <param name="projectFolder">The folder of the project.</param>
+    public static void FillExampleTranscript(ChatPanelViewModel chat, string projectFolder)
+    {
+        var clock = new ManualClock();
+
+        chat.Transcript.Add(UserRow(ExampleRequest, DateTime.Today.AddHours(14).AddMinutes(12), projectFolder));
+        chat.Transcript.Add(ToolRow("style_get", string.Empty, clock, TimeSpan.FromMilliseconds(600)));
+        chat.Transcript.Add(ToolRow("canvasnet_help", string.Empty, clock, TimeSpan.FromMilliseconds(600)));
+        chat.Transcript.Add(ToolRow("canvasnet_help", string.Empty, clock, TimeSpan.FromMilliseconds(600)));
+        chat.Transcript.Add(ToolRow("canvasnet_help", string.Empty, clock, TimeSpan.Zero));
+        var written = ToolRow("project_write", ExamplePicture, clock, TimeSpan.Zero);
+        written.ReportFile(ToolActivityText.Written(ExamplePicture, replaced: false));
+        chat.Transcript.Add(written);
+        chat.Transcript.Add(ToolRow("render_image", ExamplePicture, clock, TimeSpan.FromMilliseconds(2500)));
+        chat.Transcript.Add(ToolRow("project_read", ExamplePicture, clock, TimeSpan.Zero));
+        chat.Transcript.Add(ToolRow("style_check", string.Empty, clock, TimeSpan.Zero));
+        var replaced = ToolRow("project_write", ExamplePicture, clock, TimeSpan.Zero);
+        replaced.ReportFile(ToolActivityText.Written(ExamplePicture, replaced: true));
+        chat.Transcript.Add(replaced);
+        chat.Transcript.Add(ToolRow("render_image", ExamplePicture, clock, TimeSpan.FromMilliseconds(300)));
+
+        var reply = new AssistantReplyViewModel(
+            "I made compliance-pipeline.svg (1600 × 900): five stage cards with icons, a title, a loop line, and the tool "
+            + "legend. Mark anything you want changed.",
+            AssistantReplyState.Completed);
+        var usage = new TurnUsage();
+        usage.Add(new AgentEvent.Usage(134_094, 15_512, ReasoningTokens: 5_032, Multiplier: 15, Model: ExampleModelName));
+        reply.SetUsageCaption(usage.Format(TimeSpan.FromSeconds(157), stopped: false));
+        chat.Transcript.Add(reply);
+    }
+
+    /// <summary>
     ///     Makes the row of a message that the user sent.
     /// </summary>
     /// <param name="text">The words of the message.</param>
@@ -193,13 +322,13 @@ internal static class ScreenshotDemo
     ///     Makes the row of a tool that finished.
     /// </summary>
     /// <param name="tool">The name of the tool.</param>
-    /// <param name="file">The file that the tool worked on.</param>
+    /// <param name="file">The file that the tool worked on, or an empty text for a tool that works on no file.</param>
     /// <param name="clock">The clock that times the call.</param>
     /// <param name="took">How long the call took.</param>
     /// <returns>The row.</returns>
     private static ToolActivityRowViewModel ToolRow(string tool, string file, ManualClock clock, TimeSpan took)
     {
-        var argument = $"path={file}";
+        var argument = file.Length == 0 ? string.Empty : $"path={file}";
         var row = new ToolActivityRowViewModel(Guid.NewGuid().ToString("N"), tool, argument, ToolActivityText.Started(tool, argument), clock);
         clock.Advance(took);
         row.Finish(ToolActivityText.Finished(tool, argument, succeeded: true, string.Empty), succeeded: true, hasImage: tool == "render_image");

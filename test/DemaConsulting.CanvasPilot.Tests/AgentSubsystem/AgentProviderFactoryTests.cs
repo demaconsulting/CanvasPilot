@@ -115,6 +115,62 @@ public sealed class AgentProviderFactoryTests
     }
 
     /// <summary>
+    ///     Test that the Copilot context size of the settings is validated by the catalog of the runtime and reaches the agent
+    ///     as the selection, that a size that the model does not offer is refused with the sentence of the library, and that
+    ///     a stored size is not used for Ollama, which has no such choice.
+    /// </summary>
+    [Fact]
+    public async Task AgentProviderFactory_Create_Copilot_ContextTier_ReachesTheAgentAsTheSelectionAndIsValidated()
+    {
+        // Arrange: a runtime that offers a model with two sizes and one with a single size
+        var token = TestContext.Current.CancellationToken;
+        await using var factory = CopilotFactory(
+            out var source,
+            TestModels.Make("copilot", "claude-opus-5.5", tiers: [("default", "Standard", 328_000), ("long_context", "Long context", 1_000_000)]),
+            TestModels.Make("copilot", "single"));
+
+        // Act: the larger size, a size that the model does not offer, a size for a model with none, and no size
+        await using var larger = await factory.CreateAsync(Request(new AiProviderSettings { ModelName = "claude-opus-5.5", ContextTier = "long_context" }), token);
+        await using var refused = await factory.CreateAsync(Request(new AiProviderSettings { ModelName = "claude-opus-5.5", ContextTier = "huge" }), token);
+        await using var noTiers = await factory.CreateAsync(Request(new AiProviderSettings { ModelName = "single", ContextTier = "long_context" }), token);
+        await using var noSize = await factory.CreateAsync(Request(new AiProviderSettings { ModelName = "claude-opus-5.5" }), token);
+
+        // Assert: the size reaches the selection, a size that is not offered is refused, and none is none
+        Assert.True(larger.IsCreated);
+        Assert.Equal("long_context", source.Requests[0].Selection!.Settings.ContextTier);
+        Assert.False(refused.IsCreated);
+        Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, refused.Failure!.Status);
+        Assert.Contains("huge", refused.Failure.Message, StringComparison.Ordinal);
+        Assert.False(noTiers.IsCreated);
+        Assert.Equal(AgentReadinessStatus.ModelSettingsInvalid, noTiers.Failure!.Status);
+        Assert.True(noSize.IsCreated);
+        Assert.Null(source.Requests[1].Selection!.Settings.ContextTier);
+    }
+
+    /// <summary>
+    ///     Test that a context size that is stored in the settings is not stated for Ollama, whose model settings the
+    ///     catalog of the server would refuse with it.
+    /// </summary>
+    [Fact]
+    public void ModelRequirements_ToModelSettings_ContextTier_IsStatedForCopilotOnly()
+    {
+        // Arrange: the same choices for both providers
+        var copilot = new AiProviderSettings { Provider = AiProviderKind.GitHubCopilot, ModelName = "m", ContextTier = " long_context " };
+        var ollama = copilot with { Provider = AiProviderKind.Ollama };
+        var unnamed = copilot with { ModelName = string.Empty };
+
+        // Act
+        var forCopilot = ModelRequirements.ToModelSettings(copilot, withContextWindow: false);
+        var forOllama = ModelRequirements.ToModelSettings(ollama, withContextWindow: true);
+        var forNoModel = ModelRequirements.ToModelSettings(unnamed, withContextWindow: false);
+
+        // Assert: Copilot gets the trimmed size, Ollama none, and no model means no choice at all
+        Assert.Equal("long_context", forCopilot!.ContextTier);
+        Assert.Null(forOllama!.ContextTier);
+        Assert.Null(forNoModel);
+    }
+
+    /// <summary>
     ///     Test that Copilot model settings that the catalog refuses give the typed status with the sentence of the library
     ///     and no agent: a model without tool calling, a model that is not offered, an effort that the model does not offer,
     ///     and a model that cannot be used.

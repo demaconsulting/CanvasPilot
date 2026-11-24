@@ -36,7 +36,7 @@ namespace DemaConsulting.CanvasPilot.UiTests;
 
 /// <summary>
 ///     The opt-in tests that draw the screenshots of the README and the user guide: the main window in a conversation, the
-///     welcome screen, and the Style Kits manager. Each test builds its demonstration project in a temporary folder, shows
+///     main window with a picture that the copilot made, the welcome screen, and the Style Kits manager. Each test builds its demonstration project in a temporary folder, shows
 ///     the real window headless, and saves it to the folder that the environment variable
 ///     <c>CANVASPILOT_SCREENSHOT_DIR</c> names; without the variable every test here skips itself. The script
 ///     <c>docs/images/render-screenshots.ps1</c> runs them.
@@ -44,8 +44,9 @@ namespace DemaConsulting.CanvasPilot.UiTests;
 /// <remarks>
 ///     The pictures are of the real application, so they change when the application changes. The tests do not assert what
 ///     the pictures show: the other UI tests do that. The content is the same on every run, the culture is fixed to US
-///     English, and the headless platform draws with the embedded Inter font, so a new drawing differs from the committed one
-///     only by the anti-aliasing of the platform and by the render time that the status bar tells.
+///     English, and the headless platform draws with the embedded Inter font. The two texts of the status bar that depend on
+///     the clock, the time that the project file was saved and the time that the render took, are fixed by the demonstration,
+///     so a new drawing differs from the committed one only by the anti-aliasing of the platform.
 /// </remarks>
 public sealed class ScreenshotTests : IDisposable
 {
@@ -151,6 +152,7 @@ public sealed class ScreenshotTests : IDisposable
         // Act: open the project with the DEMA style kit, show the overview, mark two places, and write the message
         await composition.Projects.OpenAsync(project.FilePath, TestContext.Current.CancellationToken);
         await composition.Projects.SetActiveStyleKitAsync("dema", TestContext.Current.CancellationToken);
+        await ScreenshotDemo.FixSavedTimeAsync(composition, project, TestContext.Current.CancellationToken);
         var explorer = composition.Shell.Workspace.Explorer;
         foreach (var node in explorer.Roots.Where(root => root.IsFolder))
         {
@@ -167,6 +169,7 @@ public sealed class ScreenshotTests : IDisposable
         await SettleAsync(() =>
             AllNodes(explorer.Roots).Where(node => node.IsPreviewable).All(node => node.HasThumbnail)
             && ChipPictures(window).Count == 2 && ChipPictures(window).All(picture => picture.IsVisible));
+        ScreenshotDemo.FixRenderTime(composition);
 
         // Assert: the dark picture and the light one were written
         var dark = ScreenshotSupport.Capture(window, folder, "main-window.png", WindowWidth, WindowHeight, ThemeVariant.Dark);
@@ -174,6 +177,45 @@ public sealed class ScreenshotTests : IDisposable
         window.Close();
         Assert.True(File.Exists(dark));
         Assert.True(File.Exists(light));
+    }
+
+    /// <summary>
+    ///     Draws the main window with the picture that the copilot made in a real session, a one-slide overview of a
+    ///     continuous-compliance pipeline: the picture on the stage, the explorer that lists it, and the short conversation that
+    ///     made it with the tool rows and the line that says what the turn cost. It writes the dark picture that the README
+    ///     shows first.
+    /// </summary>
+    /// <returns>A task that completes when the picture is written.</returns>
+    [AvaloniaFact]
+    [Trait("Category", ScreenshotSupport.Category)]
+    public async Task Screenshot_MainWindow_CopilotExampleWithTurnCost()
+    {
+        // Arrange: the requested folder (skips the test when none was requested), the user's style kits, and the application
+        var folder = ScreenshotSupport.RequireFolder();
+        ScreenshotDemo.WriteUserKits(Path.Combine(_root, "styles"));
+        var composition = Compose();
+        await composition.StyleStartupRefresh;
+        _owned.Add(await ScreenshotDemo.ShowReadyProviderAsync(composition, ScreenshotDemo.ExampleModelName));
+        var project = await ScreenshotDemo.CreateProjectAsync(_projectsFolder.Value, ScreenshotDemo.ExampleProjectName, ScreenshotDemo.WriteExampleProject);
+        var window = new MainWindowView(composition.Shell);
+        window.Show();
+
+        // Act: open the project with the DEMA style kit, show the picture, and fill the conversation that made it
+        await composition.Projects.OpenAsync(project.FilePath, TestContext.Current.CancellationToken);
+        await composition.Projects.SetActiveStyleKitAsync("dema", TestContext.Current.CancellationToken);
+        await ScreenshotDemo.FixSavedTimeAsync(composition, project, TestContext.Current.CancellationToken);
+        var explorer = composition.Shell.Workspace.Explorer;
+        explorer.SelectFile(Path.Combine(project.FolderPath, ScreenshotDemo.ExamplePicture));
+        await composition.Preview.RenderCompletion;
+        ScreenshotDemo.FillExampleTranscript(composition.Chat, project.FolderPath);
+        window.GetVisualDescendants().OfType<ComposerSubsystem.ComposerEditorView>().First().FocusEditor();
+        await SettleAsync(() => AllNodes(explorer.Roots).Where(node => node.IsPreviewable).All(node => node.HasThumbnail));
+        ScreenshotDemo.FixRenderTime(composition);
+
+        // Assert: the picture was written
+        var path = ScreenshotSupport.Capture(window, folder, "main-window-example.png", WindowWidth, WindowHeight, ThemeVariant.Dark);
+        window.Close();
+        Assert.True(File.Exists(path));
     }
 
     /// <summary>

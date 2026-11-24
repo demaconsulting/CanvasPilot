@@ -53,6 +53,69 @@ public sealed class SpeechSettingsPageTests
     }
 
     /// <summary>
+    ///     Test that the page shows the stored talk key (the default when none is stored), takes a safe key that is pressed,
+    ///     refuses an unsafe one with a sentence and keeps the key, waits out a modifier alone, lets Esc cancel, stores the
+    ///     default as nothing, and puts the default back on reset.
+    /// </summary>
+    [Fact]
+    public void SpeechSettingsPageViewModel_PushToTalkKey_CaptureValidateResetAndStore()
+    {
+        // Arrange: a page that was loaded with the default
+        var page = CreatePage();
+        page.Load(new AppSettings());
+        var atStart = (page.PushToTalkKeyText, page.IsPushToTalkDefault, page.ResetPushToTalkCommand.CanExecute(null));
+
+        // Act: press a modifier alone, an unsafe key, Esc, and a chord
+        var modifierAlone = page.TryCapturePushToTalk(Avalonia.Input.Key.LeftCtrl, Avalonia.Input.KeyModifiers.Control);
+        var unsafeKey = page.TryCapturePushToTalk(Avalonia.Input.Key.A, Avalonia.Input.KeyModifiers.None);
+        var problem = page.PushToTalkProblem;
+        var textAfterUnsafe = page.PushToTalkKeyText;
+        var escape = page.TryCapturePushToTalk(Avalonia.Input.Key.Escape, Avalonia.Input.KeyModifiers.None);
+        var problemAfterEscape = page.PushToTalkProblem;
+        var chord = page.TryCapturePushToTalk(Avalonia.Input.Key.Space, Avalonia.Input.KeyModifiers.Control | Avalonia.Input.KeyModifiers.Shift);
+        var stored = page.Apply(new AppSettings()).Speech.PushToTalkKey;
+        var canReset = page.ResetPushToTalkCommand.CanExecute(null);
+        page.ResetPushToTalkCommand.Execute(null);
+        var storedAfterReset = page.Apply(new AppSettings()).Speech.PushToTalkKey;
+
+        // Assert
+        Assert.Equal(("F9", true, false), atStart);
+        Assert.False(modifierAlone);
+        Assert.False(unsafeKey);
+        Assert.False(string.IsNullOrWhiteSpace(problem));
+        Assert.Equal("F9", textAfterUnsafe);
+        Assert.False(escape);
+        Assert.Equal(string.Empty, problemAfterEscape);
+        Assert.True(chord);
+        Assert.Equal("Ctrl+Shift+Space", stored);
+        Assert.True(canReset);
+        Assert.Equal("F9", page.PushToTalkKeyText);
+        Assert.Equal(string.Empty, storedAfterReset);
+    }
+
+    /// <summary>
+    ///     Test that a stored talk key is shown and applied again unchanged, and that an unsafe stored key shows as the
+    ///     default.
+    /// </summary>
+    [Fact]
+    public void SpeechSettingsPageViewModel_LoadApply_PushToTalkKey_RoundTripsAndUnsafeShowsDefault()
+    {
+        // Arrange
+        var page = CreatePage();
+
+        // Act
+        page.Load(new AppSettings { Speech = new SpeechSettings { PushToTalkKey = "Ctrl+Shift+T" } });
+        var shown = page.PushToTalkKeyText;
+        var applied = page.Apply(new AppSettings()).Speech.PushToTalkKey;
+        page.Load(new AppSettings { Speech = new SpeechSettings { PushToTalkKey = "Escape" } });
+
+        // Assert
+        Assert.Equal("Ctrl+Shift+T", shown);
+        Assert.Equal("Ctrl+Shift+T", applied);
+        Assert.Equal("F9", page.PushToTalkKeyText);
+    }
+
+    /// <summary>
     ///     Test that stored settings are shown and applied again unchanged, with devices stored by name.
     /// </summary>
     [Fact]

@@ -6,9 +6,12 @@
 
 The `Chat` subsystem is the panel in which the user composes the messages for the AI copilot and follows its answers:
 above, the header with the title, a menu of more actions (which holds the item that clears the chat history), and the
-button that hides the panel; below it the transcript of the conversation in the open project, which offers example
-prompts while it is empty; at the bottom the composer card with the composer's editing control, and under it the button
-that attaches files, the button that listens while it is held, and the button that sends. It also joins the layer on
+button that hides the panel; below it the transcript of the conversation in the open project, which offers prompts that
+fit the project (ways to start while it has no drawing, ways to refine once it has one) while it is empty; while the
+copilot works, a row that says what it is doing and for how long, with the Stop button; at the bottom the composer card
+with the composer's editing control, and under it the button
+that attaches files, the button that listens while it is held (with the key that does the same), and the button that
+sends. It also joins the layer on
 which the user marks the picture to the message, so that every mark becomes a chip
 in it, and it opens the window that shows exactly what the assistant would receive for a message. It keeps the words of
 the conversation of each project on the user's computer, outside the project, and shows them again when the project is
@@ -16,16 +19,19 @@ opened. It holds no rule of editing, sending, dictation, marking, payload buildi
 to the `Composer`, `Speech`, `Annotation`, `Payload`, and `Agent` subsystems, and the `Chat` subsystem connects what
 they do to what the user sees.
 
-The subsystem contains four units: `ChatPanel`, the panel with the transcript, its rows, the buttons, the banner of the
-readiness of the copilot, and the joining of marks, `ChatTurnRunner`, the logic of one turn of the conversation with the
-copilot, `ChatHistoryStore`, which keeps the words of the conversation of each project on this computer, and
-`PayloadInspector`, the window that shows a payload. It depends on `Composer` (the view model of the message, the
-editing view, and the chips), `Annotation` (the registry and the layer of marks), `Payload` (the payload, its describer,
-and the composer of mark pictures), `Speech` (dictation, only to prepare it), `Knowledge` (only the Markdown reader and
+The subsystem contains five units: `ChatPanel`, the panel with the transcript, its rows, the buttons, the busy row, the
+banner of the readiness of the copilot, and the joining of marks, `ChatTurnRunner`, the logic of one turn of the
+conversation with the copilot (the rows, the live status, Stop, and the usage caption), `ChatHistoryStore`, which keeps
+the words of the conversation of each project on this computer, `PayloadInspector`, the window that shows a payload, and
+`FollowUpSuggestions`, the planner of the prompts that the panel offers. It depends on `Composer` (the view model of the
+message, the editing view, and the chips), `Annotation` (the registry and the layer of marks), `Payload` (the payload,
+its describer, and the composer of mark pictures), `Speech` (dictation, only to prepare it, and the setting of the talk
+key, only to name it in the hints), `Knowledge` (only the Markdown reader and
 its panel, to draw the final text of a reply), `Agent` (only `IAgentService`, the readiness report, and the events of a
 turn; never a provider, a tool, or a library), `Project` (the open project and the path of its file, which name its
-history), and `Logging`, and on nothing else of the application; in particular it does not depend on `AppShell` or
-`Settings`, and the `Agent` and `Knowledge` subsystems do not depend on it. `AppShell` depends on `Chat`: the
+history, and the filter that tells which files are drawings), and `Logging`, and on nothing else of the application; in
+particular it does not depend on `AppShell` or `Settings`, and the `Agent` and `Knowledge` subsystems do not depend on
+it. `AppShell` depends on `Chat`: the
 composition root builds the panel and the store, and the main window shows the inspector, places the panel in the chat
 column of the workspace, hides and shows that column when the panel asks, and opens the settings when the panel asks.
 The Edit menu and the talk key of the main window
@@ -40,25 +46,29 @@ reach the composer and the panel through the seams that `Composer` owns.
   (`ChatPanelView`, `TranscriptEntryView`, `AssistantReplyView`, `ToolActivityRowView`, `NoticeRowView`), and
   `ChipThumbnailProvider`, which implements the composer's `IChipThumbnailProvider`.
 - *Role*: Provider to the host that places it, and consumer of the composer, the registry and the layer of marks, the
-  mark picture composer, dictation, the file picker that the host gives it (the `IAttachmentPicker` seam of `Composer`),
+  mark picture composer, dictation, the setting of the talk key, the planner of the prompts (`FollowUpSuggestions`), the
+  file picker that the host gives it (the `IAttachmentPicker` seam of `Composer`),
   and, through the turn runner, the AI copilot.
 - *Contract*: The constructor takes the `ComposerViewModel`, the `MarkRegistry`, the `AnnotationOverlayViewModel`, an
   `IMarkImageComposer`, optionally the `IDictationService`, a logger, the `IAgentService` of the copilot, a
-  `TimeProvider`, an `IChatHistoryStore`, and an `IProjectService`, and joins the layer to the composer. `Transcript`
-  holds the rows of the conversation (one `TranscriptEntryViewModel` per sent message, which `SentEntries` lists,
-  followed by the rows of the copilot, and, for a project that was opened again, `RestoredEntryViewModel` rows of saved
-  text); `SendCommand`, `CanSend`, `CanTalk`, `IsTalking`, and `TalkText` are what the buttons bind to;
-  `BeginPushToTalkAsync` and `EndPushToTalkAsync` implement `IPushToTalkTarget`, so that a talk key can be given the
-  panel later; `PrepareDictationAsync` loads the speech engine ahead of time; `InspectorLauncher` is set by the host and
-  is what "View payload" asks, and `AttachmentPicker` is set by the host and is what the attach button (`AttachCommand`)
-  asks for files. `ExamplePrompts`, `SuggestedPrompts`, `ShowSuggestions`, and `UsePrompt` serve the empty
-  conversation and the follow-ups, and `CollapseCommand` raises `CollapseRequested`, which the host handles by hiding
-  the panel. With a copilot, `IsCopilotBusy`, `StopCommand`, and `Stop` follow and stop the turn,
-  `WaitForTurnAsync` completes when it has ended, `RefreshReadinessAsync` and `CheckAgainCommand` check the provider and
-  set `HasReadinessIssue` and `ReadinessMessage`, and `OpenSettingsCommand` raises `OpenSettingsRequested`, which the
-  host handles. With a history store and a project service, the words of each turn are saved when it ends, a project
-  that is opened shows its saved conversation, and `ClearHistoryCommand` clears it. `Dispose` stops following the
-  composer and the layer and stops a turn that runs.
+  `TimeProvider`, an `IChatHistoryStore`, an `IProjectService`, optionally the `PushToTalkSetting` that names the talk
+  key in the hints, and an `IImageSourceFilter` that tells which files are drawings, and joins the layer to the
+  composer. `Transcript` holds the rows of the conversation (one `TranscriptEntryViewModel` per sent message, which
+  `SentEntries` lists, followed by the rows of the copilot, and, for a project that was opened again,
+  `RestoredEntryViewModel` rows of saved text); `SendCommand`, `CanSend`, `CanTalk`, `IsTalking`, and `TalkText` are
+  what the buttons bind to; `BeginPushToTalkAsync` and `EndPushToTalkAsync` implement `IPushToTalkTarget`, so that a
+  talk key can be given the panel later; `PrepareDictationAsync` loads the speech engine ahead of time;
+  `InspectorLauncher` is set by the host and is what "View payload" asks, and `AttachmentPicker` is set by the host and
+  is what the attach button (`AttachCommand`) asks for files. `Suggestions`, `HasSuggestions`, `ShowSuggestions`, and
+  `UsePrompt` serve the empty conversation and the prompts above the message, `TalkKeyText`, `TalkToolTip`, and
+  `EmptyTipText` name the talk key, and `CollapseCommand` raises `CollapseRequested`, which the host handles by hiding
+  the panel. With a copilot, `IsCopilotBusy`, `StopCommand`, and `Stop` follow and stop the turn, `IsStopping` tells
+  that a stop was asked and the turn has not ended, `BusyText`, `BusyElapsedText`, `BusyHintText`, and `HasBusyHint` are
+  what the busy row shows, `WaitForTurnAsync` completes when it has ended, `RefreshReadinessAsync` and
+  `CheckAgainCommand` check the provider and set `HasReadinessIssue` and `ReadinessMessage`, and `OpenSettingsCommand`
+  raises `OpenSettingsRequested`, which the host handles. With a history store and a project service, the words of each
+  turn are saved when it ends, a project that is opened shows its saved conversation, and `ClearHistoryCommand` clears
+  it. `Dispose` stops following the composer and the layer and stops a turn that runs.
 - *Constraints*: Owned by the user interface thread; not safe for concurrent use. It does not own the composer, the
   registry, the layer, the copilot, or the history store, which the composition root disposes. Without a copilot nothing
   of the copilot is shown and nothing is blocked.
@@ -88,10 +98,25 @@ reach the composer and the panel through the seams that `Composer` owns.
 - *Contract*: The constructor takes the `IAgentService`, the transcript collection that rows are added to, optionally a
   `TimeProvider`, a logger, and what opens the settings from an error notice. `RunTurnAsync` gives a sent message (or an
   `AgentTurnRequest`) to the copilot and completes with the outcome when the turn has ended; `Stop` cancels the turn;
-  `IsBusy` and `BusyChanged` tell when a turn runs, so that the panel can block the composer; `Dispose` stops it. It
-  never throws for what the copilot does.
+  `IsBusy` and `BusyChanged` tell when a turn runs, so that the panel can block the composer; `StatusText`,
+  `ElapsedText`, `HintText`, `IsStopping`, and `StatusChanged` tell what a running turn is doing, for how long, whether
+  a long wait needs explaining, and whether a stop is under way; `Dispose` stops it. When the turn has ended it puts the
+  caption of what the turn cost, which `TurnUsage` sums and writes, under the last reply. It never throws for what the
+  copilot does.
 - *Constraints*: Owned by the user interface thread; one turn at a time; the answer text is added to the reply at most
-  once every 50 milliseconds.
+  once every 50 milliseconds; the elapsed time is ticked once a second by a timer of the clock that it is given, and
+  the status is empty when no turn runs.
+
+**FollowUpSuggestions**: The planner of the prompts that the panel offers.
+
+- *Type*: In-process .NET static class (`FollowUpSuggestions`) with the lists `StarterPrompts` and `RefinementPrompts`
+  and the constant `ExportPrompt`, and an internal static helper (`ProjectDrawingProbe`).
+- *Role*: Provider to the chat panel; consumer of `IImageSourceFilter` of the `Project` subsystem (through the probe).
+- *Contract*: `Plan(hasDrawing, hasPictureShown, busy)` gives the prompts in the order to show them: none while busy,
+  the starter prompts for a project without a drawing, otherwise the refinements and, only while a picture is shown, the
+  export. `ProjectDrawingProbe.HasDrawing(folder, filter)` tells whether a project folder holds a drawing.
+- *Constraints*: No state and no thread of its own; `Plan` is a pure function and gives a new list each time; the
+  probe lists names only, to a depth of four folders, and stops at the first drawing.
 
 **PayloadInspector**: The window that shows a payload.
 
@@ -136,13 +161,37 @@ reply ends when the copilot calls a tool, and the text after the tool is a new r
 says what was done (for example that a file was created or replaced), and notices and errors. It adds the text of a
 reply at most once every 50 milliseconds, so many small pieces do not keep the interface thread busy. `Stop` keeps what
 was written and marks the reply as stopped; a failure keeps it and adds an error with what to do, and the offer to open
-the settings when they can help. The runner never throws for what the copilot does, and the panel only follows `IsBusy`:
-while a turn runs it blocks the composer (`ComposerViewModel.BlockSending`) so that the next message waits, shows the
-indicator "The copilot is working..." (three pulsing dots) and the Stop button, and the composer stays editable. The
-chat
-knows the copilot
-only through the contract of the `Agent` subsystem, so no provider, tool, or library reaches the user interface and the
-logic is verified with a scripted copilot and a manual clock.
+the settings when they can help. The runner never throws for what the copilot does, and the panel only follows the
+runner: while a turn runs it blocks the composer (`ComposerViewModel.BlockSending`) so that the next message waits,
+shows the busy row (three pulsing dots, what the copilot is doing, how long, and the Stop button), and the composer
+stays editable. The chat knows the copilot only through the contract of the `Agent` subsystem, so no provider, tool, or
+library reaches the user interface and the logic is verified with a scripted copilot and a manual clock.
+
+**A long turn never looks dead, and nothing is made up.** A drawing can take the model minutes, during which a window
+that says nothing looks as if it had stopped. The runner therefore keeps, for the busy row, the words of what the
+copilot is doing (working, thinking, the size of the response, the file that the model is writing with the bytes so far,
+the tool that runs, the wait for the model, the answer), the time since the turn started, and, after 30 seconds without
+any sign from the copilot while no tool runs, a hint that says that large drawings can take a few minutes, that some
+models show nothing until the drawing is complete, and that Stop cancels the turn but the provider may still count the
+request. The words follow only what the provider really reports; the elapsed time, ticked once a second by a timer of
+the runner's own clock (so the panel has no timer and a test moves it by moving the clock), is the one sign of life that
+is true for every model, also for one that is silent for the whole wait; and the hint is the honest explanation of that
+silence and not a promise. The progress of a file that the model is writing is one running row of the transcript
+(`Writing x.svg... 9.8 KB`) that the later reports and then the start and the end of the call go on to update, so the
+transcript shows a row that grows and not a row for each report. The panel announces each of these as it changes and
+shows nothing of them when no turn runs.
+
+**Stop is seen at once.** A provider needs a moment to end what it was doing, and a Stop that shows nothing looks like a
+button that does not work. From the press until the turn has ended the runner says that it is stopping ("Stopping...",
+whatever the copilot still reports, with no hint), the panel shows that in the busy row and disables the Stop button, so
+a second press does nothing; the turn then ends as stopped, with the text kept.
+
+**What a turn cost.** A model can count many premium requests for one message, and a stopped turn is not given back. The
+runner sums the tokens that the provider reported for the model calls of a turn, keeps the largest model multiplier (a
+message is billed once whatever the number of model calls), and when the turn has ended puts one quiet caption under the
+last reply, for example `12.4k in, 7.2k out, 400 reasoning, model x15 premium, 3:25`, with only the figures that were
+reported (a provider that reports tokens only has no multiplier in it) and, for a turn that was stopped, the note that
+the request may still count. The caption is not part of the text and is not saved with the history.
 
 **What a reply looks like.** While a reply streams its text is plain and selectable, which is the cheapest thing to
 grow. When the part of the answer is whole, the reply is complete and its text is read once with `KnowledgeMarkdown` and
@@ -178,24 +227,38 @@ pulses while it listens, and the reasons appear in the composer's status line, w
 panel.
 
 **Writing the message.** The message is written in a card that holds the composer's editing view and, under it, the
-attach button, the talk button, the hint "Enter to send", and the Send button. Enter on its own sends when the composer
+attach button, the talk button with a key cap that names the talk key, the hint "Enter to send", and the Send button.
+Enter on its own sends when the composer
 can send, and every other key, Shift+Enter included, goes to the editing view, so a line break is written. The attach
 button asks the `IAttachmentPicker` that the host gave the panel for files, starting in the project folder, and gives
 what it returns to the composer as a drop, so the rules of the intake apply to a picked file as to a dropped one; the
-panel decides nothing about the files. All buttons without text have an accessible name and a tooltip.
+panel decides nothing about the files. All buttons without text have an accessible name and a tooltip. **The talk key is
+named from one source.** The key cap, the tooltip of the talk button, and the tip of the empty conversation take the key
+from the `PushToTalkSetting` that the composition root shares with the window, the status bar, and the welcome screen
+(`F9` unless the user chose another key on the Speech page), and change when the setting does, so no hint names a key
+that does not work.
 
-**Beginning and going on.** While the transcript is empty the panel shows a question, four example prompts, and a tip
-instead of a blank list. Choosing a prompt writes it into the message at the caret and puts the focus there, and does
-not send it. Once there is a conversation, and while the copilot is idle, three follow-up prompts show above the
-message and work the same way. The header has a button that raises `CollapseRequested`; the panel does not hide itself,
-because the column and the way back belong to the workspace that holds it.
+**Beginning and going on, with prompts that fit the project.** While the transcript is empty the panel shows a question,
+example prompts, and a tip instead of a blank list. Choosing a prompt writes it into the message at the caret and puts
+the focus there, and does not send it. The prompts are not a fixed list: `FollowUpSuggestions` plans them from what the
+project has, and the panel asks it again whenever one of the facts changes. A project with no drawing is offered ways to
+start (a flowchart of a process, a title card, a chart of a small table), because "Add a legend" means nothing to it; a
+project with a drawing is offered ways to refine it (a larger title, a legend, the style kit), and "Export as PNG" only
+while a picture is shown, because the export acts on that picture; and nothing is offered while the copilot works. A
+project has a drawing when a picture is shown, when the copilot wrote one in this session, or when its folder holds one
+(a short, bounded search that leaves out the attachments, the style kits, and hidden folders); the panel looks again
+when the project is opened, when the picture changes, and when a turn ends. The empty conversation shows these as its
+examples, and, once there is a conversation and while the copilot is idle, they show above the message and work the same
+way. The header has a button that raises `CollapseRequested`; the panel does not hide itself, because the column and the
+way back belong to the workspace that holds it.
 
 **Rows that belong together.** The panel tells each row of the transcript whether it opens a group (the first row, and
 the first row of the copilot after a message or a notice), so that the name and the avatar of the copilot are shown
 once for a run of replies and tool lines, and the first row of a restored conversation carries the divider "Earlier".
 A sent message is a bubble at the right, at most 85 percent of the width, whose "View payload" button shows only while
 the pointer is over the message or the focus is in it; a restored message is the same bubble at 70 percent opacity.
-While a turn runs the panel shows three pulsing dots and the Stop button where there used to be a progress bar.
+While a turn runs the panel shows three pulsing dots, the status of the turn (what the copilot is doing and for how
+long, and the hint when the wait is long), and the Stop button where there used to be a progress bar.
 
 **Marks are joined here.** The annotation layer and the composer do not know each other, because the composer already
 uses the annotation subsystem and a dependency back would be a cycle. The panel is the one place that knows both: when
@@ -224,9 +287,10 @@ The dependencies of the units come from the SysML2 model (`sysml2tools query dep
 views. The hub suppliers `RollingFileLogger` and `PathHelpers`, which many units use, are left out of the first.
 
 `ChatPanel` depends on `ComposerViewModel` and `ComposerEditor` (`Composer`), `MarkRegistry` and `AnnotationOverlay`
-(`Annotation`), `MarkImageComposer` and `MessagePayload` (`Payload`), `DictationService` (`Speech`), `AgentContract`
+(`Annotation`), `MarkImageComposer` and `MessagePayload` (`Payload`), `DictationService` and the setting of the talk key
+(`Speech`), `AgentContract`
 (`Agent`, for the readiness report), `KnowledgeMarkdown` (`Knowledge`, for the Markdown of a reply), `PayloadInspector`,
-`ChatTurnRunner`, and `ChatHistoryStore`.
+`ChatTurnRunner`, `ChatHistoryStore`, and `FollowUpSuggestions`.
 
 ![Chat panel dependencies](ChatSubsystemPanelView.svg)
 
@@ -235,9 +299,13 @@ views. The hub suppliers `RollingFileLogger` and `PathHelpers`, which many units
 ![Payload inspector dependencies](ChatSubsystemInspectorView.svg)
 
 `ChatTurnRunner` depends on the rows of `ChatPanel`, on `AgentContract` (`IAgentService`, the request, and the events of
-the `Agent` subsystem), on `ComposerViewModel` (the sent message), and on `MessagePayload`.
+the `Agent` subsystem, which include the progress and usage events), on `ComposerViewModel` (the sent message), and on
+`MessagePayload`.
 
 ![Chat turn dependencies](ChatSubsystemTurnView.svg)
+
+`FollowUpSuggestions` depends only on the filter of drawings of `ProjectService` (`Project`), which its probe uses; the
+panel depends on it.
 
 `ChatHistoryStore` depends on the project information types of `ProjectService` (`Project`), and on the hub suppliers
 `RollingFileLogger` and `PathHelpers`; the panel depends on the store and on `ProjectService`. The view shows the
@@ -245,3 +313,16 @@ the `Agent` subsystem), on `ComposerViewModel` (the sent message), and on `Messa
 key of the history comes from the project.
 
 ![Chat history dependencies](ChatSubsystemHistoryView.svg)
+
+### Future Direction: Undo a Copilot Turn
+
+This is planned and is not implemented: today nothing restores the files that a turn of the copilot changed (see "Files
+the Copilot Writes" in the user guide), and the Edit menu undoes only the message being written.
+
+The design that is intended is a per-session snapshot of the files before each turn. Before a turn starts, the files
+that the turn may write are recorded in a snapshot that is kept outside the project folder, with the other data of the
+application, so that the project gets no history file or backup of its own; the snapshots belong to the session and are
+cleared when the project is closed. Undoing a turn restores the files of its snapshot. The provider session cannot be
+rewound, because the Copilot runtime keeps its own history of the conversation, so the copilot would still believe that
+its changes are in place. The next message therefore carries a note that tells the copilot which files were reverted and
+that their contents are those from before the turn.
