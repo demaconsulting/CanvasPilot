@@ -18,6 +18,16 @@
     <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
     <!-- Numeric MSI ProductVersion (major.minor.build); CI strips any SemVer prerelease suffix. -->
     <Version Condition="'$(Version)' == ''">0.0.0</Version>
+    <!-- Full release version, including any SemVer prerelease suffix (e.g. "0.2.0-beta.3"), passed by CI
+         alongside the numeric Version. It is used only for the package file name (Add/Remove Programs shows
+         the numeric Version, because the MSI ProductVersion must be numeric); local builds default it to the
+         numeric Version. -->
+    <MsiPackageVersion Condition="'$(MsiPackageVersion)' == ''">$(Version)</MsiPackageVersion>
+    <!-- Package file name "CanvasPilot-{full version}-win-x64.msi" (e.g. CanvasPilot-0.2.0-beta.3-win-x64.msi, or
+         CanvasPilot-0.0.0-win-x64.msi for a local build), produced directly by this project so CI publishes the
+         project output without renaming it. Set here rather than on the command line so the rename stays scoped to
+         this project. -->
+    <TargetName>CanvasPilot-$(MsiPackageVersion)-win-x64</TargetName>
     <!-- Published self-contained win-x64 application output to harvest into the MSI. -->
     <CanvasPilotPublishDir Condition="'$(CanvasPilotPublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\publish\win-x64\</CanvasPilotPublishDir>
     <!-- DEMA Consulting logo (repository-root Icon.ico), used for the Add/Remove Programs icon. -->

@@ -1031,7 +1031,7 @@ FileAssert asserts that the published folder, which the installer takes whole, h
 `THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License, so the notice of the vendored icons is in
 the package. This scenario is tested by `ThirdPartyNotices_Published`, which is run in CI only.
 
-**WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64, builds the
-installer project with the numeric build version, and copies the package, FileAssert asserts that exactly one
-`package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by `WiX_MsiPackage`, which
-is run in CI only and is described in the WiX Toolset OTS verification document.
+**WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64 and builds the
+installer project with the numeric build version and the full build version straight into the package folder, FileAssert
+asserts that exactly one `package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by
+`WiX_MsiPackage`, which is run in CI only and is described in the WiX Toolset OTS verification document.

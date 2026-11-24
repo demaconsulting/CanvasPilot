@@ -81,6 +81,10 @@ Windows SmartScreen can warn that the publisher is unknown because the package i
 Installing a newer (or older) package replaces the installed version. If CanvasPilot is running, the installer asks it
 to close first. Uninstalling removes the application and leaves your projects, settings, and logs in place.
 
+The name of the downloaded file carries the full version, including a prerelease label such as `0.2.0-beta.3`. Windows
+Installer versions can only be numbers, so *Installed apps* (Add/Remove Programs) shows the numeric part, for example
+`0.2.0` for `0.2.0-beta.3`.
+
 # The CanvasPilot Window
 
 CanvasPilot has one main window. While no project is open it shows the welcome screen (see *The Welcome Screen* in

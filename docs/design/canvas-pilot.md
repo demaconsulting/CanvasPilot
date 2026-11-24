@@ -599,12 +599,14 @@ made in the project when the message is sent.
 **Windows Installer Package**: The way the application is delivered.
 
 - *Direction*: Output (built by the release pipeline) and input (to the user's Windows Installer).
-- *Type*: One per-machine, 64-bit MSI file named `CanvasPilot-{version}-win-x64.msi`, built by the WiX Toolset from the
-  installer project, which is not part of the solution.
+- *Type*: One per-machine, 64-bit MSI file named `CanvasPilot-{version}-win-x64.msi` with the full build version,
+  including any prerelease suffix (for example `CanvasPilot-0.2.0-beta.3-win-x64.msi`), built by the WiX Toolset from
+  the installer project, which is not part of the solution.
 - *Format*: The package carries the self-contained single-file `CanvasPilot.exe` publish output, the native libraries
   that stay beside it (the Skia, text shaping, and ANGLE graphics libraries and the speech inference runtime, Sherpa
   interface, and audio library), the `StyleKits` folder of the three style kits that come with the program, a Start Menu
-  shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version.
+  shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version, because
+  the MSI `ProductVersion` must be numeric, so Add/Remove Programs shows, for example, `0.2.0` for `0.2.0-beta.3`.
 - *Constraints*: Installing a package replaces any installed version, older or newer, and asks a running
   `CanvasPilot.exe` to close first. The package contains no user data, and uninstalling leaves the user's settings,
   logs, and projects in place. The package contains no GitHub Copilot runtime: the application never ships or

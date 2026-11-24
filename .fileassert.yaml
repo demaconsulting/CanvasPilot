@@ -10,7 +10,7 @@
 tests:
 
   # --- INSTALLER ---
-  # Runs in the Windows build leg after the MSI is built and copied to package/. The TRX it
+  # Runs in the Windows build leg after the MSI is built into package/. The TRX it
   # produces is consumed by ReqStream as evidence for the WiX Toolset OTS requirement and for the
   # self-contained speech runtime requirement. The installer harvests every file of publish/win-x64,
   # so the files asserted there are the files in the MSI; the build also reads the MSI file table.
