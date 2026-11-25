@@ -200,7 +200,9 @@ jobs:
       # FileAssert asserts the package, the native speech runtime, the style kits, and the absence of a Copilot runtime
       # in the published output (all are tagged "installer" and run by one step), and its TRX is the WiX OTS evidence,
       # the speech runtime evidence, and the no-Copilot-runtime evidence that ReqStream consumes. A separate step reads
-      # the MSI file table, which proves that the files are in the package and that no Copilot runtime is.
+      # the MSI file table, which proves that the files are in the package and that no Copilot runtime is. Another step
+      # writes the MSI tables that decide how the package installs to artifacts/msi-tables.xml, and the Installer_*
+      # FileAssert tests of the same run assert them as the evidence of the system installer requirement.
       # Downstream projects: Add any additional packaging steps here.
 
       - name: Publish self-contained build (win-x64)
@@ -230,22 +232,26 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: bash
         run: |
-          # MSI ProductVersion only supports three numeric fields (major.minor.build, each
-          # 0-65535) and cannot represent a SemVer prerelease suffix (e.g. "-beta.12"), so
-          # it's simply truncated off for the numeric MSI_VERSION. Package.wxs's MajorUpgrade
+          # MSI ProductVersion only supports three numeric fields (major.minor.build; major and
+          # minor 0-255, build 0-65535) and cannot represent a SemVer prerelease suffix (e.g.
+          # "-beta.12") or build metadata (e.g. "+abc123"), so both are cut off for the numeric
+          # MSI_VERSION (the Installer_ReplacesAnyInstalledVersion FileAssert test checks the
+          # result in the built package). Package.wxs's MajorUpgrade
           # AllowDowngrades="yes" is what makes this safe: it always replaces whatever version is
           # installed - older, same, or newer - so two builds truncating to the same MSI version
           # (e.g. a prerelease and its eventual stable release) is not a problem. Add/Remove
-          # Programs therefore shows the numeric version (e.g. 0.2.0 for 0.2.0-beta.3). The full
-          # version (MSI_PACKAGE_VERSION) is passed alongside it and names the package file
-          # (CanvasPilot-{full version}-win-x64.msi).
-          MSI_VERSION=$(echo "${{ inputs.version }}" | cut -d'-' -f1)
-          MSI_PACKAGE_VERSION="${{ inputs.version }}"
+          # Programs therefore shows the numeric version (e.g. 0.2.0 for 0.2.0-beta.3). The
+          # package version (MSI_PACKAGE_VERSION) is passed alongside it and names the package file
+          # (CanvasPilot-{package version}-win-x64.msi): it keeps any prerelease suffix but drops
+          # build metadata, because a "+" is awkward in a file name and download URL and the
+          # metadata does not tell two releases apart.
+          MSI_VERSION=$(echo "${{ inputs.version }}" | sed -E 's/[-+].*$//')
+          MSI_PACKAGE_VERSION=$(echo "${{ inputs.version }}" | sed -E 's/\+.*$//')
           echo "MSI_VERSION=${MSI_VERSION}" >> "$GITHUB_ENV"
           echo "MSI_PACKAGE_VERSION=${MSI_PACKAGE_VERSION}" >> "$GITHUB_ENV"
           echo "Computed MSI version: ${MSI_VERSION} (package version: ${MSI_PACKAGE_VERSION})"
 
-      # The installer project names its package CanvasPilot-{full version}-win-x64.msi itself, so it
+      # The installer project names its package CanvasPilot-{package version}-win-x64.msi itself, so it
       # is built straight into the package directory with no copy or rename.
       - name: Build MSI installer
         if: matrix.os == 'windows-latest'
@@ -300,7 +306,51 @@ jobs:
           Write-Host "✓ MSI contains the native speech runtime and the style kits: $($required -join ', ')"
           Write-Host "✓ MSI contains no GitHub Copilot runtime"
 
-      - name: Assert MSI installer, native speech runtime, and absence of a Copilot runtime with FileAssert
+      - name: Write the MSI tables that decide how it installs for FileAssert
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # The system requirement of the Windows installer (one 64-bit package, installed for all users, a Start
+          # Menu shortcut, a running application closed, any installed version replaced) is decided by rows of the
+          # package's tables. This writes those tables and the summary template of the built MSI to
+          # artifacts/msi-tables.xml (one element per row, named for its table, with one attribute per column), and
+          # the Installer_* FileAssert tests of the next step assert the rows, so their results are in the TRX that
+          # ReqStream reads. A table that the package does not have is left out, so the test that needs it fails.
+          $msi = (Resolve-Path "package/CanvasPilot-${{ env.MSI_PACKAGE_VERSION }}-win-x64.msi").Path
+          $tables = @('Property', 'Directory', 'Media', 'File', 'Shortcut', 'Upgrade', 'Wix4CloseApplication',
+            'InstallExecuteSequence')
+          function Invoke-ComMember($target, [string]$member, [string]$kind, [object[]]$arguments) {
+            $target.GetType().InvokeMember($member, $kind, $null, $target, $arguments)
+          }
+          $installer = New-Object -ComObject WindowsInstaller.Installer
+          $database = Invoke-ComMember $installer 'OpenDatabase' 'InvokeMethod' @($msi, 0)
+          $summary = Invoke-ComMember $installer 'SummaryInformation' 'GetProperty' @($msi, 0)
+          $template = Invoke-ComMember $summary 'Property' 'GetProperty' @(7)
+          $root = [System.Xml.Linq.XElement]::new('msi', [System.Xml.Linq.XAttribute]::new('file', (Split-Path $msi -Leaf)))
+          $root.Add([System.Xml.Linq.XElement]::new('SummaryInformation', [System.Xml.Linq.XAttribute]::new('Template', $template)))
+          # TablePersistent is 1 for a table in the package and 2 for a table that is not there.
+          $present = $tables | Where-Object { (Invoke-ComMember $database 'TablePersistent' 'GetProperty' @([string]$_)) -eq 1 }
+          foreach ($table in $present) {
+            $view = Invoke-ComMember $database 'OpenView' 'InvokeMethod' @("SELECT * FROM ``$table``")
+            Invoke-ComMember $view 'Execute' 'InvokeMethod' $null
+            $names = Invoke-ComMember $view 'ColumnInfo' 'GetProperty' @(0)
+            $count = Invoke-ComMember $names 'FieldCount' 'GetProperty' $null
+            $columns = 1..$count | ForEach-Object { Invoke-ComMember $names 'StringData' 'GetProperty' @([int]$_) }
+            while ($null -ne ($record = Invoke-ComMember $view 'Fetch' 'InvokeMethod' $null)) {
+              $row = [System.Xml.Linq.XElement]::new([System.Xml.Linq.XName][string]$table)
+              for ($i = 1; $i -le $count; $i++) {
+                $value = [string](Invoke-ComMember $record 'StringData' 'GetProperty' @($i))
+                $row.Add([System.Xml.Linq.XAttribute]::new([System.Xml.Linq.XName][string]$columns[$i - 1], $value))
+              }
+              $root.Add($row)
+            }
+            Invoke-ComMember $view 'Close' 'InvokeMethod' $null
+          }
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          $root.Save((Join-Path (Resolve-Path artifacts).Path 'msi-tables.xml'))
+          Write-Host "Wrote the tables $($present -join ', ') and the summary template of $msi to artifacts/msi-tables.xml"
+
+      - name: Assert MSI installer and its tables, native speech runtime, and absence of a Copilot runtime with FileAssert
         if: matrix.os == 'windows-latest'
         run: >
           dotnet fileassert
