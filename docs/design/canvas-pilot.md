@@ -580,7 +580,7 @@ made in the project when the message is sent.
   strings, and the talk key as text (`F9`, `Ctrl+Shift+Space`; nothing for the default F9), in the `speech` section of
   `settings.json`. A talk key that is not safe to take over (a key that types, the keys of editing and moving, a
   modifier alone, Windows key chords, `Ctrl+Space`, `Alt+Space`, `Ctrl+Alt` chords, the shortcuts of editing, `Alt+F4`,
-  and F1, F8, F10, F11, and F12) is refused on the page and, when found in the file, read as the default. The model
+  and F1, F2, F8, F10, F11, and F12) is refused on the page and, when found in the file, read as the default. The model
   store is `%LOCALAPPDATA%\DemaConsulting.Speech\Models` on Windows and is shared with other DEMA Consulting
   applications.
 - *Constraints*: The audio system and the model store are used only when the Speech page is opened or dictation is used.
