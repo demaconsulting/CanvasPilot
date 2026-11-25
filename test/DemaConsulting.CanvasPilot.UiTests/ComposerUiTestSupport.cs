@@ -68,6 +68,34 @@ internal sealed class SimpleMessageBuilder : IMessageBuilder
 }
 
 /// <summary>
+///     A message builder for UI tests that holds every message until the test lets it go, so that a test can look at the
+///     editor while a message is being sent.
+/// </summary>
+internal sealed class PendingMessageBuilder : IMessageBuilder
+{
+    /// <summary>
+    ///     Completes when the test lets the messages go.
+    /// </summary>
+    private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>
+    ///     Lets every message that is held, and every later one, be built.
+    /// </summary>
+    public void Release() => _release.TrySetResult();
+
+    /// <inheritdoc />
+    public async Task<SentMessage> BuildAsync(
+        ComposerSnapshot message,
+        IReadOnlyList<Mark> marks,
+        IReadOnlyList<StagedAttachment> attachments,
+        CancellationToken cancellationToken = default)
+    {
+        await _release.Task.WaitAsync(cancellationToken);
+        return new SentMessage(message, marks, attachments, "payload", DateTimeOffset.UtcNow);
+    }
+}
+
+/// <summary>
 ///     A provider of chip pictures for UI tests that gives one picture for every chip and records what it was asked for.
 /// </summary>
 internal sealed class FixedThumbnailProvider : IChipThumbnailProvider
@@ -107,13 +135,14 @@ internal sealed class ComposerHarness : IDisposable
     ///     Initializes a new instance of the <see cref="ComposerHarness" /> class and shows the window.
     /// </summary>
     /// <param name="openProject"><see langword="true" /> to open the project, which makes the message editable.</param>
-    public ComposerHarness(bool openProject = true)
+    /// <param name="builder">The builder of sent messages, or <see langword="null" /> for one that builds at once.</param>
+    public ComposerHarness(bool openProject = true, IMessageBuilder? builder = null)
     {
         Folder = Directory.CreateTempSubdirectory("canvaspilot-ui-composer-").FullName;
         Project = Path.Combine(Folder, "project");
         Directory.CreateDirectory(Project);
         Marks = new MarkRegistry();
-        ViewModel = new ComposerViewModel(new SimpleMessageBuilder(), Marks, new IdleDictationService());
+        ViewModel = new ComposerViewModel(builder ?? new SimpleMessageBuilder(), Marks, new IdleDictationService());
         View = new ComposerEditorView { DataContext = ViewModel };
         Window = new Window { Width = 520, Height = 320, Content = View };
         Window.Show();

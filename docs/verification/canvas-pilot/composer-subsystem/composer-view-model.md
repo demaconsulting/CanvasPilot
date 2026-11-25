@@ -50,8 +50,31 @@ from the background thread. No window, network, microphone, or special permissio
   the session, and a dictation without words each produce their own explanation and leave the draft as it is.
 - Deleting the chips of all marks takes every mark chip out of the message, each as its own step, and leaves the other
   parts of the message as they were.
+- The note of a mark is read from the registry and each change of it is passed on until the view model is disposed; a
+  request to change a note is passed on with the mark only while the message can be edited and holds its chip, also
+  for the chip beside the caret, and changes neither the message, the caret, the status, nor the undo history.
 
 #### Test Scenarios
+
+**ComposerViewModel_GetMarkNote_NoteChangedInRegistry_IsGivenAndAnnounced**: A mark with the note `before` has its chip
+in the message; its note is changed in the registry. The view model gives `before` and then `after`, announces the
+change once with the changed mark, gives nothing for an unknown mark, and announces nothing more after it is disposed.
+This scenario is tested by `ComposerViewModel_GetMarkNote_NoteChangedInRegistry_IsGivenAndAnnounced`.
+
+**ComposerViewModel_RequestMarkNoteEdit_ChipInEditableMessage_RaisesRequestWithoutAStep**: With words and a mark chip
+in the message, a request for the mark is passed on once with its identity; `Changed` is not raised and the text, the
+caret, what can be undone and redone, and the status are as before. This scenario is tested by
+`ComposerViewModel_RequestMarkNoteEdit_ChipInEditableMessage_RaisesRequestWithoutAStep`.
+
+**ComposerViewModel_RequestMarkNoteEdit_NoChipNoProjectOrSending_IsRefused**: A request for a mark without a chip,
+for a mark with a chip while the message is being sent, and for a mark of a new message after the project is closed
+are refused, and none is passed on. This scenario is tested by
+`ComposerViewModel_RequestMarkNoteEdit_NoChipNoProjectOrSending_IsRefused`.
+
+**ComposerViewModel_RequestMarkNoteEditAtCaret_ChipBesideCaret_RequestsThatMark**: With two mark chips above the words,
+the caret before the first chip asks for the first, between the chips for the first, after the second for the second,
+and in the words for nothing. This scenario is tested by
+`ComposerViewModel_RequestMarkNoteEditAtCaret_ChipBesideCaret_RequestsThatMark`.
 
 **ComposerViewModel_InsertTyped_EachCharacterIsOneStep**: Three characters are typed one at a time, as the control
 reports them; the caret is after them and each undo removes one character. This scenario is tested by

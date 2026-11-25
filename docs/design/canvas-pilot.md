@@ -136,7 +136,12 @@ note, and then the overlay makes the mark in `MarkRegistry`, pinned to the pictu
 started, and reports it. The overlay does not know the composer. The chat panel adds the chip of every reported
 mark to the message with `ComposerViewModel.AddMark` and tells the overlay which mark chips the message holds, so the
 overlay draws only the marks of the shown picture whose chips are in the message and says how many it hides. While a
-tool is chosen the overlay has the preview pane turn off dragging the picture out, and Escape throws a shape away.
+tool is chosen the overlay has the preview pane turn off dragging the picture out, and Escape throws a shape away. The
+overlay shows the note of each mark on one short line beside its number, cut short with an ellipsis, and the whole note
+as the tooltip of the mark and of its chip. The note of a mark of the message can be changed until the message is sent:
+a double-click on the mark, or a request from its chip that the chat panel passes to the overlay, opens the note card
+again, and `MarkRegistry.ChangeNote` replaces the mark with a new immutable instance of the same identity, number,
+geometry, and picture and tells the overlay and the composer through its `NoteChanged` event.
 
 `MessagePayload` and the values it is made of are the one form in which the message that the user sends reaches the
 AI copilot: the text with `[Mark n]` and `[Attachment n: name]` at the places of the marks and
@@ -575,7 +580,7 @@ made in the project when the message is sent.
   strings, and the talk key as text (`F9`, `Ctrl+Shift+Space`; nothing for the default F9), in the `speech` section of
   `settings.json`. A talk key that is not safe to take over (a key that types, the keys of editing and moving, a
   modifier alone, Windows key chords, `Ctrl+Space`, `Alt+Space`, `Ctrl+Alt` chords, the shortcuts of editing, `Alt+F4`,
-  and F1, F8, F10, F11, and F12) is refused on the page and, when found in the file, read as the default. The model
+  and F1, F2, F8, F10, F11, and F12) is refused on the page and, when found in the file, read as the default. The model
   store is `%LOCALAPPDATA%\DemaConsulting.Speech\Models` on Windows and is shared with other DEMA Consulting
   applications.
 - *Constraints*: The audio system and the model store are used only when the Speech page is opened or dictation is used.
@@ -599,12 +604,14 @@ made in the project when the message is sent.
 **Windows Installer Package**: The way the application is delivered.
 
 - *Direction*: Output (built by the release pipeline) and input (to the user's Windows Installer).
-- *Type*: One per-machine, 64-bit MSI file named `CanvasPilot-{version}-win-x64.msi`, built by the WiX Toolset from the
-  installer project, which is not part of the solution.
+- *Type*: One per-machine, 64-bit MSI file named `CanvasPilot-{version}-win-x64.msi` with the full build version,
+  including any prerelease suffix (for example `CanvasPilot-0.2.0-beta.3-win-x64.msi`), built by the WiX Toolset from
+  the installer project, which is not part of the solution.
 - *Format*: The package carries the self-contained single-file `CanvasPilot.exe` publish output, the native libraries
   that stay beside it (the Skia, text shaping, and ANGLE graphics libraries and the speech inference runtime, Sherpa
   interface, and audio library), the `StyleKits` folder of the three style kits that come with the program, a Start Menu
-  shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version.
+  shortcut, and the Add/Remove Programs icon and links; its version is the numeric part of the build version, because
+  the MSI `ProductVersion` must be numeric, so Add/Remove Programs shows, for example, `0.2.0` for `0.2.0-beta.3`.
 - *Constraints*: Installing a package replaces any installed version, older or newer, and asks a running
   `CanvasPilot.exe` to close first. The package contains no user data, and uninstalling leaves the user's settings,
   logs, and projects in place. The package contains no GitHub Copilot runtime: the application never ships or
@@ -776,6 +783,8 @@ of a shared folder are never written. The example images of a kit are drawn with
 `style_check` reads only a file inside the project (not through a link that leads out), and the block of guidance says
 that the text of a kit is data and not instructions, so a kit cannot instruct an assistant, and its size is capped.
 
+## Data Flow
+
 Application subsystems call `RollingFileLogger.Log` with a severity, a message, and optional exception
 context. `RollingFileLogger` asks `PathHelpers` to resolve the active file path inside the log folder,
 rotates and prunes archives when the active file has reached its size threshold, and appends the
@@ -845,6 +854,15 @@ mark chips the message holds, and the overlay asks `MarkRegistry.VisibleMarks` w
 picture to show a picture. To describe a mark to the assistant, `MarkSourceResolver.Resolve` reads the element positions
 or anchors of the mark's picture and returns the parts of the source file under the mark, or that the picture cannot
 tell.
+
+When the user changes the note of a mark of the message, by a double-click on the mark on the picture with no tool
+chosen, or by a double-click on the mark's chip, its Edit note item, or F2 with the caret beside the chip, the chip's
+request goes from `ComposerViewModel`
+through the chat panel to `AnnotationOverlayViewModel.BeginEditNote`, which opens the note card filled with the current
+note. Confirming calls `MarkRegistry.ChangeNote`, which raises `NoteChanged`; the overlay draws the new note and the
+editor builds the chip again with its new tooltip. The change is not a step of the message's undo history, because the
+note belongs to the registry and not to the text. The payload built at send time reads the marks as they are then, with
+their changed notes.
 
 When the message is sent, `ComposerViewModel.SendAsync` takes a snapshot of the document, puts the attachment chips of
 the snapshot into the project with `AttachmentStore.StageForSend` on a thread-pool thread, and gives the snapshot, the

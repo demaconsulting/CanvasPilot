@@ -51,7 +51,7 @@ public sealed class PushToTalkBindingTests
     /// <param name="key">The key.</param>
     /// <param name="modifiers">The modifiers.</param>
     [Theory]
-    [InlineData(Key.F2, KeyModifiers.None)]
+    [InlineData(Key.F3, KeyModifiers.None)]
     [InlineData(Key.F7, KeyModifiers.None)]
     [InlineData(Key.F9, KeyModifiers.Control)]
     [InlineData(Key.F13, KeyModifiers.None)]
@@ -71,7 +71,8 @@ public sealed class PushToTalkBindingTests
     /// <summary>
     ///     Test that the keys that are not safe are refused with a sentence: a modifier alone, the keys of typing and
     ///     moving, a key that types without Ctrl or Alt, Ctrl+Space, Alt+Space, Ctrl+Alt, the Windows key, the shortcuts
-    ///     of editing, Alt+F4, and the function keys that the system or laptops take, F8 among them.
+    ///     of editing, Alt+F4, the function keys that the system or laptops take, F8 among them, and F2, which changes the
+    ///     note of a mark in the message.
     /// </summary>
     /// <param name="key">The key.</param>
     /// <param name="modifiers">The modifiers.</param>
@@ -100,6 +101,8 @@ public sealed class PushToTalkBindingTests
     [InlineData(Key.F, KeyModifiers.Alt)]
     [InlineData(Key.F4, KeyModifiers.Alt)]
     [InlineData(Key.F1, KeyModifiers.None)]
+    [InlineData(Key.F2, KeyModifiers.None)]
+    [InlineData(Key.F2, KeyModifiers.Control)]
     [InlineData(Key.F8, KeyModifiers.None)]
     [InlineData(Key.F10, KeyModifiers.None)]
     [InlineData(Key.F11, KeyModifiers.None)]
@@ -162,7 +165,9 @@ public sealed class PushToTalkBindingTests
         Assert.Equal(string.Empty, PushToTalkBinding.Normalize("F8"));
         Assert.Equal(string.Empty, PushToTalkBinding.Normalize("Escape"));
         Assert.Equal(string.Empty, PushToTalkBinding.Normalize(null));
+        Assert.Equal(string.Empty, PushToTalkBinding.Normalize("F2"));
         Assert.Equal(PushToTalkBinding.Default, PushToTalkBinding.FromStored("F8"));
+        Assert.Equal(PushToTalkBinding.Default, PushToTalkBinding.FromStored("F2"));
         Assert.Equal(PushToTalkBinding.Default, PushToTalkBinding.FromStored(string.Empty));
         Assert.Equal("F6", PushToTalkBinding.FromStored("F6").Display);
     }

@@ -24,8 +24,9 @@ and is not part of the automated evidence.
 
 #### WiX_MsiPackage
 
-**Scenario**: After the installer project is built with a numeric version over the published win-x64 output and the
-package is copied to the package folder, FileAssert asserts the file pattern `package/CanvasPilot-*-win-x64.msi`.
+**Scenario**: After the installer project is built over the published win-x64 output, with the numeric version and the
+full build version, straight into the package folder, FileAssert asserts the file pattern
+`package/CanvasPilot-*-win-x64.msi`, the name that the project gives the package.
 
 **Expected**: Exactly one file matches and its size is at least 10,000,000 bytes.
 

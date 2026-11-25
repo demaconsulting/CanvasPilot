@@ -16,6 +16,9 @@ itself, so they hold at any zoom. After each drawing they check what the user se
 panel, the status sentence, the sentence about hidden marks) and what the application holds (the mark in the registry,
 its geometry in picture pixels, the chip in the composer, the switch for dragging out). The look of the marks equals
 that of the annotated picture of a message; a unit test compares the colors and sizes with those of `MarkImageComposer`.
+The note label beside each badge, its tooltips, and the double-click that opens a note are checked in the same window:
+the tests read the label, its place, its colors in both themes, and the tooltips of the badge, line, and label, and
+double-click with two quick clicks through the window, which the headless platform counts as a double-click.
 
 #### Test Environment
 
@@ -29,14 +32,18 @@ removed afterwards. No window is shown on a screen, no real input device, input 
    and at fit and at actual size: each mark has a white edge under its color, the badge shows its number and is inside
    the picture, the dashed shape under construction is visible on a dark and on a light picture, the bar floats at the
    top center of the stage with its shadow and the *N hidden* chip beside it, and the bar and the note card wrap in a
-   narrow window without hiding the note.
+   narrow window without hiding the note. Give a mark a long note: the label beside its number is legible in both
+   themes, ends with an ellipsis, stays inside the picture, and resting the pointer on the badge, line, or label shows
+   the whole note.
 2. *Pointer devices.* With a pen or a touch screen, press, move, and lift: the shape follows the contact and the mark is
    made on lift. With the mouse, pressing the right button does not start a shape.
 3. *Keyboard and screen reader.* With only the keyboard, choose a tool with Tab and Space or with the keys V, R, E, F,
    and A, move the cursor with the
    arrow keys, start and finish a shape with Enter, type a note, and press Enter; with a screen reader the tools, the
    status sentence, the sentence about hidden marks, and each mark are read with their names, and the marks are read as,
-   for example, `Mark 2, rectangle, note: ...`.
+   for example, `Mark 2, rectangle, note: ...`, and each note label as `Note of mark 2: ...`. With the caret beside a
+   mark chip in the message, F2 opens the note, the box is read as `Note for mark 2`, Enter saves it, and the focus goes
+   back to the message.
 4. *Drag out.* Drag the picture into the file manager with no tool chosen: the file is dropped. Choose a tool and drag
    on the picture: a mark is drawn and nothing is dragged out.
 5. *With the chat.* When the chat panel is shown, drawing a mark inserts `Mark n` in the row of chips above the words of
@@ -78,6 +85,15 @@ removed afterwards. No window is shown on a screen, no real input device, input 
 - On a window 360 wide, the bar and the note card lie inside the window.
 - *Clear marks* is off while the message holds no mark; with marks in the message it asks the host, which takes every
   mark chip out, and the layer then shows no mark and the button is off again.
+- A mark with a note shows it on one line beside its badge, in the colors of the theme, cut short with an ellipsis and
+  inside the picture; a mark without a note has no label; a changed note is drawn at once; the badge, line, and label
+  have the whole note as their tooltip.
+- A double-click on a mark with no tool, or a request of the host, opens the note card for a mark of the message with
+  its note and the focus in it; Enter or *Save note* changes only the note and reports no mark; Escape or *Cancel* keeps
+  the note and the mark; starting a shape, choosing a tool, or opening another note saves what was typed; the change
+  goes on over a new picture and is given up when the mark leaves the message, marks are not allowed, or no picture is
+  shown; the focus goes back when the card closes, except when it closed because a shape was started, which keeps the
+  focus on the layer.
 
 #### Test Scenarios
 
@@ -283,3 +299,84 @@ with a project again the buttons are on. This scenario is tested by
 own coordinates; marks one and two have the lines of red and blue, their badges are centered on the top-left corners of
 their boxes, and the second shape is named `Mark 2, rectangle`. This scenario is tested by
 `AnnotationOverlayView_ShownMarks_AreLaidOutInPicturePixelsWithTheColorOfTheirNumber`.
+
+**AnnotationOverlayViewModel_BeginEditNote_MarkOfMessage_OpensCardWithItsNumberAndNote**: With two marks of the message,
+the note of mark two is opened with no tool chosen: the card is open for that mark with its note, the box is named
+`Note for mark 2`, the primary button says *Save note*, Cancel can run and Skip cannot, and no shape is drawn. This
+scenario is tested by `AnnotationOverlayViewModel_BeginEditNote_MarkOfMessage_OpensCardWithItsNumberAndNote`.
+
+**AnnotationOverlayViewModel_BeginEditNote_UnknownOutsideMessageWhileDrawingOrNotAllowed_IsRefused**: An unknown mark, a
+mark whose chip is not in the message, a request while a shape is drawn, while marks are not allowed, and without a
+picture are refused, and no note changes. This scenario is tested by
+`AnnotationOverlayViewModel_BeginEditNote_UnknownOutsideMessageWhileDrawingOrNotAllowed_IsRefused`.
+
+**AnnotationOverlayViewModel_EditNote_Committed_ChangesOnlyTheNoteAndReportsNoNewMark**: A changed note with a line
+break is confirmed; the registry holds the same mark with the cleaned note, the shown marks are announced again with it,
+no mark is reported, and the card is closed. This scenario is tested by
+`AnnotationOverlayViewModel_EditNote_Committed_ChangesOnlyTheNoteAndReportsNoNewMark`.
+
+**AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark**: A changed note is canceled with the
+command, with Escape, and after a skip that does nothing; the card closes, the tool stays, and the mark keeps its note.
+This scenario is tested by `AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark`.
+
+**AnnotationOverlayViewModel_EditNote_NextShapeOtherToolOrOtherMark_SavesTypedNote**: A typed note is saved when a shape
+is started, when another tool is chosen, and when the note of another mark is opened, which then opens with its own
+note. This scenario is tested by `AnnotationOverlayViewModel_EditNote_NextShapeOtherToolOrOtherMark_SavesTypedNote`.
+
+**AnnotationOverlayViewModel_EditNote_MarkLeavesMessageOrDrawingNotAllowed_GivesUpTheEdit**: The change goes on while
+another chip leaves the message, and is given up without a change when the mark's own chip leaves or marks are no
+longer allowed. This scenario is tested by
+`AnnotationOverlayViewModel_EditNote_MarkLeavesMessageOrDrawingNotAllowed_GivesUpTheEdit`.
+
+**AnnotationOverlayViewModel_EditNote_NewPictureOrPictureLost_GoesOnOrGivesUpTheEdit**: While a changed note is open, a
+new picture of the file is shown and the card stays open for the mark with the typed note; then no picture is shown, as
+when the file can no longer be drawn, and the change is given up with the note unchanged. This scenario is tested by
+`AnnotationOverlayViewModel_EditNote_NewPictureOrPictureLost_GoesOnOrGivesUpTheEdit`.
+
+**AnnotationOverlayStyle_NoteLabel_StaysInsidePictureOnEitherSideOfTheBadge**: On a picture of 800 by 600 the label of
+a mark near the left is to the right of its badge, at its height, at the widest allowed and inside the picture; the
+label of a mark near the right edge flips to the left and stays inside; on a picture 30 wide the width is zero or more
+and inside; the size of the text stays from 8 to 18. This scenario is tested by
+`AnnotationOverlayStyle_NoteLabel_StaysInsidePictureOnEitherSideOfTheBadge`.
+
+**AnnotationOverlayView_MarkWithNote_ShowsOneLineLabelBesideItsBadge**: A mark with the note `door is blocked` has one
+label with that text on one line, set to trim with an ellipsis, to the right of the badge at its top and height, inside
+the picture, and named `Note of mark 1: door is blocked`. This scenario is tested by
+`AnnotationOverlayView_MarkWithNote_ShowsOneLineLabelBesideItsBadge`.
+
+**AnnotationOverlayView_LongNoteNearEdge_IsCutWithEllipsisInsidePictureAndNoteLessMarkHasNoLabel**: A long note on a
+mark near the right edge is drawn left of its badge, on one line that is cut short, inside the picture and no wider than
+the cap; a mark without a note has no label. This scenario is tested by
+`AnnotationOverlayView_LongNoteNearEdge_IsCutWithEllipsisInsidePictureAndNoteLessMarkHasNoLabel`.
+
+**AnnotationOverlayView_NoteLabel_UsesThemeColorsInDarkAndLight**: In the dark and the light theme the label has the
+overlay surface of the theme behind the primary text color of the theme. This scenario is tested by
+`AnnotationOverlayView_NoteLabel_UsesThemeColorsInDarkAndLight`.
+
+**AnnotationOverlayView_NoteChanged_LabelShowsTheNewNote**: A note changed in the registry is drawn at once, and a note
+taken away leaves no label and the badge. This scenario is tested by
+`AnnotationOverlayView_NoteChanged_LabelShowsTheNewNote`.
+
+**AnnotationOverlayView_MarkWithNote_BadgeLineAndLabelHaveTheWholeNoteAsTooltip**: The badge, the line, and the label of
+a mark with a note of 150 characters answer the pointer and have `Mark 1: <the whole note>` as their tooltip; a mark
+without a note has none. This scenario is tested by
+`AnnotationOverlayView_MarkWithNote_BadgeLineAndLabelHaveTheWholeNoteAsTooltip`.
+
+**AnnotationOverlayView_DoubleClickMarkWithSelect_OpensNoteCardFilledWithFocusInNote**: With the Select tool, two quick
+clicks on the badge open the note card for that mark, with its note in the box, the caret at the end, the focus in it,
+the name `Note for mark 1`, *Cancel* in place of *Skip note*, and *Save note*; no shape is drawn and no tool is chosen.
+This scenario is tested by `AnnotationOverlayView_DoubleClickMarkWithSelect_OpensNoteCardFilledWithFocusInNote`.
+
+**AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark**: A double-click on the note label, typing, and Enter
+save the longer note on the same mark and the label shows it; a double-click on the line, typing, and Escape close the
+card with the note, the mark, and its chip unchanged. This scenario is tested by
+`AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark`.
+
+**AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack**: With the focus on the stage, the note opened as
+the host does takes the focus; *Save note* saves the typed note and *Cancel* keeps it, and each time the focus comes
+back to the stage. This scenario is tested by `AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack`.
+
+**AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer**: With the rectangle tool and the focus on the
+stage, the note of a mark is opened as the host does and changed; a press and drag on the picture starts a shape, which
+saves the typed note and closes the card, and while the shape is drawn the layer keeps the focus instead of the stage.
+This scenario is tested by `AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer`.

@@ -150,7 +150,7 @@
                      Text="Note:" />
           <TextBox Name="NoteBox"
                    AutomationProperties.AutomationId="AnnotationNoteBox"
-                   AutomationProperties.Name="Note for the new mark (optional)"
+                   AutomationProperties.Name="{Binding Annotation.NoteBoxName}"
                    Width="220"
                    PlaceholderText="Optional short note"
                    Text="{Binding Annotation.NoteText, Mode=TwoWay}" />
@@ -159,10 +159,16 @@
           <Button AutomationProperties.AutomationId="AnnotationNoteSkip"
                   Theme="{DynamicResource SecondaryButton}"
                   Content="Skip note"
-                  Command="{Binding Annotation.SkipNoteCommand}" />
+                  Command="{Binding Annotation.SkipNoteCommand}"
+                  IsVisible="{Binding !Annotation.IsEditingMarkNote}" />
+          <Button AutomationProperties.AutomationId="AnnotationNoteCancel"
+                  Theme="{DynamicResource SecondaryButton}"
+                  Content="Cancel"
+                  Command="{Binding Annotation.CancelCommand}"
+                  IsVisible="{Binding Annotation.IsEditingMarkNote}" />
           <Button AutomationProperties.AutomationId="AnnotationNoteAdd"
                   Theme="{DynamicResource PrimaryButton}"
-                  Content="Add mark"
+                  Content="{Binding Annotation.CommitNoteText}"
                   Command="{Binding Annotation.CommitNoteCommand}" />
         </StackPanel>
       </StackPanel>

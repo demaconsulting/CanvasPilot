@@ -23,19 +23,19 @@ display, network, audio hardware, or window is required.
 
 - All unit tests pass with zero failures.
 - The default binding is `F9` with no modifiers, its text is `F9`, and it is safe.
-- Function keys F2 to F7, F9, and F13 to F24, alone and with Ctrl, Alt, or Shift, `Ctrl+Shift+Space`, `Ctrl+Shift+T`,
+- Function keys F3 to F7, F9, and F13 to F24, alone and with Ctrl, Alt, or Shift, `Ctrl+Shift+Space`, `Ctrl+Shift+T`,
   `Alt+Shift+M`, and `Ctrl+5` are accepted and give a binding and no problem.
 - Each of these is refused with a sentence that says what to do, gives no binding, and reports the same sentence from
   `Validate` and `TryCreate`: no key; a modifier alone; the Windows key held with any key; Escape, Enter, Tab,
   Backspace, and the cursor keys, also with Ctrl; a letter, a digit, or Space without a modifier, and a letter with
   Shift only; Ctrl+Space; Alt+Space; Ctrl+Alt with a letter; Ctrl+C and Ctrl+V; Ctrl+Shift+Z; Alt with a letter; Alt+F4;
-  and F1, F8, F10, F11, and F12, also with Shift.
+  and F1, F2, F8, F10, F11, and F12, also with Ctrl or Shift.
 - A binding is written as `Ctrl+Alt+Shift+Key` in that order (a digit as the digit) and read back equal, whatever the
   case and the spaces of the text; `Parse` answers nothing for no text, an empty text, an unknown key, a number, a
   modifier in place of the key (`Ctrl+Ctrl`), an unknown modifier, and a binding that is not safe (`Ctrl+Space`, `F8`).
 - The default is stored as the empty string; a safe chord is normalized to its normal form (`shift+ctrl+space` becomes
-  `Ctrl+Shift+Space`); a stored `F8`, an unsafe key, or no text is read as the default and normalized to the empty
-  string; a safe stored key such as `F6` is read as that key.
+  `Ctrl+Shift+Space`); a stored `F8` or `F2`, an unsafe key, or no text is read as the default and normalized to the
+  empty string; a safe stored key such as `F6` is read as that key.
 - A press matches the binding only with its key and exactly its modifiers among Ctrl, Alt, and Shift; the key and the
   keys of its modifiers (left or right) are part of the chord, and another key or the key of a modifier that the chord
   does not have is not.
@@ -48,17 +48,17 @@ display, network, audio hardware, or window is required.
 **PushToTalkBinding_Default_IsF9AndSafe**: The default binding has the key F9, no modifiers, and the text `F9`, and
 `Validate` accepts it. This scenario is tested by `PushToTalkBinding_Default_IsF9AndSafe`.
 
-**PushToTalkBinding_Validate_SafeKeys_AreAccepted**: A theory over nine safe cases: F2, F7, F13, `Ctrl+F9`,
+**PushToTalkBinding_Validate_SafeKeys_AreAccepted**: A theory over nine safe cases: F3, F7, F13, `Ctrl+F9`,
 `Shift+F24`, `Ctrl+Shift+Space`, `Ctrl+Shift+T`, `Alt+Shift+M`, and `Ctrl+5`. Each is accepted by `Validate`, and
 `TryCreate` gives a binding and no problem. This scenario is tested by
 `PushToTalkBinding_Validate_SafeKeys_AreAccepted`.
 
-**PushToTalkBinding_Validate_UnsafeKeys_AreRefusedWithASentence**: A theory over twenty-eight unsafe cases, which cover
-every rule: no key, a lone Ctrl or Shift or the Windows key, Escape, Enter with Ctrl, Tab, Backspace, Left with Ctrl,
-`A` alone and with Shift, `1` alone, Space alone, with Ctrl, and with Alt, `Ctrl+Alt+T`, F9 and `Ctrl+T` with the
-Windows key, `Ctrl+C`, `Ctrl+V`, `Ctrl+Shift+Z`, `Alt+F`, `Alt+F4`, F1, F8, F10, F11, and `Shift+F12`. Each gives a
-sentence that is not blank, no binding from `TryCreate`, and the same sentence from `Validate` and from `TryCreate`.
-This scenario is tested by `PushToTalkBinding_Validate_UnsafeKeys_AreRefusedWithASentence`.
+**PushToTalkBinding_Validate_UnsafeKeys_AreRefusedWithASentence**: A theory over thirty unsafe cases, which cover every
+rule: no key, a lone Ctrl or Shift or the Windows key, Escape, Enter with Ctrl, Tab, Backspace, Left with Ctrl, `A`
+alone and with Shift, `1` alone, Space alone, with Ctrl, and with Alt, `Ctrl+Alt+T`, F9 and `Ctrl+T` with the Windows
+key, `Ctrl+C`, `Ctrl+V`, `Ctrl+Shift+Z`, `Alt+F`, `Alt+F4`, F1, F2 alone and with Ctrl, F8, F10, F11, and `Shift+F12`.
+Each gives a sentence that is not blank, no binding from `TryCreate`, and the same sentence from `Validate` and from
+`TryCreate`. This scenario is tested by `PushToTalkBinding_Validate_UnsafeKeys_AreRefusedWithASentence`.
 
 **PushToTalkBinding_DisplayAndParse_RoundTripAndRefuseUnsafeText**: A chord made from Shift and Control is written as
 `Ctrl+Shift+Space`, and a digit chord as `Ctrl+5`. The text `ctrl + SHIFT + space` is read as the chord, `Ctrl+5` as the
@@ -67,9 +67,9 @@ digit chord, and `f9` as the default. No binding is read from nothing, an empty 
 `PushToTalkBinding_DisplayAndParse_RoundTripAndRefuseUnsafeText`.
 
 **PushToTalkBinding_Stored_DefaultIsEmptyAndOldF8MeansTheDefault**: The default is stored as the empty string;
-`shift+ctrl+space` normalizes to `Ctrl+Shift+Space`; `F8`, `Escape`, and nothing normalize to the empty string; stored
-`F8` and an empty string are read as the default; stored `F6` is read as `F6`. This scenario is tested by
-`PushToTalkBinding_Stored_DefaultIsEmptyAndOldF8MeansTheDefault`.
+`shift+ctrl+space` normalizes to `Ctrl+Shift+Space`; `F8`, `Escape`, nothing, and `F2` normalize to the empty string;
+stored `F8`, stored `F2`, and an empty string are read as the default; stored `F6` is read as `F6`. This scenario is
+tested by `PushToTalkBinding_Stored_DefaultIsEmptyAndOldF8MeansTheDefault`.
 
 **PushToTalkBinding_MatchesAndIsPartOf_FollowTheChord**: For `Ctrl+Shift+Space`, a press of Space with Ctrl and Shift
 matches, and Space with Ctrl only, Space with Ctrl, Shift, and Alt, and `A` with Ctrl and Shift do not; the default

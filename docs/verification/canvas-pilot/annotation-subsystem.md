@@ -9,12 +9,16 @@ pictures it returns, the way the application uses them. They check the observabl
 and picture of each mark, what each picture shows after the file has changed, the marks that the overlay makes with each
 tool, and the parts of the source that are reported under a mark. The subsystem has no dependency on another subsystem
 except `Preview` and `Logging`, so no substitute is needed except the source of the shown picture, which the tests set
-by hand; the views of the overlay are verified by the headless UI tests described in the unit verification document.
+by hand; the views of the overlay are verified by the headless UI tests described in the unit verification document. The
+drawn note labels are also verified at subsystem level by a headless Avalonia UI test defined in
+`AnnotationSubsystemUiTests.cs` of the UI test project, which joins the real `MarkRegistry`,
+`AnnotationOverlayViewModel`, and `AnnotationOverlayView` on a picture drawn by the real `ImageRenderService`, with the
+same stand-in for the source of the shown picture, and reads the labels and tooltips from the visual tree.
 
 ### Test Environment
 
 A temporary folder per test is the project and holds the files that are drawn. No network, display, or special
-permission is needed.
+permission is needed; the UI test runs on the headless Avalonia platform of the UI test project.
 
 ### Acceptance Criteria
 
@@ -34,6 +38,13 @@ permission is needed.
   the other marks, and continues the numbering.
 - With two marks in the message, the *Clear marks* button of the tool bar, which is off while there is no mark, takes
   the chips of both marks out of the message of the composed application, leaves no mark shown, and is off again.
+- The marks that the overlay shows on a rendered diagram carry their notes, a mark without a note carries none, and the
+  place of each note label lies inside the picture.
+- On a rendered picture, the layer draws the note of each noted mark on one line beside its number, cuts a long note
+  short with an ellipsis inside the picture, draws no label beside a mark without a note, and gives the number, the
+  line, and the label of a noted mark the whole note as their tooltip.
+- Changing the note of a mark through the overlay keeps the mark's identity, number, shape, place, and picture, shows
+  the new note at once, keeps the note when the change is canceled, and leaves the marks handed out before unchanged.
 
 ### Test Scenarios
 
@@ -80,3 +91,22 @@ again shows only the first mark. Both marks stay in the registry with their own 
 marks* button of the tool bar leaves no chip and no shown mark, and the button is off again. It is the evidence of the
 subsystem requirement about clearing marks, because `AnnotationSubsystemTests.cs` has no scenario for it. This scenario
 is tested by `AnnotationToolbarView_ClearMarks_TakesTheMarkChipsOutOfTheMessage`.
+
+**AnnotationSubsystem_ShowMarkNotes_MarksOnRenderedDiagram_ShownMarksCarryTheirNotes**: A diagram is drawn and shown to
+an overlay joined to a stand-in for the message. One mark is drawn with a note and one with the note skipped. The shown
+marks carry the note and no note, and the label of each would lie inside the picture. This scenario is tested by
+`AnnotationSubsystem_ShowMarkNotes_MarksOnRenderedDiagram_ShownMarksCarryTheirNotes`.
+
+**AnnotationSubsystem_ShowMarkNotes_OverlayOnRenderedPicture_DrawsLabelsWithEllipsisAndTooltips**: An SVG picture of
+800 by 400 pixels is drawn and shown to an overlay whose view fills a headless window. A mark with a short note, a mark
+with a long note near the right edge, and a mark without a note are drawn. There are three badges and lines but only two
+labels: the short note on one line that is not cut, and the long note on one line cut short with an ellipsis, both
+inside the picture. The badge, line, and label of the first mark have `Mark 1: door is blocked` as their tooltip, the
+label of the second has its whole note, and the mark without a note has no tooltip. This scenario is tested by
+`AnnotationSubsystem_ShowMarkNotes_OverlayOnRenderedPicture_DrawsLabelsWithEllipsisAndTooltips`.
+
+**AnnotationSubsystem_EditMarkNotes_ThroughOverlay_RegistryKeepsTheMarkAndChangesOnlyItsNote**: An ellipse with a note
+is drawn on a diagram and its chip is announced; the marks of the message are handed out. The note is changed and
+confirmed, then changed again and canceled. The registry holds the same mark with the same number, kind, points, and
+picture and the confirmed note, the overlay showed it at once, and the marks handed out before keep the first note.
+This scenario is tested by `AnnotationSubsystem_EditMarkNotes_ThroughOverlay_RegistryKeepsTheMarkAndChangesOnlyItsNote`.

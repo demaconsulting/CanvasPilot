@@ -355,7 +355,7 @@ public sealed class ChatPanelViewTests
 
     /// <summary>
     ///     Test the flow of a user: with an empty message a rectangle is drawn on the picture, a note is added with "Add mark",
-    ///     the user clicks into the message and types. The message that assistive technology reads is the chip, a line feed,
+    ///     the user clicks into the message and types. The message that assistive technology reads is the chip with its note, a line feed,
     ///     and the words; the chip is on a line of its own above the words, and the words were typed on the line below.
     /// </summary>
     [AvaloniaFact]
@@ -385,13 +385,91 @@ public sealed class ChatPanelViewTests
 
         // Assert: the line feed is there before the typing, the caret was on the line below the chip, the words follow the
         // line feed, and the chip is above the line of the words
-        Assert.Equal("[Mark 1]\n", valueBeforeTyping);
+        Assert.Equal("[Mark 1: this one]\n", valueBeforeTyping);
         Assert.Equal(2, caretAfterMark);
         Assert.Equal(1, caretAfterClick);
-        Assert.Equal("[Mark 1]\nMake this a green diamond.", value);
+        Assert.Equal("[Mark 1: this one]\nMake this a green diamond.", value);
         var chip = Assert.Single(harness.Editor.GetVisualDescendants().OfType<ChipView>());
         var chipBottom = chip.TranslatePoint(new Point(0, chip.Bounds.Height), surface.TextArea.TextView)!.Value.Y;
         Assert.True(surface.TextArea.Caret.CalculateCaretRectangle().Y >= chipBottom - 1, "The words must be below the chip.");
+    }
+
+    /// <summary>
+    ///     Test that a double-click on the chip of a mark in the message opens the mark's note on the layer over the
+    ///     picture, that the chip then shows the changed note, and that the chip of the sent message offers no change.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_MarkChipDoubleClicked_OpensItsNoteAndChipShowsTheChangedNote()
+    {
+        // Arrange: a mark with a note drawn on the picture, whose chip is in the message
+        using var harness = new ChatHarness();
+        harness.Annotation.SelectTool(AnnotationTool.Rectangle);
+        harness.Annotation.BeginStroke(new RenderPoint(10, 10));
+        harness.Annotation.EndStroke(new RenderPoint(60, 40));
+        harness.Annotation.NoteText = "first";
+        harness.Annotation.CommitNote();
+        harness.Annotation.SelectTool(AnnotationTool.None);
+        harness.Layout();
+        var chip = Assert.Single(harness.Editor.GetVisualDescendants().OfType<ChipView>());
+        var tipBefore = ToolTip.GetTip(chip);
+
+        // Act: double-click the chip
+        var label = chip.FindControl<TextBlock>("LabelText")!;
+        var center = label.TranslatePoint(new Point(label.Bounds.Width / 2, label.Bounds.Height / 2), harness.Window)!.Value;
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Layout();
+        var opened = (harness.Annotation.IsEditingMarkNote, harness.Annotation.NoteText);
+
+        // Act: change the note on the layer and confirm it
+        harness.Annotation.NoteText = "second";
+        harness.Annotation.CommitNote();
+        harness.Layout();
+        var tipAfter = ToolTip.GetTip(Assert.Single(harness.Editor.GetVisualDescendants().OfType<ChipView>()));
+
+        // Act: send the message
+        harness.Type("fix");
+        harness.ClickSend();
+        harness.Layout();
+        var sentChip = Assert.Single(Assert.Single(harness.Entries).GetVisualDescendants().OfType<ChipView>());
+
+        // Assert: the note opened filled, the chip followed the change, and the sent chip offers no change of the note
+        Assert.Equal("Mark 1 on the picture: first", tipBefore);
+        Assert.Equal((true, "first"), opened);
+        Assert.Equal("Mark 1 on the picture: second", tipAfter);
+        Assert.False(sentChip.IsNoteEditable);
+        Assert.Null(sentChip.ContextMenu);
+    }
+
+    /// <summary>
+    ///     Test that the chip of a mark in a sent message shows the note that the mark had when it was sent, after "Mark N
+    ///     on the picture", as its tooltip and as its help text for a screen reader, and offers no change of the note.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_Send_MarkWithNote_SentChipTooltipAndHelpTextShowTheNote()
+    {
+        // Arrange: a mark with a note drawn on the picture, whose chip is in the message, and words after it
+        using var harness = new ChatHarness();
+        harness.Annotation.SelectTool(AnnotationTool.Rectangle);
+        harness.Annotation.BeginStroke(new RenderPoint(10, 10));
+        harness.Annotation.EndStroke(new RenderPoint(60, 40));
+        harness.Annotation.NoteText = "the door is blocked";
+        harness.Annotation.CommitNote();
+        harness.Layout();
+        harness.Type("fix");
+
+        // Act: send the message
+        harness.ClickSend();
+        harness.Layout();
+
+        // Assert: the sent chip shows the note in its tooltip and help text, and the note cannot be changed from it
+        var sentChip = Assert.Single(Assert.Single(harness.Entries).Chips);
+        Assert.Equal("Mark 1 on the picture: the door is blocked", ToolTip.GetTip(sentChip));
+        Assert.Equal("Mark 1 on the picture: the door is blocked", AutomationProperties.GetHelpText(sentChip));
+        Assert.False(sentChip.IsNoteEditable);
+        Assert.Null(sentChip.ContextMenu);
     }
 
     /// <summary>

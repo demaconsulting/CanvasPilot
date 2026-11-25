@@ -81,6 +81,10 @@ Windows SmartScreen can warn that the publisher is unknown because the package i
 Installing a newer (or older) package replaces the installed version. If CanvasPilot is running, the installer asks it
 to close first. Uninstalling removes the application and leaves your projects, settings, and logs in place.
 
+The name of the downloaded file carries the full version, including a prerelease label such as `0.2.0-beta.3`. Windows
+Installer versions can only be numbers, so *Installed apps* (Add/Remove Programs) shows the numeric part, for example
+`0.2.0` for `0.2.0-beta.3`.
+
 # The CanvasPilot Window
 
 CanvasPilot has one main window. While no project is open it shows the welcome screen (see *The Welcome Screen* in
@@ -486,10 +490,13 @@ beside the box. It refuses:
 - every chord with the **Windows key**, which the system and tools such as the Xbox Game Bar use for their own
   shortcuts;
 - the shortcuts of editing and of CanvasPilot (Ctrl+A, C, V, X, Y, Z, N, O, S, P, F, W, and Q) and Alt+F4; and
-- the function keys **F1** (help), **F8** (the old default), **F10** (menu), **F11** (full screen in many programs),
-  and **F12** (the debugger on many computers).
+- the function keys **F1** (help), **F2** (which changes the note of a mark in the message and renames a file in the
+  explorer), **F8** (the old default), **F10** (menu), **F11** (full screen in many programs), and **F12** (the
+  debugger on many computers).
 
-The other function keys, F2 to F7, F9, and F13 to F24, work alone or with Ctrl, Alt, or Shift. CanvasPilot cannot know
+The other function keys, F3 to F7, F9, and F13 to F24, work alone or with Ctrl, Alt, or Shift. A talk key that is
+refused but was saved by an earlier version, such as F8 or F2, is not used: CanvasPilot uses F9 instead until you
+choose another key. CanvasPilot cannot know
 which other programs on your computer have registered a global shortcut, so if the key does nothing, choose another
 (see *Troubleshooting*).
 
@@ -528,7 +535,7 @@ caused it.
 Marks let you point at the place that you mean. With a picture shown, the floating bar at the top of the stage has five
 tool buttons and a button that clears the marks. Each shows an icon and has a tooltip with its name and key:
 
-- **Select** (V) is no marking tool; the picture can be dragged out.
+- **Select** (V) is no marking tool; the picture can be dragged out, and a double-click on a mark changes its note.
 - **Rectangle** (R), **Ellipse** (E), **Freehand** (F), and **Arrow** (A) draw that shape.
 - **Clear marks** takes every mark, and its chip, out of the message. It is available while there is a mark.
 
@@ -543,6 +550,17 @@ order you make them, and is drawn with its number. At the same time a chip, for 
 chips at the top of the message box, above your words, so you can write "the arrow in Mark 1 should point to the other
 box" and the reader knows which mark you mean. The mark is part of the message exactly as long as its chip is in it:
 deleting the chip hides the mark, and undoing the deletion shows it again. Marks are never made by voice.
+
+A mark's note shows beside its number on the picture, on one line that ends with "…" when the note is long. Rest the
+pointer on the mark, its number, its note, or its chip in the message to see the whole note; a screen reader reads the
+note with the chip as well. To change a note before
+you send the message, double-click the mark (with **Select** chosen) or its chip, choose **Edit note…** from the chip's
+right-click menu, or press F2 with the cursor right next to the chip in the message. Changing a note from its chip needs
+a picture to be shown, because the note card opens over the picture; when none is shown, or while a shape is being
+drawn, the conversation says so and what to do. The note card opens with the note:
+change it and press Enter or choose **Save note**, or press Escape or choose **Cancel** to keep the note as it was; the
+mark stays either way. Ctrl+Z in the message does not undo a changed note. A message that was sent cannot be changed,
+so neither can the notes of its marks.
 
 A mark belongs to the exact picture that it was drawn on. When you change the file and the picture is drawn again, the
 marks are not drawn on the new picture, because they might no longer point at the right place, but they stay in the
@@ -1337,6 +1355,9 @@ keys that CanvasPilot has, besides the usual keys of the system, are:
 | Anywhere | Ctrl+N, Ctrl+O, Ctrl+S | New project, open project, save project |
 | Message box | Enter, Shift+Enter | Send the message, start a new line |
 | Message box | Ctrl+Z, Ctrl+Y or Ctrl+Shift+Z | Undo and redo |
+| Message box | F2 | Change the note of the mark whose chip is right next to the cursor |
+| Note card | Enter | Add the mark with its note, or save a changed note |
+| Note card of a changed note | Escape | Close the card and keep the note as it was |
 | Anywhere in the window | Talk key (F9 by default; hold) | Talk, and let go to add the words to the message |
 | Explorer | Up and down arrows | Move through the rows |
 | Explorer | Right and left arrows | Open and close a folder |
@@ -1360,7 +1381,8 @@ CanvasPilot is built to be usable without color and with a screen reader:
 - The status bar, the sentence about the marks, and each new row of the conversation are set up to be announced politely
   by a screen reader when they change.
 - The tree of the explorer, the lists, the text boxes, and the splitters have names. The message box is named "Message"
-  and tells a screen reader the text of the message, with each chip as its label in brackets; the pages of the settings
+  and tells a screen reader the text of the message, with each chip as its label in brackets and the note of a mark
+  after its label, for example "[Mark 1: make it red]"; the pages of the settings
   are named by their titles ("AI Provider", "Speech", and so on), and the style pill by the name of the chosen kit or
   "(No style)".
 

@@ -26,7 +26,9 @@ display: the editing control only reports and shows.
   `HasContent`, `ShowsPlaceholder`, `CanEdit`, and `CanSend` are announced with every change of the message.
 - Commands: `UndoCommand`, `RedoCommand`, and `SendCommand`, whose `CanExecute` follows the state above.
 - Events: `Changed` (once for each action that changed the message, the caret, or what can be undone),
-  `UndoRedoStateChanged` (from `IUndoRedoTarget`), and `MessageSent` with a `SentMessage`.
+  `UndoRedoStateChanged` (from `IUndoRedoTarget`), `MessageSent` with a `SentMessage`, `MarkNoteChanged` (the
+  `MarkRegistry.NoteChanged` of its registry, passed on with the changed mark), and `MarkNoteEditRequested` with a
+  `MarkNoteEditRequestedEventArgs` (the identity of the mark whose note the user asks to change).
 - Collaborators, all given to the constructor: an `IMessageBuilder`, the `MarkRegistry`, an `IDictationService`, a
   function that makes the `IAttachmentStore` of a project folder (the `AttachmentStore` by default), and an optional
   logger.
@@ -66,6 +68,14 @@ it returns how many it deleted and touches no other segment. The chat panel call
 the marks to be cleared, and the `Changed` of each deletion makes the layer follow. An action that changes nothing is
 not a step (the history ignores empty edits), and an action that is refused (no project, or a message being sent)
 changes nothing. After each executed edit the view model sets the caret from the edit and raises its notifications once.
+
+**Notes of marks.** `GetMarkNote(markId)` reads the note of a mark from the registry, which is the only place that holds
+it. `RequestMarkNoteEdit(markId)` raises `MarkNoteEditRequested` and returns `true` only while `CanEdit` holds and the
+message holds a chip of that mark; it executes no edit, adds no step, and leaves the caret and the status alone.
+`RequestMarkNoteEditAtCaret()` walks the segments for the mark chip that ends at the caret, or else the one that starts
+there, and passes its mark to `RequestMarkNoteEdit`. A change of a note is therefore not a step of the message's
+history: Ctrl+Z does not take it back. The view model subscribes to `MarkRegistry.NoteChanged` when it is made and
+unsubscribes in `Dispose`.
 
 **Undo and redo.** `Undo` and `Redo` do nothing when the history has no step. Otherwise they ask the history, clear the
 status text, set the caret to the returned offset, and notify once. `CanUndo` and `CanRedo` are false while no project
@@ -146,4 +156,6 @@ send. It is owned by the interface thread and is not safe for concurrent use.
 - The editing control and the chat panel call the editing methods, show its state, and handle
   `MessageSent`; the window finds it as the `IUndoRedoTarget` for the Edit menu and as the `IPushToTalkTarget` for the
   talk key. The chat panel also calls `DeleteMarkChips`, and the main window implements `IAttachmentPicker`, which the
-  chat panel calls.
+  chat panel calls. The chat panel follows `MarkNoteEditRequested` and has the annotation layer open the note; the
+  editing control calls `GetMarkNote`, `RequestMarkNoteEdit`, and `RequestMarkNoteEditAtCaret` and follows
+  `MarkNoteChanged`.

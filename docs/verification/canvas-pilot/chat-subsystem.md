@@ -96,6 +96,11 @@ a requirement):
   inspector for it shows the same text as the payload describer and two pictures of the sizes of the payload's.
 - A message that cannot be sent because an attachment has gone leaves the draft with its text and chip, adds nothing to
   the transcript, and says which file is the problem.
+- A request from a mark's chip opens the note of the mark on the layer with its note, and the payload of the message
+  sent after the note was changed and confirmed carries the changed note.
+- A request from a mark's chip while no picture is shown opens no card and adds one information notice that names the
+  mark and says to show a picture; once a picture is shown the request opens the card with the note.
+- A request for a mark of a message that was sent is refused, opens nothing, and the sent payload keeps its note.
 - Words held to talk are shown while they are recognized, are added as one block at the caret on release, and are kept
   as dictated words, apart from the typed words, in the payload of the sent message.
 - A message that is sent is given to the copilot with its payload; while the turn runs the composer cannot send but can
@@ -169,6 +174,24 @@ and one image that has the picture's fingerprint and one mark with the node `Sta
 description is the describer's text, and its two pictures have the byte counts of the annotated picture and of the area
 around the mark. This scenario is tested by
 `ChatSubsystem_SendMessageWithMarkAndAttachment_TranscriptAndPayloadMatchDraft`.
+
+**ChatSubsystem_EditMarkNoteFromChip_SentPayloadCarriesTheChangedNote**: A diagram is drawn and shown to the real layer,
+and a rectangle with the note `too small` is drawn, so the panel puts its chip in the message. The chip asks to change
+the note; the layer opens with `too small`, the note is changed to `make it twice as big` and confirmed, and the message
+is sent through the real payload builder. The payload holds mark 1 with the changed note. This scenario is tested by
+`ChatSubsystem_EditMarkNoteFromChip_SentPayloadCarriesTheChangedNote`.
+
+**ChatSubsystem_EditMarkNoteFromChip_NoPictureShown_NoticeSaysWhatToDo**: A diagram is drawn and shown to the real
+layer, and a rectangle with the note `too small` is drawn, so the panel puts its chip in the message. The picture is
+then hidden and the chip asks to change the note: no card opens, and the transcript holds one information notice, "The
+note of Mark 1 cannot be changed now.", whose remedy says to show a picture. When the picture is shown again, the same
+request opens the card with `too small`. This scenario is tested by
+`ChatSubsystem_EditMarkNoteFromChip_NoPictureShown_NoticeSaysWhatToDo`.
+
+**ChatSubsystem_EditMarkNoteFromChip_SentMessage_NoteCannotBeChanged**: A rectangle with the note `as sent` is drawn on
+a shown diagram and the message is sent with words through the real payload builder. A request to change the note of
+that mark is then refused, no card opens on the layer, and the payload of the sent message still carries `as sent`.
+This scenario is tested by `ChatSubsystem_EditMarkNoteFromChip_SentMessage_NoteCannotBeChanged`.
 
 **ChatSubsystem_SendMessage_AttachmentCannotBeStaged_KeepsDraftAndTranscriptUnchanged**: A file is dropped into a
 message and deleted before the message is sent. Sending adds nothing to the transcript, the draft keeps its typed text

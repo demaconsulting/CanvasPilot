@@ -50,14 +50,19 @@ public sealed class TranscriptItem
     ///     The chip to ask the provider for a picture of: the chip itself, or, for an attached picture, a chip for the copy
     ///     of the file in the project, because the original may have been moved when the message was sent.
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown when an argument is <see langword="null" />.</exception>
-    public TranscriptItem(ChipSegment chip, ChipSegment thumbnailChip)
+    /// <param name="note">
+    ///     The note that the mark of a mark chip had when the message was sent, or <see langword="null" /> for none and
+    ///     for other chips.
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="chip" /> or <paramref name="thumbnailChip" /> is <see langword="null" />.</exception>
+    public TranscriptItem(ChipSegment chip, ChipSegment thumbnailChip, string? note = null)
     {
         ArgumentNullException.ThrowIfNull(chip);
         ArgumentNullException.ThrowIfNull(thumbnailChip);
 
         Chip = chip;
         ThumbnailChip = thumbnailChip;
+        Note = note;
     }
 
     /// <summary>
@@ -79,6 +84,12 @@ public sealed class TranscriptItem
     ///     Gets the chip that the picture of this item is asked for, or <see langword="null" /> for a run of text.
     /// </summary>
     public ChipSegment? ThumbnailChip { get; }
+
+    /// <summary>
+    ///     Gets the note that the mark of a mark chip had when the message was sent, which the chip shows in its tooltip,
+    ///     or <see langword="null" /> when it had none, for other chips, and for a run of text.
+    /// </summary>
+    public string? Note { get; }
 
     /// <summary>
     ///     Gets a value indicating whether the item is a chip.

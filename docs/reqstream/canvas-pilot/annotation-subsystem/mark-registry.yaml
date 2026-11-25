@@ -3,8 +3,8 @@
 #
 # The MarkRegistry unit holds the marks the user has drawn for the message being composed: each mark is pinned to the
 # exact picture it was drawn on, numbered in the order the marks were made, described by its geometry in the pixels of
-# its picture and an optional short note, and shown only on that picture while its chip is in the message. The unit has
-# no dependency on the user interface.
+# its picture and an optional short note, which can be changed while the mark is in the registry, and shown only on
+# that picture while its chip is in the message. The unit has no dependency on the user interface.
 
 sections:
   - title: CanvasPilot Requirements
@@ -87,3 +87,19 @@ sections:
                   marks and numbers that the user did not make for it.
                 tests:
                   - MarkRegistry_Clear_RemovesEveryMarkAndRestartsNumbering
+
+              - id: CanvasPilot-MarkRegistry-ChangeNote
+                title: >-
+                  The MarkRegistry shall change the note of a mark it holds on request, cleaned and cut as the note of a
+                  new mark is, keeping the mark's identity, number, geometry, picture, time, and place in the order, shall
+                  tell its observers once about each change, shall leave marks and lists that it handed out before the
+                  change as they were, and shall change nothing for a mark it does not hold or a note that is the same.
+                justification: |
+                  The user fixes a note without making the mark again, so everything else about the mark, its number
+                  above all, stays. The layer and the message show the note, so they must hear of the change. A message
+                  that was sent holds marks handed out before, and must keep the notes it was sent with.
+                tests:
+                  - MarkRegistry_ChangeNote_KnownMark_ChangesOnlyTheNoteAndTellsObservers
+                  - MarkRegistry_ChangeNote_NoteIsCleanedAndCappedLikeANewNote
+                  - MarkRegistry_ChangeNote_SameNoteOrUnknownMark_ChangesNothingAndTellsNobody
+                  - MarkRegistry_ChangeNote_EarlierListsAndMarks_StayAsTheyWere

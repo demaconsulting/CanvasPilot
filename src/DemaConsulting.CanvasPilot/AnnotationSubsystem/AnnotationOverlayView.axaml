@@ -8,14 +8,28 @@
              AutomationProperties.AutomationId="AnnotationOverlay"
              AutomationProperties.Name="Marks on the picture">
 
+  <UserControl.Styles>
+    <!-- The note of a mark beside its badge: one line in the colors of the theme in use -->
+    <Style Selector="Border.markNote">
+      <Setter Property="Background" Value="{DynamicResource CpSurfaceOverlay}" />
+      <Setter Property="CornerRadius" Value="{DynamicResource CpRadiusPill}" />
+      <Setter Property="Padding" Value="6,0" />
+    </Style>
+    <Style Selector="Border.markNote > TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource CpTextPrimary}" />
+    </Style>
+  </UserControl.Styles>
+
   <!-- The layer is as large as the picture, in the picture's own pixels (the preview pane scales both together). The
        surface is transparent but takes the pointer, so that a press on it can start a shape; with no tool chosen the
-       view leaves every event unhandled and the press goes on to the picture underneath. The shapes and badges are
-       built by the code of the view, because their geometry depends on the shapes that were drawn. -->
+       view leaves every event unhandled and the press goes on to the picture underneath, except a double-click on a
+       mark, which opens its note. The badges, lines, and notes of the shown marks answer the pointer for their
+       tooltips and the double-click; the layer has no background, so a press beside them reaches the surface as
+       before. The shapes, badges, and notes are built by the code of the view, because their geometry depends on the
+       shapes that were drawn. -->
   <Panel Name="Surface" Background="Transparent" ClipToBounds="True">
     <Canvas Name="MarkLayer"
-            AutomationProperties.AutomationId="AnnotationMarkLayer"
-            IsHitTestVisible="False" />
+            AutomationProperties.AutomationId="AnnotationMarkLayer" />
   </Panel>
 
 </UserControl>

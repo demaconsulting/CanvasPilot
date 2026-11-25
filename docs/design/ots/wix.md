@@ -28,10 +28,14 @@ Fee license terms that started with WiX v6.
 The installer project is a separate project that is not part of the solution, so the cross-platform restore and build of
 the solution never needs WiX. Only the Windows build job uses it, after the application is published self-contained as a
 single file for `win-x64` with the debug symbols and documentation files removed: it computes the numeric MSI version
-from the build version (a prerelease suffix cannot be represented and is removed), builds the installer project with
-that version and the publish folder as properties, and copies the package to `CanvasPilot-{version}-win-x64.msi`. The
-properties reach `Package.wxs` as preprocessor variables. WiX has no self-validation mode, so the evidence that it works
-is the FileAssert test `WiX_MsiPackage` (tag `installer`), run against the copied package in the same job; its results
+from the build version (a prerelease suffix cannot be represented and is removed) and builds the installer project with
+that version, the full build version, and the publish folder as properties, straight into the package folder. The
+numeric version (`Version`) reaches `Package.wxs` as a preprocessor variable and is the `ProductVersion`, which Windows
+Installer requires to be numeric, so Add/Remove Programs shows the numeric version (for example `0.2.0` for
+`0.2.0-beta.3`). The full version (`MsiPackageVersion`, which defaults to the numeric version in a local build) only
+names the package: the project names its output `CanvasPilot-{full version}-win-x64.msi`, so the build copies or
+renames nothing. WiX has no self-validation mode, so the evidence that it works
+is the FileAssert test `WiX_MsiPackage` (tag `installer`), run against the built package in the same job; its results
 file is an input of requirements enforcement. The same job asserts, with other FileAssert tests of the same tag, that
 the published folder holds the native speech runtime and the style kits that come with the program (the `StyleKits`
 folder), and a step reads the file table of the package to check that the installer took those files, also those of the

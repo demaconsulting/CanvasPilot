@@ -19,13 +19,19 @@
 // SOFTWARE.
 
 using Avalonia;
+using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Input.Raw;
+using Avalonia.Interactivity;
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
+using DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
@@ -133,5 +139,174 @@ public sealed class ComposerSubsystemUiTests
         harness.Press(PhysicalKey.Y, ComposerHarness.Command);
         Assert.Equal(["plan.txt", "logo.png"], Labels(harness));
         harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that the chip of a mark in the editor shows the mark's note after "Mark N on the picture", follows each
+    ///     change of the note made in the registry, and goes back to the plain text when the note is taken away.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ChipTooltipFollows()
+    {
+        // Arrange: a mark with a note whose chip is in the message, after some words
+        using var harness = new ComposerHarness();
+        harness.TypeEach("see");
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Arrow, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "first");
+        harness.ViewModel.AddMark(mark);
+        harness.Layout();
+        var tips = new List<object?> { ToolTip.GetTip(Assert.Single(harness.Chips)) };
+
+        // Act: change the note twice, the second time to none
+        harness.Marks.ChangeNote(mark.Id, "second");
+        harness.Layout();
+        tips.Add(ToolTip.GetTip(Assert.Single(harness.Chips)));
+        harness.Marks.ChangeNote(mark.Id, null);
+        harness.Layout();
+        tips.Add(ToolTip.GetTip(Assert.Single(harness.Chips)));
+
+        // Assert: the tooltip followed the note, and the message was not changed by it
+        Assert.Equal(["Mark 1 on the picture: first", "Mark 1 on the picture: second", "Mark 1 on the picture"], tips);
+        Assert.Equal("#\nsee", harness.ReadableMessage);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that a screen reader is told the note of a mark in the editor, both in the text of the message, where the
+    ///     chip reads as its label and note in brackets, and as the help text of the chip, and that both follow each change
+    ///     of the note made in the registry.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ScreenReaderReadsTheNote()
+    {
+        // Arrange: a mark with a note whose chip is in the message, after some words, and the automation of the surface
+        using var harness = new ComposerHarness();
+        harness.TypeEach("see");
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Arrow, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "first");
+        harness.ViewModel.AddMark(mark);
+        harness.Layout();
+        var surface = harness.View.FindControl<ComposerTextEditor>("Editor")!;
+        var value = Assert.IsAssignableFrom<IValueProvider>(ControlAutomationPeer.CreatePeerForElement(surface));
+        var read = new List<(string? Text, string? Help)> { (value.Value, AutomationProperties.GetHelpText(Assert.Single(harness.Chips))) };
+
+        // Act: change the note twice, the second time to none
+        harness.Marks.ChangeNote(mark.Id, "second");
+        harness.Layout();
+        read.Add((value.Value, AutomationProperties.GetHelpText(Assert.Single(harness.Chips))));
+        harness.Marks.ChangeNote(mark.Id, null);
+        harness.Layout();
+        read.Add((value.Value, AutomationProperties.GetHelpText(Assert.Single(harness.Chips))));
+
+        // Assert: what is read followed the note, and the message was not changed by it
+        Assert.Equal(
+            new List<(string? Text, string? Help)>
+            {
+                ("[Mark 1: first]\nsee", "Mark 1 on the picture: first"),
+                ("[Mark 1: second]\nsee", "Mark 1 on the picture: second"),
+                ("[Mark 1]\nsee", "Mark 1 on the picture"),
+            },
+            read);
+        Assert.Equal("#\nsee", harness.ReadableMessage);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that the user asks to change the note of a mark from its chip in the editor by a double-click, by the Edit
+    ///     note item of the chip's menu, and by F2 beside the chip, that each request names the mark of the chip, and that
+    ///     none of them changes the message or adds an undo step.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerSubsystem_RequestMarkNoteEdit_DoubleClickMenuAndF2_AskForTheMarkOfTheChip()
+    {
+        // Arrange: a mark chip above the words "go", and an observer of the requests
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "note");
+        harness.ViewModel.AddMark(mark);
+        harness.TypeEach("go");
+        harness.Layout();
+        var requested = new List<Guid>();
+        harness.ViewModel.MarkNoteEditRequested += (_, e) => requested.Add(e.MarkId);
+        var before = (harness.Message, harness.ViewModel.CanRedo);
+        harness.Press(PhysicalKey.Z, ComposerHarness.Command);
+        harness.Press(PhysicalKey.Y, ComposerHarness.Command);
+
+        // Act: double-click the chip
+        var chip = Assert.Single(harness.Chips);
+        var label = chip.FindControl<TextBlock>("LabelText")!;
+        var center = label.TranslatePoint(new Point(label.Bounds.Width / 2, label.Bounds.Height / 2), harness.Window)!.Value;
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Layout();
+
+        // Act: choose Edit note from the chip's menu
+        var item = Assert.IsType<MenuItem>(Assert.Single(Assert.Single(harness.Chips).ContextMenu!.Items));
+        item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+
+        // Act: press F2 with the caret right after the chip
+        harness.MoveCaret(1);
+        harness.Press(PhysicalKey.F2);
+
+        // Assert: three requests, all for the mark of the chip, and the message and its history are unchanged
+        Assert.Equal([mark.Id, mark.Id, mark.Id], requested);
+        Assert.Equal(before, (harness.Message, harness.ViewModel.CanRedo));
+        Assert.True(harness.ViewModel.CanUndo);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that while the message cannot be edited, because it is being sent, the chip of a mark offers its Edit note
+    ///     item disabled, and that no way of asking to change the note (a double-click on the chip, the item, F2 beside
+    ///     the chip, or a direct request) is passed on.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task ComposerSubsystem_RequestMarkNoteEdit_MessageBeingSent_IsNotPassedOn()
+    {
+        // Arrange: a mark chip above the words "go" in a message whose sending is held, and an observer of the requests
+        var builder = new PendingMessageBuilder();
+        using var harness = new ComposerHarness(builder: builder);
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "note");
+        harness.ViewModel.AddMark(mark);
+        harness.TypeEach("go");
+        harness.Layout();
+        var requested = new List<Guid>();
+        harness.ViewModel.MarkNoteEditRequested += (_, e) => requested.Add(e.MarkId);
+
+        // Act: start sending the message, which is held until the builder lets it go
+        var sending = harness.ViewModel.SendAsync(TestContext.Current.CancellationToken);
+        harness.Layout();
+        var canEdit = harness.ViewModel.CanEdit;
+
+        // Act: double-click the chip, choose its Edit note item, press F2 beside it, and ask directly
+        var chip = Assert.Single(harness.Chips);
+        var label = chip.FindControl<TextBlock>("LabelText")!;
+        var center = label.TranslatePoint(new Point(label.Bounds.Width / 2, label.Bounds.Height / 2), harness.Window)!.Value;
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Layout();
+        var item = Assert.IsType<MenuItem>(Assert.Single(Assert.Single(harness.Chips).ContextMenu!.Items));
+        var itemEnabled = item.IsEnabled;
+        item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        harness.MoveCaret(1);
+        harness.Press(PhysicalKey.F2);
+        var direct = harness.ViewModel.RequestMarkNoteEdit(mark.Id);
+
+        // Act: let the message go
+        builder.Release();
+        Assert.True(harness.WaitFor(() => sending.IsCompleted));
+        var sent = await sending;
+
+        // Assert: the message could not be edited, the item was disabled, and no request was passed on
+        Assert.False(canEdit);
+        Assert.False(itemEnabled);
+        Assert.False(direct);
+        Assert.Empty(requested);
+        Assert.True(sent);
     }
 }

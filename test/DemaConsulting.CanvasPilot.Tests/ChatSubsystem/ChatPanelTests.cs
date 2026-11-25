@@ -242,6 +242,29 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the chip of a mark in a sent message carries the note that the mark had when the message was sent, and
+    ///     keeps it when the note of the mark is changed afterwards, while a chip of a mark without a note carries none.
+    /// </summary>
+    [Fact]
+    public async Task ChatPanelViewModel_Send_MarksWithAndWithoutNote_EntryKeepsTheNotesAsSent()
+    {
+        // Arrange: a mark with a note and a mark without one in the message
+        var withNote = _marks.Add(_source.CurrentImage!, MarkKind.Rectangle, [new RenderPoint(5, 5), new RenderPoint(40, 30)], "the door");
+        var withoutNote = _marks.Add(_source.CurrentImage!, MarkKind.Rectangle, [new RenderPoint(50, 5), new RenderPoint(80, 30)]);
+        _composer.AddMark(withNote);
+        _composer.AddMark(withoutNote);
+
+        // Act: send it, then change the note of the first mark
+        await _panel.SendCommand.ExecuteAsync(null);
+        _marks.ChangeNote(withNote.Id, "changed later");
+
+        // Assert: the chips carry the notes as they were sent
+        var entry = Assert.Single(_panel.SentEntries);
+        var notes = entry.Items.Where(item => item.Chip is MarkChip).Select(item => item.Note).ToList();
+        Assert.Equal(["the door", null], notes);
+    }
+
+    /// <summary>
     ///     Test that a message that cannot be sent leaves the draft as it was, adds nothing to the transcript, and says why.
     /// </summary>
     [Fact]
@@ -328,6 +351,88 @@ public sealed class ChatPanelTests : IDisposable
         // Assert: the registry and the layer hold no mark any more
         Assert.Empty(_marks.Marks);
         Assert.Empty(_annotation.VisibleMarks);
+    }
+
+    /// <summary>
+    ///     Test that a request from a mark's chip in the message opens the mark's note for changing on the layer, and
+    ///     that the note confirmed there is the one the composer gives for the chip.
+    /// </summary>
+    [Fact]
+    public void ChatPanelViewModel_MarkNoteEditRequested_OpensTheNoteOnTheLayer()
+    {
+        // Arrange: a mark with a note drawn on the layer, whose chip the panel put in the message
+        _annotation.SelectTool(AnnotationTool.Rectangle);
+        _annotation.BeginStroke(new RenderPoint(10, 10));
+        _annotation.EndStroke(new RenderPoint(50, 40));
+        _annotation.NoteText = "first";
+        _annotation.CommitNote();
+        _annotation.SelectTool(AnnotationTool.None);
+        var chip = Assert.Single(_composer.Document.Chips.OfType<MarkChip>());
+
+        // Act: ask from the chip to change the note
+        var requested = _composer.RequestMarkNoteEdit(chip.MarkId);
+
+        // Assert: the layer opened the note of that mark, filled with it
+        Assert.True(requested);
+        Assert.True(_annotation.IsEditingMarkNote);
+        Assert.Equal(chip.MarkId, _annotation.EditingMarkId);
+        Assert.Equal("first", _annotation.NoteText);
+
+        // Act: change the note on the layer and confirm it
+        _annotation.NoteText = "second";
+        _annotation.CommitNote();
+
+        // Assert: the composer gives the changed note for the chip, and the message is unchanged
+        Assert.Equal("second", _composer.GetMarkNote(chip.MarkId));
+        Assert.Equal(chip, Assert.Single(_composer.Document.Chips.OfType<MarkChip>()));
+    }
+
+    /// <summary>
+    ///     Test that a request from a mark's chip that the layer cannot follow, because no picture is shown or a shape is
+    ///     being drawn, adds an information notice that names the mark and says what to do, once for each cause, and
+    ///     leaves the mark, its note, and the message as they were.
+    /// </summary>
+    [Fact]
+    public void ChatPanelViewModel_MarkNoteEditRequested_LayerCannotOpen_ShowsNoticeWithWhatToDo()
+    {
+        // Arrange: a mark with a note drawn on the layer, whose chip the panel put in the message
+        var picture = _source.CurrentImage;
+        _annotation.SelectTool(AnnotationTool.Rectangle);
+        _annotation.BeginStroke(new RenderPoint(10, 10));
+        _annotation.EndStroke(new RenderPoint(50, 40));
+        _annotation.NoteText = "keep me";
+        _annotation.CommitNote();
+        var chip = Assert.Single(_composer.Document.Chips.OfType<MarkChip>());
+        var message = _composer.Document.FlatText;
+
+        // Act: hide the picture and ask twice from the chip to change the note
+        _source.CurrentImage = null;
+        _composer.RequestMarkNoteEdit(chip.MarkId);
+        _composer.RequestMarkNoteEdit(chip.MarkId);
+        var noPicture = _panel.Transcript.ToList();
+        var openedWithoutPicture = _annotation.IsNoteEditing;
+
+        // Act: show the picture again, start a shape, and ask once more
+        _source.CurrentImage = picture;
+        _annotation.SelectTool(AnnotationTool.Rectangle);
+        _annotation.BeginStroke(new RenderPoint(60, 60));
+        _composer.RequestMarkNoteEdit(chip.MarkId);
+
+        // Assert: no note card opened, and one notice for each cause, naming the mark and saying what to do
+        Assert.False(openedWithoutPicture);
+        Assert.False(_annotation.IsEditingMarkNote);
+        var first = Assert.IsType<NoticeRowViewModel>(Assert.Single(noPicture));
+        Assert.Equal(NoticeSeverity.Information, first.Severity);
+        Assert.Equal("The note of Mark 1 cannot be changed now.", first.Message);
+        Assert.Equal(ChatPanelViewModel.NoteNeedsPictureRemedy, first.Remedy);
+        Assert.Equal(2, _panel.Transcript.Count);
+        var second = Assert.IsType<NoticeRowViewModel>(_panel.Transcript[1]);
+        Assert.Equal("The note of Mark 1 cannot be changed now.", second.Message);
+        Assert.Equal(ChatPanelViewModel.NoteWaitsForShapeRemedy, second.Remedy);
+
+        // Assert: the mark keeps its note and the message is as it was
+        Assert.Equal("keep me", _composer.GetMarkNote(chip.MarkId));
+        Assert.Equal(message, _composer.Document.FlatText);
     }
 
     /// <summary>
@@ -687,7 +792,8 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a disposed panel no longer follows the composer, so a message sent afterwards is not added.
+    ///     Test that a disposed panel no longer follows the composer, so a message sent afterwards is not added and a
+    ///     request from a mark's chip to change its note opens nothing on the layer.
     /// </summary>
     [Fact]
     public async Task ChatPanelViewModel_Dispose_StopsFollowingTheComposer()
@@ -695,8 +801,19 @@ public sealed class ChatPanelTests : IDisposable
         // Arrange: a panel that is disposed
         using var composer = new ComposerViewModel(_builder, _marks, _dictation);
         composer.SetProject(_project);
-        var panel = new ChatPanelViewModel(composer, _marks, new AnnotationOverlayViewModel(_marks, _source, _ => { }), _markImages);
+        using var annotation = new AnnotationOverlayViewModel(_marks, _source, _ => { });
+        var panel = new ChatPanelViewModel(composer, _marks, annotation, _markImages);
         panel.Dispose();
+
+        // Act: ask to change the note of a mark from its chip
+        var mark = _marks.Add(_source.CurrentImage!, MarkKind.Rectangle, [new RenderPoint(5, 5), new RenderPoint(40, 30)], "note");
+        composer.AddMark(mark);
+        annotation.SetActiveMarkIds(composer.MarkChipIds);
+        var requested = composer.RequestMarkNoteEdit(mark.Id);
+
+        // Assert: the composer passed the request on, but the layer did not follow
+        Assert.True(requested);
+        Assert.False(annotation.IsNoteEditing);
 
         // Act: send a message in the composer
         composer.InsertTyped("later");

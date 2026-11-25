@@ -272,6 +272,87 @@ public sealed class AnnotationSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the marks the overlay shows on a rendered diagram carry their notes, a mark whose note was skipped
+    ///     carries none, and that the place of each note label stays inside the picture.
+    /// </summary>
+    [Fact]
+    public async Task AnnotationSubsystem_ShowMarkNotes_MarksOnRenderedDiagram_ShownMarksCarryTheirNotes()
+    {
+        // Arrange: a drawn diagram that is shown, a registry, and an overlay joined to a stand-in for the message
+        var picture = await RenderAsync("flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var source = new FakeRenderedImageSource { CurrentImage = picture };
+        var registry = new MarkRegistry();
+        using var overlay = new AnnotationOverlayViewModel(registry, source);
+        var chips = new List<Guid>();
+        overlay.MarkAdded += (_, e) =>
+        {
+            chips.Add(e.Mark.Id);
+            overlay.SetActiveMarkIds(chips);
+        };
+
+        // Act: draw one mark with a note and one whose note is skipped
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        overlay.BeginStroke(new RenderPoint(4, 4));
+        overlay.EndStroke(new RenderPoint(40, 30));
+        overlay.NoteText = "make this node bigger";
+        overlay.CommitNote();
+        overlay.BeginStroke(new RenderPoint(50, 4));
+        overlay.EndStroke(new RenderPoint(90, 30));
+        overlay.SkipNote();
+
+        // Assert: the shown marks carry the note and no note, and each label would sit inside the picture
+        Assert.Equal(new string?[] { "make this node bigger", null }, overlay.VisibleMarks.Select(mark => mark.Note));
+        Assert.All(overlay.VisibleMarks, mark =>
+        {
+            var layout = AnnotationOverlayStyle.NoteLabel(mark.Geometry.BoundingBox, picture.Width, picture.Height);
+            var outer = layout.LeftOfBadge ? layout.Edge - layout.MaxWidth : layout.Edge + layout.MaxWidth;
+            Assert.InRange(outer, 0, picture.Width);
+        });
+    }
+
+    /// <summary>
+    ///     Test that changing the note of a mark through the overlay keeps the mark in the registry with its number,
+    ///     shape, place, and picture, changes only its note, shows it at once, keeps it when canceled, and does not
+    ///     change a copy of the marks handed out before, as a sent message holds.
+    /// </summary>
+    [Fact]
+    public async Task AnnotationSubsystem_EditMarkNotes_ThroughOverlay_RegistryKeepsTheMarkAndChangesOnlyItsNote()
+    {
+        // Arrange: a drawn diagram with a mark with a note whose chip is in the message, and a copy handed out
+        var picture = await RenderAsync("flow.mmd", "flowchart LR\n  A[Start] --> B[End]\n");
+        var source = new FakeRenderedImageSource { CurrentImage = picture };
+        var registry = new MarkRegistry();
+        using var overlay = new AnnotationOverlayViewModel(registry, source);
+        overlay.SelectTool(AnnotationTool.Ellipse);
+        overlay.BeginStroke(new RenderPoint(4, 4));
+        overlay.EndStroke(new RenderPoint(40, 30));
+        overlay.NoteText = "first";
+        overlay.CommitNote();
+        var mark = registry.Marks[0];
+        overlay.SetActiveMarkIds([mark.Id]);
+        var handedOut = registry.ActiveMarks([mark.Id]);
+        overlay.SelectTool(AnnotationTool.None);
+
+        // Act: change the note and confirm, then change it again and cancel
+        overlay.BeginEditNote(mark.Id);
+        overlay.NoteText = "second";
+        overlay.CommitNote();
+        var afterCommit = overlay.VisibleMarks.Single();
+        overlay.BeginEditNote(mark.Id);
+        overlay.NoteText = "third";
+        overlay.Cancel();
+
+        // Assert: the same mark with the new note, kept when canceled, and the copy handed out before is unchanged
+        var now = Assert.Single(registry.Marks);
+        Assert.Equal((mark.Id, mark.Number, mark.Kind), (now.Id, now.Number, now.Kind));
+        Assert.Equal(mark.Geometry.Points, now.Geometry.Points);
+        Assert.Same(picture, now.Snapshot);
+        Assert.Equal("second", afterCommit.Note);
+        Assert.Equal("second", now.Note);
+        Assert.Equal("first", handedOut[0].Note);
+    }
+
+    /// <summary>
     ///     Writes a file in the project and draws it with the real render service.
     /// </summary>
     /// <param name="name">The name of the file.</param>

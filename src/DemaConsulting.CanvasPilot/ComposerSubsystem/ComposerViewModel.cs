@@ -46,6 +46,27 @@ public enum DictationState
 }
 
 /// <summary>
+///     The data of the <see cref="ComposerViewModel.MarkNoteEditRequested" /> event: the mark whose note the user asks
+///     to change.
+/// </summary>
+public sealed class MarkNoteEditRequestedEventArgs : EventArgs
+{
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="MarkNoteEditRequestedEventArgs" /> class.
+    /// </summary>
+    /// <param name="markId">The identity of the mark, as carried by its chip.</param>
+    public MarkNoteEditRequestedEventArgs(Guid markId)
+    {
+        MarkId = markId;
+    }
+
+    /// <summary>
+    ///     Gets the identity of the mark whose note the user asks to change.
+    /// </summary>
+    public Guid MarkId { get; }
+}
+
+/// <summary>
 ///     The orchestration of the message being composed, without a window: it owns the document, its undo history, the
 ///     intake of dropped and pasted content, and the push-to-talk dictation; it connects the marks and the attachments
 ///     of the project to the message; and it sends the message. The editing control that shows the message reports what
@@ -78,6 +99,13 @@ public enum DictationState
 ///         released the final words are added at the caret as one dictated block. A release before listening has started
 ///         makes the start give up. When dictation cannot work, <see cref="StatusText" /> says why and what to do, and the
 ///         draft is not changed. Marks are never made by voice.
+///     </para>
+///     <para>
+///         <b>Notes of marks.</b> The note of a mark lives in the <see cref="MarkRegistry" />, not in the message, so
+///         <see cref="GetMarkNote" /> reads it from there and <see cref="MarkNoteChanged" /> passes on its changes. A
+///         request to change a note (<see cref="RequestMarkNoteEdit" />) is passed on through
+///         <see cref="MarkNoteEditRequested" /> to whoever joins the composer to the layer over the picture; it neither
+///         changes the message nor is a step of its undo history.
 ///     </para>
 ///     <para>
 ///         The class is owned by the user interface thread. The recognizer raises its events on another thread, which
@@ -267,7 +295,20 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
         UndoCommand = new RelayCommand(Undo, () => CanUndo);
         RedoCommand = new RelayCommand(Redo, () => CanRedo);
         SendCommand = new AsyncRelayCommand(token => SendAsync(token), () => CanSend);
+        _marks.NoteChanged += OnMarkNoteChanged;
     }
+
+    /// <summary>
+    ///     Raised when the user asks to change the note of a mark whose chip is in the message, from the chip, while the
+    ///     message can be edited. Whoever joins the composer to the layer over the picture opens the note there.
+    /// </summary>
+    public event EventHandler<MarkNoteEditRequestedEventArgs>? MarkNoteEditRequested;
+
+    /// <summary>
+    ///     Raised after the note of a mark in the registry of this composer changed, with the mark as it is now, so that
+    ///     the editing control can show the new note on the mark's chip.
+    /// </summary>
+    public event EventHandler<MarkNoteChangedEventArgs>? MarkNoteChanged;
 
     /// <summary>
     ///     Raised once for each action that changed the message, its caret, or what can be undone, so that the editing
@@ -589,6 +630,66 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
         }
 
         return deleted;
+    }
+
+    /// <summary>
+    ///     Gets the current note of a mark, as the tooltip of its chip shows it.
+    /// </summary>
+    /// <param name="markId">The identity of the mark, as carried by its chip.</param>
+    /// <returns>The note, or <see langword="null" /> when the mark has none or the registry holds no such mark.</returns>
+    public string? GetMarkNote(Guid markId) => _marks.Find(markId)?.Note;
+
+    /// <summary>
+    ///     Passes on the user's request to change the note of a mark, from its chip, through
+    ///     <see cref="MarkNoteEditRequested" />. The message, the caret, the status, and the undo history do not change.
+    /// </summary>
+    /// <param name="markId">The identity of the mark, as carried by its chip.</param>
+    /// <returns>
+    ///     <see langword="true" /> when the request was passed on; <see langword="false" /> when the message cannot be
+    ///     edited or holds no chip of the mark.
+    /// </returns>
+    public bool RequestMarkNoteEdit(Guid markId)
+    {
+        if (!CanEdit || !_document.Chips.OfType<MarkChip>().Any(chip => chip.MarkId == markId))
+        {
+            return false;
+        }
+
+        MarkNoteEditRequested?.Invoke(this, new MarkNoteEditRequestedEventArgs(markId));
+        return true;
+    }
+
+    /// <summary>
+    ///     Passes on the user's request to change the note of the mark whose chip is beside the caret, as the F2 key
+    ///     does: the chip just before the caret, or else the one just after it.
+    /// </summary>
+    /// <returns>
+    ///     <see langword="true" /> when the request was passed on; <see langword="false" /> when no mark chip is beside
+    ///     the caret or the message cannot be edited.
+    /// </returns>
+    public bool RequestMarkNoteEditAtCaret()
+    {
+        MarkChip? before = null;
+        MarkChip? after = null;
+        var offset = 0;
+        foreach (var segment in _document.Segments)
+        {
+            if (segment is MarkChip chip)
+            {
+                if (offset + segment.Length == _caretOffset)
+                {
+                    before = chip;
+                }
+                else if (offset == _caretOffset)
+                {
+                    after = chip;
+                }
+            }
+
+            offset += segment.Length;
+        }
+
+        return (before ?? after) is { } beside && RequestMarkNoteEdit(beside.MarkId);
     }
 
     /// <summary>
@@ -946,8 +1047,16 @@ public sealed partial class ComposerViewModel : ObservableObject, IUndoRedoTarge
     /// <inheritdoc />
     public void Dispose()
     {
+        _marks.NoteChanged -= OnMarkNoteChanged;
         DiscardDictation();
     }
+
+    /// <summary>
+    ///     Passes a change of the note of a mark on to the observers of the composer.
+    /// </summary>
+    /// <param name="sender">The mark registry.</param>
+    /// <param name="e">The mark as it is after the change.</param>
+    private void OnMarkNoteChanged(object? sender, MarkNoteChangedEventArgs e) => MarkNoteChanged?.Invoke(this, e);
 
     /// <summary>
     ///     Clears the sentence about the last action and checks that the message can be changed.

@@ -87,7 +87,9 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         <b>Marks.</b> The annotation layer and the composer do not know each other, because the composer already uses
 ///         the annotation subsystem. The panel joins them: every mark drawn becomes a chip in the message at the caret, as
 ///         one undo step, and each time the message changes the layer is told which mark chips it holds and whether marks
-///         can be made, so that undoing the chip hides the mark and redoing it shows the mark again.
+///         can be made, so that undoing the chip hides the mark and redoing it shows the mark again. A request from a
+///         mark's chip to change its note opens the note card on the layer; when the layer cannot open it (no picture is
+///         shown, or a shape is being drawn), an information notice in the transcript says so and what to do.
 ///     </para>
 ///     <para>
 ///         The class is owned by the user interface thread. It does not own the composer, the registry, the layer, or the
@@ -141,6 +143,29 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     ///     The notice that says that the chat history was cleared, which is not saved.
     /// </summary>
     public const string ClearedText = "Chat history cleared.";
+
+    /// <summary>
+    ///     The format of the notice that says that the note of a mark cannot be opened for changing now; the argument is
+    ///     the label of the mark, such as "Mark 2".
+    /// </summary>
+    public const string NoteNotOpenedFormat = "The note of {0} cannot be changed now.";
+
+    /// <summary>
+    ///     What to do when the note of a mark cannot be opened because no picture is shown: the note card is on the layer
+    ///     over the picture, which is there only while a picture is shown.
+    /// </summary>
+    public const string NoteNeedsPictureRemedy = "Show a picture, then ask again: the note opens in a card over the picture.";
+
+    /// <summary>
+    ///     What to do when the note of a mark cannot be opened because a shape is being drawn on the picture.
+    /// </summary>
+    public const string NoteWaitsForShapeRemedy = "Finish the shape that is being drawn, or press Escape to throw it away, then ask again.";
+
+    /// <summary>
+    ///     What to do when the note of a mark cannot be opened for another reason, such as a message that cannot be
+    ///     edited at the moment.
+    /// </summary>
+    public const string NoteTryLaterRemedy = "Ask again when the message can be edited.";
 
     /// <summary>
     ///     The composer of the message.
@@ -218,6 +243,12 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
     private readonly EventHandler _clearMarks;
 
     /// <summary>
+    ///     The handler that opens the note of a mark on the layer when the user asks for it from the mark's chip, kept so
+    ///     that it can be removed.
+    /// </summary>
+    private readonly EventHandler<MarkNoteEditRequestedEventArgs> _markNoteEditRequested;
+
+    /// <summary>
     ///     The handler of the sent messages, kept so that it can be removed.
     /// </summary>
     private readonly EventHandler<MessageSentEventArgs> _messageSent;
@@ -265,7 +296,8 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
 
     /// <summary>
     ///     Initializes a new instance of the <see cref="ChatPanelViewModel" /> class and joins the composer and the
-    ///     annotation layer.
+    ///     annotation layer: marks drawn on the layer become chips of the message, the layer shows the marks of the
+    ///     message, and a request from a mark's chip to change its note opens the note on the layer.
     /// </summary>
     /// <param name="composer">The composer of the message.</param>
     /// <param name="marks">The marks made for the draft, from which the pictures of the mark chips are made.</param>
@@ -334,15 +366,17 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
 
         // The panel follows the composer: what depends on it is announced again, a changed project drops the transcript,
-        // and a sent message joins the transcript
+        // a sent message joins the transcript, and a request from a mark's chip opens the mark's note on the layer
         _composerPropertyChanged = OnComposerPropertyChanged;
         _messageSent = (_, e) => OnMessageSent(e.Message);
         _composerChanged = (_, _) => JoinAnnotationToComposer();
         _markAdded = (_, e) => _composer.AddMark(e.Mark);
         _clearMarks = (_, _) => _composer.DeleteMarkChips();
+        _markNoteEditRequested = (_, e) => OpenMarkNote(e.MarkId);
         _composer.PropertyChanged += _composerPropertyChanged;
         _composer.MessageSent += _messageSent;
         _composer.Changed += _composerChanged;
+        _composer.MarkNoteEditRequested += _markNoteEditRequested;
         _annotation.MarkAdded += _markAdded;
         _annotation.ClearMarksRequested += _clearMarks;
         _annotation.PropertyChanged += OnAnnotationPropertyChanged;
@@ -794,6 +828,7 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         _composer.PropertyChanged -= _composerPropertyChanged;
         _composer.MessageSent -= _messageSent;
         _composer.Changed -= _composerChanged;
+        _composer.MarkNoteEditRequested -= _markNoteEditRequested;
         _annotation.MarkAdded -= _markAdded;
         _annotation.ClearMarksRequested -= _clearMarks;
         _annotation.PropertyChanged -= OnAnnotationPropertyChanged;
@@ -1002,6 +1037,49 @@ public sealed partial class ChatPanelViewModel : ObservableObject, IPushToTalkTa
         }
 
         OnPropertyChanged(nameof(HasTranscript));
+    }
+
+    /// <summary>
+    ///     Opens the note of a mark for changing on the annotation layer, as the user asked from the mark's chip. When the
+    ///     layer cannot open it, an information notice says why and what to do, because otherwise the request would seem
+    ///     to be ignored; the same notice is not repeated while it is the last row of the transcript.
+    /// </summary>
+    /// <remarks>
+    ///     The layer opens the note only while a picture is shown, marks may be made, and no shape is being drawn (see
+    ///     <see cref="AnnotationOverlayViewModel.BeginEditNote" />). The notice is not saved with the history, like any
+    ///     notice that is not part of a turn.
+    /// </remarks>
+    /// <param name="markId">The identity of the mark, as carried by its chip.</param>
+    private void OpenMarkNote(Guid markId)
+    {
+        if (_annotation.BeginEditNote(markId))
+        {
+            return;
+        }
+
+        // Say which mark could not be opened, and what to do according to what stands in the way
+        var label = _composer.Document.Chips.OfType<MarkChip>().FirstOrDefault(chip => chip.MarkId == markId)?.Label ?? "the mark";
+        var message = string.Format(CultureInfo.InvariantCulture, NoteNotOpenedFormat, label);
+        string remedy;
+        if (!_annotation.HasPicture)
+        {
+            remedy = NoteNeedsPictureRemedy;
+        }
+        else if (_annotation.IsDrawing)
+        {
+            remedy = NoteWaitsForShapeRemedy;
+        }
+        else
+        {
+            remedy = NoteTryLaterRemedy;
+        }
+
+        if (Transcript.LastOrDefault() is NoticeRowViewModel last && last.Message == message && last.Remedy == remedy)
+        {
+            return;
+        }
+
+        Transcript.Add(new NoticeRowViewModel(NoticeSeverity.Information, message, remedy));
     }
 
     /// <summary>

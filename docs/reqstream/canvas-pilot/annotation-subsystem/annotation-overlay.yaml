@@ -4,7 +4,8 @@
 # The AnnotationOverlay unit is the layer on which the user marks the shown picture: the floating bar of icon tool
 # buttons with the choice of a rectangle, ellipse, freehand, or arrow tool (also by the keys V, R, E, F, and A) and the
 # button that clears the marks of the message, the drawing of the shape in the pixels of the picture with the pointer or
-# the keyboard, the optional short note, the numbered marks that are shown over the picture, and the switch that keeps the
+# the keyboard, the optional short note, the numbered marks that are shown over the picture with their notes beside
+# them and in full on hover, the change of the note of a mark of the message, and the switch that keeps the
 # picture from being dragged out while a tool is chosen. It makes every mark in the MarkRegistry and reports it; it does
 # not know the composer, so whoever joins the two adds the chip of each reported mark to the message, takes the chips out
 # when the user clears the marks, and tells the overlay which chips the message holds.
@@ -58,8 +59,7 @@ sections:
                   A shape says where; a few words say what, such as "this label is wrong". The note must be optional
                   and quick to give: the user can type and press Enter, skip it with a button, or simply go on with the
                   next shape without a prompt that has to be answered. It is short because a mark's note is a remark and
-                  not a second message. Because a mark never changes after it is made, the note is asked for before the
-                  mark is made.
+                  not a second message.
                 tests:
                   - AnnotationOverlayViewModel_Note_Typed_IsKeptCleanAndCappedAtTwoHundredCharacters
                   - AnnotationOverlayViewModel_Note_Skipped_MakesMarkWithoutNote
@@ -120,15 +120,18 @@ sections:
                 title: >-
                   The AnnotationOverlay shall tell its host to turn off dragging the picture out of the application while a
                   tool is chosen and to turn it on when no tool is chosen or the overlay is released, and shall leave the
-                  pointer to the picture, unhandled, while no tool is chosen.
+                  pointer to the picture, unhandled, while no tool is chosen, except for a double-click on a mark, which
+                  opens its note.
                 justification: |
                   Dragging the picture out and drawing on it both use a press and a move of the pointer on the picture, so
                   while the user draws, a drag must not take the picture away, and while no tool is chosen the picture
-                  must still be draggable.
+                  must still be draggable. A double-click does not move the pointer, so it can open the note of a mark
+                  without taking a drag away.
                 tests:
                   - AnnotationOverlayViewModel_SelectTool_ToolThenNone_TurnsDragOutOffThenOn
                   - AnnotationOverlayViewModel_Dispose_ToolChosen_AllowsDragOutAndStopsFollowing
                   - AnnotationOverlayView_ToolChosen_PictureDragOutIsOffAndPointerDragsPictureOut
+                  - AnnotationOverlayView_DoubleClickMarkWithSelect_OpensNoteCardFilledWithFocusInNote
 
               - id: CanvasPilot-AnnotationOverlay-OperateByKeyboard
                 title: >-
@@ -196,3 +199,105 @@ sections:
                   - AnnotationOverlayViewModel_PictureCleared_ShapeIsThrownAwayAndToolWaitsForNextPicture
                   - AnnotationOverlayViewModel_IsDrawingAllowed_TurnedOffWhileNoteWaits_ThrowsShapeAwayAndGivesUpTool
                   - AnnotationToolbarView_MessageCannotBeEdited_ToolsAreOffAndToolIsGivenUp
+
+              - id: CanvasPilot-AnnotationOverlay-ShowNoteBesideBadge
+                title: >-
+                  The AnnotationOverlay shall show the note of each shown mark beside its number badge as a single line
+                  in the colors of the theme in use, cut short with an ellipsis when it is wider than the room it has and
+                  kept inside the picture, shall show nothing beside the badge of a mark without a note, and shall show a
+                  changed note as soon as it changes.
+                justification: |
+                  The user reads a note where its mark is. One short line beside the number keeps the picture visible
+                  under the notes, and the colors of the theme keep the note legible in the dark and the light theme. A
+                  label that left the picture would be cut off by the edge of the layer. The note label belongs to the
+                  screen only: the pictures sent to the assistant carry the note as data.
+                tests:
+                  - AnnotationOverlayView_MarkWithNote_ShowsOneLineLabelBesideItsBadge
+                  - AnnotationOverlayView_LongNoteNearEdge_IsCutWithEllipsisInsidePictureAndNoteLessMarkHasNoLabel
+                  - AnnotationOverlayView_NoteLabel_UsesThemeColorsInDarkAndLight
+                  - AnnotationOverlayView_NoteChanged_LabelShowsTheNewNote
+                  - AnnotationOverlayStyle_NoteLabel_StaysInsidePictureOnEitherSideOfTheBadge
+
+              - id: CanvasPilot-AnnotationOverlay-ShowWholeNoteOnHover
+                title: >-
+                  The AnnotationOverlay shall give the badge, the line, and the note of a mark with a note the whole note
+                  as their tooltip, and shall name the note to a screen reader.
+                justification: |
+                  A note that is cut short on the picture must still be readable in full without opening it, wherever the
+                  pointer rests on the mark, and a user of a screen reader must hear it.
+                tests:
+                  - AnnotationOverlayView_MarkWithNote_BadgeLineAndLabelHaveTheWholeNoteAsTooltip
+                  - AnnotationOverlayView_MarkWithNote_ShowsOneLineLabelBesideItsBadge
+
+              - id: CanvasPilot-AnnotationOverlay-OpenNoteOfMark
+                title: >-
+                  The AnnotationOverlay shall, while a picture is shown and its host allows marks, open the note card for
+                  a mark of the message when the user double-clicks the mark's badge, line, or note with no drawing tool
+                  chosen, or when its host asks for it, with the mark's number and its current note in the box and the
+                  keyboard focus in it.
+                justification: |
+                  The note card that asked for the note is the natural place to change it, so the user finds the same
+                  box, keys, and buttons, reached from the mark itself or from wherever the host offers it.
+                tests:
+                  - AnnotationOverlayViewModel_BeginEditNote_MarkOfMessage_OpensCardWithItsNumberAndNote
+                  - AnnotationOverlayViewModel_BeginEditNote_UnknownOutsideMessageWhileDrawingOrNotAllowed_IsRefused
+                  - AnnotationOverlayViewModel_StatusText_EachState_TellsWhatToDo
+                  - AnnotationOverlayView_DoubleClickMarkWithSelect_OpensNoteCardFilledWithFocusInNote
+                  - AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark
+
+              - id: CanvasPilot-AnnotationOverlay-SaveChangedNote
+                title: >-
+                  The AnnotationOverlay shall change only the note of the mark, and report no new mark, when the user
+                  confirms a changed note with Enter or the Save note button.
+                justification: |
+                  A wrong note must be fixable without drawing the mark again, which would make a new mark with a new
+                  number that the words of the message do not refer to.
+                tests:
+                  - AnnotationOverlayViewModel_EditNote_Committed_ChangesOnlyTheNoteAndReportsNoNewMark
+                  - AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark
+                  - AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack
+
+              - id: CanvasPilot-AnnotationOverlay-CancelNoteChange
+                title: >-
+                  The AnnotationOverlay shall leave the note and the mark as they were when the user cancels a change of
+                  the note with Escape or the Cancel button.
+                justification: |
+                  Canceling a change must never cost the user the mark, unlike canceling a new shape, which throws the
+                  shape away.
+                tests:
+                  - AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark
+                  - AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark
+                  - AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack
+
+              - id: CanvasPilot-AnnotationOverlay-KeepTypedNoteWhenWorkGoesOn
+                title: >-
+                  The AnnotationOverlay shall save the note typed so far when the user starts a shape, chooses another
+                  tool, or opens the note of another mark while a note is being changed.
+                justification: |
+                  Going on with the work keeps what was typed, as it does for a new mark, so the user does not have to
+                  close the card before doing the next thing.
+                tests:
+                  - AnnotationOverlayViewModel_EditNote_NextShapeOtherToolOrOtherMark_SavesTypedNote
+                  - AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer
+
+              - id: CanvasPilot-AnnotationOverlay-GiveUpNoteChangeWhenMarkUnavailable
+                title: >-
+                  The AnnotationOverlay shall give up a change of a note, leaving the note as it was, when the mark leaves
+                  the message or marks can no longer be made.
+                justification: |
+                  A mark whose chip was taken out of the message, or a message that can no longer be changed or has no
+                  picture to mark, has no note left to change.
+                tests:
+                  - AnnotationOverlayViewModel_EditNote_MarkLeavesMessageOrDrawingNotAllowed_GivesUpTheEdit
+                  - AnnotationOverlayViewModel_EditNote_NewPictureOrPictureLost_GoesOnOrGivesUpTheEdit
+
+              - id: CanvasPilot-AnnotationOverlay-RestoreFocusAfterNoteChange
+                title: >-
+                  The AnnotationOverlay shall give the keyboard focus back to where it was before the note of a mark was
+                  opened when the card closes, unless it closed because the user started a shape.
+                justification: |
+                  A user who opened the note from the message goes on writing without having to click back into it. A
+                  shape that the user started needs the keyboard on the layer, for Escape and the arrow keys.
+                tests:
+                  - AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack
+                  - AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer

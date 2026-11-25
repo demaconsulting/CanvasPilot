@@ -921,4 +921,329 @@ public sealed class AnnotationOverlayViewTests
         Assert.Empty(harness.Overlay.VisibleMarks);
         Assert.False(clear.IsEffectivelyEnabled);
     }
+
+    /// <summary>
+    ///     Draws a rectangle with the pointer, gives it a note with the Add mark button, and chooses the Select tool.
+    /// </summary>
+    /// <param name="harness">The harness, with a picture shown.</param>
+    /// <param name="from">The start of the rectangle in picture pixels.</param>
+    /// <param name="to">The end of the rectangle in picture pixels.</param>
+    /// <param name="note">The note.</param>
+    /// <returns>The mark that was made.</returns>
+    private static Mark DrawNotedMark(AnnotationHarness harness, (double X, double Y) from, (double X, double Y) to, string note)
+    {
+        harness.ChooseTool("AnnotationToolRectangle");
+        harness.Drag(from, to);
+        harness.Overlay.NoteText = note;
+        SettingsUiHelpers.Click(harness.Window, harness.Find<Button>("AnnotationNoteAdd"));
+        AnnotationHarness.Flush();
+        harness.ChooseTool("AnnotationToolSelect");
+        return harness.Overlay.VisibleMarks[^1];
+    }
+
+    /// <summary>
+    ///     Double-clicks with the left button at a point of the window, as two quick clicks at the same place, which the
+    ///     platform reports as a press with a click count of two.
+    /// </summary>
+    /// <param name="harness">The harness.</param>
+    /// <param name="at">The point in the window's coordinates.</param>
+    private static void DoubleClick(AnnotationHarness harness, Point at)
+    {
+        harness.Window.MouseDown(at, MouseButton.Left);
+        harness.Window.MouseUp(at, MouseButton.Left);
+        harness.Window.MouseDown(at, MouseButton.Left);
+        harness.Window.MouseUp(at, MouseButton.Left);
+        AnnotationHarness.Flush();
+    }
+
+    /// <summary>
+    ///     Gets the center of a control in the window's coordinates.
+    /// </summary>
+    /// <param name="harness">The harness.</param>
+    /// <param name="control">The control.</param>
+    /// <returns>The center.</returns>
+    private static Point CenterOf(AnnotationHarness harness, Control control) => harness.ExtentOf(control).Center;
+
+    /// <summary>
+    ///     Test that a mark with a note shows the note on one line in a label beside its number badge, at the height of
+    ///     the badge, inside the picture, and named for a screen reader.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_MarkWithNote_ShowsOneLineLabelBesideItsBadge()
+    {
+        // Arrange: a picture
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+
+        // Act: draw a mark with a note
+        DrawNotedMark(harness, (100, 80), (300, 200), "door is blocked");
+        var badge = Assert.Single(harness.FindAll<Border>("AnnotationMarkBadge"));
+        var label = Assert.Single(harness.FindAll<Border>("AnnotationMarkNote"));
+        var text = Assert.IsType<TextBlock>(label.Child);
+
+        // Assert: the label holds the note on one line, sits right of the badge at its height, and is inside the picture
+        Assert.Equal("door is blocked", text.Text);
+        Assert.Equal(1, text.MaxLines);
+        Assert.Equal(TextWrapping.NoWrap, text.TextWrapping);
+        Assert.Equal(TextTrimming.CharacterEllipsis, text.TextTrimming);
+        Assert.Single(text.TextLayout.TextLines);
+        Assert.True(Canvas.GetLeft(label) > Canvas.GetLeft(badge) + badge.Width);
+        Assert.Equal(Canvas.GetTop(badge), Canvas.GetTop(label), 1);
+        Assert.Equal(badge.Height, label.Height, 1);
+        Assert.True(label.Bounds.Right <= AnnotationHarness.PictureWidth);
+        Assert.Equal("Note of mark 1: door is blocked", AutomationProperties.GetName(label));
+    }
+
+    /// <summary>
+    ///     Test that a long note near the right edge of the picture goes to the left of its badge, is cut short with an
+    ///     ellipsis on one line inside the picture, and that a mark without a note has no label.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_LongNoteNearEdge_IsCutWithEllipsisInsidePictureAndNoteLessMarkHasNoLabel()
+    {
+        // Arrange: a picture and a long note
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var note = string.Join(' ', Enumerable.Repeat("this part of the drawing needs another color", 4));
+
+        // Act: draw a mark with the long note near the right edge, and a mark without a note
+        DrawNotedMark(harness, (700, 80), (780, 200), note);
+        harness.ChooseTool("AnnotationToolRectangle");
+        harness.Drag((100, 250), (300, 350));
+        harness.SkipNote();
+        var label = Assert.Single(harness.FindAll<Border>("AnnotationMarkNote"));
+        var text = Assert.IsType<TextBlock>(label.Child);
+        var line = Assert.Single(text.TextLayout.TextLines);
+
+        // Assert: one label, for the noted mark, left of its badge, cut short on one line, inside the picture
+        Assert.Equal(2, harness.FindAll<Border>("AnnotationMarkBadge").Count);
+        Assert.Equal(note, text.Text);
+        Assert.True(line.HasCollapsed);
+        Assert.True(label.Bounds.Left >= 0, $"label {label.Bounds}");
+        Assert.True(label.Bounds.Right <= 700, $"label {label.Bounds}");
+        Assert.True(label.Bounds.Width <= AnnotationOverlayStyle.NoteMaxWidth(800, 400) + 0.5);
+    }
+
+    /// <summary>
+    ///     Test that the note label takes the overlay surface and the primary text color of the theme in use, in the dark
+    ///     and the light theme, so that it is legible in both.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_NoteLabel_UsesThemeColorsInDarkAndLight()
+    {
+        // Arrange: a mark with a note
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        DrawNotedMark(harness, (100, 80), (300, 200), "legible");
+
+        foreach (var variant in ThemeUiHelpers.Variants)
+        {
+            // Act: show the window in the variant and read the colors of the label
+            harness.Window.RequestedThemeVariant = variant;
+            AnnotationHarness.Flush();
+            var label = Assert.Single(harness.FindAll<Border>("AnnotationMarkNote"));
+            var background = Assert.IsAssignableFrom<ISolidColorBrush>(label.Background).Color;
+            var foreground = Assert.IsAssignableFrom<ISolidColorBrush>(Assert.IsType<TextBlock>(label.Child).Foreground).Color;
+
+            // Assert: the colors are the tokens of the variant
+            Assert.Equal(ThemeUiHelpers.ColorOf("CpSurfaceOverlay", variant), background);
+            Assert.Equal(ThemeUiHelpers.ColorOf("CpTextPrimary", variant), foreground);
+        }
+    }
+
+    /// <summary>
+    ///     Test that the label shows a changed note as soon as it changes, and goes away when the note is taken away.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_NoteChanged_LabelShowsTheNewNote()
+    {
+        // Arrange: a mark with a note
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var mark = DrawNotedMark(harness, (100, 80), (300, 200), "old");
+
+        // Act: change the note, then take it away
+        harness.Composition.Marks.ChangeNote(mark.Id, "new");
+        AnnotationHarness.Flush();
+        var changed = Assert.IsType<TextBlock>(Assert.Single(harness.FindAll<Border>("AnnotationMarkNote")).Child).Text;
+        harness.Composition.Marks.ChangeNote(mark.Id, null);
+        AnnotationHarness.Flush();
+
+        // Assert: the label showed the new note, and there is none without a note
+        Assert.Equal("new", changed);
+        Assert.Empty(harness.FindAll<Border>("AnnotationMarkNote"));
+        Assert.Single(harness.FindAll<Border>("AnnotationMarkBadge"));
+    }
+
+    /// <summary>
+    ///     Test that the badge, the line, and the note label of a mark with a note have the whole note as their tooltip,
+    ///     that they answer the pointer, and that a mark without a note has no tooltip.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_MarkWithNote_BadgeLineAndLabelHaveTheWholeNoteAsTooltip()
+    {
+        // Arrange: a picture
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var note = new string('w', 150);
+
+        // Act: draw a mark with a long note, and one without
+        DrawNotedMark(harness, (100, 80), (300, 200), note);
+        harness.ChooseTool("AnnotationToolRectangle");
+        harness.Drag((400, 250), (500, 350));
+        harness.SkipNote();
+        var badges = harness.FindAll<Border>("AnnotationMarkBadge");
+        var lines = harness.FindAll<Path>("AnnotationMarkShape");
+        var label = Assert.Single(harness.FindAll<Border>("AnnotationMarkNote"));
+
+        // Assert: the three elements of the noted mark carry the whole note and answer the pointer; the other has no tip
+        var expected = $"Mark 1: {note}";
+        Assert.Equal(expected, ToolTip.GetTip(badges[0]));
+        Assert.Equal(expected, ToolTip.GetTip(lines[0]));
+        Assert.Equal(expected, ToolTip.GetTip(label));
+        Assert.True(badges[0].IsHitTestVisible && lines[0].IsHitTestVisible && label.IsHitTestVisible);
+        Assert.Null(ToolTip.GetTip(badges[1]));
+        Assert.Null(ToolTip.GetTip(lines[1]));
+    }
+
+    /// <summary>
+    ///     Test that a double-click on the badge of a mark with the Select tool opens the note card for that mark, filled
+    ///     with its note and named for it, with the focus in the note, Cancel in place of Skip, and Save note.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_DoubleClickMarkWithSelect_OpensNoteCardFilledWithFocusInNote()
+    {
+        // Arrange: a mark with a note, and the Select tool
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var mark = DrawNotedMark(harness, (100, 80), (300, 200), "door");
+        var badge = Assert.Single(harness.FindAll<Border>("AnnotationMarkBadge"));
+
+        // Act: double-click the badge
+        DoubleClick(harness, CenterOf(harness, badge));
+        AnnotationHarness.Flush();
+        var noteBox = harness.Find<TextBox>("AnnotationNoteBox");
+
+        // Assert: the card is open for the mark with its note, the focus is in the note, and the buttons are for a change
+        Assert.Equal(mark.Id, harness.Overlay.EditingMarkId);
+        Assert.True(harness.Find<StackPanel>("AnnotationNotePanel").IsVisible);
+        Assert.Equal("door", noteBox.Text);
+        Assert.True(noteBox.IsFocused);
+        Assert.Equal(4, noteBox.CaretIndex);
+        Assert.Equal("Note for mark 1", AutomationProperties.GetName(noteBox));
+        Assert.False(harness.Find<Button>("AnnotationNoteSkip").IsVisible);
+        Assert.True(harness.Find<Button>("AnnotationNoteCancel").IsVisible);
+        Assert.Equal("Save note", harness.Find<Button>("AnnotationNoteAdd").Content);
+        Assert.Empty(harness.FindAll<Path>("AnnotationDraftShape"));
+        Assert.Equal(AnnotationTool.None, harness.Overlay.CurrentTool);
+    }
+
+    /// <summary>
+    ///     Test that Enter in the opened note saves the changed note on the same mark, and that Escape closes the card
+    ///     with the note unchanged and the mark and its chip kept; the note is opened from its label.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark()
+    {
+        // Arrange: a mark with a note, and the Select tool
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var mark = DrawNotedMark(harness, (100, 80), (300, 200), "door");
+
+        // Act: double-click the note label, type, and press Enter
+        DoubleClick(harness, CenterOf(harness, Assert.Single(harness.FindAll<Border>("AnnotationMarkNote"))));
+        harness.Window.KeyTextInput(" is blocked");
+        AnnotationHarness.Flush();
+        harness.Key(PhysicalKey.Enter);
+        var saved = (harness.Overlay.IsNoteEditing, Assert.Single(harness.Overlay.VisibleMarks).Note);
+        var label = Assert.IsType<TextBlock>(Assert.Single(harness.FindAll<Border>("AnnotationMarkNote")).Child).Text;
+
+        // Act: double-click the line of the mark, type, and press Escape
+        DoubleClick(harness, harness.At(200, 200));
+        var reopened = harness.Overlay.IsEditingMarkNote;
+        harness.Window.KeyTextInput(" now");
+        AnnotationHarness.Flush();
+        harness.Key(PhysicalKey.Escape);
+
+        // Assert: the note was saved on the same mark, then kept when escaped, with the mark and its chip still there
+        Assert.Equal((false, "door is blocked"), saved);
+        Assert.Equal("door is blocked", label);
+        Assert.True(reopened);
+        Assert.False(harness.Overlay.IsNoteEditing);
+        var now = Assert.Single(harness.Overlay.VisibleMarks);
+        Assert.Equal((mark.Id, mark.Number, "door is blocked"), (now.Id, now.Number, now.Note));
+        Assert.Equal([mark.Id], harness.Composition.Composer.MarkChipIds);
+        Assert.Single(harness.Composition.Marks.Marks);
+    }
+
+    /// <summary>
+    ///     Test that the Save note and Cancel buttons save or keep the note, and that the keyboard focus goes back to
+    ///     where it was before the note was opened.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack()
+    {
+        // Arrange: a mark with a note, and the focus on the stage, which stands in for the message
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var mark = DrawNotedMark(harness, (100, 80), (300, 200), "old");
+        var stage = harness.Find<ScrollViewer>("PreviewScroller");
+
+        // Act: open the note as the host does, change it, and click Save note
+        stage.Focus();
+        harness.Overlay.BeginEditNote(mark.Id);
+        AnnotationHarness.Flush();
+        var focusInNote = harness.Find<TextBox>("AnnotationNoteBox").IsFocused;
+        harness.Overlay.NoteText = "saved";
+        SettingsUiHelpers.Click(harness.Window, harness.Find<Button>("AnnotationNoteAdd"));
+        AnnotationHarness.Flush();
+        var afterSave = (harness.Composition.Marks.Find(mark.Id)!.Note, stage.IsFocused);
+
+        // Act: open it again, change it, and click Cancel
+        stage.Focus();
+        harness.Overlay.BeginEditNote(mark.Id);
+        AnnotationHarness.Flush();
+        harness.Overlay.NoteText = "dropped";
+        SettingsUiHelpers.Click(harness.Window, harness.Find<Button>("AnnotationNoteCancel"));
+        AnnotationHarness.Flush();
+
+        // Assert: the focus moved into the note, the note was saved and then kept, and the focus came back each time
+        Assert.True(focusInNote);
+        Assert.Equal(("saved", true), afterSave);
+        Assert.Equal("saved", harness.Composition.Marks.Find(mark.Id)!.Note);
+        Assert.True(stage.IsFocused);
+        Assert.False(harness.Overlay.IsNoteEditing);
+        Assert.Single(harness.Composition.Composer.MarkChipIds);
+    }
+
+    /// <summary>
+    ///     Test that when the user starts a shape while the note of a mark is open, the typed note is saved and the
+    ///     keyboard focus stays on the layer that draws the shape instead of going back to where it was before.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer()
+    {
+        // Arrange: a mark with a note, the Rectangle tool, the focus on the stage, and the note opened as the host does
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var mark = DrawNotedMark(harness, (100, 80), (300, 200), "old");
+        harness.ChooseTool("AnnotationToolRectangle");
+        var stage = harness.Find<ScrollViewer>("PreviewScroller");
+        stage.Focus();
+        harness.Overlay.BeginEditNote(mark.Id);
+        AnnotationHarness.Flush();
+        harness.Overlay.NoteText = "typed";
+
+        // Act: press on the picture and drag, which starts a shape and closes the card
+        harness.Press(harness.At(400, 250), harness.At(450, 300), harness.At(500, 350));
+        AnnotationHarness.Flush();
+        var during = (harness.Overlay.IsDrawing, harness.OverlayView.IsFocused, stage.IsFocused);
+        harness.Release(harness.At(500, 350));
+        harness.SkipNote();
+
+        // Assert: the note was saved, and the layer kept the focus while the shape was drawn
+        Assert.Equal("typed", harness.Composition.Marks.Find(mark.Id)!.Note);
+        Assert.Equal((true, true, false), during);
+        Assert.Equal(2, harness.Composition.Marks.Marks.Length);
+    }
 }

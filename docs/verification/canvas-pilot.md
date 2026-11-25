@@ -27,6 +27,17 @@ Speech subsystem and of the Chat subsystem (the talk button of the chat panel wi
 Windows microphone privacy setting), together with the checks of the installed package, and are not evidence for a
 requirement.
 
+The system tests of the notes of marks (`CanvasPilot-System-ShowAndEditMarkNotes`) compose the application without a
+window, so they verify what the user's actions do to the marks, the composer, and the payload that is sent, and that the
+notes of a sent message cannot be changed. The presentational details of that requirement are verified by the tests of
+its child requirements instead: the label beside the number with its ellipsis and its place inside the picture, and the
+whole note as a tooltip on the mark, by the headless UI tests of the `Annotation` subsystem and of `AnnotationOverlay`;
+the tooltip and the Edit note item of the chip, a double-click on the chip, and F2 beside it, by the headless UI tests
+of the `Composer` subsystem and its units, with the request carried from the chip to the layer verified by the tests of
+the `Chat` subsystem; and a real double-click on the mark with the Select tool, by the headless UI tests of
+`AnnotationOverlay`. Check 7 of *Manual Verification* (*Marking on a real pointer and a screen reader*) then confirms
+them with a real pointer, keyboard, theme, and screen reader.
+
 ## Test Environment
 
 System tests run under the standard .NET test runner on Windows, Linux, and macOS with the .NET 10
@@ -81,6 +92,9 @@ services, or display is required.
 - A user who draws a rectangle on the shown picture gets a mark whose chip is in the message at the caret; undo of the
   chip hides the mark and redo shows it; dragging the picture out is off only while a marking tool is chosen; and when
   the file is edited the mark is not drawn on the new picture but stays in the message.
+- The note of a mark of the message is shown with the mark and its chip and can be changed from the chip until the
+  message is sent, on the same mark; a canceled change keeps the note; the payload carries the note as it was last
+  changed; and the note of a mark of a sent message cannot be changed.
 - The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
   earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
   the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
@@ -196,7 +210,10 @@ steps are in the verification of the unit or subsystem named at each check.
    `Copilot_RuntimeNotPublished` and in the file table). (Verification of the `Speech` subsystem and of the WiX
    Toolset.)
 7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
-   the keyboard, and check the tool bar and the chips with a screen reader. (Verification of `AnnotationOverlay`.)
+   the keyboard, and check the tool bar and the chips with a screen reader. Give a mark a long note in the dark and the
+   light theme: the label beside its number is legible, ends with an ellipsis, and stays inside the picture; resting
+   the pointer on the mark or its chip shows the whole note; a double-click on the mark or the chip, or F2 beside the
+   chip, opens the note for changing, and Escape keeps the note and the mark. (Verification of `AnnotationOverlay`.)
 8. *Style kits with the real pickers.* On the installed package, open Tools > Style Kits, choose Import and Export with
    the system zip pickers, add example images with the image picker in the editor, change a color with the flyout and
    its sliders, and add a shared folder on the Style Kits page of the settings with the folder picker, including a
@@ -659,6 +676,19 @@ shown again the mark is not shown, the overlay counts one hidden mark, and the m
 is the overlay of the preview pane and its tool bar is the pane's tool bar. This scenario is tested by
 `CanvasPilot_MarkImage_DrawRectangleOnShownPicture_AddsMarkChipAndHidesMarkOnNewPicture`.
 
+**CanvasPilot_MarkImage_EditNoteOfDraftMark_SentPayloadCarriesTheChangedNote**: The composed application's user shows a
+diagram and draws a rectangle with the note `first`; the composer and the shown mark give `first`. A request from the
+chip opens the note on the layer with `first`; the note `second` is confirmed, and the shown mark and the composer give
+`second` on the same mark, with the same number, geometry, and picture. A second change to `third` is canceled and the
+note stays `second` with the chip in the message. The message is sent, and its payload holds mark 1 with the note
+`second`. This scenario is tested by
+`CanvasPilot_MarkImage_EditNoteOfDraftMark_SentPayloadCarriesTheChangedNote`.
+
+**CanvasPilot_MarkImage_NoteOfSentMark_CannotBeChanged**: The composed application's user sends a message with a mark
+whose note is `a`. Asking to change the note of that mark on the layer and from the composer is refused, nothing opens,
+and the payload of the sent message keeps the note `a`. This scenario is tested by
+`CanvasPilot_MarkImage_NoteOfSentMark_CannotBeChanged`.
+
 **CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile**: The composed application is started with a file of an
 earlier run in its drag folder, which is removed at start. Without a picture no file is offered. With a 32 by 16 SVG
 shown the offered file is in the drag folder, is named `logo-` and the start of the pixel fingerprint, and is a PNG
@@ -1031,7 +1061,7 @@ FileAssert asserts that the published folder, which the installer takes whole, h
 `THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License, so the notice of the vendored icons is in
 the package. This scenario is tested by `ThirdPartyNotices_Published`, which is run in CI only.
 
-**WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64, builds the
-installer project with the numeric build version, and copies the package, FileAssert asserts that exactly one
-`package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by `WiX_MsiPackage`, which
-is run in CI only and is described in the WiX Toolset OTS verification document.
+**WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64 and builds the
+installer project with the numeric build version and the full build version straight into the package folder, FileAssert
+asserts that exactly one `package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by
+`WiX_MsiPackage`, which is run in CI only and is described in the WiX Toolset OTS verification document.

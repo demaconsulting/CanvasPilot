@@ -20,6 +20,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 
@@ -28,10 +29,12 @@ namespace DemaConsulting.CanvasPilot.ComposerSubsystem;
 /// <summary>
 ///     The control that shows one chip inside a line of the message: an icon for the kind of chip, or the picture of
 ///     the item when there is one, the name of the item, and a button that deletes the chip. The tooltip shows the full
-///     path or the note of the item.
+///     path of an attachment, or says that a mark is on the picture, with its note when it has one; the same text is the
+///     help text that a screen reader gives for the chip.
 /// </summary>
 /// <remarks>
-///     The control only shows the chip and reports that its delete button was pressed; it never changes the message and
+///     The control only shows the chip and reports that its delete button was pressed or that the user asks to change
+///     the note of a mark, by a double-click or the Edit note item of its context menu; it never changes the message and
 ///     never opens the item the chip stands for. The path is only displayed. The delete button does not take the focus,
 ///     so deleting a chip with the mouse leaves the caret in the message.
 /// </remarks>
@@ -68,6 +71,21 @@ public sealed partial class ChipView : UserControl
     private CancellationTokenSource? _cancellation;
 
     /// <summary>
+    ///     Whether the chip of a mark offers to change the mark's note.
+    /// </summary>
+    private bool _isNoteEditable;
+
+    /// <summary>
+    ///     Whether the offer to change the note can be used now, because the message can be edited.
+    /// </summary>
+    private bool _isNoteEditEnabled = true;
+
+    /// <summary>
+    ///     The Edit note item of the context menu, or <see langword="null" /> while the chip offers no change of a note.
+    /// </summary>
+    private MenuItem? _editNoteItem;
+
+    /// <summary>
     ///     Initializes a new instance of the <see cref="ChipView" /> class, which shows no chip until <see cref="Show" />
     ///     is called.
     /// </summary>
@@ -83,9 +101,50 @@ public sealed partial class ChipView : UserControl
     public event EventHandler? DeleteRequested;
 
     /// <summary>
+    ///     Raised when the user asks to change the note of the mark of the chip: by a double-click on the chip or by the
+    ///     Edit note item of its context menu. Only raised for the chip of a mark while <see cref="IsNoteEditable" /> and
+    ///     <see cref="IsNoteEditEnabled" /> are set.
+    /// </summary>
+    public event EventHandler? EditNoteRequested;
+
+    /// <summary>
     ///     Gets the chip that is shown, or <see langword="null" /> before <see cref="Show" /> was called.
     /// </summary>
     public ChipSegment? Chip { get; private set; }
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether the chip of a mark offers to change the mark's note, by a
+    ///     double-click and by the Edit note item of its context menu. It is off by default; the message being written
+    ///     turns it on, and the transcript of sent messages leaves it off, because a sent message cannot be changed.
+    /// </summary>
+    public bool IsNoteEditable
+    {
+        get => _isNoteEditable;
+        set
+        {
+            _isNoteEditable = value;
+            UpdateNoteEditing();
+        }
+    }
+
+    /// <summary>
+    ///     Gets or sets a value indicating whether the offer of <see cref="IsNoteEditable" /> can be used now: the Edit
+    ///     note item of the context menu is enabled and a double-click asks to change the note. It is on by default; the
+    ///     message being written turns it off while the message cannot be edited (no project is open, or the message is
+    ///     being sent), so that the menu does not offer what would do nothing.
+    /// </summary>
+    public bool IsNoteEditEnabled
+    {
+        get => _isNoteEditEnabled;
+        set
+        {
+            _isNoteEditEnabled = value;
+            if (_editNoteItem is not null)
+            {
+                _editNoteItem.IsEnabled = value;
+            }
+        }
+    }
 
     /// <summary>
     ///     Gets or sets a value indicating whether the delete button is shown. It is shown by default, in the message being
@@ -115,12 +174,29 @@ public sealed partial class ChipView : UserControl
     }
 
     /// <summary>
+    ///     Gets the tooltip of the chip of a mark: that the mark is on the picture, followed by its note when it has one.
+    /// </summary>
+    /// <param name="chip">The chip of the mark.</param>
+    /// <param name="note">The note of the mark, or <see langword="null" /> or empty for none.</param>
+    /// <returns>The text, as "Mark 2 on the picture" or "Mark 2 on the picture: the note".</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="chip" /> is <see langword="null" />.</exception>
+    public static string GetMarkToolTip(MarkChip chip, string? note)
+    {
+        ArgumentNullException.ThrowIfNull(chip);
+        return string.IsNullOrEmpty(note) ? $"{chip.Label} on the picture" : $"{chip.Label} on the picture: {note}";
+    }
+
+    /// <summary>
     ///     Shows a chip.
     /// </summary>
     /// <param name="chip">The chip to show.</param>
     /// <param name="provider">Gives the picture of the chip, or <see langword="null" /> to show only the icon.</param>
+    /// <param name="note">
+    ///     The note of the mark of a mark chip, which its tooltip shows, or <see langword="null" /> for none; ignored for
+    ///     other chips.
+    /// </param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="chip" /> is <see langword="null" />.</exception>
-    public void Show(ChipSegment chip, IChipThumbnailProvider? provider)
+    public void Show(ChipSegment chip, IChipThumbnailProvider? provider, string? note = null)
     {
         ArgumentNullException.ThrowIfNull(chip);
         Chip = chip;
@@ -137,14 +213,31 @@ public sealed partial class ChipView : UserControl
             _ => FileIcon,
         });
 
-        // The full path of an attachment is only displayed; a mark says what it is
-        ToolTip.SetTip(this, chip switch
+        // The full path of an attachment is only displayed; a mark says what it is, with its note. A screen reader is
+        // given the same text as the help text, because a tooltip is only seen with a pointer
+        var tip = chip switch
         {
             AttachmentChip attachment => attachment.FullPath,
-            MarkChip mark => $"{mark.Label} on the picture",
+            MarkChip mark => GetMarkToolTip(mark, note),
             _ => null,
-        });
+        };
+        ToolTip.SetTip(this, tip);
+        Avalonia.Automation.AutomationProperties.SetHelpText(this, tip);
         Avalonia.Automation.AutomationProperties.SetName(this, GetLabel(chip));
+        UpdateNoteEditing();
+    }
+
+    /// <inheritdoc />
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+
+        // A double-click on the chip of a mark asks to change its note, and is kept from selecting a word of the message
+        if (!e.Handled && e.ClickCount == 2 && _isNoteEditable && _isNoteEditEnabled && Chip is MarkChip && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            EditNoteRequested?.Invoke(this, EventArgs.Empty);
+            e.Handled = true;
+        }
     }
 
     /// <inheritdoc />
@@ -208,5 +301,39 @@ public sealed partial class ChipView : UserControl
     {
         e.Handled = true;
         DeleteRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    ///     Gives the chip of a mark whose note may be changed a context menu with the Edit note item, named for a screen
+    ///     reader, showing its key, F2, and enabled while <see cref="IsNoteEditEnabled" /> is set; takes the menu away
+    ///     from any other chip.
+    /// </summary>
+    private void UpdateNoteEditing()
+    {
+        if (!_isNoteEditable || Chip is not MarkChip mark)
+        {
+            _editNoteItem = null;
+            ContextMenu = null;
+            return;
+        }
+
+        var item = new MenuItem
+        {
+            Header = "Edit note…",
+            InputGesture = new KeyGesture(Key.F2),
+            IsEnabled = _isNoteEditEnabled,
+        };
+        Avalonia.Automation.AutomationProperties.SetAutomationId(item, "ComposerChipEditNote");
+        Avalonia.Automation.AutomationProperties.SetName(item, $"Edit the note of {mark.Label}");
+        item.Click += (_, e) =>
+        {
+            e.Handled = true;
+            if (_isNoteEditEnabled)
+            {
+                EditNoteRequested?.Invoke(this, EventArgs.Empty);
+            }
+        };
+        _editNoteItem = item;
+        ContextMenu = new ContextMenu { Items = { item } };
     }
 }

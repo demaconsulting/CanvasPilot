@@ -54,6 +54,11 @@ payload" button that shows on hover); they are not evidence for a requirement.
   with dictated words shown differently from typed ones, and its chips in their places without delete buttons, with
   their names; the summary says how many marks and attachments it carried and is hidden when there are none.
 - The transcript is dropped when the project changes or closes, and a disposed panel no longer follows the composer.
+- A request from a mark's chip in the message opens the note of that mark on the annotation layer, filled with its note,
+  and the chip shows the note confirmed there; a disposed panel opens nothing; the chip of a sent message offers no
+  change of its note. A request that the layer cannot follow, because no picture is shown or a shape is being drawn,
+  adds one information notice that names the mark and gives the remedy of that cause, is not repeated while it is the
+  last row, and leaves the mark, its note, and the message as they were.
 - The Send button, an icon button named Send, can be used exactly when the composer can send; sending moves the message
   to the transcript and empties the editing control; a failure keeps the draft, adds nothing, and shows the composer's
   reason. Enter on its own sends and Shift+Enter writes a line break and sends nothing; the hint beside Send says that
@@ -329,6 +334,11 @@ words, and a mark is sent; the entry has the typed item, the dictated item, and 
 summary is `1 mark`. This scenario is tested by
 `ChatPanelViewModel_Send_TypedDictatedAndMark_EntryKeepsOrderOriginsAndSummary`.
 
+**ChatPanelViewModel_Send_MarksWithAndWithoutNote_EntryKeepsTheNotesAsSent**: A message with a mark that has the note
+`the door` and a mark without a note is sent, and the note of the first mark is then changed in the registry; the mark
+chips of the entry carry `the door` and no note. This scenario is tested by
+`ChatPanelViewModel_Send_MarksWithAndWithoutNote_EntryKeepsTheNotesAsSent`.
+
 **ChatPanelViewModel_Send_BuildFails_KeepsDraftAndTranscriptUnchangedAndSaysWhy**: The builder fails; the draft is kept,
 the transcript is empty, and the status text says that the message was not sent and why. This scenario is tested by
 `ChatPanelViewModel_Send_BuildFails_KeepsDraftAndTranscriptUnchangedAndSaysWhy`.
@@ -344,6 +354,29 @@ not after it is closed, and again in a project. This scenario is tested by
 
 **ChatPanelViewModel_Send_MessageWithMark_LayerShowsNoMarkAfterwards**: A message with a mark is sent; the registry and
 the layer hold no mark. This scenario is tested by `ChatPanelViewModel_Send_MessageWithMark_LayerShowsNoMarkAfterwards`.
+
+**ChatPanelViewModel_MarkNoteEditRequested_OpensTheNoteOnTheLayer**: A rectangle with the note `first` is drawn on the
+layer and its chip is in the message; a request from the chip opens the note of that mark on the layer with `first`;
+the note `second` is confirmed there, the composer gives `second` for the chip, and the message holds the same chip.
+This scenario is tested by `ChatPanelViewModel_MarkNoteEditRequested_OpensTheNoteOnTheLayer`.
+
+**ChatPanelViewModel_MarkNoteEditRequested_LayerCannotOpen_ShowsNoticeWithWhatToDo**: A rectangle with the note
+`keep me` is drawn on the layer and its chip is in the message. With the picture hidden, two requests from the chip open
+no card and add one information notice, "The note of Mark 1 cannot be changed now.", with the remedy that says to show a
+picture. With the picture shown again and a rectangle started, a further request opens no card and adds a second notice
+with the remedy that says to finish or throw away the shape. The mark keeps `keep me` and the message is unchanged. This
+scenario is tested by `ChatPanelViewModel_MarkNoteEditRequested_LayerCannotOpen_ShowsNoticeWithWhatToDo`.
+
+**ChatPanelView_MarkChipDoubleClicked_OpensItsNoteAndChipShowsTheChangedNote**: In the window of the panel a mark with
+the note `first` is drawn; its chip's tooltip names the note. Two quick clicks on the chip open the note of the mark on
+the layer with `first`; after `second` is confirmed the chip's tooltip names `second`. After the message is sent, the
+chip in the transcript offers no change of its note and has no menu. This scenario is tested by
+`ChatPanelView_MarkChipDoubleClicked_OpensItsNoteAndChipShowsTheChangedNote`.
+
+**ChatPanelView_Send_MarkWithNote_SentChipTooltipAndHelpTextShowTheNote**: In the window of the panel a mark with the
+note `the door is blocked` is drawn and the message is sent; the chip in the transcript has the tooltip and the help
+text `Mark 1 on the picture: the door is blocked`, offers no change of its note, and has no menu. This scenario is
+tested by `ChatPanelView_Send_MarkWithNote_SentChipTooltipAndHelpTextShowTheNote`.
 
 **ChatPanelViewModel_TalkText_FollowsDictationState**: The text that names the talk button is `Hold to talk`, becomes
 `Starting... keep holding`
@@ -377,8 +410,9 @@ preparation without failing. This scenario is tested by
 transcript is empty and `HasTranscript` is announced; a message sent there is the only entry; closing the project
 empties it again. This scenario is tested by `ChatPanelViewModel_ProjectChanges_DropsTheTranscript`.
 
-**ChatPanelViewModel_Dispose_StopsFollowingTheComposer**: After the panel is disposed, a message sent in the composer is
-not added to its transcript. This scenario is tested by `ChatPanelViewModel_Dispose_StopsFollowingTheComposer`.
+**ChatPanelViewModel_Dispose_StopsFollowingTheComposer**: After the panel is disposed, a request from a mark's chip to
+change its note opens nothing on the layer, and a message sent in the composer is not added to its transcript. This
+scenario is tested by `ChatPanelViewModel_Dispose_StopsFollowingTheComposer`.
 
 **TranscriptEntryViewModel_ViewPayloadCommand_ShowsInspectorForThePayloadOfTheMessage**: A message with a ready-made
 payload is sent; the command gives the launcher an inspector whose payload is that payload and whose description is the

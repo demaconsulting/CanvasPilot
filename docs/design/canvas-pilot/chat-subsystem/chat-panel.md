@@ -74,14 +74,17 @@ The unit is made of these parts, all in the user interface layer:
 - `TranscriptEntryViewModel`: one sent message. It holds the `SentMessage`, its `Payload` when it is a `MessagePayload`,
   `Items` (the runs of text with their origin and the chips, in order), `Summary` (for example `2 marks, 1 attachment`),
   `SentText` (the time), `Thumbnails`, and `ViewPayloadCommand`. It owns the picture provider it made and releases it in
-  `Dispose`. `TranscriptItem` is one run of text or one chip, with the chip to ask for the picture.
+  `Dispose`. `TranscriptItem` is one run of text or one chip, with the chip to ask for the picture and, for the chip of
+  a mark, the note that the mark had when the message was sent, taken from the immutable `SentMessage.Marks`.
 - `TranscriptEntryView` (a `UserControl`): the entry as a bubble at the right in the accent color (radius 14 with a 4
   pixel bottom-right corner, at most 85 percent of the width because the entry's grid gives it the right 0.85 of the
   width), holding the blocks of the message in order (`MessageBlocks`): a selectable text block
   (`TranscriptMessageText`) for each run of words and a wrapping row for each run of chips, which hold the composer's
-  `ChipView` without its delete button. The bubble sizes to its content. Below the bubble, at the right, are the "View
-  payload" text button (`TranscriptViewPayloadButton`) and the sent time (`TranscriptSentTime`); the button has opacity
-  0 and takes opacity 1 only while the pointer is over the entry or the focus is inside it (the style
+  `ChipView` without its delete button and with `IsNoteEditable` off, so that a sent chip offers no change of its
+  mark's note; the chip of a mark is given the item's note, so that its tooltip and help text read "Mark N on the
+  picture: note" as in the message being written. The bubble sizes to its content. Below the bubble, at the right, are
+  the "View payload" text button (`TranscriptViewPayloadButton`) and the sent time (`TranscriptSentTime`); the button
+  has opacity 0 and takes opacity 1 only while the pointer is over the entry or the focus is inside it (the style
   `Grid.entry:pointerover` and `:focus-within`), so that it is out of the way but can be reached by the keyboard. Below
   them is the summary of what the message carried.
 - `ChipThumbnailProvider`: implements the composer's `IChipThumbnailProvider`. It is given a function from a mark chip
@@ -165,7 +168,16 @@ and the view model it follows.
 identities. The panel subscribes to `MarkAdded` of the layer and calls `ComposerViewModel.AddMark`, which makes one edit
 that puts the chip in the row of chips above the words, and to `ClearMarksRequested` of the layer and calls
 `ComposerViewModel.DeleteMarkChips`, which deletes the chips of all marks one step each; the `Changed` that each
-deletion raises makes the layer show only the marks that are left. Both handlers are removed when the panel is disposed.
+deletion raises makes the layer show only the marks that are left. It also subscribes to
+`ComposerViewModel.MarkNoteEditRequested`, raised when the user asks from a mark's chip to change its note, and calls
+`AnnotationOverlayViewModel.BeginEditNote` with the mark, which opens the note card on the layer; the composer follows
+the change through the registry, so the panel passes nothing back. When `BeginEditNote` returns false (the layer opens
+the card only while a picture is shown, marks may be made, and no shape is being drawn), the panel adds an information
+`NoticeRowViewModel` to the transcript: the message `NoteNotOpenedFormat` with the label of the mark's chip ("The note
+of Mark 1 cannot be changed now.") and, as the remedy, `NoteNeedsPictureRemedy` when the layer has no picture,
+`NoteWaitsForShapeRemedy` while a shape is being drawn, and `NoteTryLaterRemedy` otherwise. The notice is not added
+again while an equal notice is the last row, so that pressing F2 repeatedly does not fill the transcript, and it is not
+saved with the history, like any notice outside a turn. The handlers are removed when the panel is disposed.
 Nothing else about marks is known here.
 
 **Prompts and collapse.** `UsePrompt` writes a prompt with `ComposerViewModel.InsertTyped` at the caret (over the
@@ -320,7 +332,9 @@ and consecutive runs of words are the runs of one selectable text block; the lin
 row of chips (see `AddLeadingChips`) is the break between a row and the block that follows it and is not shown again. A
 chip is not put inside a line of words, because a text line with a fixed line height is only as high as its words and
 cuts a taller inline chip off, which is what the bubble did before. A chip is a `ChipView` with its delete button
-hidden, whose picture is asked for through a small adapter that passes the chip of the project copy to the provider.
+hidden and `IsNoteEditable` left off (a sent message cannot be changed, so neither a double-click nor a context menu
+offers to change the note of its mark), whose picture is asked for through a small adapter that passes the chip of the
+project copy to the provider.
 
 **Pictures.** `ChipThumbnailProvider.GetThumbnailAsync` passes every chip that is not a mark to the file provider. For a
 mark it makes the picture on a thread-pool thread: it calls the function, decodes the PNG to 64 pixels wide, keeps the
@@ -338,7 +352,9 @@ without a payload, does nothing; a turn that fails is an error notice with the r
 check that fails is a sentence in the banner. A history that cannot be saved or deleted is a notice (the store reports
 it as a result and never throws); a saved history that cannot be read is empty (the store sets the file aside). A failed
 or cancelled task of the talk button is the composer's to report. An attach button without a picker, or with a picker
-that returned no files, does nothing. The logger gets facts only (the type of an exception),
+that returned no files, does nothing. A request from a mark's chip to change its note that the layer cannot follow (no
+picture is shown, or a shape is being drawn) is an information notice that names the mark and says what to do; the
+mark, its note, and the message are left as they were. The logger gets facts only (the type of an exception),
 never the words of a message or an answer.
 
 **Identifiers that a test needs.** The controls of the panel have these `AutomationProperties.AutomationId` values; a
@@ -363,9 +379,11 @@ a tool chip, and the busy line do not stop when the system asks for reduced moti
 - **ComposerViewModel**, **ComposerEditorView**, **ChipView**, **IChipThumbnailProvider**,
   **ImageChipThumbnailProvider**, **SentMessage**, **IAttachmentPicker**, **DroppedContent**, and the chips and segments
   of **ComposerDocument**: the message, its editing, what is sent, the block of sending while the copilot works, the
-  seam that picks files to attach, and the way the picked files enter the message.
-- **MarkRegistry**, **Mark**, and **AnnotationOverlayViewModel**: the marks of the draft, the layer that draws them, and
-  its request to clear them.
+  seam that picks files to attach, the way the picked files enter the message, and the request from a mark's chip to
+  change its note (`MarkNoteEditRequested` and `MarkNoteEditRequestedEventArgs`).
+- **MarkRegistry**, **Mark**, and **AnnotationOverlayViewModel**: the marks of the draft, the layer that draws them, its
+  request to clear them, and the opening of the note card of a mark (`BeginEditNote`, with `HasPicture` and `IsDrawing`
+  to say why it could not open).
 - **MarkImageComposer** (through `IMarkImageComposer`), **MessagePayload**, and **PayloadInspector**: the pictures of
   marks and the payload that "View payload" shows.
 - **DictationService** (through `IDictationService`): prepared ahead of the first press.

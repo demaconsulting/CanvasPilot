@@ -63,6 +63,14 @@ and no real input method is used.
 - Previews are made only for picture files of at most 20 MB, are reused until the file changes, and are never made for
   anything else; a failing provider leaves the icon.
 - While the message of an open project is empty the surface shows the placeholder text, and typing hides it.
+- The tooltip of a mark's chip is `Mark n on the picture`, followed by `: <note>` when the mark has a note, and follows
+  a change of the note; a double-click on a mark chip of the message, its Edit note item (named and showing F2), and F2
+  with the caret beside it ask the view model for that mark, with no selection and no change of the message; chips of
+  other kinds and chips of sent messages offer no change of a note.
+- The help text of every chip is its tooltip, and the text of the message that assistive technology reads gives a mark
+  with a note as `[Mark n: note]` and every other chip as `[label]`, following a change of the note.
+- The Edit note item of a mark's chip is disabled while the message is being sent and enabled again when sending was
+  canceled; a chip whose offer cannot be used asks nothing on a double-click or its item.
 
 #### Test Scenarios
 
@@ -118,10 +126,10 @@ first line, the caret, at the end of the words, is below the bottom of the chips
 This scenario is tested by `ComposerEditorView_AddMarkThenType_ChipIsOnItsOwnLineAboveTheWords`.
 
 **ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords**: With an empty message a
-rectangle is drawn and added with a note through the annotation layer; the message read by assistive technology is
-`[Mark 1]` and a line feed and the caret is on the line below. A click on the row of the chip puts the caret at the end
-of the row, and the words that are then typed are read as `[Mark 1]`, a line feed, and the words, and are drawn on a
-line below the chip. This scenario is tested by
+rectangle is drawn and added with the note `this one` through the annotation layer; the message read by assistive
+technology is `[Mark 1: this one]` and a line feed and the caret is on the line below. A click on the row of the chip
+puts the caret at the end of the row, and the words that are then typed are read as `[Mark 1: this one]`, a line feed,
+and the words, and are drawn on a line below the chip. This scenario is tested by
 `ChatPanelView_EmptyMessageMarkWithNoteThenClickAndType_ChipRowIsSeparateFromTheWords`.
 
 **ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage**: For a message with words and a mark chip
@@ -261,3 +269,47 @@ model,
 over the empty surface, and typing "Make it blue" hides it. It is described in the verification of the `ChatPanel`
 unit, and is the evidence for the placeholder because the view is tested here only without the card around it. This
 scenario is tested by `ChatPanelView_ComposerCard_PlaceholderNamesAndHint`.
+
+**ChipView_Show_MarkWithNote_TooltipAddsTheNote**: The chip of mark 2 shown with a note has the tooltip
+`Mark 2 on the picture: the door is blocked`; shown with no note or an empty one it has `Mark 2 on the picture`; the
+helper refuses a missing chip. This scenario is tested by `ChipView_Show_MarkWithNote_TooltipAddsTheNote`.
+
+**ChipView_DoubleClickAndEditNoteItem_RaiseEditNoteRequestedOnlyForEditableMarkChips**: An editable mark chip, a mark
+chip of a sent message, and an editable file chip are double-clicked in a window, and the Edit note item of the first is
+chosen. Only the editable mark chip asks, twice; only it has the menu, whose item is `Edit note…`, shows F2, and is
+named `Edit the note of Mark 1`; turning the change off takes the menu away. This scenario is tested by
+`ChipView_DoubleClickAndEditNoteItem_RaiseEditNoteRequestedOnlyForEditableMarkChips`.
+
+**ComposerEditorView_MarkNoteChanged_ChipTooltipShowsTheNewNote**: A mark chip with the note `old note` is drawn; the
+note is changed in the registry and the chip, drawn again, says `Mark 1 on the picture: new note`, offers the change of
+its note, and the message and what can be undone are as before. This scenario is tested by
+`ComposerEditorView_MarkNoteChanged_ChipTooltipShowsTheNewNote`.
+
+**ComposerEditorView_MarkChipDoubleClickedOrF2_AsksToEditTheNoteOfThatMark**: Two mark chips stand above the words
+`hi`. Two quick clicks on the second chip ask for the second mark and select nothing; F2 right after the first chip asks
+for the first mark; F2 in the words asks for nothing; the message does not change. This scenario is tested by
+`ComposerEditorView_MarkChipDoubleClickedOrF2_AsksToEditTheNoteOfThatMark`.
+
+**ChipView_NoteEditNotEnabled_ItemDisabledAndNothingAsked**: A mark chip that offers the change of its note, but not
+now, is double-clicked in a window and its Edit note item, which is disabled, is chosen; nothing is asked. When the
+offer can be used again the item is enabled. This scenario is tested by
+`ChipView_NoteEditNotEnabled_ItemDisabledAndNothingAsked`.
+
+**ChipView_Show_HelpTextIsTheTooltip**: The help text of a file chip is its path, and that of the chip of mark 2 is
+`Mark 2 on the picture: the door is blocked` with that note and `Mark 2 on the picture` without, equal to the tooltip.
+This scenario is tested by `ChipView_Show_HelpTextIsTheTooltip`.
+
+**ComposerEditorView_DescribeForScreenReader_MarkWithNote_ReadsTheNoteAfterTheLabel**: Text, a mark with the note
+`make it red`, a mark with an empty note, a file chip, and text are described as
+`see [Mark 1: make it red][Mark 2][plan.docx] now`; a missing argument is refused. This scenario is tested by
+`ComposerEditorView_DescribeForScreenReader_MarkWithNote_ReadsTheNoteAfterTheLabel`.
+
+**ComposerEditorView_MarkWithNote_ScreenReaderReadsTheNote**: A chip of a mark with the note `make it red` and one of a
+mark without a note stand above `hello`. The automation peer of the surface reads `[Mark 1: make it red][Mark 2]` and
+the words, and the help texts of the chips are their tooltips; after the note is changed to `make it blue` both follow.
+This scenario is tested by `ComposerEditorView_MarkWithNote_ScreenReaderReadsTheNote`.
+
+**ComposerEditorView_MessageBeingSent_EditNoteItemIsDisabled**: A mark chip with a note stands above `go` in a message
+whose sending is held by the builder. The Edit note item of the chip is enabled before sending, disabled while the
+message is being sent, and enabled again after the sending was canceled, with the chip still in the message. This
+scenario is tested by `ComposerEditorView_MessageBeingSent_EditNoteItemIsDisabled`.

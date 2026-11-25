@@ -427,6 +427,79 @@ public sealed class ComposerEditorViewTests
     }
 
     /// <summary>
+    ///     Test that the chip of a mark shows the mark's note in its tooltip, and the new note as soon as the note of the
+    ///     mark changes, without a change of the message or a step of its history.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_MarkNoteChanged_ChipTooltipShowsTheNewNote()
+    {
+        // Arrange: a mark with a note whose chip is in the message
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "old note");
+        harness.ViewModel.AddMark(mark);
+        harness.Layout();
+        var before = ToolTip.GetTip(Assert.Single(harness.Chips));
+        var canUndo = harness.ViewModel.CanUndo;
+
+        // Act: change the note of the mark
+        harness.Marks.ChangeNote(mark.Id, "new note");
+        harness.Layout();
+
+        // Assert: the chip tells the new note, and the message and its history are as they were
+        Assert.Equal("Mark 1 on the picture: old note", before);
+        var chip = Assert.Single(harness.Chips);
+        Assert.Equal("Mark 1 on the picture: new note", ToolTip.GetTip(chip));
+        Assert.True(chip.IsNoteEditable);
+        Assert.Equal("#\n", harness.ReadableMessage);
+        Assert.Equal(canUndo, harness.ViewModel.CanUndo);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that a double-click on a mark's chip and F2 with the caret beside it ask the view model to change the note
+    ///     of that mark, that F2 elsewhere asks for nothing, and that the message stays as it was.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_MarkChipDoubleClickedOrF2_AsksToEditTheNoteOfThatMark()
+    {
+        // Arrange: two mark chips above the words "hi", and an observer of the requests
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var first = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        var second = harness.Marks.Add(picture, MarkKind.Ellipse, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        harness.ViewModel.AddMark(first);
+        harness.ViewModel.AddMark(second);
+        harness.TypeEach("hi");
+        harness.Layout();
+        var requested = new List<Guid>();
+        harness.ViewModel.MarkNoteEditRequested += (_, e) => requested.Add(e.MarkId);
+        var message = harness.Message;
+
+        // Act: double-click the second chip on its label
+        var label = harness.Chips[1].FindControl<TextBlock>("LabelText")!;
+        var center = label.TranslatePoint(new Point(label.Bounds.Width / 2, label.Bounds.Height / 2), harness.Window)!.Value;
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Window.MouseDown(center, MouseButton.Left);
+        harness.Window.MouseUp(center, MouseButton.Left);
+        harness.Layout();
+        var selectionAfterDoubleClick = harness.Editor.SelectionLength;
+
+        // Act: press F2 right after the first chip, and in the words
+        harness.MoveCaret(1);
+        harness.Press(PhysicalKey.F2);
+        harness.MoveCaret(harness.Message.Length - 1);
+        harness.Press(PhysicalKey.F2);
+
+        // Assert: the second mark by the double-click, the first by F2, nothing in the words, no selection, same message
+        Assert.Equal([second.Id, first.Id], requested);
+        Assert.Equal(0, selectionAfterDoubleClick);
+        Assert.Equal(message, harness.Message);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
     ///     Test that the editing surface is a named text field for assistive technology that reads the message with its
     ///     chips named, and that setting its value replaces the message.
     /// </summary>
@@ -458,6 +531,80 @@ public sealed class ComposerEditorViewTests
         Assert.False(readOnly);
         Assert.Equal("Message", AutomationProperties.GetName(surface.TextArea));
         Assert.Equal("replaced by automation", harness.Message);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
+    ///     Test that a screen reader is told the note of a mark: the text of the message reads the chip of a mark with a
+    ///     note as its label and note in brackets, and the chip's help text is its tooltip, both following a change of
+    ///     the note.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_MarkWithNote_ScreenReaderReadsTheNote()
+    {
+        // Arrange: a chip of a mark with a note and one of a mark without, above the words "hello"
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var noted = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "make it red");
+        var plain = harness.Marks.Add(picture, MarkKind.Ellipse, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        harness.TypeEach("hello");
+        harness.ViewModel.AddMark(noted);
+        harness.ViewModel.AddMark(plain);
+        harness.Layout();
+        var surface = harness.View.FindControl<ComposerTextEditor>("Editor")!;
+        var value = Assert.IsAssignableFrom<IValueProvider>(ControlAutomationPeer.CreatePeerForElement(surface));
+
+        // Act: read the message and the chips, then change the note and read again
+        var readBefore = value.Value;
+        var helpBefore = harness.Chips.Select(AutomationProperties.GetHelpText).ToList();
+        harness.Marks.ChangeNote(noted.Id, "make it blue");
+        harness.Layout();
+        var readAfter = value.Value;
+        var helpAfter = AutomationProperties.GetHelpText(harness.Chips[0]);
+
+        // Assert: the note is read after the label of its chip, and the help text is the tooltip
+        Assert.Equal("[Mark 1: make it red][Mark 2]\nhello", readBefore);
+        Assert.Equal(["Mark 1 on the picture: make it red", "Mark 2 on the picture"], helpBefore);
+        Assert.Equal("[Mark 1: make it blue][Mark 2]\nhello", readAfter);
+        Assert.Equal("Mark 1 on the picture: make it blue", helpAfter);
+        Assert.Equal(ToolTip.GetTip(harness.Chips[0]), helpAfter);
+    }
+
+    /// <summary>
+    ///     Test that the Edit note item of a mark's chip can be chosen exactly while the message can be edited: it is
+    ///     disabled while the message is being sent and enabled again when the sending was canceled.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task ComposerEditorView_MessageBeingSent_EditNoteItemIsDisabled()
+    {
+        // Arrange: a mark chip in a message whose sending is held
+        using var harness = new ComposerHarness(builder: new PendingMessageBuilder());
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "note");
+        harness.ViewModel.AddMark(mark);
+        harness.TypeEach("go");
+        harness.Layout();
+        static bool ItemEnabled(ComposerHarness h) =>
+            Assert.IsType<MenuItem>(Assert.Single(Assert.Single(h.Chips).ContextMenu!.Items)).IsEnabled;
+        var before = ItemEnabled(harness);
+
+        // Act: start sending, then cancel it
+        using var cancellation = new CancellationTokenSource();
+        var sending = harness.ViewModel.SendAsync(cancellation.Token);
+        harness.Layout();
+        var whileSending = ItemEnabled(harness);
+        await cancellation.CancelAsync();
+        Assert.True(harness.WaitFor(() => sending.IsCompleted));
+        var sent = await sending;
+        harness.Layout();
+        var afterCancel = ItemEnabled(harness);
+
+        // Assert: enabled, disabled while sending, enabled again with the message still there
+        Assert.True(before);
+        Assert.False(whileSending);
+        Assert.False(sent);
+        Assert.True(afterCancel);
+        Assert.Single(harness.ViewModel.Document.Chips);
         harness.AssertConsistent();
     }
 

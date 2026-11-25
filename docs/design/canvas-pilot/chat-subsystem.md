@@ -266,7 +266,11 @@ the layer reports a mark, it adds the chip with `ComposerViewModel.AddMark`, one
 change of the composer it tells the layer which mark chips the message holds and whether marks can be made. Undoing the
 chip therefore hides the mark and redoing shows it, with no undo of the marks' own. When the layer asks for all marks to
 be cleared, the panel has the composer delete the chips of all marks, each as its own step, and the layer then shows
-none.
+none. When the user asks from a mark's chip to change its note, the composer raises `MarkNoteEditRequested` and the
+panel has the layer open the note card for that mark; the changed note reaches the chip through the mark registry. When
+the layer cannot open the card (no picture is shown, or a shape is being drawn), the panel adds an information notice to
+the transcript that names the mark and says what to do. The chips of a sent message in the transcript offer no change of
+the note, because a sent message cannot be changed.
 
 **Pictures for chips.** `ChipThumbnailProvider` makes the small pictures of chips. A mark's picture is the area around
 the mark. For the message being written it is cut from the picture the mark was drawn on with `IMarkImageComposer`; for

@@ -232,14 +232,21 @@ jobs:
         run: |
           # MSI ProductVersion only supports three numeric fields (major.minor.build, each
           # 0-65535) and cannot represent a SemVer prerelease suffix (e.g. "-beta.12"), so
-          # it's simply truncated off here. Package.wxs's MajorUpgrade AllowDowngrades="yes"
-          # is what makes this safe: it always replaces whatever version is installed -
-          # older, same, or newer - so two builds truncating to the same MSI version (e.g.
-          # a prerelease and its eventual stable release) is not a problem.
+          # it's simply truncated off for the numeric MSI_VERSION. Package.wxs's MajorUpgrade
+          # AllowDowngrades="yes" is what makes this safe: it always replaces whatever version is
+          # installed - older, same, or newer - so two builds truncating to the same MSI version
+          # (e.g. a prerelease and its eventual stable release) is not a problem. Add/Remove
+          # Programs therefore shows the numeric version (e.g. 0.2.0 for 0.2.0-beta.3). The full
+          # version (MSI_PACKAGE_VERSION) is passed alongside it and names the package file
+          # (CanvasPilot-{full version}-win-x64.msi).
           MSI_VERSION=$(echo "${{ inputs.version }}" | cut -d'-' -f1)
+          MSI_PACKAGE_VERSION="${{ inputs.version }}"
           echo "MSI_VERSION=${MSI_VERSION}" >> "$GITHUB_ENV"
-          echo "Computed MSI version: ${MSI_VERSION}"
+          echo "MSI_PACKAGE_VERSION=${MSI_PACKAGE_VERSION}" >> "$GITHUB_ENV"
+          echo "Computed MSI version: ${MSI_VERSION} (package version: ${MSI_PACKAGE_VERSION})"
 
+      # The installer project names its package CanvasPilot-{full version}-win-x64.msi itself, so it
+      # is built straight into the package directory with no copy or rename.
       - name: Build MSI installer
         if: matrix.os == 'windows-latest'
         run: >
@@ -247,15 +254,9 @@ jobs:
           src/DemaConsulting.CanvasPilot.Installer/DemaConsulting.CanvasPilot.Installer.wixproj
           --configuration Release
           --property:Version=${{ env.MSI_VERSION }}
+          --property:MsiPackageVersion=${{ env.MSI_PACKAGE_VERSION }}
           --property:CanvasPilotPublishDir=${{ github.workspace }}/publish/win-x64/
-
-      - name: Copy MSI to package directory
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path package | Out-Null
-          Copy-Item "src/DemaConsulting.CanvasPilot.Installer/bin/x64/Release/*.msi" `
-            "package/CanvasPilot-${{ inputs.version }}-win-x64.msi"
+          --output ${{ github.workspace }}/package/
 
       - name: Check MSI file table for the native speech runtime and the style kits, and for any Copilot runtime
         if: matrix.os == 'windows-latest'
@@ -272,7 +273,7 @@ jobs:
           # CLI that the user installed, and the Copilot SDK would otherwise put a runtime of about 180 MB
           # into the published folder (CopilotSkipCliDownload in Directory.Build.props prevents that).
           $required = @('onnxruntime.dll', 'sherpa-onnx-c-api.dll', 'portaudio.dll', 'style.json', 'title-card.svg', 'flow.mmd', 'chart.vl.json')
-          $msi = (Resolve-Path "package/CanvasPilot-${{ inputs.version }}-win-x64.msi").Path
+          $msi = (Resolve-Path "package/CanvasPilot-${{ env.MSI_PACKAGE_VERSION }}-win-x64.msi").Path
           $installer = New-Object -ComObject WindowsInstaller.Installer
           $database = $installer.GetType().InvokeMember('OpenDatabase', 'InvokeMethod', $null, $installer, @($msi, 0))
           $view = $database.GetType().InvokeMember('OpenView', 'InvokeMethod', $null, $database, @('SELECT FileName FROM File'))

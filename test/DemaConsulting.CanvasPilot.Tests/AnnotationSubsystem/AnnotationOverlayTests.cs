@@ -847,6 +847,313 @@ public sealed class AnnotationOverlayTests
         Assert.Equal("Choose a tool to mark the picture.", noTool);
         Assert.Equal("Drag on the picture to draw an arrow, or use the arrow keys and Enter. Escape stops.", withTool);
         Assert.Equal("Release to finish the mark. Escape cancels it.", drawing);
+
+        // Act: finish the arrow as mark 1, put its chip in the message, and open its note for changing
+        overlay.EndStroke(new RenderPoint(90, 50));
+        overlay.SkipNote();
+        overlay.SetActiveMarkIds([_added[0].Id]);
+        overlay.BeginEditNote(_added[0].Id);
+
+        // Assert: the edit of a note has its own sentence
+        Assert.Equal("Mark 1: change the note and press Enter, or press Escape to keep it.", overlay.StatusText);
+    }
+
+    /// <summary>
+    ///     Makes a rectangle mark with a note, puts every mark's chip in the message, and returns the new mark.
+    /// </summary>
+    /// <param name="overlay">The overlay, with the rectangle tool chosen.</param>
+    /// <param name="left">The left edge of the rectangle.</param>
+    /// <param name="note">The note of the mark, or <see langword="null" /> to skip it.</param>
+    /// <returns>The mark that was made.</returns>
+    private Mark DrawActiveMark(AnnotationOverlayViewModel overlay, double left, string? note)
+    {
+        overlay.BeginStroke(new RenderPoint(left, 10));
+        overlay.EndStroke(new RenderPoint(left + 40, 40));
+        if (note is null)
+        {
+            overlay.SkipNote();
+        }
+        else
+        {
+            overlay.NoteText = note;
+            overlay.CommitNote();
+        }
+
+        overlay.SetActiveMarkIds(_marks.Marks.Select(mark => mark.Id));
+        return _added[^1];
+    }
+
+    /// <summary>
+    ///     Test that the note card opens for a mark of the message with the mark's number and current note, names the box
+    ///     and the button for the change, offers Cancel instead of Skip, and draws no shape under construction.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_BeginEditNote_MarkOfMessage_OpensCardWithItsNumberAndNote()
+    {
+        // Arrange: two marks of the message, the second with a note, and the pointer chosen
+        var overlay = CreateOverlay();
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        DrawActiveMark(overlay, 10, null);
+        var second = DrawActiveMark(overlay, 70, "door is blocked");
+        overlay.SelectTool(AnnotationTool.None);
+        var before = (overlay.NoteBoxName, overlay.CommitNoteText);
+
+        // Act: open the note of the second mark
+        var opened = overlay.BeginEditNote(second.Id);
+
+        // Assert: the card is open for mark 2 with its note, named for it, with Cancel in place of Skip and no draft
+        Assert.True(opened);
+        Assert.True(overlay.IsNoteEditing);
+        Assert.True(overlay.IsEditingMarkNote);
+        Assert.Equal(second.Id, overlay.EditingMarkId);
+        Assert.Equal("door is blocked", overlay.NoteText);
+        Assert.Equal("Note for mark 2", overlay.NoteBoxName);
+        Assert.Equal("Save note", overlay.CommitNoteText);
+        Assert.Equal(("Note for the new mark (optional)", "Add mark"), before);
+        Assert.False(overlay.HasDraft);
+        Assert.True(overlay.CommitNoteCommand.CanExecute(null));
+        Assert.True(overlay.CancelCommand.CanExecute(null));
+        Assert.False(overlay.SkipNoteCommand.CanExecute(null));
+    }
+
+    /// <summary>
+    ///     Test that the note card does not open for a mark the registry does not hold, a mark whose chip is not in the
+    ///     message, while a shape is drawn, or while marks cannot be made.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_BeginEditNote_UnknownOutsideMessageWhileDrawingOrNotAllowed_IsRefused()
+    {
+        // Arrange: two marks, only the first of which has its chip in the message
+        var overlay = CreateOverlay();
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        var inMessage = DrawActiveMark(overlay, 10, "a");
+        var outside = DrawActiveMark(overlay, 70, "b");
+        overlay.SetActiveMarkIds([inMessage.Id]);
+
+        // Act: ask for a stranger, for the mark outside the message, during a stroke, and with marks not allowed
+        var unknown = overlay.BeginEditNote(Guid.NewGuid());
+        var notInMessage = overlay.BeginEditNote(outside.Id);
+        overlay.BeginStroke(new RenderPoint(120, 10));
+        var whileDrawing = overlay.BeginEditNote(inMessage.Id);
+        overlay.Cancel();
+        overlay.IsDrawingAllowed = false;
+        var notAllowed = overlay.BeginEditNote(inMessage.Id);
+        overlay.IsDrawingAllowed = true;
+        _source.CurrentImage = null;
+        var noPicture = overlay.BeginEditNote(inMessage.Id);
+
+        // Assert: every request was refused and nothing changed
+        Assert.Equal([false, false, false, false, false], new[] { unknown, notInMessage, whileDrawing, notAllowed, noPicture });
+        Assert.False(overlay.IsNoteEditing);
+        Assert.Equal(["a", "b"], _marks.Marks.Select(mark => mark.Note));
+    }
+
+    /// <summary>
+    ///     Test that confirming the changed note changes only the note in the registry, shows it at once, and reports no
+    ///     new mark.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_EditNote_Committed_ChangesOnlyTheNoteAndReportsNoNewMark()
+    {
+        // Arrange: a mark of the message with a note, and its card open with a changed note
+        var overlay = CreateOverlay();
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        var mark = DrawActiveMark(overlay, 10, "old");
+        overlay.SelectTool(AnnotationTool.None);
+        overlay.BeginEditNote(mark.Id);
+        overlay.NoteText = "new\nnote";
+        var shownChanges = 0;
+        overlay.PropertyChanged += (_, e) => shownChanges += e.PropertyName == nameof(AnnotationOverlayViewModel.VisibleMarks) ? 1 : 0;
+
+        // Act: confirm the note
+        overlay.CommitNote();
+
+        // Assert: the same mark has the cleaned new note, is shown with it, no mark was added, and the card is closed
+        var changed = Assert.Single(_marks.Marks);
+        Assert.Equal(mark.Id, changed.Id);
+        Assert.Equal(mark.Number, changed.Number);
+        Assert.Same(mark.Geometry, changed.Geometry);
+        Assert.Same(mark.Snapshot, changed.Snapshot);
+        Assert.Equal("new note", changed.Note);
+        Assert.Equal("new note", Assert.Single(overlay.VisibleMarks).Note);
+        Assert.True(shownChanges > 0);
+        Assert.Single(_added);
+        Assert.False(overlay.IsNoteEditing);
+        Assert.False(overlay.IsEditingMarkNote);
+        Assert.Null(overlay.EditingMarkId);
+    }
+
+    /// <summary>
+    ///     Test that canceling the change of a note, by the command, by Escape, or by a skip that is not offered, keeps
+    ///     the note and the mark as they were.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark()
+    {
+        // Arrange: a mark of the message with a note
+        var overlay = CreateOverlay();
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        var mark = DrawActiveMark(overlay, 10, "keep me");
+        overlay.SelectTool(AnnotationTool.None);
+
+        // Act: change the note and cancel; change it and press Escape; change it and try to skip, then cancel
+        overlay.BeginEditNote(mark.Id);
+        overlay.NoteText = "first try";
+        overlay.CancelCommand.Execute(null);
+        var afterCancel = (overlay.IsNoteEditing, overlay.CurrentTool);
+        overlay.BeginEditNote(mark.Id);
+        overlay.NoteText = "second try";
+        var escaped = overlay.Escape();
+        overlay.BeginEditNote(mark.Id);
+        overlay.NoteText = "third try";
+        overlay.SkipNote();
+        var afterSkip = overlay.IsNoteEditing;
+        overlay.Cancel();
+
+        // Assert: the card closed each time without a change, the tool stayed, the skip did nothing, the mark is kept
+        Assert.Equal((false, AnnotationTool.None), afterCancel);
+        Assert.True(escaped);
+        Assert.True(afterSkip);
+        Assert.Same(mark, Assert.Single(_marks.Marks));
+        Assert.Equal("keep me", Assert.Single(overlay.VisibleMarks).Note);
+        Assert.Single(_added);
+    }
+
+    /// <summary>
+    ///     Test that starting a shape, choosing another tool, or opening the note of another mark saves the note typed so
+    ///     far.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_EditNote_NextShapeOtherToolOrOtherMark_SavesTypedNote()
+    {
+        // Arrange: two marks of the message
+        var overlay = CreateOverlay();
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        var first = DrawActiveMark(overlay, 10, "one");
+        var second = DrawActiveMark(overlay, 70, "two");
+
+        // Act: change the first note and start a shape; change the second and choose a tool; change the first and open the second
+        overlay.BeginEditNote(first.Id);
+        overlay.NoteText = "one by shape";
+        var started = overlay.BeginStroke(new RenderPoint(120, 10));
+        var byShape = _marks.Find(first.Id)!.Note;
+        overlay.Cancel();
+        overlay.BeginEditNote(second.Id);
+        overlay.NoteText = "two by tool";
+        overlay.SelectTool(AnnotationTool.Ellipse);
+        var byTool = _marks.Find(second.Id)!.Note;
+        overlay.BeginEditNote(first.Id);
+        overlay.NoteText = "one by other mark";
+        overlay.BeginEditNote(second.Id);
+
+        // Assert: every typed note was saved, the shape started, and the card is now open for the second mark
+        Assert.True(started);
+        Assert.Equal("one by shape", byShape);
+        Assert.Equal("two by tool", byTool);
+        Assert.Equal("one by other mark", _marks.Find(first.Id)!.Note);
+        Assert.Equal(second.Id, overlay.EditingMarkId);
+        Assert.Equal("two by tool", overlay.NoteText);
+        Assert.Equal(2, _added.Count);
+    }
+
+    /// <summary>
+    ///     Test that the change of a note is given up, with the note unchanged, when the mark leaves the message or marks
+    ///     can no longer be made.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_EditNote_MarkLeavesMessageOrDrawingNotAllowed_GivesUpTheEdit()
+    {
+        // Arrange: two marks of the message
+        var overlay = CreateOverlay();
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        var first = DrawActiveMark(overlay, 10, "one");
+        var second = DrawActiveMark(overlay, 70, "two");
+
+        // Act: change the first note while another chip leaves, then while its own chip leaves
+        overlay.BeginEditNote(first.Id);
+        overlay.NoteText = "changed";
+        overlay.SetActiveMarkIds([first.Id]);
+        var otherLeft = overlay.IsEditingMarkNote;
+        overlay.SetActiveMarkIds([second.Id]);
+        var ownLeft = overlay.IsNoteEditing;
+
+        // Act: change the second note while marks stop being allowed
+        overlay.BeginEditNote(second.Id);
+        overlay.NoteText = "changed";
+        overlay.IsDrawingAllowed = false;
+
+        // Assert: the edit went on while only another chip left, and was given up without a change otherwise
+        Assert.True(otherLeft);
+        Assert.False(ownLeft);
+        Assert.False(overlay.IsNoteEditing);
+        Assert.Equal(["one", "two"], _marks.Marks.Select(mark => mark.Note));
+    }
+
+    /// <summary>
+    ///     Test that the change of a note goes on when a new picture of the file is shown, and is given up with the note
+    ///     unchanged when no picture is shown any more, as when the file can no longer be drawn.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_EditNote_NewPictureOrPictureLost_GoesOnOrGivesUpTheEdit()
+    {
+        // Arrange: a mark of the message whose note is opened and changed
+        var overlay = CreateOverlay();
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        var mark = DrawActiveMark(overlay, 10, "one");
+        overlay.BeginEditNote(mark.Id);
+        overlay.NoteText = "changed";
+
+        // Act: show a new picture of the file, then show none
+        _source.CurrentImage = AnnotationTestPictures.Picture(fill: 7);
+        var afterNewPicture = (overlay.EditingMarkId, overlay.NoteText);
+        _source.CurrentImage = null;
+
+        // Assert: the change went on over the new picture, and was given up without a change when the picture was lost
+        Assert.Equal(((Guid?)mark.Id, "changed"), afterNewPicture);
+        Assert.False(overlay.IsNoteEditing);
+        Assert.Null(overlay.EditingMarkId);
+        Assert.Equal("one", _marks.Find(mark.Id)!.Note);
+    }
+
+    /// <summary>
+    ///     Test that the note label of a mark stays inside the picture: beside the badge on the right where there is
+    ///     room, flipped to the left near the right edge, and never wider than the room or the cap.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayStyle_NoteLabel_StaysInsidePictureOnEitherSideOfTheBadge()
+    {
+        // Arrange: a normal picture with a mark near the left and one near the right edge, and a very narrow picture
+        const int width = 800;
+        const int height = 600;
+        var radius = AnnotationOverlayStyle.BadgeRadius(width, height);
+        var cap = AnnotationOverlayStyle.NoteMaxWidth(width, height);
+
+        // Act: lay out the labels
+        var left = AnnotationOverlayStyle.NoteLabel(new RenderBox(100, 100, 50, 50), width, height);
+        var right = AnnotationOverlayStyle.NoteLabel(new RenderBox(780, 100, 10, 10), width, height);
+        var narrow = AnnotationOverlayStyle.NoteLabel(new RenderBox(5, 5, 10, 10), 30, 300);
+
+        // Assert: the left mark's label is to the right of its badge, at its height, capped, and inside the picture
+        Assert.False(left.LeftOfBadge);
+        Assert.True(left.Edge > 100 + radius);
+        Assert.Equal(cap, left.MaxWidth);
+        Assert.Equal(radius * 2, left.Height);
+        Assert.Equal(100 - radius, left.Top);
+        Assert.True(left.Edge + left.MaxWidth <= width);
+
+        // Assert: the right mark's label flips to the left of its badge and stays inside the picture
+        Assert.True(right.LeftOfBadge);
+        Assert.True(right.Edge - right.MaxWidth >= 0);
+        Assert.True(right.MaxWidth > 0 && right.MaxWidth <= cap);
+
+        // Assert: a picture too narrow for a label gives a width of zero or more that stays inside it
+        Assert.True(narrow.MaxWidth >= 0);
+        Assert.True(narrow.LeftOfBadge ? narrow.Edge - narrow.MaxWidth >= 0 : narrow.Edge + narrow.MaxWidth <= 30);
+
+        // Assert: the size of the text and the cap grow with the picture within their limits
+        Assert.InRange(AnnotationOverlayStyle.NoteFontSize(40, 30), 8, 18);
+        Assert.InRange(AnnotationOverlayStyle.NoteFontSize(4000, 3000), 8, 18);
+        Assert.InRange(cap, radius * 6, radius * 24);
     }
 
     /// <summary>

@@ -21,6 +21,9 @@ N/A - standard test environment.
 - Geometry is in normal form inside the picture; shapes smaller than a pixel and invalid points are refused without a
   change; a stroke has at most 500 points and keeps its end points; a note is one clean line of at most 200 characters.
 - Clearing removes every mark and restarts the numbering.
+- Changing a note keeps the mark's identity, number, geometry, picture, time, and place, cleans the note as for a new
+  mark, tells the observers once, leaves earlier copies unchanged, and changes nothing for the same note or an unknown
+  mark.
 
 #### Test Scenarios
 
@@ -76,3 +79,23 @@ the same names.
 
 **Mark_New_InvalidArguments_Throw**: A mark needs a number of at least one, a shape, and a picture. This scenario is
 tested by `Mark_New_InvalidArguments_Throw`.
+
+**MarkRegistry_ChangeNote_KnownMark_ChangesOnlyTheNoteAndTellsObservers**: The note of the second of three marks is
+changed and then taken away; each time the registry holds, at the same place, a new mark with the same identity, number,
+geometry, picture, and time and the new note, and the observers are told once. This scenario is tested by
+`MarkRegistry_ChangeNote_KnownMark_ChangesOnlyTheNoteAndTellsObservers`.
+
+**MarkRegistry_ChangeNote_NoteIsCleanedAndCappedLikeANewNote**: A changed note with line breaks and tabs becomes one
+clean line, a note of 300 characters is cut to 200, and a blank note is no note. This scenario is tested by
+`MarkRegistry_ChangeNote_NoteIsCleanedAndCappedLikeANewNote`.
+
+**MarkRegistry_ChangeNote_SameNoteOrUnknownMark_ChangesNothingAndTellsNobody**: The same note with spaces around it
+gives back the same mark, an unknown identity gives nothing, and no observer is told. This scenario is tested by
+`MarkRegistry_ChangeNote_SameNoteOrUnknownMark_ChangesNothingAndTellsNobody`.
+
+**MarkRegistry_ChangeNote_EarlierListsAndMarks_StayAsTheyWere**: The mark, the copy of the marks, and the active and
+visible lists taken before a change keep the old note, as a sent message needs; only lists taken afterwards have the
+new one. This scenario is tested by `MarkRegistry_ChangeNote_EarlierListsAndMarks_StayAsTheyWere`.
+
+**MarkNoteChangedEventArgs_New_NullMark_Throws**: The details of a changed note cannot be made without the changed
+mark. This defensive scenario is tested by `MarkNoteChangedEventArgs_New_NullMark_Throws`.

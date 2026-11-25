@@ -28,7 +28,8 @@ overlay reports.
 - *Contract*: `Add` takes the picture the user drew on, the shape, the points the pointer visited in the picture's
   pixels, and an optional note, and returns the `Mark` with the next number. `ActiveMarks` takes the identities of the
   mark chips that are in the message and returns their marks in number order. `VisibleMarks` returns those that were
-  drawn on exactly the picture whose key is given. `Clear` forgets all marks.
+  drawn on exactly the picture whose key is given. `ChangeNote` changes the note of a mark it holds, keeping everything
+  else about the mark, and raises `NoteChanged` with the changed mark. `Clear` forgets all marks.
 - *Constraints*: Not safe for concurrent use; the user interface thread owns it. `Marks` and the lists it returns are
   copies that other threads may read. `Add` throws `ArgumentException` for a shape smaller than one pixel and does not
   change the registry.
@@ -52,8 +53,9 @@ overlay reports.
   `SetActiveMarkIds` tells which mark chips the message holds. `IsDrawingAllowed` is set by the host. The event
   `MarkAdded` carries each finished mark, which is already in the registry. `ClearMarksCommand` raises
   `ClearMarksRequested`, which the host answers by taking the marks out of the message; `HasMarks` tells whether the
-  message holds a mark. The constructor takes a switch that is
-  called with `false` while a tool is chosen and `true` otherwise.
+  message holds a mark. `BeginEditNote` opens the note card for a mark of the message, as a double-click on the mark
+  with no tool chosen does; `IsEditingMarkNote` tells that the card is open for an existing mark. The constructor takes
+  a switch that is called with `false` while a tool is chosen and `true` otherwise.
 - *Constraints*: Owned by the user interface thread; not safe for concurrent use. The views must be laid out in the
   pixels of the picture, as the overlay slot of `PreviewPane` does.
 
@@ -92,7 +94,7 @@ told that nothing lies under a mark when the picture simply cannot say.
 **The layer.** `AnnotationOverlay` lives in the overlay slot of the preview pane, which is laid out in the pixels of the
 picture and scaled with it, so the position of a pointer event on the layer is already a point of the picture and no
 conversion exists to get wrong. Its tools are in a second slot, floating over the stage of the pane, which is not
-scaled. The overlay makes a mark only when its note is finished, since a mark never changes, and reports it through an
+scaled. The overlay makes a mark only when its note is finished or skipped, and reports it through an
 event; the overlay and the composer do not know each other, because `Composer` already depends on `Annotation`. The chat
 panel joins them: it adds the chip of each reported mark with `ComposerViewModel.AddMark`, which is one undo step, and
 tells the overlay which chips the message holds each time the composer changes, so undo and redo of the chip hide and
@@ -102,3 +104,16 @@ of the composer. Because the pointer is also used to drag the picture out of the
 off while a tool is chosen and handles the press only then, so with no tool the press goes on to the picture. A shape is
 cancelled by Escape from anywhere in the window, and the whole layer can be used with the keyboard. What a mark looks
 like on the screen is what `MarkImageComposer` draws in the annotated picture, so the user sees what the assistant gets.
+
+**Notes.** The layer shows the note of each shown mark on one line beside its number badge, in the colors of the theme,
+cut short with an ellipsis and kept inside the picture, and gives the badge, the line, and the label the whole note as
+their tooltip. The label is drawn only on the screen; the pictures sent to the assistant carry the note as data. The
+note of a mark of the message can be changed until the message is sent. A `Mark` instance is immutable;
+`MarkRegistry.ChangeNote` replaces it at its place with a new instance of the same identity, number, geometry, picture,
+and time, so the marks of a message that was sent, which hold the instances of that moment, keep their notes, and raises
+`NoteChanged`, which the overlay and the composer follow. The overlay opens the same note card as for a new shape,
+filled with the note, on a double-click on the mark with no tool chosen, or when the chat panel passes on a request from
+the mark's chip. Confirming changes only the note; canceling leaves the note and the mark as they were. Starting a
+shape, choosing a tool, or opening another note saves what was typed; the change is given up when the mark's chip leaves
+the message or marks can no longer be made. A change of a note is not a step of the composer's undo history, because the
+note belongs to the registry and not to the text of the message.

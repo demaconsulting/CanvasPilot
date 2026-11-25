@@ -264,3 +264,42 @@ sections:
               - CanvasPilot-ComposerEditor-ExposeMessageToAssistiveTechnology
             tests:
               - ComposerEditorView_AutomationPeer_IsANamedEditFieldWithTheTextOfTheMessage
+
+          - id: CanvasPilot-Composer-ShowMarkNoteOnChip
+            title: >-
+              The Composer subsystem shall show the note of a mark in the tooltip of the mark's chip, after "Mark N on
+              the picture", shall give a screen reader the same text for the chip and read the chip of a mark with a
+              note in the text of the message as "[Mark N: note]", and shall show and read the changed note when the
+              note of the mark changes.
+            justification: |
+              The chip stands for the mark in the words of the message, so the user who reads the message sees what
+              each mark says without looking for it on the picture, which may show another picture by now. A tooltip
+              is only seen with a pointer, and a chip inside the message cannot take the focus, so a user of a screen
+              reader is told the note with the chip and in the text of the message.
+            children:
+              - CanvasPilot-ComposerEditor-ShowMarkNoteOnChip
+              - CanvasPilot-ComposerEditor-ReadMarkNoteToScreenReader
+              - CanvasPilot-ComposerViewModel-ProvideMarkNotes
+            tests:
+              - ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ChipTooltipFollows
+              - ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ScreenReaderReadsTheNote
+
+          - id: CanvasPilot-Composer-RequestMarkNoteEdit
+            title: >-
+              The Composer subsystem shall let the user ask to change the note of a mark from the mark's chip in the
+              message being written, by double-clicking the chip, by the Edit note item of its context menu, or with F2
+              while the caret is beside the chip, shall pass the request on with the mark it is for only while the
+              message can be edited, offering the Edit note item disabled otherwise, and shall not change the message
+              or its undo history by it.
+            justification: |
+              The chip is where the user works on the message, and the mark may be drawn on a picture that is no longer
+              shown, so the note must be reachable from the chip with the pointer and with the keyboard alone. The note
+              is not part of the text of the message, so asking for it changes nothing that undo would take back. A
+              message that is being sent, or that has no project, cannot be changed, so the request is not passed on and
+              the menu does not offer what would do nothing.
+            children:
+              - CanvasPilot-ComposerEditor-RequestMarkNoteEdit
+              - CanvasPilot-ComposerViewModel-RequestMarkNoteEdit
+            tests:
+              - ComposerSubsystem_RequestMarkNoteEdit_DoubleClickMenuAndF2_AskForTheMarkOfTheChip
+              - ComposerSubsystem_RequestMarkNoteEdit_MessageBeingSent_IsNotPassedOn

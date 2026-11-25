@@ -30,7 +30,8 @@ namespace DemaConsulting.CanvasPilot.AnnotationSubsystem;
 ///     A mark holds the <see cref="RenderedImage" /> it was drawn on, not just a name, so that the pixels the user saw,
 ///     the file they came from, and the fingerprints of both stay with the mark even after the file changes and the
 ///     preview shows a new picture. A mark never moves to another picture. Instances are immutable and safe to share
-///     between threads.
+///     between threads; a changed note is a new instance with the same <see cref="Id" />, made by the
+///     <see cref="MarkRegistry" />.
 /// </remarks>
 public sealed class Mark
 {
