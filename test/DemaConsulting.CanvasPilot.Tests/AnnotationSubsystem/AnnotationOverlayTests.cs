@@ -988,7 +988,7 @@ public sealed class AnnotationOverlayTests
     ///     the note and the mark as they were.
     /// </summary>
     [Fact]
-    public void AnnotationOverlayViewModel_EditNote_CancelledOrEscaped_KeepsTheNoteAndTheMark()
+    public void AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark()
     {
         // Arrange: a mark of the message with a note
         var overlay = CreateOverlay();

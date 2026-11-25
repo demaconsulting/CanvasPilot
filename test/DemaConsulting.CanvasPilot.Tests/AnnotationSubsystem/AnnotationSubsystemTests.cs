@@ -312,7 +312,7 @@ public sealed class AnnotationSubsystemTests : IDisposable
 
     /// <summary>
     ///     Test that changing the note of a mark through the overlay keeps the mark in the registry with its number,
-    ///     shape, place, and picture, changes only its note, shows it at once, keeps it when cancelled, and does not
+    ///     shape, place, and picture, changes only its note, shows it at once, keeps it when canceled, and does not
     ///     change a copy of the marks handed out before, as a sent message holds.
     /// </summary>
     [Fact]
@@ -342,7 +342,7 @@ public sealed class AnnotationSubsystemTests : IDisposable
         overlay.NoteText = "third";
         overlay.Cancel();
 
-        // Assert: the same mark with the new note, kept when cancelled, and the copy handed out before is unchanged
+        // Assert: the same mark with the new note, kept when canceled, and the copy handed out before is unchanged
         var now = Assert.Single(registry.Marks);
         Assert.Equal((mark.Id, mark.Number, mark.Kind), (now.Id, now.Number, now.Kind));
         Assert.Equal(mark.Geometry.Points, now.Geometry.Points);

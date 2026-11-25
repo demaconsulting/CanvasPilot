@@ -313,9 +313,9 @@ break is confirmed; the registry holds the same mark with the cleaned note, the 
 no mark is reported, and the card is closed. This scenario is tested by
 `AnnotationOverlayViewModel_EditNote_Committed_ChangesOnlyTheNoteAndReportsNoNewMark`.
 
-**AnnotationOverlayViewModel_EditNote_CancelledOrEscaped_KeepsTheNoteAndTheMark**: A changed note is cancelled with the
+**AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark**: A changed note is canceled with the
 command, with Escape, and after a skip that does nothing; the card closes, the tool stays, and the mark keeps its note.
-This scenario is tested by `AnnotationOverlayViewModel_EditNote_CancelledOrEscaped_KeepsTheNoteAndTheMark`.
+This scenario is tested by `AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark`.
 
 **AnnotationOverlayViewModel_EditNote_NextShapeOtherToolOrOtherMark_SavesTypedNote**: A typed note is saved when a shape
 is started, when another tool is chosen, and when the note of another mark is opened, which then opens with its own

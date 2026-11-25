@@ -30,7 +30,6 @@ using AvaloniaEdit;
 using AvaloniaEdit.Document;
 using AvaloniaEdit.Rendering;
 using CommunityToolkit.Mvvm.Input;
-using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 
 namespace DemaConsulting.CanvasPilot.ComposerSubsystem;
 
@@ -466,8 +465,8 @@ public sealed partial class ComposerEditorView : UserControl
     ///     Builds the chips again when the note of a mark changed, so that the chip of the mark shows the new note.
     /// </summary>
     /// <param name="sender">The view model.</param>
-    /// <param name="e">The mark as it is after the change.</param>
-    private void OnMarkNoteChanged(object? sender, MarkNoteChangedEventArgs e)
+    /// <param name="e">Not used; every chip reads the current note of its mark when it is built again.</param>
+    private void OnMarkNoteChanged(object? sender, EventArgs e)
     {
         Editor.TextArea.TextView.Redraw();
     }

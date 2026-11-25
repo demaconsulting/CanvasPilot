@@ -145,7 +145,8 @@ it cannot be verified without a real input method (see the verification document
 #### Dependencies
 
 - **ComposerViewModel**: every action on the message, the document to show, the caret, and the state to bind; and
-  through it **ComposerDocument**, **ComposerHistory**, and **AttachmentIntake**.
+  through it **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, and the note changes of the
+  **MarkRegistry**.
 - **DroppedContent** (of `AttachmentIntake`): what the reader hands over.
 - **AvaloniaEdit** (OTS): the editing surface, its inline objects, change reports, and replaceable commands; see the
   *AvaloniaEdit* design.

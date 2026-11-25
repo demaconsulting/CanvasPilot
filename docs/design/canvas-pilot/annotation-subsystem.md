@@ -108,7 +108,7 @@ like on the screen is what `MarkImageComposer` draws in the annotated picture, s
 **Notes.** The layer shows the note of each shown mark on one line beside its number badge, in the colors of the theme,
 cut short with an ellipsis and kept inside the picture, and gives the badge, the line, and the label the whole note as
 their tooltip. The label is drawn only on the screen; the pictures sent to the assistant carry the note as data. The
-note of a mark of the message can be changed until the message is sent. A `Mark` never changes;
+note of a mark of the message can be changed until the message is sent. A `Mark` instance is immutable;
 `MarkRegistry.ChangeNote` replaces it at its place with a new instance of the same identity, number, geometry, picture,
 and time, so the marks of a message that was sent, which hold the instances of that moment, keep their notes, and raises
 `NoteChanged`, which the overlay and the composer follow. The overlay opens the same note card as for a new shape,

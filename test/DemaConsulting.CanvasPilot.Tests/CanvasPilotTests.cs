@@ -1631,7 +1631,7 @@ public sealed class CanvasPilotTests : IDisposable
 
     /// <summary>
     ///     Test that a user who marks the shown diagram with a note sees the note with the mark and its chip, can change
-    ///     it from the chip, keeps it when a change is cancelled, and sends a message whose payload carries the note as it
+    ///     it from the chip, keeps it when a change is canceled, and sends a message whose payload carries the note as it
     ///     was last changed, on the same mark.
     /// </summary>
     [Fact]
@@ -1676,7 +1676,7 @@ public sealed class CanvasPilotTests : IDisposable
         var payload = Assert.Single(composition.Chat.SentEntries).Payload;
         composition.Dispose();
 
-        // Assert: the note was shown, opened for changing, changed on the same mark, kept when cancelled, and sent
+        // Assert: the note was shown, opened for changing, changed on the same mark, kept when canceled, and sent
         Assert.Equal(("first", "first"), shownFirst);
         Assert.True(requested);
         Assert.Equal((true, "first"), opened);

@@ -176,18 +176,21 @@ sees no mark. Nothing in the unit performs I/O.
   the point and box types; the view of the tool bar also finds `PreviewPaneView` above it, to take the tool keys. The
   view model does not reference `PreviewPane` or the composer.
 - **Logging subsystem**: `RollingFileLogger` for the warning above.
+- **ThemeResources** (of the AppShell subsystem, by resource keys only): the surface, text, border, and warning colors,
+  the radii, the floating shadow, the small type size, the tool icons, and the `IconButton`, `PrimaryButton`,
+  `SecondaryButton`, and `ToolToggle` themes.
 - **Avalonia and CommunityToolkit.Mvvm**: the views, and observable properties and commands of the view model.
 
 #### Callers
 
 - `ApplicationComposition` creates the view model over the mark registry and the preview pane, gives it the drag-out
-  switch (`PreviewPaneViewModel.IsDragOutEnabled`), and puts it in the overlay slot and its tool bar in the slot that
-  floats over the stage of the pane. It joins the layer to the message: it sets `IsDrawingAllowed` from
-  `ComposerViewModel.CanEdit` and calls `SetActiveMarkIds` with `MarkChipIds` whenever the composer reports a change,
-  and adds the chip of each mark that `MarkAdded` reports with `ComposerViewModel.AddMark`, which makes it one undo
-  step.
-- `ChatPanelViewModel` handles `ClearMarksRequested` by calling `ComposerViewModel.DeleteMarkChips`, which removes the
-  chips of all marks, hidden ones included, with one undo step for each chip, and handles
-  `ComposerViewModel.MarkNoteEditRequested` by calling `BeginEditNote` with the mark of the chip.
+  switch (`PreviewPaneViewModel.IsDragOutEnabled`), puts it in the overlay slot of the pane and its tool bar view model
+  in the slot that floats over the stage of the pane, and hands it to the chat panel.
+- `ChatPanelViewModel` joins the layer to the message. Whenever the composer reports a change (and once when it is
+  made), it sets `IsDrawingAllowed` from `ComposerViewModel.CanEdit` and calls `SetActiveMarkIds` with `MarkChipIds`. It
+  adds the chip of each mark that `MarkAdded` reports with `ComposerViewModel.AddMark`, which makes it one undo step.
+  It handles `ClearMarksRequested` by calling `ComposerViewModel.DeleteMarkChips`, which removes the chips of all marks,
+  hidden ones included, with one undo step for each chip. It handles `ComposerViewModel.MarkNoteEditRequested` by
+  calling `BeginEditNote` with the mark of the chip.
 - The view locator finds the two views from the two view models by their names.
 - `AnnotationToolbarView` depends on `PreviewPaneView` only to take the tool keys from it.

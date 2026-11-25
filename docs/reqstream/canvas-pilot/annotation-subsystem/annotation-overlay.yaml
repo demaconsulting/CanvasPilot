@@ -250,7 +250,7 @@ sections:
                   - AnnotationOverlayViewModel_BeginEditNote_MarkOfMessage_OpensCardWithItsNumberAndNote
                   - AnnotationOverlayViewModel_BeginEditNote_UnknownOutsideMessageWhileDrawingOrNotAllowed_IsRefused
                   - AnnotationOverlayViewModel_EditNote_Committed_ChangesOnlyTheNoteAndReportsNoNewMark
-                  - AnnotationOverlayViewModel_EditNote_CancelledOrEscaped_KeepsTheNoteAndTheMark
+                  - AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark
                   - AnnotationOverlayViewModel_EditNote_NextShapeOtherToolOrOtherMark_SavesTypedNote
                   - AnnotationOverlayViewModel_EditNote_MarkLeavesMessageOrDrawingNotAllowed_GivesUpTheEdit
                   - AnnotationOverlayViewModel_StatusText_EachState_TellsWhatToDo

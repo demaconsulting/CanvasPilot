@@ -82,7 +82,7 @@ services, or display is required.
   chip hides the mark and redo shows it; dragging the picture out is off only while a marking tool is chosen; and when
   the file is edited the mark is not drawn on the new picture but stays in the message.
 - The note of a mark of the message is shown with the mark and its chip and can be changed from the chip until the
-  message is sent, on the same mark; a cancelled change keeps the note; the payload carries the note as it was last
+  message is sent, on the same mark; a canceled change keeps the note; the payload carries the note as it was last
   changed; and the note of a mark of a sent message cannot be changed.
 - The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
   earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
@@ -668,7 +668,7 @@ is the overlay of the preview pane and its tool bar is the pane's tool bar. This
 **CanvasPilot_MarkImage_EditNoteOfDraftMark_SentPayloadCarriesTheChangedNote**: The composed application's user shows a
 diagram and draws a rectangle with the note `first`; the composer and the shown mark give `first`. A request from the
 chip opens the note on the layer with `first`; the note `second` is confirmed, and the shown mark and the composer give
-`second` on the same mark, with the same number, geometry, and picture. A second change to `third` is cancelled and the
+`second` on the same mark, with the same number, geometry, and picture. A second change to `third` is canceled and the
 note stays `second` with the chip in the message. The message is sent, and its payload holds mark 1 with the note
 `second`. This scenario is tested by
 `CanvasPilot_MarkImage_EditNoteOfDraftMark_SentPayloadCarriesTheChangedNote`.

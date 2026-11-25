@@ -37,7 +37,7 @@ permission is needed.
 - The marks that the overlay shows on a rendered diagram carry their notes, a mark without a note carries none, and the
   place of each note label lies inside the picture.
 - Changing the note of a mark through the overlay keeps the mark's identity, number, shape, place, and picture, shows
-  the new note at once, keeps the note when the change is cancelled, and leaves the marks handed out before unchanged.
+  the new note at once, keeps the note when the change is canceled, and leaves the marks handed out before unchanged.
 
 ### Test Scenarios
 
@@ -92,6 +92,6 @@ marks carry the note and no note, and the label of each would lie inside the pic
 
 **AnnotationSubsystem_EditMarkNotes_ThroughOverlay_RegistryKeepsTheMarkAndChangesOnlyItsNote**: An ellipse with a note
 is drawn on a diagram and its chip is announced; the marks of the message are handed out. The note is changed and
-confirmed, then changed again and cancelled. The registry holds the same mark with the same number, kind, points, and
+confirmed, then changed again and canceled. The registry holds the same mark with the same number, kind, points, and
 picture and the confirmed note, the overlay showed it at once, and the marks handed out before keep the first note.
 This scenario is tested by `AnnotationSubsystem_EditMarkNotes_ThroughOverlay_RegistryKeepsTheMarkAndChangesOnlyItsNote`.
