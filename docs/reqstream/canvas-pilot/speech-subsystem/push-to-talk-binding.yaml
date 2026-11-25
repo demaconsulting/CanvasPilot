@@ -19,13 +19,15 @@ sections:
                   what to do, a modifier alone, a key of editing or moving (Esc, Enter, Tab, Backspace, Delete, the cursor
                   keys, and the like), a letter, a digit, or a space without Ctrl or Alt, Ctrl+Space, Alt+Space, Alt with a
                   letter or a digit alone, Ctrl+Alt, any chord with the Windows key, the shortcuts of editing and of the
-                  application, Alt+F4, and the function keys F1, F8, F10, F11, and F12, and shall accept the other function
+                  application, Alt+F4, and the function keys F1, F2, F8, F10, F11, and F12, and shall accept the other function
                   keys alone or with Ctrl, Alt, or Shift and a character key with Ctrl or Alt that is not refused.
                 justification: |
                   No key is free on every computer. F8, the first default, is swallowed by the function keys of many
                   laptops, F9 is not claimed by Windows or by the usual tools, and other keys belong to typing, to the
-                  system, or to tools such as PowerToys and the Windows Game Bar. A key that is refused never takes effect,
-                  so a bad choice cannot take away a key that people need.
+                  system, or to tools such as PowerToys and the Windows Game Bar. F2 is kept for CanvasPilot itself: it
+                  changes the note of a mark in the message and renames a file, and the window listens for the talk key
+                  before anything else, so a talk key of F2 would take both away. A key that is refused never takes
+                  effect, so a bad choice cannot take away a key that people need.
                 tests:
                   - PushToTalkBinding_Default_IsF9AndSafe
                   - PushToTalkBinding_Validate_SafeKeys_AreAccepted
@@ -37,7 +39,7 @@ sections:
                   the key (for example F9 or Ctrl+Shift+Space), read that text back whatever its case or spacing, read
                   nothing from a text that is empty, is not a key, repeats a modifier, has no key after its modifiers, or is
                   not safe, and keep nothing for the default so that it can follow a later release, with the old default F8
-                  read as the default.
+                  and a stored F2, which earlier releases allowed, read as the default.
                 justification: |
                   The key is stored in the settings file, which a person can edit and an older release may have written, so
                   the text must read back to the same key and a bad value must never take effect or stop the application

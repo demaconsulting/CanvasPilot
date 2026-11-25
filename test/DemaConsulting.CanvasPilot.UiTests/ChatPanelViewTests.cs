@@ -355,7 +355,7 @@ public sealed class ChatPanelViewTests
 
     /// <summary>
     ///     Test the flow of a user: with an empty message a rectangle is drawn on the picture, a note is added with "Add mark",
-    ///     the user clicks into the message and types. The message that assistive technology reads is the chip, a line feed,
+    ///     the user clicks into the message and types. The message that assistive technology reads is the chip with its note, a line feed,
     ///     and the words; the chip is on a line of its own above the words, and the words were typed on the line below.
     /// </summary>
     [AvaloniaFact]
@@ -385,10 +385,10 @@ public sealed class ChatPanelViewTests
 
         // Assert: the line feed is there before the typing, the caret was on the line below the chip, the words follow the
         // line feed, and the chip is above the line of the words
-        Assert.Equal("[Mark 1]\n", valueBeforeTyping);
+        Assert.Equal("[Mark 1: this one]\n", valueBeforeTyping);
         Assert.Equal(2, caretAfterMark);
         Assert.Equal(1, caretAfterClick);
-        Assert.Equal("[Mark 1]\nMake this a green diamond.", value);
+        Assert.Equal("[Mark 1: this one]\nMake this a green diamond.", value);
         var chip = Assert.Single(harness.Editor.GetVisualDescendants().OfType<ChipView>());
         var chipBottom = chip.TranslatePoint(new Point(0, chip.Bounds.Height), surface.TextArea.TextView)!.Value.Y;
         Assert.True(surface.TextArea.Caret.CalculateCaretRectangle().Y >= chipBottom - 1, "The words must be below the chip.");

@@ -235,17 +235,35 @@ sections:
                   - ChipView_Show_MarkWithNote_TooltipAddsTheNote
                   - ComposerEditorView_MarkNoteChanged_ChipTooltipShowsTheNewNote
 
+              - id: CanvasPilot-ComposerEditor-ReadMarkNoteToScreenReader
+                title: >-
+                  The ComposerEditor shall give a screen reader the tooltip of each chip as the chip's help text, shall
+                  give the chip of a mark that has a note as "[Mark N: note]" in the text of the message that it gives
+                  assistive technology, and shall give the changed note when the note of the mark changes.
+                justification: |
+                  The note of a mark is otherwise only in a tooltip, which appears for a pointer; a chip inside the
+                  editing surface cannot take the keyboard focus, so a user of a screen reader learns the note from the
+                  help text of the chip and from the text of the message, which a screen reader reads as a whole.
+                tests:
+                  - ChipView_Show_HelpTextIsTheTooltip
+                  - ComposerEditorView_DescribeForScreenReader_MarkWithNote_ReadsTheNoteAfterTheLabel
+                  - ComposerEditorView_MarkWithNote_ScreenReaderReadsTheNote
+
               - id: CanvasPilot-ComposerEditor-RequestMarkNoteEdit
                 title: >-
                   The ComposerEditor shall ask its view model to change the note of a mark when the user double-clicks
                   the mark's chip, chooses the Edit note item, named for a screen reader and showing its key, in the
-                  chip's context menu, or presses F2 with the caret beside the chip, and shall offer no way to change a
-                  note on chips that are not in the message being written.
+                  chip's context menu, or presses F2 with the caret beside the chip, shall offer the Edit note item
+                  disabled and ask nothing from the chip while the message cannot be edited, and shall offer no way to
+                  change a note on chips that are not in the message being written.
                 justification: |
                   A chip inside the editing surface cannot take the keyboard focus, so the keyboard reaches it through
                   the caret beside it, and the menu shows the key so that it can be found. A double-click on a chip would
-                  otherwise select a word of the message. The chips of sent messages stand for what was sent, which is
+                  otherwise select a word of the message. A message that is being sent cannot be changed, so the menu
+                  must not offer what would do nothing. The chips of sent messages stand for what was sent, which is
                   never changed.
                 tests:
                   - ChipView_DoubleClickAndEditNoteItem_RaiseEditNoteRequestedOnlyForEditableMarkChips
+                  - ChipView_NoteEditNotEnabled_ItemDisabledAndNothingAsked
                   - ComposerEditorView_MarkChipDoubleClickedOrF2_AsksToEditTheNoteOfThatMark
+                  - ComposerEditorView_MessageBeingSent_EditNoteItemIsDisabled

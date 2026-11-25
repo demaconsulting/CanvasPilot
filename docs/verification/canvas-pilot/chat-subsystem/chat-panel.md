@@ -56,7 +56,9 @@ payload" button that shows on hover); they are not evidence for a requirement.
 - The transcript is dropped when the project changes or closes, and a disposed panel no longer follows the composer.
 - A request from a mark's chip in the message opens the note of that mark on the annotation layer, filled with its note,
   and the chip shows the note confirmed there; a disposed panel opens nothing; the chip of a sent message offers no
-  change of its note.
+  change of its note. A request that the layer cannot follow, because no picture is shown or a shape is being drawn,
+  adds one information notice that names the mark and gives the remedy of that cause, is not repeated while it is the
+  last row, and leaves the mark, its note, and the message as they were.
 - The Send button, an icon button named Send, can be used exactly when the composer can send; sending moves the message
   to the transcript and empties the editing control; a failure keeps the draft, adds nothing, and shows the composer's
   reason. Enter on its own sends and Shift+Enter writes a line break and sends nothing; the hint beside Send says that
@@ -352,6 +354,13 @@ the layer hold no mark. This scenario is tested by `ChatPanelViewModel_Send_Mess
 layer and its chip is in the message; a request from the chip opens the note of that mark on the layer with `first`;
 the note `second` is confirmed there, the composer gives `second` for the chip, and the message holds the same chip.
 This scenario is tested by `ChatPanelViewModel_MarkNoteEditRequested_OpensTheNoteOnTheLayer`.
+
+**ChatPanelViewModel_MarkNoteEditRequested_LayerCannotOpen_ShowsNoticeWithWhatToDo**: A rectangle with the note
+`keep me` is drawn on the layer and its chip is in the message. With the picture hidden, two requests from the chip open
+no card and add one information notice, "The note of Mark 1 cannot be changed now.", with the remedy that says to show a
+picture. With the picture shown again and a rectangle started, a further request opens no card and adds a second notice
+with the remedy that says to finish or throw away the shape. The mark keeps `keep me` and the message is unchanged. This
+scenario is tested by `ChatPanelViewModel_MarkNoteEditRequested_LayerCannotOpen_ShowsNoticeWithWhatToDo`.
 
 **ChatPanelView_MarkChipDoubleClicked_OpensItsNoteAndChipShowsTheChangedNote**: In the window of the panel a mark with
 the note `first` is drawn; its chip's tooltip names the note. Two quick clicks on the chip open the note of the mark on

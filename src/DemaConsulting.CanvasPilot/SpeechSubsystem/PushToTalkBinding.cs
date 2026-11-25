@@ -39,14 +39,16 @@ namespace DemaConsulting.CanvasPilot.SpeechSubsystem;
 ///         the like), a letter, a digit, or a space without Ctrl or Alt (it would type), Ctrl+Space (the input method and
 ///         PowerToys), Alt+Space (the system menu), Alt with a letter or a digit alone (the menus), Ctrl+Alt (AltGr on many
 ///         layouts), every chord with the Windows key, the shortcuts of editing and of CanvasPilot (Ctrl+A, C, V, X, Y, Z,
-///         N, O, S, P, F, W, Q), Alt+F4, and the function keys F1 (help), F8 (the old default, which laptops swallow),
-///         F10 (menu), F11 (full screen), and F12 (the debugger). The function keys F2 to F7, F9, and F13 to F24 are
-///         welcome alone or with Ctrl, Alt, or Shift.
+///         N, O, S, P, F, W, Q), Alt+F4, and the function keys F1 (help), F2 (changing the note of a mark in the
+///         message, and renaming a file), F8 (the old default, which laptops swallow), F10 (menu), F11 (full screen), and
+///         F12 (the debugger). The function keys F3 to F7, F9, and F13 to F24 are welcome alone or with Ctrl, Alt, or
+///         Shift.
 ///     </para>
 ///     <para>
 ///         <b>Text.</b> The text of a binding is the modifiers in the order <c>Ctrl+Alt+Shift</c> and then the key, for
 ///         example <c>F9</c> or <c>Ctrl+Shift+Space</c>. <see cref="Parse" /> reads it back, ignoring case, and refuses a
-///         text that is not a safe binding, so a bad value in a file never takes effect.
+///         text that is not a safe binding, so a bad value in a file never takes effect: a stored key that is refused,
+///         such as <c>F8</c> or <c>F2</c> that earlier releases allowed, is read as the default.
 ///     </para>
 /// </remarks>
 public sealed record PushToTalkBinding
@@ -78,6 +80,7 @@ public sealed record PushToTalkBinding
     private static readonly Dictionary<Key, string> ReservedFunctionKeys = new()
     {
         [Key.F1] = "F1 opens help in most programs.",
+        [Key.F2] = "F2 changes the note of the mark beside the caret in the message, and renames the selected file.",
         [Key.F8] = "F8 is the brightness, media, or screen-capture key of many laptops, so the window may never see it.",
         [Key.F10] = "F10 opens the menu.",
         [Key.F11] = "F11 is the full-screen key of many programs.",

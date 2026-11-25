@@ -29,24 +29,28 @@ The unit is made of these parts, all in the user interface layer:
   drop handler call.
 - `ComposerTextEditor`: the editing surface (a `TextEditor`) with an automation peer, because the library's control has
   none and the platform reports it as an unnamed scroll area. The peer is an edit field (`AutomationControlType.Edit`)
-  with a value pattern: `Value` is the message with each chip named in brackets (`ValueProvider`, set by the view to
-  `DescribeForClipboard` of the message), `SetValue` replaces the whole message as one step through `ValueSetter` (chips
-  are not kept) and is read-only while the message cannot be edited, and a change of the text is reported as a change of
-  the value. The surface and its text area are named "Message", and the peer takes the focus into the text area.
+  with a value pattern: `Value` is the message with each chip named in brackets and the chip of a mark that has a note
+  named with its note, such as `[Mark 1: make it red]` (`ValueProvider`, set by the view to `DescribeForScreenReader` of
+  the message with `ComposerViewModel.GetMarkNote`), `SetValue` replaces the whole message as one step through
+  `ValueSetter` (chips are not kept) and is read-only while the message cannot be edited, and a change of the text is
+  reported as a change of the value. The surface and its text area are named "Message", and the peer takes the focus
+  into the text area.
 - `ChipElementGenerator`: the library's inline element generator, which turns each placeholder character of the surface
   into an inline control.
 - `ChipView` (a `UserControl`): one chip, a pill at least 24 pixels high (the shared `ChipBorder` theme: a raised
   surface with a subtle border and a fully rounded corner) with an icon for its kind (file, folder, picture, mark) or
   the picture from the provider, its name (trimmed with an ellipsis beyond 180 pixels), a delete button (which
   `IsDeleteButtonVisible` can hide; the transcript of sent messages hides it), and a tooltip with the full path or
-  `Mark n on the picture`, followed by `: <note>` when the mark has a note (`GetMarkToolTip`). `IsNoteEditable` (off by
-  default, on for the chips of the message being written) gives the chip of a mark a context menu with the item *Edit
-  note…* (`ComposerChipEditNote`, named `Edit the note of Mark n`, showing the key F2), and makes a double-click on the
-  chip ask for the change too; both raise `EditNoteRequested`, and the double-click is handled so that the surface does
-  not select a word. A mark chip has the class `mark`, which tints the pill with `CpMarkTint`, gives it the `CpMark`
-  outline, and fills its icon with `CpMark`, so it reads like the mark on the picture. The delete button shows a small
-  cross icon; its accessible name and tooltip are `Remove {label}`, set when the chip is shown, so that the screen
-  reader says which chip.
+  `Mark n on the picture`, followed by `: <note>` when the mark has a note (`GetMarkToolTip`); the same text is the
+  chip's `AutomationProperties.HelpText`, so that a screen reader gives it too. `IsNoteEditable` (off by default, on for
+  the chips of the message being written) gives the chip of a mark a context menu with the item *Edit note…*
+  (`ComposerChipEditNote`, named `Edit the note of Mark n`, showing the key F2), and makes a double-click on the chip
+  ask for the change too; both raise `EditNoteRequested`, and the double-click is handled so that the surface does not
+  select a word. `IsNoteEditEnabled` (on by default) says whether that offer can be used now: while it is off the item
+  is disabled, and neither the item nor a double-click raises `EditNoteRequested`. A mark chip has the class `mark`,
+  which tints the pill with `CpMarkTint`, gives it the `CpMark` outline, and fills its icon with `CpMark`, so it reads
+  like the mark on the picture. The delete button shows a small cross icon; its accessible name and tooltip are
+  `Remove {label}`, set when the chip is shown, so that the screen reader says which chip.
 - `IChipThumbnailProvider` and `ImageChipThumbnailProvider`: the contract that gives a chip its small picture
   asynchronously, and the default implementation for attached picture files.
 - `DictatedTextBackgroundRenderer` and `DictatedRange`: draws the background behind dictated text; `GetRanges` finds the
@@ -107,12 +111,18 @@ because the button does not take it. Backspace and Delete over a chip are one ch
 therefore one step too.
 
 **Notes of marks.** When the generator makes the control of a mark chip, the view asks `ComposerViewModel.GetMarkNote`
-for the mark's note, shows it in the tooltip, and turns `IsNoteEditable` on. The view follows
-`ComposerViewModel.MarkNoteChanged` and draws the lines again, so every chip is made again with its current note. A
+for the mark's note, shows it in the tooltip and the help text, turns `IsNoteEditable` on, and sets `IsNoteEditEnabled`
+to `ComposerViewModel.CanEdit`. The view follows `ComposerViewModel.MarkNoteChanged` and draws the lines again, so every
+chip is made again with its current note; it also draws them again when `CanEdit` changes (a send starts or ends, or the
+project opens or closes), which it notices with the read-only state of the surface, so that the Edit note item is
+enabled exactly while the message can be edited. `DescribeForScreenReader(segments, getMarkNote)` gives the text that
+the automation peer reads: each text segment as it is, the chip of a mark with a note that is not empty as
+`[{label}: {note}]`, and every other chip as `[{label}]`; it throws `ArgumentNullException` for a missing argument. A
 double-click on the chip or its Edit note item calls `ComposerViewModel.RequestMarkNoteEdit` with the chip's mark. Chips
 cannot take the focus inside the surface, so the keyboard way is a key binding of F2, which calls
-`RequestMarkNoteEditAtCaret` for the mark chip just before the caret, or else just after it. None of them changes the
-message.
+`RequestMarkNoteEditAtCaret` for the mark chip just before the caret, or else just after it; the view model refuses
+both while the message cannot be edited. None of them changes the message. F2 is never a talk key (see
+*PushToTalkBinding*), so the window does not take it before the surface.
 
 **Previews.** `ImageChipThumbnailProvider` makes a preview only for a picture chip whose file exists and is not larger
 than 20 MB, decodes it straight to a width of 64 pixels on a background thread, keeps up to 64 previews keyed by path,

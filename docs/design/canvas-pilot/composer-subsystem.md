@@ -59,8 +59,10 @@ it.
   reports every change of the user as one view model action; writes every other change of the view model into the
   surface; handles Ctrl+Z, Ctrl+Y, Ctrl+Shift+Z, paste, copy, cut, and drops as data; gives the view model as the
   `IUndoRedoTarget` of the focused surface; takes the pictures of chips from an `IChipThumbnailProvider`; shows the note
-  of a mark in the tooltip of its chip; and asks the view model to change the note of a mark on a double-click of its
-  chip, the Edit note item of the chip's context menu, or F2 with the caret beside the chip.
+  of a mark in the tooltip of its chip, gives the same text to a screen reader as the chip's help text, and reads a
+  mark with a note as `[Mark N: note]` in the text of the message that assistive technology reads; and asks the view
+  model to change the note of a mark on a double-click of its chip, the Edit note item of the chip's context menu
+  (enabled only while the message can be edited), or F2 with the caret beside the chip.
 - *Constraints*: Owned by the interface thread. The surface is read-only while the message cannot be edited. It uses
   the AvaloniaEdit control, and holds no state of the message.
 
@@ -192,9 +194,11 @@ while its chip is in the sequence, so undoing the addition of a mark, or deletin
 message, and redoing brings it back, with one undo system for text, chips, and marks. `DeleteMarkChips` deletes every
 mark chip, one `DeleteChip` for each, so that a request to clear the marks of the picture can be taken back in steps,
 like deleting the chips one by one. The note of a mark lives in the registry, not in the message: the editor shows it
-in the tooltip of the chip through `GetMarkNote` and builds the chips again on `MarkNoteChanged`. The user asks to
+in the tooltip of the chip through `GetMarkNote`, gives the same text to a screen reader as the chip's help text and in
+the text of the message, and builds the chips again on `MarkNoteChanged`. The user asks to
 change a note from the chip (double-click, the Edit note item of its context menu, or F2 with the caret beside it); the
-view model passes the request on through `MarkNoteEditRequested`, and the chat panel has the annotation layer open the
+view model passes the request on through `MarkNoteEditRequested` only while the message can be edited (the Edit note
+item is disabled otherwise), and the chat panel has the annotation layer open the
 note. The change of a note is therefore not a step of the message's undo history.
 
 **Attachments are data.** What is dropped or pasted comes from outside the application and is never trusted. The intake

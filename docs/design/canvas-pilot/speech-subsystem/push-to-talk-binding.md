@@ -31,7 +31,9 @@ that exists is a safe one. Two bindings are equal when their key and modifiers a
 `EditingKeys`, the keys that are needed to edit and move about: Escape, Enter, Tab, Backspace, Delete, Insert, Home,
 End, Page Up, Page Down, the four cursor keys, Caps Lock, Num Lock, Scroll Lock, Pause, Print Screen, Apps (the menu
 key), Sleep, Clear, and Select; `ReservedFunctionKeys`, the function keys that are refused with a reason, each a
-sentence: F1 (opens help in most programs), F8 (the brightness, media, or screen-capture key of many laptops, so the
+sentence: F1 (opens help in most programs), F2 (changes the note of the mark beside the caret in the message, and
+renames the selected file; the key of the message would never be reached, because the window handles the talk key
+first), F8 (the brightness, media, or screen-capture key of many laptops, so the
 window may never see it), F10 (opens the menu), F11 (the full-screen key of many programs), and F12 (starts the debugger
 on many computers); and `CtrlLetterShortcuts`, the letters that Ctrl alone must not be combined with because they are
 the shortcuts of editing and of the application: A, C, V, X, Y, Z, N, O, S, P, F, W, and Q.
@@ -46,9 +48,9 @@ safe). They are applied in this order, and the first that holds decides:
    system. Choose another key."
 4. The key is one of the editing and moving keys, with any modifiers: "Esc, Enter, Tab, Backspace, the cursor keys, and
    the like are needed for typing. Choose another key."
-5. The key is F1, F8, F10, F11, or F12, with any modifiers: the reason of that key followed by "Choose another key, for
-   example F9."
-6. The key is one of the other function keys, F2 to F7, F9, or F13 to F24: it is safe alone and with any of Ctrl, Alt,
+5. The key is F1, F2, F8, F10, F11, or F12, with any modifiers: the reason of that key followed by "Choose another key,
+   for example F9."
+6. The key is one of the other function keys, F3 to F7, F9, or F13 to F24: it is safe alone and with any of Ctrl, Alt,
    and Shift, except Alt+F4 (with Alt held, whatever else is), which is refused with "Alt+F4 closes the window. Choose
    another key."
 7. Any other key, which is a key that types (a letter, a digit, Space, a sign, or a key of the numeric pad), is judged
@@ -86,8 +88,9 @@ registered, and F9 can be swallowed by a computer too. That is why the key is a 
 - *Stored form*: the settings keep the text of the binding, and the empty string for the default, so that the default
   can follow a later release. `ToStored(binding)` gives the empty string for `Default` and `Display` otherwise.
   `FromStored(text)` gives `Parse(text)` or, when that is `null` (empty, not a key, or not safe, which includes the old
-  default `F8`), `Default`. `Normalize(text)` is `ToStored(FromStored(text))`: it cleans a value of a settings file,
-  writing a safe binding in its normal form and a bad or empty one as the empty string.
+  default `F8` and `F2`, which earlier releases allowed), `Default`. `Normalize(text)` is `ToStored(FromStored(text))`:
+  it cleans a value of a settings file, writing a safe binding in its normal form and a bad or empty one as the empty
+  string.
 
 **Questions about a key event**:
 

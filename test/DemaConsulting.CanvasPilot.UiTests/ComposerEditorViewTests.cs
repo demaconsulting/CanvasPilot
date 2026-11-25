@@ -535,6 +535,80 @@ public sealed class ComposerEditorViewTests
     }
 
     /// <summary>
+    ///     Test that a screen reader is told the note of a mark: the text of the message reads the chip of a mark with a
+    ///     note as its label and note in brackets, and the chip's help text is its tooltip, both following a change of
+    ///     the note.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_MarkWithNote_ScreenReaderReadsTheNote()
+    {
+        // Arrange: a chip of a mark with a note and one of a mark without, above the words "hello"
+        using var harness = new ComposerHarness();
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var noted = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "make it red");
+        var plain = harness.Marks.Add(picture, MarkKind.Ellipse, [new RenderPoint(0, 0), new RenderPoint(3, 3)]);
+        harness.TypeEach("hello");
+        harness.ViewModel.AddMark(noted);
+        harness.ViewModel.AddMark(plain);
+        harness.Layout();
+        var surface = harness.View.FindControl<ComposerTextEditor>("Editor")!;
+        var value = Assert.IsAssignableFrom<IValueProvider>(ControlAutomationPeer.CreatePeerForElement(surface));
+
+        // Act: read the message and the chips, then change the note and read again
+        var readBefore = value.Value;
+        var helpBefore = harness.Chips.Select(AutomationProperties.GetHelpText).ToList();
+        harness.Marks.ChangeNote(noted.Id, "make it blue");
+        harness.Layout();
+        var readAfter = value.Value;
+        var helpAfter = AutomationProperties.GetHelpText(harness.Chips[0]);
+
+        // Assert: the note is read after the label of its chip, and the help text is the tooltip
+        Assert.Equal("[Mark 1: make it red][Mark 2]\nhello", readBefore);
+        Assert.Equal(["Mark 1 on the picture: make it red", "Mark 2 on the picture"], helpBefore);
+        Assert.Equal("[Mark 1: make it blue][Mark 2]\nhello", readAfter);
+        Assert.Equal("Mark 1 on the picture: make it blue", helpAfter);
+        Assert.Equal(ToolTip.GetTip(harness.Chips[0]), helpAfter);
+    }
+
+    /// <summary>
+    ///     Test that the Edit note item of a mark's chip can be chosen exactly while the message can be edited: it is
+    ///     disabled while the message is being sent and enabled again when the sending was canceled.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task ComposerEditorView_MessageBeingSent_EditNoteItemIsDisabled()
+    {
+        // Arrange: a mark chip in a message whose sending is held
+        using var harness = new ComposerHarness(builder: new PendingMessageBuilder());
+        var picture = new RenderedImage(Path.Combine(harness.Folder, "pic.svg"), "svg", 4, 4, new byte[4 * 4 * 4]);
+        var mark = harness.Marks.Add(picture, MarkKind.Rectangle, [new RenderPoint(0, 0), new RenderPoint(3, 3)], "note");
+        harness.ViewModel.AddMark(mark);
+        harness.TypeEach("go");
+        harness.Layout();
+        static bool ItemEnabled(ComposerHarness h) =>
+            Assert.IsType<MenuItem>(Assert.Single(Assert.Single(h.Chips).ContextMenu!.Items)).IsEnabled;
+        var before = ItemEnabled(harness);
+
+        // Act: start sending, then cancel it
+        using var cancellation = new CancellationTokenSource();
+        var sending = harness.ViewModel.SendAsync(cancellation.Token);
+        harness.Layout();
+        var whileSending = ItemEnabled(harness);
+        await cancellation.CancelAsync();
+        Assert.True(harness.WaitFor(() => sending.IsCompleted));
+        var sent = await sending;
+        harness.Layout();
+        var afterCancel = ItemEnabled(harness);
+
+        // Assert: enabled, disabled while sending, enabled again with the message still there
+        Assert.True(before);
+        Assert.False(whileSending);
+        Assert.False(sent);
+        Assert.True(afterCancel);
+        Assert.Single(harness.ViewModel.Document.Chips);
+        harness.AssertConsistent();
+    }
+
+    /// <summary>
     ///     Test that a drop of three files and a picture is four chips and one undo step, however it is made.
     /// </summary>
     [AvaloniaFact]

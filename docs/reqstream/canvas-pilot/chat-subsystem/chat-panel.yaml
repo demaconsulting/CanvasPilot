@@ -25,14 +25,16 @@ sections:
                   The ChatPanel shall list in its transcript, as the rows of the user, exactly the messages that were sent in
                   the open project, once each and oldest first, each with its words in the order they were written,
                   dictated words marked as such, the chips of its attachments and marks in their places with their
-                  pictures and no button to delete them, and a statement of how many marks and attachments it carried;
+                  pictures, no button to delete them, and no way to change the notes of its marks, and a statement of how
+                  many marks and attachments it carried;
                   and shall drop what it shows when the project changes or closes, so that the answer of one project is
                   never shown in another.
                 justification: |
                   The transcript is the user's record of what was said to the assistant, so it must show what was
                   sent and not what is still being written, in the order it was sent, and it must show it the way it
                   was composed, with the marks and files where the user put them, so that the user recognizes the
-                  message. A sent message cannot be changed, so its chips have no delete button. The messages belong
+                  message. A sent message cannot be changed, so its chips have no delete button and the notes of its
+                  marks cannot be changed from them. The messages belong
                   to the project they were sent in and may hold the user's words and file names, so the transcript goes
                   with the project; what is kept of it for the next time is a separate requirement and is kept outside
                   the project.
@@ -50,6 +52,7 @@ sections:
                   - ChatPanelView_Send_MessageWithMarkAndFile_ShowsChipsInTranscriptWithoutDeleteButtons
                   - ChatPanelView_Send_MessageWithChip_BubbleSizesToTheChipRowAndTheWords
                   - ChatPanelView_Send_DictatedWords_AreShownWithTheDictatedBackground
+                  - ChatPanelView_MarkChipDoubleClicked_OpensItsNoteAndChipShowsTheChangedNote
 
               - id: CanvasPilot-ChatPanel-SendFromPanel
                 title: >-
@@ -128,13 +131,19 @@ sections:
               - id: CanvasPilot-ChatPanel-OpenMarkNoteFromChip
                 title: >-
                   The ChatPanel shall have the annotation layer open the note of a mark for changing when the composer
-                  passes on the user's request from the mark's chip, and shall stop doing so when it is released.
+                  passes on the user's request from the mark's chip; when the layer cannot open it, because no picture is
+                  shown or a shape is being drawn, shall add an information notice to the transcript that names the mark
+                  and says what to do, without repeating a notice that is the last row; and shall stop following the
+                  requests when it is released.
                 justification: |
                   The composer and the annotation layer do not know each other; the panel already joins them for the
-                  chips of marks, so it also passes on the request to change a note. A released panel must not act on a
-                  composer it no longer shows.
+                  chips of marks, so it also passes on the request to change a note. The note card is on the layer over
+                  the picture, so it cannot open while no picture is shown or while a shape waits to be finished; a
+                  request that seemed to be ignored would leave the user guessing, so the panel says why and what to do,
+                  once. A released panel must not act on a composer it no longer shows.
                 tests:
                   - ChatPanelViewModel_MarkNoteEditRequested_OpensTheNoteOnTheLayer
+                  - ChatPanelViewModel_MarkNoteEditRequested_LayerCannotOpen_ShowsNoticeWithWhatToDo
                   - ChatPanelViewModel_Dispose_StopsFollowingTheComposer
                   - ChatPanelView_MarkChipDoubleClicked_OpensItsNoteAndChipShowsTheChangedNote
 

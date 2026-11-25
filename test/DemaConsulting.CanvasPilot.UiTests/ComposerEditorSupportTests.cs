@@ -409,6 +409,69 @@ public sealed class ComposerEditorSupportTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a mark's chip whose offer to change the note cannot be used now shows its Edit note item disabled,
+    ///     asks nothing on a double-click or the item, and enables the item again when the offer can be used.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChipView_NoteEditNotEnabled_ItemDisabledAndNothingAsked()
+    {
+        // Arrange: a mark chip that offers to change its note, but not now, in a window
+        var view = new ChipView { IsNoteEditable = true, IsNoteEditEnabled = false };
+        view.Show(new MarkChip(Guid.NewGuid(), 1), null);
+        var window = new Window { Content = view };
+        window.Show();
+        var requests = 0;
+        view.EditNoteRequested += (_, _) => requests++;
+
+        // Act: double-click the chip on its label and choose the menu item
+        var label = view.FindControl<TextBlock>("LabelText")!;
+        var center = label.TranslatePoint(new Point(label.Bounds.Width / 2, label.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseUp(center, MouseButton.Left);
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseUp(center, MouseButton.Left);
+        var item = Assert.IsType<MenuItem>(Assert.Single(view.ContextMenu!.Items));
+        var disabled = !item.IsEnabled;
+        item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+
+        // Act: let the offer be used again
+        view.IsNoteEditEnabled = true;
+        window.Close();
+
+        // Assert: the item was disabled, nothing was asked, and the item is enabled now
+        Assert.True(disabled);
+        Assert.Equal(0, requests);
+        Assert.True(item.IsEnabled);
+        Assert.True(view.IsNoteEditEnabled);
+    }
+
+    /// <summary>
+    ///     Test that the help text that a screen reader gives for a chip is its tooltip: the path of an attachment, and
+    ///     for a mark that it is on the picture, with its note when it has one.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChipView_Show_HelpTextIsTheTooltip()
+    {
+        // Arrange: the chips of a file and of mark 2
+        var path = Path.Combine(_folder, "plan.txt");
+        var file = new ChipView();
+        var mark = new ChipView();
+
+        // Act: show them, the mark with a note and then without
+        file.Show(new FileChip(path), null);
+        mark.Show(new MarkChip(Guid.NewGuid(), 2), null, "the door is blocked");
+        var withNote = Avalonia.Automation.AutomationProperties.GetHelpText(mark);
+        mark.Show(new MarkChip(Guid.NewGuid(), 2), null);
+        var withoutNote = Avalonia.Automation.AutomationProperties.GetHelpText(mark);
+
+        // Assert: the help text is the tooltip in every case
+        Assert.Equal(path, Avalonia.Automation.AutomationProperties.GetHelpText(file));
+        Assert.Equal("Mark 2 on the picture: the door is blocked", withNote);
+        Assert.Equal("Mark 2 on the picture", withoutNote);
+        Assert.Equal(ToolTip.GetTip(mark), withoutNote);
+    }
+
+    /// <summary>
     ///     Test that the delete button of a chip control raises the delete request, and the label helper names every
     ///     kind of chip and refuses a missing one.
     /// </summary>
@@ -515,6 +578,35 @@ public sealed class ComposerEditorSupportTests : IDisposable
         Assert.DoesNotContain(ComposerSnapshot.ChipPlaceholder, text);
         Assert.Throws<ArgumentNullException>(() => ComposerEditorView.DescribeForClipboard(null!));
         Assert.Throws<ArgumentNullException>(() => ComposerEditorView.ContainsForbiddenCharacter(null!));
+    }
+
+    /// <summary>
+    ///     Test that the text that a screen reader reads gives the chip of a mark with a note as its label and its note in
+    ///     brackets, and every other chip, a mark without a note among them, as its label in brackets.
+    /// </summary>
+    [AvaloniaFact]
+    public void ComposerEditorView_DescribeForScreenReader_MarkWithNote_ReadsTheNoteAfterTheLabel()
+    {
+        // Arrange: text, a mark with a note, a mark with an empty note, a file, and text
+        var noted = new MarkChip(Guid.NewGuid(), 1);
+        var empty = new MarkChip(Guid.NewGuid(), 2);
+        ComposerSegment[] segments =
+        [
+            new TextSegment("see ", TextOrigin.Typed),
+            noted,
+            empty,
+            new FileChip(Path.Combine(_folder, "plan.docx")),
+            new TextSegment(" now", TextOrigin.Dictated),
+        ];
+        var notes = new Dictionary<Guid, string?> { [noted.MarkId] = "make it red", [empty.MarkId] = string.Empty };
+
+        // Act: describe them
+        var text = ComposerEditorView.DescribeForScreenReader(segments, id => notes.GetValueOrDefault(id));
+
+        // Assert: the note after the label of its mark, and the other chips by their labels
+        Assert.Equal("see [Mark 1: make it red][Mark 2][plan.docx] now", text);
+        Assert.Throws<ArgumentNullException>(() => ComposerEditorView.DescribeForScreenReader(null!, _ => null));
+        Assert.Throws<ArgumentNullException>(() => ComposerEditorView.DescribeForScreenReader(segments, null!));
     }
 
     /// <summary>

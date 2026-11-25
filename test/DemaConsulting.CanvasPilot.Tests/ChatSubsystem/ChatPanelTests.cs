@@ -365,6 +365,54 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a request from a mark's chip that the layer cannot follow, because no picture is shown or a shape is
+    ///     being drawn, adds an information notice that names the mark and says what to do, once for each cause, and
+    ///     leaves the mark, its note, and the message as they were.
+    /// </summary>
+    [Fact]
+    public void ChatPanelViewModel_MarkNoteEditRequested_LayerCannotOpen_ShowsNoticeWithWhatToDo()
+    {
+        // Arrange: a mark with a note drawn on the layer, whose chip the panel put in the message
+        var picture = _source.CurrentImage;
+        _annotation.SelectTool(AnnotationTool.Rectangle);
+        _annotation.BeginStroke(new RenderPoint(10, 10));
+        _annotation.EndStroke(new RenderPoint(50, 40));
+        _annotation.NoteText = "keep me";
+        _annotation.CommitNote();
+        var chip = Assert.Single(_composer.Document.Chips.OfType<MarkChip>());
+        var message = _composer.Document.FlatText;
+
+        // Act: hide the picture and ask twice from the chip to change the note
+        _source.CurrentImage = null;
+        _composer.RequestMarkNoteEdit(chip.MarkId);
+        _composer.RequestMarkNoteEdit(chip.MarkId);
+        var noPicture = _panel.Transcript.ToList();
+        var openedWithoutPicture = _annotation.IsNoteEditing;
+
+        // Act: show the picture again, start a shape, and ask once more
+        _source.CurrentImage = picture;
+        _annotation.SelectTool(AnnotationTool.Rectangle);
+        _annotation.BeginStroke(new RenderPoint(60, 60));
+        _composer.RequestMarkNoteEdit(chip.MarkId);
+
+        // Assert: no note card opened, and one notice for each cause, naming the mark and saying what to do
+        Assert.False(openedWithoutPicture);
+        Assert.False(_annotation.IsEditingMarkNote);
+        var first = Assert.IsType<NoticeRowViewModel>(Assert.Single(noPicture));
+        Assert.Equal(NoticeSeverity.Information, first.Severity);
+        Assert.Equal("The note of Mark 1 cannot be changed now.", first.Message);
+        Assert.Equal(ChatPanelViewModel.NoteNeedsPictureRemedy, first.Remedy);
+        Assert.Equal(2, _panel.Transcript.Count);
+        var second = Assert.IsType<NoticeRowViewModel>(_panel.Transcript[1]);
+        Assert.Equal("The note of Mark 1 cannot be changed now.", second.Message);
+        Assert.Equal(ChatPanelViewModel.NoteWaitsForShapeRemedy, second.Remedy);
+
+        // Assert: the mark keeps its note and the message is as it was
+        Assert.Equal("keep me", _composer.GetMarkNote(chip.MarkId));
+        Assert.Equal(message, _composer.Document.FlatText);
+    }
+
+    /// <summary>
     ///     Test that the rows that open a group are the first row and the first row of the copilot after a notice, so that the
     ///     name of the copilot is shown once for a run of replies and tools.
     /// </summary>
@@ -730,7 +778,7 @@ public sealed class ChatPanelTests : IDisposable
         // Arrange: a panel that is disposed
         using var composer = new ComposerViewModel(_builder, _marks, _dictation);
         composer.SetProject(_project);
-        var annotation = new AnnotationOverlayViewModel(_marks, _source, _ => { });
+        using var annotation = new AnnotationOverlayViewModel(_marks, _source, _ => { });
         var panel = new ChatPanelViewModel(composer, _marks, annotation, _markImages);
         panel.Dispose();
 

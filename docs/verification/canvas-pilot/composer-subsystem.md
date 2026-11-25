@@ -45,9 +45,12 @@ project. No network, display, or special permission is needed.
 - The clearing of the marks takes every mark chip out of the message and no visible mark remains (the user interface
   test of the annotation toolbar over the real panel and composer), and the empty message shows its placeholder in the
   chat panel until text is typed (the user interface test of the chat panel).
-- Through the editing view, the tooltip of a mark's chip shows the mark's note and follows each change of it; a
-  double-click on the chip, the Edit note item of its menu, and F2 beside it each ask once for the mark of the chip,
-  without a change of the message or its undo history.
+- Through the editing view, the tooltip of a mark's chip shows the mark's note and follows each change of it, and a
+  screen reader is given the same text as the chip's help text and reads the chip as `[Mark N: note]` in the text of
+  the message; a double-click on the chip, the Edit note item of its menu, and F2 beside it each ask once for the mark
+  of the chip, without a change of the message or its undo history.
+- While the message cannot be edited because it is being sent, the Edit note item of a mark's chip is disabled, and
+  neither a double-click on the chip, the item, F2 beside the chip, nor a direct request passes a request on.
 
 ### Test Scenarios
 
@@ -144,7 +147,20 @@ in the editing view; the note is changed in the registry and then taken away. Th
 `Mark 1 on the picture: first`, then `...: second`, then `Mark 1 on the picture`, and the message stays the chip, a line
 feed, and the words. This scenario is tested by `ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ChipTooltipFollows`.
 
+**ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ScreenReaderReadsTheNote**: A mark with the note `first` is added
+after the words `see` in the editing view; the note is changed in the registry to `second` and then taken away. The
+text that the automation peer of the surface reads is `[Mark 1: first]`, then `[Mark 1: second]`, then `[Mark 1]`,
+each followed by a line feed and `see`, and the help text of the chip is its tooltip each time; the message is not
+changed. This scenario is tested by `ComposerSubsystem_ShowMarkNoteOnChip_NoteChanged_ScreenReaderReadsTheNote`.
+
 **ComposerSubsystem_RequestMarkNoteEdit_DoubleClickMenuAndF2_AskForTheMarkOfTheChip**: A mark chip stands above the
 words `go`. Two quick clicks on the chip, the Edit note item of its context menu, and F2 with the caret after the chip
 each raise one request for the mark of the chip; the message and what can be undone and redone are as before. This
 scenario is tested by `ComposerSubsystem_RequestMarkNoteEdit_DoubleClickMenuAndF2_AskForTheMarkOfTheChip`.
+
+**ComposerSubsystem_RequestMarkNoteEdit_MessageBeingSent_IsNotPassedOn**: A mark chip with a note stands above the
+words `go`, and the message is being sent through a builder that holds it, so the message cannot be edited. Two quick
+clicks on the chip, the Edit note item of its context menu (which is disabled), F2 with the caret after the chip, and
+a direct request of the view model raise no request, and the direct request answers that it was refused. When the
+builder lets the message go, it is sent. This scenario is tested by
+`ComposerSubsystem_RequestMarkNoteEdit_MessageBeingSent_IsNotPassedOn`.

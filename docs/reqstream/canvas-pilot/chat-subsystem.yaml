@@ -228,15 +228,23 @@ sections:
           - id: CanvasPilot-Chat-EditMarkNotesFromChips
             title: >-
               The Chat subsystem shall open the note of a mark for changing on the layer over the picture when the user
-              asks for it from the mark's chip in the message, so that the message that is sent carries the changed note.
+              asks for it from the mark's chip in the message, so that the message that is sent carries the changed note;
+              shall say in the transcript, naming the mark, what to do when the note cannot be opened because no picture
+              is shown or a shape is being drawn; and shall not let the notes of the marks of a message that was sent be
+              changed.
             justification: |
               The chip is in the message and the note card is on the layer over the picture; neither knows the other,
               so the chat, which joins the message to the layer, passes the request on. The note that is sent must be
-              the one the user last confirmed.
+              the one the user last confirmed. The card can only open over a picture that is shown and not while a shape
+              waits to be finished, and a request that seemed to be ignored would leave the user guessing. A message that
+              was sent is the record of what the assistant was given, so its notes stay as they were sent.
             children:
               - CanvasPilot-ChatPanel-OpenMarkNoteFromChip
+              - CanvasPilot-ChatPanel-ListSentMessagesOnly
             tests:
               - ChatSubsystem_EditMarkNoteFromChip_SentPayloadCarriesTheChangedNote
+              - ChatSubsystem_EditMarkNoteFromChip_NoPictureShown_NoticeSaysWhatToDo
+              - ChatSubsystem_EditMarkNoteFromChip_SentMessage_NoteCannotBeChanged
 
           - id: CanvasPilot-Chat-HoldToTalk
             title: >-

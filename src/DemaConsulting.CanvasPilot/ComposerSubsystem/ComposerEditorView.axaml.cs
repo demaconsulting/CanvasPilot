@@ -66,10 +66,12 @@ namespace DemaConsulting.CanvasPilot.ComposerSubsystem;
 ///         model; typed text that holds a placeholder or a control character is refused before it enters.
 ///     </para>
 ///     <para>
-///         <b>Mark notes.</b> The chip of a mark shows the mark's current note in its tooltip, and is built again when a
-///         note changes. A double-click on the chip, the Edit note item of its context menu, or F2 with the caret beside
-///         it asks the view model to change the note; the change itself is made on the layer over the picture and is
-///         not a step of the message's history.
+///         <b>Mark notes.</b> The chip of a mark shows the mark's current note in its tooltip, which is also its help text
+///         for a screen reader, and is built again when a note changes; the text of the message that assistive technology
+///         reads gives a mark with a note as <c>[Mark N: note]</c>. A double-click on the chip, the Edit note item of its
+///         context menu, or F2 with the caret beside it asks the view model to change the note; the item can be chosen
+///         only while the message can be edited. The change itself is made on the layer over the picture and is not a
+///         step of the message's history.
 ///     </para>
 ///     <para>
 ///         The view belongs to the user interface thread.
@@ -246,6 +248,33 @@ public sealed partial class ComposerEditorView : UserControl
     }
 
     /// <summary>
+    ///     Gets the text of the message that assistive technology reads: the text as it is, each chip as its label in
+    ///     brackets, and the chip of a mark that has a note as its label and its note, such as <c>[Mark 1: make it red]</c>,
+    ///     because the note is otherwise only in a tooltip that a screen reader user does not reach.
+    /// </summary>
+    /// <param name="segments">The segments of the message.</param>
+    /// <param name="getMarkNote">Gives the current note of a mark by its identity, or <see langword="null" /> or empty for none.</param>
+    /// <returns>The text.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when an argument is <see langword="null" />.</exception>
+    public static string DescribeForScreenReader(IEnumerable<ComposerSegment> segments, Func<Guid, string?> getMarkNote)
+    {
+        ArgumentNullException.ThrowIfNull(segments);
+        ArgumentNullException.ThrowIfNull(getMarkNote);
+        var builder = new StringBuilder();
+        foreach (var segment in segments)
+        {
+            builder.Append(segment switch
+            {
+                TextSegment text => text.Text,
+                MarkChip mark when getMarkNote(mark.MarkId) is { Length: > 0 } note => $"[{mark.Label}: {note}]",
+                _ => $"[{ChipView.GetLabel((ChipSegment)segment)}]",
+            });
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>
     ///     Gets a value indicating whether typed or input-method text holds a character that must not enter the message:
     ///     the placeholder character of a chip, or a control character other than a tab or a line break.
     /// </summary>
@@ -327,9 +356,10 @@ public sealed partial class ComposerEditorView : UserControl
     {
         var area = Editor.TextArea;
 
-        // Assistive technology reads the message with its chips named, and can replace it as a whole
+        // Assistive technology reads the message with its chips named and the notes of its marks, and can replace it as
+        // a whole
         AutomationProperties.SetName(area, "Message");
-        Editor.ValueProvider = () => _viewModel is { } viewModel ? DescribeForClipboard(viewModel.Document.Segments) : Editor.Text;
+        Editor.ValueProvider = () => _viewModel is { } viewModel ? DescribeForScreenReader(viewModel.Document.Segments, viewModel.GetMarkNote) : Editor.Text;
         Editor.ValueSetter = SetMessageFromAutomation;
 
         // The message owns the history, so the surface must not keep one, and its commands must not reach it
@@ -473,7 +503,8 @@ public sealed partial class ComposerEditorView : UserControl
 
     /// <summary>
     ///     Makes the control for the chip of the message with a number, for the generator that draws chips in the text.
-    ///     The chip of a mark shows the mark's current note and offers to change it.
+    ///     The chip of a mark shows the mark's current note and offers to change it, which can be chosen while the message
+    ///     can be edited.
     /// </summary>
     /// <param name="index">The number of the chip, counted from zero in the order of the message.</param>
     /// <returns>The control, or <see langword="null" /> when the message has no such chip.</returns>
@@ -486,7 +517,7 @@ public sealed partial class ComposerEditorView : UserControl
         }
 
         var note = chip is MarkChip mark ? _viewModel?.GetMarkNote(mark.MarkId) : null;
-        var view = new ChipView { IsNoteEditable = chip is MarkChip };
+        var view = new ChipView { IsNoteEditable = chip is MarkChip, IsNoteEditEnabled = _viewModel?.CanEdit == true };
         view.Show(chip, ThumbnailProvider, note);
         view.DeleteRequested += OnChipDeleteRequested;
         view.EditNoteRequested += OnChipEditNoteRequested;
@@ -654,15 +685,17 @@ public sealed partial class ComposerEditorView : UserControl
     }
 
     /// <summary>
-    ///     Keeps the surface read-only while the message cannot be edited.
+    ///     Keeps the surface read-only while the message cannot be edited, and draws the chips again when that changes,
+    ///     so that the Edit note item of a mark's chip can be chosen exactly while the message can be edited.
     /// </summary>
     /// <param name="sender">The view model.</param>
     /// <param name="e">The event data.</param>
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (_viewModel is { } viewModel)
+        if (_viewModel is { } viewModel && Editor.IsReadOnly == viewModel.CanEdit)
         {
             Editor.IsReadOnly = !viewModel.CanEdit;
+            Editor.TextArea.TextView.Redraw();
         }
     }
 
