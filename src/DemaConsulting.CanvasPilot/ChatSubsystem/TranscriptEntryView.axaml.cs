@@ -37,10 +37,11 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         The message is shown as blocks one below the other: a read-only text block for each run of typed and dictated
 ///         words (dictated words have the same subtle background that they have in the editing control), and a wrapping
 ///         row for each run of chips, which hold the same <see cref="ChipView" /> control as the composer, without its
-///         delete button, because a sent message cannot be changed. The chips are not put inside a line of words, because
-///         a line is only as high as its words and would cut the chips off. The line break that the composer puts after
-///         its row of chips is the break between the blocks. The text can be selected and copied. The view only shows
-///         what its view model holds and never opens an attachment.
+///         delete button, because a sent message cannot be changed; the chip of a mark shows in its tooltip and help text
+///         the note that the mark had when the message was sent, and offers no change of it. The chips are not put inside
+///         a line of words, because a line is only as high as its words and would cut the chips off. The line break that
+///         the composer puts after its row of chips is the break between the blocks. The text can be selected and copied.
+///         The view only shows what its view model holds and never opens an attachment.
 ///     </para>
 ///     <para>
 ///         The picture of an attached picture comes from its copy in the project, which the view model names as the chip to
@@ -97,7 +98,7 @@ public sealed partial class TranscriptEntryView : UserControl
 
                 textBlock = null;
                 var control = new ChipView { IsDeleteButtonVisible = false };
-                control.Show(chip, new MappedThumbnailProvider(entry.Thumbnails, item.ThumbnailChip ?? chip));
+                control.Show(chip, new MappedThumbnailProvider(entry.Thumbnails, item.ThumbnailChip ?? chip), item.Note);
                 chipRow.Children.Add(control);
                 continue;
             }

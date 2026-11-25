@@ -855,8 +855,9 @@ picture to show a picture. To describe a mark to the assistant, `MarkSourceResol
 or anchors of the mark's picture and returns the parts of the source file under the mark, or that the picture cannot
 tell.
 
-When the user changes the note of a mark of the message, by a double-click on the mark with no tool chosen or by a
-double-click, the Edit note item, or F2 with the caret beside its chip, the chip's request goes from `ComposerViewModel`
+When the user changes the note of a mark of the message, by a double-click on the mark on the picture with no tool
+chosen, or by a double-click on the mark's chip, its Edit note item, or F2 with the caret beside the chip, the chip's
+request goes from `ComposerViewModel`
 through the chat panel to `AnnotationOverlayViewModel.BeginEditNote`, which opens the note card filled with the current
 note. Confirming calls `MarkRegistry.ChangeNote`, which raises `NoteChanged`; the overlay draws the new note and the
 editor builds the chip again with its new tooltip. The change is not a step of the message's undo history, because the

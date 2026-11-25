@@ -334,6 +334,11 @@ words, and a mark is sent; the entry has the typed item, the dictated item, and 
 summary is `1 mark`. This scenario is tested by
 `ChatPanelViewModel_Send_TypedDictatedAndMark_EntryKeepsOrderOriginsAndSummary`.
 
+**ChatPanelViewModel_Send_MarksWithAndWithoutNote_EntryKeepsTheNotesAsSent**: A message with a mark that has the note
+`the door` and a mark without a note is sent, and the note of the first mark is then changed in the registry; the mark
+chips of the entry carry `the door` and no note. This scenario is tested by
+`ChatPanelViewModel_Send_MarksWithAndWithoutNote_EntryKeepsTheNotesAsSent`.
+
 **ChatPanelViewModel_Send_BuildFails_KeepsDraftAndTranscriptUnchangedAndSaysWhy**: The builder fails; the draft is kept,
 the transcript is empty, and the status text says that the message was not sent and why. This scenario is tested by
 `ChatPanelViewModel_Send_BuildFails_KeepsDraftAndTranscriptUnchangedAndSaysWhy`.
@@ -367,6 +372,11 @@ the note `first` is drawn; its chip's tooltip names the note. Two quick clicks o
 the layer with `first`; after `second` is confirmed the chip's tooltip names `second`. After the message is sent, the
 chip in the transcript offers no change of its note and has no menu. This scenario is tested by
 `ChatPanelView_MarkChipDoubleClicked_OpensItsNoteAndChipShowsTheChangedNote`.
+
+**ChatPanelView_Send_MarkWithNote_SentChipTooltipAndHelpTextShowTheNote**: In the window of the panel a mark with the
+note `the door is blocked` is drawn and the message is sent; the chip in the transcript has the tooltip and the help
+text `Mark 1 on the picture: the door is blocked`, offers no change of its note, and has no menu. This scenario is
+tested by `ChatPanelView_Send_MarkWithNote_SentChipTooltipAndHelpTextShowTheNote`.
 
 **ChatPanelViewModel_TalkText_FollowsDictationState**: The text that names the talk button is `Hold to talk`, becomes
 `Starting... keep holding`

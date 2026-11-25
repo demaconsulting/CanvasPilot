@@ -174,6 +174,12 @@ public sealed class TranscriptEntryViewModel : TranscriptRowViewModel
                     items.Add(new TranscriptItem(attachment, ProjectCopyOf(attachment, staged, projectFolder)));
                     break;
 
+                case MarkChip mark:
+                    // The note is the one the mark had when the message was sent, which never changes afterwards
+                    var note = message.Marks.FirstOrDefault(candidate => candidate.Number == mark.Number)?.Note;
+                    items.Add(new TranscriptItem(mark, mark, note));
+                    break;
+
                 case ChipSegment chip:
                     items.Add(new TranscriptItem(chip, chip));
                     break;

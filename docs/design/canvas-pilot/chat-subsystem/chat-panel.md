@@ -74,15 +74,17 @@ The unit is made of these parts, all in the user interface layer:
 - `TranscriptEntryViewModel`: one sent message. It holds the `SentMessage`, its `Payload` when it is a `MessagePayload`,
   `Items` (the runs of text with their origin and the chips, in order), `Summary` (for example `2 marks, 1 attachment`),
   `SentText` (the time), `Thumbnails`, and `ViewPayloadCommand`. It owns the picture provider it made and releases it in
-  `Dispose`. `TranscriptItem` is one run of text or one chip, with the chip to ask for the picture.
+  `Dispose`. `TranscriptItem` is one run of text or one chip, with the chip to ask for the picture and, for the chip of
+  a mark, the note that the mark had when the message was sent, taken from the immutable `SentMessage.Marks`.
 - `TranscriptEntryView` (a `UserControl`): the entry as a bubble at the right in the accent color (radius 14 with a 4
   pixel bottom-right corner, at most 85 percent of the width because the entry's grid gives it the right 0.85 of the
   width), holding the blocks of the message in order (`MessageBlocks`): a selectable text block
   (`TranscriptMessageText`) for each run of words and a wrapping row for each run of chips, which hold the composer's
   `ChipView` without its delete button and with `IsNoteEditable` off, so that a sent chip offers no change of its
-  mark's note. The bubble sizes to its content. Below the bubble, at the right, are the "View
-  payload" text button (`TranscriptViewPayloadButton`) and the sent time (`TranscriptSentTime`); the button has opacity
-  0 and takes opacity 1 only while the pointer is over the entry or the focus is inside it (the style
+  mark's note; the chip of a mark is given the item's note, so that its tooltip and help text read "Mark N on the
+  picture: note" as in the message being written. The bubble sizes to its content. Below the bubble, at the right, are
+  the "View payload" text button (`TranscriptViewPayloadButton`) and the sent time (`TranscriptSentTime`); the button
+  has opacity 0 and takes opacity 1 only while the pointer is over the entry or the focus is inside it (the style
   `Grid.entry:pointerover` and `:focus-within`), so that it is out of the way but can be reached by the keyboard. Below
   them is the summary of what the message carried.
 - `ChipThumbnailProvider`: implements the composer's `IChipThumbnailProvider`. It is given a function from a mark chip

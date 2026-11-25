@@ -444,6 +444,35 @@ public sealed class ChatPanelViewTests
     }
 
     /// <summary>
+    ///     Test that the chip of a mark in a sent message shows the note that the mark had when it was sent, after "Mark N
+    ///     on the picture", as its tooltip and as its help text for a screen reader, and offers no change of the note.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_Send_MarkWithNote_SentChipTooltipAndHelpTextShowTheNote()
+    {
+        // Arrange: a mark with a note drawn on the picture, whose chip is in the message, and words after it
+        using var harness = new ChatHarness();
+        harness.Annotation.SelectTool(AnnotationTool.Rectangle);
+        harness.Annotation.BeginStroke(new RenderPoint(10, 10));
+        harness.Annotation.EndStroke(new RenderPoint(60, 40));
+        harness.Annotation.NoteText = "the door is blocked";
+        harness.Annotation.CommitNote();
+        harness.Layout();
+        harness.Type("fix");
+
+        // Act: send the message
+        harness.ClickSend();
+        harness.Layout();
+
+        // Assert: the sent chip shows the note in its tooltip and help text, and the note cannot be changed from it
+        var sentChip = Assert.Single(Assert.Single(harness.Entries).Chips);
+        Assert.Equal("Mark 1 on the picture: the door is blocked", ToolTip.GetTip(sentChip));
+        Assert.Equal("Mark 1 on the picture: the door is blocked", AutomationProperties.GetHelpText(sentChip));
+        Assert.False(sentChip.IsNoteEditable);
+        Assert.Null(sentChip.ContextMenu);
+    }
+
+    /// <summary>
     ///     Test that a mark drawn on the picture becomes a chip in the message through the panel and that the layer shows
     ///     the mark only while its chip is in the message.
     /// </summary>

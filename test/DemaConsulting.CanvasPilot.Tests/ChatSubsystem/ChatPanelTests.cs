@@ -242,6 +242,29 @@ public sealed class ChatPanelTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the chip of a mark in a sent message carries the note that the mark had when the message was sent, and
+    ///     keeps it when the note of the mark is changed afterwards, while a chip of a mark without a note carries none.
+    /// </summary>
+    [Fact]
+    public async Task ChatPanelViewModel_Send_MarksWithAndWithoutNote_EntryKeepsTheNotesAsSent()
+    {
+        // Arrange: a mark with a note and a mark without one in the message
+        var withNote = _marks.Add(_source.CurrentImage!, MarkKind.Rectangle, [new RenderPoint(5, 5), new RenderPoint(40, 30)], "the door");
+        var withoutNote = _marks.Add(_source.CurrentImage!, MarkKind.Rectangle, [new RenderPoint(50, 5), new RenderPoint(80, 30)]);
+        _composer.AddMark(withNote);
+        _composer.AddMark(withoutNote);
+
+        // Act: send it, then change the note of the first mark
+        await _panel.SendCommand.ExecuteAsync(null);
+        _marks.ChangeNote(withNote.Id, "changed later");
+
+        // Assert: the chips carry the notes as they were sent
+        var entry = Assert.Single(_panel.SentEntries);
+        var notes = entry.Items.Where(item => item.Chip is MarkChip).Select(item => item.Note).ToList();
+        Assert.Equal(["the door", null], notes);
+    }
+
+    /// <summary>
     ///     Test that a message that cannot be sent leaves the draft as it was, adds nothing to the transcript, and says why.
     /// </summary>
     [Fact]
