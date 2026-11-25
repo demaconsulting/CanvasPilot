@@ -143,7 +143,10 @@ services, or display is required.
 - The application starts on every supported platform: composing its units without a window gives a titled shell
   with the right commands available, and the log records the start and stop.
 - The Windows build produces exactly one MSI package of non-trivial size for the application, named for the build
-  version; installing it is checked by hand before each release.
+  version, and the tables of that package make it one 64-bit package with an embedded cabinet that installs for all
+  users into the 64-bit Program Files folder, adds a Start Menu shortcut to the installed program, closes a running
+  CanvasPilot, and replaces any installed version, with a numeric product version; installing it is checked by hand
+  before each release.
 - The main window shell creates a project, lists its image files, finds it in the recent projects after a
   restart, and keeps a changed setting across the restart.
 - A folder and a drawing can be created in the open project and a picture added to it, a name or file that exists is
@@ -1062,6 +1065,42 @@ FileAssert asserts that the published folder, which the installer takes whole, h
 the package. This scenario is tested by `ThirdPartyNotices_Published`, which is run in CI only.
 
 **WiX_MsiPackage**: After the Windows build job publishes the application self-contained for win-x64 and builds the
-installer project with the numeric build version and the full build version straight into the package folder, FileAssert
+installer project with the numeric build version and the package version straight into the package folder, FileAssert
 asserts that exactly one `package/CanvasPilot-*-win-x64.msi` exists with a non-trivial size. This scenario is tested by
-`WiX_MsiPackage`, which is run in CI only and is described in the WiX Toolset OTS verification document.
+`WiX_MsiPackage`, which is run in CI only and is described in the WiX Toolset OTS verification document; it is the
+evidence of the WiX Toolset requirement, not of the system installer requirement.
+
+The next five scenarios are the evidence of the system installer requirement (`CanvasPilot-System-WindowsInstaller`).
+After the package is built, a step of the Windows build job reads the `Property`, `Directory`, `Media`, `File`,
+`Shortcut`, `Upgrade`, `Wix4CloseApplication`, and `InstallExecuteSequence` tables and the summary template of the built
+MSI through the Windows Installer automation interface and writes them to `artifacts/msi-tables.xml`, one element per
+row with one attribute per column; a table that the package lacks is left out. FileAssert then asserts rows of that file
+with XPath queries, in the same run and results file as `WiX_MsiPackage`. All five are run in CI only, and their results
+count only from the Windows leg. What the package does when it runs is the check by hand *Installed package*. The
+queries were also checked against changed copies of the written tables (`ALLUSERS` of `2`, a version of four fields,
+with a prerelease suffix, or out of range, a maximum version, a 32-bit template, an external cabinet, the shortcut in
+the install folder, other close attributes, no `RemoveExistingProducts`, and the install folder under the 32-bit Program
+Files folder): each change failed the test that covers it.
+
+**Installer_SelfContained64BitPackage**: The summary template of the package starts with `x64;`, the package has one
+media row and its cabinet is embedded (the name starts with `#`), and the file table lists `CanvasPilot.exe`. This
+scenario is tested by `Installer_SelfContained64BitPackage`.
+
+**Installer_InstallsForAllUsers**: The property `ALLUSERS` is `1`, there is no `MSIINSTALLPERUSER` property, and the
+parent of the install folder is a folder in `ProgramFiles64Folder`. This scenario is tested by
+`Installer_InstallsForAllUsers`.
+
+**Installer_AddsStartMenuShortcut**: One shortcut named `CanvasPilot` in a folder of `ProgramMenuFolder` targets
+`[INSTALLFOLDER]CanvasPilot.exe`, and `CreateShortcuts` is in the install sequence. This scenario is tested by
+`Installer_AddsStartMenuShortcut`.
+
+**Installer_ClosesRunningApplication**: One close row targets `CanvasPilot.exe` with the attributes `33` (close
+message and the forced end of the process, no reboot prompt) and a time-out, and the action of the extension that runs
+it is in the install sequence. This scenario is tested by `Installer_ClosesRunningApplication`. Whether the user is
+asked about files in use before this action runs in an interactive upgrade is part of the check by hand.
+
+**Installer_ReplacesAnyInstalledVersion**: The package has exactly one upgrade row; it is for the package's own upgrade
+code, from version `0` inclusive with no maximum, migrates features, and is not detect-only, so there is no row that
+refuses a downgrade; `RemoveExistingProducts` is in the install sequence; and the product version is three numeric
+fields with major and minor at most 255 and build at most 65535. This scenario is tested by
+`Installer_ReplacesAnyInstalledVersion`.

@@ -687,7 +687,11 @@ sections:
         children:
           - CanvasPilot-OTS-WiX-BuildMsiPackage
         tests:
-          - WiX_MsiPackage
+          - windows@Installer_SelfContained64BitPackage
+          - windows@Installer_InstallsForAllUsers
+          - windows@Installer_AddsStartMenuShortcut
+          - windows@Installer_ClosesRunningApplication
+          - windows@Installer_ReplacesAnyInstalledVersion
 
       - id: CanvasPilot-System-UseInstalledCopilotCli
         title: >-

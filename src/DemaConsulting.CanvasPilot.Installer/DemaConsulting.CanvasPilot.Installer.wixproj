@@ -16,14 +16,14 @@
     <OutputType>Package</OutputType>
     <!-- MSI targets 64-bit installs to match the self-contained win-x64 publish output. -->
     <Platform Condition="'$(Platform)' == '' Or '$(Platform)' == 'AnyCPU'">x64</Platform>
-    <!-- Numeric MSI ProductVersion (major.minor.build); CI strips any SemVer prerelease suffix. -->
+    <!-- Numeric MSI ProductVersion (major.minor.build); CI strips any SemVer prerelease suffix and build metadata. -->
     <Version Condition="'$(Version)' == ''">0.0.0</Version>
-    <!-- Full release version, including any SemVer prerelease suffix (e.g. "0.2.0-beta.3"), passed by CI
-         alongside the numeric Version. It is used only for the package file name (Add/Remove Programs shows
-         the numeric Version, because the MSI ProductVersion must be numeric); local builds default it to the
-         numeric Version. -->
+    <!-- Release version for the package file name, including any SemVer prerelease suffix (e.g. "0.2.0-beta.3") but
+         without build metadata (CI drops any "+..." because a "+" is awkward in a file name), passed by CI alongside
+         the numeric Version. It is used only for the package file name (Add/Remove Programs shows the numeric Version,
+         because the MSI ProductVersion must be numeric); local builds default it to the numeric Version. -->
     <MsiPackageVersion Condition="'$(MsiPackageVersion)' == ''">$(Version)</MsiPackageVersion>
-    <!-- Package file name "CanvasPilot-{full version}-win-x64.msi" (e.g. CanvasPilot-0.2.0-beta.3-win-x64.msi, or
+    <!-- Package file name "CanvasPilot-{package version}-win-x64.msi" (e.g. CanvasPilot-0.2.0-beta.3-win-x64.msi, or
          CanvasPilot-0.0.0-win-x64.msi for a local build), produced directly by this project so CI publishes the
          project output without renaming it. Set here rather than on the command line so the rename stays scoped to
          this project. -->

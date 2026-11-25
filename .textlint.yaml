@@ -83,6 +83,13 @@ words:
   - communitytoolkit
   - wixext
   - wixproj
+  # Windows Installer property, folder, and registry root names asserted in the MSI tables
+  - ALLUSERS
+  - ARPNOMODIFY
+  - ARPNOREPAIR
+  - HKCU
+  - INSTALLFOLDER
+  - MSIINSTALLPERUSER
   - premul
   - onnx
   - onnxruntime

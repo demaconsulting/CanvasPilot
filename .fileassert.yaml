@@ -23,6 +23,101 @@ tests:
         count: 1
         min-size: 10000000
 
+  # The build writes the tables of the built MSI that decide how it installs (Property, Directory, Media, File, Shortcut,
+  # Upgrade, Wix4CloseApplication, InstallExecuteSequence) and its summary template to artifacts/msi-tables.xml, one
+  # element per row named for its table with one attribute per column. The tests below assert those rows, so they are
+  # the system-level evidence of the Windows installer requirement; installing the package is still checked by hand.
+  # Long names are stored as "short|long", so a name matches either the whole value or the part after the "|".
+  - name: Installer_SelfContained64BitPackage
+    description: "Windows MSI installer is one 64-bit package that carries the application in an embedded cabinet"
+    tags: [installer]
+    files:
+      - pattern: "artifacts/msi-tables.xml"
+        count: 1
+        xml:
+          - query: "/msi/SummaryInformation[starts-with(@Template, 'x64;')]"
+            count: 1
+          - query: "/msi/Media"
+            count: 1
+          - query: "/msi/Media[starts-with(@Cabinet, '#')]"
+            count: 1
+          - query: "/msi/File[@FileName = 'CanvasPilot.exe' or substring-after(@FileName, '|') = 'CanvasPilot.exe']"
+            count: 1
+
+  - name: Installer_InstallsForAllUsers
+    description: "Windows MSI installer installs per machine into the 64-bit Program Files folder"
+    tags: [installer]
+    files:
+      - pattern: "artifacts/msi-tables.xml"
+        count: 1
+        xml:
+          - query: "/msi/Property[@Property = 'ALLUSERS' and @Value = '1']"
+            count: 1
+          - query: "/msi/Property[@Property = 'MSIINSTALLPERUSER']"
+            count: 0
+          - query: >-
+              /msi/Directory[@Directory = /msi/Directory[@Directory = 'INSTALLFOLDER']/@Directory_Parent
+              and @Directory_Parent = 'ProgramFiles64Folder']
+            count: 1
+
+  - name: Installer_AddsStartMenuShortcut
+    description: "Windows MSI installer adds a CanvasPilot shortcut to the Start Menu that starts the installed program"
+    tags: [installer]
+    files:
+      - pattern: "artifacts/msi-tables.xml"
+        count: 1
+        xml:
+          - query: >-
+              /msi/Shortcut[@Target = '[INSTALLFOLDER]CanvasPilot.exe'
+              and (@Name = 'CanvasPilot' or substring-after(@Name, '|') = 'CanvasPilot')
+              and @Directory_ = /msi/Directory[@Directory_Parent = 'ProgramMenuFolder']/@Directory]
+            count: 1
+          - query: "/msi/InstallExecuteSequence[@Action = 'CreateShortcuts']"
+            count: 1
+
+  # Attributes 33 of the close row are the close message (1) and the forced end of the process (32), with no reboot
+  # prompt (2); the action that runs the rows is in the install sequence.
+  - name: Installer_ClosesRunningApplication
+    description: "Windows MSI installer closes a running CanvasPilot.exe and ends it if it does not exit"
+    tags: [installer]
+    files:
+      - pattern: "artifacts/msi-tables.xml"
+        count: 1
+        xml:
+          - query: "/msi/Wix4CloseApplication[@Target = 'CanvasPilot.exe' and @Attributes = '33' and @Timeout != '']"
+            count: 1
+          - query: "/msi/InstallExecuteSequence[starts-with(@Action, 'Wix4CloseApplications')]"
+            count: 1
+
+  # One Upgrade row for the package's own upgrade code, from version 0 inclusive (256) with no maximum, that migrates
+  # features (1) and is not detect-only: every installed version, older, the same, or newer, is found and removed, and
+  # there is no second row that would refuse a downgrade. The ProductVersion is the numeric major.minor.build that
+  # Windows Installer compares, within its limits of 255, 255, and 65535.
+  - name: Installer_ReplacesAnyInstalledVersion
+    description: "Windows MSI installer replaces any installed version of CanvasPilot in place"
+    tags: [installer]
+    files:
+      - pattern: "artifacts/msi-tables.xml"
+        count: 1
+        xml:
+          - query: "/msi/Upgrade"
+            count: 1
+          - query: >-
+              /msi/Upgrade[@UpgradeCode = /msi/Property[@Property = 'UpgradeCode']/@Value
+              and @VersionMin = '0' and @VersionMax = '' and @Attributes = '257' and @ActionProperty != '']
+            count: 1
+          - query: "/msi/InstallExecuteSequence[@Action = 'RemoveExistingProducts']"
+            count: 1
+          - query: >-
+              /msi/Property[@Property = 'ProductVersion'
+              and translate(@Value, '0123456789', '') = '..'
+              and not(starts-with(@Value, '.')) and not(contains(@Value, '..'))
+              and substring(@Value, string-length(@Value)) != '.'
+              and number(substring-before(@Value, '.')) <= 255
+              and number(substring-before(substring-after(@Value, '.'), '.')) <= 255
+              and number(substring-after(substring-after(@Value, '.'), '.')) <= 65535]
+            count: 1
+
   - name: Speech_NativeRuntimePublished
     description: "Published win-x64 application contains the native speech and audio runtime"
     tags: [installer]
