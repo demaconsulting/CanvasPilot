@@ -153,7 +153,8 @@ public sealed partial class AnnotationToolbarView : UserControl
 
     /// <summary>
     ///     Puts the focus in the note when a finished shape starts to wait for it, or when the note of a mark is opened
-    ///     for changing; in the latter case the focus goes back to where it was when the card closes.
+    ///     for changing; in the latter case the focus goes back to where it was when the card closes, unless it closed
+    ///     because the user started a shape, which keeps the keyboard on the layer while it is drawn.
     /// </summary>
     /// <param name="sender">The layer's view model.</param>
     /// <param name="e">The change details.</param>
@@ -196,9 +197,15 @@ public sealed partial class AnnotationToolbarView : UserControl
                 }
             });
         }
+        else if (closed && _annotation.IsDrawing)
+        {
+            // The card closed because the user started a shape, which takes the keyboard for the layer while it is
+            // drawn, so the focus is not given back and the place it was is forgotten
+            _focusBeforeEdit = null;
+        }
         else if (closed && _focusBeforeEdit is not null)
         {
-            // Give the focus back once the card is gone, unless another note was opened at once
+            // Give the focus back once the card is gone, unless another note was opened or a shape started at once
             Dispatcher.UIThread.Post(() =>
             {
                 if (_annotation is { IsNoteEditing: true } || _focusBeforeEdit is null)
@@ -208,7 +215,7 @@ public sealed partial class AnnotationToolbarView : UserControl
 
                 var target = _focusBeforeEdit;
                 _focusBeforeEdit = null;
-                if (target is Visual visual && TopLevel.GetTopLevel(visual) is not null)
+                if (_annotation is not { IsDrawing: true } && target is Visual visual && TopLevel.GetTopLevel(visual) is not null)
                 {
                     target.Focus();
                 }

@@ -90,8 +90,10 @@ removed afterwards. No window is shown on a screen, no real input device, input 
   have the whole note as their tooltip.
 - A double-click on a mark with no tool, or a request of the host, opens the note card for a mark of the message with
   its note and the focus in it; Enter or *Save note* changes only the note and reports no mark; Escape or *Cancel* keeps
-  the note and the mark; starting a shape, choosing a tool, or opening another note saves what was typed; the change is
-  given up when the mark leaves the message or marks are not allowed; the focus goes back when the card closes.
+  the note and the mark; starting a shape, choosing a tool, or opening another note saves what was typed; the change
+  goes on over a new picture and is given up when the mark leaves the message, marks are not allowed, or no picture is
+  shown; the focus goes back when the card closes, except when it closed because a shape was started, which keeps the
+  focus on the layer.
 
 #### Test Scenarios
 
@@ -326,6 +328,11 @@ another chip leaves the message, and is given up without a change when the mark'
 longer allowed. This scenario is tested by
 `AnnotationOverlayViewModel_EditNote_MarkLeavesMessageOrDrawingNotAllowed_GivesUpTheEdit`.
 
+**AnnotationOverlayViewModel_EditNote_NewPictureOrPictureLost_GoesOnOrGivesUpTheEdit**: While a changed note is open, a
+new picture of the file is shown and the card stays open for the mark with the typed note; then no picture is shown, as
+when the file can no longer be drawn, and the change is given up with the note unchanged. This scenario is tested by
+`AnnotationOverlayViewModel_EditNote_NewPictureOrPictureLost_GoesOnOrGivesUpTheEdit`.
+
 **AnnotationOverlayStyle_NoteLabel_StaysInsidePictureOnEitherSideOfTheBadge**: On a picture of 800 by 600 the label of
 a mark near the left is to the right of its badge, at its height, at the widest allowed and inside the picture; the
 label of a mark near the right edge flips to the left and stays inside; on a picture 30 wide the width is zero or more
@@ -368,3 +375,8 @@ card with the note, the mark, and its chip unchanged. This scenario is tested by
 **AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack**: With the focus on the stage, the note opened as
 the host does takes the focus; *Save note* saves the typed note and *Cancel* keeps it, and each time the focus comes
 back to the stage. This scenario is tested by `AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack`.
+
+**AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer**: With the rectangle tool and the focus on the
+stage, the note of a mark is opened as the host does and changed; a press and drag on the picture starts a shape, which
+saves the typed note and closes the card, and while the shape is drawn the layer keeps the focus instead of the stage.
+This scenario is tested by `AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer`.

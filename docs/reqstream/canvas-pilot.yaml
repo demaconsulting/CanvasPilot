@@ -289,11 +289,11 @@ sections:
 
       - id: CanvasPilot-System-ShowAndEditMarkNotes
         title: >-
-          The application shall show the note of each mark of the message being written beside the mark's number on
-          the picture, on one line that is cut short with an ellipsis when it is long, shall show the whole note when
-          the pointer rests on the mark or on its chip, and shall let the user change the note of such a mark with
-          the pointer or the keyboard until the message is sent, so that the message that is sent carries each note
-          as it was last changed, while the marks of messages that were sent keep their notes.
+          The application shall show the note of each mark of the message being written that is drawn on the shown
+          picture beside the mark's number, on one line that is cut short with an ellipsis when it is long, shall show
+          the whole note when the pointer rests on the mark or on its chip, and shall let the user change the note of
+          such a mark with the pointer or the keyboard until the message is sent, so that the message that is sent
+          carries each note as it was last changed, while the marks of messages that were sent keep their notes.
         tags: [system]
         justification: |
           A note that cannot be seen after it was typed is forgotten and cannot be checked before the message is

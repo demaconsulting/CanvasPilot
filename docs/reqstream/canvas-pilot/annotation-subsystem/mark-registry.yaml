@@ -97,8 +97,7 @@ sections:
                 justification: |
                   The user fixes a note without making the mark again, so everything else about the mark, its number
                   above all, stays. The layer and the message show the note, so they must hear of the change. A message
-                  that was sent holds marks handed out before, and must keep the notes it was sent with; the marks
-                  themselves therefore never change, and a changed note is a new mark of the same identity.
+                  that was sent holds marks handed out before, and must keep the notes it was sent with.
                 tests:
                   - MarkRegistry_ChangeNote_KnownMark_ChangesOnlyTheNoteAndTellsObservers
                   - MarkRegistry_ChangeNote_NoteIsCleanedAndCappedLikeANewNote

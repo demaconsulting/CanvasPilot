@@ -1215,4 +1215,35 @@ public sealed class AnnotationOverlayViewTests
         Assert.False(harness.Overlay.IsNoteEditing);
         Assert.Single(harness.Composition.Composer.MarkChipIds);
     }
+
+    /// <summary>
+    ///     Test that when the user starts a shape while the note of a mark is open, the typed note is saved and the
+    ///     keyboard focus stays on the layer that draws the shape instead of going back to where it was before.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer()
+    {
+        // Arrange: a mark with a note, the Rectangle tool, the focus on the stage, and the note opened as the host does
+        using var harness = await AnnotationHarness.CreateAsync();
+        await harness.ShowAsync("blue.svg", AnnotationHarness.BluePicture);
+        var mark = DrawNotedMark(harness, (100, 80), (300, 200), "old");
+        harness.ChooseTool("AnnotationToolRectangle");
+        var stage = harness.Find<ScrollViewer>("PreviewScroller");
+        stage.Focus();
+        harness.Overlay.BeginEditNote(mark.Id);
+        AnnotationHarness.Flush();
+        harness.Overlay.NoteText = "typed";
+
+        // Act: press on the picture and drag, which starts a shape and closes the card
+        harness.Press(harness.At(400, 250), harness.At(450, 300), harness.At(500, 350));
+        AnnotationHarness.Flush();
+        var during = (harness.Overlay.IsDrawing, harness.OverlayView.IsFocused, stage.IsFocused);
+        harness.Release(harness.At(500, 350));
+        harness.SkipNote();
+
+        // Assert: the note was saved, and the layer kept the focus while the shape was drawn
+        Assert.Equal("typed", harness.Composition.Marks.Find(mark.Id)!.Note);
+        Assert.Equal((true, true, false), during);
+        Assert.Equal(2, harness.Composition.Marks.Marks.Length);
+    }
 }

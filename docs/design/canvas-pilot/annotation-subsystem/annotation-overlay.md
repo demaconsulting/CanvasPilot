@@ -82,7 +82,9 @@ A fourth state, *editing a note*, is the note card open for a mark that already 
 shape to draw, so `HasDraft` is false. `CommitNote` saves the note with `MarkRegistry.ChangeNote` and raises no
 `MarkAdded`; `SkipNote` does nothing; `Cancel` and Escape close the card and keep the note and the mark as they were.
 Starting a shape, choosing a tool, or opening another note saves the note typed so far. A new picture does not end the
-state, because the card is not tied to the shown picture.
+state, because the card is not tied to the shown picture. When no picture is shown any more, for example because the
+file could not be drawn or was closed, marks can no longer be made (`ToolsEnabled` is false), so the change is given up
+with the note unchanged, as in the last row of the table.
 
 | Aspect | New shape | Editing a note |
 | --- | --- | --- |
@@ -153,7 +155,9 @@ The layer takes the keyboard focus, and is a tab stop, only while a tool is chos
 picture now has a margin inside the scroller of the pane). When a note is asked for, the tool bar view puts the focus in
 the note box (after the layout), and Enter and Escape in the box make the mark or throw the shape away. When the note of
 an existing mark is opened, the tool bar view remembers the element that had the focus, puts the caret at the end of the
-note, and gives the focus back to that element when the card closes, unless another note was opened at once. When the
+note, and gives the focus back to that element when the card closes, unless another note was opened at once or the card
+closed because the user started a shape (`IsDrawing`), in which case the layer keeps the focus while the shape is drawn
+and the remembered element is forgotten. When the
 tool bar view is attached it looks for the `PreviewPaneView` above it and listens to the key presses in the whole pane;
 with no modifier, with `ToolsEnabled` true, and with a source that is not a `TextBox`, it chooses the tool of the key: V
 for Select, R for rectangle, E for ellipse, F for freehand, and A for arrow, and handles the key. It stops listening

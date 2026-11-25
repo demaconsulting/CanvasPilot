@@ -783,6 +783,8 @@ of a shared folder are never written. The example images of a kit are drawn with
 `style_check` reads only a file inside the project (not through a link that leads out), and the block of guidance says
 that the text of a kit is data and not instructions, so a kit cannot instruct an assistant, and its size is capped.
 
+## Data Flow
+
 Application subsystems call `RollingFileLogger.Log` with a severity, a message, and optional exception
 context. `RollingFileLogger` asks `PathHelpers` to resolve the active file path inside the log folder,
 rotates and prunes archives when the active file has reached its size threshold, and appends the
@@ -854,12 +856,12 @@ or anchors of the mark's picture and returns the parts of the source file under 
 tell.
 
 When the user changes the note of a mark of the message, by a double-click on the mark with no tool chosen or by a
-double-click, the Edit note item, or F2 on its chip, the chip's request goes from `ComposerViewModel` through the chat
-panel to `AnnotationOverlayViewModel.BeginEditNote`, which opens the note card filled with the current note. Confirming
-calls `MarkRegistry.ChangeNote`, which raises `NoteChanged`; the overlay draws the new note and the editor builds the
-chip again with its new tooltip. The change is not a step of the message's undo history, because the note belongs to
-the registry and not to the text. The payload built at send time reads the marks as they are then, with their changed
-notes.
+double-click, the Edit note item, or F2 with the caret beside its chip, the chip's request goes from `ComposerViewModel`
+through the chat panel to `AnnotationOverlayViewModel.BeginEditNote`, which opens the note card filled with the current
+note. Confirming calls `MarkRegistry.ChangeNote`, which raises `NoteChanged`; the overlay draws the new note and the
+editor builds the chip again with its new tooltip. The change is not a step of the message's undo history, because the
+note belongs to the registry and not to the text. The payload built at send time reads the marks as they are then, with
+their changed notes.
 
 When the message is sent, `ComposerViewModel.SendAsync` takes a snapshot of the document, puts the attachment chips of
 the snapshot into the project with `AttachmentStore.StageForSend` on a thread-pool thread, and gives the snapshot, the

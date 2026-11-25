@@ -27,6 +27,17 @@ Speech subsystem and of the Chat subsystem (the talk button of the chat panel wi
 Windows microphone privacy setting), together with the checks of the installed package, and are not evidence for a
 requirement.
 
+The system tests of the notes of marks (`CanvasPilot-System-ShowAndEditMarkNotes`) compose the application without a
+window, so they verify what the user's actions do to the marks, the composer, and the payload that is sent, and that the
+notes of a sent message cannot be changed. The presentational details of that requirement are verified by the tests of
+its child requirements instead: the label beside the number with its ellipsis and its place inside the picture, and the
+whole note as a tooltip on the mark, by the headless UI tests of the `Annotation` subsystem and of `AnnotationOverlay`;
+the tooltip and the Edit note item of the chip, a double-click on the chip, and F2 beside it, by the headless UI tests
+of the `Composer` subsystem and its units, with the request carried from the chip to the layer verified by the tests of
+the `Chat` subsystem; and a real double-click on the mark with the Select tool, by the headless UI tests of
+`AnnotationOverlay`. Check 7 of *Manual Verification* (*Marking on a real pointer and a screen reader*) then confirms
+them with a real pointer, keyboard, theme, and screen reader.
+
 ## Test Environment
 
 System tests run under the standard .NET test runner on Windows, Linux, and macOS with the .NET 10

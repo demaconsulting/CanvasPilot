@@ -539,6 +539,16 @@ public sealed class MarkRegistryTests
         Assert.Equal("before", active[0].Note);
         Assert.Equal("before", visible[0].Note);
         Assert.Equal("after", registry.ActiveMarks([mark.Id])[0].Note);
+    }
+
+    /// <summary>
+    ///     Test that the details of a changed note refuse to be made without the changed mark, so that an observer is
+    ///     never told of a change without the mark it concerns.
+    /// </summary>
+    [Fact]
+    public void MarkNoteChangedEventArgs_New_NullMark_Throws()
+    {
+        // Act / Assert: details without a mark are refused
         Assert.Throws<ArgumentNullException>(() => new MarkNoteChangedEventArgs(null!));
     }
 }

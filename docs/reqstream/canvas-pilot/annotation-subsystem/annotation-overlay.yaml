@@ -229,31 +229,75 @@ sections:
                   - AnnotationOverlayView_MarkWithNote_BadgeLineAndLabelHaveTheWholeNoteAsTooltip
                   - AnnotationOverlayView_MarkWithNote_ShowsOneLineLabelBesideItsBadge
 
-              - id: CanvasPilot-AnnotationOverlay-EditNoteOfMark
+              - id: CanvasPilot-AnnotationOverlay-OpenNoteOfMark
                 title: >-
                   The AnnotationOverlay shall, while a picture is shown and its host allows marks, open the note card for
                   a mark of the message when the user double-clicks the mark's badge, line, or note with no drawing tool
                   chosen, or when its host asks for it, with the mark's number and its current note in the box and the
-                  focus in it. It shall change only the note of the mark, and report no new mark, when the user confirms
-                  with Enter or the Save note button. It shall leave the note and the mark as they were when the user
-                  cancels with Escape or the Cancel button. It shall save the note typed so far when the user starts a
-                  shape, chooses another tool, or opens another note. It shall give up the change when the mark leaves
-                  the message or marks can no longer be made, and shall give the keyboard focus back to where it was when
-                  the card closes.
+                  keyboard focus in it.
                 justification: |
                   The note card that asked for the note is the natural place to change it, so the user finds the same
-                  box, keys, and buttons. Canceling must never cost the mark, unlike canceling a new shape. Going on
-                  with the work keeps what was typed, as it does for a new mark. A mark whose chip was taken out of the
-                  message, or a message that can no longer be changed, has no note left to change. The focus goes back so
-                  that a user who opened the note from the message goes on writing.
+                  box, keys, and buttons, reached from the mark itself or from wherever the host offers it.
                 tests:
                   - AnnotationOverlayViewModel_BeginEditNote_MarkOfMessage_OpensCardWithItsNumberAndNote
                   - AnnotationOverlayViewModel_BeginEditNote_UnknownOutsideMessageWhileDrawingOrNotAllowed_IsRefused
-                  - AnnotationOverlayViewModel_EditNote_Committed_ChangesOnlyTheNoteAndReportsNoNewMark
-                  - AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark
-                  - AnnotationOverlayViewModel_EditNote_NextShapeOtherToolOrOtherMark_SavesTypedNote
-                  - AnnotationOverlayViewModel_EditNote_MarkLeavesMessageOrDrawingNotAllowed_GivesUpTheEdit
                   - AnnotationOverlayViewModel_StatusText_EachState_TellsWhatToDo
                   - AnnotationOverlayView_DoubleClickMarkWithSelect_OpensNoteCardFilledWithFocusInNote
                   - AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark
+
+              - id: CanvasPilot-AnnotationOverlay-SaveChangedNote
+                title: >-
+                  The AnnotationOverlay shall change only the note of the mark, and report no new mark, when the user
+                  confirms a changed note with Enter or the Save note button.
+                justification: |
+                  A wrong note must be fixable without drawing the mark again, which would make a new mark with a new
+                  number that the words of the message do not refer to.
+                tests:
+                  - AnnotationOverlayViewModel_EditNote_Committed_ChangesOnlyTheNoteAndReportsNoNewMark
+                  - AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark
                   - AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack
+
+              - id: CanvasPilot-AnnotationOverlay-CancelNoteChange
+                title: >-
+                  The AnnotationOverlay shall leave the note and the mark as they were when the user cancels a change of
+                  the note with Escape or the Cancel button.
+                justification: |
+                  Canceling a change must never cost the user the mark, unlike canceling a new shape, which throws the
+                  shape away.
+                tests:
+                  - AnnotationOverlayViewModel_EditNote_CanceledOrEscaped_KeepsTheNoteAndTheMark
+                  - AnnotationOverlayView_EditNote_EnterSavesAndEscapeKeepsTheMark
+                  - AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack
+
+              - id: CanvasPilot-AnnotationOverlay-KeepTypedNoteWhenWorkGoesOn
+                title: >-
+                  The AnnotationOverlay shall save the note typed so far when the user starts a shape, chooses another
+                  tool, or opens the note of another mark while a note is being changed.
+                justification: |
+                  Going on with the work keeps what was typed, as it does for a new mark, so the user does not have to
+                  close the card before doing the next thing.
+                tests:
+                  - AnnotationOverlayViewModel_EditNote_NextShapeOtherToolOrOtherMark_SavesTypedNote
+                  - AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer
+
+              - id: CanvasPilot-AnnotationOverlay-GiveUpNoteChangeWhenMarkUnavailable
+                title: >-
+                  The AnnotationOverlay shall give up a change of a note, leaving the note as it was, when the mark leaves
+                  the message or marks can no longer be made.
+                justification: |
+                  A mark whose chip was taken out of the message, or a message that can no longer be changed or has no
+                  picture to mark, has no note left to change.
+                tests:
+                  - AnnotationOverlayViewModel_EditNote_MarkLeavesMessageOrDrawingNotAllowed_GivesUpTheEdit
+                  - AnnotationOverlayViewModel_EditNote_NewPictureOrPictureLost_GoesOnOrGivesUpTheEdit
+
+              - id: CanvasPilot-AnnotationOverlay-RestoreFocusAfterNoteChange
+                title: >-
+                  The AnnotationOverlay shall give the keyboard focus back to where it was before the note of a mark was
+                  opened when the card closes, unless it closed because the user started a shape.
+                justification: |
+                  A user who opened the note from the message goes on writing without having to click back into it. A
+                  shape that the user started needs the keyboard on the layer, for Escape and the arrow keys.
+                tests:
+                  - AnnotationOverlayView_EditNote_ButtonsSaveOrCancelAndFocusGoesBack
+                  - AnnotationOverlayView_EditNote_ShapeStarted_FocusStaysOnTheLayer

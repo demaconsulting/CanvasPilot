@@ -96,3 +96,6 @@ gives back the same mark, an unknown identity gives nothing, and no observer is 
 **MarkRegistry_ChangeNote_EarlierListsAndMarks_StayAsTheyWere**: The mark, the copy of the marks, and the active and
 visible lists taken before a change keep the old note, as a sent message needs; only lists taken afterwards have the
 new one. This scenario is tested by `MarkRegistry_ChangeNote_EarlierListsAndMarks_StayAsTheyWere`.
+
+**MarkNoteChangedEventArgs_New_NullMark_Throws**: The details of a changed note cannot be made without the changed
+mark. This defensive scenario is tested by `MarkNoteChangedEventArgs_New_NullMark_Throws`.

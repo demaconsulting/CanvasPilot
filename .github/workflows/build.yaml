@@ -273,7 +273,7 @@ jobs:
           # CLI that the user installed, and the Copilot SDK would otherwise put a runtime of about 180 MB
           # into the published folder (CopilotSkipCliDownload in Directory.Build.props prevents that).
           $required = @('onnxruntime.dll', 'sherpa-onnx-c-api.dll', 'portaudio.dll', 'style.json', 'title-card.svg', 'flow.mmd', 'chart.vl.json')
-          $msi = (Resolve-Path "package/CanvasPilot-${{ inputs.version }}-win-x64.msi").Path
+          $msi = (Resolve-Path "package/CanvasPilot-${{ env.MSI_PACKAGE_VERSION }}-win-x64.msi").Path
           $installer = New-Object -ComObject WindowsInstaller.Installer
           $database = $installer.GetType().InvokeMember('OpenDatabase', 'InvokeMethod', $null, $installer, @($msi, 0))
           $view = $database.GetType().InvokeMember('OpenView', 'InvokeMethod', $null, $database, @('SELECT FileName FROM File'))

@@ -141,6 +141,7 @@ sections:
               - CanvasPilot-AnnotationOverlay-ShowWholeNoteOnHover
             tests:
               - AnnotationSubsystem_ShowMarkNotes_MarksOnRenderedDiagram_ShownMarksCarryTheirNotes
+              - AnnotationSubsystem_ShowMarkNotes_OverlayOnRenderedPicture_DrawsLabelsWithEllipsisAndTooltips
 
           - id: CanvasPilot-Annotation-EditMarkNotes
             title: >-
@@ -153,7 +154,12 @@ sections:
               and the words that refer to it. Canceling a change must never cost the user the mark. A sent message is
               part of the conversation and keeps what it carried.
             children:
-              - CanvasPilot-AnnotationOverlay-EditNoteOfMark
+              - CanvasPilot-AnnotationOverlay-OpenNoteOfMark
+              - CanvasPilot-AnnotationOverlay-SaveChangedNote
+              - CanvasPilot-AnnotationOverlay-CancelNoteChange
+              - CanvasPilot-AnnotationOverlay-KeepTypedNoteWhenWorkGoesOn
+              - CanvasPilot-AnnotationOverlay-GiveUpNoteChangeWhenMarkUnavailable
+              - CanvasPilot-AnnotationOverlay-RestoreFocusAfterNoteChange
               - CanvasPilot-MarkRegistry-ChangeNote
             tests:
               - AnnotationSubsystem_EditMarkNotes_ThroughOverlay_RegistryKeepsTheMarkAndChangesOnlyItsNote

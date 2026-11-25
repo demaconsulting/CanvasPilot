@@ -1036,6 +1036,7 @@ public sealed class AnnotationOverlayTests
         overlay.BeginEditNote(first.Id);
         overlay.NoteText = "one by shape";
         var started = overlay.BeginStroke(new RenderPoint(120, 10));
+        var byShape = _marks.Find(first.Id)!.Note;
         overlay.Cancel();
         overlay.BeginEditNote(second.Id);
         overlay.NoteText = "two by tool";
@@ -1047,6 +1048,7 @@ public sealed class AnnotationOverlayTests
 
         // Assert: every typed note was saved, the shape started, and the card is now open for the second mark
         Assert.True(started);
+        Assert.Equal("one by shape", byShape);
         Assert.Equal("two by tool", byTool);
         Assert.Equal("one by other mark", _marks.Find(first.Id)!.Note);
         Assert.Equal(second.Id, overlay.EditingMarkId);
@@ -1085,6 +1087,32 @@ public sealed class AnnotationOverlayTests
         Assert.False(ownLeft);
         Assert.False(overlay.IsNoteEditing);
         Assert.Equal(["one", "two"], _marks.Marks.Select(mark => mark.Note));
+    }
+
+    /// <summary>
+    ///     Test that the change of a note goes on when a new picture of the file is shown, and is given up with the note
+    ///     unchanged when no picture is shown any more, as when the file can no longer be drawn.
+    /// </summary>
+    [Fact]
+    public void AnnotationOverlayViewModel_EditNote_NewPictureOrPictureLost_GoesOnOrGivesUpTheEdit()
+    {
+        // Arrange: a mark of the message whose note is opened and changed
+        var overlay = CreateOverlay();
+        overlay.SelectTool(AnnotationTool.Rectangle);
+        var mark = DrawActiveMark(overlay, 10, "one");
+        overlay.BeginEditNote(mark.Id);
+        overlay.NoteText = "changed";
+
+        // Act: show a new picture of the file, then show none
+        _source.CurrentImage = AnnotationTestPictures.Picture(fill: 7);
+        var afterNewPicture = (overlay.EditingMarkId, overlay.NoteText);
+        _source.CurrentImage = null;
+
+        // Assert: the change went on over the new picture, and was given up without a change when the picture was lost
+        Assert.Equal(((Guid?)mark.Id, "changed"), afterNewPicture);
+        Assert.False(overlay.IsNoteEditing);
+        Assert.Null(overlay.EditingMarkId);
+        Assert.Equal("one", _marks.Find(mark.Id)!.Note);
     }
 
     /// <summary>
