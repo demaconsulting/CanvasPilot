@@ -38,3 +38,16 @@ updates:
       github-actions-dependencies:
         patterns:
           - "*"
+
+  # Maintain dependencies for Python tooling (pip-requirements.txt: Pillow for make_icon.py,
+  # yamllint and yamlfix for lint.ps1/fix.ps1)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      pip-dependencies:
+        patterns:
+          - "*"
