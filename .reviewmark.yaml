@@ -350,6 +350,7 @@ reviews:
       - "docs/design/canvas-pilot/annotation-subsystem.md"
       - "docs/verification/canvas-pilot/annotation-subsystem.md"
       - "test/**/AnnotationSubsystem/AnnotationSubsystemTests.cs"
+      - "test/**/AnnotationSubsystemUiTests.cs"
 
   - id: CanvasPilot-Annotation-AnnotationOverlay
     title: Review of CanvasPilot AnnotationOverlay unit implementation
