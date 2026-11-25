@@ -19,7 +19,7 @@
     <PackageReference Include="Avalonia.Skia" Version="12.2.0" />
     <!-- Referenced directly so that the OTS tests of the Copilot SDK can use its client types (the same version that the
          AgentKit Copilot package brings). -->
-    <PackageReference Include="Microsoft.Copilot.SDK" Version="2.0.1" />
+    <PackageReference Include="Microsoft.Copilot.SDK" Version="2.0.3" />
     <PackageReference Include="coverlet.collector" Version="10.1.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
