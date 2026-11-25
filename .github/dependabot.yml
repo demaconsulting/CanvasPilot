@@ -39,8 +39,8 @@ updates:
         patterns:
           - "*"
 
-  # Maintain dependencies for Python tooling (pip-requirements.txt: Pillow for make_icon.py,
-  # yamllint and yamlfix for lint.ps1/fix.ps1)
+  # Maintain dependencies for Python tooling (pip-requirements.txt: yamllint and yamlfix
+  # for lint.ps1/fix.ps1)
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
