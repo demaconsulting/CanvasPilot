@@ -4,7 +4,7 @@
         x:Class="DemaConsulting.CanvasPilot.KnowledgeSubsystem.KnowledgeBrowserView"
         x:DataType="vm:KnowledgeBrowserViewModel"
         Title="{Binding Title}"
-        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.ico"
         Width="1000"
         Height="700"
         MinWidth="620"

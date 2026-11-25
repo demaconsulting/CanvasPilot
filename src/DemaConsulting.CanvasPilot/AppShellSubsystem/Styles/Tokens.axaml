@@ -130,6 +130,8 @@
   <SolidColorBrush x:Key="CpBadgeImage" Color="#1d4ed8" />
   <SolidColorBrush x:Key="CpBadgeData" Color="#6d28d9" />
   <SolidColorBrush x:Key="CpBadgeSource" Color="#475569" />
+  <!-- The application icon, Icon.svg at the root of the repository, repeats this gradient: redraw it with
+       render-icon.ps1 when the gradient changes -->
   <LinearGradientBrush x:Key="CpAccentGradient" StartPoint="0%,0%" EndPoint="100%,100%">
     <GradientStop Color="#4f46e5" Offset="0" />
     <GradientStop Color="#06b6d4" Offset="1" />

@@ -6,9 +6,9 @@
     <AssemblyName>CanvasPilot</AssemblyName>
     <RootNamespace>DemaConsulting.CanvasPilot.Desktop</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <!-- Embeds the DEMA Consulting logo as the Windows executable's icon (exe icon, taskbar,
-         Explorer). Only meaningful on win-x64 publishes; the SDK silently ignores it on
-         other RIDs. -->
+    <!-- Embeds the CanvasPilot sparkle icon (the repository-root Icon.ico, drawn from Icon.svg by
+         render-icon.ps1) as the Windows executable's icon (exe icon, taskbar, Start Menu shortcut,
+         Explorer). Only meaningful on win-x64 publishes; the SDK silently ignores it on other RIDs. -->
     <ApplicationIcon>..\..\Icon.ico</ApplicationIcon>
   </PropertyGroup>
 

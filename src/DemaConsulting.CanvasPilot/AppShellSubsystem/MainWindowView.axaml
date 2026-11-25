@@ -5,7 +5,7 @@
         x:DataType="vm:MainWindowShell"
         Name="MainWindow"
         Title="{Binding Title}"
-        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.ico"
         Width="1440"
         Height="900"
         MinWidth="960"
@@ -61,6 +61,9 @@
 
         <Border Name="TitleBarLeadingReserve" Grid.Column="0" Width="0" />
 
+        <!-- The brand mark. Icon.svg at the root of the repository draws the same mark (this 24 tile, corner radius
+             7, CpAccentGradient, and CpIconSparkle) as the application icon: change both together and run
+             render-icon.ps1. -->
         <Border Grid.Column="1"
                 Width="24"
                 Height="24"

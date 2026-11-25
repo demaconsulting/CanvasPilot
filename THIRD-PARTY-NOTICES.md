@@ -5,9 +5,9 @@ built on are listed in the About dialog of the application.
 
 ## Fluent System Icons
 
-The line icons of the user interface (`AppShellSubsystem/Styles/Icons.axaml`) are glyphs of Fluent System Icons
-(20 px, regular) by Microsoft Corporation, from <https://github.com/microsoft/fluentui-system-icons>, used under the
-MIT License:
+The line icons of the user interface (`AppShellSubsystem/Styles/Icons.axaml`) and the sparkle of the application icon
+(`Icon.svg`, drawn into `Icon.png` and `Icon.ico`) are glyphs of Fluent System Icons (20 px, regular) by Microsoft
+Corporation, from <https://github.com/microsoft/fluentui-system-icons>, used under the MIT License:
 
 ```text
 MIT License

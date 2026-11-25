@@ -210,8 +210,9 @@ steps are in the verification of the unit or subsystem named at each check.
    build already fails when any of the three is missing from the published folder or the file table
    (`Speech_NativeRuntimePublished`); this check confirms what a user gets. Also check that no file whose name starts
    with `copilot` and no `runtime.node` is in the installed folder (the build asserts the same in
-   `Copilot_RuntimeNotPublished` and in the file table). (Verification of the `Speech` subsystem and of the WiX
-   Toolset.)
+   `Copilot_RuntimeNotPublished` and in the file table). Check also that the Start Menu shortcut, the taskbar, Alt-Tab,
+   the window title bars, and the Add/Remove Programs entry show the CanvasPilot sparkle icon. (Verification of the
+   `Speech` subsystem and of the WiX Toolset.)
 7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
    the keyboard, and check the tool bar and the chips with a screen reader. Give a mark a long note in the dark and the
    light theme: the label beside its number is legible, ends with an ellipsis, and stays inside the picture; resting

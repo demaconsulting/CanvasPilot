@@ -4,7 +4,7 @@
         x:Class="DemaConsulting.CanvasPilot.ChatSubsystem.PayloadInspectorView"
         x:DataType="vm:PayloadInspectorViewModel"
         Title="{Binding Title}"
-        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.ico"
         Width="980"
         Height="700"
         MinWidth="560"

@@ -31,9 +31,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- DEMA Consulting logo, sourced from the repository-root Icon.png, exposed for the
-         window icon via avares://DemaConsulting.CanvasPilot/Assets/Icon.png. -->
-    <AvaloniaResource Include="..\..\Icon.png" Link="Assets\Icon.png" />
+    <!-- The CanvasPilot sparkle icon, from the repository-root Icon.ico (drawn from Icon.svg by
+         render-icon.ps1), exposed for the window icon of every window via
+         avares://DemaConsulting.CanvasPilot/Assets/Icon.ico. The multi-size icon, rather than Icon.png,
+         lets Windows take the hand-tuned 16 and 24 px frames for title bars and the taskbar instead of
+         shrinking one large picture. -->
+    <AvaloniaResource Include="..\..\Icon.ico" Link="Assets\Icon.ico" />
   </ItemGroup>
 
   <ItemGroup>
