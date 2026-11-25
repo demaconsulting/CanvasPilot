@@ -17,9 +17,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Avalonia.Headless.XUnit" Version="12.2.0" />
     <PackageReference Include="Avalonia.Skia" Version="12.2.0" />
-    <!-- Referenced directly so that the OTS tests of the Copilot SDK can use its client types (the same version that the
-         AgentKit Copilot package brings). -->
-    <PackageReference Include="Microsoft.Copilot.SDK" Version="2.0.3" />
     <PackageReference Include="coverlet.collector" Version="10.1.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -34,6 +31,9 @@
                       LogicalName="OtsSoftwareTests.HelpCards/%(Filename)%(Extension)" />
   </ItemGroup>
 
+  <!-- The application brings the OTS items under test. The Copilot SDK is not referenced directly: it comes
+       transitively through the application's AgentKit Copilot package, so the OTS tests of the Copilot SDK test the
+       version that the application ships. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\DemaConsulting.CanvasPilot\DemaConsulting.CanvasPilot.csproj" />
   </ItemGroup>

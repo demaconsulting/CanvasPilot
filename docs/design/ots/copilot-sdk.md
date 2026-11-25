@@ -25,8 +25,9 @@ program.
 
 ### Integration Pattern
 
-The package is a transitive reference of the application library through AgentKit. The test project references it
-directly as well, only so that the OTS tests can use its client types. The tests in
+The package is a transitive reference of the application library through AgentKit. The OTS test project does not
+reference it directly either: it reaches the client types through the application library, so the OTS tests test the
+version that the application ships. The tests in
 `test/OtsSoftwareTests/CopilotSdkTests.cs` start no Copilot CLI and use no model: they start clients that must fail, and
 they check the documented minimum CLI version of CanvasPilot against `CopilotCli.MinimumVersion` of AgentKit. The facts
 that they pin are those on which the use of the installed CLI rests (see the AgentKit design): an explicit path wins,

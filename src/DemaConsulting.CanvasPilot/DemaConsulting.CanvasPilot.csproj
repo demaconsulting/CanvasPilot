@@ -28,7 +28,6 @@
     <PackageReference Include="DemaConsulting.AgentKit.Agents.Copilot" Version="0.1.0-beta.5" />
     <PackageReference Include="DemaConsulting.AgentKit.Agents.ChatClient" Version="0.1.0-beta.5" />
     <PackageReference Include="DemaConsulting.AgentKit.Agents.Ollama" Version="0.1.0-beta.5" />
-    <PackageReference Include="Microsoft.Copilot.SDK" Version="2.0.3" />
   </ItemGroup>
 
   <ItemGroup>
