@@ -16,6 +16,10 @@ needs-review:
   - "docs/verification/**/*.md"   # Verification documentation files
   - "docs/user_guide/**/*.md"     # User guide documentation
   - "docs/sysml2/**/*.sysml"      # SysML2 architecture model
+  # Project files are normally not reviewed; the installer is the exception because its .wixproj carries
+  # packaging logic (versioned TargetName, version properties) and its .wxs files are the installer source.
+  - "src/DemaConsulting.CanvasPilot.Installer/**/*.wxs"      # WiX installer source
+  - "src/DemaConsulting.CanvasPilot.Installer/**/*.wixproj"  # WiX installer project (packaging logic)
   - "!**/obj/**"                  # Exclude build output
   - "!**/bin/**"                  # Exclude build output
   - "!node_modules/**"            # Exclude npm dependencies
