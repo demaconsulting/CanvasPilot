@@ -93,7 +93,84 @@ public sealed class SpeechSettingsPageViewTests : IDisposable
         Assert.Equal("stt-one", ((ModelListItemViewModel)SettingsUiHelpers.Find<ListBox>(window, "SpeechSttModelList").SelectedItem!).Id);
         Assert.Equal(["Installed", "Not downloaded"], StatusTexts(window));
         var voice = SettingsUiHelpers.Find<ComboBox>(window, "SpeechParameterComboBox");
-        Assert.Equal("b", ((ChoiceParameterOption)voice.SelectedItem!).Value);
+        Assert.Equal("b", ((ParameterChoice)voice.SelectedItem!).Value);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the closed microphone and speaker lists tell a screen reader the device that they show, for a device
+    ///     and for the system default.
+    /// </summary>
+    [AvaloniaFact]
+    public void SpeechSettingsPageView_DeviceLists_AnnounceTheShownDevice()
+    {
+        // Arrange: a machine with one microphone and one speaker, with the microphone stored
+        _audio.Snapshot = new AudioDeviceSnapshot(
+            [new AudioDeviceDescription("Desk mic", AudioDeviceDirection.Capture, 1, 16000)],
+            [new AudioDeviceDescription("Desk speaker", AudioDeviceDirection.Playback, 2, 48000)]);
+        var page = new SpeechSettingsPageViewModel(_audio, _models);
+
+        // Act: show the page and read what the closed lists tell a screen reader
+        var window = ShowPage(page, new AppSettings { Speech = new SpeechSettings { CaptureDevice = "Desk mic" } });
+        var capture = SettingsUiHelpers.AnnouncedValue(SettingsUiHelpers.Find<ComboBox>(window, "SpeechCaptureDeviceComboBox"));
+        var playback = SettingsUiHelpers.AnnouncedValue(SettingsUiHelpers.Find<ComboBox>(window, "SpeechPlaybackDeviceComboBox"));
+
+        // Assert: each value is the label of the chosen device
+        Assert.Equal("Desk mic", capture);
+        Assert.Equal(DeviceSelectionViewModel.SystemDefaultLabel, playback);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that a screen reader names every row of the recognition and synthesis model lists by the model name that
+    ///     the row shows, and not by the type of the row.
+    /// </summary>
+    [AvaloniaFact]
+    public void SpeechSettingsPageView_ModelLists_RowsAreNamedByTheModelName()
+    {
+        // Arrange: a catalog with two recognition models and one synthesis model
+        _models.AddModel("stt-one", SpeechModelRole.Recognition, SpeechModelState.Downloaded);
+        _models.AddModel("stt-two", SpeechModelRole.Recognition, SpeechModelState.NotDownloaded);
+        _models.AddModel("tts-one", SpeechModelRole.Synthesis, SpeechModelState.NotDownloaded);
+        var page = new SpeechSettingsPageViewModel(_audio, _models);
+
+        // Act: show the page and read the names of the rows
+        var window = ShowPage(page, new AppSettings());
+        var stt = SettingsUiHelpers.AnnouncedRowNames(SettingsUiHelpers.Find<ListBox>(window, "SpeechSttModelList"));
+        var tts = SettingsUiHelpers.AnnouncedRowNames(SettingsUiHelpers.Find<ListBox>(window, "SpeechTtsModelList"));
+
+        // Assert: each row is named by its model
+        Assert.Equal(page.Models.SttModels.Select(row => row.DisplayName), stt);
+        Assert.Equal(page.Models.TtsModels.Select(row => row.DisplayName), tts);
+        Assert.All(stt.Concat(tts), name => Assert.DoesNotContain(nameof(ModelListItemViewModel), name, StringComparison.Ordinal));
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the closed list of a choice parameter tells a screen reader the label of the chosen option, as it
+    ///     shows it, and not the record of the speech library.
+    /// </summary>
+    [AvaloniaFact]
+    public void SpeechSettingsPageView_ParameterList_AnnouncesTheShownOption()
+    {
+        // Arrange: a synthesis model with a voice parameter, chosen
+        _models.AddModel("tts-one", SpeechModelRole.Synthesis, SpeechModelState.NotDownloaded, CreateVoiceParameter());
+        var page = new SpeechSettingsPageViewModel(_audio, _models);
+        var window = ShowPage(page, new AppSettings { Speech = new SpeechSettings { TtsModelId = "tts-one" } });
+        var voice = SettingsUiHelpers.Find<ComboBox>(window, "SpeechParameterComboBox");
+        var atDefault = SettingsUiHelpers.AnnouncedValue(voice);
+
+        // Act: choose the first option
+        voice.SelectedIndex = 0;
+        Dispatcher.UIThread.RunJobs();
+        var chosen = SettingsUiHelpers.AnnouncedValue(voice);
+
+        // Assert: each value is the shown label
+        Assert.Equal("Ben", atDefault);
+        Assert.Equal("Anna", chosen);
 
         window.Close();
     }

@@ -123,3 +123,13 @@ sections:
                   reached by the keyboard.
                 tests:
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+              - id: CanvasPilot-StyleKitManager-AnnounceChosenEntries
+                title: >-
+                  The StyleKitManager shall tell assistive technology the chosen place where new and imported kits go by
+                  the words that the list shows.
+                justification: |
+                  A closed drop-down list tells a screen reader the text of its chosen entry, so a person who cannot see
+                  the list must hear the same place that a sighted user reads before making or importing a kit.
+                tests:
+                  - StyleKitManagerView_TargetList_AnnouncesTheShownPlace

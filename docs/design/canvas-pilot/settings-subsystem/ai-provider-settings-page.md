@@ -46,9 +46,11 @@ always there, so a model that is not listed, or any model while no list exists, 
 by an entry for "Provider default model" (empty id). A `ModelChoice` has an id, the text of the list entry, the
 `ProviderModelInfo`, and `IsSelectable` (false for a model that the provider says cannot be used, which the view shows
 disabled). The entry text is the name with a short note of what the model lacks ("no tool calling", "no pictures",
-"unavailable"). `SelectedModel` and `ModelName` stay in step: choosing an entry sets the name (never for a disabled
-entry, and never for the `null` that a combo box reports when its list is replaced); typing a name chooses the entry of
-the same id, a name without a tag matching the `:latest` entry, and none when the name is not listed.
+"unavailable"). The text (`ToString`) of a `ModelChoice`, and of the `SettingsChoice` of a provider, a reasoning level,
+and a context size, is its label, because a closed drop-down list tells a screen reader the text of its chosen item.
+`SelectedModel` and `ModelName` stay in step: choosing an entry sets the name (never for a disabled entry, and never for
+the `null` that a combo box reports when its list is replaced); typing a name chooses the entry of the same id, a name
+without a tag matching the `:latest` entry, and none when the name is not listed.
 
 **ModelDetails / ModelWarning**: `string` — the capabilities of the chosen model, one fact per line (tool calling,
 pictures, reasoning levels, context window), and what it lacks, one sentence per line: a model that cannot be used with

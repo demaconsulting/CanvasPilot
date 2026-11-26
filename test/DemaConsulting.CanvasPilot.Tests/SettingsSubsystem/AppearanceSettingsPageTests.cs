@@ -49,6 +49,23 @@ public sealed class AppearanceSettingsPageTests
     }
 
     /// <summary>
+    ///     Test that every theme reads as its label, so a screen reader announces the chosen theme by the words the
+    ///     list shows.
+    /// </summary>
+    [Fact]
+    public void AppearanceSettingsPage_Themes_ReadAsTheirLabels()
+    {
+        // Arrange: a new page
+        var page = new AppearanceSettingsPageViewModel();
+
+        // Act: read the text of every theme
+        var texts = page.Themes.Select(choice => choice.ToString()).ToList();
+
+        // Assert: each text is the label of the theme
+        Assert.Equal(page.Themes.Select(choice => choice.Label), texts);
+    }
+
+    /// <summary>
     ///     Test that loading settings shows the stored theme and explorer options.
     /// </summary>
     [Fact]

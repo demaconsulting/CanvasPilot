@@ -110,6 +110,57 @@ public sealed class StyleSettingsPageViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the closed default kit list tells a screen reader the label that it shows, for no style, a kit, and a
+    ///     default that no kit has, and never the text of the record behind it.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task StyleSettingsPageView_DefaultKit_AnnouncesTheShownLabelAndNotTheRecord()
+    {
+        // Arrange: kits that are read, and settings with a default that no kit has
+        await _catalog.RefreshAsync(TestContext.Current.CancellationToken);
+        var (window, _) = ShowPage(new AppSettings { Styles = new StyleSettings { DefaultKitId = "team-kit" } });
+        var combo = SettingsUiHelpers.Find<ComboBox>(window, "StyleDefaultKitComboBox");
+        var missing = SettingsUiHelpers.AnnouncedValue(combo);
+
+        // Act: choose no style, then the DEMA kit, and read what the closed list tells a screen reader each time
+        combo.SelectedIndex = 0;
+        Dispatcher.UIThread.RunJobs();
+        var noStyle = SettingsUiHelpers.AnnouncedValue(combo);
+        combo.SelectedIndex = combo.Items.OfType<StyleKitChoice>().ToList().FindIndex(choice => choice.Id == "dema");
+        Dispatcher.UIThread.RunJobs();
+        var dema = SettingsUiHelpers.AnnouncedValue(combo);
+
+        // Assert: each value is the shown label and not the record
+        Assert.Equal("team-kit (not found)", missing);
+        Assert.Equal(StyleSettingsPageViewModel.NoStyleLabel, noStyle);
+        Assert.Equal("DEMA (built-in)", dema);
+        Assert.All([missing, noStyle, dema], value => Assert.DoesNotContain(nameof(StyleKitChoice), value, StringComparison.Ordinal));
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that a screen reader names every row of the shared folders by the path that it shows, and not by the text
+    ///     of the record behind it.
+    /// </summary>
+    [AvaloniaFact]
+    public void StyleSettingsPageView_SharedFolders_RowsAreNamedByTheirPath()
+    {
+        // Arrange: settings with two shared folders
+        var one = Path.Combine(_root, "one");
+        var two = Path.Combine(_root, "two");
+        var (window, _) = ShowPage(new AppSettings { Styles = new StyleSettings { SharedKitFolders = [one, two] } });
+
+        // Act: read the names of the rows
+        var names = SettingsUiHelpers.AnnouncedRowNames(SettingsUiHelpers.Find<ListBox>(window, "StyleSharedFolders"));
+
+        // Assert: each row is named by its path
+        Assert.Equal([one, two], names);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that typing a path and clicking Add lists the folder, that Move up, Move down, and Remove act on the selected
     ///     folder, and that a path that is not a full path shows a message.
     /// </summary>

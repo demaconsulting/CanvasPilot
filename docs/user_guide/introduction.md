@@ -1401,6 +1401,9 @@ CanvasPilot is built to be usable without color and with a screen reader:
   after its label, for example "[Mark 1: make it red]"; the pages of the settings
   are named by their titles ("AI Provider", "Speech", and so on), and the style pill by the name of the chosen kit or
   "(No style)".
+- Every drop-down list tells a screen reader its chosen entry, and every list its rows, by the words that you see, for
+  example "(No style)" for the default kit on the **Style Kits** page, the name of a speech model, or the name of an
+  export size.
 
 Pulsing and moving parts of the window, such as the dots while the copilot works and the busy line at the top of the
 stage, do not yet stop when your system asks for less motion. The window has not yet been checked with a screen reader

@@ -58,3 +58,17 @@ sections:
                   be reached by the keyboard.
                 tests:
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+              - id: CanvasPilot-StyleSettingsPage-AnnounceChosenEntries
+                title: >-
+                  The StyleSettingsPage shall tell assistive technology the chosen default kit by the label that the list
+                  shows, for no style, a kit, and a default that no kit has, and each shared folder row by the path that
+                  it shows.
+                justification: |
+                  A closed drop-down list tells a screen reader the text of its chosen entry, and a row of two lines is
+                  named by the text of the row. Without the shown words a screen reader announced the members of a record,
+                  such as the id, the label, and whether the kit is missing, instead of "(No style)".
+                tests:
+                  - StyleSettingsPage_DefaultKitChoicesAndFolders_ReadAsTheirShownWords
+                  - StyleSettingsPageView_DefaultKit_AnnouncesTheShownLabelAndNotTheRecord
+                  - StyleSettingsPageView_SharedFolders_RowsAreNamedByTheirPath

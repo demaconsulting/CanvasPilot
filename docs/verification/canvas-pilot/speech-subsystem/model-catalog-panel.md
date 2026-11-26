@@ -108,3 +108,10 @@ the message, the Download button is enabled, and the row reads "Failed or corrup
 **SpeechSettingsPageView_CancelButton_StopsDownloadAndExplains**: The Cancel button, visible while downloading, is
 pressed. The token is cancelled, the Download button is enabled, the row reads "Not downloaded", and the failure line
 reads "Download canceled." This scenario is tested by `SpeechSettingsPageView_CancelButton_StopsDownloadAndExplains`.
+
+**ModelListItemViewModel_ToString_IsTheDisplayName**: The text of a row is the model name that it shows and not the
+name of its type. This scenario is tested by `ModelListItemViewModel_ToString_IsTheDisplayName`.
+
+**SpeechSettingsPageView_ModelLists_RowsAreNamedByTheModelName**: A shown Speech page over two recognition models and
+one synthesis model; the name that automation gives each row of both lists is the model name. This scenario is tested
+by `SpeechSettingsPageView_ModelLists_RowsAreNamedByTheModelName`.

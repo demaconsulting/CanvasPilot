@@ -972,6 +972,10 @@ and has the service forget the conversation and delete the session of the provid
 - View models shall talk to the user only through `IDialogService`, which the main window implements, so no
   view model references a window.
 - Every control that a test or assistive technology must find shall carry an automation identifier.
+- Every value that a drop-down list or a list shows shall have a text (its `ToString`) that is the words that the entry
+  shows as its name, because the automation peers of Avalonia tell a screen reader the value of a closed drop-down list,
+  and the name of a row whose template is a panel, from the text of the item; a record or a view model without that text
+  would be announced as the printout of its members or as its type name.
 - The image preview plugs into the shell through `IImageExporter` and `ProjectWorkspaceViewModel.Preview`
   and does not require changes to the shell's commands. `Preview` shall not depend on `AppShell`: it owns the
   exporter seam `IImageExporter` and the dialog seam `IExportDialogs`, and `AppShell` refers to `Preview` only for

@@ -1308,4 +1308,33 @@ public sealed class AiProviderSettingsPageTests
         Assert.Equal("Ready.", shown);
         Assert.Equal(string.Empty, page.CheckConnectionResult);
     }
+
+    /// <summary>
+    ///     Test that every entry of the provider, model, reasoning level, and context size lists reads as its label, so a
+    ///     screen reader announces the chosen entry by the words the list shows and not by the record.
+    /// </summary>
+    [Fact]
+    public async Task AiProviderSettingsPageViewModel_Lists_EntriesReadAsTheirLabels()
+    {
+        // Arrange: a model with levels and two context sizes, and a model that cannot be used
+        var source = new FakeModelSource { Models = [TieredModel("opus"), Model("off", usable: false, name: "Off Model")] };
+        var page = await LoadedPage(source, new AiProviderSettings { ModelName = "opus" });
+
+        // Act: read the label and the text of every entry of every list
+        var entries = page.Providers.Select(choice => (choice.Label, Text: choice.ToString()))
+            .Concat(page.Models.Select(choice => (choice.Label, Text: choice.ToString())))
+            .Concat(page.ReasoningEfforts.Select(choice => (choice.Label, Text: choice.ToString())))
+            .Concat(page.ContextTiers.Select(choice => (choice.Label, Text: choice.ToString())))
+            .ToList();
+
+        // Assert: each text is the shown label, never a record, and every list was read
+        Assert.All(entries, entry =>
+        {
+            Assert.Equal(entry.Label, entry.Text);
+            Assert.DoesNotContain(" { ", entry.Text, StringComparison.Ordinal);
+        });
+        Assert.Contains(entries, entry => entry.Text == "Off Model (off) - unavailable");
+        Assert.Contains(entries, entry => entry.Text == "Long context (1M tokens)");
+        Assert.True(entries.Count >= page.Providers.Count + 3 + 3 + 2);
+    }
 }

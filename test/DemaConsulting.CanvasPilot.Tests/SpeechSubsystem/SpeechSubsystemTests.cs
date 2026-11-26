@@ -86,6 +86,35 @@ public sealed class SpeechSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the devices, the model rows, and the options of a choice parameter of the Speech page read as the
+    ///     words they show, so a screen reader announces the chosen entry by those words and not by the record or the
+    ///     type of the row.
+    /// </summary>
+    [Fact]
+    public void SpeechSubsystem_AnnounceChosenEntries_SpeechPageLists_ReadAsTheirShownWords()
+    {
+        // Arrange: the real services over a machine with devices and a catalog, and a dialog over the Speech page
+        var service = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        using var models = CreateModelService();
+        var page = new SpeechSettingsPageViewModel(CreateAudioService(["Mic A"], ["Out 1"]), models, SpeechTestData.Inline);
+        _ = new SettingsDialogViewModel(service, [page]);
+        page.Models.SelectedTtsModel = page.Models.TtsModels.Single();
+        var voice = (ChoiceParameterViewModel)page.TtsParameters.Parameters[0];
+
+        // Act: read the text of every device, model row, and option
+        var devices = page.Devices.CaptureDevices.Concat(page.Devices.PlaybackDevices).Select(device => (device.Label, Text: device.ToString())).ToList();
+        var rows = page.Models.SttModels.Concat(page.Models.TtsModels).Select(row => (row.DisplayName, Text: row.ToString())).ToList();
+        var options = voice.Options.Select(option => option.ToString()).ToList();
+
+        // Assert: each text is the shown words
+        Assert.All(devices, device => Assert.Equal(device.Label, device.Text));
+        Assert.All(rows, row => Assert.Equal(row.DisplayName, row.Text));
+        Assert.Equal(2, rows.Count);
+        Assert.Equal(["Anna", "Ben", "Cleo"], options);
+        Assert.Equal("Ben", voice.SelectedOption.ToString());
+    }
+
+    /// <summary>
     ///     Test that a machine with no audio system and an unusable model store does not stop the dialog, explains
     ///     what is missing, and keeps the stored choices when the user chooses OK.
     /// </summary>

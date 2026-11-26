@@ -20,6 +20,7 @@
 
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
@@ -41,7 +42,8 @@ namespace DemaConsulting.CanvasPilot.UiTests;
 ///     Headless UI tests of the accessibility of the application, the sweep over its windows: every button that has no text has
 ///     a name and a tooltip, every field has a name, every button can be reached with the keyboard and is big enough to hit,
 ///     the shared button looks show a focus ring on the keyboard focus, the menu has a key for every item, and the colors of the
-///     notices and of the welcome screen are readable. The windows are drawn in both theme variants.
+///     notices and of the welcome screen are readable, and every drop-down list and list tells a screen reader its chosen entry
+///     by the words that the entry shows. The windows are drawn in both theme variants.
 /// </summary>
 public sealed class AccessibilityViewTests : IDisposable
 {
@@ -134,6 +136,68 @@ public sealed class AccessibilityViewTests : IDisposable
         // Assert: no control has a problem, and the sweep looked at enough controls
         Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems.Distinct().Take(60)));
         Assert.True(Volatile.Read(ref _swept) > 150, $"Only {_swept} controls were looked at.");
+    }
+
+    /// <summary>
+    ///     Test that in the workspace, the window that manages style kits, and every page of the settings, every drop-down
+    ///     list that has a chosen entry tells a screen reader the words that it shows for that entry, and every shown row of
+    ///     a list is named by the words that the row shows, never by the text of the data behind it, including a default kit
+    ///     that no kit has and a shared kit folder.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task Accessibility_Lists_AnnounceTheWordsOfTheChosenEntry()
+    {
+        // Arrange: a remembered project with two pictures, settings with a shared kit folder and a default kit that no kit
+        // has, and the main window
+        var problems = new List<string>();
+        var looked = new List<string>();
+        await CreateProjectAsync("Release Overview", "overview.svg", "detail.svg");
+        var settings = new SettingsService(Path.Combine(_root, "settings"));
+        settings.Load();
+        settings.Update(s => s with
+        {
+            Styles = new StyleSettings { SharedKitFolders = [Path.Combine(_root, "team-kits")], DefaultKitId = "team-kit" },
+        });
+        var composition = AppShellUiHelpers.Compose(_root);
+        _compositions.Add(composition);
+        var window = new MainWindowView(composition.Shell);
+        window.Show();
+        Settle();
+
+        // Act: check the workspace of the open project, the window that manages kits, and every page of the settings
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        Settle();
+        CheckAnnounced(window, "workspace", problems, looked);
+        var kits = composition.Shell.ShowStyleKitsCommand.ExecuteAsync(null);
+        Settle();
+        var manager = window.OwnedWindows.OfType<StyleKitManagerView>().Single();
+        CheckAnnounced(manager, "style kits", problems, looked);
+        manager.Close();
+        await kits;
+        var shown = composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        Settle();
+        var dialog = window.OwnedWindows.OfType<SettingsDialogView>().Single();
+        var model = (SettingsDialogViewModel)dialog.DataContext!;
+        foreach (var page in model.Pages)
+        {
+            model.SelectedPage = page;
+            Settle();
+            CheckAnnounced(dialog, $"settings {page.Title}", problems, looked);
+        }
+
+        dialog.Close();
+        await shown;
+        window.Close();
+
+        // Assert: nothing announced the data behind an entry, and the check looked at the lists that the issue names
+        Assert.True(problems.Count == 0, string.Join(Environment.NewLine, problems.Distinct().Take(60)));
+        Assert.Contains("StylePicker", looked);
+        Assert.Contains("StyleKitTargetComboBox", looked);
+        Assert.Contains("StyleDefaultKitComboBox", looked);
+        Assert.Contains("StyleSharedFolders", looked);
+        Assert.Contains("AiProviderComboBox", looked);
+        Assert.Contains("AppearanceThemeComboBox", looked);
+        Assert.True(looked.Count >= 10, $"Only {looked.Count} lists were looked at.");
     }
 
     /// <summary>
@@ -431,6 +495,73 @@ public sealed class AccessibilityViewTests : IDisposable
                     break;
             }
         }
+    }
+
+    /// <summary>
+    ///     Looks at every shown drop-down list that has a chosen entry and every shown row of a list in a window, and notes
+    ///     each one whose announced text is not words that it shows, or is the text of the data behind it.
+    /// </summary>
+    /// <param name="root">The window.</param>
+    /// <param name="label">What the window is called in a message.</param>
+    /// <param name="problems">Collects the problems.</param>
+    /// <param name="looked">Collects the automation identifiers of the lists that were looked at.</param>
+    private static void CheckAnnounced(Window root, string label, List<string> problems, List<string> looked)
+    {
+        // The value of a closed drop-down list is the text of its chosen entry, which the list shows
+        foreach (var combo in root.GetVisualDescendants().OfType<ComboBox>().Where(combo => combo.IsEffectivelyVisible && combo.SelectedItem is not null))
+        {
+            var id = AutomationProperties.GetAutomationId(combo) ?? combo.Name ?? nameof(ComboBox);
+            looked.Add(id);
+            var value = SettingsUiHelpers.AnnouncedValue(combo);
+            if (!IsShownWords(value, ShownTexts(combo)))
+            {
+                problems.Add($"{label}: the drop-down list {id} announces '{value}', which it does not show.");
+            }
+        }
+
+        // The name of a row of a list is the words that the row shows
+        foreach (var list in root.GetVisualDescendants().OfType<ListBox>().Where(list => list.IsEffectivelyVisible))
+        {
+            var id = AutomationProperties.GetAutomationId(list) ?? list.Name ?? nameof(ListBox);
+            looked.Add(id);
+            foreach (var row in list.GetVisualDescendants().OfType<ListBoxItem>().Where(row => row.IsEffectivelyVisible))
+            {
+                var name = ControlAutomationPeer.CreatePeerForElement(row).GetName();
+                if (!IsShownWords(name, ShownTexts(row)))
+                {
+                    problems.Add($"{label}: a row of the list {id} is named '{name}', which it does not show.");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Reads the texts that a control shows.
+    /// </summary>
+    /// <param name="control">The control.</param>
+    /// <returns>The text of every shown text block inside it.</returns>
+    private static List<string> ShownTexts(Control control)
+    {
+        return control.GetVisualDescendants()
+            .OfType<TextBlock>()
+            .Where(text => text.IsEffectivelyVisible && !string.IsNullOrWhiteSpace(text.Text))
+            .Select(text => text.Text!)
+            .ToList();
+    }
+
+    /// <summary>
+    ///     Tells whether an announced text is words that are shown and not the text of the data behind them: a type name or
+    ///     the members of a record.
+    /// </summary>
+    /// <param name="announced">The announced text.</param>
+    /// <param name="shown">The texts that are shown.</param>
+    /// <returns><see langword="true" /> when the text is shown and is not the text of data.</returns>
+    private static bool IsShownWords(string? announced, List<string> shown)
+    {
+        return !string.IsNullOrWhiteSpace(announced)
+               && shown.Contains(announced)
+               && !announced.Contains(" { ", StringComparison.Ordinal)
+               && !announced.StartsWith("DemaConsulting.", StringComparison.Ordinal);
     }
 
     /// <summary>

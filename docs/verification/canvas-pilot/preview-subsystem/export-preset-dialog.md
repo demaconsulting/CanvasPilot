@@ -71,3 +71,11 @@ name `1920 x 1080 px`, and clicking Export closes the window and accepts the sli
 
 **ExportPresetDialogView_CancelButton_ClosesWindowWithoutAccepting**: Clicking Cancel closes the window without
 accepting. This scenario is tested by `ExportPresetDialogView_CancelButton_ClosesWindowWithoutAccepting`.
+
+**ExportPresetItemViewModel_ToString_IsTheNameOfThePreset**: The text of every line of a dialog over the picture as it
+is shown and three sizes is the name that the line shows. This scenario is tested by
+`ExportPresetItemViewModel_ToString_IsTheNameOfThePreset`.
+
+**ExportPresetDialogView_PresetList_RowsAreNamedByThePresetName**: A shown dialog; the name that automation gives each
+row of the list is the name of its size. This scenario is tested by
+`ExportPresetDialogView_PresetList_RowsAreNamedByThePresetName`.

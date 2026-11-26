@@ -132,3 +132,17 @@ opens a dialog that lists the page with the other two, and Cancel closes it. Thi
 both theme variants and each of its pages, this one among them, is chosen and every control of it is looked at; a
 button that shows no text has a name and a tooltip, a text box, list, and drop-down has a name, and every enabled button
 can take the keyboard focus. This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**StyleSettingsPage_DefaultKitChoicesAndFolders_ReadAsTheirShownWords**: Kits that are read, a shared folder, and a
+default that no kit has; the text of every default kit choice is its label (no style and `team-kit (not found)`
+included), and the text of the folder row is its path. This scenario is tested by
+`StyleSettingsPage_DefaultKitChoicesAndFolders_ReadAsTheirShownWords`.
+
+**StyleSettingsPageView_DefaultKit_AnnouncesTheShownLabelAndNotTheRecord**: A shown page whose settings name a default
+that no kit has; the value that the closed list gives to automation is `team-kit (not found)`, then `(No style)` and
+`DEMA (built-in)` as they are chosen, and never the record. This scenario is tested by
+`StyleSettingsPageView_DefaultKit_AnnouncesTheShownLabelAndNotTheRecord`.
+
+**StyleSettingsPageView_SharedFolders_RowsAreNamedByTheirPath**: A shown page with two shared folders; the name that
+automation gives each row is its path. This scenario is tested by
+`StyleSettingsPageView_SharedFolders_RowsAreNamedByTheirPath`.

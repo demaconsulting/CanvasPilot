@@ -186,3 +186,16 @@ sections:
               - CanvasPilot-SettingsService-KeepStyleSettings
             tests:
               - SettingsSubsystem_KeepStyleSettings_SavedWithOthers_SurviveRestartAndOtherChanges
+
+          - id: CanvasPilot-Settings-AnnounceChosenEntries
+            title: >-
+              The Settings subsystem shall tell a screen reader the chosen entry of the drop-down lists of its pages by the
+              words that the entry shows: the provider, the model, the reasoning level, the context size, and the theme.
+            justification: |
+              The pages of the settings dialog are where the user makes choices that apply everywhere. A person who uses a
+              screen reader must hear the same words that the list shows to know what is chosen.
+            children:
+              - CanvasPilot-AiProviderSettingsPage-AnnounceChosenEntries
+              - CanvasPilot-AppearanceSettingsPage-AnnounceChosenEntries
+            tests:
+              - SettingsSubsystem_AnnounceChosenEntries_PageLists_ReadAsTheirShownWords

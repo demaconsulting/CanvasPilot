@@ -163,3 +163,18 @@ sections:
               - CanvasPilot-OTS-Speech-DeliverNativeRuntime
             tests:
               - windows@Speech_NativeRuntimePublished
+
+          - id: CanvasPilot-Speech-AnnounceChosenEntries
+            title: >-
+              The Speech subsystem shall tell a screen reader the chosen microphone, speakers, and option of a model
+              setting, and each row of the lists of models, by the words that the entry shows.
+            justification: |
+              Choosing the devices and the models for speech must be possible for a person who uses a screen reader, who
+              hears the chosen entry and the rows instead of reading them; a type name or the members of a record tell
+              that person nothing.
+            children:
+              - CanvasPilot-DeviceSelection-AnnounceChosenEntries
+              - CanvasPilot-ModelCatalogPanel-AnnounceChosenEntries
+              - CanvasPilot-ModelParameterEditor-AnnounceChosenEntries
+            tests:
+              - SpeechSubsystem_AnnounceChosenEntries_SpeechPageLists_ReadAsTheirShownWords

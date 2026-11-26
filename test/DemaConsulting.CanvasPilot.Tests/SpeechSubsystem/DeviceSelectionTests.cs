@@ -68,6 +68,29 @@ public sealed class DeviceSelectionTests
     }
 
     /// <summary>
+    ///     Test that every microphone and speaker choice, including the system default and a stored device that is not
+    ///     connected, reads as its label, so a screen reader announces the chosen device by the words the list shows.
+    /// </summary>
+    [Fact]
+    public void DeviceSelectionViewModel_Devices_ReadAsTheirLabels()
+    {
+        // Arrange: a view model over two microphones and one speaker
+        var viewModel = new DeviceSelectionViewModel(SpeechTestData.AudioDevices(["Mic A", "Mic B"], ["Out 1"]));
+
+        // Act: load with a stored microphone and a stored speaker that is not connected
+        viewModel.Load("Mic B", "Gone");
+        var choices = viewModel.CaptureDevices.Concat(viewModel.PlaybackDevices).ToList();
+
+        // Assert: each text is the label of the choice and never the record
+        Assert.All(choices, choice =>
+        {
+            Assert.Equal(choice.Label, choice.ToString());
+            Assert.DoesNotContain(nameof(DeviceChoice), choice.ToString(), StringComparison.Ordinal);
+        });
+        Assert.Contains(choices, choice => choice.ToString() == DeviceSelectionViewModel.SystemDefaultLabel);
+    }
+
+    /// <summary>
     ///     Test that an empty stored name selects the system default.
     /// </summary>
     [Fact]

@@ -74,3 +74,13 @@ sections:
                 tests:
                   - StylePicker_ManageKitsCommand_SetThenCleared_IsAnnouncedAndTold
                   - StylePickerView_ManageStyleKitsEntry_OpensTheWindowThatManagesKits
+
+              - id: CanvasPilot-StylePicker-AnnounceChosenEntries
+                title: >-
+                  The StylePicker shall tell assistive technology the chosen entry by the name that the list shows, for no
+                  style, a kit, and a kit that cannot be found.
+                justification: |
+                  The pill is a closed drop-down list, which tells a screen reader the text of its chosen entry. That text
+                  must be the name of the kit, so a person who cannot see the pill hears which style the project uses.
+                tests:
+                  - StylePickerView_Pill_AnnouncesTheNameOfTheChoiceAndNotTheRecord

@@ -20,6 +20,8 @@
 
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Automation.Peers;
+using Avalonia.Automation.Provider;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -60,6 +62,30 @@ internal static class SettingsUiHelpers
                      ?? throw new InvalidOperationException("The button is not part of the window's visual tree.");
         window.MouseDown(center, MouseButton.Left);
         window.MouseUp(center, MouseButton.Left);
+    }
+
+    /// <summary>
+    ///     Reads the value that a drop-down list tells a screen reader, which is the text of its chosen entry.
+    /// </summary>
+    /// <param name="combo">The drop-down list, closed as a user finds it.</param>
+    /// <returns>The value of its automation peer, or <see langword="null" /> when nothing is chosen.</returns>
+    public static string? AnnouncedValue(ComboBox combo)
+    {
+        var peer = ControlAutomationPeer.CreatePeerForElement(combo);
+        return ((IValueProvider)peer).Value;
+    }
+
+    /// <summary>
+    ///     Reads the names that a screen reader announces for the shown rows of a list.
+    /// </summary>
+    /// <param name="list">The list, shown in a window.</param>
+    /// <returns>The name of the automation peer of each realized row, in order.</returns>
+    public static IReadOnlyList<string> AnnouncedRowNames(ListBox list)
+    {
+        return list.GetVisualDescendants()
+            .OfType<ListBoxItem>()
+            .Select(item => ControlAutomationPeer.CreatePeerForElement(item).GetName())
+            .ToList();
     }
 }
 

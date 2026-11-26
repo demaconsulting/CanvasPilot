@@ -147,3 +147,8 @@ picture shown, a source of one size (300 by 300 at 200 dots per inch), and a use
 model, the first export offers the picture as it is shown and the size, and writes a PNG whose header holds 300 by 300
 and whose physical size chunk holds 7874 pixels per meter; the second export offers the size already selected. This
 scenario is tested by `PreviewSubsystem_ExportAtPreset_ShownPicture_WritesPngOfThePresetSizeAndRemembersTheChoice`.
+
+**PreviewSubsystem_AnnounceChosenEntries_ExportSizes_ReadAsTheirNames**: A shown picture, a size of the style kit and a
+size of the application, and a user who works the real export dialog view model; the text of every line that the
+exporter offers is the name that the line shows. This scenario is tested by
+`PreviewSubsystem_AnnounceChosenEntries_ExportSizes_ReadAsTheirNames`.

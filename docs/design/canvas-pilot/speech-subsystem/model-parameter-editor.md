@@ -22,8 +22,14 @@ string), and `TrySetValueText(text)`, which returns whether the text was a value
 to the range and rounded to a whole number for an integer; a number that is not finite is ignored. `ValueText` uses
 the shortest text that reads back as the same number, with a point as the separator.
 
-**ChoiceParameterViewModel**: `Options` and `SelectedOption`. A null or unknown option is ignored, so the value is
-always one the model declared. `ValueText` is the option's value.
+**ChoiceParameterViewModel**: `Options` (`IReadOnlyList<ParameterChoice>`, in the order the model declares them) and
+`SelectedOption` (`ParameterChoice`), which starts at the option whose value is the declared default. A null or unknown
+option is ignored (an option is matched by its value), so the value is always one the model declared. `ValueText` is
+the option's value.
+
+**ParameterChoice**: `Value` (stored in the settings) and `Label` (shown in the list); its text (`ToString`) is the
+label. It stands for one `ChoiceParameterOption` of the speech library, whose text lists its members and cannot be
+changed; a closed drop-down list tells a screen reader the text of its chosen item, so the options are wrapped.
 
 **BooleanParameterViewModel**: `Value`. `ValueText` is `true` or `false`; either case is read.
 

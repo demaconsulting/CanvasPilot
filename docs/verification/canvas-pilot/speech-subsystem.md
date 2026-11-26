@@ -121,3 +121,9 @@ before the installer is built from that folder, FileAssert asserts that `publish
 `sherpa-onnx-c-api.dll`, `onnxruntime.dll`, and `portaudio.dll`, each of a plausible size. A later step of the same job
 reads the file table of the installer package and fails when any of the three is not listed. This scenario is tested by
 `Speech_NativeRuntimePublished`.
+
+**SpeechSubsystem_AnnounceChosenEntries_SpeechPageLists_ReadAsTheirShownWords**: A dialog over the Speech page, the real
+audio and model services with one microphone, one speaker, and a catalog of two models, one with a voice parameter;
+the text of every device is its label, the text of every model row is its model name, and the text of every option of
+the voice, and of the chosen one, is its label. This scenario is tested by
+`SpeechSubsystem_AnnounceChosenEntries_SpeechPageLists_ReadAsTheirShownWords`.

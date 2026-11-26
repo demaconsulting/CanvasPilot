@@ -20,6 +20,7 @@
 
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
@@ -508,6 +509,41 @@ public sealed class AiProviderSettingsPageViewTests
         Assert.True(hiddenForPlain);
         Assert.True(shownAgain);
         Assert.True(hiddenForOllama);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the closed provider, model, reasoning level, and context size lists tell a screen reader the label of
+    ///     the chosen entry, as the list shows it, and never the text of the record behind it.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task AiProviderSettingsPageView_Lists_AnnounceTheShownWordsOfTheChosenEntry()
+    {
+        // Arrange: a page over a model with reasoning levels and two context sizes, with that model and its larger size
+        // and its high level chosen
+        var tiered = Model("opus", efforts: ["low", "high"]) with
+        {
+            ContextTiers = [new ProviderContextTier("default", "Standard", 328_000), new ProviderContextTier("long_context", "Long context", 1_000_000)],
+            DefaultContextTier = "default",
+        };
+        var viewModel = new AiProviderSettingsPageViewModel(null, new FixedModels(tiered, Model("plain")), TimeSpan.Zero);
+        viewModel.Load(new AppSettings { AiProvider = new AiProviderSettings { ModelName = "opus", ReasoningEffort = "high", ContextTier = "long_context" } });
+        await viewModel.ModelListLoaded;
+        var window = new Window { Width = 520, Height = 1400, Content = new AiProviderSettingsPageView { DataContext = viewModel } };
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+
+        // Act: read what each closed list tells a screen reader
+        var announced = new[] { "AiProviderComboBox", "AiModelComboBox", "AiReasoningEffortComboBox", "AiContextTierComboBox" }
+            .Select(id => SettingsUiHelpers.AnnouncedValue(SettingsUiHelpers.Find<ComboBox>(window, id)) ?? string.Empty)
+            .ToArray();
+
+        // Assert: each value is the label of the chosen entry and not the record
+        Assert.Equal(
+            [viewModel.SelectedProvider.Label, viewModel.SelectedModel!.Label, viewModel.SelectedReasoningEffort!.Label, "Long context (1M tokens)"],
+            announced);
+        Assert.All(announced, value => Assert.DoesNotContain(" { ", value, StringComparison.Ordinal));
 
         window.Close();
     }

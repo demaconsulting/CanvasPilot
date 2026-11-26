@@ -400,6 +400,27 @@ public sealed class StyleKitManagerViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the closed list of where new and imported kits go tells a screen reader the place that it shows.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task StyleKitManagerView_TargetList_AnnouncesTheShownPlace()
+    {
+        // Arrange: a window over the kits that come with the program
+        var (window, _) = await ShowAsync();
+        var combo = SettingsUiHelpers.Find<ComboBox>(window, "StyleKitTargetComboBox");
+
+        // Act: read what the closed list tells a screen reader, and what it shows
+        var announced = SettingsUiHelpers.AnnouncedValue(combo);
+        var shown = combo.GetVisualDescendants().OfType<TextBlock>().Select(text => text.Text).ToList();
+
+        // Assert: the value is the place that is shown
+        Assert.Equal("My kits", announced);
+        Assert.Contains(announced, shown);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Makes the window over the real catalog, with its kits read, and shows it.
     /// </summary>
     /// <returns>The window and its view model.</returns>

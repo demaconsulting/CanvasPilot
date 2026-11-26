@@ -12,6 +12,7 @@ so devices are chosen, and stored, by name.
 #### Data Model
 
 **DeviceChoice**: `Name` (the stored name, or an empty string for the system default) and `Label` (the text shown).
+Its text (`ToString`) is the label, because a closed drop-down list tells a screen reader the text of its chosen item.
 
 **CaptureDevices / PlaybackDevices**: `ObservableCollection<DeviceChoice>`. A new view model holds only the system
 default entry in each.

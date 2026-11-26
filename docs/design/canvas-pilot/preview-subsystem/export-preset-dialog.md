@@ -14,7 +14,8 @@ window implements by showing this window.
 
 **ExportPresetItemViewModel**: one line of the list: the `Preset`, its `Name`, the `SizeLine` (for example
 `1920 x 1080 px, on #FFFFFF`, `800 px wide, transparent`, or `As shown`), and the `Group` (`As shown`, `Style kit`, or
-`Application`).
+`Application`). The text of a line (`ToString`) is its `Name`, the first line it shows, because a screen reader names a
+row of two lines by the text of its item, which would otherwise be the type name.
 
 **Items**: the lines, in the order the exporter gave them (the picture as it is shown first, the sizes of the style kit,
 then the sizes of the application).

@@ -107,6 +107,33 @@ public sealed class SettingsSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the entries of the lists of the AI provider and Appearance pages, as the dialog shows them, read as
+    ///     the words they show, so a screen reader announces the chosen entry by those words and not by the record.
+    /// </summary>
+    [Fact]
+    public void SettingsSubsystem_AnnounceChosenEntries_PageLists_ReadAsTheirShownWords()
+    {
+        // Arrange: stored settings and a dialog over the AI provider page and the Appearance page
+        var service = new SettingsService(_tempRoot);
+        service.Save(new AppSettings { Appearance = new AppearanceSettings { Theme = ThemeChoice.Dark } });
+        var provider = new AiProviderSettingsPageViewModel();
+        var appearance = new AppearanceSettingsPageViewModel();
+        _ = new SettingsDialogViewModel(service, [provider, appearance]);
+
+        // Act: read the label and the text of the entries of every list, and of the chosen ones
+        var entries = provider.Providers.Select(choice => (choice.Label, Text: choice.ToString()))
+            .Concat(provider.ReasoningEfforts.Select(choice => (choice.Label, Text: choice.ToString())))
+            .Concat(appearance.Themes.Select(choice => (choice.Label, Text: choice.ToString())))
+            .ToList();
+
+        // Assert: each text is the shown label, and the chosen theme reads as its label
+        Assert.NotEmpty(entries);
+        Assert.All(entries, entry => Assert.Equal(entry.Label, entry.Text));
+        Assert.Equal("Dark", appearance.SelectedTheme.ToString());
+        Assert.Equal(provider.SelectedProvider.Label, provider.SelectedProvider.ToString());
+    }
+
+    /// <summary>
     ///     Test that choices made in the dialog survive an application restart.
     /// </summary>
     [Fact]

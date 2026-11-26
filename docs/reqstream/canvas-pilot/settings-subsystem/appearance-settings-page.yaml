@@ -40,3 +40,14 @@ sections:
                   - AppearanceSettingsPageView_Show_ShowsStoredAppearanceWithAutomationIds
                   - AppearanceSettingsPageView_ChooseThemeAndOptions_Ok_StoresThem
                   - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+              - id: CanvasPilot-AppearanceSettingsPage-AnnounceChosenEntries
+                title: >-
+                  The AppearanceSettingsPage shall tell assistive technology the chosen theme by the words that the theme
+                  list shows.
+                justification: |
+                  A closed drop-down list tells a screen reader the text of its chosen entry, so that text must be the name
+                  of the theme that a sighted user reads.
+                tests:
+                  - AppearanceSettingsPage_Themes_ReadAsTheirLabels
+                  - AppearanceSettingsPageView_ThemeList_AnnouncesTheShownTheme

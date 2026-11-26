@@ -681,6 +681,23 @@ sections:
           - Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly
           - Accessibility_Colors_NoticesAndWelcomeTextAreReadable
 
+      - id: CanvasPilot-System-AnnounceChosenEntries
+        title: >-
+          The application shall tell a screen reader the chosen entry of every drop-down list, and every entry of a list
+          of choices, by the words that the entry shows, and never by the text of the data behind it.
+        tags: [system]
+        justification: |
+          A person who cannot see the screen hears the value of a drop-down list and the name of a row instead of
+          reading them. A type name or a printout of the members of a record tells that person nothing and differs from
+          what a sighted user reads, so the chosen default style kit, for example, must be announced as "(No style)".
+        children:
+          - CanvasPilot-Settings-AnnounceChosenEntries
+          - CanvasPilot-Speech-AnnounceChosenEntries
+          - CanvasPilot-Style-AnnounceChosenEntries
+          - CanvasPilot-Preview-AnnounceChosenEntries
+        tests:
+          - Accessibility_Lists_AnnounceTheWordsOfTheChosenEntry
+
       - id: CanvasPilot-System-ShipThirdPartyNotices
         title: >-
           The installed application shall carry the license notices of the third-party material that is part of it but

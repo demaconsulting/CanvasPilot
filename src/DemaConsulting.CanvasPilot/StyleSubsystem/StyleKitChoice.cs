@@ -26,4 +26,16 @@ namespace DemaConsulting.CanvasPilot.StyleSubsystem;
 /// <param name="Id">The id of the kit, or an empty string for no style.</param>
 /// <param name="Label">The text shown in the list.</param>
 /// <param name="IsMissing"><see langword="true" /> for the default kit that the settings name and that no kit has.</param>
-public sealed record StyleKitChoice(string Id, string Label, bool IsMissing);
+public sealed record StyleKitChoice(string Id, string Label, bool IsMissing)
+{
+    /// <summary>
+    ///     Gives the text shown for the choice, so a screen reader announces the chosen kit by the words the list shows.
+    /// </summary>
+    /// <remarks>
+    ///     A closed drop-down list tells assistive technology the text of its chosen item, and the text of a record
+    ///     would otherwise print its members. The label of a missing kit already says that it was not found, so the
+    ///     announced text is the shown text.
+    /// </remarks>
+    /// <returns>The <see cref="Label" />.</returns>
+    public override string ToString() => Label;
+}

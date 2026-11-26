@@ -54,3 +54,10 @@ comfortable rows are turned on, and OK is chosen; a fresh service loads those ch
 both theme variants and each of its pages, this one among them, is chosen and every control of it is looked at; the
 drop-down has a name and every enabled button can take the keyboard focus. This scenario is tested by
 `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**AppearanceSettingsPage_Themes_ReadAsTheirLabels**: The text of every theme of a new page is its label. This scenario
+is tested by `AppearanceSettingsPage_Themes_ReadAsTheirLabels`.
+
+**AppearanceSettingsPageView_ThemeList_AnnouncesTheShownTheme**: Each theme is chosen in turn in a shown dialog; the
+value that the closed list gives to automation is Follow system, Dark, and Light. This scenario is tested by
+`AppearanceSettingsPageView_ThemeList_AnnouncesTheShownTheme`.

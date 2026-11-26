@@ -81,6 +81,35 @@ public sealed class AppearanceSettingsPageViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the closed theme list tells a screen reader the label of the chosen theme, as it shows it, for every
+    ///     theme.
+    /// </summary>
+    [AvaloniaFact]
+    public void AppearanceSettingsPageView_ThemeList_AnnouncesTheShownTheme()
+    {
+        // Arrange: a dialog on the Appearance page over default settings
+        var service = new SettingsService(_tempRoot);
+        var (window, _, _) = CreateDialog(service);
+        window.Show();
+        Dispatcher.UIThread.RunJobs();
+        var theme = SettingsUiHelpers.Find<ComboBox>(window, "AppearanceThemeComboBox");
+        var announced = new List<string?>();
+
+        // Act: choose each theme in turn and read what the closed list tells a screen reader
+        foreach (var choice in theme.Items.OfType<SettingsChoice<ThemeChoice>>().ToList())
+        {
+            theme.SelectedItem = choice;
+            Dispatcher.UIThread.RunJobs();
+            announced.Add(SettingsUiHelpers.AnnouncedValue(theme));
+        }
+
+        // Assert: each value is the label of the theme
+        Assert.Equal(["Follow system", "Dark", "Light"], announced);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that choosing the dark theme and a compact list on the page and then choosing OK stores them.
     /// </summary>
     [AvaloniaFact]

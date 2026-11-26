@@ -26,4 +26,15 @@ namespace DemaConsulting.CanvasPilot.StyleSubsystem;
 /// <param name="Path">The full path of the folder, as the user entered it.</param>
 /// <param name="StatusText">Whether the folder could be read the last time the kits were read, or why not, or that it has not been read yet.</param>
 /// <param name="IsValid"><see langword="false" /> when the path is not a full path, which cannot be saved.</param>
-public sealed record StyleFolderItem(string Path, string StatusText, bool IsValid);
+public sealed record StyleFolderItem(string Path, string StatusText, bool IsValid)
+{
+    /// <summary>
+    ///     Gives the path shown as the first line of the row, so a screen reader names the row by the folder.
+    /// </summary>
+    /// <remarks>
+    ///     A list row whose template is a panel of two lines is named by the text of its item, and the text of a
+    ///     record would otherwise print its members. The status stays readable as the second line of the row.
+    /// </remarks>
+    /// <returns>The <see cref="Path" />.</returns>
+    public override string ToString() => Path;
+}

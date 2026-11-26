@@ -91,3 +91,10 @@ window, each dialog, the window that manages kits, and every page of the setting
 variants and every control is looked at; a button that shows no text has a name and a tooltip, a text box, drop-down,
 list, and slider has a name, and every enabled button can take the keyboard focus. This scenario is tested by
 `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**StyleSubsystem_AnnounceChosenEntries_PickerPageAndManagerLists_ReadAsTheirShownWords**: A real catalog with a kit of
+the program, an open project that names a kit that cannot be found, and settings with a shared folder and a default kit
+that no kit has; the text of every entry of the style picker, of every default kit choice (no style and the missing
+default included), of every shared folder row, and of every place where the window that manages kits puts new kits is
+the words that the entry shows and never the members of a record. This scenario is tested by
+`StyleSubsystem_AnnounceChosenEntries_PickerPageAndManagerLists_ReadAsTheirShownWords`.

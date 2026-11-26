@@ -72,3 +72,12 @@ capture status shows the problem text. This scenario is tested by
 **SpeechSettingsPageView_RefreshDevicesButton_ScansAndShowsNewDevice**: The Refresh devices button is pressed after a
 speaker appears. The service was asked to scan once and the playback combo box offers `USB speakers`. This scenario is
 tested by `SpeechSettingsPageView_RefreshDevicesButton_ScansAndShowsNewDevice`.
+
+**DeviceSelectionViewModel_Devices_ReadAsTheirLabels**: Two microphones and one speaker, loaded with a stored
+microphone and a stored speaker that is not connected; the text of every choice, the system default included, is its
+label and never the record. This scenario is tested by `DeviceSelectionViewModel_Devices_ReadAsTheirLabels`.
+
+**SpeechSettingsPageView_DeviceLists_AnnounceTheShownDevice**: A shown Speech page over one microphone, which is stored,
+and one speaker; the value that the closed microphone list gives to automation is the name of the microphone, and the
+value of the speaker list is the system default. This scenario is tested by
+`SpeechSettingsPageView_DeviceLists_AnnounceTheShownDevice`.

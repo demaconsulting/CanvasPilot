@@ -1096,6 +1096,14 @@ requirement: `Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey` (every menu 
 focus ring on the Tab key and on no other control), and `Accessibility_Colors_NoticesAndWelcomeTextAreReadable` (the
 text on notices, the amber button, and the welcome backdrop has a contrast of at least 4.5 to 1).
 
+**Accessibility_Lists_AnnounceTheWordsOfTheChosenEntry**: The composed application opens a remembered project with two
+pictures, with settings that name a shared kit folder and a default kit that no kit has (a headless UI test in
+`AccessibilityViewTests.cs`). In the workspace, the window that manages style kits, and every page of the Settings
+dialog, the value that every shown drop-down list with a chosen entry gives to automation is a text that the list shows,
+and the name of every shown row of a list is a text that the row shows; neither is a type name or the printout of a
+record. The check must have looked at the style picker, the place where new kits go, the default kit, the shared
+folders, the provider, and the theme. This scenario is tested by `Accessibility_Lists_AnnounceTheWordsOfTheChosenEntry`.
+
 **ThirdPartyNotices_Published**: After the Windows build job publishes the application self-contained for win-x64,
 FileAssert asserts that the published folder, which the installer takes whole, holds exactly one
 `THIRD-PARTY-NOTICES.md` that names Fluent System Icons and the MIT License, so the notice of the vendored icons is in

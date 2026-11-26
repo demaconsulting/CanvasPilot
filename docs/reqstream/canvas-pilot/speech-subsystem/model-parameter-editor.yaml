@@ -58,3 +58,15 @@ sections:
                 tests:
                   - ModelParameterEditorViewModel_GetValues_GermanCulture_WritesInvariantStrings
                   - ModelParameterEditorViewModel_GetSetValues_RoundTrips
+
+              - id: CanvasPilot-ModelParameterEditor-AnnounceChosenEntries
+                title: >-
+                  The ModelParameterEditor shall tell assistive technology the chosen option of a choice parameter by the
+                  label that the list shows.
+                justification: |
+                  A closed drop-down list tells a screen reader the text of its chosen entry. The options of a model come
+                  from the speech library, whose text lists the members of the option, so the editor must give the label
+                  that a sighted user reads instead.
+                tests:
+                  - ChoiceParameterViewModel_Options_ReadAsTheirLabels
+                  - SpeechSettingsPageView_ParameterList_AnnouncesTheShownOption
