@@ -20,6 +20,7 @@
 
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
@@ -204,6 +205,31 @@ public sealed partial class PreviewPaneViewModel : ObservableObject, IRenderedIm
     /// </summary>
     [ObservableProperty]
     private bool _isDragOutEnabled = true;
+
+    /// <summary>
+    ///     The command that the Copy image item of the menu on the stage runs, or null while the host gives none.
+    ///     It is a slot that the pane does not interpret: the host puts its own copy command here, so the menu on the
+    ///     picture and the host's menu run the very same command, are usable at the same times, and the pane does not
+    ///     depend on the host. The view shows the item unusable while the slot is empty or the command cannot run.
+    /// </summary>
+    [ObservableProperty]
+    private ICommand? _copyImageCommand;
+
+    /// <summary>
+    ///     The command that the Export as PNG item of the menu on the stage runs, or null while the host gives none.
+    ///     Like <see cref="CopyImageCommand" /> it is a slot for the host's own command, which the view shows unusable
+    ///     while the slot is empty or the command cannot run.
+    /// </summary>
+    [ObservableProperty]
+    private ICommand? _exportPngCommand;
+
+    /// <summary>
+    ///     Whether the menu on the stage may open, by a right-click or from the keyboard. It is on by default; the host
+    ///     turns it off while the pointer is used for something else on the picture, such as drawing a mark, because a
+    ///     menu that opened during a stroke would take the pointer from the stroke.
+    /// </summary>
+    [ObservableProperty]
+    private bool _isPictureMenuEnabled = true;
 
     /// <summary>
     ///     The file that is rendered or was last rendered, or null.

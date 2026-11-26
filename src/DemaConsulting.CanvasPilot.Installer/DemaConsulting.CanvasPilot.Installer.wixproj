@@ -30,7 +30,7 @@
     <TargetName>CanvasPilot-$(MsiPackageVersion)-win-x64</TargetName>
     <!-- Published self-contained win-x64 application output to harvest into the MSI. -->
     <CanvasPilotPublishDir Condition="'$(CanvasPilotPublishDir)' == ''">$(MSBuildThisFileDirectory)..\..\publish\win-x64\</CanvasPilotPublishDir>
-    <!-- DEMA Consulting logo (repository-root Icon.ico), used for the Add/Remove Programs icon. -->
+    <!-- CanvasPilot sparkle icon (repository-root Icon.ico), used for the Add/Remove Programs icon. -->
     <CanvasPilotIconFile Condition="'$(CanvasPilotIconFile)' == ''">$(MSBuildThisFileDirectory)..\..\Icon.ico</CanvasPilotIconFile>
     <!-- Exposes MSBuild properties as WiX preprocessor variables ($(Version), $(CanvasPilotPublishDir),
          $(CanvasPilotIconFile) in .wxs). -->

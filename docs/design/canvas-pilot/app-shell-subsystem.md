@@ -130,9 +130,11 @@ here because they only join the units together.
    and logs the start. The shell is given a function that gives the catalog of the drawing knowledge, which reads the
    cards the first time the Help menu asks for them. The speech model service that the composition creates is disposed
    with the composition. After the shell, the composition makes the mark registry, the composer of the message, the
-   layer on which the user marks the picture, and the chat panel. It puts the layer in the overlay slot of the preview
-   pane and the layer's tool bar in the toolbar slot that floats at the top center of the stage, and gives the layer the
-   switch for dragging the picture out. The chat panel joins the layer to the message: it allows marks while the
+   layer on which the user marks the picture, and the chat panel. It gives the preview pane the shell's Copy Image and
+   Export as PNG commands for the menu of the picture on the stage, so that menu does what the Image menu does. It puts
+   the layer in the overlay slot of the preview pane and the layer's tool bar in the toolbar slot that floats at the top
+   center of the stage, and gives the layer the switch for dragging the picture out, which also turns the menu of the
+   picture off while a marking tool is chosen. The chat panel joins the layer to the message: it allows marks while the
    composer can edit, tells the layer which mark chips the message holds whenever the composer changes, and adds the
    chip of each mark that the layer reports, so that an undo of the chip hides the mark. The composition places the
    panel in the chat column of the workspace and makes it the push-to-talk target of the shell, and gives the panel the

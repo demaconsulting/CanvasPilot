@@ -1320,6 +1320,61 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the menu of the picture on the stage copies and exports the shown picture exactly like Copy Image and
+    ///     Export as PNG in the Image menu, is unusable while no picture is shown and after a render failed, and is off
+    ///     while a marking tool is chosen.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_PictureMenu_ShownPicture_CopiesAndExportsLikeTheImageMenuAndIsOffWhileMarking()
+    {
+        // Arrange: the application with a project that holds a good and a broken SVG, and a user who chooses where to save
+        var token = TestContext.Current.CancellationToken;
+        var (composition, dialogs) = await ComposeWithProjectAsync();
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "logo.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='16'><rect width='32' height='16' fill='#00ff00'/></svg>", token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "broken.svg"), "<svg><not closed", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        var target = Path.Combine(_tempRoot, "menu-exported.png");
+        dialogs.SaveFileToPick = target;
+        dialogs.ExportPresetToPick = ExportPreset.AsRendered;
+        var copy = Assert.IsAssignableFrom<CommunityToolkit.Mvvm.Input.IAsyncRelayCommand>(composition.Preview.CopyImageCommand);
+        var export = Assert.IsAssignableFrom<CommunityToolkit.Mvvm.Input.IAsyncRelayCommand>(composition.Preview.ExportPngCommand);
+
+        // Act: look at the menu with no picture; show the picture, choose Copy image and Export as PNG, and choose a
+        // marking tool and then none; then show the broken file
+        var withoutPicture = (copy.CanExecute(null), export.CanExecute(null));
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "logo.svg"));
+        await composition.Preview.RenderCompletion;
+        var withPicture = (copy.CanExecute(null), export.CanExecute(null));
+        await copy.ExecuteAsync(null);
+        await export.ExecuteAsync(null);
+        var shown = composition.Preview.Image;
+        composition.Annotation.SelectTool(AnnotationTool.Rectangle);
+        var whileMarking = composition.Preview.IsPictureMenuEnabled;
+        composition.Annotation.SelectTool(AnnotationTool.None);
+        var afterMarking = composition.Preview.IsPictureMenuEnabled;
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "broken.svg"));
+        await composition.Preview.RenderCompletion;
+        var afterFailure = (copy.CanExecute(null), export.CanExecute(null));
+        composition.Dispose();
+
+        // Assert: the menu runs the Image menu's commands, usable only with a picture; it copied the shown picture and
+        // exported a PNG of its size; it was off while marking and on again afterwards
+        Assert.Same(composition.Shell.CopyImageCommand, copy);
+        Assert.Same(composition.Shell.ExportPngCommand, export);
+        Assert.Equal((false, false), withoutPicture);
+        Assert.Equal((true, true), withPicture);
+        Assert.Equal((false, false), afterFailure);
+        Assert.Same(shown, Assert.Single(dialogs.CopiedImages));
+        var png = await File.ReadAllBytesAsync(target, token);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], png[..8]);
+        Assert.Equal(32, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16, 4)));
+        Assert.Equal(16, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4)));
+        Assert.False(whileMarking);
+        Assert.True(afterMarking);
+    }
+
+    /// <summary>
     ///     Test that a user who selects a diagram sees a picture that is pinned to the exact file and pixels shown:
     ///     the picture carries fingerprints of the file and the pixels, and the positions of the diagram's elements, and
     ///     all of them change when the file is edited.

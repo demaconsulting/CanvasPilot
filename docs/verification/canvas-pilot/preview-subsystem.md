@@ -10,10 +10,16 @@ hand-written fakes that hold callbacks until a test runs them, so no test waits 
 are a hand-written fake that plays the user. The views are verified by the headless UI tests described in the unit
 verification documents.
 
+The menu of the picture is also verified at subsystem level by a headless Avalonia UI test,
+`PreviewSubsystem_PictureMenu_PaneViewOverExporter_OpensAndRunsCommandsAndStaysClosedWhileOff`, kept in
+`PreviewPaneViewTests.cs` of the UI test project, as is the zoom test below. It joins the real `ImageRenderService`,
+`PreviewPaneViewModel`, `PreviewPaneView`, and `ImageExporter` in a headless window, with a hand-written stand-in for
+the export dialogs that plays the user, and opens the menu with the pointer and the keys.
+
 ### Test Environment
 
-N/A - standard test environment. Tests use temporary local folders and real file I/O, including the real folder
-watcher; no network, external services, or display are required.
+Tests use temporary local folders and real file I/O, including the real folder watcher; no network, external services,
+or display are required. The UI tests run on the headless Avalonia platform of the UI test project.
 
 ### Acceptance Criteria
 
@@ -38,6 +44,12 @@ watcher; no network, external services, or display are required.
   real render service.
 - The shown picture can be prepared for dragging out as a file that is a PNG of exactly that picture, which is reused
   for the same picture and is another file for another picture.
+- The menu of the picture, given copy and export commands of a host over the exporter, cannot run them before a picture
+  is shown or after a render failed, and with the picture shown copies it to the clipboard of the export dialogs and
+  exports a PNG of its size; the menu is on by default. In the pane's view, a right-click on the stage and the Menu key
+  and Shift+F10 on the focused stage open the menu. Its items are unusable before a picture is shown and after a render
+  failed, and usable with the picture shown, and choosing them copies the shown picture and exports a PNG of its size.
+  While the menu is turned off, neither a right-click nor the Menu key opens it.
 - Exported at a size that is chosen in the export dialog, the shown file is drawn again and written as a PNG of exactly
   that size with its resolution, and the choice is offered again the next time.
 - Notes that another part gives for the shown picture are listed after the notes of the renderer, are replaced by the
@@ -86,6 +98,24 @@ height 20. Showing `good.svg` gives another file named `good-`. The handling of 
 drag are verified with the `PreviewPane` unit, and which programs accept the dropped picture is checked by hand (see the
 verification of `ImageDragSource`). This scenario is tested by
 `PreviewSubsystem_DragImageOut_ShownPicture_ProvidesPngFileAndBytes`.
+
+**PreviewSubsystem_PictureMenu_ExporterCommands_CopyAndExportTheShownPictureAndFollowIt**: With the real render service,
+a pane, and an `ImageExporter` over it, the pane is given host-style commands that copy and export through the exporter
+and ask again whether they can run whenever the exporter says so. Before a picture is shown neither command can run;
+with the 40 by 20 picture of `wide.svg` shown both can, and running them through the pane puts that picture on the
+clipboard of the export dialogs and writes a PNG with the PNG signature, width 40, and height 20; after the broken file
+is selected neither can run. The menu of the picture is on. This scenario is tested by
+`PreviewSubsystem_PictureMenu_ExporterCommands_CopyAndExportTheShownPictureAndFollowIt`.
+
+**PreviewSubsystem_PictureMenu_PaneViewOverExporter_OpensAndRunsCommandsAndStaysClosedWhileOff**: The pane's view is
+shown in a headless window with the real render service and an `ImageExporter`, and the pane is given host-style copy
+and export commands over the exporter. Before a picture is shown, a right-click on the empty stage opens the menu with
+both items unusable. With the 40 by 20 picture shown, a right-click on it opens the menu with both items usable, and
+choosing Copy image copies that picture. The Menu key on the focused stage opens the menu, and choosing Export as PNG
+writes a PNG with width 40 and height 20. Shift+F10 opens the menu too. While the menu is turned off, neither a
+right-click on the picture nor the Menu key opens it. After the broken file is selected, a right-click on the error
+opens the menu with both items unusable. No message is shown. This scenario is tested by
+`PreviewSubsystem_PictureMenu_PaneViewOverExporter_OpensAndRunsCommandsAndStaysClosedWhileOff`.
 
 **PreviewSubsystem_RenderAtRequestedSize_ShownFile_IsDrawnAtTheBoxAndEncodedWithResolution**: With the real render
 service, the file of the shown 40 by 20 picture and the folder of the project that the pane gives as the source of the

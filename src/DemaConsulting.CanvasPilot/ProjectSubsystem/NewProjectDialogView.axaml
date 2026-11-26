@@ -4,7 +4,7 @@
         x:Class="DemaConsulting.CanvasPilot.ProjectSubsystem.NewProjectDialogView"
         x:DataType="vm:NewProjectDialogViewModel"
         Title="{Binding Title}"
-        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.ico"
         Width="560"
         Height="360"
         CanResize="False"

@@ -385,9 +385,10 @@ measurement answers `null` and the constant stays.
 #### Callers
 
 - `App` (through `ApplicationComposition`) — creates the shell and shows `MainWindowView` over it.
-- `ApplicationComposition` — connects the `Preview` subsystem: `ImageExporter` is passed as the `IImageExporter`,
-  and the preview pane is the workspace's preview content. It sets `PushToTalk` to the chat panel, which the talk
-  key of the window then starts and stops, and passes the `TalkKey` of the shell to the chat panel, so that its hints
-  name the key that is in effect. It also sets `ProviderPill` after it has made the chat panel, and passes
-  the style list, the thumbnail source, the folder launcher (a `SystemFolderLauncher` unless a test supplies another),
-  and the other optional collaborators to the constructor.
+- `ApplicationComposition` — connects the `Preview` subsystem: `ImageExporter` is passed as the `IImageExporter`, and
+  the preview pane is the workspace's preview content. It gives the preview pane `CopyImageCommand` and
+  `ExportPngCommand`, which the menu of the picture on the stage runs, so that menu and the Image menu run the same
+  commands. It sets `PushToTalk` to the chat panel, which the talk key of the window then starts and stops, and passes
+  the `TalkKey` of the shell to the chat panel, so that its hints name the key that is in effect. It also sets
+  `ProviderPill` after it has made the chat panel, and passes the style list, the thumbnail source, the folder launcher
+  (a `SystemFolderLauncher` unless a test supplies another), and the other optional collaborators to the constructor.

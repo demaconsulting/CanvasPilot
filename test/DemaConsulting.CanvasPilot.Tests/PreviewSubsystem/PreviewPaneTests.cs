@@ -746,6 +746,40 @@ public sealed class PreviewPaneTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the slots for the commands of the menu on the stage start empty, expose exactly the commands the
+    ///     host assigns, and announce each change, and that the switch of the menu starts on and announces being turned
+    ///     off and on again.
+    /// </summary>
+    [Fact]
+    public void PreviewPaneViewModel_PictureMenu_AssignedCommandsAndSwitch_AreExposedAndAnnounced()
+    {
+        // Arrange: a pane that records which properties change, and two commands of a host
+        var pane = CreatePane();
+        var changed = new List<string?>();
+        pane.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        var defaults = (pane.CopyImageCommand, pane.ExportPngCommand, pane.IsPictureMenuEnabled);
+        var copy = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        var export = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+
+        // Act: assign both commands, then turn the menu off and on again
+        pane.CopyImageCommand = copy;
+        pane.ExportPngCommand = export;
+        pane.IsPictureMenuEnabled = false;
+        var whileOff = pane.IsPictureMenuEnabled;
+        pane.IsPictureMenuEnabled = true;
+
+        // Assert: no commands and the menu on by default; the very commands assigned are exposed; every change is announced
+        Assert.Equal((null, null, true), defaults);
+        Assert.Same(copy, pane.CopyImageCommand);
+        Assert.Same(export, pane.ExportPngCommand);
+        Assert.False(whileOff);
+        Assert.True(pane.IsPictureMenuEnabled);
+        Assert.Equal(1, changed.Count(name => name == nameof(PreviewPaneViewModel.CopyImageCommand)));
+        Assert.Equal(1, changed.Count(name => name == nameof(PreviewPaneViewModel.ExportPngCommand)));
+        Assert.Equal(2, changed.Count(name => name == nameof(PreviewPaneViewModel.IsPictureMenuEnabled)));
+    }
+
+    /// <summary>
     ///     Test that the pane prepares the shown picture for dragging only while a picture is shown and dragging out is
     ///     turned on, and only when it has a drag source.
     /// </summary>

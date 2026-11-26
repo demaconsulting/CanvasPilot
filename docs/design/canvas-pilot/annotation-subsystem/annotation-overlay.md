@@ -188,8 +188,9 @@ sees no mark. Nothing in the unit performs I/O.
 #### Callers
 
 - `ApplicationComposition` creates the view model over the mark registry and the preview pane, gives it the drag-out
-  switch (`PreviewPaneViewModel.IsDragOutEnabled`), puts it in the overlay slot of the pane and its tool bar view model
-  in the slot that floats over the stage of the pane, and hands it to the chat panel.
+  switch (which sets both `PreviewPaneViewModel.IsDragOutEnabled` and `PreviewPaneViewModel.IsPictureMenuEnabled`, so
+  the picture can neither be dragged out nor open its menu while a tool is chosen), puts it in the overlay slot of the
+  pane and its tool bar view model in the slot that floats over the stage of the pane, and hands it to the chat panel.
 - `ChatPanelViewModel` joins the layer to the message. Whenever the composer reports a change (and once when it is
   made), it sets `IsDrawingAllowed` from `ComposerViewModel.CanEdit` and calls `SetActiveMarkIds` with `MarkChipIds`. It
   adds the chip of each mark that `MarkAdded` reports with `ComposerViewModel.AddMark`, which makes it one undo step.

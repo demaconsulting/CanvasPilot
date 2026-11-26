@@ -4,7 +4,7 @@
         x:Class="DemaConsulting.CanvasPilot.SettingsSubsystem.SettingsDialogView"
         x:DataType="vm:SettingsDialogViewModel"
         Title="{Binding Title}"
-        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.ico"
         Width="860"
         Height="620"
         MinWidth="640"

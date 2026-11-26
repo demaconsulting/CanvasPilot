@@ -7,6 +7,9 @@ directories without opening a window. Each test exercises the units together as 
 and asserts on observable outcomes such as the files written to disk and the exceptions raised. The
 tests use real file I/O and no mocks for the units themselves; where a user would act in a dialog, a hand-written
 dialog service plays the user, and a hand-written refresh scheduler replaces timed refreshes so no test waits.
+Requirements whose behavior is seen only in a window, the themes and the menu of the picture, are also verified by
+headless UI system tests in `CanvasPilotThemeTests.cs` of the UI test project, which show the composed main window on
+the headless Avalonia platform.
 
 The `AppShell` subsystem depends on the `Preview` subsystem and not the reverse (see *Dependency Direction* in the
 design). Verification follows that direction: the `Preview` units are verified with a substitute for the
@@ -98,6 +101,12 @@ services, or display is required.
 - The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
   earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
   the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
+- The menu of the picture on the stage runs the Image menu's Copy Image and Export as PNG commands: it cannot run them
+  before a picture is shown or after a render failed, copies the shown picture and exports a PNG of its size with the
+  picture shown, and is off while a marking tool is chosen and on again afterwards; in the composed main window it opens
+  on a right-click of the stage and on Shift+F10 and the Menu key with the stage focused, it and its items are named for
+  screen readers (Picture, Copy image, Export as PNG), and it opens neither by a right-click nor by a key while a
+  marking tool is chosen.
 - A message is composed from typed text, dictated text, and chips for attached files, folders, images, and marks, which
   stay in the order they were placed with the origin and kind of each; each user action is one undo step and redo gives
   the same steps; sending clears the draft and what can be undone, and nothing of the draft is written to disk.
@@ -210,8 +219,9 @@ steps are in the verification of the unit or subsystem named at each check.
    build already fails when any of the three is missing from the published folder or the file table
    (`Speech_NativeRuntimePublished`); this check confirms what a user gets. Also check that no file whose name starts
    with `copilot` and no `runtime.node` is in the installed folder (the build asserts the same in
-   `Copilot_RuntimeNotPublished` and in the file table). (Verification of the `Speech` subsystem and of the WiX
-   Toolset.)
+   `Copilot_RuntimeNotPublished` and in the file table). Check also that the Start Menu shortcut, the taskbar, Alt-Tab,
+   the window title bars, and the Add/Remove Programs entry show the CanvasPilot sparkle icon. (Verification of the
+   `Speech` subsystem and of the WiX Toolset.)
 7. *Marking on a real pointer and a screen reader.* Draw the four mark shapes with a mouse, a pen, and touch, and with
    the keyboard, and check the tool bar and the chips with a screen reader. Give a mark a long note in the dark and the
    light theme: the label beside its number is legible, ends with an ellipsis, and stays inside the picture; resting
@@ -408,6 +418,14 @@ steps are in the verification of the unit or subsystem named at each check.
     size of the model through the composed application
     on the real Copilot runtime. They belong to no requirement, cost real premium requests, and are repeated before a
     release that changes the agent. (Verification of the `Agent` and `Chat` subsystems.)
+13. *The menu of the picture on a real desktop.* With a picture shown, right-click it, choose Copy image, and paste into
+    an Outlook message and a PowerPoint slide: each receives the picture. Choose Export as PNG... from the same menu and
+    check the file. Focus the stage with Tab and press Shift+F10, then the Menu key: each opens the menu, and a screen
+    reader reads "Copy image" and "Export as PNG". Draw a rectangle, press V to go back to Select without clicking
+    elsewhere, and press Shift+F10, once releasing F10 first and once releasing Shift first: the menu opens once each
+    time. Choose the rectangle tool and right-click during a stroke: no menu opens and the stroke keeps going. The
+    headless tests send the pointer and key events and check the menu, but neither the system clipboard of Windows nor
+    a real keyboard and screen reader. (Verification of `PreviewPane`.)
 
 ### Live verification record (agent turns)
 
@@ -697,6 +715,25 @@ earlier run in its drag folder, which is removed at start. Without a picture no 
 shown the offered file is in the drag folder, is named `logo-` and the start of the pixel fingerprint, and is a PNG
 of width 32 and height 16; with dragging out turned off none is offered; after the composition is disposed the file is
 gone. This scenario is tested by `CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile`.
+
+**CanvasPilot_PictureMenu_ShownPicture_CopiesAndExportsLikeTheImageMenuAndIsOffWhileMarking**: The composed application
+with a project that holds a 32 by 16 SVG and a broken one: the commands of the menu of the picture are the Image menu's
+Copy Image and Export as PNG commands and cannot run before a picture is shown; with the SVG shown both can, the copy
+puts the shown picture on the clipboard of the dialog service, and the export writes a PNG of width 32 and height 16;
+the menu is off while the rectangle tool is chosen and on again with none; with the broken file selected neither command
+can run. How the menu is opened, how it is named, and that it stays closed while marking are verified in the composed
+window by `CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking`. This scenario is tested by
+`CanvasPilot_PictureMenu_ShownPicture_CopiesAndExportsLikeTheImageMenuAndIsOffWhileMarking`.
+
+**CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking**: The composed application's main
+window is shown headless (a headless UI test in `CanvasPilotThemeTests.cs`) with a project that holds a 40 by 20 SVG and
+a broken one, and with the real image exporter. Before a file is selected, a right-click on the empty stage opens the
+menu of the picture with both items unusable. With the SVG shown, a right-click on the picture, and Shift+F10 and the
+Menu key with the stage focused, each open the menu. The menu is named "Picture", its items are named "Copy image" and
+"Export as PNG", and both are usable. With the rectangle tool chosen, neither a right-click on the picture nor the Menu
+key or Shift+F10 on the focused stage opens it. With no tool, a right-click opens it again. With the broken file
+selected, a right-click on the error opens it with both items unusable. This scenario is tested by
+`CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking`.
 
 **CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage**: A message is composed by typing, dictating a
 block, dropping a file and a folder in one operation, adding a mark where the caret was, and typing more. The message

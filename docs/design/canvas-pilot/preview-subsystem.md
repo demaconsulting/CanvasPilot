@@ -91,7 +91,10 @@ render service.
   slot for content that the view shows exactly over the picture, laid out in the picture's own pixel coordinates and
   scaled together with the picture, so that the host's content needs no conversion between the screen and the picture;
   the slot is empty by default. A second slot, `Toolbar`, floats over the top center of the stage and is not scaled, for
-  the host's controls of the overlay.
+  the host's controls of the overlay. The stage carries the menu of the picture, opened by a right-click or by Shift+F10
+  or the Menu key with the stage focused, whose Copy image and Export as PNG items run the commands that the host puts
+  in the view model's `CopyImageCommand` and `ExportPngCommand` slots and are usable only while those commands can run;
+  the menu stays closed while the host turns `IsPictureMenuEnabled` off and over the controls that float over the stage.
 
 **Thumbnails**: The small pictures of files.
 
@@ -137,7 +140,11 @@ render service.
    picture as a file; `ImageDragSource` writes it as a PNG in its own folder, and the view starts the system's drag
    with that file and a bitmap of the picture. The application deletes the files in that folder when it starts and when
    it ends.
-7. The explorer asks `ThumbnailProvider` for the thumbnail of each file that can be drawn and whose row is visible. The
+7. When the user right-clicks the stage, or presses Shift+F10 or the Menu key while the stage has the focus, the view
+   opens the menu of the picture, whose items run the host's copy and export commands, so they do exactly what the
+   host's own menu does; the subsystem holds no second copy of that logic. The menu stays closed while the host turns it
+   off, which the host does while the pointer draws on the picture.
+8. The explorer asks `ThumbnailProvider` for the thumbnail of each file that can be drawn and whose row is visible. The
    provider
    draws the file through the render service at 56 by 36 pixels on white, at most two at a time, keeps the pixels of the
    latest 256 thumbnails keyed by the file's path, time, size, and the picture size, and gives each caller a new bitmap.

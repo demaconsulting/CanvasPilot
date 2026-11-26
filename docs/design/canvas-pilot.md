@@ -476,9 +476,11 @@ works with its files.
   pixels, including transparency; an export at a size is the file drawn again at that size (fitted into a width and a
   height, or scaled to one of them, keeping its ratio) over the background of the size or transparent, with the
   resolution of the size written into the file; a copy is a bitmap on the clipboard.
-- *Constraints*: The drawn file may read other files only from inside the project folder. A file that cannot be
-  drawn is explained with its error code, message, and hint, never an unhandled failure. Export and copy are
-  enabled only while a picture is shown.
+- *Constraints*: The drawn file may read other files only from inside the project folder. A file that cannot be drawn is
+  explained with its error code, message, and hint, never an unhandled failure. Export and copy are enabled only while a
+  picture is shown. Export and copy are offered by the Image menu and also by the menu of the picture on the stage (a
+  right-click, or Shift+F10 or the Menu key with the stage focused), which runs the same commands and does not open
+  while a marking tool is chosen.
 
 **Picture Drag-out**: The shown picture, dragged out of the preview into another program.
 

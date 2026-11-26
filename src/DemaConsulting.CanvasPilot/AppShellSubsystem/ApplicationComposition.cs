@@ -534,6 +534,11 @@ public sealed class ApplicationComposition : IDisposable
             folderLauncher ?? new SystemFolderLauncher());
         pickerOwner = shell;
 
+        // The menu of the picture on the stage runs the commands of the Image menu, so its Copy image and Export as
+        // PNG items do the same and are usable at the same times
+        preview.CopyImageCommand = shell.CopyImageCommand;
+        preview.ExportPngCommand = shell.ExportPngCommand;
+
         // The composer of the message: marks drawn on the picture, the message builder, and dictation, working in the open project
         var marks = new MarkRegistry();
         var markImages = new MarkImageComposer(renderer);
@@ -543,8 +548,17 @@ public sealed class ApplicationComposition : IDisposable
             dictation,
             logger: logger);
 
-        // The layer over the picture: drawing a mark turns off dragging the picture out, and its tools are in the top bar
-        var annotation = new AnnotationOverlayViewModel(marks, preview, allowed => preview.IsDragOutEnabled = allowed, logger);
+        // The layer over the picture: drawing a mark turns off dragging the picture out and the menu of the picture, so
+        // neither takes the pointer from a stroke, and its tools are in the top bar
+        var annotation = new AnnotationOverlayViewModel(
+            marks,
+            preview,
+            allowed =>
+            {
+                preview.IsDragOutEnabled = allowed;
+                preview.IsPictureMenuEnabled = allowed;
+            },
+            logger);
         preview.Overlay = annotation;
         preview.Toolbar = new AnnotationToolbarViewModel(annotation);
 

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The CanvasPilot application icon: the brand mark of the title bar of the main window, a rounded tile filled with the
+  accent gradient and a white sparkle. This file is the single source of the icon: render-icon.ps1 at the root of the
+  repository draws Icon.png (256 px) and Icon.ico (16, 24, 32, 48, 64, and 256 px) from it. Run
+  "pwsh ./render-icon.ps1" after a change and commit the three files together; "pwsh ./render-icon.ps1 -Check" tells
+  whether the committed pictures are current.
+
+  Keep it in step with the brand mark it repeats, and redraw it when one of them changes:
+  - the tile of the title bar in AppShellSubsystem/MainWindowView.axaml: 24 by 24 with a corner radius of 7, and a
+    14 by 14 glyph in the middle;
+  - CpAccentGradient in AppShellSubsystem/Styles/Tokens.axaml: #4f46e5 at the top left to #06b6d4 at the bottom right;
+  - CpIconSparkle in AppShellSubsystem/Styles/Icons.axaml: the path below is its data without the leading "F1" (both
+    fill with the nonzero rule).
+
+  The PathIcon of the title bar stretches the glyph uniformly into its 14 by 14 box. The glyph covers 2.99 to 17.01 of
+  its 20 by 20 grid, so translate(2 2) puts it within 0.02 units of where the title bar draws it.
+
+  The path has four subpaths, in this order: the outer outline of the large sparkle, the inner outline (the hole) of
+  the large sparkle, the outer outline of the small sparkle, and the inner outline of the small sparkle. At 16 and 24
+  px the outline is thinner than a pixel and blurs, so render-icon.ps1 keeps the first and the third subpath only and
+  draws the sparkles filled at those sizes. It fails when the path does not have four subpaths.
+
+  The sparkle is the glyph "Sparkle" of Fluent System Icons (20 px, regular) by Microsoft Corporation,
+  https://github.com/microsoft/fluentui-system-icons, rounded to two decimals, used under the MIT License (copyright
+  2020 Microsoft Corporation); the license text is in THIRD-PARTY-NOTICES.md.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 24 24">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="24" height="24" rx="7" ry="7" fill="url(#accent)"/>
+  <path id="sparkle" transform="translate(2 2)" fill="#ffffff" d="M7.4 12.81C7.57 12.93 7.78 13 8 13C8.22 13 8.43 12.93 8.6 12.81C8.78 12.68 8.91 12.5 8.99 12.29L9.44 10.92C9.55 10.57 9.74 10.26 10 10C10.26 9.74 10.57 9.55 10.91 9.44L12.3 8.99C12.46 8.93 12.59 8.84 12.71 8.73C12.82 8.61 12.9 8.47 12.95 8.32C13 8.16 13.01 8 12.98 7.84C12.96 7.68 12.9 7.53 12.8 7.4C12.67 7.21 12.48 7.07 12.26 7.01L10.89 6.56C10.54 6.44 10.23 6.25 9.97 5.99C9.71 5.74 9.52 5.43 9.41 5.08L8.95 3.69C8.88 3.49 8.75 3.32 8.57 3.19C8.44 3.1 8.29 3.04 8.13 3.01C7.96 2.99 7.8 3 7.65 3.05C7.49 3.1 7.35 3.19 7.24 3.3C7.12 3.42 7.03 3.56 6.98 3.71L6.52 5.11C6.41 5.45 6.22 5.75 5.97 6C5.72 6.25 5.42 6.44 5.08 6.56L3.69 7.01C3.54 7.06 3.4 7.15 3.29 7.27C3.18 7.38 3.1 7.52 3.05 7.68C3 7.83 2.99 7.99 3.01 8.15C3.04 8.31 3.1 8.46 3.19 8.6C3.32 8.77 3.5 8.91 3.71 8.98L5.08 9.43C5.52 9.57 5.91 9.85 6.19 10.21C6.36 10.42 6.48 10.66 6.56 10.91L7.02 12.31C7.09 12.51 7.22 12.68 7.4 12.81ZM7.48 5.39L8.01 4.02L8.45 5.39C8.61 5.89 8.89 6.34 9.26 6.7C9.63 7.07 10.07 7.35 10.57 7.51L11.97 8.04L10.59 8.49C10.1 8.65 9.65 8.93 9.28 9.29C8.92 9.66 8.64 10.11 8.48 10.6L7.95 11.98L7.5 10.6C7.34 10.11 7.07 9.66 6.7 9.29C6.34 8.92 5.89 8.64 5.39 8.48L4.01 7.96L5.4 7.51C5.89 7.34 6.33 7.06 6.69 6.69C7.05 6.33 7.32 5.88 7.48 5.39ZM13.54 16.85C13.67 16.95 13.83 17 14 17C14.17 17 14.33 16.95 14.46 16.85C14.6 16.75 14.71 16.61 14.76 16.45L15.01 15.69C15.06 15.53 15.15 15.39 15.27 15.27C15.39 15.15 15.53 15.06 15.69 15.01L16.46 14.76C16.62 14.7 16.76 14.6 16.85 14.47C16.93 14.36 16.97 14.24 16.99 14.12C17.01 13.99 17 13.87 16.96 13.75C16.92 13.63 16.85 13.52 16.76 13.43C16.67 13.34 16.56 13.28 16.44 13.24L15.67 12.99C15.52 12.94 15.37 12.85 15.25 12.73C15.14 12.61 15.05 12.47 14.99 12.31L14.74 11.54C14.69 11.38 14.59 11.24 14.45 11.15C14.35 11.08 14.23 11.03 14.11 11.01C13.98 10.99 13.85 11 13.74 11.04C13.62 11.08 13.51 11.14 13.42 11.23C13.33 11.32 13.26 11.43 13.22 11.55L12.98 12.31C12.92 12.47 12.84 12.61 12.72 12.73C12.61 12.85 12.47 12.94 12.31 12.99L11.54 13.24C11.38 13.3 11.24 13.4 11.14 13.53C11.05 13.67 11 13.84 11 14C11 14.17 11.05 14.33 11.15 14.47C11.25 14.61 11.39 14.71 11.55 14.76L12.31 15.01C12.47 15.06 12.61 15.15 12.73 15.27C12.85 15.39 12.94 15.53 12.99 15.69L13.24 16.46C13.3 16.62 13.4 16.76 13.54 16.85ZM12.62 14.06L12.44 14L12.63 13.94C12.93 13.83 13.2 13.66 13.43 13.43C13.65 13.2 13.82 12.92 13.93 12.62L13.99 12.44L14.04 12.62C14.15 12.93 14.32 13.21 14.55 13.44C14.78 13.66 15.05 13.84 15.36 13.94L15.56 14L15.38 14.06C15.07 14.16 14.79 14.33 14.56 14.56C14.33 14.79 14.16 15.07 14.06 15.38L14 15.56L13.94 15.38C13.84 15.07 13.67 14.79 13.44 14.56C13.21 14.33 12.93 14.16 12.62 14.06Z"/>
+</svg>

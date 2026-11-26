@@ -523,6 +523,59 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the composed application gives the menu of the picture on the stage the Copy Image and Export as PNG
+    ///     commands of the Image menu, so that choosing its items copies and exports the shown picture, and turns the menu
+    ///     off, together with dragging out, while a marking tool is chosen and on again when none is.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_PictureMenu_ComposedApplication_RunsTheImageCommandsAndIsOffWhileMarking()
+    {
+        // Arrange: a composition with a project that shows a 32 x 16 picture
+        var token = TestContext.Current.CancellationToken;
+        var composition = Compose();
+        _dialogs.OnNewProject = dialog =>
+        {
+            dialog.ProjectName = "Menu";
+            dialog.OkCommand.Execute(null);
+        };
+        await composition.Shell.NewProjectCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "logo.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='16'><rect width='32' height='16' fill='#00ff00'/></svg>",
+            token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "logo.svg"));
+        await composition.Preview.RenderCompletion;
+        var copiesBefore = _dialogs.CopiedImages.Count;
+
+        // Act: choose Copy image in the menu of the picture; then choose each marking tool in turn, and then none
+        var usable = (composition.Preview.CopyImageCommand!.CanExecute(null), composition.Preview.ExportPngCommand!.CanExecute(null));
+        composition.Preview.CopyImageCommand.Execute(null);
+        await WaitUntilAsync(() => _dialogs.CopiedImages.Count > copiesBefore, token);
+        var menuBeforeMarking = composition.Preview.IsPictureMenuEnabled;
+        var whileMarking = new List<(bool Menu, bool DragOut)>();
+        foreach (var tool in new[] { AnnotationTool.Rectangle, AnnotationTool.Ellipse, AnnotationTool.Freehand, AnnotationTool.Arrow })
+        {
+            composition.Annotation.SelectTool(tool);
+            whileMarking.Add((composition.Preview.IsPictureMenuEnabled, composition.Preview.IsDragOutEnabled));
+        }
+
+        composition.Annotation.SelectTool(AnnotationTool.None);
+
+        // Assert: the menu runs the very commands of the Image menu, usable with the picture, and copying put the shown
+        // picture on the clipboard; the menu and dragging out are off while marking and on again without a tool
+        Assert.Same(composition.Shell.CopyImageCommand, composition.Preview.CopyImageCommand);
+        Assert.Same(composition.Shell.ExportPngCommand, composition.Preview.ExportPngCommand);
+        Assert.Equal((true, true), usable);
+        Assert.Same(composition.Preview.Image, _dialogs.CopiedImages[^1]);
+        Assert.True(menuBeforeMarking);
+        Assert.All(whileMarking, state => Assert.Equal((false, false), state));
+        Assert.True(composition.Preview.IsPictureMenuEnabled);
+        Assert.True(composition.Preview.IsDragOutEnabled);
+    }
+
+    /// <summary>
     ///     Test that composing the application with the folders for the data of the AI copilot gives the chat panel a copilot
     ///     and the AI Provider page a Check connection that asks the copilot's readiness check, with the stand-ins that the
     ///     test passes for the Ollama server, and that composing without the folders builds no copilot and no check.

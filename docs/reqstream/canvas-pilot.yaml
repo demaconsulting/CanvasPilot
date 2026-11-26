@@ -326,6 +326,27 @@ sections:
         tests:
           - CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile
 
+      - id: CanvasPilot-System-PictureMenu
+        title: >-
+          The application shall open a menu on the stage of the preview when the user right-clicks the shown picture or
+          the stage around it, or presses Shift+F10 or the Menu key while the stage has the keyboard focus, whose Copy
+          image and Export as PNG items do the same as Copy Image and Export as PNG in the Image menu, are unusable while
+          no picture is shown, also after a render failed, and are named for screen readers; and shall not open the menu
+          while a marking tool is chosen.
+        tags: [system]
+        justification: |
+          In imaging tools, browsers, and viewers, right-clicking a picture and choosing Copy is the expected way to put it
+          on the clipboard, so offering it where the picture is makes sharing quicker than the Image menu. Users of the
+          keyboard and of screen readers need the same menu. Doing exactly what the Image menu does keeps one behavior for
+          the picture. While a marking tool is chosen the pointer draws, and a menu that opened during a stroke would take
+          the pointer away and throw the shape away.
+        children:
+          - CanvasPilot-Preview-PictureMenu
+          - CanvasPilot-AppShell-PictureMenu
+        tests:
+          - CanvasPilot_PictureMenu_ShownPicture_CopiesAndExportsLikeTheImageMenuAndIsOffWhileMarking
+          - CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking
+
       - id: CanvasPilot-System-ComposeMessage
         title: >-
           The application shall let the user compose a message to the assistant from typed text, dictated text, and

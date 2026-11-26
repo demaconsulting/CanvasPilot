@@ -4,7 +4,7 @@
         x:Class="DemaConsulting.CanvasPilot.StyleSubsystem.StyleKitManagerView"
         x:DataType="vm:StyleKitManagerViewModel"
         Title="Style Kits"
-        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.ico"
         Width="1120"
         Height="760"
         MinWidth="820"

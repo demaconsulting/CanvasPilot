@@ -4,7 +4,7 @@
         x:Class="DemaConsulting.CanvasPilot.PreviewSubsystem.ExportPresetDialogView"
         x:DataType="vm:ExportPresetDialogViewModel"
         Title="{Binding Title}"
-        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.png"
+        Icon="avares://DemaConsulting.CanvasPilot/Assets/Icon.ico"
         Width="520"
         Height="440"
         MinWidth="420"

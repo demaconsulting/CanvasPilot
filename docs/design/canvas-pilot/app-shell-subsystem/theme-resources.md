@@ -57,10 +57,18 @@ commands, files, states, tools, and navigation of the views), and one style, `Pa
 `PathIcon` fills the geometry with the foreground of the control around it, so the icon takes the color of its button,
 on hover and when disabled too. The glyphs are outlines to be filled, not strokes. They are vendored from Fluent System
 Icons (20 px, regular, MIT license, copyright Microsoft Corporation), rounded to two decimals, and are not an OTS
-package: they are assets in the source, like the logo, so no OTS item exists for them. The license notice is in the
-header of the file and in `THIRD-PARTY-NOTICES.md` at the root of the repository, which the project copies beside the
-executable (build and publish output), so the installer, which takes the published folder whole, ships it. An icon
-button that has no text must have an automation name and a tooltip; this is the duty of the view that uses the icon.
+package: they are assets in the source, like the application icon, so no OTS item exists for them. The license notice
+is in the header of the file and in `THIRD-PARTY-NOTICES.md` at the root of the repository, which the project copies
+beside the executable (build and publish output), so the installer, which takes the published folder whole, ships it.
+An icon button that has no text must have an automation name and a tooltip; this is the duty of the view that uses the
+icon.
+
+The application icon at the root of the repository (`Icon.svg`, drawn into `Icon.png` and `Icon.ico` by
+`render-icon.ps1`) is the brand mark of the title bar: the `CpAccentGradient` tile with the `CpIconSparkle` glyph,
+with the glyph filled at 16 and 24 px, where its outline is thinner than a pixel. It repeats the gradient and the
+glyph, so it is redrawn when either changes. Every window and dialog takes `Icon.ico` as its window icon (the
+application library links it as the resource `Assets/Icon.ico`), so the title bars and the taskbar use the 16 and
+24 px frames rather than a shrunken 256 px picture.
 
 **Control themes** (`AppShellSubsystem/Styles/Controls.axaml`): keyed control themes that more than one view uses,
 each with its own template (none is based on the Fluent theme, so no state of the stock look shows through) and built

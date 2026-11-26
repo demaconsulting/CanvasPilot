@@ -339,6 +339,58 @@ public sealed class PreviewSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the menu on the stage, given the copy and export commands of a host over the exporter, copies and
+    ///     exports the shown picture, is usable only while a picture is shown, follows a failed render, and is on by
+    ///     default.
+    /// </summary>
+    [Fact]
+    public async Task PreviewSubsystem_PictureMenu_ExporterCommands_CopyAndExportTheShownPictureAndFollowIt()
+    {
+        // Arrange: a project with a 40 x 20 SVG and a broken one, and a pane given host-style commands over an exporter
+        // that ask again whether they can run whenever the exporter says so
+        await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), WideSvg, TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(Path.Combine(_folder, "broken.svg"), "<svg><not closed", TestContext.Current.CancellationToken);
+        var (explorer, pane) = Create();
+        var exporter = new ImageExporter(pane, new ImageRenderService());
+        var dialogs = new FakeExportDialogs { SaveFileToPick = Path.Combine(_folder, "wide-menu.png") };
+        var copy = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(() => exporter.CopyImageAsync(dialogs), () => exporter.CanExport);
+        var export = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(() => exporter.ExportPngAsync(dialogs), () => exporter.CanExport);
+        exporter.CanExportChanged += (_, _) =>
+        {
+            copy.NotifyCanExecuteChanged();
+            export.NotifyCanExecuteChanged();
+        };
+        pane.CopyImageCommand = copy;
+        pane.ExportPngCommand = export;
+        explorer.Open(_folder);
+
+        // Act: check the commands with no picture; show the picture, then copy and export it through the pane's
+        // commands; then show the broken file
+        var beforePicture = (pane.CopyImageCommand.CanExecute(null), pane.ExportPngCommand.CanExecute(null));
+        explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
+        await pane.RenderCompletion;
+        var withPicture = (pane.CopyImageCommand.CanExecute(null), pane.ExportPngCommand.CanExecute(null));
+        await copy.ExecuteAsync(null);
+        await export.ExecuteAsync(null);
+        var shown = pane.Image;
+        explorer.SelectFile(Path.Combine(_folder, "broken.svg"));
+        await pane.RenderCompletion;
+        var afterFailure = (pane.CopyImageCommand.CanExecute(null), pane.ExportPngCommand.CanExecute(null));
+
+        // Assert: usable only while the picture is shown; the shown picture was copied and exported at its size; the
+        // menu is on
+        Assert.Equal((false, false), beforePicture);
+        Assert.Equal((true, true), withPicture);
+        Assert.Equal((false, false), afterFailure);
+        Assert.Same(shown, Assert.Single(dialogs.CopiedImages));
+        var png = await File.ReadAllBytesAsync(Path.Combine(_folder, "wide-menu.png"), TestContext.Current.CancellationToken);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], png[..8]);
+        Assert.Equal(40, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16, 4)));
+        Assert.Equal(20, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4)));
+        Assert.True(pane.IsPictureMenuEnabled);
+    }
+
+    /// <summary>
     ///     Creates an explorer and a preview pane over the real render service.
     /// </summary>
     /// <returns>The explorer and the pane.</returns>
