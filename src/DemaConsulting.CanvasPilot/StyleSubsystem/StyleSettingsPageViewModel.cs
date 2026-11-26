@@ -42,6 +42,14 @@ namespace DemaConsulting.CanvasPilot.StyleSubsystem;
 ///         While the dialog is open the page follows the catalog, so the status of the folders and the choices of the
 ///         default kit are current when the kits have been read, which may be after the dialog was shown.
 ///     </para>
+///     <para>
+///         The catalog announces a change on the thread that read the kits. The page posts the announcement to its owner
+///         context (the thread of the user interface), so the rows and the choices change only there. A page without an
+///         owner context (one made outside a user interface, as in tests) has no thread to post to; it follows the
+///         catalog on the announcing thread, and a lock keeps that apart from <see cref="Load" /> and
+///         <see cref="OnClosed" /> on the thread that uses the page, so two rebuilds of the rows and the choices never
+///         run at the same time. The commands are meant for the owner thread only.
+///     </para>
 /// </remarks>
 public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISettingsPage
 {
@@ -61,9 +69,17 @@ public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISett
     private readonly Func<IFolderPicker?> _folderPicker;
 
     /// <summary>
-    ///     The synchronization context of the thread that created the page, which owns the user interface, or null.
+    ///     The synchronization context of the thread that owns the page (the user interface), to which a change of the
+    ///     catalog is posted, or <see langword="null" /> for a page made outside a user interface.
     /// </summary>
-    private readonly SynchronizationContext? _context = SynchronizationContext.Current;
+    private readonly SynchronizationContext? _context;
+
+    /// <summary>
+    ///     Keeps the rebuilds of the rows and the choices, and the start and end of following the catalog, apart: without
+    ///     an owner context a change of the catalog arrives on the thread that read the kits, at any moment, also while
+    ///     <see cref="Load" /> rebuilds on the thread that uses the page.
+    /// </summary>
+    private readonly Lock _rebuildLock = new();
 
     /// <summary>
     ///     The shared folders as they are edited, in order.
@@ -130,14 +146,20 @@ public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISett
     ///     Gives the picker with which the user chooses a folder, or <see langword="null" /> while there is none (the main
     ///     window is not there yet); the function is called when the user asks to browse.
     /// </param>
+    /// <param name="ownerContext">
+    ///     The synchronization context of the thread that owns the page, to which a change of the catalog is posted, or
+    ///     <see langword="null" /> for the context of the thread that makes the page (the user interface thread in the
+    ///     application; none in a test that makes the page on a thread without one).
+    /// </param>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="catalog" /> or <paramref name="folderPicker" /> is <see langword="null" />.</exception>
-    public StyleSettingsPageViewModel(IStyleKitCatalog catalog, Func<IFolderPicker?> folderPicker)
+    public StyleSettingsPageViewModel(IStyleKitCatalog catalog, Func<IFolderPicker?> folderPicker, SynchronizationContext? ownerContext = null)
     {
         ArgumentNullException.ThrowIfNull(catalog);
         ArgumentNullException.ThrowIfNull(folderPicker);
 
         _catalog = catalog;
         _folderPicker = folderPicker;
+        _context = ownerContext ?? SynchronizationContext.Current;
         Folders = new ReadOnlyObservableCollection<StyleFolderItem>(_folders);
         DefaultKitChoices = new ReadOnlyObservableCollection<StyleKitChoice>(_choices);
         RebuildChoices();
@@ -189,19 +211,25 @@ public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISett
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        _paths.Clear();
-        _paths.AddRange(settings.Styles.SharedKitFolders);
-        _defaultKitId = settings.Styles.DefaultKitId ?? string.Empty;
-        NewFolderText = string.Empty;
-        FolderError = string.Empty;
-        if (!_listening)
+        // Take the working copy, start to follow the catalog, and make the rows and the choices while a change of the
+        // catalog that arrives on another thread waits, so that it rebuilds after this and not at the same time
+        lock (_rebuildLock)
         {
-            _listening = true;
-            _catalog.Changed += OnCatalogChanged;
+            _paths.Clear();
+            _paths.AddRange(settings.Styles.SharedKitFolders);
+            _defaultKitId = settings.Styles.DefaultKitId ?? string.Empty;
+            NewFolderText = string.Empty;
+            FolderError = string.Empty;
+            if (!_listening)
+            {
+                _listening = true;
+                _catalog.Changed += OnCatalogChanged;
+            }
+
+            RebuildFolders(null);
+            RebuildChoices();
         }
 
-        RebuildFolders(null);
-        RebuildChoices();
         OnPropertyChanged(nameof(IsValid));
     }
 
@@ -227,10 +255,13 @@ public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISett
     /// <inheritdoc />
     public void OnClosed()
     {
-        if (_listening)
+        lock (_rebuildLock)
         {
-            _listening = false;
-            _catalog.Changed -= OnCatalogChanged;
+            if (_listening)
+            {
+                _listening = false;
+                _catalog.Changed -= OnCatalogChanged;
+            }
         }
     }
 
@@ -448,7 +479,9 @@ public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISett
                 }
             }
 
-            SelectedDefaultKit = _choices.First(choice => choice.Id == _defaultKitId);
+            // Select from the list that was just made, which always has the default (or no style when the default is
+            // empty), rather than from the shown collection, which is only read here
+            SelectedDefaultKit = choices.FirstOrDefault(choice => choice.Id == _defaultKitId) ?? choices[0];
         }
         finally
         {
@@ -524,17 +557,21 @@ public sealed partial class StyleSettingsPageViewModel : ObservableObject, ISett
     {
         RunOnOwnerThread(() =>
         {
-            if (_listening)
+            lock (_rebuildLock)
             {
-                RebuildFolders(null);
-                RebuildChoices();
+                if (_listening)
+                {
+                    RebuildFolders(null);
+                    RebuildChoices();
+                }
             }
         });
     }
 
     /// <summary>
-    ///     Runs an action on the user interface thread: directly when already there (or when the page was created outside a
-    ///     user interface), otherwise posted to it.
+    ///     Runs an action on the thread that owns the page: directly when already there, posted to the owner context when
+    ///     called from another thread, and directly when the page has no owner context (it was made outside a user
+    ///     interface), where the lock of the rebuilds keeps the action apart from the thread that uses the page.
     /// </summary>
     /// <param name="action">The action.</param>
     private void RunOnOwnerThread(Action action)

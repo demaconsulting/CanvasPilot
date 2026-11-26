@@ -6,7 +6,10 @@
 `SettingsService` on temporary folders (the catalog reads real folders, so the status of a folder that exists, a folder
 that does not, and a folder that the catalog was not told about are all real), with a hand-written folder picker that
 answers as the test says. The tests read the rows, the choices, the selection, the commands, and the settings that the
-page returns when applied. Headless UI tests in `StyleSettingsPageViewTests.cs` (the `UiTests` project, using Avalonia's
+page returns when applied. The two tests of threading use a stand-in catalog (NSubstitute) that gives the kits of the
+real catalog and announces a change when and on the thread that the test chooses, and the test of the owner context
+gives the page a synchronization context that keeps what is posted to it until the test runs it, as the user interface
+thread would. Headless UI tests in `StyleSettingsPageViewTests.cs` (the `UiTests` project, using Avalonia's
 headless platform) show the real page, find controls by automation identifier, type into the text box and click the
 buttons with the mouse, and show the page in the real settings dialog and click OK, then read the settings file. The
 platform folder picker cannot be shown headless; the page is tested with a picker that answers, and the real picker is
@@ -41,6 +44,9 @@ windowing system is required. No network folder is used: a folder that cannot be
   after the settings are loaded with another default; choosing another kit or no style changes what is applied.
 - While the page is open it follows the catalog (the status of a folder and the kits that can be the default), after
   `OnClosed` it does not, and after another `Load` it does again.
+- A change of the catalog that is announced on another thread is posted to the owner context of the page and changes
+  nothing until the owner runs it; on a page without an owner context, a change that is announced while `Load` rebuilds
+  waits for the load, so the choices are made once and the default stays selected.
 - In the settings dialog, a folder that is typed and a default kit that is chosen are written to the settings file when
   OK is clicked, and the page is listed with the other pages.
 - A missing catalog, function for the picker, or settings is refused; the rule for a folder is a full path without a
@@ -97,6 +103,20 @@ folder has not been read and shows `clean (not found)`; after the catalog has re
 `Clean (built-in)`; after `OnClosed` (twice) and the loss of the folder the status stays as it was; loading again shows
 `Not reachable now`, and when the folder is back and the catalog reads it again the page says `Reachable.`. This
 scenario is tested by `StyleSettingsPage_CatalogChanges_AreFollowedWhileOpenOnly`.
+
+**StyleSettingsPage_CatalogChanged_AnnouncedOnAnotherThreadDuringLoad_RebuildsOneAtATime**: A page made on a thread
+without a synchronization context, over a stand-in catalog that has the kits of the program, is loaded with a default
+that no kit has, which makes it replace its choices; when it has cleared them, another thread announces a change of the
+catalog and the load waits a moment for it. The choices are no style, the two kits of the program, and
+`team-kit (not found)`, once each, with the default selected. A page that rebuilt on the announcing thread at the same
+time listed the choices twice, which is how the race of the first refresh of the catalog with the opening of the
+settings dialog showed. This scenario is tested by
+`StyleSettingsPage_CatalogChanged_AnnouncedOnAnotherThreadDuringLoad_RebuildsOneAtATime`.
+
+**StyleSettingsPage_CatalogChanged_WithOwnerContext_IsFollowedOnlyWhenTheOwnerRunsIt**: A page with an owner context
+that keeps what is posted to it is loaded with the default `clean` before the kits were read; a change that is announced
+on another thread is posted once and changes nothing, and when the owner runs it the page selects `Clean (built-in)`.
+This scenario is tested by `StyleSettingsPage_CatalogChanged_WithOwnerContext_IsFollowedOnlyWhenTheOwnerRunsIt`.
 
 **StyleSettingsPage_NullArguments_Throw**: A missing catalog, function for the picker, and missing settings for `Load`
 and `Apply` are refused. This scenario is tested by `StyleSettingsPage_NullArguments_Throw`.

@@ -18,9 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections.Specialized;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.StyleSubsystem;
+using NSubstitute;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
@@ -61,6 +63,13 @@ public sealed class FixedFolderPicker : IFolderPicker
 /// </summary>
 public sealed class StyleSettingsPageTests : IDisposable
 {
+    /// <summary>
+    ///     How long a load waits for a change of the catalog that another thread announces while the load rebuilds. A page
+    ///     that rebuilt on that thread at the same time would finish well within it; a page that keeps the rebuilds apart
+    ///     makes the announcement wait for the load, so the wait runs out and the load goes on.
+    /// </summary>
+    private static readonly TimeSpan AnnouncementWait = TimeSpan.FromMilliseconds(500);
+
     /// <summary>
     ///     The places that hold the kits, with a settings service.
     /// </summary>
@@ -433,6 +442,104 @@ public sealed class StyleSettingsPageTests : IDisposable
         Assert.Equal("Reachable.", whileClosed);
         Assert.StartsWith("Not reachable now", afterLoad, StringComparison.Ordinal);
         Assert.Equal("Reachable.", afterRestore);
+        page.OnClosed();
+    }
+
+    /// <summary>
+    ///     Test that a change of the catalog that is announced on another thread while <see cref="StyleSettingsPageViewModel.Load" />
+    ///     rebuilds the choices, on a page that has no owner context (as in a test, where the catalog announces on the
+    ///     thread that read the kits), waits for the load to finish instead of rebuilding at the same time, so the choices
+    ///     are made once and the default stays selected.
+    /// </summary>
+    [Fact]
+    public async Task StyleSettingsPage_CatalogChanged_AnnouncedOnAnotherThreadDuringLoad_RebuildsOneAtATime()
+    {
+        // Arrange: a catalog that has read the kits of the program and announces a change when the test says so, and a
+        // page made on a thread without a synchronization context, so that it has no owner context to post to
+        await _catalog.RefreshAsync(Ct);
+        var catalog = Substitute.For<IStyleKitCatalog>();
+        catalog.Entries.Returns(_ => _catalog.Entries);
+        catalog.Locations.Returns(_ => _catalog.Locations);
+        var settings = SettingsWithDefault("team-kit");
+        using var announced = new ManualResetEventSlim();
+
+        // Act: on that thread, load settings whose default no kit has, which makes the page replace its choices; when it
+        // has cleared them, another thread announces a change, and the load waits a moment for that thread to finish
+        var (labels, selected, announcer) = await Task.Run(
+            () =>
+            {
+                var page = new StyleSettingsPageViewModel(catalog, () => null);
+                var loadThread = Environment.CurrentManagedThreadId;
+                Task? announcing = null;
+                ((INotifyCollectionChanged)page.DefaultKitChoices).CollectionChanged += (_, e) =>
+                {
+                    if (announcing is null && e.Action == NotifyCollectionChangedAction.Reset && Environment.CurrentManagedThreadId == loadThread)
+                    {
+                        announcing = Task.Run(
+                            () =>
+                            {
+                                try
+                                {
+                                    catalog.Changed += Raise.Event();
+                                }
+                                finally
+                                {
+                                    announced.Set();
+                                }
+                            },
+                            CancellationToken.None);
+
+                        // A page that rebuilt on the announcing thread at the same time would be done long before this
+                        // ends; a page that keeps the rebuilds apart lets the announcement wait until the load is done
+                        announced.Wait(AnnouncementWait, Ct);
+                    }
+                };
+                page.Load(settings);
+                return (page.DefaultKitChoices.Select(choice => choice.Label).ToArray(), page.SelectedDefaultKit?.Label, announcing);
+            },
+            Ct);
+        if (announcer is not null)
+        {
+            await announcer;
+        }
+
+        // Assert: the announcement came during the load, and the choices were made once, with the default selected
+        Assert.NotNull(announcer);
+        Assert.Equal([StyleSettingsPageViewModel.NoStyleLabel, "Clean (built-in)", "Slides Dark (built-in)", "team-kit (not found)"], labels);
+        Assert.Equal("team-kit (not found)", selected);
+    }
+
+    /// <summary>
+    ///     Test that a page that is given an owner context posts a change of the catalog that is announced on another thread
+    ///     to that context, so that the rows and the choices change only when the owner runs it, as on the thread of the user
+    ///     interface.
+    /// </summary>
+    [Fact]
+    public async Task StyleSettingsPage_CatalogChanged_WithOwnerContext_IsFollowedOnlyWhenTheOwnerRunsIt()
+    {
+        // Arrange: a catalog that has no kits yet, and a page loaded with an owner context that keeps what is posted to it
+        await _catalog.RefreshAsync(Ct);
+        IReadOnlyList<StyleKitEntry> entries = [];
+        var catalog = Substitute.For<IStyleKitCatalog>();
+        catalog.Entries.Returns(_ => entries);
+        catalog.Locations.Returns(_ => _catalog.Locations);
+        var owner = new QueueingSynchronizationContext();
+        var page = new StyleSettingsPageViewModel(catalog, () => null, owner);
+        page.Load(SettingsWithDefault("clean"));
+        var before = page.SelectedDefaultKit!.Label;
+
+        // Act: the catalog reads the kits and announces it on another thread; then the owner runs what was posted
+        entries = _catalog.Entries;
+        await Task.Run(() => catalog.Changed += Raise.Event(), Ct);
+        var pending = owner.Pending;
+        var beforeOwnerRuns = page.SelectedDefaultKit.Label;
+        owner.RunAll();
+
+        // Assert: nothing changed until the owner ran the posted rebuild, which then selected the kit that was read
+        Assert.Equal("clean (not found)", before);
+        Assert.Equal(1, pending);
+        Assert.Equal("clean (not found)", beforeOwnerRuns);
+        Assert.Equal("Clean (built-in)", page.SelectedDefaultKit.Label);
         page.OnClosed();
     }
 

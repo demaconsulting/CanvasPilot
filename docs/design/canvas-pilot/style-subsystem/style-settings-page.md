@@ -66,6 +66,17 @@ the user interface, makes the rows and the choices again, so the status of the f
 default are current when the catalog has read them, which is after the dialog is shown when it is opened early.
 `OnClosed` stops listening, and a later `Load` starts again.
 
+**Threading**: The catalog announces a change on the thread that read the kits, a worker thread. The page has an owner
+context, the `SynchronizationContext` that its constructor is given, or the one of the thread that makes it when it is
+given none; in the application that is the context of the user interface thread, as the page is made there. A change
+that arrives on another thread is posted to the owner context, so the rows and the choices change only on the owner
+thread. A page that has no owner context (one made on a thread without a context, as in a test) has no thread to post to
+and follows the change on the announcing thread. For that case a lock keeps the rebuild that a change causes apart from
+`Load` and `OnClosed`: `Load` takes the settings and rebuilds the rows and the choices inside the lock, and a change
+that arrives meanwhile waits and rebuilds after it, so two rebuilds never clear and fill the lists at the same time. The
+selection of the default kit is taken from the list of choices that the rebuild has just made, which always has the
+default (or no style), not from the shown list. The commands of the page are for the owner thread only.
+
 **View**: `StyleSettingsPageView` shows two raised cards, each with a section title. The card `Shared kit folders` has a
 sentence about the order, the list of folders (`StyleSharedFolders`, named `Shared kit folders`) with the status under
 each path in the hint look, the buttons `StyleFolderUpButton`, `StyleFolderDownButton`, and `StyleFolderRemoveButton`,
@@ -87,6 +98,8 @@ The constructor throws `ArgumentNullException` for a missing catalog or function
 - **Settings** subsystem - `ISettingsPage`, `AppSettings`, and `StyleSettings`.
 - **Project** subsystem - `IFolderPicker`, the platform folder picker that the main window implements.
 - **CommunityToolkit.Mvvm**, **Avalonia** - notification, commands, and the view.
+- **.NET** - `SynchronizationContext`, the owner context to which a change of the catalog is posted, and `Lock`, which
+  keeps the rebuilds apart when there is no owner context.
 
 #### Callers
 

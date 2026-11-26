@@ -228,7 +228,7 @@ public sealed class AppShellSubsystemTests : IDisposable
         };
 
         // Act: open Settings, then start a second run over the same folders
-        await firstRun.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        await OpenSettingsAsync(firstRun);
         firstRun.Dispose();
         var secondRun = Compose();
 
@@ -257,7 +257,7 @@ public sealed class AppShellSubsystemTests : IDisposable
         };
 
         // Act: open Settings
-        await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        await OpenSettingsAsync(composition);
 
         // Assert: both pages are hosted
         Assert.Equal(["AI Provider", "Speech", "Style Kits", "Appearance"], titles);
@@ -600,7 +600,7 @@ public sealed class AppShellSubsystemTests : IDisposable
             dialog.CancelCommand.Execute(null);
         };
         var plain = Compose();
-        await plain.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        await OpenSettingsAsync(plain);
         var rig = ComposeWithCopilot();
         rig.Probe.Models = new OllamaModelList(true, ["gemma3:latest"]);
         AiProviderSettingsPageViewModel? page = null;
@@ -613,7 +613,7 @@ public sealed class AppShellSubsystemTests : IDisposable
         };
 
         // Act: open the settings of the composition that has the copilot and check the connection on the page
-        await rig.Composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
+        await OpenSettingsAsync(rig.Composition);
         await page!.CheckConnectionCommand.ExecuteAsync(null);
 
         // Assert: only the second composition has a copilot and a check, and the check asked the stand-in server, in the
@@ -635,11 +635,13 @@ public sealed class AppShellSubsystemTests : IDisposable
     public async Task AppShellSubsystem_ComposeApplication_CopilotAsksForSettingsAndIsCheckedAgainWhenTheyChange()
     {
         // Arrange: a composition whose settings choose GitHub Copilot, which cannot be used on this machine because the
-        // CLI is not signed in, with the panel having checked that
+        // CLI is not signed in, with the panel having checked that and the style kits read, so that the settings dialog
+        // opens over the kits that were read
         var token = TestContext.Current.CancellationToken;
         var rig = ComposeWithCopilot();
         rig.Probe.Models = new OllamaModelList(true, ["gemma3:latest"]);
         await rig.Composition.Chat.RefreshReadinessAsync();
+        await rig.Composition.StyleStartupRefresh;
         var before = rig.Composition.Chat.ReadinessMessage;
         var questionsBefore = rig.Probe.ListQuestions.Count;
 
@@ -762,6 +764,19 @@ public sealed class AppShellSubsystemTests : IDisposable
         composition.Shell.AttachDialogService(_dialogs);
         _compositions.Add(composition);
         return composition;
+    }
+
+    /// <summary>
+    ///     Opens the settings dialog of a composition once the style kits have been read at start, so that the Style Kits
+    ///     page is loaded over the kits that were read and the first refresh of the catalog does not finish while the dialog
+    ///     opens, which makes the test the same on a slow machine as on a fast one.
+    /// </summary>
+    /// <param name="composition">The composition, with the dialog service attached.</param>
+    /// <returns>A task that completes when the dialog was shown and closed.</returns>
+    private static async Task OpenSettingsAsync(ApplicationComposition composition)
+    {
+        await composition.StyleStartupRefresh;
+        await composition.Shell.OpenSettingsCommand.ExecuteAsync(null);
     }
 
     /// <summary>
