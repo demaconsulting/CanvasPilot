@@ -8,7 +8,7 @@ the shown picture, a welcome screen, a title bar with the style and AI provider 
 that is remembered, a dark and a light theme with one set of design tokens and line icons, persisted settings with AI
 provider and speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders, and
 pictures, and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload inspector,
-the drawing knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the Help menu),
+the drawing knowledge (a tree of cards about the image formats and about CanvasPilot that the copilot reads),
 style kits (palettes, fonts, sizes, and example images that a project, a user, or a team keeps, with a window to manage
 them, export at their sizes, and a check of a picture against the palette), and the installer. Messages are answered by
 an AI copilot that runs through a local Ollama server (the provider that is covered by automated tests in this release;
@@ -50,12 +50,12 @@ Local items:
   - **Annotation** subsystem: **MarkRegistry**, **MarkSourceResolver**, and **AnnotationOverlay** units.
   - **AppShell** subsystem: **MainWindowShell**, **ProjectWorkspace**, **StatusBar**, **ProviderPill**, **Welcome**,
     **AboutDialog**, and **ThemeResources** units.
-  - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, **ChatHistoryStore**, **FollowUpSuggestions**, and
-    **PayloadInspector** units.
+  - **Chat** subsystem: **ChatPanel**, **ChatTurnRunner**, **ChatHistoryStore**, **FollowUpSuggestions**,
+    **PayloadInspector**, and **ReplyMarkdown** units.
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
   - **Knowledge** subsystem: **KnowledgeCatalog**, **KnowledgeSearch**, **KnowledgePromptBuilder**,
-    **KnowledgeTools**, **KnowledgeSkills**, **KnowledgeMarkdown**, and **KnowledgeBrowser** units.
+    **KnowledgeTools**, and **KnowledgeSkills** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Payload** subsystem: **MessagePayload**, **MarkImageComposer**, **PayloadBuilder**, and **PayloadDescriber**
     units.
@@ -126,21 +126,22 @@ The next diagram shows how the parts fit together at run time. The small executa
 application. The application library holds the subsystems: the AppShell subsystem builds every unit in one place (the
 composition root) and hosts the others, and nothing else refers to it. The Chat subsystem is the panel in which the user
 converses; it uses the Composer subsystem (the message, its undo steps, and the attachments), the Annotation subsystem
-(marks on the picture), the Payload subsystem (the message that is sent), and the Speech subsystem (dictation).
-Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in the Project
-explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing: the AppShell
-opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards, so the
-copilot can be given the same cards. The Style subsystem holds the style kits: the AppShell shows its window from the
-Tools menu and its pill of kits in the title bar, the Preview subsystem offers the sizes of the kit of the project when
-a picture is exported, and the check of a picture against the palette puts its result among the notes of the preview; it
-depends on Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none of them depends on it.
-The Agent subsystem is the AI copilot: the Chat subsystem reaches it only through `IAgentService` and the events of a
-turn, it uses Settings (the provider choices), Project (the open folder), Payload (the message to answer), Knowledge,
-Style, and Preview (what its tools give the copilot), and the AI libraries, and it implements the connection check and
-the model list that Settings declares, so Settings never refers to it. Every subsystem logs through Logging, and the
-subsystems that build file locations use Utilities. The third-party items are used inside the library, and the
-application reads and writes only the local data in the bottom row. Section *Architecture* of the system design explains
-the dependencies between the subsystems, which run one way, and why no subsystem refers to AppShell.
+(marks on the picture), the Payload subsystem (the message that is sent), and the Speech subsystem (dictation); it draws
+the completed replies of the copilot with its own Markdown reader. Annotation and Payload read the pictures of the
+Preview subsystem, which follows the file selected in the Project explorer; Speech also adds a page to the Settings
+dialog. The Knowledge subsystem is the guide to drawing that the copilot is given, and it depends on nothing but
+CanvasNet's help cards. The Style subsystem holds the style kits: the AppShell shows its window from the Tools menu and
+its pill of kits in the title bar, the Preview subsystem offers the sizes of the kit of the project when a picture is
+exported, and the check of a picture against the palette puts its result among the notes of the preview; it depends on
+Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none of them depends on it. The Agent
+subsystem is the AI copilot: the Chat subsystem reaches it only through `IAgentService` and the events of a turn, it
+uses Settings (the provider choices), Project (the open folder), Payload (the message to answer), Knowledge, Style, and
+Preview (what its tools give the copilot), and the AI libraries, and it implements the connection check and the model
+list that Settings declares, so Settings never refers to it. The subsystems that write a log do so through Logging
+(Knowledge, Payload, and Utilities write none), and the subsystems that build file locations use Utilities. The
+third-party items are used inside the library, and the application reads and writes only the local data in the bottom
+row. Section *Architecture* of the system design explains the dependencies between the subsystems, which run one way,
+and why no subsystem refers to AppShell.
 
 ![Architecture of CanvasPilot: the desktop head starts the application library, whose AppShell subsystem builds and
 hosts the other thirteen subsystems, from Chat, Composer, and Agent down to Logging and Utilities, with the Knowledge
@@ -163,13 +164,14 @@ and Style subsystems beside them, and the third-party items and the local data t
       root, view locator, and the design tokens, vendored line icons, and control themes of the dark and light themes
       (`Styles/`)
     - **ChatSubsystem/** - the chat panel with the transcript of the sent messages, the composer, the send and
-      hold-to-talk buttons and the joining of marks to the message, and the payload inspector window
+      hold-to-talk buttons and the joining of marks to the message, the payload inspector window, and the reader and
+      control that draw a completed reply's Markdown
     - **ComposerSubsystem/** - the message being composed: ordered segments of text and chips, undo and redo, the
       intake and copying of attachments, the view model that orchestrates them with dictation and sending, and the
       editing view that shows the message with its chips inline
     - **KnowledgeSubsystem/** - the drawing knowledge: the tree of cards from the help of CanvasNet and the cards of
       CanvasPilot (embedded Markdown under `Cards/`), the search of the cards, their text for the prompt of an
-      assistant, the tool and the skills that describe them, the Markdown reader, and the browser window
+      assistant, and the tool and the skills that describe them
     - **LoggingSubsystem/** - local rolling log file subsystem
     - **PayloadSubsystem/** - the message that is sent as one immutable payload: text with references, attachments,
       annotated pictures, mark crops, mark geometry, and source elements, and its description

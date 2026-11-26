@@ -40,6 +40,7 @@ includes:
   - docs/reqstream/canvas-pilot/chat-subsystem/chat-turn-runner.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/follow-up-suggestions.yaml
   - docs/reqstream/canvas-pilot/chat-subsystem/payload-inspector.yaml
+  - docs/reqstream/canvas-pilot/chat-subsystem/reply-markdown.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-document.yaml
   - docs/reqstream/canvas-pilot/composer-subsystem/composer-history.yaml
@@ -53,8 +54,6 @@ includes:
   - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.yaml
   - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-tools.yaml
   - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-skills.yaml
-  - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-markdown.yaml
-  - docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-browser.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem.yaml
   - docs/reqstream/canvas-pilot/logging-subsystem/rolling-file-logger.yaml
   - docs/reqstream/canvas-pilot/payload-subsystem.yaml

@@ -22,7 +22,6 @@ using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
-using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.LoggingSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.SpeechSubsystem;
@@ -283,30 +282,6 @@ public sealed class AppShellSubsystemTests : IDisposable
         Assert.Equal("CanvasPilot", about.Name);
         Assert.False(string.IsNullOrWhiteSpace(about.Version));
         Assert.Equal(6, about.Dependencies.Count);
-    }
-
-    /// <summary>
-    ///     Test that Drawing Knowledge run on the composed shell gives the dialog service a browser over the catalog of the
-    ///     application, whose tree is the roots of the catalog and which can show a card of CanvasPilot.
-    /// </summary>
-    [Fact]
-    public async Task AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication()
-    {
-        // Arrange: a composed application
-        var composition = Compose();
-
-        // Act: run Drawing Knowledge, and choose a card in the browser that was shown
-        var enabled = composition.Shell.ShowDrawingKnowledgeCommand.CanExecute(null);
-        await composition.Shell.ShowDrawingKnowledgeCommand.ExecuteAsync(null);
-        var browser = _dialogs.LastKnowledgeBrowser!;
-        var shown = browser.Select("canvaspilot/project-layout");
-
-        // Assert: the browser is over the catalog of the application
-        Assert.True(enabled);
-        Assert.Equal(1, _dialogs.KnowledgeBrowserCount);
-        Assert.Equal(KnowledgeCatalog.Default.Roots.Select(r => r.Id), browser.Nodes.Select(n => n.Id));
-        Assert.True(shown);
-        Assert.Equal("canvaspilot/project-layout", browser.SelectedCard!.Id);
     }
 
     /// <summary>

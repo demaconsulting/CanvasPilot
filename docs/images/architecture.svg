@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="1100" viewBox="0 0 960 1100" font-family="Segoe UI, Arial, sans-serif">
   <title>CanvasPilot architecture</title>
-  <desc>The Desktop head starts the Avalonia application. The library holds the AppShell subsystem, which builds and hosts the other thirteen subsystems: Chat, Composer, Payload, and Annotation for the conversation, Project, Preview, Settings, and Speech for the files, the picture, and the choices, Knowledge, the drawing guide of cards with its browser, Style, the style kits with their window, picker, and check of a picture against a palette, and Agent, the AI copilot. Chat uses Composer, Payload, Annotation, and Speech, and reaches Agent only through IAgentService and the events of a turn; Payload and Annotation read the pictures of Preview; Preview follows the Project explorer, and Speech and Style add pages to the Settings dialog. Agent uses Settings, Project, Payload, Knowledge, Style, and Preview, and implements the connection check that Settings declares, so Settings does not use Agent. Style depends on Project, Settings, Preview, and Knowledge, and none of them depends on Style. Every subsystem logs through Logging, and the subsystems that build file locations use Utilities. Third-party items, including the AI libraries, and the local data the application reads and writes, including the chat history and the Copilot runtime data outside the project, are shown below.</desc>
+  <desc>The Desktop head starts the Avalonia application. The library holds the AppShell subsystem, which builds and hosts the other thirteen subsystems: Chat, Composer, Payload, and Annotation for the conversation, Project, Preview, Settings, and Speech for the files, the picture, and the choices, Knowledge, the drawing guide of cards that the copilot reads, Style, the style kits with their window, picker, and check of a picture against a palette, and Agent, the AI copilot. Chat uses Composer, Payload, Annotation, and Speech, and reaches Agent only through IAgentService and the events of a turn; Payload and Annotation read the pictures of Preview; Preview follows the Project explorer, and Speech and Style add pages to the Settings dialog. Agent uses Settings, Project, Payload, Knowledge, Style, and Preview, and implements the connection check that Settings declares, so Settings does not use Agent. Style depends on Project, Settings, Preview, and Knowledge, and none of them depends on Style. The subsystems that write a log use Logging (Knowledge, Payload, and Utilities write none), and the subsystems that build file locations use Utilities. Chat draws the completed replies of the copilot with its own ReplyMarkdown unit. Third-party items, including the AI libraries, and the local data the application reads and writes, including the chat history and the Copilot runtime data outside the project, are shown below.</desc>
   <defs>
     <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
@@ -39,6 +39,7 @@
   <g font-size="11" fill="#5b21b6" text-anchor="middle">
     <text x="142" y="240">ChatPanel</text>
     <text x="142" y="255">PayloadInspector</text>
+    <text x="142" y="270">ReplyMarkdown</text>
   </g>
 
   <!-- Composer -->
@@ -127,7 +128,7 @@
   <g font-size="11" fill="#334155" text-anchor="middle">
     <text x="480" y="444">Chat also uses Annotation, Payload, and Speech; Annotation and Payload read the pictures of Preview.</text>
     <text x="480" y="458">Style uses Project, Settings, Preview, and Knowledge (only the descriptor of a tool); none of them uses Style.</text>
-    <text x="480" y="472">Every subsystem logs through Logging, and the subsystems that build file locations use Utilities.</text>
+    <text x="480" y="472">The subsystems that write a log use Logging (Knowledge, Payload, and Utilities write none); those that build file locations use Utilities.</text>
     <text x="480" y="486">Chat reaches Agent only through IAgentService; Agent uses Settings, Project, Payload, Knowledge, Style, and Preview, and Settings never uses Agent.</text>
   </g>
 
@@ -148,8 +149,8 @@
   <text x="255" y="505" font-size="14" font-weight="700" fill="#4c1d95" text-anchor="middle">Knowledge</text>
   <g font-size="11" fill="#5b21b6" text-anchor="middle">
     <text x="255" y="522">KnowledgeCatalog, KnowledgeSearch, KnowledgePromptBuilder,</text>
-    <text x="255" y="536">KnowledgeTools, KnowledgeSkills, KnowledgeMarkdown,</text>
-    <text x="255" y="550">KnowledgeBrowser (Help &gt; Drawing Knowledge); no language model</text>
+    <text x="255" y="536">KnowledgeTools, KnowledgeSkills</text>
+    <text x="255" y="550">no user interface, no language model</text>
   </g>
 
   <!-- Style -->
@@ -161,9 +162,8 @@
     <text x="705" y="550">StyleSettingsPage, StyleKitEditor, StyleKitManager; no language model</text>
   </g>
 
-  <!-- Knowledge logs through Logging, Style uses Utilities -->
+  <!-- Style uses Utilities -->
   <g stroke="#475569" stroke-width="2" marker-end="url(#a)">
-    <line x1="255" y1="562" x2="255" y2="580"/>
     <line x1="705" y1="562" x2="705" y2="580"/>
   </g>
   <!-- Logging and Utilities -->

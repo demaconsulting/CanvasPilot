@@ -69,11 +69,6 @@ temporary local folders; no network or external services are required.
   is opened, or the shell is disposed, so a failed write is logged once.
 - Exit closes the window; Save and Close follow the open project.
 - Settings opens over its pages and tells them when it closed; About opens the About dialog.
-- Drawing Knowledge, in the Help menu above About, asks the dialog service to show a browser over the catalog that the
-  shell was given, reading the catalog only when it is first used; it is unusable when the shell has no catalog and does
-  nothing without a dialog service; a catalog that cannot be read is logged and shown to the user and no browser is
-  shown; the browser is a window owned by the main window that does not block it, a second request brings the open one
-  to the front, a request after it was closed opens a new one, and closing the main window closes it.
 - The Image commands are disabled until the exporter reports an image, follow it, and run it with the dialog
   service.
 - Message, confirmation, and prompt dialogs return the user's answer, trim a prompt's text, and cannot accept a
@@ -188,19 +183,6 @@ page and the page is told the dialog closed. This scenario is tested by
 **MainWindowShell_ShowAbout_ShowsAboutDialog**: About shows the About dialog. This scenario is tested by
 `MainWindowShell_ShowAbout_ShowsAboutDialog`.
 
-**MainWindowShell_ShowDrawingKnowledge_ShowsBrowserOnTheCatalog**: A shell that was given a catalog does not ask for it
-when it is made; running Drawing Knowledge asks once and gives the dialog service a browser whose tree is the roots of
-the catalog, and no message is shown. This scenario is tested by
-`MainWindowShell_ShowDrawingKnowledge_ShowsBrowserOnTheCatalog`.
-
-**MainWindowShell_ShowDrawingKnowledge_WithoutKnowledgeOrDialogService_DoesNothing**: A shell with no catalog cannot run
-the command, and a shell with a catalog but no dialog service runs it without asking for the catalog or showing
-anything. This scenario is tested by `MainWindowShell_ShowDrawingKnowledge_WithoutKnowledgeOrDialogService_DoesNothing`.
-
-**MainWindowShell_ShowDrawingKnowledge_CatalogCannotBeLoaded_LogsAndShowsMessage**: A catalog that throws is written to
-the log, and the user is told in a message titled Drawing Knowledge that names the problem; no browser is shown. This
-scenario is tested by `MainWindowShell_ShowDrawingKnowledge_CatalogCannotBeLoaded_LogsAndShowsMessage`.
-
 **MainWindowShell_CommandsWithoutDialogService_DoNothing**: Before a dialog service is attached, every command
 that needs the user does nothing. This scenario is tested by
 `MainWindowShell_CommandsWithoutDialogService_DoNothing`.
@@ -254,13 +236,13 @@ command, and running it anyway shows no message. This scenario is tested by
 tested by `MainWindowView_Show_OpensWithShellTitle`.
 
 **MainWindowView_Menus_HaveExpectedStructureAndAutomationIds**: The five menus and their items are in the expected order
-(the Help menu has Drawing Knowledge, Open Log Folder, a separator, and About, and the Open Log Folder item has the
+(the Help menu has Open Log Folder, a separator, and About, and the Open Log Folder item has the
 header `Open _Log Folder`), each has a matching name and automation identifier, and the Undo and Redo items show Ctrl+Z
 and Ctrl+Y as text (Cmd+Z and Cmd+Shift+Z on macOS). This scenario is tested by
 `MainWindowView_Menus_HaveExpectedStructureAndAutomationIds`.
 
-**MainWindowView_Menus_NoProject_EnabledStateFollowsCommands**: With no project the New, Open, Exit, Settings, Drawing
-Knowledge, Open Log Folder, and About
+**MainWindowView_Menus_NoProject_EnabledStateFollowsCommands**: With no project the New, Open, Exit, Settings, Open Log
+Folder, and About
 items are usable and the Recent, Save, Close, Undo, Redo, Export, and Copy items are not. This scenario is tested by
 `MainWindowView_Menus_NoProject_EnabledStateFollowsCommands`.
 
@@ -307,18 +289,6 @@ by `MainWindowView_ExitMenuItem_ClosesWindow`.
 **MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses**: The About command opens the dialog with
 the identity texts and six libraries, and clicking Close ends it. This scenario is tested by
 `MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses`.
-
-**MainWindowView_DrawingKnowledgeMenuItem_ShowsBrowserWindowThatDoesNotBlock**: The Drawing Knowledge command of the
-real window finishes while a browser window that the main window owns is open, with the roots of the catalog of the
-application in its tree, and the main window stays enabled. This scenario is tested by
-`MainWindowView_DrawingKnowledgeMenuItem_ShowsBrowserWindowThatDoesNotBlock`.
-
-**MainWindowView_DrawingKnowledgeMenuItem_SecondRequest_ReusesTheOpenBrowser**: Asking again while the browser is open
-brings the same window, with the card that was chosen, to the front; after it is closed, asking opens a new one with
-nothing chosen. This scenario is tested by `MainWindowView_DrawingKnowledgeMenuItem_SecondRequest_ReusesTheOpenBrowser`.
-
-**MainWindowView_Close_ClosesTheBrowserItOwns**: Closing the main window closes the browser. This scenario is tested by
-`MainWindowView_Close_ClosesTheBrowserItOwns`.
 
 **MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses**: The Settings command opens the dialog with
 one page and clicking Cancel closes it. This scenario is tested by
@@ -506,7 +476,7 @@ of each menu has one that no other item of the menu has. This scenario is tested
 `Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey`.
 
 **Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The welcome screen and the workspace of an open
-project, the About dialog, the knowledge browser, the New Project dialog, the Style Kits window, and every page of the
+project, the About dialog, the New Project dialog, the Style Kits window, and every page of the
 settings are walked in the dark and the light theme; a button that shows no text has a name and a tooltip, is at least
 28 by 28, and every enabled button takes the focus; every field, list, drop-down, slider, and tree has a name; and more
 than 150 controls were looked at. This scenario is tested by

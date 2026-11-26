@@ -1,13 +1,16 @@
-### KnowledgeMarkdown
+### ReplyMarkdown
 
-![Knowledge Structure](KnowledgeSubsystemView.svg)
+![Chat Structure](ChatSubsystemView.svg)
 
 #### Purpose
 
-`KnowledgeMarkdown` reads the Markdown of a knowledge card into blocks and runs of text, and draws those blocks with its
-own control, `MarkdownBlocksPanel`. The cards use only a few constructs, so the unit is small and has no dependency on a
-Markdown library; a library would add a third-party item with its own documents and tests and give nothing the cards
-need. The reader holds no state and does not depend on the user interface; the control that draws the blocks does.
+`ReplyMarkdown` reads the Markdown text of a completed reply of the copilot into blocks and runs of text, and draws
+those blocks with its own control, `MarkdownBlocksPanel`, which the chat panel uses for the replies of the copilot. It
+reads headings, paragraphs, bulleted and numbered list items, fenced blocks of code, and bold, italic, and code text;
+every other construct, such as a link, a table, or a quote, is kept as the text that was written. Reading only these
+constructs keeps the unit small and free of a Markdown library, which would add a third-party item with its own
+documents and tests. The reader holds no state and does not depend on the user interface; the control that draws the
+blocks does.
 
 #### Data Model
 
@@ -18,17 +21,17 @@ need. The reader holds no state and does not depend on the user interface; the c
   has no markers. A block never has an empty run or two neighbors of the same style.
 - The reader holds no state.
 - `MarkdownBlocksPanel` is a vertical stack (6 pixels apart) with the property `Blocks`; it is made again from the
-  blocks whenever they change, which is when another card is shown, and draws nothing for `null`. It draws a text block
+  blocks whenever they change, which is when a reply is complete, and draws nothing for `null`. It draws a text block
   for each block, so the text can be selected and copied as the text of any page can:
   - a heading is semibold, in a size that falls with its level (20, then 16, then 14 pixels for the levels 3 to 6), with
-    a gap above it (`KnowledgeBodyHeading`);
+    a gap above it (`ReplyMarkdownHeading`);
   - a paragraph is wrapped text with a run for each style: bold, italic, and code, whose run is in the fixed-width font
-    on a gray shade that lets the theme show through (`KnowledgeBodyText`);
+    on a gray shade that lets the theme show through (`ReplyMarkdownText`);
   - a list item is a grid with its marker (a dot for `-`, `*`, and `+`, and the number as written otherwise) and its
-    text (`KnowledgeBodyItem`), indented by 12 pixels;
+    text (`ReplyMarkdownItem`), indented by 12 pixels;
   - a block of code is its lines in the fixed-width font that scrolls sideways, in a border of 8 pixel corners and 10
     pixels of padding whose background and outline are the tokens `CpSurfaceRaised` and `CpBorderSubtle` through dynamic
-    resources, so that the block follows a change of the theme variant (`KnowledgeBodyCode`).
+    resources, so that the block follows a change of the theme variant (`ReplyMarkdownCode`).
   Nothing in the panel can run or open anything.
 
 #### Key Methods
@@ -63,8 +66,9 @@ does not keep the blocks it drew, so the same blocks drawn again give the same c
 #### Error Handling
 
 A missing text is an `ArgumentNullException`. Any text can be read: nothing is rejected, and a marker that has no end is
-text. The tests check, on every card and every example description of the catalog of the application, that no letter or
-digit of the source is lost, so a construct that the reader does not know shows up as text and not as a missing piece.
+text. A test checks, on a text full of constructs that the reader does not know, that no letter or digit of the source
+is lost, so such a construct shows up as text and not as a missing piece. The one part of the source that is not shown
+is the words after the language on the line that opens a fenced block, which are not part of the code.
 The reader performs no I/O and logs nothing, and is safe for concurrent use. The panel draws a block that it does not
 know as nothing, which cannot happen while the hierarchy of blocks is closed, and it is used on the thread of the user
 interface only.
@@ -76,5 +80,5 @@ interface only.
 
 #### Callers
 
-- `KnowledgeBrowser` shows the text of the card that is chosen with the panel.
-- The chat panel draws the replies of the copilot with the same panel, so a reply and a card look alike.
+- The chat panel draws the completed replies of the copilot with the panel, over the blocks that `Parse` reads from the
+  text of the reply.

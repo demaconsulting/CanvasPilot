@@ -81,5 +81,5 @@ I/O except reading embedded resources and logs nothing.
 
 #### Callers
 
-- The search, the builder of the prompt, the tools and skills for an assistant, and the browser of the cards of later
-  steps read the catalog through `IKnowledgeCatalog`.
+- The search, the builder of the prompt, and the tools and skills for an assistant read the catalog through
+  `IKnowledgeCatalog`.

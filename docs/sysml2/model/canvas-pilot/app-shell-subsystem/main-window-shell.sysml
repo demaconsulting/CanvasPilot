@@ -4,7 +4,6 @@ package CanvasPilot_MainWindowShell {
     private import CanvasPilot_ComposerViewModel::*;
     private import CanvasPilot_ExportPresetDialog::*;
     private import CanvasPilot_ImageExporter::*;
-    private import CanvasPilot_KnowledgeBrowser::*;
     private import CanvasPilot_NewProjectDialog::*;
     private import CanvasPilot_PayloadInspector::*;
     private import CanvasPilot_ProjectService::*;
@@ -22,7 +21,7 @@ package CanvasPilot_MainWindowShell {
     private import CanvasPilot_PushToTalkBinding::*;
 
     part def MainWindowShell {
-        doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands (Help shows the About dialog, the browser of the drawing knowledge, and, through a folder launcher that tests replace, the folder of the log files, with a message that gives the reason and the path when it cannot be shown), the window title, the title bar that holds the compact menu, the name of the open project, the style list, and the AI provider pill and keeps clear of the buttons that the system draws at the edge of the window (it asks for the minimize, maximize, and close buttons and no full-screen button, keeps free the width that they cover, measured from the top of the visual tree with 140 pixels as the fallback on Windows, and turns a window that is put into full screen by any other means back to the normal state, with no key for full screen), the body that shows the welcome screen or the workspace and the status bar below it, the recent projects menu, the opening of a project at the picture last shown in it (the picture that the user shows last is stored with the recent projects when the project is closed or another opens and at exit), Undo and Redo of the focused part, the talk key (the key or chord that the speech settings choose, F9 by default: dictation starts when it goes down, ignores its repeats, and ends when any key of the chord is released, the window closes, or the window is no longer active), the saved size, place, and state of the window with the widths of its columns, the thumbnail setting of the explorer, and the dialog service the window implements. */
+        doc /* The main window's view model and window: File, Edit, Image, Tools, and Help commands (Help shows the About dialog and, through a folder launcher that tests replace, the folder of the log files, with a message that gives the reason and the path when it cannot be shown), the window title, the title bar that holds the compact menu, the name of the open project, the style list, and the AI provider pill and keeps clear of the buttons that the system draws at the edge of the window (it asks for the minimize, maximize, and close buttons and no full-screen button, keeps free the width that they cover, measured from the top of the visual tree with 140 pixels as the fallback on Windows, and turns a window that is put into full screen by any other means back to the normal state, with no key for full screen), the body that shows the welcome screen or the workspace and the status bar below it, the recent projects menu, the opening of a project at the picture last shown in it (the picture that the user shows last is stored with the recent projects when the project is closed or another opens and at exit), Undo and Redo of the focused part, the talk key (the key or chord that the speech settings choose, F9 by default: dictation starts when it goes down, ignores its repeats, and ends when any key of the chord is released, the window closes, or the window is no longer active), the saved size, place, and state of the window with the widths of its columns, the thumbnail setting of the explorer, and the dialog service the window implements. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (
@@ -77,11 +76,6 @@ package CanvasPilot_MainWindowShell {
         // Shows the payload inspector as a dialog it owns, on behalf of the chat panel, through the launcher seam
         // (IPayloadInspectorLauncher) that the Chat subsystem owns and the dialog service extends.
         dependency MainWindowShell to PayloadInspector;
-
-        // Shows the browser of the drawing knowledge as a window it owns that does not block it, through the launcher
-        // seam (IKnowledgeBrowserLauncher) that the Knowledge subsystem owns and the dialog service extends, over the
-        // catalog that the composition gives it.
-        dependency MainWindowShell to KnowledgeBrowser;
 
         // Undoes and redoes through the focused part's IUndoRedoTarget and starts and stops dictation through an
         // IPushToTalkTarget, both seams that the Composer subsystem owns (ComposerViewModel implements the first).

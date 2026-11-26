@@ -18,16 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using CommunityToolkit.Mvvm.Input;
-
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     A card that the user can go to from the card that is shown: a card below it, a related card, or a hit of the
-///     search. The window shows it as a button that runs <see cref="NavigateCommand" /> with the identifier.
+///     A run of text of a heading, paragraph, or list item that is drawn in one style.
 /// </summary>
-/// <param name="Id">The identifier of the card, which is the parameter of the command.</param>
-/// <param name="Title">The title of the card.</param>
-/// <param name="Summary">The one-line summary of the card.</param>
-/// <param name="NavigateCommand">The command of the browser that shows a card by its identifier.</param>
-public sealed record KnowledgeLinkViewModel(string Id, string Title, string Summary, IRelayCommand<string> NavigateCommand);
+/// <param name="Text">The text of the run, without the markers that gave it its style.</param>
+/// <param name="Style">How the run is drawn.</param>
+public sealed record MarkdownSpan(string Text, MarkdownSpanStyle Style);

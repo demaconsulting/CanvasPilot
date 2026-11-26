@@ -54,7 +54,8 @@ Available now:
 - **Marking problems**: Mark the rendered picture with rectangles, ellipses, freehand strokes, and arrows from a
   floating tool bar, numbered and with notes that show on the picture and can be changed until the message is sent;
   the marks are embedded in the message with crops and the source elements under each mark
-- **Drawing knowledge**: Browse CanvasNet's built-in cards and CanvasPilot's own project guide from the Help menu
+- **Drawing knowledge**: The copilot draws from CanvasNet's built-in help cards and CanvasPilot's own project guide,
+  which ship inside the program and need no network
 - **Style kits**: Reusable palettes, fonts, size presets, and example images from the program, your folder, the project,
   or a team folder; export at preset sizes and check a picture against the style
 - **AI copilot chat**: An AI copilot answers your messages in the conversation pane. It writes, renders, looks at, and

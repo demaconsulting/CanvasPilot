@@ -4,8 +4,8 @@
 
 `KnowledgeSearch` is verified with unit tests in `KnowledgeSearchTests.cs`. The weights are checked on small catalogs
 that the test makes by hand with a fake of `IKnowledgeCatalog`, so that each score can be worked out exactly. The
-questions that a user asks are checked on the catalog of the application, so that the right cards are found. Nothing is
-substituted in the unit itself.
+questions that an assistant asks are checked on the catalog of the application, so that the right cards are found.
+Nothing is substituted in the unit itself.
 
 #### Test Environment
 

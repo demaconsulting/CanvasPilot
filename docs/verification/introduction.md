@@ -65,6 +65,7 @@ This document covers the verification design for the following software items:
       restored when the project is opened and cleared on request
     - **PayloadInspector** — the window that shows exactly what the assistant would receive for a sent message
     - **FollowUpSuggestions** — the example prompts that fit what the project has
+    - **ReplyMarkdown** — a completed reply's Markdown as blocks, with other text kept, and the control that draws them
   - **Composer** subsystem
     - **ComposerDocument** — the message being composed as ordered segments of text and chips
     - **ComposerHistory** — undo and redo of the user's changes, one action at a time
@@ -80,8 +81,6 @@ This document covers the verification design for the following software items:
     - **KnowledgePromptBuilder** — the cards as text for the prompt of an assistant, within a size budget
     - **KnowledgeTools** — the tool description and function by which an assistant gets the cards
     - **KnowledgeSkills** — each card as a skill for an assistant
-    - **KnowledgeMarkdown** — the Markdown of a card as blocks that a window draws, with no text lost
-    - **KnowledgeBrowser** — the window in which the user reads, searches, and follows the cards and copies examples
   - **Logging** subsystem
     - **RollingFileLogger** — local rolling log file writer
   - **Payload** subsystem

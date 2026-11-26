@@ -18,30 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     How a run of text of a card is drawn.
+///     A fenced block of code of a Markdown text.
 /// </summary>
-public enum MarkdownSpanStyle
-{
-    /// <summary>
-    ///     Plain text.
-    /// </summary>
-    Normal,
-
-    /// <summary>
-    ///     Text between <c>**</c> markers.
-    /// </summary>
-    Bold,
-
-    /// <summary>
-    ///     Text between <c>*</c> markers.
-    /// </summary>
-    Italic,
-
-    /// <summary>
-    ///     Text between backticks, drawn as code.
-    /// </summary>
-    Code
-}
+/// <param name="Language">The language that follows the opening fence, or <see langword="null" /> when there is none.</param>
+/// <param name="Text">The lines of the block as the source wrote them, joined with line feeds and without a final line feed.</param>
+public sealed record CodeBlock(string? Language, string Text) : MarkdownBlock;

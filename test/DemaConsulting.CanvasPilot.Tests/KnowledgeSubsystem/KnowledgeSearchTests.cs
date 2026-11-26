@@ -24,7 +24,7 @@ namespace DemaConsulting.CanvasPilot.Tests;
 
 /// <summary>
 ///     Unit tests for <see cref="KnowledgeSearch" />, on small catalogs of cards made by hand, so that each weight can
-///     be checked, and on the catalog of the application, so that the questions a user asks find the right cards.
+///     be checked, and on the catalog of the application, so that the questions an assistant asks find the right cards.
 /// </summary>
 public sealed class KnowledgeSearchTests
 {
@@ -313,7 +313,7 @@ public sealed class KnowledgeSearchTests
     }
 
     /// <summary>
-    ///     Validates that the questions that a user or an assistant asks find the right cards of the application.
+    ///     Validates that the questions that an assistant asks find the right cards of the application.
     /// </summary>
     [Fact]
     public void KnowledgeSearch_Search_RealCatalog_FindsTheCardsForCommonQuestions()

@@ -3,10 +3,10 @@
 #
 # PURPOSE:
 # - Define requirements for the CanvasPilot Knowledge subsystem
-# - The Knowledge subsystem holds what the drawing assistant and the user need to know to draw with the formats CanvasNet
-#   draws and to work in a CanvasPilot project: a catalog of cards that is taken from the help of CanvasNet and extended
-#   with cards of CanvasPilot, a search of the cards, and the text of cards for the prompt of an assistant. It is kept
-#   apart from every provider of a language model
+# - The Knowledge subsystem holds what the drawing assistant needs to know to draw with the formats CanvasNet draws and to
+#   work in a CanvasPilot project: a catalog of cards that is taken from the help of CanvasNet and extended with cards of
+#   CanvasPilot, a search of the cards, and the text of cards for the prompt of an assistant. It has no user interface,
+#   and it is kept apart from every provider of a language model
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -22,7 +22,7 @@ sections:
               the user uses, how to read the marks and attachments of a message, what the user sees, and how to draw in the style of
               the project.
             justification: |
-              The assistant writes files, and the user reads the same advice. The cards of CanvasNet are the advice of the
+              The assistant writes files. The cards of CanvasNet are the advice of the
               library that draws the files, so they are as current as the library; the cards about the options that the
               program that hosts the library sets in code would only take room in a prompt, because CanvasPilot is that
               program, while the cards for embedding pages, pictures, and files are what a drawing needs.
@@ -47,7 +47,7 @@ sections:
               The Knowledge subsystem shall find the cards that fit some words, such as the name of a format or of a thing to
               draw, best first, with the same answer every time.
             justification: |
-              The user and the assistant seldom know the name of the card they need. Finding cards from the words of the
+              The assistant seldom knows the name of the card it needs. Finding cards from the words of the
               question puts the card that is about the thing in front of the cards that only mention it, and a list that is
               the same every time can be relied on in a prompt and compared in a test.
             children:
@@ -103,39 +103,3 @@ sections:
               - CanvasPilot-KnowledgeSkills-NameSkillsFromIds
             tests:
               - KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostOnlyCards
-
-          - id: CanvasPilot-Knowledge-BrowseCards
-            title: >-
-              The Knowledge subsystem shall offer a window that shows the cards to a user as a tree with a search box, with
-              the Markdown of a card read into headings, paragraphs, list items, and blocks of code with bold, italic, and
-              code text without losing any of its text, with the cards below a card and its related cards as links, and
-              with each example of a card ready to be copied.
-            justification: |
-              The cards are written for the assistant, but a user who can read them can tell the assistant exactly what is
-              wanted. A card that is shown as the Markdown it was typed in is hard to read, and a card that is shown with
-              part of its text missing would mislead, so what shows a card is made once, here, and checked on every card.
-              A user who has to leave the window to follow a reference or to take an example would stop using it, so the
-              references and the examples are in the window.
-            children:
-              - CanvasPilot-KnowledgeMarkdown-ParseCardDialect
-              - CanvasPilot-KnowledgeMarkdown-DrawBlocks
-              - CanvasPilot-KnowledgeBrowser-ShowTreeAndSelectedCard
-              - CanvasPilot-KnowledgeBrowser-SearchCards
-              - CanvasPilot-KnowledgeBrowser-NavigateRelatedCards
-              - CanvasPilot-KnowledgeBrowser-CopyExamples
-              - CanvasPilot-KnowledgeBrowser-CloseOnRequest
-            tests:
-              - KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow
-              - KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample
-
-          - id: CanvasPilot-Knowledge-BeUsableWithAssistiveTechnology
-            title: >-
-              The Knowledge subsystem shall give the window that shows the cards names for its entries and tooltips for the
-              buttons that show no text, and let every button be reached with the keyboard.
-            justification: |
-              Reading the cards must be possible for people who use a screen reader or only the keyboard. An entry without a
-              name is read as nothing, and a button that cannot take the focus cannot be reached.
-            children:
-              - CanvasPilot-KnowledgeBrowser-BeUsableWithAssistiveTechnology
-            tests:
-              - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize

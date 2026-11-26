@@ -21,10 +21,12 @@ temporary project folders, and the real filter of drawings. The history test use
 what the transcript holds, which files are in the project, what the payload and the inspector hold, and that the draft
 is empty or kept. The views are verified by the headless UI tests described in the unit verification documents; the
 subsystem requirements about what the panel offers in its view (prompts, hiding, the attach button, the names of the
-buttons, and following the latest message of the transcript) are linked to those UI tests, which run the real panel
-with the real composer and editing view. What these requirements ask for can only be seen in a laid-out view, and the
-subsystem tests run without a user interface platform. The system test that composes the whole application is
-described in the system verification.
+buttons, and following the latest message of the transcript) are linked to those UI tests, which run the real panel with
+the real composer and editing view. The subsystem requirement to show a completed reply with its formatting is verified
+by the headless UI test in `ChatSubsystemUiTests.cs`, which runs the real panel, composer, views of the rows, and
+`ReplyMarkdown` with a scripted copilot. What these requirements ask for can only be seen in a laid-out view, and the
+subsystem tests run without a user interface platform. The system test that composes the whole application is described
+in the system verification.
 
 ### Test Environment
 
@@ -131,8 +133,19 @@ a requirement):
   attach button adds the picked files as chips,
   and every button that shows only an icon has a name, a tooltip, and a target of at least 28 by 28 pixels. These are
   verified by the headless UI tests of the panel.
+- A completed reply is drawn with a semibold heading, bold, italic, and code runs without their markers, a dot and a
+  number for its items, and a block of code, all as selectable text, with a line that holds a link kept as its text, and
+  the plain text of the reply is hidden.
 
 ### Test Scenarios
+
+**ChatSubsystem_ShowRepliesFormatted_CompletedReply_DrawsHeadingsListsCodeAndStyledText**: In a headless window, the
+real panel over the real composer sends "Draw a box", and a scripted copilot streams a reply with a heading, a paragraph
+with bold, italic, and code text, a bulleted and a numbered item, a fenced block of SVG, and a line with a link, and
+completes. The reply shows the Markdown panel instead of the plain text: six blocks, a semibold heading "Plan", a
+paragraph whose bold, italic, and code runs carry their styles without asterisks or backticks, the markers a dot and
+`2.`, a code block that holds `<rect/>`, and the link line as written, every text of them selectable. This scenario is
+tested by `ChatSubsystem_ShowRepliesFormatted_CompletedReply_DrawsHeadingsListsCodeAndStyledText`.
 
 **ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile**: The real
 `ChatPanelViewModel` over the real composer (and the real payload builder) and a scripted copilot sends "Draw a box".

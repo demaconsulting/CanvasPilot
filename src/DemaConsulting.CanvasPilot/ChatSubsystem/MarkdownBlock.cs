@@ -18,10 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     A paragraph of a card: the lines of the source that follow each other, joined with a space.
+///     A block of Markdown text that has been read: a heading, a paragraph, an item of a list, or a block of code.
+///     The blocks are plain values, so <see cref="MarkdownBlocksPanel" /> can draw them with its own controls.
 /// </summary>
-/// <param name="Spans">The text of the paragraph, in runs that have one style each.</param>
-public sealed record ParagraphBlock(IReadOnlyList<MarkdownSpan> Spans) : MarkdownBlock;
+/// <remarks>
+///     The hierarchy is closed: only the blocks of this library derive from it, which is why the constructor is not
+///     visible outside the assembly.
+/// </remarks>
+public abstract record MarkdownBlock
+{
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="MarkdownBlock" /> class; only the blocks of this library can derive from it.
+    /// </summary>
+    private protected MarkdownBlock()
+    {
+    }
+}

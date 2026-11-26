@@ -8,10 +8,10 @@
 #   with the example and follow-up prompts, the composer card below it with the buttons that attach files, that listen
 #   while held, that send, and that stop the copilot, the banner of the readiness of the provider, the joining of the
 #   marks on the picture to the message, and the window that shows exactly what the assistant would receive for a
-#   message. It keeps the words of the conversation of each project on the user's computer, outside the project folder,
-#   restores them when the project is opened, and clears them on request. It uses the Composer, Annotation,
-#   Payload, Speech, and Knowledge (Markdown only) subsystems, the Project information types, and the Agent subsystem
-#   through its contract only, and
+#   message. It shows each completed reply of the copilot with its Markdown formatting drawn. It keeps the words of the
+#   conversation of each project on the user's computer, outside the project folder, restores them when the project is
+#   opened, and clears them on request. It uses the Composer, Annotation, Payload, and Speech subsystems, the Project
+#   information types, and the Agent subsystem through its contract only, and
 #   holds none of their rules; it does not depend on the application shell, which places it in the chat column of the
 #   main window and hides and shows that column when the panel asks
 # - Subsystem requirements describe the behavior of the units working together
@@ -64,6 +64,22 @@ sections:
               - CanvasPilot-ChatTurnRunner-ShowToolCalls
             tests:
               - ChatSubsystem_ConverseWithCopilot_SentMessageGetsStreamedAnswerAndToolRows_ComposerWaitsMeanwhile
+
+          - id: CanvasPilot-Chat-ShowRepliesFormatted
+            title: >-
+              The Chat subsystem shall show each completed reply of the AI copilot with its Markdown formatting drawn
+              instead of its markers (headings, bulleted and numbered lists, fenced blocks of code, and bold, italic, and
+              code text) as text that the user can select, with any other construct of the reply kept as text.
+            justification: |
+              A reply that is shown with its markers is hard to read, and a reply that is shown with part of its text
+              missing would mislead, so the formatting that a reply uses most is drawn and anything else is kept as it was
+              written. The user takes words from a reply back to the copilot, so the text must be selectable.
+            children:
+              - CanvasPilot-ReplyMarkdown-ReadFormatting
+              - CanvasPilot-ReplyMarkdown-KeepOtherTextAsText
+              - CanvasPilot-ReplyMarkdown-DrawBlocks
+            tests:
+              - ChatSubsystem_ShowRepliesFormatted_CompletedReply_DrawsHeadingsListsCodeAndStyledText
 
           - id: CanvasPilot-Chat-StopTheCopilotTurn
             title: >-

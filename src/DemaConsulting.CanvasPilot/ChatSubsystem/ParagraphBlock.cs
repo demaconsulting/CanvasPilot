@@ -18,11 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     A heading of a card.
+///     A paragraph of a Markdown text: the lines of the source that follow each other, joined with a space.
 /// </summary>
-/// <param name="Level">The level of the heading, from 1 for <c>#</c> to 6 for <c>######</c>.</param>
-/// <param name="Spans">The text of the heading, in runs that have one style each.</param>
-public sealed record HeadingBlock(int Level, IReadOnlyList<MarkdownSpan> Spans) : MarkdownBlock;
+/// <param name="Spans">The text of the paragraph, in runs that have one style each.</param>
+public sealed record ParagraphBlock(IReadOnlyList<MarkdownSpan> Spans) : MarkdownBlock;

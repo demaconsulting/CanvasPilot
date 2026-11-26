@@ -158,27 +158,6 @@ sections:
                   - MainWindowView_SettingsMenuItem_OpensSettingsDialogAndCancelCloses
                   - MainWindowView_AboutMenuItem_OpensAboutDialogAndCloseButtonCloses
 
-              - id: CanvasPilot-MainWindowShell-ShowDrawingKnowledge
-                title: >-
-                  The MainWindowShell shall offer a Drawing Knowledge item in the Help menu, above About, that reads the
-                  cards of the application only when it is first used and shows the browser of the drawing knowledge in a
-                  window of its own that does not block the main window, shall bring the open browser to the front instead
-                  of opening a second one, shall close the browser with the main window, shall be unavailable when the
-                  application has no knowledge, and shall log and show to the user, instead of failing, a catalog that
-                  cannot be read.
-                justification: |
-                  The cards help the user write what is wanted, and they are read while the user works, so the window must
-                  not block the application, and one is enough. Reading the cards at the first use keeps the start of the
-                  application as fast as before. A card that cannot be read is a defect of the application, which the user
-                  can report only if it is said and logged, and must not take the application down.
-                tests:
-                  - MainWindowShell_ShowDrawingKnowledge_ShowsBrowserOnTheCatalog
-                  - MainWindowShell_ShowDrawingKnowledge_WithoutKnowledgeOrDialogService_DoesNothing
-                  - MainWindowShell_ShowDrawingKnowledge_CatalogCannotBeLoaded_LogsAndShowsMessage
-                  - MainWindowView_DrawingKnowledgeMenuItem_ShowsBrowserWindowThatDoesNotBlock
-                  - MainWindowView_DrawingKnowledgeMenuItem_SecondRequest_ReusesTheOpenBrowser
-                  - MainWindowView_Close_ClosesTheBrowserItOwns
-
               - id: CanvasPilot-MainWindowShell-ProvideImageMenuSeam
                 title: >-
                   The MainWindowShell shall offer Export as PNG and Copy Image commands that are available only

@@ -18,21 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     Shows the browser of the drawing knowledge to the user. The command of the Help menu asks for it and does not
-///     know what shows it, because showing a window needs the main window as its owner; the main window implements it
-///     through the dialog service, and tests supply a substitute.
+///     How a run of Markdown text is drawn.
 /// </summary>
-public interface IKnowledgeBrowserLauncher
+public enum MarkdownSpanStyle
 {
     /// <summary>
-    ///     Shows the browser in a window of its own that does not block the main window. There is one browser at a time:
-    ///     when it is already open, the open window is brought to the front and the view model that was given is not used.
+    ///     Plain text.
     /// </summary>
-    /// <param name="viewModel">The view model of the browser.</param>
-    /// <returns>A task that completes when the window is shown, not when it is closed.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="viewModel" /> is <see langword="null" />.</exception>
-    Task ShowKnowledgeBrowserAsync(KnowledgeBrowserViewModel viewModel);
+    Normal,
+
+    /// <summary>
+    ///     Text between <c>**</c> markers.
+    /// </summary>
+    Bold,
+
+    /// <summary>
+    ///     Text between <c>*</c> markers.
+    /// </summary>
+    Italic,
+
+    /// <summary>
+    ///     Text between backticks, drawn as code.
+    /// </summary>
+    Code
 }

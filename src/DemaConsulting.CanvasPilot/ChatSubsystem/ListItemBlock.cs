@@ -18,11 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     A fenced block of code of a card.
+///     An item of a bulleted or numbered list of a Markdown text, with the lines that continue it joined with a space.
 /// </summary>
-/// <param name="Language">The language that follows the opening fence, or <see langword="null" /> when there is none.</param>
-/// <param name="Text">The lines of the block as the source wrote them, joined with line feeds and without a final line feed.</param>
-public sealed record CodeBlock(string? Language, string Text) : MarkdownBlock;
+/// <param name="Marker">The marker of the item as the source wrote it: <c>-</c>, <c>*</c>, or <c>+</c> for a bullet, or the number and its dot or parenthesis, such as <c>1.</c>.</param>
+/// <param name="Spans">The text of the item, in runs that have one style each.</param>
+public sealed record ListItemBlock(string Marker, IReadOnlyList<MarkdownSpan> Spans) : MarkdownBlock;

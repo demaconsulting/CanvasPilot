@@ -18,8 +18,8 @@ are talking about. When you send a message, the AI copilot answers it: it looks 
 files of the project, draws them, looks at the result, and fixes what it finds. The copilot works with a local Ollama
 server or with your installed GitHub Copilot CLI (see *Setting Up an AI Provider*). The copilot can only use
 CanvasPilot's own tools, which are confined to the project folder, and it overwrites files directly, with no backup, so
-keep your projects under source control. The Help menu opens the drawing knowledge, a guide to the image formats and to
-CanvasPilot that you can read card by card and that the copilot uses as well. Style kits let you keep a look (colors,
+keep your projects under source control. The copilot carries the drawing knowledge, a guide to the image formats and to
+CanvasPilot that is part of the program (see *Drawing Knowledge*). Style kits let you keep a look (colors,
 fonts, sizes, and example images) for a project or a team, export pictures at sizes that fit slides, email, and paper,
 and check a picture against the colors of the style.
 
@@ -42,8 +42,7 @@ This user guide covers:
   model and its reasoning level
 - Working with the copilot: asking, marks and attachments, what the copilot can do in the project, Stop, the chat
   history, the files that the copilot writes, and what to do about errors
-- Reading the drawing knowledge: opening the browser, the tree of cards, searching, following related cards, and
-  copying examples
+- What the copilot knows about drawing: the drawing knowledge that comes with the program
 - Style kits: choosing the style of a project, the Style Kits window, where kits are kept and which copy wins, making,
   editing, importing, and exporting kits, exporting at sizes, and checking a picture against the style
 - The Settings dialog, with the AI Provider, Speech, Style Kits, and Appearance pages, and the dark and light themes
@@ -1035,48 +1034,8 @@ that you use, and what the marks and attachments of a message mean. The cards of
 library that is installed with CanvasPilot, so they describe exactly what the application can draw. The few cards that
 are only about the program that hosts CanvasNet, such as the options of a render in a program's code, are left out,
 because CanvasPilot sets those itself; the cards about embedding pages of documents, pictures, and files, and about
-setting a view or a parameter in a link, are kept. You can read the cards yourself, and the AI copilot uses the same
-cards: it is given their index and looks up a card when it needs it. Opening the browser sends nothing anywhere.
-
-## Opening the Browser
-
-Choose **Help > Drawing Knowledge...** to open the **Drawing Knowledge** window. It opens beside the main window and
-does not block it, so you can read a card while you work on a picture. Choosing the command again brings the window
-that is already open to the front. The window closes when you choose **Close** or press Escape, and with the main
-window. If the cards cannot be read, a message says so and the log has the details.
-
-## The Tree and the Cards
-
-The tree at the left lists the cards. Cards that have cards below them open and close with the arrow, and pausing the
-pointer over a card shows its summary. Choose a card to read it in the pane at the right, which shows:
-
-- the title and the one-line summary of the card, its tags, and the other names that it is known by,
-- the text of the card, with headings, lists, bold, italic, and code text, and blocks of code that you can select,
-- **Cards below**, the cards that the card is the parent of,
-- **See also**, the cards that are related to it,
-- **Examples**, each with a name, a short description, and its text.
-
-The line between the tree and the card can be dragged to make either wider. Before you choose a card the pane tells you
-to choose one or to search.
-
-## Searching the Cards
-
-Type two or more letters into the box above the tree to search. The hits replace the tree, best first, each with its
-title and summary, and choosing a hit shows its card. The search looks at the names, other names, titles, tags, and
-summaries of the cards and the names of their examples, not at the whole text of a card, so the card that is about a
-thing comes before the cards that only mention it. When no card fits, the list says "No card matches those words."
-Clear the box, or type fewer than two letters, to see the tree again. The card that you are reading stays as it is
-while you type.
-
-## Following Cards and Copying Examples
-
-Choose a card under **Cards below** or **See also** to go to it. The tree opens the cards above it and selects it, so
-you always see where you are, however you reached the card.
-
-Each example has a **Copy** button. Choose it to put the text of the example on the clipboard, then paste it into a
-new file in your project and change it. A line under the cards says "Copied example" with the name of the example when
-it worked, or "Could not reach the clipboard." when another program is holding the clipboard; try again in a moment.
-Nothing is written to your project by the browser.
+setting a view or a parameter in a link, are kept. The AI copilot uses the cards: it is given their index and looks up a
+card when it needs it. Looking up a card sends nothing anywhere.
 
 # Style Kits
 
@@ -1658,14 +1617,6 @@ or undid it; redo or Ctrl+Y brings them back.
 
 **Drag-out does not work while marking.** Dragging the picture out is turned off while a marking tool is chosen. Choose
 **Select** on the marking bar first.
-
-**The Drawing Knowledge window does not open.** A message says that the cards could not be read and the log has the
-details. Cards are part of the installation, so reinstall CanvasPilot with the package from the releases page. If the
-window is already open it is brought to the front instead of opening a second one.
-
-**The search finds no card.** The search needs two or more letters and looks at the names, titles, tags, and summaries
-of the cards, not at their whole text. Try another word for the thing, such as the name of the format, or open the tree
-and read the card that is about it.
 
 **A shared folder of style kits is not reachable.** The Style Kits page and the Style Kits window say that the folder
 cannot be reached, for example because the network share is offline or you may not read it. The other places still work,

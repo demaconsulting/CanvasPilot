@@ -21,7 +21,7 @@
 namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 
 /// <summary>
-///     The drawing knowledge that the user can browse and that the drawing assistant can look things up in: a tree of
+///     The drawing knowledge that the drawing assistant can look things up in: a tree of
 ///     cards, each with a body, related cards, and examples. It is a seam, so that what searches the cards and builds
 ///     prompts from them can be tested on small catalogs.
 /// </summary>

@@ -130,8 +130,6 @@ services, or display is required.
   itself: the compact index is within its budget and names the cards of CanvasNet and of CanvasPilot, the help tool
   answers the index, a card, an example, and a search, there is a skill for each card, and no card about what the host
   program controls is offered.
-- Drawing Knowledge in the Help menu of the composed application gives a browser over that catalog, in which the user
-  can search, open a card, follow a related card, and copy an example.
 - Style kits are found in the program, the folder of the user, the project, and the shared folders, the most local copy
   of a kit wins, an unreachable shared folder and a kit with a wrong value are reported without hiding the other kits,
   and the Style Kits window makes, exports, deletes, imports, and copies kits into the project, and chooses the style of
@@ -644,21 +642,13 @@ effect, and the log holds the start and stop entries. The platform requirements 
 and runtime with source filters. This scenario is tested by
 `CanvasPilot_Startup_ComposeApplication_ProducesWorkingShell`.
 
-**CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork**: The catalog of the application,
-which the Help menu shows, is asked for as an assistant would ask. The compact index is within its budget and has a line
+**CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork**: The catalog of the application
+is asked for as an assistant would ask. The compact index is within its budget and has a line
 for the card of CanvasPilot and a card of CanvasNet; the help tool answers with no arguments the same index, for a topic
 the card of the marks of a message, for an example the text of the example in a fenced block, and for a query the cards
 that fit it. There is one skill for each card, with names that are all different. The card of the layout of a project is
 there, no card that is only about the host program is, and the card of the PDF format is. This scenario is tested by
 `CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork`.
-
-**CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog**: The application is composed as at
-startup with a dialog service that plays the window, and the user chooses Drawing Knowledge. The command is usable and
-gives the dialog service one browser whose tree is the roots of the catalog of the application, with the cards of
-CanvasPilot among them. The user searches for a word and gets hits, opens the card of the layout of a project and sees
-its title and text, follows the first related card of it, opens the card of deliverables, and copies its first example:
-the text of the example is on the clipboard that records and the status names it. No message was shown. This scenario is
-tested by `CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog`.
 
 **CanvasPilot_PreviewImages_SelectedFile_ShowsRenderedPictureOrError**: The composed application's user creates a
 project that holds a good and a broken SVG and selects the good file: the preview shows a 32 by 16 picture and the
@@ -1099,7 +1089,7 @@ service over the same folder reads the dark choice. This scenario is tested by
 `CanvasPilot_Theme_ChoiceInSettingsDialogChangesTheWindowAndIsRemembered`.
 
 **Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The windows of the composed application (the welcome
-screen, the workspace of an open project, About, Drawing Knowledge, New Project, Style Kits, and every page of the
+screen, the workspace of an open project, About, New Project, Style Kits, and every page of the
 Settings dialog) are walked in both theme variants (a headless UI test in `AccessibilityViewTests.cs`). Every button or
 toggle that shows no text has a name and a tooltip, can take the keyboard focus, and is at least 28 by 28 pixels, and
 every text field, drop-down, slider, number box, list, and tree has a name or a placeholder. This scenario is tested by

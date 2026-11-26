@@ -4,24 +4,22 @@
 
 ### Overview
 
-The `Knowledge` subsystem holds what the AI copilot, and the user, need to know to draw with
+The `Knowledge` subsystem holds what the AI copilot needs to know to draw with
 the formats CanvasNet draws and to work in a CanvasPilot project. The knowledge is a tree of cards. Each card has a
 title, a one-line summary, tags, other names, a body in Markdown that links to other cards and examples, related cards,
 and examples with their text. The cards come from two places: the help of CanvasNet, which tells how to write each
 format and is as current as the library that draws the files, and cards of CanvasPilot that are embedded in the
 application and tell what the library cannot know: where files go in a project, how to make the picture the user uses,
-how to read the marks and attachments of a message, and what the user sees. Everything in it except two units, the
-window that shows the cards to the user and the control that draws their text, has no dependency on the user
-interface; none of it depends on any provider of a language model or on any agent library, so the knowledge can be
-given to any provider of the copilot.
+how to read the marks and attachments of a message, and what the user sees. None of it depends on the user interface,
+on any provider of a language model, or on any agent library, so the knowledge can be given to any provider of the
+copilot.
 
-The subsystem contains seven units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
+The subsystem contains five units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
 which finds the cards that fit some words, `KnowledgePromptBuilder`, which writes the cards as text for the prompt of an
-assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, `KnowledgeSkills`, which
-describes each card as a skill, `KnowledgeMarkdown`, which reads the Markdown of a card into blocks and draws them as
-selectable text, and `KnowledgeBrowser`, the window in which the user reads the cards. It depends on CanvasNet for the
-help cards, on `Logging` for the log of a clipboard failure, and on `Project`, `Composer`, and `Annotation` only in its
-tests, which check that what the cards of CanvasPilot say about the application is what the code says.
+assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, and `KnowledgeSkills`, which
+describes each card as a skill. It depends on CanvasNet for the help
+cards, and on `Project`, `Composer`, and `Annotation` only in its tests, which check that what the cards of CanvasPilot
+say about the application is what the code says.
 
 ### Interfaces
 
@@ -77,32 +75,6 @@ tests, which check that what the cards of CanvasPilot say about the application 
 - *Constraints*: The skills are made as they are read. The names of the skills of the catalog of the application are all
   different, which the tests check. Safe for concurrent use.
 
-**KnowledgeMarkdown**: The Markdown of a card as blocks, and the control that draws them.
-
-- *Type*: In-process static class, with the immutable values `HeadingBlock`, `ParagraphBlock`, `ListItemBlock`,
-  `CodeBlock` (all `MarkdownBlock`), `MarkdownSpan`, and the enumeration `MarkdownSpanStyle`; and the Avalonia control
-  `MarkdownBlocksPanel`.
-- *Role*: Provider.
-- *Contract*: `Parse` reads the Markdown that the cards use into headings of six levels, paragraphs, list items with
-  their markers, and fenced blocks of code with their language, with the text of a heading, paragraph, or item as runs
-  of normal, bold, italic, and code text. `MarkdownBlocksPanel` draws the blocks it is given in its `Blocks` property as
-  text that can be selected, with the code blocks on a raised surface of the theme; the window of the cards and the chat
-  panel use it.
-- *Constraints*: Any text can be read and no letter or digit of a card is lost, which the tests check on every card.
-  `Parse` is safe for concurrent use; the panel is used on the thread of the user interface.
-
-**KnowledgeBrowser**: The window in which the user reads the cards.
-
-- *Type*: In-process .NET window with its view model, the view models of its nodes, links, and examples, the seam
-  `IKnowledgeClipboard`, and the seam `IKnowledgeBrowserLauncher` by which the main window is asked to show it.
-- *Role*: Provider (the view model and the window) and Consumer (the catalog, the search, and the Markdown reader).
-- *Contract*: The view model shows the cards as a tree, runs the search of the knowledge from a search box, and shows
-  the card that is chosen with its text, the cards below it, its related cards, and its examples. `Select` shows a card
-  by identifier, the links are commands that call it, and an example can be copied to the clipboard. The launcher shows
-  the window beside the main window, one at a time.
-- *Constraints*: Owned by the user interface thread. It changes nothing in the catalog. A failure to reach the clipboard
-  is a sentence in its status and not an exception.
-
 ### Design
 
 **Extend first, then leave cards out.** The catalog is made from the help catalog of CanvasNet by adding the cards that
@@ -132,9 +104,9 @@ CanvasNet); the root card of CanvasPilot tells the assistant that it cannot run 
 (`canvasnet_help` and the file tools).
 
 **Own values.** Every card is copied into a `KnowledgeCard`, so that what searches the cards, writes them for a prompt,
-and shows them does not depend on the help types of CanvasNet and can be tested with small catalogs. The links of a body
-are written once, here, as the identifier of a card in code quotes or as the name of an example and the card that holds
-it; a link to a card that is left out is plain text.
+makes skills of them, and answers the help tool does not depend on the help types of CanvasNet and can be tested with
+small catalogs. The links of a body are written once, here, as the identifier of a card in code quotes or as the name of
+an example and the card that holds it; a link to a card that is left out is plain text.
 
 **Deterministic and shared.** The default catalog is built once, thread-safe, from embedded resources only, so no file
 or network is touched and every caller sees the same tree.
@@ -158,18 +130,6 @@ of the card in its name, the title and summary as its description, and the card 
 text of all the cards is many times what should be built up front, so the skills are made one at a time as they are
 read.
 
-**An own small reader for the cards.** The cards use only headings, paragraphs, lists, fenced code, and bold, italic,
-and code text, and their links were already written as identifiers. A reader of those constructs, whose tests prove on
-every card that no text is lost, shows the cards without a Markdown library, which would be one more third-party item to
-document, test, and keep current.
-
-**A window that reads, and nothing else.** The browser is the one place where the knowledge meets the user interface, so
-it is kept as a thin window over a view model that can be tested without one. The window never changes the catalog; it
-shows a tree, runs the same search as the assistant, and shows one card at a time. The three ways to a card (the tree, a
-hit of the search, and a link) all end in one method, so a card looks the same however it was reached and the tree
-always shows where it is. The clipboard is a seam, because it belongs to a window, and a failure to reach it is a
-sentence the user can read and not an exception.
-
 ### Dependencies
 
 - **KnowledgeCatalog** unit: the tree of cards.
@@ -178,13 +138,8 @@ sentence the user can read and not an exception.
   results of the search.
 - **KnowledgeTools** unit: the tool for an assistant, which answers from the catalog, the search, and the text writer.
 - **KnowledgeSkills** unit: the cards as skills, which reads the catalog and writes each card with the text writer.
-- **KnowledgeMarkdown** unit: the blocks of the Markdown of a card, which has no dependency on another unit.
-- **KnowledgeBrowser** unit: the window of the user, which reads the catalog, the search, and the Markdown blocks.
-- **Logging** subsystem: the log, used only by the browser, for a clipboard failure.
-- **Avalonia** and **CommunityToolkit.Mvvm** (OTS): the window of the browser, which is the only unit that uses them.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.
 
-The view below shows the dependencies between the units of this subsystem and on CanvasNet, from the SysML2 model; the
-hub supplier `RollingFileLogger` is left out.
+The view below shows the dependencies between the units of this subsystem and on CanvasNet, from the SysML2 model.
 
 ![Knowledge dependencies](KnowledgeSubsystemDependencyView.svg)

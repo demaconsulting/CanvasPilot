@@ -53,7 +53,7 @@ parallelization disabled; no display is required.
 documented type (the fill tokens for dictated words and code among them); the surfaces, the main text color, and the
 focus ring differ between the variants. This scenario is tested by `ThemeResources_Tokens_ResolveInBothVariants`.
 
-**ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant**: A knowledge card paragraph with a code span, in a
+**ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant**: A Markdown paragraph with a code span, in a
 window that asks for dark, shows the code run with the `CpFillCode` color of the dark variant and plain text with no
 background; after the window asks for light, the code run shows the color of the light variant. This scenario is tested
 by `ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant`.

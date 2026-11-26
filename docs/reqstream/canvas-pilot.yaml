@@ -698,7 +698,6 @@ sections:
           - CanvasPilot-Settings-BeUsableWithAssistiveTechnology
           - CanvasPilot-Speech-BeUsableWithAssistiveTechnology
           - CanvasPilot-Style-BeUsableWithAssistiveTechnology
-          - CanvasPilot-Knowledge-BeUsableWithAssistiveTechnology
         tests:
           - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
           - Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey
@@ -828,6 +827,7 @@ sections:
           - CanvasPilot-Agent-ConverseInProjectConversations
           - CanvasPilot-Chat-ShowCopilotConversation
           - CanvasPilot-Chat-HideConversation
+          - CanvasPilot-Chat-ShowRepliesFormatted
           - CanvasPilot-AppShell-ComposeAiCopilot
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext
@@ -942,11 +942,10 @@ sections:
           program that hosts CanvasNet controls, and without depending on any language model or agent library.
         tags: [system]
         justification: |
-          A language model writes good drawing files only when it knows how the drawing library reads them, and the
-          people who use the application want to read the same advice. Taking the cards from the drawing library keeps
-          the advice as current as the library, and adding the application's own cards tells the copilot where files go
-          and how to read the marks the user makes. The copilot may come from more than one
-          provider, so the knowledge is kept apart from every provider and offered as plain values and text.
+          A language model writes good drawing files only when it knows how the drawing library reads them. Taking the
+          cards from the drawing library keeps the advice as current as the library, and adding the application's own
+          cards tells the copilot where files go and how to read the marks the user makes. The copilot may come from more
+          than one provider, so the knowledge is kept apart from every provider and offered as plain values and text.
         children:
           - CanvasPilot-Knowledge-OfferDrawingCards
           - CanvasPilot-Knowledge-FindCards
@@ -955,22 +954,6 @@ sections:
           - CanvasPilot-Knowledge-DescribeAgentSkills
         tests:
           - CanvasPilot_ProvideDrawingKnowledge_ComposedCatalog_IndexCardExampleAndSearchWork
-
-      - id: CanvasPilot-System-BrowseDrawingKnowledge
-        title: >-
-          The application shall let the user open the drawing knowledge from the Help menu in a window that stays open
-          beside the work, to browse the cards as a tree, search them, read a card with the cards below it and those
-          related to it, and copy its examples.
-        tags: [system]
-        justification: |-
-          The cards are written for the assistant, but they also explain how each format works, and a user who can read
-          them can tell the assistant exactly what is wanted. A window that does not block the application lets the user
-          read a card while working.
-        children:
-          - CanvasPilot-Knowledge-BrowseCards
-          - CanvasPilot-AppShell-DrawingKnowledgeMenu
-        tests:
-          - CanvasPilot_BrowseDrawingKnowledge_HelpMenuCommand_ShowsBrowserOnTheCatalog
 
       - id: CanvasPilot-System-DefineStyleKits
         title: >-

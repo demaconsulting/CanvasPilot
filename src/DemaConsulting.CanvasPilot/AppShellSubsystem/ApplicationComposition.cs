@@ -525,7 +525,6 @@ public sealed class ApplicationComposition : IDisposable
             pages,
             exporter,
             defaultProjectsFolder,
-            () => KnowledgeCatalog.Default,
             stylePicker,
             styleCheck,
             dialogs => new StyleKitManagerViewModel(styleCatalog, styleSelection, renderer, dialogs, projects, logger),

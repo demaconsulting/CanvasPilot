@@ -1,0 +1,61 @@
+---
+# Software Unit Requirements for the ReplyMarkdown Unit
+#
+# The ReplyMarkdown unit of the Chat subsystem reads the Markdown text of a completed reply of the copilot into blocks and
+# runs of text, and draws those blocks as text that the user can select and copy (the control MarkdownBlocksPanel, which
+# the chat panel uses for the replies of the copilot). It reads headings, paragraphs, bulleted and numbered lists, fenced
+# blocks of code, and bold, italic, and code text; every other construct is kept as text. The reader has no dependency on
+# the user interface, on a Markdown library, or on any provider of a language model; only the control that draws the
+# blocks depends on the user interface.
+
+sections:
+  - title: CanvasPilot Requirements
+    sections:
+      - title: Chat Subsystem Requirements
+        sections:
+          - title: ReplyMarkdown Requirements
+            requirements:
+              - id: CanvasPilot-ReplyMarkdown-ReadFormatting
+                title: >-
+                  The ReplyMarkdown unit shall read Markdown text into headings of six levels, paragraphs, bulleted and
+                  numbered list items with their markers, and fenced blocks of code with their language, in the order of
+                  the text, joining the lines of a paragraph or item with a space and keeping the lines of code as they
+                  are, and shall read bold, italic, and code text inside them into runs of one style each.
+                justification: |
+                  The replies of the copilot are shown to the user, and Markdown that is shown with its markers is hard to
+                  read. Headings, lists, blocks of code, and bold, italic, and code text are the formatting that a reply
+                  about a drawing uses most, so a small reader of these does the work without adding a Markdown library,
+                  which would be one more third-party item to document and keep up to date.
+                tests:
+                  - ReplyMarkdown_Parse_Headings_AreReadByLevel
+                  - ReplyMarkdown_Parse_Paragraphs_JoinLinesAndSplitAtBlankLines
+                  - ReplyMarkdown_Parse_Lists_ReadMarkersAndContinuations
+                  - ReplyMarkdown_Parse_LinesThatOnlyLookLikeListItems_AreParagraphs
+                  - ReplyMarkdown_Parse_FencedCode_IsKeptVerbatim
+                  - ReplyMarkdown_Parse_Spans_ReadBoldItalicAndCode
+                  - ReplyMarkdown_Parse_WholeReply_KeepsOrderAndMergesRuns
+
+              - id: CanvasPilot-ReplyMarkdown-KeepOtherTextAsText
+                title: >-
+                  The ReplyMarkdown unit shall keep as text every marker that has no end and every line that is not a
+                  heading, a list item, or a fence, so that no letter or digit of such text is lost.
+                justification: |
+                  A reply may use constructs that the reader does not know, such as links, tables, or quotes. Text that
+                  is not formatted is still readable, but a reply with part of its text missing would mislead the user,
+                  so any text that the reader does not know must be shown as it was written.
+                tests:
+                  - ReplyMarkdown_Parse_Spans_ReadBoldItalicAndCode
+                  - ReplyMarkdown_Parse_ConstructsItDoesNotRead_KeepEveryLetterAndDigit
+
+              - id: CanvasPilot-ReplyMarkdown-DrawBlocks
+                title: >-
+                  The ReplyMarkdown unit shall draw the blocks it reads as text that the user can select and copy: a
+                  heading in semibold type, a paragraph with its bold, italic, and code text shown in those styles, a list
+                  item with a dot for a bullet or its number as written, and a block of code with its lines in a fixed-width
+                  font in a block of its own, and shall draw the new blocks, or nothing, when the blocks it is given change.
+                justification: |
+                  A reply that is shown as it was typed, with its markers, is hard to read, and the user takes words from a
+                  reply back to the copilot, so the text must be selectable. The control follows the blocks it is given, so
+                  that a reply is drawn again when its text is complete.
+                tests:
+                  - MarkdownBlocksPanel_Blocks_DrawsEveryKindOfBlock

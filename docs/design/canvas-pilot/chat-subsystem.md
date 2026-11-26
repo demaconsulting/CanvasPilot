@@ -19,18 +19,18 @@ opened. It holds no rule of editing, sending, dictation, marking, payload buildi
 to the `Composer`, `Speech`, `Annotation`, `Payload`, and `Agent` subsystems, and the `Chat` subsystem connects what
 they do to what the user sees.
 
-The subsystem contains five units: `ChatPanel`, the panel with the transcript, its rows, the buttons, the busy row, the
+The subsystem contains six units: `ChatPanel`, the panel with the transcript, its rows, the buttons, the busy row, the
 banner of the readiness of the copilot, and the joining of marks, `ChatTurnRunner`, the logic of one turn of the
 conversation with the copilot (the rows, the live status, Stop, and the usage caption), `ChatHistoryStore`, which keeps
-the words of the conversation of each project on this computer, `PayloadInspector`, the window that shows a payload, and
-`FollowUpSuggestions`, the planner of the prompts that the panel offers. It depends on `Composer` (the view model of the
+the words of the conversation of each project on this computer, `PayloadInspector`, the window that shows a payload,
+`FollowUpSuggestions`, the planner of the prompts that the panel offers, and `ReplyMarkdown`, the reader and control
+that draw a completed reply with its Markdown formatting. It depends on `Composer` (the view model of the
 message, the editing view, and the chips), `Annotation` (the registry and the layer of marks), `Payload` (the payload,
 its describer, and the composer of mark pictures), `Speech` (dictation, only to prepare it, and the setting of the talk
-key, only to name it in the hints), `Knowledge` (only the Markdown reader and
-its panel, to draw the final text of a reply), `Agent` (only `IAgentService`, the readiness report, and the events of a
+key, only to name it in the hints), `Agent` (only `IAgentService`, the readiness report, and the events of a
 turn; never a provider, a tool, or a library), `Project` (the open project and the path of its file, which name its
 history, and the filter that tells which files are drawings), and `Logging`, and on nothing else of the application; in
-particular it does not depend on `AppShell` or `Settings`, and the `Agent` and `Knowledge` subsystems do not depend on
+particular it does not depend on `AppShell`, `Settings`, or `Knowledge`, and the `Agent` subsystem does not depend on
 it. `AppShell` depends on `Chat`: the
 composition root builds the panel and the store, and the main window shows the inspector, places the panel in the chat
 column of the workspace, hides and shows that column when the panel asks, and opens the settings when the panel asks.
@@ -129,6 +129,19 @@ reach the composer and the panel through the seams that `Composer` owns.
 - *Constraints*: The view model is owned by the user interface thread; the window disposes it when it closes. Nothing in
   the inspector can change the payload.
 
+**ReplyMarkdown**: The reader and control that draw a completed reply with its Markdown formatting.
+
+- *Type*: In-process .NET static class (`ReplyMarkdown`) with the immutable blocks (`HeadingBlock`, `ParagraphBlock`,
+  `ListItemBlock`, and `CodeBlock`, all `MarkdownBlock`), the run `MarkdownSpan` and the enumeration
+  `MarkdownSpanStyle`, and the Avalonia control `MarkdownBlocksPanel`.
+- *Role*: Provider to the chat panel.
+- *Contract*: `Parse` reads Markdown text into headings of six levels, paragraphs, list items with their markers, and
+  fenced blocks of code with their language, each heading, paragraph, and item as runs of normal, bold, italic, and code
+  text; every other construct is kept as text. `MarkdownBlocksPanel` draws the blocks it is given in its `Blocks`
+  property as text that can be selected.
+- *Constraints*: `Parse` holds no state, is safe for concurrent use, and never fails for any text other than a missing
+  one. The panel is owned by the user interface thread.
+
 ### Design
 
 **The conversation is what was sent and what the copilot answered.** The panel adds an entry for each
@@ -194,10 +207,11 @@ reported (a provider that reports tokens only has no multiplier in it) and, for 
 the request may still count. The caption is not part of the text and is not saved with the history.
 
 **What a reply looks like.** While a reply streams its text is plain and selectable, which is the cheapest thing to
-grow. When the part of the answer is whole, the reply is complete and its text is read once with `KnowledgeMarkdown` and
-drawn with `MarkdownBlocksPanel`, the same controls that show the knowledge cards, so that lists, headings, and code
-look as the model meant. A reply that was stopped or failed stays plain with a label, because its text may end in the
-middle of a construct. This is the only use of the `Knowledge` subsystem by `Chat`.
+grow. When the part of the answer is whole, the reply is complete and its text is read once with `ReplyMarkdown` and
+drawn with its `MarkdownBlocksPanel`, so that lists, headings, and code look as the model meant, and any construct
+that the reader does not know is kept as the text that was written. A reply that was stopped or failed stays plain with
+a label, because its text may end in the middle of a construct. The chat panel is the only user of the reader and its
+control, so the unit lives in `Chat` and no other subsystem is involved in drawing a reply.
 
 **A project change ends the turn.** A turn belongs to the project it was started in. When the project changes the panel
 stops the turn, empties the transcript at once, and drops the rows that the old turn still adds until it has ended, so
@@ -293,8 +307,9 @@ views. The hub suppliers `RollingFileLogger` and `PathHelpers`, which many units
 `ChatPanel` depends on `ComposerViewModel` and `ComposerEditor` (`Composer`), `MarkRegistry` and `AnnotationOverlay`
 (`Annotation`), `MarkImageComposer` and `MessagePayload` (`Payload`), `DictationService` and the setting of the talk key
 (`Speech`), `AgentContract`
-(`Agent`, for the readiness report), `KnowledgeMarkdown` (`Knowledge`, for the Markdown of a reply), `PayloadInspector`,
-`ChatTurnRunner`, `ChatHistoryStore`, and `FollowUpSuggestions`.
+(`Agent`, for the readiness report), `ReplyMarkdown` (for the Markdown of a reply), `PayloadInspector`,
+`ChatTurnRunner`, `ChatHistoryStore`, and `FollowUpSuggestions`. `ReplyMarkdown` depends on no other unit; its
+control uses Avalonia.
 
 ![Chat panel dependencies](ChatSubsystemPanelView.svg)
 

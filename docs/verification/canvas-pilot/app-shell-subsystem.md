@@ -31,8 +31,6 @@ services, or display are required.
 - Choices made in the settings dialog opened from the shell are stored and in effect in the next run, and the
   dialog hosts the AI Provider page followed by the Speech page, the Style Kits page, and the Appearance page.
 - The About dialog opened from the composed shell shows the application name, a version, and the six libraries.
-- The Drawing Knowledge command of the composed shell gives the dialog service a browser over the catalog of the
-  application, whose tree is the roots of the catalog.
 - The composer of the message created by the composition works in the folder of the project that is open, and has no
   project and no draft once the project is closed.
 - The layer for marks is the overlay of the preview pane with its tool bar in the toolbar slot of the stage, and it can
@@ -143,11 +141,6 @@ tested by `AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPage
 **AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries**: The About command of a composed shell
 shows a dialog with the application name, a non-blank version, and six libraries. This scenario is tested by
 `AppShellSubsystem_About_ComposedShell_ShowsIdentityVersionAndLibraries`.
-
-**AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication**: The Drawing Knowledge
-command of a composed shell is usable, gives the dialog service one browser whose tree is the roots of the catalog of
-the application, and the browser can show a card of CanvasPilot. This scenario is tested by
-`AppShellSubsystem_DrawingKnowledge_ComposedShell_ShowsBrowserOnTheCatalogOfTheApplication`.
 
 **AppShellSubsystem_ComposeApplication_StyleKitsPickerDefaultToolsAndExporterAreWired**: A composition whose user chose
 `clean` as the default kit finds the three kits that come with the program, shows no picker with no project, gives a
@@ -270,7 +263,7 @@ made with the arrow keys is saved, and `WorkspaceLayout_CloseWindow_SavesTheSize
 closing saves the size and that a new window opens with it.
 
 **Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize**: The welcome screen, the workspace of an open project,
-About, Drawing Knowledge, New Project, Style Kits, and every page of the settings are walked in both theme variants (a
+About, New Project, Style Kits, and every page of the settings are walked in both theme variants (a
 headless UI test in `AccessibilityViewTests.cs`); every button that shows no text has a name and a tooltip, can take the
 keyboard focus, and is at least 28 by 28 pixels, and every text field, list, tree, drop-down, and slider has a name.
 `Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey` checks the access keys of the menus,

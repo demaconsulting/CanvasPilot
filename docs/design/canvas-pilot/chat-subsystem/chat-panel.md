@@ -114,11 +114,11 @@ The unit is made of these parts, all in the user interface layer:
     (`Streaming`, `Completed`, `Stopped`, `Failed`) with `IsStreaming`, `IsComplete`, and `StatusLabel` (`Stopped` or
     `Failed`, otherwise empty). `AppendText` adds a piece while it streams; `Complete`, `Stop`, and `Fail` end it once,
     and after that it never changes. A reply made from restored text starts in a given state. `Blocks` is the text read
-    once by `KnowledgeMarkdown` when the reply is complete, and `null` otherwise. The view is two columns, 22 pixels for
-    the avatar and the rest for the content. On a row that opens a group the avatar (a round gradient sparkle) and the
-    name "Copilot" are shown; a row that does not open one has neither. The status label, `Stopped` or `Failed`, is a
-    small pill chip (`AssistantReplyStatus` is its text). The view shows the text as plain selectable text at 13 pixels
-    while `IsComplete` is false and draws `Blocks` with the Knowledge subsystem's `MarkdownBlocksPanel` once it is true,
+    once by `ReplyMarkdown` when the reply is complete, and `null` otherwise. The view is two columns, 22 pixels for the
+    avatar and the rest for the content. On a row that opens a group the avatar (a round gradient sparkle) and the name
+    "Copilot" are shown; a row that does not open one has neither. The status label, `Stopped` or `Failed`, is a small
+    pill chip (`AssistantReplyStatus` is its text). The view shows the text as plain selectable text at 13 pixels while
+    `IsComplete` is false and draws `Blocks` with the `MarkdownBlocksPanel` of the `ReplyMarkdown` unit once it is true,
     without a border; stopped and failed text stays plain, because it may end in the middle of a construct.
     `UsageCaption` and `HasUsageCaption` hold the line that says what the turn cost, which the turn runner puts on the
     last reply of a turn with `SetUsageCaption` (it is no part of the text, is not saved with the history, and can be
@@ -408,8 +408,7 @@ a tool chip, and the busy line do not stop when the system asks for reduced moti
 - **AgentService** (through `IAgentService`, `AgentReadinessReport`, and the events only): the readiness and the turns,
   by way of the **ChatTurnRunner**; the panel also follows `FileWritten` of the service, to know that the copilot wrote
   a drawing.
-- **KnowledgeMarkdown** and **MarkdownBlocksPanel** of the Knowledge subsystem: the final text of a reply drawn as
-  Markdown. This is the only use of the Knowledge subsystem.
+- **ReplyMarkdown** and its **MarkdownBlocksPanel**: the final text of a reply drawn as Markdown.
 - **ChatHistoryStore** (through `IChatHistoryStore`, `ChatHistoryRow`, and `ChatHistoryResult`): where the words of the
   conversation are kept on this computer.
 - **ProjectService** (through `IProjectService` and `ProjectInfo`): which project is open and the path of its file.

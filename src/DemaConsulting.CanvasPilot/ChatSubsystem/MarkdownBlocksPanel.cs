@@ -26,16 +26,17 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Media;
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     Draws the blocks that <see cref="KnowledgeMarkdown" /> read from a card: headings, paragraphs, list items, and
-///     blocks of code, with bold, italic, and code text, as text that the user can select and copy.
+///     Draws the blocks that <see cref="ReplyMarkdown" /> read from a reply of the copilot: headings, paragraphs,
+///     list items, and blocks of code, with bold, italic, and code text, as text that the user can select and copy.
 /// </summary>
 /// <remarks>
-///     The panel has a text block for each block, so that the text of a card can be selected and copied as the text of any
-///     page can. It is made again from the blocks every time <see cref="Blocks" /> changes, which is when another card is
-///     shown; the blocks are immutable, so nothing else changes them. Nothing in it can run or open anything.
+///     The panel has a text block for each block, so that the text of a reply can be selected and copied as the text
+///     of any page can. It is made again from the blocks every time <see cref="Blocks" /> changes, which is when a
+///     reply is complete; the blocks are immutable, so nothing else changes them. Nothing in it can run or open
+///     anything.
 /// </remarks>
 public sealed class MarkdownBlocksPanel : StackPanel
 {
@@ -124,7 +125,7 @@ public sealed class MarkdownBlocksPanel : StackPanel
         text.FontWeight = FontWeight.SemiBold;
         text.FontSize = HeadingSizes[Math.Clamp(heading.Level, 1, HeadingSizes.Length) - 1];
         text.Margin = new Thickness(0, 8, 0, 0);
-        AutomationProperties.SetAutomationId(text, "KnowledgeBodyHeading");
+        AutomationProperties.SetAutomationId(text, "ReplyMarkdownHeading");
         return text;
     }
 
@@ -144,7 +145,7 @@ public sealed class MarkdownBlocksPanel : StackPanel
             Margin = new Thickness(0, 0, 6, 0)
         };
         var text = DrawText(item.Spans);
-        AutomationProperties.SetAutomationId(text, "KnowledgeBodyItem");
+        AutomationProperties.SetAutomationId(text, "ReplyMarkdownItem");
         Grid.SetColumn(text, 1);
 
         var grid = new Grid
@@ -170,7 +171,7 @@ public sealed class MarkdownBlocksPanel : StackPanel
             FontFamily = CodeFont,
             TextWrapping = TextWrapping.NoWrap
         };
-        AutomationProperties.SetAutomationId(text, "KnowledgeBodyCode");
+        AutomationProperties.SetAutomationId(text, "ReplyMarkdownCode");
 
         var border = new Border
         {
@@ -199,7 +200,7 @@ public sealed class MarkdownBlocksPanel : StackPanel
     private static SelectableTextBlock DrawText(IReadOnlyList<MarkdownSpan> spans)
     {
         var text = new SelectableTextBlock { TextWrapping = TextWrapping.Wrap };
-        AutomationProperties.SetAutomationId(text, "KnowledgeBodyText");
+        AutomationProperties.SetAutomationId(text, "ReplyMarkdownText");
         foreach (var span in spans)
         {
             var run = new Run(span.Text);
