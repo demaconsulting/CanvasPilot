@@ -224,7 +224,20 @@ project, so a new project says which style it uses from the start; opening a pro
 
 **OpenProject**: Asks `PickProjectFileAsync` for a file and opens it with `IProjectService.OpenAsync`. A failure
 is shown, and when the file no longer exists it is also removed from the recent projects. Choosing an entry of the
-Recent Projects menu runs the same operation for that entry.
+Recent Projects menu, or a card of the welcome screen, runs the same operation for that entry.
+
+**Resuming at the last shown picture**: A create and an open both end in `CompleteOpenAsync`, which, on success, adds
+the project to the recent projects, brings the shell in line with the project service (which fills the explorer at
+once), and then calls `ShowRememberedPicture`: it asks `IRecentProjects.GetShownPicture` for the path of the picture
+last shown in the project, relative to the project folder, makes it a full path inside the folder, and asks the
+explorer to select it (`ProjectExplorerViewModel.SelectFile`), which expands its folders and makes the preview draw
+it. The explorer selects only a file that it lists, so a picture that was deleted or renamed selects nothing, and a
+new project has no remembered picture. The shell listens to `PropertyChanged` of the workspace; when `SelectedFile`
+becomes a file while a project is open, it calls `IRecentProjects.RememberShownPicture` with the path of the file
+relative to the project folder (a file outside the folder is refused there). A selection that is no file (nothing, a
+folder, or the moment a project closes or another opens) is ignored, so it never forgets the picture. The picture is
+kept in the settings of the user with the recent projects, not in the project file: a project folder is copied,
+shared, and put under source control, and the picture that a person looked at is that person's own view state.
 
 **SaveProject** / **CloseProject** / **Exit**: Save calls `SaveAsync` and shows a failure. Close calls `Close`.
 Exit raises `ExitRequested`.
@@ -346,7 +359,8 @@ measurement answers `null` and the constant stays.
 #### Dependencies
 
 - **ProjectService** (through `IProjectService`) — creates, opens, saves, and closes projects.
-- **RecentProjects** (through `IRecentProjects`) — the recent projects menu and the cards.
+- **RecentProjects** (through `IRecentProjects`) — the recent projects menu and the cards, and the picture last shown in
+  each project.
 - **NewProjectDialog** — collects a project name and location.
 - **SettingsDialog** and **SettingsService** (through `ISettingsService` and `ISettingsPage`) — the settings dialog, the
   saved window layout (`WindowSettings`), the time of each opening of a project, and the thumbnail setting.

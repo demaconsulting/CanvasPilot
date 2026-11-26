@@ -79,3 +79,24 @@ sets, adding a project records the time of opening, adding it again three hours 
 project leaves no time in the settings. This scenario is tested by
 `RecentProjects_Add_RecordsTheTimeOfOpeningAndRemoveForgetsIt`, which is in `WelcomeTests.cs` because the welcome screen
 is its reason.
+
+**RecentProjects_RememberShownPicture_StoredPerProjectAndReadBack**: Two listed projects each remember a picture (the
+second twice); a list over the same settings after a restart gives back the newest picture of each, the project path is
+matched ignoring case, and `Changed` is not raised. This scenario is tested by
+`RecentProjects_RememberShownPicture_StoredPerProjectAndReadBack`.
+
+**RecentProjects_RememberShownPicture_UnlistedProjectOrPathOutsideTheFolder_IsRefused**: A picture of a project that is
+not listed, an empty or blank path, a rooted path, a path with a `..` part, and an empty project path are each refused,
+and nothing is stored. This scenario is tested by
+`RecentProjects_RememberShownPicture_UnlistedProjectOrPathOutsideTheFolder_IsRefused`.
+
+**RecentProjects_RememberShownPicture_SamePicture_WritesNothingAndDoesNotAnnounce**: Remembering the picture that is
+already remembered succeeds without a write of the settings and without `Changed`. This scenario is tested by
+`RecentProjects_RememberShownPicture_SamePicture_WritesNothingAndDoesNotAnnounce`.
+
+**RecentProjects_RememberShownPicture_SettingsWriteFails_ReturnsFalse**: A settings service whose update throws an
+`IOException`; remembering a picture returns `false` and raises nothing. This scenario is tested by
+`RecentProjects_RememberShownPicture_SettingsWriteFails_ReturnsFalse`.
+
+**RecentProjects_Remove_ForgetsTheShownPicture**: A project with a picture is removed and added again; it has no
+picture. This scenario is tested by `RecentProjects_Remove_ForgetsTheShownPicture`.

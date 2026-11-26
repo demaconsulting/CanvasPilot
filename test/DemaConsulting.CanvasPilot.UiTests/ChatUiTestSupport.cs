@@ -564,6 +564,52 @@ internal sealed class ChatHarness : IDisposable
     }
 
     /// <summary>
+    ///     Gets the scroll viewer of the transcript.
+    /// </summary>
+    public ScrollViewer TranscriptScroll => Find<ScrollViewer>("ChatTranscriptScroll");
+
+    /// <summary>
+    ///     Gets a value indicating whether the transcript is scrolled to its end, within about a line (24 pixels, the
+    ///     tolerance of the panel), and has more rows than fit, so that being at the end means something.
+    /// </summary>
+    public bool IsAtTheEndOfALongTranscript =>
+        TranscriptScroll.Extent.Height > TranscriptScroll.Viewport.Height
+        && TranscriptScroll.Offset.Y > 0
+        && TranscriptScroll.Offset.Y + TranscriptScroll.Viewport.Height >= TranscriptScroll.Extent.Height - 24;
+
+    /// <summary>
+    ///     Scrolls the transcript to its top, as a reader who scrolls up to read does.
+    /// </summary>
+    public void ScrollToTheTop()
+    {
+        TranscriptScroll.Offset = new Vector(0, 0);
+        Layout();
+    }
+
+    /// <summary>
+    ///     Makes a saved conversation that is longer than the panel is high: questions and answers of the user and the
+    ///     copilot, one after the other, the last answer saying that it is the last.
+    /// </summary>
+    /// <param name="pairs">How many questions, each with its answer.</param>
+    /// <returns>The rows of the conversation.</returns>
+    public static IReadOnlyList<ChatHistoryRow> LongConversation(int pairs = 20)
+    {
+        var rows = new List<ChatHistoryRow>();
+        for (var index = 1; index <= pairs; index++)
+        {
+            rows.Add(new ChatHistoryRow { Kind = ChatHistoryRowKind.User, Utc = DateTimeOffset.UnixEpoch.AddMinutes(index), Text = $"Question {index}" });
+            rows.Add(new ChatHistoryRow
+            {
+                Kind = ChatHistoryRowKind.Assistant,
+                Text = index == pairs ? "The latest answer." : $"Answer {index}, which takes a line or two of the panel.",
+                Reply = ChatHistoryReplyState.Completed,
+            });
+        }
+
+        return rows;
+    }
+
+    /// <summary>
     ///     Gets the stop button.
     /// </summary>
     public Button StopButton => Find<Button>("ChatStopButton");
@@ -705,6 +751,36 @@ internal sealed class ChatHarness : IDisposable
                 Thread.Sleep(50);
             }
         }
+    }
+}
+
+/// <summary>
+///     A store of the chat history that keeps the conversations in memory, for the tests that need a saved conversation
+///     but not its file.
+/// </summary>
+internal sealed class MemoryChatHistoryStore : IChatHistoryStore
+{
+    /// <summary>
+    ///     The saved rows by the folder of the project.
+    /// </summary>
+    private readonly Dictionary<string, IReadOnlyList<ChatHistoryRow>> _rows = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <inheritdoc />
+    public IReadOnlyList<ChatHistoryRow> Load(ProjectInfo project) =>
+        _rows.TryGetValue(project.FolderPath, out var rows) ? rows : [];
+
+    /// <inheritdoc />
+    public ChatHistoryResult Save(ProjectInfo project, IReadOnlyList<ChatHistoryRow> rows)
+    {
+        _rows[project.FolderPath] = [.. rows];
+        return ChatHistoryResult.Ok;
+    }
+
+    /// <inheritdoc />
+    public ChatHistoryResult Clear(ProjectInfo project)
+    {
+        _rows.Remove(project.FolderPath);
+        return ChatHistoryResult.Ok;
     }
 }
 

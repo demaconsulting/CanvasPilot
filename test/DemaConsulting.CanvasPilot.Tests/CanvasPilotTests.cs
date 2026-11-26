@@ -2921,6 +2921,64 @@ public sealed class CanvasPilotTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a project opened again after a restart selects and shows the picture that was last shown in it, and
+    ///     that a project whose last shown picture was deleted opens with nothing selected.
+    /// </summary>
+    [Fact]
+    public async Task CanvasPilot_ResumeProject_ReopenedProject_SelectsTheLastShownPicture()
+    {
+        // Arrange: the application composed on temporary folders, with a user who creates a project with two pictures and
+        // shows the second
+        var token = TestContext.Current.CancellationToken;
+        var documents = Directory.CreateDirectory(PathHelpers.SafePathCombine(_tempRoot, "Documents")).FullName;
+        var logger = new RollingFileLogger(PathHelpers.SafePathCombine(_tempRoot, "logs"));
+        var settingsFolder = PathHelpers.SafePathCombine(_tempRoot, "CanvasPilot");
+        var dialogs = new FakeDialogService
+        {
+            OnNewProject = dialog =>
+            {
+                dialog.ProjectName = "Resume";
+                dialog.OkCommand.Execute(null);
+            },
+        };
+        var composition = ApplicationComposition.Create(
+            logger,
+            new SettingsService(settingsFolder, logger),
+            new FakeRefreshScheduler(),
+            defaultProjectsFolder: documents,
+            audioDevices: SpeechTestData.AudioDevices([], []),
+            speechModels: SpeechTestData.Models());
+        composition.Shell.AttachDialogService(dialogs);
+        await composition.Shell.NewProjectCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='10'/>", token);
+        var second = Path.Combine(folder, "b.svg");
+        await File.WriteAllTextAsync(second, "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='10'/>", token);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(second);
+        composition.Dispose();
+
+        // Act: restart and open the project from the list of recent projects; then delete the picture, restart, and open
+        // it again
+        using var restarted = ApplicationComposition.Create(logger, new SettingsService(settingsFolder, logger), new FakeRefreshScheduler());
+        restarted.Shell.AttachDialogService(dialogs);
+        await restarted.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        await restarted.Preview.RenderCompletion;
+        var reopened = (restarted.Shell.Workspace.SelectedFile, restarted.Preview.CurrentImage?.SourcePath);
+        restarted.Shell.CloseProjectCommand.Execute(null);
+        File.Delete(second);
+        using var again = ApplicationComposition.Create(logger, new SettingsService(settingsFolder, logger), new FakeRefreshScheduler());
+        again.Shell.AttachDialogService(dialogs);
+        await again.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+
+        // Assert: the picture was selected and drawn, and once it was gone nothing was selected and nothing went wrong
+        Assert.Equal((second, second), reopened);
+        Assert.True(again.Shell.HasProject);
+        Assert.Null(again.Shell.Workspace.SelectedFile);
+        Assert.Empty(dialogs.Messages);
+    }
+
+    /// <summary>
     ///     Test that style kits are found in the program, the folder of the user, the project, and the shared folders
     ///     of a team, that the most local copy of a kit wins, that a shared folder that cannot be reached and a kit
     ///     with a wrong value are reported without hiding the others, and that the message names the wrong property.

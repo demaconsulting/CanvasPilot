@@ -256,6 +256,7 @@ public sealed class SettingsService : ISettingsService
             },
             Window = NormalizeWindow(source.Window ?? new WindowSettings()),
             RecentProjectOpened = NormalizeOpenedTimes(source.RecentProjectOpened, recentProjects),
+            RecentProjectPicture = NormalizeShownPictures(source.RecentProjectPicture, recentProjects),
         };
     }
 
@@ -312,6 +313,32 @@ public sealed class SettingsService : ISettingsService
             if (!string.IsNullOrWhiteSpace(path) && recentProjects.Contains(path, StringComparer.OrdinalIgnoreCase))
             {
                 kept[path] = time;
+            }
+        }
+
+        return kept;
+    }
+
+    /// <summary>
+    ///     Keeps the picture last shown only for the projects that are in the list of recent projects, and only when it is
+    ///     a path inside the folder of its project, so the table cannot grow beyond the list, a picture never belongs to a
+    ///     project that is gone from it, and a hand-edited file cannot point outside a project.
+    /// </summary>
+    /// <param name="pictures">The pictures as read or supplied; may be <see langword="null" /> after parsing.</param>
+    /// <param name="recentProjects">The recent projects that are kept.</param>
+    /// <returns>The relative paths of the pictures of the projects that are listed, by the paths of the projects.</returns>
+    private static Dictionary<string, string> NormalizeShownPictures(
+        IReadOnlyDictionary<string, string>? pictures,
+        List<string> recentProjects)
+    {
+        var kept = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (path, picture) in pictures ?? new Dictionary<string, string>())
+        {
+            if (!string.IsNullOrWhiteSpace(path)
+                && recentProjects.Contains(path, StringComparer.OrdinalIgnoreCase)
+                && AppSettings.IsValidShownPicture(picture))
+            {
+                kept[path] = picture;
             }
         }
 

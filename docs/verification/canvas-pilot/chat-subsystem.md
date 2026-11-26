@@ -246,3 +246,10 @@ returns. It is described in the verification of the `ChatPanel` unit.
 and with it the panel, in both theme variants, and shows that every button without text has a name and a tooltip,
 takes the
 focus, and is at least 28 by 28 pixels. It is described in the verification of the `ChatPanel` unit.
+
+**Follow the latest message** (the follow-latest behavior of the panel over a real composer and transcript, with a
+scripted copilot and a saved conversation of forty rows): a restored conversation opens at its latest message, the
+latest row stays in view while a reply grows, and a reader who scrolled up keeps the place. These scenarios are tested
+by `ChatPanelView_RestoredHistory_OpensScrolledToTheLatestMessage`,
+`ChatPanelView_CopilotReply_AtTheEnd_KeepsTheLatestInView`, and
+`ChatPanelView_ScrolledUp_ReplyArrives_KeepsThePlaceOfTheReader` (see *ChatPanel*).

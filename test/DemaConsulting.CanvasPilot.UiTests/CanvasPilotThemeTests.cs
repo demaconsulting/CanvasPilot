@@ -28,9 +28,11 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
@@ -38,8 +40,9 @@ namespace DemaConsulting.CanvasPilot.UiTests;
 
 /// <summary>
 ///     Headless system tests of the whole application in its main window: the composed window is drawn in the dark
-///     and the light theme that the system asks for, and the menu of the picture on the stage opens, is named, and
-///     stays closed while marking.
+///     and the light theme that the system asks for, the menu of the picture on the stage opens, is named, and
+///     stays closed while marking, and a project opened from the welcome screen shows the picture that was last shown in
+///     it and the latest message of its conversation.
 /// </summary>
 public sealed class CanvasPilotThemeTests : IDisposable
 {
@@ -71,6 +74,63 @@ public sealed class CanvasPilotThemeTests : IDisposable
         {
             Directory.Delete(_root, recursive: true);
         }
+    }
+
+    /// <summary>
+    ///     Test that a project opened from its card on the welcome screen of the composed window selects and draws the
+    ///     picture that was last shown in it, and shows its restored conversation scrolled to the latest message.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task CanvasPilot_ResumeProject_ComposedWindow_ShowsTheLastPictureAndTheLatestMessage()
+    {
+        // Arrange: a remembered project with two pictures, the second shown last, and a long saved conversation; the
+        // provider is Ollama without a model, which is not ready without asking a server
+        var token = TestContext.Current.CancellationToken;
+        var projects = Directory.CreateDirectory(Path.Combine(_root, "projects")).FullName;
+        var project = (await new ProjectService().CreateAsync(projects, "Resume", token)).Project!;
+        await File.WriteAllTextAsync(Path.Combine(project.FolderPath, "a.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='10'/>", token);
+        var picture = Path.Combine(project.FolderPath, "b.svg");
+        await File.WriteAllTextAsync(picture, "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='10'/>", token);
+        var settings = new SettingsService(Path.Combine(_root, "settings"));
+        settings.Load();
+        var recent = new RecentProjects(settings);
+        recent.Add(project.FilePath);
+        recent.RememberShownPicture(project.FilePath, "b.svg");
+        settings.Update(s => s with { AiProvider = new AiProviderSettings { Provider = AiProviderKind.Ollama, ModelName = string.Empty } });
+        var historyRoot = Path.Combine(_root, "history");
+        new ChatHistoryStore(historyRoot).Save(project, ChatHarness.LongConversation());
+        var composition = AppShellUiHelpers.Compose(_root, historyRoot: historyRoot);
+        _compositions.Add(composition);
+        var window = new MainWindowView(composition.Shell) { Width = 1280, Height = 800 };
+        window.Show();
+        AppShellUiHelpers.Flush();
+
+        // Act: click the card of the project on the welcome screen
+        var card = window.GetVisualDescendants().OfType<Button>().First(button => AutomationProperties.GetAutomationId(button) == "WelcomeRecentCard");
+        var center = card.TranslatePoint(new Point(card.Bounds.Width / 2, card.Bounds.Height / 2), window)!.Value;
+        window.MouseDown(center, MouseButton.Left);
+        window.MouseUp(center, MouseButton.Left);
+        await Task.Delay(100, token);
+        AppShellUiHelpers.Flush();
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
+        Dispatcher.UIThread.RunJobs();
+        var scroll = window.GetVisualDescendants().OfType<ScrollViewer>().Single(viewer => AutomationProperties.GetAutomationId(viewer) == "ChatTranscriptScroll");
+
+        // Assert: the last shown picture is selected and drawn
+        Assert.True(composition.Shell.HasProject);
+        Assert.Equal(picture, composition.Shell.Workspace.SelectedFile);
+        Assert.Equal(picture, composition.Preview.CurrentImage?.SourcePath);
+
+        // Assert: the conversation was restored and is scrolled to its latest message
+        Assert.True(composition.Chat.Transcript.Count >= 40);
+        Assert.True(scroll.Extent.Height > scroll.Viewport.Height, $"Extent {scroll.Extent.Height}, viewport {scroll.Viewport.Height}.");
+        Assert.True(
+            scroll.Offset.Y > 0 && scroll.Offset.Y + scroll.Viewport.Height >= scroll.Extent.Height - 24,
+            $"Offset {scroll.Offset.Y}, viewport {scroll.Viewport.Height}, extent {scroll.Extent.Height}.");
+
+        window.Close();
     }
 
     /// <summary>

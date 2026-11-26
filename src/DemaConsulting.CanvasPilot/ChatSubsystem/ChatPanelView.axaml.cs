@@ -23,7 +23,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
 
 namespace DemaConsulting.CanvasPilot.ChatSubsystem;
@@ -44,7 +43,12 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///     </para>
 ///     <para>
 ///         <b>Transcript.</b> The list shows one row per sent message, part of the answer, tool, and notice through the
-///         application's view locator, and scrolls to the newest row when one is added and while a reply grows. The banner
+///         application's view locator, and follows the latest row: whenever the content or the height of the list changes
+///         (rows are restored or added, a reply grows, the panel is laid out for the first time) while the reader is at the
+///         end, it scrolls to the end again, so a project opens at its latest message. A reader who scrolls up stops the
+///         following and keeps the place; scrolling back to the end, sending a message, or showing another conversation
+///         follows again. Following is decided from the scroll changes themselves, because restored rows are added before
+///         the list has a size, when scrolling to the end at once does nothing. The banner
 ///         of the readiness of the copilot, the indicator that it works, and the Stop button are bound to the view model.
 ///         <b>Pictures.</b> The composer's editing control gets the panel's
 ///         provider of chip pictures, so that mark chips show the area around the mark.
@@ -57,9 +61,20 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 public sealed partial class ChatPanelView : UserControl
 {
     /// <summary>
+    ///     How far from the end, in device independent pixels, the reader may be and still count as at the end: about a
+    ///     line, so that rounding of the layout and a small nudge do not stop the following.
+    /// </summary>
+    private const double FollowTolerance = 24;
+
+    /// <summary>
     ///     The view model whose transcript is followed, or <see langword="null" /> before there is one.
     /// </summary>
     private ChatPanelViewModel? _viewModel;
+
+    /// <summary>
+    ///     Whether the transcript keeps its latest row in view; false while the reader has scrolled up to read.
+    /// </summary>
+    private bool _followLatest = true;
 
     /// <summary>
     ///     Whether the talk button is held down, so that listening is started and ended once for each hold.
@@ -83,6 +98,9 @@ public sealed partial class ChatPanelView : UserControl
 
         // Enter sends the message, and Shift+Enter (or any other modifier) writes a new line in it
         ComposerView.AddHandler(KeyDownEvent, OnComposerKeyDown, RoutingStrategies.Tunnel);
+
+        // The transcript follows its latest row unless the reader scrolled up
+        TranscriptScroll.ScrollChanged += OnTranscriptScrollChanged;
     }
 
     /// <summary>
@@ -116,6 +134,8 @@ public sealed partial class ChatPanelView : UserControl
             _viewModel.Transcript.CollectionChanged -= OnTranscriptChanged;
         }
 
+        // Another conversation is shown from its latest row
+        _followLatest = true;
         _viewModel = DataContext as ChatPanelViewModel;
         if (_viewModel is not null)
         {
@@ -132,6 +152,9 @@ public sealed partial class ChatPanelView : UserControl
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+
+        // A panel that is shown again starts at the latest row
+        _followLatest = true;
 
         // Load the speech engine now so that the first press of the talk button does not wait for it, and find out whether
         // the copilot can be used so that the banner is right from the start
@@ -274,39 +297,54 @@ public sealed partial class ChatPanelView : UserControl
     }
 
     /// <summary>
-    ///     Scrolls to the newest row when one was added, and to the end again while a reply of the copilot grows.
+    ///     Follows the latest row again when another conversation is shown (the transcript was emptied) or when the user
+    ///     sent a message, which the user wants to see together with its answer.
     /// </summary>
     /// <param name="sender">The transcript.</param>
     /// <param name="e">What changed.</param>
     private void OnTranscriptChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        if (e.Action == NotifyCollectionChangedAction.Add)
+        var userSent = e.Action == NotifyCollectionChangedAction.Add
+                       && e.NewItems?.OfType<TranscriptEntryViewModel>().Any() == true;
+        if (e.Action == NotifyCollectionChangedAction.Reset || userSent)
         {
-            foreach (var reply in e.NewItems?.OfType<AssistantReplyViewModel>() ?? [])
-            {
-                reply.PropertyChanged += OnReplyChanged;
-            }
-
-            ScrollToEndLater();
+            _followLatest = true;
         }
     }
 
     /// <summary>
-    ///     Scrolls to the end because the text of a reply grew.
+    ///     Keeps the latest row in view while following, and tells from the movements of the reader whether to follow.
     /// </summary>
-    /// <param name="sender">The reply.</param>
-    /// <param name="e">The name of the property that changed.</param>
-    private void OnReplyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    /// <remarks>
+    ///     A change of the content or of the height of the list (a row added or restored, a reply that grows, the first
+    ///     layout, the composer that grows or shrinks) scrolls to the end while following. A movement of the offset is the
+    ///     reader's when nothing else changed, or when it went up while the content did not shrink and the view did not
+    ///     grow, which are the only reasons for the layout to move the offset up; after a movement of the reader, following
+    ///     goes on only when it left the reader at the end. A movement that the layout made is not the reader's, so it
+    ///     does not stop the following.
+    /// </remarks>
+    /// <param name="sender">The scroll viewer of the transcript.</param>
+    /// <param name="e">How the content, the offset, and the height changed.</param>
+    private void OnTranscriptScrollChanged(object? sender, ScrollChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(AssistantReplyViewModel.Text))
+        var contentChanged = e.ExtentDelta.Y != 0 || e.ViewportDelta.Y != 0;
+        var layoutMovesUp = e.ExtentDelta.Y < 0 || e.ViewportDelta.Y > 0;
+        var readerMoved = e.OffsetDelta.Y != 0 && (!contentChanged || (e.OffsetDelta.Y < 0 && !layoutMovesUp));
+        if (readerMoved)
         {
-            ScrollToEndLater();
+            _followLatest = IsAtEnd();
+        }
+
+        if (contentChanged && _followLatest)
+        {
+            TranscriptScroll.ScrollToEnd();
         }
     }
 
     /// <summary>
-    ///     Scrolls to the end when the layout has caught up.
+    ///     Tells whether the reader is at the end of the transcript, within <see cref="FollowTolerance" />.
     /// </summary>
-    private void ScrollToEndLater() =>
-        Dispatcher.UIThread.Post(() => TranscriptScroll.ScrollToEnd(), DispatcherPriority.Background);
+    /// <returns><see langword="true" /> when the bottom of the view is at most the tolerance above the end.</returns>
+    private bool IsAtEnd() =>
+        TranscriptScroll.Offset.Y + TranscriptScroll.Viewport.Height >= TranscriptScroll.Extent.Height - FollowTolerance;
 }

@@ -409,6 +409,173 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the picture that the user shows in the open project is remembered for that project, relative to its
+    ///     folder, and that selecting a folder or closing the project does not forget it.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_SelectedFile_ShownPicture_IsRememberedForTheProject()
+    {
+        // Arrange: an open project with a picture in a subfolder
+        var file = await CreateProjectFileAsync("Remember");
+        var picture = WritePicture(file, Path.Combine("diagrams", "flow.svg"));
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var shell = CreateShell(settings: settings);
+        _dialogs.ProjectFileToPick = file;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+
+        // Act: show the picture, then select its folder, then close the project
+        shell.Workspace.Explorer.SelectFile(picture);
+        var remembered = settings.Current.RecentProjectPicture[file];
+        shell.Workspace.Explorer.SelectedNode = shell.Workspace.Explorer.FindNode(Path.GetDirectoryName(picture)!);
+        var afterFolder = settings.Current.RecentProjectPicture[file];
+        shell.CloseProjectCommand.Execute(null);
+
+        // Assert: the relative path was remembered and kept
+        Assert.Equal(Path.Combine("diagrams", "flow.svg"), remembered);
+        Assert.Null(shell.Workspace.SelectedFile);
+        Assert.Equal(remembered, afterFolder);
+        Assert.Equal(remembered, settings.Current.RecentProjectPicture[file]);
+    }
+
+    /// <summary>
+    ///     Test that File, Open Project selects and shows the picture that was last shown in the project.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenProject_RememberedPicture_IsSelected()
+    {
+        // Arrange: a remembered project with two pictures, the second of which was last shown
+        var file = await CreateProjectFileAsync("Reopen");
+        WritePicture(file, "a.svg");
+        var second = WritePicture(file, "b.svg");
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var recent = new RecentProjects(settings);
+        recent.Add(file);
+        recent.RememberShownPicture(file, "b.svg");
+        var shell = CreateShell(settings: settings, recent: recent);
+        _dialogs.ProjectFileToPick = file;
+
+        // Act: open the project with File, Open Project
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+
+        // Assert: the picture is selected
+        Assert.True(shell.HasProject);
+        Assert.Equal(second, shell.Workspace.SelectedFile);
+    }
+
+    /// <summary>
+    ///     Test that choosing a project in the list of recent projects, as on the welcome screen and in the Recent Projects
+    ///     menu, selects the picture that was last shown in it, also after a restart.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_RecentProjects_OpenOnChoice_SelectsTheRememberedPicture()
+    {
+        // Arrange: a project whose picture was shown in an earlier run, and a restarted shell
+        var file = await CreateProjectFileAsync("Recent");
+        var picture = WritePicture(file, "flow.svg");
+        WritePicture(file, "other.svg");
+        var settingsFolder = Path.Combine(_tempRoot, "settings");
+        var earlier = new RecentProjects(new SettingsService(settingsFolder));
+        earlier.Add(file);
+        earlier.RememberShownPicture(file, "flow.svg");
+        var settings = new SettingsService(settingsFolder);
+        settings.Load();
+        var shell = CreateShell(settings: settings, recent: new RecentProjects(settings));
+
+        // Act: choose the project in the list
+        await shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+
+        // Assert: the picture is selected
+        Assert.Equal(picture, shell.Workspace.SelectedFile);
+    }
+
+    /// <summary>
+    ///     Test that a project whose remembered picture was deleted opens with nothing selected, as before.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenProject_RememberedPictureGone_SelectsNothing()
+    {
+        // Arrange: a remembered picture that was deleted
+        var file = await CreateProjectFileAsync("Deleted");
+        var picture = WritePicture(file, "gone.svg");
+        WritePicture(file, "kept.svg");
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var recent = new RecentProjects(settings);
+        recent.Add(file);
+        recent.RememberShownPicture(file, "gone.svg");
+        File.Delete(picture);
+        var shell = CreateShell(settings: settings, recent: recent);
+        _dialogs.ProjectFileToPick = file;
+
+        // Act: open the project
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+
+        // Assert: the project is open with nothing selected, and no problem was shown
+        Assert.True(shell.HasProject);
+        Assert.Null(shell.Workspace.SelectedFile);
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that two projects each open at their own last shown picture when the user goes back and forth.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenProject_TwoProjects_EachOpensAtItsOwnPicture()
+    {
+        // Arrange: two projects with two pictures each
+        var first = await CreateProjectFileAsync("First");
+        WritePicture(first, "one.svg");
+        var firstPicture = WritePicture(first, "two.svg");
+        var second = await CreateProjectFileAsync("Second");
+        var secondPicture = WritePicture(second, "three.svg");
+        WritePicture(second, "four.svg");
+        var shell = CreateShell();
+
+        // Act: show a picture in each, then open each again
+        _dialogs.ProjectFileToPick = first;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        shell.Workspace.Explorer.SelectFile(firstPicture);
+        _dialogs.ProjectFileToPick = second;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        var secondAtFirstOpen = shell.Workspace.SelectedFile;
+        shell.Workspace.Explorer.SelectFile(secondPicture);
+        _dialogs.ProjectFileToPick = first;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        var firstAgain = shell.Workspace.SelectedFile;
+        _dialogs.ProjectFileToPick = second;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        var secondAgain = shell.Workspace.SelectedFile;
+
+        // Assert: nothing was selected in the second project at first, and each opened at its own picture afterwards
+        Assert.Null(secondAtFirstOpen);
+        Assert.Equal(firstPicture, firstAgain);
+        Assert.Equal(secondPicture, secondAgain);
+    }
+
+    /// <summary>
+    ///     Test that a new project, which has no picture that was shown, opens with nothing selected and nothing remembered.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_NewProject_NothingRemembered_SelectsNothing()
+    {
+        // Arrange: a shell whose user creates a project
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var shell = CreateShell(settings: settings, defaultProjectsFolder: Directory.CreateDirectory(Projects).FullName);
+        _dialogs.OnNewProject = dialog =>
+        {
+            dialog.ProjectName = "Fresh";
+            dialog.OkCommand.Execute(null);
+        };
+
+        // Act: run New Project
+        await shell.NewProjectCommand.ExecuteAsync(null);
+
+        // Assert: the project is open with nothing selected and no picture remembered for it
+        Assert.True(shell.HasProject);
+        Assert.Null(shell.Workspace.SelectedFile);
+        Assert.Empty(settings.Current.RecentProjectPicture);
+    }
+
+    /// <summary>
     ///     Test that the shell gives the explorer the row height that was saved in the Appearance settings and follows the
     ///     setting when it changes.
     /// </summary>
@@ -1030,6 +1197,20 @@ public sealed class MainWindowShellTests : IDisposable
     {
         var created = await new ProjectService().CreateAsync(Directory.CreateDirectory(Projects).FullName, name, TestContext.Current.CancellationToken);
         return created.Project!.FilePath;
+    }
+
+    /// <summary>
+    ///     Writes a small picture into the folder of a project.
+    /// </summary>
+    /// <param name="projectFile">The project file, whose folder holds the picture.</param>
+    /// <param name="relative">The path of the picture relative to the project folder.</param>
+    /// <returns>The full path of the picture.</returns>
+    private static string WritePicture(string projectFile, string relative)
+    {
+        var path = Path.Combine(Path.GetDirectoryName(projectFile)!, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'/>");
+        return path;
     }
 
     /// <summary>

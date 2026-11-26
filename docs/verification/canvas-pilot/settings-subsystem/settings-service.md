@@ -211,3 +211,12 @@ loaded: one with no talk key, which gives the empty string (the default F9); one
 as `Ctrl+Shift+Space`, and a save of it followed by a load by a fresh service keeps `Ctrl+Shift+Space`; one with the old
 default `F8`, which gives the empty string; and one with `Escape`, which cannot be a talk key and gives the empty
 string. This scenario is tested by `SettingsService_Load_PushToTalkKey_IsNormalizedAndUnsafeOrOldF8BecomesTheDefault`.
+
+**SettingsService_SaveLoad_RecentProjectPicture_RoundTrips**: The pictures of two listed projects are saved, the file
+names `recentProjectPicture`, and a new service reads both back, by the project path in any case. This scenario is
+tested by `SettingsService_SaveLoad_RecentProjectPicture_RoundTrips`.
+
+**SettingsService_Load_RecentProjectPicture_KeepsOnlyListedProjectsAndRelativePaths**: A file with a relative picture,
+a path that leaves the folder, a rooted path, a blank path, and a picture of a project that is not listed; only the
+relative picture of the listed project is kept. This scenario is tested by
+`SettingsService_Load_RecentProjectPicture_KeepsOnlyListedProjectsAndRelativePaths`.

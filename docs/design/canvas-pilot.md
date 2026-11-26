@@ -429,11 +429,11 @@ user, for example) is refused, so that a configuration mistake cannot write into
 
 - *Direction*: Input and output.
 - *Type*: JSON file on the local file system.
-- *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects with the time each was opened, the
-  AI provider choices, the speech choices (the devices, the models, and the talk key), the style choices (the shared kit
-  folders and the default kit), the window layout (size, place, state, and the widths of the explorer and the chat
-  column), and the appearance (the theme choice, the small pictures of the explorer, and the row height). Unknown
-  properties are ignored.
+- *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects with the time each was opened and
+  the picture last shown in each (relative to the project folder), the AI provider choices, the speech choices (the
+  devices, the models, and the talk key), the style choices (the shared kit folders and the default kit), the window
+  layout (size, place, state, and the widths of the explorer and the chat column), and the appearance (the theme choice,
+  the small pictures of the explorer, and the row height). Unknown properties are ignored.
 - *Constraints*: The default location is `%APPDATA%\CanvasPilot\settings.json`. The file is written
   atomically. A corrupt file is renamed `settings.json.bad` and defaults are used. The file never
   contains credentials.
@@ -961,6 +961,8 @@ and has the service forget the conversation and delete the session of the provid
 - Logging shall be safe to call from multiple threads.
 - The settings file shall be under the per-user application data folder, written atomically, and tolerant
   of missing, corrupt, and newer content.
+- The view state of a person, such as the picture last shown in a project, shall be kept in the settings of that person
+  and never in the project folder, because a project folder is copied, shared, and put under source control.
 - Settings pages shall be supplied to the settings dialog, never referenced by it.
 - The settings subsystem shall hold no reference to any AI provider SDK or client.
 - The project file shall carry a format version, and a file with a newer version shall never be rewritten.

@@ -830,6 +830,50 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that a project opened from its card on the welcome screen, and from the Recent Projects menu, selects in the
+    ///     explorer the picture that was last shown in it, and that the picture shown before the project is closed is the
+    ///     one it opens at the next time.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_OpenProject_FromWelcomeCardAndRecentMenu_ShowsTheLastShownPicture()
+    {
+        // Arrange: a remembered project with two pictures, the second of which an earlier run showed last
+        var projectFile = await CreateRememberedProjectAsync("Resume", "a.svg", "b.svg");
+        var settings = new SettingsService(Path.Combine(_root, "settings"));
+        settings.Load();
+        new RecentProjects(settings).RememberShownPicture(projectFile, "b.svg");
+        var folder = Path.GetDirectoryName(projectFile)!;
+        var (composition, window) = CreateWindow();
+        window.Show();
+        AppShellUiHelpers.Flush();
+
+        // Act: click the card of the project on the welcome screen
+        var card = window.GetVisualDescendants().OfType<Button>().First(button => AutomationProperties.GetAutomationId(button) == "WelcomeRecentCard");
+        SettingsUiHelpers.Click(window, card);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        AppShellUiHelpers.Flush();
+        var tree = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        var fromCard = (composition.Shell.Workspace.SelectedFile, (tree.SelectedItem as ProjectNodeViewModel)?.Name);
+
+        // Act: show the other picture, close the project, and open it from the Recent Projects menu
+        tree.SelectedItem = tree.Items.OfType<ProjectNodeViewModel>().Single(node => node.Name == "a.svg");
+        AppShellUiHelpers.Flush();
+        window.FindControl<MenuItem>("CloseProjectMenuItem")!.Command!.Execute(null);
+        AppShellUiHelpers.Flush();
+        var item = Assert.IsType<RecentProjectItem>(window.FindControl<MenuItem>("RecentProjectsMenuItem")!.Items.Cast<object>().Single());
+        await item.OpenCommand.ExecuteAsync(null);
+        AppShellUiHelpers.Flush();
+        tree = SettingsUiHelpers.Find<TreeView>(window, "ProjectExplorerList");
+        var fromMenu = (composition.Shell.Workspace.SelectedFile, (tree.SelectedItem as ProjectNodeViewModel)?.Name);
+
+        // Assert: each way of opening selected the picture that was shown last
+        Assert.Equal((Path.Combine(folder, "b.svg"), "b.svg"), fromCard);
+        Assert.Equal((Path.Combine(folder, "a.svg"), "a.svg"), fromMenu);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the placeholder follows the selected file, and that supplied preview content replaces it.
     /// </summary>
     [AvaloniaFact]

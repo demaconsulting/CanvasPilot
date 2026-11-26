@@ -184,6 +184,12 @@ read, or that was written by a newer version of CanvasPilot, is not opened, and 
 **File > Recent Projects** lists the projects you used last, most recent first. Choose one to open it. A project whose
 file no longer exists is removed from the list after a message. The welcome screen lists them too.
 
+However you open a project, from the welcome screen, **File > Open Project...**, or **File > Recent Projects**, it opens
+at the picture that you looked at last in it on this computer: the explorer selects it and the stage shows it. If that
+file was deleted or renamed, nothing is selected. The conversation opens at its latest message. CanvasPilot remembers
+the picture in its settings on your computer and not in the project folder, so the people you share the project with
+are not affected by what you looked at. A new project opens with nothing selected.
+
 ## The Welcome Screen
 
 While no project is open, the window shows the welcome screen instead of the three panes. At the left it has the name
@@ -409,6 +415,10 @@ appears under its name, with a spinner while it works, then a green check, and t
 a second or more, for example "Rendered overview.svg · 0.8 s". A tool that did not work shows a red cross and the
 reason. A notice in the middle says what went wrong, with **Open Settings** when the settings can fix it. The messages
 from an earlier session are shown a little paler under a divider that says "Earlier".
+
+The transcript opens at the latest message and keeps it in view as you send messages and the copilot answers. If you
+scroll up to read an earlier answer, the transcript keeps your place while new text arrives; scroll back to the end, or
+send a message, and it follows the latest message again.
 
 ### The Example Prompts and the Suggestions
 
@@ -1438,7 +1448,7 @@ The line icons of the window are glyphs of the Fluent System Icons by Microsoft 
 
 | What | Location |
 | --- | --- |
-| Settings and recent projects | `%APPDATA%\CanvasPilot\settings.json` |
+| Settings, recent projects, and the picture last shown in each | `%APPDATA%\CanvasPilot\settings.json` |
 | Log files (choose **Help > Open Log Folder** to open it) | `%LOCALAPPDATA%\CanvasPilot\logs` |
 | Chat history of each project (text only) | `%LOCALAPPDATA%\CanvasPilot\history\{key}` |
 | Copilot runtime data (its sessions) | `%LOCALAPPDATA%\CanvasPilot\copilot` |
@@ -1456,8 +1466,9 @@ The settings file never contains credentials. The log files stay on your compute
 roll over when they reach a size limit and old ones are removed, so they cannot fill the disk. They record what
 happened (provider, model, tool names, sizes, and durations), but never the words of your messages or of the answers,
 pictures, or the contents of your files. To reset all settings, close CanvasPilot and delete `settings.json`. The same
-file holds the theme and the explorer choices of the Appearance page, and the size, position, and splitter widths of the
-window.
+file holds the theme and the explorer choices of the Appearance page, the size, position, and splitter widths of the
+window, and, for each recent project, when you opened it and the picture that you looked at last, as a path inside the
+project folder.
 CanvasPilot never stores what you say or the audio from the microphone; the words of a dictation exist only in the
 message that you are writing.
 

@@ -146,4 +146,23 @@ public sealed class ChatPanelHistoryViewTests
             Directory.Delete(historyRoot, recursive: true);
         }
     }
+
+    /// <summary>
+    ///     Test that a conversation that was restored from the saved history, and is longer than the panel is high, opens
+    ///     scrolled to its latest message and not to its oldest.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_RestoredHistory_OpensScrolledToTheLatestMessage()
+    {
+        // Arrange: a saved conversation of the project that is longer than the panel is high
+        var store = new MemoryChatHistoryStore();
+
+        // Act: a panel opens the project, which restores the conversation before the panel is laid out
+        using var harness = new ChatHarness(history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.Layout();
+
+        // Assert: the transcript is at its end
+        Assert.True(harness.Chat.Transcript.Count >= 40);
+        Assert.True(harness.IsAtTheEndOfALongTranscript, $"Offset {harness.TranscriptScroll.Offset.Y} of {harness.TranscriptScroll.Extent.Height}.");
+    }
 }

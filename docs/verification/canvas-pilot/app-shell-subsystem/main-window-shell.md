@@ -508,3 +508,31 @@ settings are walked in the dark and the light theme; a button that shows no text
 28 by 28, and every enabled button takes the focus; every field, list, drop-down, slider, and tree has a name; and more
 than 150 controls were looked at. This scenario is tested by
 `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**MainWindowShell_SelectedFile_ShownPicture_IsRememberedForTheProject**: A picture in a subfolder of the open project
+is selected; its path relative to the project folder is stored for the project, and selecting its folder and closing
+the project keep it. This scenario is tested by `MainWindowShell_SelectedFile_ShownPicture_IsRememberedForTheProject`.
+
+**MainWindowShell_OpenProject_RememberedPicture_IsSelected**: File, Open Project opens a project whose second picture
+is remembered; that picture is selected. This scenario is tested by
+`MainWindowShell_OpenProject_RememberedPicture_IsSelected`.
+
+**MainWindowShell_RecentProjects_OpenOnChoice_SelectsTheRememberedPicture**: A picture remembered in an earlier run is
+selected when a restarted shell opens the project from its list of recent projects. This scenario is tested by
+`MainWindowShell_RecentProjects_OpenOnChoice_SelectsTheRememberedPicture`.
+
+**MainWindowShell_OpenProject_RememberedPictureGone_SelectsNothing**: The remembered picture was deleted; the project
+opens with nothing selected and no message. This scenario is tested by
+`MainWindowShell_OpenProject_RememberedPictureGone_SelectsNothing`.
+
+**MainWindowShell_OpenProject_TwoProjects_EachOpensAtItsOwnPicture**: A picture is shown in each of two projects that
+are opened one after the other; the second opens at first with nothing selected, and when each is opened again it
+selects its own picture. This scenario is tested by `MainWindowShell_OpenProject_TwoProjects_EachOpensAtItsOwnPicture`.
+
+**MainWindowShell_NewProject_NothingRemembered_SelectsNothing**: A new project opens with nothing selected and nothing
+remembered for it. This scenario is tested by `MainWindowShell_NewProject_NothingRemembered_SelectsNothing`.
+
+**MainWindowView_OpenProject_FromWelcomeCardAndRecentMenu_ShowsTheLastShownPicture**: Headless UI test of the composed
+window: the card of a project on the welcome screen opens it with the remembered picture selected in the tree; another
+picture is then shown, the project closed, and opened from the Recent Projects menu, which selects that picture. This
+scenario is tested by `MainWindowView_OpenProject_FromWelcomeCardAndRecentMenu_ShowsTheLastShownPicture`.

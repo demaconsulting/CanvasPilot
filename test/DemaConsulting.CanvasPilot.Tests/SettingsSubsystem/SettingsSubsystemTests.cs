@@ -79,6 +79,41 @@ public sealed class SettingsSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the picture last shown in a recent project is stored with the other settings, survives a restart, is
+    ///     kept when the dialog stores its own choices, and goes when the project leaves the list of recent projects.
+    /// </summary>
+    [Fact]
+    public void SettingsSubsystem_RememberLayoutAndAppearance_ShownPictureOfRecentProject_SurvivesRestartAndOtherChanges()
+    {
+        // Arrange: two listed projects with their pictures, and a dialog over the AI provider page
+        var service = new SettingsService(_tempRoot);
+        service.Save(new AppSettings
+        {
+            RecentProjects = ["C:\\a.canvaspilot", "C:\\b.canvaspilot"],
+            RecentProjectPicture = new Dictionary<string, string>
+            {
+                ["C:\\a.canvaspilot"] = "diagrams/flow.svg",
+                ["C:\\b.canvaspilot"] = "logo.svg",
+            },
+        });
+        var page = new AiProviderSettingsPageViewModel();
+        var dialog = new SettingsDialogViewModel(service, [page]);
+        page.ModelName = "llama3";
+
+        // Act: choose OK, restart, and then drop the second project from the list
+        dialog.OkCommand.Execute(null);
+        var restarted = new SettingsService(_tempRoot);
+        var afterRestart = restarted.Load().RecentProjectPicture;
+        restarted.Update(s => s with { RecentProjects = ["C:\\a.canvaspilot"] });
+        var afterDrop = new SettingsService(_tempRoot).Load().RecentProjectPicture;
+
+        // Assert: both pictures survived the dialog and the restart, and only the listed project keeps one
+        Assert.Equal("diagrams/flow.svg", afterRestart["C:\\a.canvaspilot"]);
+        Assert.Equal("logo.svg", afterRestart["C:\\b.canvaspilot"]);
+        Assert.Equal(["C:\\a.canvaspilot"], afterDrop.Keys);
+    }
+
+    /// <summary>
     ///     Test that the theme and the explorer options chosen on the Appearance page and accepted with OK are stored,
     ///     are present after a restart, and leave the choices of the other pages as they were.
     /// </summary>

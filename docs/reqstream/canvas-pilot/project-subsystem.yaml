@@ -188,3 +188,17 @@ sections:
               - CanvasPilot-ProjectService-StoreTheActiveStyleKit
             tests:
               - ProjectSubsystem_KeepTheStyleChoice_SetAndReopen_GivesTheSameChoiceAndKeepsTheProject
+
+          - id: CanvasPilot-Project-RememberShownPicture
+            title: >-
+              The Project subsystem shall remember, with the recent projects on this computer, the picture that was last
+              shown in each project, give it back for that project after a restart, leave the project file untouched, and
+              forget the picture with the project when it leaves the list.
+            justification: |
+              The picture a person looked at is that person's own view state. A project folder is copied, shared, and put
+              under source control, so writing the picture into the project file would change a shared file on every
+              click and hand one user's view to the team; it belongs with the list of recent projects of the user.
+            children:
+              - CanvasPilot-RecentProjects-RememberShownPicture
+            tests:
+              - ProjectSubsystem_RememberShownPicture_SetAndRestart_IsReadBackForTheProject

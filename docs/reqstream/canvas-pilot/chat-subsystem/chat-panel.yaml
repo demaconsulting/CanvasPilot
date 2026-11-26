@@ -465,3 +465,20 @@ sections:
                 tests:
                   - ChatPanelViewModel_Stop_ShowsStoppingAndDisablesStopUntilTheTurnEnds
                   - ChatPanelView_Stop_ShowsStoppingUntilTheTurnEnds
+
+              - id: CanvasPilot-ChatPanel-FollowLatestMessage
+                title: >-
+                  The ChatPanel shall show the conversation scrolled to its latest row when it is shown and when the
+                  conversation of a project is shown, keep the latest row in view as rows are added and as a reply grows
+                  while the reader is at the end, keep the place of a reader who has scrolled up, follow again once the
+                  reader is back at the end, and bring the latest row into view when the user sends a message.
+                justification: |
+                  The rows of a restored conversation are added before the panel has a size, so scrolling to the end once
+                  is not enough: the panel must follow the latest row whenever its content or its size changes, and only a
+                  movement of the reader may stop that.
+                tests:
+                  - ChatPanelView_RestoredHistory_OpensScrolledToTheLatestMessage
+                  - ChatPanelView_CopilotReply_AtTheEnd_KeepsTheLatestInView
+                  - ChatPanelView_ScrolledUp_ReplyArrives_KeepsThePlaceOfTheReader
+                  - ChatPanelView_ScrolledBackToTheEnd_FollowsAgain
+                  - ChatPanelView_ScrolledUp_SendMessage_ScrollsToTheLatest

@@ -484,3 +484,17 @@ sections:
               - AppShellSubsystem_ComposeApplication_ChatPanelFollowsTheOpenProject
               - AppShellSubsystem_Settings_ComposedShell_HostsAiProviderAndSpeechPages
               - AppShellSubsystem_Create_NullArguments_Throw
+
+          - id: CanvasPilot-AppShell-ReopenAtLastShownPicture
+            title: >-
+              The AppShell subsystem shall, whenever a project is opened or created, select in the explorer, and so show on
+              the stage, the picture that was last shown in that project, selecting nothing when that file is gone, and
+              shall remember each picture that the user shows for the open project.
+            justification: |
+              Every way of opening a project goes through the main window, which is where the explorer, the stage, and the
+              list of recent projects meet, so the main window is where a project is brought back to the picture that the
+              user left it at.
+            children:
+              - CanvasPilot-MainWindowShell-ReopenAtLastShownPicture
+            tests:
+              - AppShellSubsystem_ReopenProject_LastShownPicture_IsSelectedAndDrawn

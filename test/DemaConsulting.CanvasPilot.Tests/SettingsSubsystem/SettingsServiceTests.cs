@@ -743,6 +743,65 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the picture last shown in each recent project is written to the settings file under its own name and
+    ///     read back, by the path of the project in any case.
+    /// </summary>
+    [Fact]
+    public void SettingsService_SaveLoad_RecentProjectPicture_RoundTrips()
+    {
+        // Arrange: two listed projects, each with a picture
+        var settings = new AppSettings
+        {
+            RecentProjects = ["C:\\work\\one.canvaspilot", "C:\\work\\two.canvaspilot"],
+            RecentProjectPicture = new Dictionary<string, string>
+            {
+                ["C:\\work\\one.canvaspilot"] = "flow.svg",
+                ["C:\\work\\two.canvaspilot"] = "diagrams/chart.vl.json",
+            },
+        };
+
+        // Act: save with one service and load with another
+        new SettingsService(SettingsFolder).Save(settings);
+        var text = File.ReadAllText(Path.Combine(SettingsFolder, "settings.json"));
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: the file names the table, and every picture is back
+        Assert.Contains("\"recentProjectPicture\"", text, StringComparison.Ordinal);
+        Assert.Equal("flow.svg", loaded.RecentProjectPicture["C:\\work\\one.canvaspilot"]);
+        Assert.Equal("diagrams/chart.vl.json", loaded.RecentProjectPicture["c:\\WORK\\two.canvaspilot"]);
+    }
+
+    /// <summary>
+    ///     Test that a picture of a project that is not in the list, and a picture path that is blank, rooted, or leaves the
+    ///     folder of the project, are dropped when the file is read, so a hand-edited file cannot point outside a project.
+    /// </summary>
+    [Fact]
+    public void SettingsService_Load_RecentProjectPicture_KeepsOnlyListedProjectsAndRelativePaths()
+    {
+        // Arrange: a file with one listed project and pictures for it and for others
+        WriteSettingsFile("""
+            {
+              "version": 1,
+              "recentProjects": ["C:\\a.canvaspilot", "C:\\b.canvaspilot", "C:\\c.canvaspilot", "C:\\d.canvaspilot"],
+              "recentProjectPicture": {
+                "C:\\a.canvaspilot": "pictures/flow.svg",
+                "C:\\b.canvaspilot": "../outside.svg",
+                "C:\\c.canvaspilot": "/elsewhere/flow.svg",
+                "C:\\d.canvaspilot": " ",
+                "C:\\gone.canvaspilot": "flow.svg"
+              }
+            }
+            """);
+
+        // Act: load
+        var loaded = new SettingsService(SettingsFolder).Load();
+
+        // Assert: only the relative picture of the listed project is kept
+        var kept = Assert.Single(loaded.RecentProjectPicture);
+        Assert.Equal(("C:\\a.canvaspilot", "pictures/flow.svg"), (kept.Key, kept.Value));
+    }
+
+    /// <summary>
     ///     Test that a settings file of an earlier build, which has no window, appearance, or times of opening, loads with
     ///     the defaults and still keeps what it has.
     /// </summary>

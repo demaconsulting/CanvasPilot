@@ -417,3 +417,21 @@ sections:
                   - MainWindowShell_OpenLogFolder_NoLoggerOrLauncherFails_UsesTheDefaultFolderAndTellsTheUser
                   - MainWindowShell_OpenLogFolder_WithoutLauncher_IsDisabledAndDoesNothing
                   - MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog
+
+              - id: CanvasPilot-MainWindowShell-ReopenAtLastShownPicture
+                title: >-
+                  The MainWindowShell shall remember, for the open project, each picture that the user shows, and, when a
+                  project is opened or created, select the picture last shown in it, selecting nothing when that file is
+                  gone; closing a project or selecting a folder shall not forget it.
+                justification: |
+                  The welcome screen, the File menu, the Recent Projects menu, and New Project all end in the shell, so
+                  the shell brings each opened project back to its picture. A selection that is no picture, as when a
+                  folder is selected or the project closes, says nothing about the picture the user looked at.
+                tests:
+                  - MainWindowShell_SelectedFile_ShownPicture_IsRememberedForTheProject
+                  - MainWindowShell_OpenProject_RememberedPicture_IsSelected
+                  - MainWindowShell_RecentProjects_OpenOnChoice_SelectsTheRememberedPicture
+                  - MainWindowShell_OpenProject_RememberedPictureGone_SelectsNothing
+                  - MainWindowShell_OpenProject_TwoProjects_EachOpensAtItsOwnPicture
+                  - MainWindowShell_NewProject_NothingRemembered_SelectsNothing
+                  - MainWindowView_OpenProject_FromWelcomeCardAndRecentMenu_ShowsTheLastShownPicture

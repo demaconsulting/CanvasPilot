@@ -84,3 +84,8 @@ is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
 provider page, and the Appearance page loads stored settings with the dark theme; the text of every provider, reasoning
 level, and theme entry, and of the chosen ones, is the label that the list shows. This scenario is tested by
 `SettingsSubsystem_AnnounceChosenEntries_PageLists_ReadAsTheirShownWords`.
+
+**SettingsSubsystem_RememberLayoutAndAppearance_ShownPictureOfRecentProject_SurvivesRestartAndOtherChanges**: Stored
+pictures of two listed projects survive the OK of the dialog over the AI provider page and a restart, and only the
+project that stays in the list keeps its picture after the other leaves it. This scenario is tested by
+`SettingsSubsystem_RememberLayoutAndAppearance_ShownPictureOfRecentProject_SurvivesRestartAndOtherChanges`.

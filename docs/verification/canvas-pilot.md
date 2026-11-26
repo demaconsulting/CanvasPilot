@@ -605,6 +605,19 @@ first entry is opened. The project reopens with its name. A damaged project file
 a failed result, the open project is unchanged, and the refusal is logged. This scenario is tested by
 `CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject`.
 
+**CanvasPilot_ResumeProject_ReopenedProject_SelectsTheLastShownPicture**: The composed application creates a project
+with two pictures and shows the second; after a restart, the project is opened from the list of recent projects and the
+second picture is selected and drawn. After the picture is deleted and the application restarted again, the project
+opens with nothing selected and no message. This scenario is tested by
+`CanvasPilot_ResumeProject_ReopenedProject_SelectsTheLastShownPicture`.
+
+**CanvasPilot_ResumeProject_ComposedWindow_ShowsTheLastPictureAndTheLatestMessage**: A remembered project with two
+pictures, the second shown last, and a saved conversation of forty rows; the composed main window (a headless UI test
+in `CanvasPilotThemeTests.cs`, with Ollama without a model as the provider so that nothing is started or asked) opens
+the project from its card on the welcome screen. The second picture is selected and drawn, and the transcript is
+longer than its view and scrolled to its end, within 24 pixels. This scenario is tested by
+`CanvasPilot_ResumeProject_ComposedWindow_ShowsTheLastPictureAndTheLatestMessage`.
+
 **CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles**: A created project holds two SVG files and
 a text file; the project explorer is opened on the project folder and lists the two SVG files in name order,
 and selecting one reports its path. This scenario is tested by

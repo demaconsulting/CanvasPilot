@@ -331,3 +331,20 @@ sections:
               - CanvasPilot-ChatHistoryStore-RefuseRootInsideProject
             tests:
               - ChatSubsystem_KeepChatHistoryOnThisComputer_TurnSavedRestoredAndClearedOutsideTheProject
+
+          - id: CanvasPilot-Chat-FollowLatestMessage
+            title: >-
+              The Chat subsystem shall show a conversation scrolled to its latest message when it is shown or restored,
+              keep the latest message in view as messages are added and replies grow while the reader is at the end, keep
+              the place of a reader who has scrolled up, and follow again once the reader is back at the end or sends a
+              message.
+            justification: |
+              People return to the end of a conversation, as in every chat program; opening at the oldest message makes
+              them scroll through the whole history. A new reply must not pull away a reader who scrolled up to read an
+              earlier answer, and a message that the user sends is one the user wants to see with its answer.
+            children:
+              - CanvasPilot-ChatPanel-FollowLatestMessage
+            tests:
+              - ChatPanelView_RestoredHistory_OpensScrolledToTheLatestMessage
+              - ChatPanelView_CopilotReply_AtTheEnd_KeepsTheLatestInView
+              - ChatPanelView_ScrolledUp_ReplyArrives_KeepsThePlaceOfTheReader

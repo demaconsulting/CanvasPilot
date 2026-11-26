@@ -347,4 +347,58 @@ public sealed class ChatPanelCopilotViewTests
         Assert.False(harness.BusyRow.IsEffectivelyVisible);
         Assert.False(harness.StopButton.IsEffectivelyVisible);
     }
+
+    /// <summary>
+    ///     Test that while the reader is at the end, the latest row stays in view as the answer of the copilot grows line
+    ///     by line.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_CopilotReply_AtTheEnd_KeepsTheLatestInView()
+    {
+        // Arrange: a long restored conversation and a sent message
+        var store = new MemoryChatHistoryStore();
+        var agent = new ScriptedAgentService();
+        using var harness = new ChatHarness(agent: agent, history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.Type("Draw a box");
+        harness.ClickSend();
+
+        // Act: the answer grows by one line at a time, and completes
+        for (var line = 0; line < 15; line++)
+        {
+            agent.Emit(new AgentEvent.TextDelta($"Line {line} of the answer\n"));
+            Assert.True(harness.WaitFor(() => harness.Chat.Transcript.OfType<AssistantReplyViewModel>().Any(reply => reply.Text.Contains($"Line {line} ", StringComparison.Ordinal))));
+        }
+
+        agent.Emit(new AgentEvent.Completed());
+        Assert.True(harness.WaitFor(() => !harness.Chat.IsCopilotBusy));
+
+        // Assert: the end of the answer is in view
+        Assert.True(harness.IsAtTheEndOfALongTranscript, $"Offset {harness.TranscriptScroll.Offset.Y} of {harness.TranscriptScroll.Extent.Height}.");
+    }
+
+    /// <summary>
+    ///     Test that a reader who scrolled up to read keeps the place while the answer of the copilot grows and completes.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_ScrolledUp_ReplyArrives_KeepsThePlaceOfTheReader()
+    {
+        // Arrange: a long restored conversation, a sent message whose answer has started, and a reader who scrolled up
+        var store = new MemoryChatHistoryStore();
+        var agent = new ScriptedAgentService();
+        using var harness = new ChatHarness(agent: agent, history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.Type("Draw a box");
+        harness.ClickSend();
+        agent.Emit(new AgentEvent.TextDelta("Here is"));
+        Assert.True(harness.WaitFor(() => harness.Chat.Transcript.OfType<AssistantReplyViewModel>().Any()));
+        harness.ScrollToTheTop();
+
+        // Act: the answer grows by many lines and completes
+        agent.Emit(new AgentEvent.TextDelta(" the box" + string.Concat(Enumerable.Repeat("\nwith one more line", 20))), new AgentEvent.Completed());
+        Assert.True(harness.WaitFor(() => !harness.Chat.IsCopilotBusy));
+
+        // Assert: the reader is still at the top
+        Assert.Equal(0, harness.TranscriptScroll.Offset.Y);
+        Assert.True(harness.TranscriptScroll.Extent.Height > harness.TranscriptScroll.Viewport.Height);
+    }
+
 }

@@ -3,7 +3,7 @@ package CanvasPilot_RecentProjects {
     private import CanvasPilot_SettingsService::*;
 
     part def RecentProjects {
-        doc /* Keeps the most-recently-used project file list, with the time of each opening, in the application settings. */
+        doc /* Keeps the most-recently-used project file list, with the time of each opening and the picture last shown in each project (relative to its folder, never in the project), in the application settings. */
 
         metadata info : SoftwareInfo {
             sourceFiles = (

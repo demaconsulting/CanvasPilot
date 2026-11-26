@@ -362,6 +362,11 @@ public sealed record AppSettings
     public const int CurrentVersion = 1;
 
     /// <summary>
+    ///     The separators of the parts of a picture path: both, so a path written on another system is judged the same way.
+    /// </summary>
+    private static readonly char[] PictureSeparators = ['/', '\\'];
+
+    /// <summary>
     ///     Gets the schema version of the document.
     /// </summary>
     public int Version { get; init; } = CurrentVersion;
@@ -407,4 +412,46 @@ public sealed record AppSettings
     /// </remarks>
     public IReadOnlyDictionary<string, DateTimeOffset> RecentProjectOpened { get; init; } =
         new Dictionary<string, DateTimeOffset>();
+
+    /// <summary>
+    ///     Gets the picture that was last shown in each recently opened project, by the same path as in
+    ///     <see cref="RecentProjects" />, as a path relative to the folder of the project (for example
+    ///     <c>diagrams/flow.svg</c>). A project that has none opens with nothing selected.
+    /// </summary>
+    /// <remarks>
+    ///     Which picture a person looked at is that person's own view state, and a project folder is copied, shared, and
+    ///     put under source control, so it is kept here, on this computer, and never in the project file. The path is
+    ///     relative so that it is the same for every place the folder is opened from; see
+    ///     <see cref="IsValidShownPicture" /> for the paths that are kept. This is an additive part of the document, like
+    ///     <see cref="RecentProjectOpened" />, so the schema version does not change.
+    /// </remarks>
+    public IReadOnlyDictionary<string, string> RecentProjectPicture { get; init; } =
+        new Dictionary<string, string>();
+
+    /// <summary>
+    ///     Tells whether a path can be kept as the picture last shown in a project: a path relative to the folder of the
+    ///     project that stays inside it.
+    /// </summary>
+    /// <remarks>
+    ///     A rooted path would name a file outside the project, or on one computer only, and a <c>..</c> part leaves the
+    ///     folder, so neither is a picture of the project. The check is on the text only and does not look at the disk:
+    ///     a picture that was deleted is still a valid path, and the project simply opens with nothing selected.
+    /// </remarks>
+    /// <param name="picture">The path to check; may be <see langword="null" />.</param>
+    /// <returns>
+    ///     <see langword="true" /> when the path is not blank, has no character that a path cannot hold, is not rooted,
+    ///     and has no <c>..</c> part.
+    /// </returns>
+    public static bool IsValidShownPicture(string? picture)
+    {
+        if (string.IsNullOrWhiteSpace(picture)
+            || picture.IndexOfAny(Path.GetInvalidPathChars()) >= 0
+            || Path.IsPathRooted(picture))
+        {
+            return false;
+        }
+
+        // No part may climb out of the folder of the project
+        return !picture.Split(PictureSeparators).Any(part => part == "..");
+    }
 }

@@ -115,6 +115,39 @@ public sealed class ProjectSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the picture last shown in each of two real projects is remembered with the recent projects, read back
+    ///     after a restart for the right project, kept out of the project file, and forgotten when the project leaves the
+    ///     list.
+    /// </summary>
+    [Fact]
+    public async Task ProjectSubsystem_RememberShownPicture_SetAndRestart_IsReadBackForTheProject()
+    {
+        // Arrange: two real projects in the recent list
+        Directory.CreateDirectory(Projects);
+        var settingsFolder = Path.Combine(_tempRoot, "settings");
+        var service = new ProjectService();
+        var recent = new RecentProjects(new SettingsService(settingsFolder));
+        var first = (await service.CreateAsync(Projects, "First", TestContext.Current.CancellationToken)).Project!;
+        var second = (await service.CreateAsync(Projects, "Second", TestContext.Current.CancellationToken)).Project!;
+        recent.Add(first.FilePath);
+        recent.Add(second.FilePath);
+        var projectFileBefore = await File.ReadAllTextAsync(first.FilePath, TestContext.Current.CancellationToken);
+
+        // Act: remember a picture of each, restart, and then remove the second project from the list
+        recent.RememberShownPicture(first.FilePath, "flow.svg");
+        recent.RememberShownPicture(second.FilePath, Path.Combine("charts", "sales.vl.json"));
+        var restarted = new RecentProjects(Loaded(settingsFolder));
+        var afterRestart = (restarted.GetShownPicture(first.FilePath), restarted.GetShownPicture(second.FilePath));
+        restarted.Remove(second.FilePath);
+
+        // Assert: each project had its own picture, the project file was not touched, and a removed project forgot it
+        Assert.Equal(("flow.svg", Path.Combine("charts", "sales.vl.json")), afterRestart);
+        Assert.Equal(projectFileBefore, await File.ReadAllTextAsync(first.FilePath, TestContext.Current.CancellationToken));
+        Assert.Null(new RecentProjects(Loaded(settingsFolder)).GetShownPicture(second.FilePath));
+        Assert.Equal("flow.svg", new RecentProjects(Loaded(settingsFolder)).GetShownPicture(first.FilePath));
+    }
+
+    /// <summary>
     ///     Test that the explorer of a created project lists the image source files of its folders and sub-folders but not the
     ///     data folder, and reflects a rename and delete of the selected file.
     /// </summary>
@@ -186,5 +219,17 @@ public sealed class ProjectSubsystemTests : IDisposable
         Assert.Contains("futureThing", clearedText, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(project.FolderPath, "logo.svg")));
         Assert.True(Directory.Exists(Path.Combine(project.FolderPath, ".canvaspilot")));
+    }
+
+    /// <summary>
+    ///     Reads the settings in a folder with a new service, as the application does when it starts.
+    /// </summary>
+    /// <param name="folder">The settings folder.</param>
+    /// <returns>The service, with the settings read.</returns>
+    private static SettingsService Loaded(string folder)
+    {
+        var settings = new SettingsService(folder);
+        settings.Load();
+        return settings;
     }
 }

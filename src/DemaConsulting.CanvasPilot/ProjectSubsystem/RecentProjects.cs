@@ -25,7 +25,7 @@ namespace DemaConsulting.CanvasPilot.ProjectSubsystem;
 /// <summary>
 ///     RecentProjects keeps the most-recently-used list of project files in the application settings: at most
 ///     <see cref="MaxCount" /> entries, without case-insensitive duplicates, the most recent first, and without
-///     files that no longer exist.
+///     files that no longer exist, with the time each was opened and the picture last shown in each.
 /// </summary>
 public sealed class RecentProjects : IRecentProjects
 {
@@ -108,6 +108,46 @@ public sealed class RecentProjects : IRecentProjects
     /// <inheritdoc />
     public bool Clear() => TryUpdateList(_ => []);
 
+    /// <inheritdoc />
+    public string? GetShownPicture(string projectFile)
+    {
+        var path = Normalize(projectFile);
+        return path is not null
+               && _settings.Current.RecentProjectPicture.TryGetValue(path, out var picture)
+               && AppSettings.IsValidShownPicture(picture)
+            ? picture
+            : null;
+    }
+
+    /// <inheritdoc />
+    public bool RememberShownPicture(string projectFile, string picture)
+    {
+        // Only a listed project keeps a picture, and only a path that stays inside its folder
+        var path = Normalize(projectFile);
+        if (path is null
+            || !AppSettings.IsValidShownPicture(picture)
+            || !_settings.Current.RecentProjects.Any(entry => SamePath(entry, path)))
+        {
+            return false;
+        }
+
+        // The same picture again writes nothing, so selecting it once more costs no write of the settings
+        if (_settings.Current.RecentProjectPicture.TryGetValue(path, out var stored)
+            && string.Equals(stored, picture, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        // The list did not change, so the change is not announced
+        return TryStore(settings => settings with
+        {
+            RecentProjectPicture = new Dictionary<string, string>(settings.RecentProjectPicture, StringComparer.OrdinalIgnoreCase)
+            {
+                [path] = picture,
+            },
+        });
+    }
+
     /// <summary>
     ///     Compares two stored paths ignoring case.
     /// </summary>
@@ -155,6 +195,22 @@ public sealed class RecentProjects : IRecentProjects
     /// <returns><see langword="true" /> when the settings were stored.</returns>
     private bool TryUpdate(Func<AppSettings, AppSettings> change)
     {
+        if (!TryStore(change))
+        {
+            return false;
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>
+    ///     Stores settings built from the latest stored settings, without announcing a change of the list.
+    /// </summary>
+    /// <param name="change">Builds the new settings from the stored settings.</param>
+    /// <returns><see langword="true" /> when the settings were stored.</returns>
+    private bool TryStore(Func<AppSettings, AppSettings> change)
+    {
         try
         {
             _settings.Update(change);
@@ -165,7 +221,6 @@ public sealed class RecentProjects : IRecentProjects
             return false;
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
         return true;
     }
 }
