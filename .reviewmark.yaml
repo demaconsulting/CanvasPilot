@@ -9,6 +9,9 @@ needs-review:
   - "README.md"                   # Root README file
   - "requirements.yaml"           # Root requirements file
   - "**/*.cs"                     # All C# source and test files
+  # Avalonia view markup carries behavior (bindings, commands, menus, key bindings, automation names, templates),
+  # so it is reviewed with the unit whose {Unit}.axaml.cs it pairs with; shared styles go to ThemeResources.
+  - "src/**/*.axaml"              # Avalonia view and style markup
   - "src/**/KnowledgeSubsystem/Cards/**/*.md"  # Knowledge cards: they steer the drawing assistant
   - "src/**/StyleSubsystem/BuiltIn/**/style.json"  # Built-in style kits: they steer the drawing assistant
   - "docs/reqstream/**/*.yaml"    # Requirements files
