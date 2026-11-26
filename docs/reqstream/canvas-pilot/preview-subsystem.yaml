@@ -178,6 +178,7 @@ sections:
               - CanvasPilot-PreviewPane-ShowPictureMenu
             tests:
               - PreviewSubsystem_PictureMenu_ExporterCommands_CopyAndExportTheShownPictureAndFollowIt
+              - PreviewSubsystem_PictureMenu_PaneViewOverExporter_OpensAndRunsCommandsAndStaysClosedWhileOff
 
           - id: CanvasPilot-Preview-ZoomPicture
             title: >-

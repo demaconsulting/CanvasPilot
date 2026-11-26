@@ -19,21 +19,27 @@
 // SOFTWARE.
 
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
+using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.Input;
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
+using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
 /// <summary>
-///     Headless system tests of the look of the whole application: the composed main window is drawn in the dark
-///     and in the light theme that the system asks for.
+///     Headless system tests of the whole application in its main window: the composed window is drawn in the dark
+///     and the light theme that the system asks for, and the menu of the picture on the stage opens, is named, and
+///     stays closed while marking.
 /// </summary>
 public sealed class CanvasPilotThemeTests : IDisposable
 {
@@ -123,6 +129,161 @@ public sealed class CanvasPilotThemeTests : IDisposable
             Assert.IsAssignableFrom<ISolidColorBrush>(window.Background).Color);
         Assert.Equal(ThemeChoice.Dark, remembered);
         window.Close();
+    }
+
+    /// <summary>
+    ///     Test that, in the composed main window with the real image exporter, the menu of the picture opens on a
+    ///     right-click of the stage and on Shift+F10 and the Menu key with the stage focused, that it and its items are
+    ///     named for screen readers, that its items are usable only while a picture is shown, and that it opens neither
+    ///     by a right-click nor by a key while a marking tool is chosen.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking()
+    {
+        // Arrange: a remembered project, the composed application with nothing substituted, its main window shown
+        // with the project open, and a 40 x 20 SVG and a broken one in the project
+        var token = TestContext.Current.CancellationToken;
+        var projects = Directory.CreateDirectory(Path.Combine(_root, "projects")).FullName;
+        var created = await new ProjectService().CreateAsync(projects, "Menu", token);
+        new RecentProjects(new SettingsService(Path.Combine(_root, "settings"))).Add(created.Project!.FilePath);
+        var composition = AppShellUiHelpers.Compose(_root);
+        _compositions.Add(composition);
+        var window = new MainWindowView(composition.Shell);
+        window.Show();
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "red.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='#ff0000'/></svg>",
+            token);
+        await File.WriteAllTextAsync(Path.Combine(folder, "broken.svg"), "<svg><not closed", token);
+        var explorer = composition.Shell.Workspace.Explorer;
+        explorer.Refresh();
+        AppShellUiHelpers.Flush();
+        var stage = SettingsUiHelpers.Find<Grid>(window, "PreviewStage");
+        var menu = stage.ContextMenu ?? throw new InvalidOperationException("The stage has no menu.");
+        var stageLeft = stage.TranslatePoint(new Point(20, stage.Bounds.Height / 2), window)
+                        ?? throw new InvalidOperationException("The stage is not in the window.");
+
+        // Act: with no file selected right-click the empty stage; show the picture, right-click it, read the names, and
+        // press Shift+F10 and the Menu key on the focused stage; choose the rectangle tool, right-click the picture,
+        // and press the Menu key and Shift+F10 on the focused stage; put the tool away and right-click the picture;
+        // then show the broken file and right-click the error
+        RightClick(window, stageLeft);
+        var openedOnEmptyStage = menu.IsOpen;
+        var usableOnEmptyStage = UsableItems(menu);
+        menu.Close();
+        explorer.SelectFile(Path.Combine(folder, "red.svg"));
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var scroller = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
+        var picture = Center(window, SettingsUiHelpers.Find<Image>(window, "PreviewImage"));
+        RightClick(window, picture);
+        var openedOnPicture = menu.IsOpen;
+        var usableOnPicture = UsableItems(menu);
+        var itemNames = menu.Items.OfType<MenuItem>().Select(AutomationProperties.GetName).ToList();
+        var menuName = AutomationProperties.GetName(menu);
+        menu.Close();
+        scroller.Focus();
+        PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+        var openedByShiftF10 = menu.IsOpen;
+        menu.Close();
+        scroller.Focus();
+        PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+        var openedByMenuKey = menu.IsOpen;
+        menu.Close();
+        composition.Annotation.SelectTool(AnnotationTool.Rectangle);
+        AppShellUiHelpers.Flush();
+        RightClick(window, picture);
+        var openedByRightClickWhileMarking = menu.IsOpen;
+        menu.Close();
+        scroller.Focus();
+        PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+        var openedByMenuKeyWhileMarking = menu.IsOpen;
+        menu.Close();
+        scroller.Focus();
+        PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+        var openedByShiftF10WhileMarking = menu.IsOpen;
+        menu.Close();
+        composition.Annotation.SelectTool(AnnotationTool.None);
+        AppShellUiHelpers.Flush();
+        RightClick(window, picture);
+        var openedAfterMarking = menu.IsOpen;
+        menu.Close();
+        explorer.SelectFile(Path.Combine(folder, "broken.svg"));
+        await composition.Preview.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        RightClick(window, Center(window, SettingsUiHelpers.Find<StackPanel>(window, "PreviewErrorPanel")));
+        var openedOnError = menu.IsOpen;
+        var usableOnError = UsableItems(menu);
+        menu.Close();
+
+        // Assert: the empty stage and the error open the menu with unusable items; with the picture shown it opens all
+        // three ways, is named, and its items are named and usable; nothing opens while marking, and the picture opens
+        // it again after
+        Assert.True(openedOnEmptyStage);
+        Assert.Equal([false, false], usableOnEmptyStage);
+        Assert.True(openedOnPicture);
+        Assert.True(openedByShiftF10);
+        Assert.True(openedByMenuKey);
+        Assert.Equal([true, true], usableOnPicture);
+        Assert.Equal("Picture", menuName);
+        Assert.Equal(["Copy image", "Export as PNG"], itemNames);
+        Assert.False(openedByRightClickWhileMarking);
+        Assert.False(openedByMenuKeyWhileMarking);
+        Assert.False(openedByShiftF10WhileMarking);
+        Assert.True(openedAfterMarking);
+        Assert.True(openedOnError);
+        Assert.Equal([false, false], usableOnError);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Presses and releases the right button at a point of a window, the way a user right-clicks.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    /// <param name="point">The point, in the window's coordinates.</param>
+    private static void RightClick(Window window, Point point)
+    {
+        window.MouseDown(point, MouseButton.Right);
+        window.MouseUp(point, MouseButton.Right);
+        AppShellUiHelpers.Flush();
+    }
+
+    /// <summary>
+    ///     Presses and releases a key with modifiers on a window, the way a user types it.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    /// <param name="key">The physical key.</param>
+    /// <param name="modifiers">The modifiers held down.</param>
+    private static void PressKey(Window window, PhysicalKey key, RawInputModifiers modifiers)
+    {
+        window.KeyPressQwerty(key, modifiers);
+        window.KeyReleaseQwerty(key, modifiers);
+        AppShellUiHelpers.Flush();
+    }
+
+    /// <summary>
+    ///     Reads whether each item of a menu is usable, in the order of the items.
+    /// </summary>
+    /// <param name="menu">The menu.</param>
+    /// <returns>Whether each item is usable.</returns>
+    private static bool[] UsableItems(ContextMenu menu)
+    {
+        return menu.Items.OfType<MenuItem>().Select(item => item.IsEffectivelyEnabled).ToArray();
+    }
+
+    /// <summary>
+    ///     Gets the center of a control in a window's coordinates.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    /// <param name="control">The control.</param>
+    /// <returns>The point at the control's center.</returns>
+    private static Point Center(Window window, Control control)
+    {
+        return control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)
+               ?? throw new InvalidOperationException("The control is not in the window.");
     }
 
     /// <summary>

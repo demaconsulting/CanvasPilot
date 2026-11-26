@@ -1,3 +1,5 @@
+#Requires -Version 7.0
+
 <#
 .SYNOPSIS
     Draws the application icon, Icon.png and Icon.ico, from Icon.svg, or checks that they are current.

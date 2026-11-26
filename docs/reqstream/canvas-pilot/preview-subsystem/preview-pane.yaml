@@ -265,6 +265,7 @@ sections:
                   - PreviewPaneView_PictureMenu_ShiftF10WherePlatformCountsItAsMenuKey_RequestsTheMenuOnce
                   - PreviewPaneView_PictureMenu_CommandsCannotRunOrMissing_ItemsAreUnusable
                   - PreviewPaneView_PictureMenu_TurnedOffOrOnFloatingControls_DoesNotOpen
+                  - PreviewPaneView_PictureMenu_MenuKeyOrShiftF10OnFloatingControls_DoesNotOpen
 
               - id: CanvasPilot-PreviewPane-ShowStyleNotes
                 title: >-

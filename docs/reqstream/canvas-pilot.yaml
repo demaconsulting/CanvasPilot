@@ -345,6 +345,7 @@ sections:
           - CanvasPilot-AppShell-PictureMenu
         tests:
           - CanvasPilot_PictureMenu_ShownPicture_CopiesAndExportsLikeTheImageMenuAndIsOffWhileMarking
+          - CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking
 
       - id: CanvasPilot-System-ComposeMessage
         title: >-

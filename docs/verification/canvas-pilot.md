@@ -7,6 +7,9 @@ directories without opening a window. Each test exercises the units together as 
 and asserts on observable outcomes such as the files written to disk and the exceptions raised. The
 tests use real file I/O and no mocks for the units themselves; where a user would act in a dialog, a hand-written
 dialog service plays the user, and a hand-written refresh scheduler replaces timed refreshes so no test waits.
+Requirements whose behavior is seen only in a window, the themes and the menu of the picture, are also verified by
+headless UI system tests in `CanvasPilotThemeTests.cs` of the UI test project, which show the composed main window on
+the headless Avalonia platform.
 
 The `AppShell` subsystem depends on the `Preview` subsystem and not the reverse (see *Dependency Direction* in the
 design). Verification follows that direction: the `Preview` units are verified with a substitute for the
@@ -100,7 +103,10 @@ services, or display is required.
   the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
 - The menu of the picture on the stage runs the Image menu's Copy Image and Export as PNG commands: it cannot run them
   before a picture is shown or after a render failed, copies the shown picture and exports a PNG of its size with the
-  picture shown, and is off while a marking tool is chosen and on again afterwards.
+  picture shown, and is off while a marking tool is chosen and on again afterwards; in the composed main window it opens
+  on a right-click of the stage and on Shift+F10 and the Menu key with the stage focused, it and its items are named for
+  screen readers (Picture, Copy image, Export as PNG), and it opens neither by a right-click nor by a key while a
+  marking tool is chosen.
 - A message is composed from typed text, dictated text, and chips for attached files, folders, images, and marks, which
   stay in the order they were placed with the origin and kind of each; each user action is one undo step and redo gives
   the same steps; sending clears the draft and what can be undone, and nothing of the draft is written to disk.
@@ -715,9 +721,19 @@ with a project that holds a 32 by 16 SVG and a broken one: the commands of the m
 Copy Image and Export as PNG commands and cannot run before a picture is shown; with the SVG shown both can, the copy
 puts the shown picture on the clipboard of the dialog service, and the export writes a PNG of width 32 and height 16;
 the menu is off while the rectangle tool is chosen and on again with none; with the broken file selected neither command
-can run. How the menu is opened (a right-click, Shift+F10, the Menu key) is verified by the headless tests of the
-`PreviewPane` unit and the composed window. This scenario is tested by
+can run. How the menu is opened, how it is named, and that it stays closed while marking are verified in the composed
+window by `CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking`. This scenario is tested by
 `CanvasPilot_PictureMenu_ShownPicture_CopiesAndExportsLikeTheImageMenuAndIsOffWhileMarking`.
+
+**CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking**: The composed application's main
+window is shown headless (a headless UI test in `CanvasPilotThemeTests.cs`) with a project that holds a 40 by 20 SVG and
+a broken one, and with the real image exporter. Before a file is selected, a right-click on the empty stage opens the
+menu of the picture with both items unusable. With the SVG shown, a right-click on the picture, and Shift+F10 and the
+Menu key with the stage focused, each open the menu. The menu is named "Picture", its items are named "Copy image" and
+"Export as PNG", and both are usable. With the rectangle tool chosen, neither a right-click on the picture nor the Menu
+key or Shift+F10 on the focused stage opens it. With no tool, a right-click opens it again. With the broken file
+selected, a right-click on the error opens it with both items unusable. This scenario is tested by
+`CanvasPilot_PictureMenu_ComposedWindow_OpensNamedItemsAndStaysClosedWhileMarking`.
 
 **CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage**: A message is composed by typing, dictating a
 block, dropping a file and a folder in one operation, adding a mark where the caret was, and typing more. The message

@@ -339,8 +339,9 @@ For example, right-click the picture, choose **Copy image**, and paste it into a
 From the keyboard, give the stage the focus (press Tab until it is focused, or click the empty stage) and press
 **Shift+F10** or the **Menu** key; the menu opens at the bottom of the stage. Screen readers read the items as "Copy
 image" and "Export as PNG". Like the Image menu, both items are disabled while no picture is shown, also when the file
-could not be drawn. The menu does not open while a marking tool is chosen, so a right-click never interrupts a mark;
-choose **Select** (or press V) first.
+could not be drawn. Then the stage cannot take the keyboard focus either, so the menu does not open from the keyboard;
+there is nothing to copy or export then, and a right-click still opens it with both items disabled. The menu does not
+open while a marking tool is chosen, so a right-click never interrupts a mark; choose **Select** (or press V) first.
 
 ## Drag the Picture Into Another Program
 

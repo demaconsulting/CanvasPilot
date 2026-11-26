@@ -436,10 +436,12 @@ sections:
               application joins them. Running the same commands keeps one behavior and one rule of availability for the
               picture, and a right-click while a mark is drawn must not open a menu that takes the pointer from the stroke.
               The menu is turned off and on by the signal that the layer for marks already gives its host when a tool is
-              chosen and put away (CanvasPilot-AnnotationOverlay-ToggleDragOutWithTool, a requirement of the Annotation
-              subsystem), so the layer needs no new behavior, and the composed result is tested here.
+              chosen and put away (CanvasPilot-AnnotationOverlay-ToggleDragOutWithTool, a requirement of the AnnotationOverlay
+              unit of the Annotation subsystem, listed as a child because the off-while-marking clause depends on it), so the
+              layer needs no new behavior, and the composed result is tested here.
             children:
               - CanvasPilot-MainWindowShell-ProvideImageMenuSeam
+              - CanvasPilot-AnnotationOverlay-ToggleDragOutWithTool
             tests:
               - AppShellSubsystem_PictureMenu_ComposedApplication_RunsTheImageCommandsAndIsOffWhileMarking
               - MainWindowView_PictureMenu_ShownPicture_RunsTheImageCommandsAndStaysClosedWhileMarking

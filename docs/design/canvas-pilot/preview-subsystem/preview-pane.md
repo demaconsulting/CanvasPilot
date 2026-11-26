@@ -194,8 +194,10 @@ The view handles the menu's `Opening` event and cancels it while `IsPictureMenuE
 shown, which covers the pointer and the keys alike. Canceling the opening, instead of marking every request on the
 stage handled, keeps the context menus of controls on the stage, such as the text box of a note, working while a tool is
 chosen. The slot of the host's controls (`PreviewToolbar`), the zoom pill, and the notes drawer each mark a
-`ContextRequested` that bubbles through them handled, so a right-click or the Menu key on them never opens the menu of
-the picture; the handler runs as the request bubbles, after their children, so a child with a menu of its own still
+`ContextRequested` that bubbles through them handled, so a right-click, the Menu key, or Shift+F10 on them never opens
+the menu of the picture: the view's Shift+F10 handler sits on the scroller, which does not contain them, and where the
+platform counts Shift+F10 as a menu key the framework's request bubbles through them and is marked handled like the
+Menu key's; the handler runs as the request bubbles, after their children, so a child with a menu of its own still
 opens it.
 
 **Automation identifiers that changed**: `PreviewFitToWindow` is now a `ToggleButton` (it was a `CheckBox`) named "Fit

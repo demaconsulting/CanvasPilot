@@ -1045,6 +1045,172 @@ public sealed class PreviewPaneViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that neither the Menu key nor Shift+F10, also where the platform counts Shift+F10 as a menu key, opens the
+    ///     menu of the picture while a control that floats over the stage has the keyboard focus (a control in the tool
+    ///     bar slot, the header of the notes drawer, and a button of the zoom pill), while the Menu key on the focused
+    ///     stage still opens it.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_PictureMenu_MenuKeyOrShiftF10OnFloatingControls_DoesNotOpen()
+    {
+        // Arrange: a shown pane with a picture, commands of a host, a button in the tool bar slot, a note in the notes
+        // drawer, the focusable floating controls, and the platform's gestures for a context menu
+        var (window, _, pane, menu) = await ShowPictureWithMenuAsync();
+        pane.CopyImageCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        pane.ExportPngCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        var toolbarButton = new Button { Content = "Tool" };
+        pane.Toolbar = toolbarButton;
+        pane.ShowNotes("picture-menu", [new RenderDiagnostic(RenderDiagnosticSeverity.Info, "picture-menu-note", "a note")]);
+        AppShellUiHelpers.Flush();
+        var drawer = SettingsUiHelpers.Find<Expander>(window, "PreviewDiagnosticsExpander");
+        var drawerHeader = drawer.GetVisualDescendants().OfType<ToggleButton>().First();
+        var zoomButton = SettingsUiHelpers.Find<Button>(window, "PreviewZoomActual");
+        var stage = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
+        var gestures = window.GetPlatformSettings()!.HotkeyConfiguration.OpenContextMenu;
+        var shiftF10 = new KeyGesture(Key.F10, KeyModifiers.Shift);
+
+        // Act: on each floating control, take the focus and press the Menu key, Shift+F10, and Shift+F10 counted as a
+        // menu key, as on Windows, recording whether the menu opened; then press the Menu key on the focused stage
+        var tookFocus = new List<bool>();
+        var openedOnFloating = new List<bool>();
+        foreach (var control in new Control[] { toolbarButton, drawerHeader, zoomButton })
+        {
+            tookFocus.Add(control.Focus());
+            PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+            openedOnFloating.Add(menu.IsOpen);
+            menu.Close();
+            control.Focus();
+            PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+            openedOnFloating.Add(menu.IsOpen);
+            menu.Close();
+            gestures.Add(shiftF10);
+            try
+            {
+                control.Focus();
+                PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+                openedOnFloating.Add(menu.IsOpen);
+                menu.Close();
+            }
+            finally
+            {
+                gestures.Remove(shiftF10);
+            }
+        }
+
+        stage.Focus();
+        PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+        var openedOnStage = menu.IsOpen;
+        menu.Close();
+
+        // Assert: every floating control took the focus and opened nothing, and the stage's Menu key opened the menu
+        Assert.Equal([true, true, true], tookFocus);
+        Assert.Equal(9, openedOnFloating.Count);
+        Assert.DoesNotContain(true, openedOnFloating);
+        Assert.True(openedOnStage);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the Preview subsystem's menu of the picture, in the pane's view over the real render service and
+    ///     image exporter given host-style commands, opens by a right-click, the Menu key, and Shift+F10, has items that
+    ///     are usable only while a picture is shown, copies the shown picture and exports a PNG of its size when they are
+    ///     chosen, and opens neither by a right-click nor by the Menu key while it is turned off.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewSubsystem_PictureMenu_PaneViewOverExporter_OpensAndRunsCommandsAndStaysClosedWhileOff()
+    {
+        // Arrange: a project with a 40 x 20 SVG and a broken one, a shown pane, an exporter over it with dialogs that
+        // play the user, and host-style commands over the exporter that ask again whether they can run whenever the
+        // exporter says so
+        var token = TestContext.Current.CancellationToken;
+        await File.WriteAllTextAsync(Path.Combine(_folder, "red.svg"), HalfRedSvg, token);
+        await File.WriteAllTextAsync(Path.Combine(_folder, "broken.svg"), "<svg><not closed", token);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        var exporter = new ImageExporter(pane, new ImageRenderService());
+        var dialogs = new RecordingExportDialogs { SaveFileToPick = Path.Combine(_folder, "menu.png") };
+        var copy = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(() => exporter.CopyImageAsync(dialogs), () => exporter.CanExport);
+        var export = new CommunityToolkit.Mvvm.Input.AsyncRelayCommand(() => exporter.ExportPngAsync(dialogs), () => exporter.CanExport);
+        exporter.CanExportChanged += (_, _) =>
+        {
+            copy.NotifyCanExecuteChanged();
+            export.NotifyCanExecuteChanged();
+        };
+        pane.CopyImageCommand = copy;
+        pane.ExportPngCommand = export;
+        AppShellUiHelpers.Flush();
+        var menu = SettingsUiHelpers.Find<Grid>(window, "PreviewStage").ContextMenu
+                   ?? throw new InvalidOperationException("The stage has no menu.");
+        var stage = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
+
+        // Act: right-click the empty stage; show the picture, right-click it, and choose Copy image; press the Menu key
+        // on the focused stage and choose Export as PNG; press Shift+F10 on the focused stage; turn the menu off,
+        // right-click the picture, and press the Menu key on the focused stage; turn it on, show the broken file, and
+        // right-click the error
+        RightClick(window, new Point(20, 150));
+        var openedOnEmptyStage = menu.IsOpen;
+        var usableOnEmptyStage = UsableItems(menu);
+        menu.Close();
+        explorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var shown = pane.Image;
+        var picture = Center(window, SettingsUiHelpers.Find<Image>(window, "PreviewImage"));
+        RightClick(window, picture);
+        var openedOnPicture = menu.IsOpen;
+        var usableOnPicture = UsableItems(menu);
+        menu.Items.OfType<MenuItem>().ElementAt(0).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        await WaitForAsync(() => copy.ExecutionTask?.IsCompleted == true);
+        menu.Close();
+        stage.Focus();
+        PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+        var openedByMenuKey = menu.IsOpen;
+        menu.Items.OfType<MenuItem>().ElementAt(1).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        await WaitForAsync(() => export.ExecutionTask?.IsCompleted == true);
+        menu.Close();
+        stage.Focus();
+        PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+        var openedByShiftF10 = menu.IsOpen;
+        menu.Close();
+        pane.IsPictureMenuEnabled = false;
+        RightClick(window, picture);
+        var openedByRightClickWhileOff = menu.IsOpen;
+        stage.Focus();
+        PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+        var openedByMenuKeyWhileOff = menu.IsOpen;
+        pane.IsPictureMenuEnabled = true;
+        explorer.SelectFile(Path.Combine(_folder, "broken.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        RightClick(window, Center(window, SettingsUiHelpers.Find<StackPanel>(window, "PreviewErrorPanel")));
+        var openedOnError = menu.IsOpen;
+        var usableOnError = UsableItems(menu);
+        menu.Close();
+
+        // Assert: the menu opened every way while on, with items usable only while the picture was shown, and not while
+        // off; the shown picture was copied and exported as a 40 x 20 PNG, and no message was shown
+        Assert.True(openedOnEmptyStage);
+        Assert.Equal([false, false], usableOnEmptyStage);
+        Assert.True(openedOnPicture);
+        Assert.Equal([true, true], usableOnPicture);
+        Assert.True(openedByMenuKey);
+        Assert.True(openedByShiftF10);
+        Assert.False(openedByRightClickWhileOff);
+        Assert.False(openedByMenuKeyWhileOff);
+        Assert.True(openedOnError);
+        Assert.Equal([false, false], usableOnError);
+        Assert.NotNull(shown);
+        Assert.Same(shown, Assert.Single(dialogs.CopiedImages));
+        var png = await File.ReadAllBytesAsync(Path.Combine(_folder, "menu.png"), token);
+        Assert.Equal([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A], png[..8]);
+        Assert.Equal(40, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(16, 4)));
+        Assert.Equal(20, System.Buffers.Binary.BinaryPrimitives.ReadInt32BigEndian(png.AsSpan(20, 4)));
+        Assert.Empty(dialogs.Messages);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the bitmap created for a picture has the picture's size and premultiplied BGRA pixels.
     /// </summary>
     [AvaloniaFact]
@@ -1262,6 +1428,54 @@ public sealed class PreviewPaneViewTests : IDisposable
                 file?.Name,
                 header,
                 data.TryGetBitmap()?.PixelSize);
+        }
+    }
+
+    /// <summary>
+    ///     Export dialogs for the headless tests that play the user: they answer the save picker with a set path, put
+    ///     copied pictures in a list instead of on the clipboard, and record the messages they were asked to show.
+    /// </summary>
+    private sealed class RecordingExportDialogs : IExportDialogs
+    {
+        /// <summary>
+        ///     Gets or sets the path the save picker returns, or <see langword="null" /> to imitate canceling.
+        /// </summary>
+        public string? SaveFileToPick { get; set; }
+
+        /// <summary>
+        ///     Gets the pictures that were copied, in order.
+        /// </summary>
+        public List<RenderedImage> CopiedImages { get; } = [];
+
+        /// <summary>
+        ///     Gets the messages shown, as title and message.
+        /// </summary>
+        public List<(string Title, string Message)> Messages { get; } = [];
+
+        /// <inheritdoc />
+        public Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern)
+        {
+            return Task.FromResult(SaveFileToPick);
+        }
+
+        /// <inheritdoc />
+        public Task<ExportPreset?> PickExportPresetAsync(IReadOnlyList<ExportPreset> presets, ExportPreset? last)
+        {
+            return Task.FromResult<ExportPreset?>(presets[0]);
+        }
+
+        /// <inheritdoc />
+        public Task<bool> CopyImageToClipboardAsync(RenderedImage image)
+        {
+            CopiedImages.Add(image);
+            return Task.FromResult(true);
+        }
+
+        /// <inheritdoc />
+        public Task ShowMessageAsync(string title, string message)
+        {
+            Messages.Add((title, message));
+            return Task.CompletedTask;
         }
     }
 

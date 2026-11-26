@@ -9,7 +9,9 @@ cancellation tokens can be inspected. A hand-written `FakeRefreshScheduler` hold
 test runs them. Two tests let the real `FileSystemWatcher` report a change and wait, with a timeout, for the pane to
 request the render. `RenderedImageBitmapTests.cs` checks the pixel conversion without an Avalonia platform. Headless
 UI tests in `PreviewPaneViewTests.cs` (the `UiTests` project) show the real `PreviewPaneView` with the real render
-service, and `MainWindowViewTests.cs` shows the pane inside the main window.
+service, and `MainWindowViewTests.cs` shows the pane inside the main window. The file also holds the Preview
+subsystem's headless test of the menu of the picture, which adds the real `ImageExporter` and is described in the
+verification of the Preview subsystem.
 
 #### Test Environment
 
@@ -82,7 +84,8 @@ are not evidence for a requirement):
   and where the platform counts Shift+F10 as a menu key, one press asks for the menu once. The items are unusable while
   their commands cannot run, while no commands are assigned, and after a render failed, when a right-click on the error
   opens the menu. The menu does not open while it is turned off, by a right-click or a key, nor by a right-click on the
-  slot of the host's tool bar, the notes drawer, or the zoom pill, and opens again on the picture once turned on.
+  slot of the host's tool bar, the notes drawer, or the zoom pill, nor by the Menu key or Shift+F10 (also where the
+  platform counts it as a menu key) on a focused control of theirs, and opens again on the picture once turned on.
 - Notes that a part gives for the shown picture replace, in place, the earlier notes of the same group, keep the notes
   of the renderer and of other groups in their order, open the list, are ignored while no picture is shown, and are gone
   when the picture is drawn again; a blank group and a missing list are refused.
@@ -323,6 +326,12 @@ the slot of the host's tool bar and a note in the notes drawer, a right-click on
 the drawer's header once it is closed, and on the actual size button of the zoom pill opens nothing, and a right-click
 on the picture opens the menu. This scenario is tested by
 `PreviewPaneView_PictureMenu_TurnedOffOrOnFloatingControls_DoesNotOpen`.
+
+**PreviewPaneView_PictureMenu_MenuKeyOrShiftF10OnFloatingControls_DoesNotOpen**: With a picture shown, a button in the
+slot of the host's tool bar, and a note in the notes drawer, the button, the header of the drawer, and the actual-size
+button of the zoom pill each take the focus. On each, the Menu key and Shift+F10, also with Shift+F10 added to the
+platform's gestures for a context menu as on Windows, open nothing. The Menu key on the focused stage then opens the
+menu. This scenario is tested by `PreviewPaneView_PictureMenu_MenuKeyOrShiftF10OnFloatingControls_DoesNotOpen`.
 
 **PreviewPaneView_ProjectClosed_ClearsPicture**: Closing the project removes the bitmap and shows the placeholder
 `No project is open.`. This scenario is tested by `PreviewPaneView_ProjectClosed_ClearsPicture`.
