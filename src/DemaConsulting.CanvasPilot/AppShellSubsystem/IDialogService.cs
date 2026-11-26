@@ -20,7 +20,6 @@
 
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
-using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
@@ -31,14 +30,14 @@ namespace DemaConsulting.CanvasPilot.AppShellSubsystem;
 /// <summary>
 ///     Shows the application's dialogs and platform pickers on behalf of the view models. The main window
 ///     implements it, because showing a dialog needs the window as owner; tests supply a fake so no real window
-///     is needed. Every method completes when the user has closed the dialog, except the browser of the drawing
-///     knowledge, which is a window that does not block and completes when it is shown. It includes the dialogs that
-///     lower subsystems ask for through their own interfaces: the folder picker of the project subsystem, the export
-///     dialogs of the preview subsystem, the payload inspector of the chat subsystem, the attachment picker of the composer subsystem, the browser of the knowledge
-///     subsystem, and the windows, file pickers, and questions of the style kits window (which include asking the user to
-///     confirm an action and to type a line of text).
+///     is needed. Every method completes when the user has closed the dialog, except the window that manages style kits,
+///     which does not block and completes when it is shown. It includes the dialogs that lower subsystems ask for through
+///     their own interfaces: the folder picker of the project subsystem, the export dialogs of the preview subsystem, the
+///     payload inspector of the chat subsystem, the attachment picker of the composer subsystem, and the windows, file
+///     pickers, and questions of the style kits window (which include asking the user to confirm an action and to type a
+///     line of text).
 /// </summary>
-public interface IDialogService : IFolderPicker, IExportDialogs, IPayloadInspectorLauncher, IKnowledgeBrowserLauncher, IStyleKitDialogs, IAttachmentPicker
+public interface IDialogService : IFolderPicker, IExportDialogs, IPayloadInspectorLauncher, IStyleKitDialogs, IAttachmentPicker
 {
     /// <summary>
     ///     Shows the New Project dialog modally. The view model reports whether it was accepted.

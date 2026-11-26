@@ -227,7 +227,6 @@ package CanvasPilotDesignViews {
         expose CanvasPilot_AboutDialog::AboutDialog;
         expose CanvasPilot_ProjectExplorer::ProjectExplorer;
         expose CanvasPilot_ChatPanel::ChatPanel;
-        expose CanvasPilot_KnowledgeBrowser::KnowledgeBrowser;
         expose CanvasPilot_PayloadInspector::PayloadInspector;
         expose CanvasPilot_ComposerViewModel::ComposerViewModel;
         filter not (@SysML::Documentation);
@@ -324,14 +323,13 @@ package CanvasPilotDesignViews {
     }
 
     view KnowledgeSubsystemDependencyView : GeneralView {
-        doc /* Dependencies of every knowledge unit and their suppliers. Hub supplier omitted: RollingFileLogger. */
+        doc /* Dependencies of every knowledge unit and their suppliers. */
         expose CanvasPilot_KnowledgeCatalog::KnowledgeCatalog;
         expose CanvasPilot_KnowledgeSearch::KnowledgeSearch;
         expose CanvasPilot_KnowledgePromptBuilder::KnowledgePromptBuilder;
         expose CanvasPilot_KnowledgeTools::KnowledgeTools;
         expose CanvasPilot_KnowledgeSkills::KnowledgeSkills;
         expose CanvasPilot_KnowledgeMarkdown::KnowledgeMarkdown;
-        expose CanvasPilot_KnowledgeBrowser::KnowledgeBrowser;
         expose OtsDependencies::CanvasNet;
         filter not (@SysML::Documentation);
     }

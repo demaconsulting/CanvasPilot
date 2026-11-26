@@ -93,7 +93,7 @@ package CanvasPilot_ChatPanel {
         // Asks the copilot whether the provider can be used (IAgentService and the readiness report only) for the banner.
         dependency ChatPanel to AgentContract;
 
-        // Reads the final text of a reply as Markdown, which the knowledge browser draws too.
+        // Reads the final text of a reply as Markdown and draws it with the control of the Knowledge subsystem.
         dependency ChatPanel to KnowledgeMarkdown;
 
         // Saves the words of every turn, shows them again when the project is opened, and deletes them on request, through the store (IChatHistoryStore and the row records only).

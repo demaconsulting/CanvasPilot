@@ -4,10 +4,12 @@
 
 #### Purpose
 
-`KnowledgeMarkdown` reads the Markdown of a knowledge card into blocks and runs of text, and draws those blocks with its
-own control, `MarkdownBlocksPanel`. The cards use only a few constructs, so the unit is small and has no dependency on a
-Markdown library; a library would add a third-party item with its own documents and tests and give nothing the cards
-need. The reader holds no state and does not depend on the user interface; the control that draws the blocks does.
+`KnowledgeMarkdown` reads Markdown in the small dialect of the knowledge cards, which the copilot writes its replies in,
+into blocks and runs of text, and draws those blocks with its own control, `MarkdownBlocksPanel`, which the chat panel
+uses for the replies of the copilot. The dialect uses only a few constructs, so the unit is small and has no dependency
+on a Markdown library; a library would add a third-party item with its own documents and tests and give nothing the
+replies need. The reader holds no state and does not depend on the user interface; the control that draws the blocks
+does.
 
 #### Data Model
 
@@ -18,7 +20,7 @@ need. The reader holds no state and does not depend on the user interface; the c
   has no markers. A block never has an empty run or two neighbors of the same style.
 - The reader holds no state.
 - `MarkdownBlocksPanel` is a vertical stack (6 pixels apart) with the property `Blocks`; it is made again from the
-  blocks whenever they change, which is when another card is shown, and draws nothing for `null`. It draws a text block
+  blocks whenever they change, which is when a reply is complete, and draws nothing for `null`. It draws a text block
   for each block, so the text can be selected and copied as the text of any page can:
   - a heading is semibold, in a size that falls with its level (20, then 16, then 14 pixels for the levels 3 to 6), with
     a gap above it (`KnowledgeBodyHeading`);
@@ -76,5 +78,5 @@ interface only.
 
 #### Callers
 
-- `KnowledgeBrowser` shows the text of the card that is chosen with the panel.
-- The chat panel draws the replies of the copilot with the same panel, so a reply and a card look alike.
+- The chat panel draws the completed replies of the copilot with the panel, over the blocks that `Parse` reads from the
+  text of the reply.

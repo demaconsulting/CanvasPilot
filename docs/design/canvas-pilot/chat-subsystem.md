@@ -195,7 +195,7 @@ the request may still count. The caption is not part of the text and is not save
 
 **What a reply looks like.** While a reply streams its text is plain and selectable, which is the cheapest thing to
 grow. When the part of the answer is whole, the reply is complete and its text is read once with `KnowledgeMarkdown` and
-drawn with `MarkdownBlocksPanel`, the same controls that show the knowledge cards, so that lists, headings, and code
+drawn with `MarkdownBlocksPanel`, the controls of the `Knowledge` subsystem, so that lists, headings, and code
 look as the model meant. A reply that was stopped or failed stays plain with a label, because its text may end in the
 middle of a construct. This is the only use of the `Knowledge` subsystem by `Chat`.
 

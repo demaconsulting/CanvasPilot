@@ -22,7 +22,7 @@ namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 
 /// <summary>
 ///     A block of a card that has been read from Markdown: a heading, a paragraph, an item of a list, or a block of code.
-///     The blocks are plain values, so a window can draw them with its own controls.
+///     The blocks are plain values, so <see cref="MarkdownBlocksPanel" /> can draw them with its own controls.
 /// </summary>
 /// <remarks>
 ///     The hierarchy is closed: only the blocks of this library derive from it, which is why the constructor is not

@@ -21,7 +21,7 @@
 namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 
 /// <summary>
-///     One knowledge card: a topic that tells the drawing assistant, or the user, how to do one thing.
+///     One knowledge card: a topic that tells the drawing assistant how to do one thing.
 /// </summary>
 /// <param name="Id">The identifier: the path of the card, for example <c>svg/framed-figure</c>.</param>
 /// <param name="Name">The last segment of the identifier.</param>

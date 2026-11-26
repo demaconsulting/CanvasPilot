@@ -55,7 +55,7 @@ constructor; the application supplies the exporter of the `Preview` subsystem.
 **Commands**: `NewProjectCommand`, `OpenProjectCommand`, `SaveProjectCommand` and `CloseProjectCommand` (enabled while a
 project is open), `ExitCommand`, `ExportPngCommand` and `CopyImageCommand` (enabled while the exporter can export),
 `OpenSettingsCommand`, `ShowStyleKitsCommand` (enabled while the application has a window that manages style kits),
-`ShowDrawingKnowledgeCommand` (enabled while the application has knowledge to show), `OpenLogFolderCommand` (enabled
+`OpenLogFolderCommand` (enabled
 while the shell has a folder launcher, with or without an open project), and `ShowAboutCommand`, and `UndoCommand` and
 `RedoCommand` (enabled while `EditTarget` can undo or redo), and `CheckAgainstStyleCommand` (enabled while a picture can
 be checked against the style).
@@ -125,11 +125,10 @@ clipboard, and the message dialog; the dialog service includes `IAttachmentPicke
 `PickAttachmentsAsync` opens the file picker of the platform ("Attach Files", several files of any type) for the attach
 button of the chat panel, which the workspace connects to the chat panel when it attaches the dialog service. Its
 constructor passes itself to `AttachDialogService`, and `ExitRequested` closes it. It also tracks the focus and the talk
-key (see **Focus tracking** and **Talk key** below). Its Help menu has `DrawingKnowledgeMenuItem`
-(`_Drawing Knowledge...`), `OpenLogFolderMenuItem` (`Open _Log Folder`, bound to `OpenLogFolderCommand`), a separator,
-and `AboutMenuItem`. The window shows the browser of the drawing knowledge with `Show` and itself as the owner, so that
-it does not block the window, and keeps the one that is open. Its Tools menu has `StyleKitsMenuItem` (`Style _Kits...`)
-above `SettingsMenuItem`. The window also implements `IStyleKitDialogs`, which `IDialogService` includes: it shows the
+key (see **Focus tracking** and **Talk key** below). Its Help menu has `OpenLogFolderMenuItem` (`Open _Log Folder`,
+bound to `OpenLogFolderCommand`), a separator, and `AboutMenuItem`. Its Tools menu has `StyleKitsMenuItem`
+(`Style _Kits...`) above `SettingsMenuItem`. The window also implements `IStyleKitDialogs`, which `IDialogService`
+includes: it shows the
 window that manages style kits with `Show` and itself as the owner, one at a time (a request while it is open brings it
 to the front, restored if it was minimized, and disposes the view model that was made for the request), shows the editor
 of a kit modally over that window (or over itself when that is not open), and shows the pickers of a zip file to import,
@@ -202,7 +201,7 @@ returns to. `OnClosing` (when the closing is not canceled) calls `SaveWindow` wi
 of the normal state, and whether the window is maximized.
 
 **Accessibility**: the controls of the window follow the rules that `AccessibilityViewTests` checks over the main window
-(with and without a project), the About dialog, the knowledge browser, the New Project dialog, the Style Kits window,
+(with and without a project), the About dialog, the New Project dialog, the Style Kits window,
 and every page of the settings, in both theme variants: a button or toggle that shows no text has an
 `AutomationProperties.Name` and a tooltip, every enabled button can take the focus with the keyboard, such a button is
 at least 28 by 28 pixels, and a text field, list, drop-down, slider, or tree has a name (or a placeholder). The chevron
@@ -261,17 +260,6 @@ the dialog it has closed afterwards so the pages can release resources. **ShowAb
 render service, and the project service. The command is unavailable when there is no function and does nothing until a
 dialog service is attached. Each time it runs it calls the function with the dialog service and gives the view model to
 `IStyleKitDialogs.ShowStyleKitManagerAsync`, which completes when the window is shown, not when it is closed.
-
-**ShowDrawingKnowledge**: The constructor takes an optional function that gives the catalog of the drawing knowledge and
-an optional logger; the composition root passes the function that gives the catalog of the application, which reads the
-cards when it is first called, so the start of the application does not pay for them. The command is unavailable when
-there is no function and does nothing until a dialog service is attached. It calls the function, makes a
-`KnowledgeBrowserViewModel` over the catalog and a search of its cards, and gives it to
-`IKnowledgeBrowserLauncher.ShowKnowledgeBrowserAsync`; the dialog service completes that when the window is shown, not
-when it is closed. When the catalog cannot be made, the failure is written to the log and a message dialog says that the
-drawing knowledge could not be loaded, and no window is shown. The window keeps one browser: a request while it is open
-brings that window to the front, restored if it was minimized, and leaves what the user was reading, and a request after
-it was closed shows a new one.
 
 **OpenLogFolder**: Does nothing when the shell has no launcher (the command is then disabled too). Otherwise it takes
 the folder that the logger writes to (`RollingFileLogger.LogDirectory` of the logger that was supplied, or
@@ -381,8 +369,6 @@ measurement answers `null` and the constant stays.
   bottom, in the title bar, and in the body.
 - **ThemeResources** — every color, radius, type size, shadow, icon, and button look of the window and its dialogs
   comes from the tokens and the control themes.
-- **KnowledgeBrowser** and **KnowledgeCatalog** (through `IKnowledgeBrowserLauncher` and `IKnowledgeCatalog`) — what
-  the Drawing Knowledge command shows; the dialog service extends the launcher, which the `Knowledge` subsystem owns.
 - **ImageExporter** (through `IImageExporter` and `IExportDialogs`) — the Image menu commands run it, and the
   dialog service extends `IExportDialogs` so the exporter can ask the user through it.
 - **ExportPresetDialog** (through `IExportDialogs.PickExportPresetAsync`) — the main window shows the Export PNG dialog

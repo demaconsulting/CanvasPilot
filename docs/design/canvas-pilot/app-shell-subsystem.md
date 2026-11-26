@@ -27,8 +27,7 @@ here because they only join the units together.
 **Dialog Service**: How the view models ask the user questions, show dialogs, and open platform pickers.
 
 - *Type*: In-process .NET API (`IDialogService`, which extends `IFolderPicker` of the `Project` subsystem,
-  `IExportDialogs` of the `Preview` subsystem, `IPayloadInspectorLauncher` of the `Chat` subsystem, and
-  `IKnowledgeBrowserLauncher` of the `Knowledge` subsystem).
+  `IExportDialogs` of the `Preview` subsystem, and `IPayloadInspectorLauncher` of the `Chat` subsystem).
 - *Role*: Provider of the contract; the main window (`MainWindowView`) is the implementation.
 - *Contract*: `ShowNewProjectAsync`, `ShowSettingsAsync`, and `ShowAboutAsync` show modal dialogs;
   `PickFolderAsync`, `PickProjectFileAsync`, and `PickSaveFileAsync` return a path or `null` when cancelled;
@@ -38,9 +37,7 @@ here because they only join the units together.
   `CopyImageToClipboardAsync` are declared by `IExportDialogs`, which the `Preview` subsystem owns, so the
   image exporter needs nothing of the shell. `ShowPayloadInspectorAsync` is declared by `IPayloadInspectorLauncher`,
   which the `Chat` subsystem owns; the window shows the payload inspector as a dialog that it owns.
-  `ShowKnowledgeBrowserAsync` is declared by `IKnowledgeBrowserLauncher`, which the `Knowledge` subsystem owns; the
-  window shows the browser of the drawing knowledge as a window that it owns and that does not block it, one at a time,
-  and completes the request when the window is shown. `PickAttachmentsAsync` is declared by `IAttachmentPicker`, which
+  `PickAttachmentsAsync` is declared by `IAttachmentPicker`, which
   the `Composer` subsystem owns; the window shows the system file dialog for the Attach button of the chat panel and
   answers the paths that were chosen, or an empty list when it was cancelled or cannot be shown.
 - *Constraints*: A platform picker that cannot be shown answers `null`, which reads as cancelled.
@@ -99,7 +96,7 @@ here because they only join the units together.
   automation identifier that are the same (`FileMenu`, `NewProjectMenuItem`, `OpenProjectMenuItem`,
   `RecentProjectsMenuItem`, `SaveProjectMenuItem`, `CloseProjectMenuItem`, `ExitMenuItem`, `EditMenu`, `UndoMenuItem`,
   `RedoMenuItem`, `ImageMenu`, `ExportPngMenuItem`, `CopyImageMenuItem`, `CheckAgainstStyleMenuItem`, `ToolsMenu`,
-  `StyleKitsMenuItem`, `SettingsMenuItem`, `HelpMenu`, `DrawingKnowledgeMenuItem`, `OpenLogFolderMenuItem`,
+  `StyleKitsMenuItem`, `SettingsMenuItem`, `HelpMenu`, `OpenLogFolderMenuItem`,
   `AboutMenuItem`). The menu sits in a title bar (`AppTitleBar`, 44 pixels high, with the project name in bold and the
   application name after it, `AppTitleBarText`) that also holds the style pill (`StylePicker`) and the AI provider pill
   (`ProviderPill`) while a project is open and leaves room for the window buttons that the system draws (minimize,
@@ -127,8 +124,7 @@ here because they only join the units together.
    exporter, the settings pages (the AI Provider page, the Speech page over the speech services, which use neither the
    audio system nor the model store until the Speech page is loaded, and the Style Kits page over the catalog of style
    kits, which gets the folder picker from the shell once the window has attached itself), and the shell, in that order,
-   and logs the start. The shell is given a function that gives the catalog of the drawing knowledge, which reads the
-   cards the first time the Help menu asks for them. The speech model service that the composition creates is disposed
+   and logs the start. The speech model service that the composition creates is disposed
    with the composition. After the shell, the composition makes the mark registry, the composer of the message, the
    layer on which the user marks the picture, and the chat panel. It gives the preview pane the shell's Copy Image and
    Export as PNG commands for the menu of the picture on the stage, so that menu does what the Image menu does. It puts
@@ -231,7 +227,7 @@ as dependency edges of the model; the units themselves state what they depend on
 contract of the `Agent` subsystem.
 
 The first view shows what the main window and the workspace host. `MainWindowShell` depends on `ProjectWorkspace`,
-`AboutDialog`, `PayloadInspector` (`Chat`), `KnowledgeBrowser` (`Knowledge`), and `ComposerViewModel` (`Composer`);
+`AboutDialog`, `PayloadInspector` (`Chat`), and `ComposerViewModel` (`Composer`);
 `ProjectWorkspace` depends on `ProjectExplorer` (`Project`) and `ChatPanel` (`Chat`).
 
 ![AppShell workspace dependencies](AppShellSubsystemWorkspaceView.svg)

@@ -53,4 +53,4 @@ concurrent use, because the index is not changed after it is built.
 
 #### Callers
 
-- The tool for an assistant and the browser of the cards of later steps use the search.
+- The tool for an assistant uses the search.

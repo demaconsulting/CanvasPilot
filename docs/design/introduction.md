@@ -8,7 +8,7 @@ the shown picture, a welcome screen, a title bar with the style and AI provider 
 that is remembered, a dark and a light theme with one set of design tokens and line icons, persisted settings with AI
 provider and speech choices, a chat panel with a message composer (typed and dictated text, attached files, folders, and
 pictures, and numbered marks drawn on the shown picture), a transcript of the sent messages with a payload inspector,
-the drawing knowledge (a tree of cards about the image formats and about CanvasPilot, with a browser in the Help menu),
+the drawing knowledge (a tree of cards about the image formats and about CanvasPilot that the copilot reads),
 style kits (palettes, fonts, sizes, and example images that a project, a user, or a team keeps, with a window to manage
 them, export at their sizes, and a check of a picture against the palette), and the installer. Messages are answered by
 an AI copilot that runs through a local Ollama server (the provider that is covered by automated tests in this release;
@@ -55,7 +55,7 @@ Local items:
   - **Composer** subsystem: **ComposerDocument**, **ComposerHistory**, **AttachmentIntake**, **AttachmentStore**,
     **ComposerViewModel**, and **ComposerEditor** units.
   - **Knowledge** subsystem: **KnowledgeCatalog**, **KnowledgeSearch**, **KnowledgePromptBuilder**,
-    **KnowledgeTools**, **KnowledgeSkills**, **KnowledgeMarkdown**, and **KnowledgeBrowser** units.
+    **KnowledgeTools**, **KnowledgeSkills**, and **KnowledgeMarkdown** units.
   - **Logging** subsystem: **RollingFileLogger** unit.
   - **Payload** subsystem: **MessagePayload**, **MarkImageComposer**, **PayloadBuilder**, and **PayloadDescriber**
     units.
@@ -128,9 +128,9 @@ composition root) and hosts the others, and nothing else refers to it. The Chat 
 converses; it uses the Composer subsystem (the message, its undo steps, and the attachments), the Annotation subsystem
 (marks on the picture), the Payload subsystem (the message that is sent), and the Speech subsystem (dictation).
 Annotation and Payload read the pictures of the Preview subsystem, which follows the file selected in the Project
-explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing: the AppShell
-opens its browser from the Help menu, and it depends on nothing but the logger and CanvasNet's help cards, so the
-copilot can be given the same cards. The Style subsystem holds the style kits: the AppShell shows its window from the
+explorer; Speech also adds a page to the Settings dialog. The Knowledge subsystem is the guide to drawing that the
+copilot is given, and it depends on nothing but CanvasNet's help cards; its Markdown control also draws the replies of
+the copilot in the Chat subsystem. The Style subsystem holds the style kits: the AppShell shows its window from the
 Tools menu and its pill of kits in the title bar, the Preview subsystem offers the sizes of the kit of the project when
 a picture is exported, and the check of a picture against the palette puts its result among the notes of the preview; it
 depends on Project, Settings, Preview, and Knowledge (only the descriptor of a tool), and none of them depends on it.
@@ -169,7 +169,8 @@ and Style subsystems beside them, and the third-party items and the local data t
       editing view that shows the message with its chips inline
     - **KnowledgeSubsystem/** - the drawing knowledge: the tree of cards from the help of CanvasNet and the cards of
       CanvasPilot (embedded Markdown under `Cards/`), the search of the cards, their text for the prompt of an
-      assistant, the tool and the skills that describe them, the Markdown reader, and the browser window
+      assistant, the tool and the skills that describe them, and the Markdown reader and control that draw the replies
+      of the copilot
     - **LoggingSubsystem/** - local rolling log file subsystem
     - **PayloadSubsystem/** - the message that is sent as one immutable payload: text with references, attachments,
       annotated pictures, mark crops, mark geometry, and source elements, and its description

@@ -432,8 +432,8 @@ public sealed class ThemeResourcesViewTests
     }
 
     /// <summary>
-    ///     Test that the shade behind code in the text of a knowledge card is the fill token of the theme, and that it is found
-    ///     again when the theme variant of the window is switched.
+    ///     Test that the shade behind code in Markdown text, such as a reply of the copilot, is the fill token of the theme, and
+    ///     that it is found again when the theme variant of the window is switched.
     /// </summary>
     [AvaloniaFact]
     public void ThemeResources_FillTokens_CodeInTextShowsTheTokenOfTheVariant()

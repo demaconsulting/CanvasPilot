@@ -3,14 +3,14 @@
 #### Verification Approach
 
 `KnowledgeMarkdown` is verified with unit tests in `KnowledgeMarkdownTests.cs` for the reader and with headless Avalonia
-UI tests in `KnowledgeBrowserViewTests.cs` for the control that draws the blocks (`MarkdownBlocksPanel`). Each construct
-of the dialect, and the cases at its edges, are checked on short texts whose blocks and runs are written out as a line
-each, so the exact result can be compared. One test reads the body of every card and the description of every example
-of the catalog of the application and checks that the letters and digits of the source are the letters and digits of
-the blocks, so no text is lost or added, and that the headings, paragraphs, items, code blocks, bold, and code text
-that the cards use occur in it. The UI tests put the blocks that the reader made of a small text into the real panel,
-shown in a headless window, and read the controls that it drew. Nothing is substituted in the unit itself. The colors
-of the code block in the two themes are checked by eye before a release.
+UI tests in `KnowledgeMarkdownViewTests.cs` for the control that draws the blocks (`MarkdownBlocksPanel`). Each
+construct of the dialect, and the cases at its edges, are checked on short texts whose blocks and runs are written out
+as a line each, so the exact result can be compared. One test reads the body of every card and the description of every
+example of the catalog of the application and checks that the letters and digits of the source are the letters and
+digits of the blocks, so no text is lost or added, and that the headings, paragraphs, items, code blocks, bold, and code
+text that the cards use occur in it. The UI tests put the blocks that the reader made of a small text into the real
+panel, shown in a headless window, and read the controls that it drew. Nothing is substituted in the unit itself. The
+colors of the code block in the two themes are checked by eye before a release.
 
 #### Test Environment
 
@@ -32,8 +32,7 @@ renderer and the application's own `App`, serialized with test parallelization d
 - Every card and example description of the catalog of the application is read with every letter and digit kept.
 - The panel draws a heading in semibold type, a paragraph with its bold, italic, and code runs in those styles, a dot
   for a bullet and the number as written for a numbered item, and a block of code with its lines as one selectable
-  block; it draws the new blocks when they change and nothing when they are removed; and a card that is chosen in the
-  window has a control for each block of its body.
+  block; and it draws the new blocks when they change and nothing when they are removed.
 
 #### Test Scenarios
 
@@ -71,13 +70,8 @@ catalog of the application is read, with the letters and digits of the source eq
 headings, paragraphs, bulleted and numbered items, blocks of code with a language, bold text, and code text among the
 result. This scenario is tested by `KnowledgeMarkdown_Parse_RealCatalog_ReadsEveryCardWithoutLosingText`.
 
-**KnowledgeBrowserView_MarkdownBlocksPanel_DrawsEveryKindOfBlock**: A heading, a paragraph with bold, italic, and code
+**MarkdownBlocksPanel_Blocks_DrawsEveryKindOfBlock**: A heading, a paragraph with bold, italic, and code
 runs, a bullet, a number, and a block of code are read from a small text and drawn by the panel; five blocks are
 drawn, the heading is semibold, the bold and italic runs carry their weight and style, the code run a shade, the
 markers are a dot and `3.`, and the code is one block with its lines; the panel follows a change of the blocks and an
-empty list. This scenario is tested by `KnowledgeBrowserView_MarkdownBlocksPanel_DrawsEveryKindOfBlock`.
-
-**KnowledgeBrowserView_NodeChosen_ShowsTitleSummaryTagsAndBodyDrawnFromMarkdown**: Choosing a node in the tree of the
-window shows the title, summary, tags, and other names, and a body that has a control for each block of the card, with
-runs of code text and headings. This scenario is tested by
-`KnowledgeBrowserView_NodeChosen_ShowsTitleSummaryTagsAndBodyDrawnFromMarkdown`.
+empty list. This scenario is tested by `MarkdownBlocksPanel_Blocks_DrawsEveryKindOfBlock`.

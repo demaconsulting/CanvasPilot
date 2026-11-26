@@ -23,8 +23,8 @@ using System.Text;
 namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 
 /// <summary>
-///     Reads the small dialect of Markdown that the knowledge cards are written in into blocks and runs of text that a
-///     window can draw.
+///     Reads the small dialect of Markdown that the knowledge cards and the replies of the copilot are written in into
+///     blocks and runs of text that <see cref="MarkdownBlocksPanel" /> draws.
 /// </summary>
 /// <remarks>
 ///     <para>

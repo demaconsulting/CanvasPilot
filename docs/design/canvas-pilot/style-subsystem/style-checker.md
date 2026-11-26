@@ -87,7 +87,7 @@ run from it, and gives `ToNotes()` to `IRenderNoteSink.ShowNotes` with the group
 replaced while the check ran (the result would then be about a picture that is no longer shown) or the command was
 disposed. A failure of `Check` is written to the log and answered with a sentence. `CanCheck` is true while there is a
 picture, and `CanCheckChanged` follows `IRenderedImageSource.CurrentImageChanged`. The interface is owned by the Style
-subsystem, like `IKnowledgeBrowserLauncher` by Knowledge, so that the main window can offer the command and `Style` does
+subsystem, like `IPayloadInspectorLauncher` by Chat, so that the main window can offer the command and `Style` does
 not depend on the window; the answer is `null` or a sentence, and the window shows the sentence in a message.
 
 #### Error Handling

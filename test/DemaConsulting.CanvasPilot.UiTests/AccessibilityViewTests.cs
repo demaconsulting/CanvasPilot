@@ -31,7 +31,6 @@ using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
-using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 using DemaConsulting.CanvasPilot.ProjectSubsystem;
 using DemaConsulting.CanvasPilot.SettingsSubsystem;
 using DemaConsulting.CanvasPilot.StyleSubsystem;
@@ -125,7 +124,6 @@ public sealed class AccessibilityViewTests : IDisposable
 
             // Every dialog and window
             await SweepDialogAsync<AboutDialogView>(window, composition.Shell.ShowAboutCommand, variant, "about", problems);
-            await SweepDialogAsync<KnowledgeBrowserView>(window, composition.Shell.ShowDrawingKnowledgeCommand, variant, "knowledge", problems);
             await SweepDialogAsync<NewProjectDialogView>(window, composition.Shell.NewProjectCommand, variant, "new project", problems);
             await SweepDialogAsync<StyleKitManagerView>(window, composition.Shell.ShowStyleKitsCommand, variant, "style kits", problems);
             await SweepSettingsAsync(window, composition.Shell, variant, problems);

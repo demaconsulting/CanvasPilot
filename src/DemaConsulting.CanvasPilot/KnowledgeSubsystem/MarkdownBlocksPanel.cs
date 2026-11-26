@@ -29,13 +29,14 @@ using Avalonia.Media;
 namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 
 /// <summary>
-///     Draws the blocks that <see cref="KnowledgeMarkdown" /> read from a card: headings, paragraphs, list items, and
-///     blocks of code, with bold, italic, and code text, as text that the user can select and copy.
+///     Draws the blocks that <see cref="KnowledgeMarkdown" /> read from a reply of the copilot: headings, paragraphs,
+///     list items, and blocks of code, with bold, italic, and code text, as text that the user can select and copy.
 /// </summary>
 /// <remarks>
-///     The panel has a text block for each block, so that the text of a card can be selected and copied as the text of any
-///     page can. It is made again from the blocks every time <see cref="Blocks" /> changes, which is when another card is
-///     shown; the blocks are immutable, so nothing else changes them. Nothing in it can run or open anything.
+///     The panel has a text block for each block, so that the text of a reply can be selected and copied as the text
+///     of any page can. It is made again from the blocks every time <see cref="Blocks" /> changes, which is when a
+///     reply is complete; the blocks are immutable, so nothing else changes them. Nothing in it can run or open
+///     anything.
 /// </remarks>
 public sealed class MarkdownBlocksPanel : StackPanel
 {

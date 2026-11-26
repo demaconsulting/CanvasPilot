@@ -926,31 +926,7 @@ reviews:
       - "src/**/KnowledgeSubsystem/MarkdownSpanStyle.cs"
       - "src/**/KnowledgeSubsystem/MarkdownBlocksPanel.cs"
       - "test/**/KnowledgeSubsystem/KnowledgeMarkdownTests.cs"
-
-  - id: CanvasPilot-Knowledge-KnowledgeBrowser
-    title: Review of CanvasPilot KnowledgeBrowser unit implementation
-    context:
-      - docs/design/canvas-pilot.md
-      - docs/reqstream/canvas-pilot.yaml
-      - docs/design/canvas-pilot/knowledge-subsystem.md
-      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
-    paths:
-      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-browser.yaml"
-      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-browser.md"
-      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-browser.md"
-      - "src/**/KnowledgeSubsystem/IKnowledgeBrowserLauncher.cs"
-      - "src/**/KnowledgeSubsystem/IKnowledgeClipboard.cs"
-      - "src/**/KnowledgeSubsystem/KnowledgeBrowserView.axaml"
-      - "src/**/KnowledgeSubsystem/KnowledgeBrowserView.axaml.cs"
-      - "src/**/KnowledgeSubsystem/KnowledgeBrowserViewModel.cs"
-      - "src/**/KnowledgeSubsystem/KnowledgeNodeViewModel.cs"
-      - "src/**/KnowledgeSubsystem/KnowledgeLinkViewModel.cs"
-      - "src/**/KnowledgeSubsystem/KnowledgeExampleViewModel.cs"
-      - "src/**/KnowledgeSubsystem/WindowKnowledgeClipboard.cs"
-      - "test/**/KnowledgeSubsystem/KnowledgeBrowserTests.cs"
-      - "test/**/KnowledgeSubsystem/RecordingKnowledgeClipboard.cs"
-      - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
-      - "test/**/KnowledgeBrowserViewTests.cs"
+      - "test/**/KnowledgeMarkdownViewTests.cs"
 
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging

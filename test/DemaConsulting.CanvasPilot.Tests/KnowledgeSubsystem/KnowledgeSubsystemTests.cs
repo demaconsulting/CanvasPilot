@@ -225,37 +225,4 @@ public sealed class KnowledgeSubsystemTests
             Assert.All(spans, s => Assert.NotEqual(string.Empty, s.Text));
         });
     }
-
-    /// <summary>
-    ///     Validates that the browser over the catalog of the application shows the tree of its roots, finds a card of
-    ///     CanvasPilot and a card of CanvasNet by search, and shows each with its text, its related cards, and an example
-    ///     that can be copied, without a window.
-    /// </summary>
-    [Fact]
-    public async Task KnowledgeSubsystem_Browser_ApplicationCatalog_ShowsTreeSearchCardsAndCopiesAnExample()
-    {
-        // Arrange: a browser over the catalog of the application with a clipboard that records
-        var catalog = KnowledgeCatalog.Default;
-        var clipboard = new RecordingKnowledgeClipboard();
-        var browser = new KnowledgeBrowserViewModel(catalog, new KnowledgeSearch(catalog)) { Clipboard = clipboard };
-
-        // Act: search for a card of each source and show it, then copy the first example of the card of the marks
-        browser.SearchText = "marks";
-        var marksFound = browser.Results.Any(hit => hit.Id == "canvaspilot/marks");
-        browser.SearchText = "gradient";
-        var gradientFound = browser.Results.Count > 0;
-        browser.Select("canvaspilot/marks");
-        var related = browser.SeeAlso.Select(link => link.Id).ToList();
-        await browser.CopyExampleCommand.ExecuteAsync(browser.Examples[0]);
-
-        // Assert: the tree is the roots of the catalog, both searches found cards, the card shows its text, and the
-        // example is on the clipboard
-        Assert.Equal(catalog.Roots.Select(r => r.Id), browser.Nodes.Select(n => n.Id));
-        Assert.True(marksFound);
-        Assert.True(gradientFound);
-        Assert.NotEmpty(browser.Blocks);
-        Assert.Equal(catalog.GetSeeAlso(browser.SelectedCard!).Select(c => c.Id), related);
-        Assert.Equal([browser.Examples[0].Content], clipboard.Texts);
-        Assert.Equal($"Copied example '{browser.Examples[0].Name}'.", browser.Status);
-    }
 }
