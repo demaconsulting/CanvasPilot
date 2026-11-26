@@ -233,11 +233,21 @@ last shown in the project, relative to the project folder, makes it a full path 
 explorer to select it (`ProjectExplorerViewModel.SelectFile`), which expands its folders and makes the preview draw
 it. The explorer selects only a file that it lists, so a picture that was deleted or renamed selects nothing, and a
 new project has no remembered picture. The shell listens to `PropertyChanged` of the workspace; when `SelectedFile`
-becomes a file while a project is open, it calls `IRecentProjects.RememberShownPicture` with the path of the file
-relative to the project folder (a file outside the folder is refused there). A selection that is no file (nothing, a
-folder, or the moment a project closes or another opens) is ignored, so it never forgets the picture. The picture is
-kept in the settings of the user with the recent projects, not in the project file: a project folder is copied,
-shared, and put under source control, and the picture that a person looked at is that person's own view state.
+becomes a file while a project is open, it keeps the project file and the path of the file relative to the project
+folder in memory (`_unsavedPicture`). A selection that is no file (nothing, a folder, or the moment a project closes or
+another opens) is ignored, so it never forgets the picture. The kept picture is stored with
+`IRecentProjects.RememberShownPicture` (a file outside the folder is refused there) only at three moments:
+`CompleteOpenAsync` stores it before it adds the opened project to the list, so the picture of the project that was open
+is stored before another is opened and before the same project is read back; `SyncProjectState` stores it when the open
+project is no longer the project of the picture, which covers Close; and `Dispose`, which the composition root calls at
+exit, stores it last. Each moment stores it once and forgets it, whether the write succeeds or not. Storing on every
+selection would write the whole settings file on the user interface thread for each click, take back the changes that
+another running instance of the application made to the settings each time (`ISettingsService.Update` builds the new
+settings from the settings of this instance), and log a failed write once per click; this way a failure is logged once
+by the settings service and not tried again. The picture is kept in the settings of the user with the recent projects,
+not in the project file: a project folder is copied, shared, and put under source control, and the picture that a
+person looked at is that person's own view state. Because the recent projects keep a picture only for a listed project,
+a project that was removed from the list or fell off it (it holds ten) opens with nothing selected.
 
 **SaveProject** / **CloseProject** / **Exit**: Save calls `SaveAsync` and shows a failure. Close calls `Close`.
 Exit raises `ExitRequested`.
@@ -289,7 +299,8 @@ given to the constructor, otherwise none; pickers start there if the folder exis
 **Following the services**: The shell subscribes to `IProjectService.CurrentChanged`, `IRecentProjects.Changed`, and
 `ISettingsService.Changed`. A notification raised on another thread is posted to the synchronization context of the
 thread that created the shell. Updating the title and the workspace is idempotent, so the shell also does it after
-its own operations. `Dispose` unsubscribes and disposes the status bar, the provider pill, the welcome screen, the
+its own operations. `Dispose` first stores the picture that the user showed last (see *Resuming at the last shown
+picture*), then unsubscribes and disposes the status bar, the provider pill, the welcome screen, the
 recent project items, and the workspace.
 
 **Recent projects menu and cards**: `RefreshRecentProjects` reads the list first (reading drops files that are gone and

@@ -73,15 +73,12 @@ sections:
                 title: >-
                   The RecentProjects shall store, for a listed project, the path of the picture last shown in it relative
                   to the project folder, give it back, refuse a path that is not relative or leaves the folder and a
-                  project that is not listed, write nothing when the picture is unchanged, report a failed save as a
-                  result, not announce a change of the list, and forget the picture with the project.
+                  project that is not listed, and forget the picture with the project.
                 justification: |
                   A relative path names the same picture wherever the folder is opened from, and a path that is rooted or
-                  climbs out of the folder is not a picture of the project. Selecting pictures happens often, so an
-                  unchanged picture must cost no write, and the welcome screen must not be rebuilt for it.
+                  climbs out of the folder is not a picture of the project. The picture belongs to the user's list of
+                  recent projects, so it leaves with the project.
                 tests:
                   - RecentProjects_RememberShownPicture_StoredPerProjectAndReadBack
                   - RecentProjects_RememberShownPicture_UnlistedProjectOrPathOutsideTheFolder_IsRefused
-                  - RecentProjects_RememberShownPicture_SamePicture_WritesNothingAndDoesNotAnnounce
-                  - RecentProjects_RememberShownPicture_SettingsWriteFails_ReturnsFalse
                   - RecentProjects_Remove_ForgetsTheShownPicture

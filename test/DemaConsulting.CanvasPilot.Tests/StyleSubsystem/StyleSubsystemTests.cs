@@ -452,10 +452,9 @@ public sealed class StyleSubsystemTests : IDisposable
     }
 
     /// <summary>
-    ///     Validates that the choices of the style picker, of the default kit on the Style Kits settings page, the shared
-    ///     folder rows of that page, and the places where the window that manages kits puts new kits all read as the words
-    ///     they show, including no style and a kit that cannot be found, so a screen reader announces the chosen entry by
-    ///     those words and not by the record.
+    ///     Validates that the choices of the style picker, of the default kit on the Style Kits settings page, and the shared
+    ///     folder rows of that page all read as the words they show, including no style and a kit that cannot be found, so a
+    ///     screen reader announces the chosen entry by those words and not by the record.
     /// </summary>
     [Fact]
     public async Task StyleSubsystem_AnnounceChosenEntries_PickerPageAndManagerLists_ReadAsTheirShownWords()
@@ -478,7 +477,6 @@ public sealed class StyleSubsystemTests : IDisposable
         var entries = picker.Items.Select(item => (Shown: item.DisplayName, Text: item.ToString()))
             .Concat(page.DefaultKitChoices.Select(choice => (Shown: choice.Label, Text: choice.ToString())))
             .Concat(page.Folders.Select(row => (Shown: row.Path, Text: row.ToString())))
-            .Concat(StyleKitManagerViewModel.TargetChoices.Select(target => (Shown: target, Text: target.ToString())))
             .ToList();
         page.OnClosed();
 

@@ -473,12 +473,17 @@ sections:
                   while the reader is at the end, keep the place of a reader who has scrolled up, follow again once the
                   reader is back at the end, and bring the latest row into view when the user sends a message.
                 justification: |
-                  The rows of a restored conversation are added before the panel has a size, so scrolling to the end once
-                  is not enough: the panel must follow the latest row whenever its content or its size changes, and only a
-                  movement of the reader may stop that.
+                  People return to the end of a conversation, as in every chat program. A reader who scrolled up to read an
+                  earlier answer must not be pulled away from it, and a reader who is at the end again, by scrolling or
+                  because the panel grew, expects the conversation to go on in view. A message that the user sends is one
+                  the user wants to see with its answer.
                 tests:
                   - ChatPanelView_RestoredHistory_OpensScrolledToTheLatestMessage
                   - ChatPanelView_CopilotReply_AtTheEnd_KeepsTheLatestInView
                   - ChatPanelView_ScrolledUp_ReplyArrives_KeepsThePlaceOfTheReader
                   - ChatPanelView_ScrolledBackToTheEnd_FollowsAgain
                   - ChatPanelView_ScrolledUp_SendMessage_ScrollsToTheLatest
+                  - ChatPanelView_ScrolledUp_AnotherProjectShown_OpensAtTheLatest
+                  - ChatPanelView_ScrolledUp_PanelHiddenAndShown_OpensAtTheLatest
+                  - ChatPanelView_ScrolledUp_DataContextChanged_OpensAtTheLatest
+                  - ChatPanelView_ScrolledUpALittle_PanelGrowsToTheEnd_FollowsAgain

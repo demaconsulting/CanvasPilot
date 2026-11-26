@@ -188,7 +188,10 @@ However you open a project, from the welcome screen, **File > Open Project...**,
 at the picture that you looked at last in it on this computer: the explorer selects it and the stage shows it. If that
 file was deleted or renamed, nothing is selected. The conversation opens at its latest message. CanvasPilot remembers
 the picture in its settings on your computer and not in the project folder, so the people you share the project with
-are not affected by what you looked at. A new project opens with nothing selected.
+are not affected by what you looked at. It saves the picture when you close the project, open another one, or exit
+CanvasPilot. The picture is remembered only while the project is in the list of recent projects, which holds the last
+10 projects: a project that you remove from the welcome screen, or that falls off the list, opens with nothing
+selected the next time. A new project opens with nothing selected.
 
 ## The Welcome Screen
 

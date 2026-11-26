@@ -170,6 +170,14 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private IPushToTalkTarget? _talkingTarget;
 
     /// <summary>
+    ///     The picture that the user shows last in the open project and that is not stored yet: the project file and the path
+    ///     of the picture relative to the project folder, or null when there is none. It is kept here and stored with the
+    ///     recent projects only when the project is closed, another project is opened, or the shell is disposed at exit, so
+    ///     that a selection does not write the settings file.
+    /// </summary>
+    private (string ProjectFile, string Picture)? _unsavedPicture;
+
+    /// <summary>
     ///     Creates the shell.
     /// </summary>
     /// <param name="projectService">Creates, opens, saves, and closes projects.</param>
@@ -495,6 +503,9 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         }
 
         _disposed = true;
+
+        // The application exits: the picture that the user shows last is stored for the next start
+        StoreShownPicture();
         _projectService.CurrentChanged -= OnProjectChanged;
         _recentProjects.Changed -= OnRecentProjectsChanged;
         ImageExporter.CanExportChanged -= OnCanExportChanged;
@@ -876,7 +887,8 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     /// </summary>
     /// <remarks>
     ///     Every way of opening a project (the welcome screen, File, Open Project, and the Recent Projects menu) and of
-    ///     creating one ends here, so each opens at the last shown picture.
+    ///     creating one ends here, so each opens at the last shown picture. The picture of the project that was open before
+    ///     is stored first, also when the same project is opened again, so that it is the one read back.
     /// </remarks>
     /// <param name="result">The outcome of the operation.</param>
     /// <param name="title">The title of the dialog that reports a problem.</param>
@@ -885,6 +897,7 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     {
         if (result.Succeeded)
         {
+            StoreShownPicture();
             _recentProjects.Add(result.Project!.FilePath);
             SyncProjectState();
             ShowRememberedPicture(result.Project);
@@ -925,8 +938,9 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     }
 
     /// <summary>
-    ///     Remembers the picture that the user shows in the open project. A selection that is no picture (nothing, or a
-    ///     folder, as when the project closes or another opens) is not remembered, so it does not forget the last picture.
+    ///     Keeps the picture that the user shows in the open project, to be stored when the project is closed, another
+    ///     opens, or the application exits. A selection that is no picture (nothing, or a folder, as when the project
+    ///     closes or another opens) is not kept, so it does not forget the last picture.
     /// </summary>
     /// <param name="sender">The workspace.</param>
     /// <param name="e">The name of the property that changed.</param>
@@ -940,7 +954,22 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
         }
 
         // The path is kept relative to the project folder; a file outside it is refused by the recent projects
-        _recentProjects.RememberShownPicture(project.FilePath, Path.GetRelativePath(project.FolderPath, file));
+        _unsavedPicture = (project.FilePath, Path.GetRelativePath(project.FolderPath, file));
+    }
+
+    /// <summary>
+    ///     Stores the picture that the user showed last with the recent projects, once, and forgets it here. A failure to
+    ///     write the settings is logged by the settings service and not tried again, so it is reported once.
+    /// </summary>
+    private void StoreShownPicture()
+    {
+        if (_unsavedPicture is not { } shown)
+        {
+            return;
+        }
+
+        _unsavedPicture = null;
+        _recentProjects.RememberShownPicture(shown.ProjectFile, shown.Picture);
     }
 
     /// <summary>
@@ -970,6 +999,14 @@ public sealed partial class MainWindowShell : ObservableObject, IDisposable
     private void SyncProjectState()
     {
         var project = _projectService.Current;
+
+        // The project of the kept picture was closed or another took its place, so the picture is stored now
+        if (_unsavedPicture is { } shown
+            && !string.Equals(shown.ProjectFile, project?.FilePath, StringComparison.OrdinalIgnoreCase))
+        {
+            StoreShownPicture();
+        }
+
         CurrentProject = project;
         Title = project is null ? ApplicationName : $"{project.Name} - {ApplicationName}";
         Workspace.ShowProject(project);

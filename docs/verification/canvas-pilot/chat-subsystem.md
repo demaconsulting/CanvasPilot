@@ -20,9 +20,11 @@ temporary project folders, and the real filter of drawings. The history test use
 `ChatHistoryStore` over a temporary folder that stands for the user's computer. The tests check the observable result:
 what the transcript holds, which files are in the project, what the payload and the inspector hold, and that the draft
 is empty or kept. The views are verified by the headless UI tests described in the unit verification documents; the
-subsystem requirements about what the panel offers in its view (prompts, hiding, the attach button, and the names of the
-buttons) are linked to those UI tests, which run the real panel with the real composer and editing view, and the system
-test that composes the whole application is described in the system verification.
+subsystem requirements about what the panel offers in its view (prompts, hiding, the attach button, the names of the
+buttons, and following the latest message of the transcript) are linked to those UI tests, which run the real panel
+with the real composer and editing view. What these requirements ask for can only be seen in a laid-out view, and the
+subsystem tests run without a user interface platform. The system test that composes the whole application is
+described in the system verification.
 
 ### Test Environment
 

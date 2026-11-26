@@ -3,11 +3,13 @@
 #### Verification Approach
 
 `RecentProjects` is verified by unit tests in `RecentProjectsTests.cs`. Most tests use a real `SettingsService` on a
-temporary folder and real project files, so they check the stored list and what a new service loads. One test uses an
+temporary folder and real project files, so they check the stored list and what a new service loads. Two tests use an
 NSubstitute `ISettingsService` whose `Update` throws, to force a failed save. The test of the time of opening
 (`RecentProjects_Add_RecordsTheTimeOfOpeningAndRemoveForgetsIt`, in `WelcomeTests.cs`) gives the list a hand-written
 clock (`TimeProvider`) so the recorded times can be checked exactly. The tests assert the returned lists, the stored
-settings, and the `Changed` event.
+settings, and the `Changed` event. Two tests of `RememberShownPicture` check decisions of its design rather than a
+requirement: that the picture already remembered costs no write and no `Changed` event, and that a failed save is a
+`false` result (see the design of `RecentProjects`).
 
 #### Test Environment
 

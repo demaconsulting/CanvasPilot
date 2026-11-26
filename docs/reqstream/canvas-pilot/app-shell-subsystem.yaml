@@ -487,13 +487,14 @@ sections:
 
           - id: CanvasPilot-AppShell-ReopenAtLastShownPicture
             title: >-
-              The AppShell subsystem shall, whenever a project is opened or created, select in the explorer, and so show on
-              the stage, the picture that was last shown in that project, selecting nothing when that file is gone, and
-              shall remember each picture that the user shows for the open project.
+              The AppShell subsystem shall, whenever a project that is in the list of recent projects is opened, select in
+              the explorer, and so show on the stage, the picture that was last shown in that project, selecting nothing
+              when that file is gone, and shall remember the picture that the user shows last in the open project when the
+              project is closed, another project is opened, or the application exits.
             justification: |
               Every way of opening a project goes through the main window, which is where the explorer, the stage, and the
               list of recent projects meet, so the main window is where a project is brought back to the picture that the
-              user left it at.
+              user left it at. The picture is kept with the recent projects, so only a listed project has one.
             children:
               - CanvasPilot-MainWindowShell-ReopenAtLastShownPicture
             tests:

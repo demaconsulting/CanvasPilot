@@ -131,7 +131,7 @@ public sealed class RecentProjects : IRecentProjects
             return false;
         }
 
-        // The same picture again writes nothing, so selecting it once more costs no write of the settings
+        // The same picture again writes nothing, so storing it once more costs no write of the settings
         if (_settings.Current.RecentProjectPicture.TryGetValue(path, out var stored)
             && string.Equals(stored, picture, StringComparison.Ordinal))
         {

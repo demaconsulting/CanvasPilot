@@ -201,3 +201,4 @@ sections:
               - CanvasPilot-StyleKitManager-AnnounceChosenEntries
             tests:
               - StyleSubsystem_AnnounceChosenEntries_PickerPageAndManagerLists_ReadAsTheirShownWords
+              - StyleKitManagerView_TargetList_AnnouncesTheShownPlace

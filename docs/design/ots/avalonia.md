@@ -24,8 +24,9 @@ a third-party library from an unrelated program, so it is treated as OTS.
 - Automation peers: `ControlAutomationPeer.CreatePeerForElement` and the peers of `ComboBox` and `ListBox`, which a
   screen reader reads. The application relies on two facts of them: a closed `ComboBox` reports as its value the
   `ToString` of its chosen item when that item is not a control, and a `ListBoxItem` whose template is a panel is named
-  by the `ToString` of its item. Every item type that the application shows in such a list therefore returns its shown
-  words from `ToString`.
+  by the `ToString` of its item unless it carries `AutomationProperties.Name`. Every item type that the application
+  shows in such a list therefore returns its shown words from `ToString`, or its row is named with
+  `AutomationProperties.Name`, as the rows of the page rail of the settings dialog are.
 - Imaging: `WriteableBitmap` in blue, green, red, alpha order with premultiplied alpha, filled through its
   framebuffer.
 - Drag and drop out of the application: `DataTransfer` and `DataTransferItem` with a file (`SetFile`, from

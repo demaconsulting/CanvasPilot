@@ -138,8 +138,9 @@ public sealed class StylePickerViewTests : IDisposable
     }
 
     /// <summary>
-    ///     Test that a screen reader is told the name of the chosen kit, or "(No style)", as the value of the pill and as the
-    ///     name of each choice, and not the text of the record that stands behind the choice.
+    ///     Test that a screen reader is told the name of the chosen kit, "(No style)", or the label of a kit that cannot be
+    ///     found, as the value of the pill and as the name of each choice, and not the text of the record that stands behind
+    ///     the choice.
     /// </summary>
     [AvaloniaFact]
     public async Task StylePickerView_Pill_AnnouncesTheNameOfTheChoiceAndNotTheRecord()
@@ -155,15 +156,22 @@ public sealed class StylePickerViewTests : IDisposable
         var value = Assert.IsAssignableFrom<IValueProvider>(peer);
         var noStyle = value.Value;
 
-        // Act: choose the DEMA kit
+        // Act: choose the DEMA kit, then let the project name a kit that cannot be found
         picker.SelectedIndex = picker.Items.OfType<StylePickerItem>().ToList().FindIndex(item => item.Id == "dema");
+        await composition.StylePicker.ChangeTask;
         AppShellUiHelpers.Flush();
         window.UpdateLayout();
         var dema = value.Value;
+        await composition.Projects.SetActiveStyleKitAsync("team-kit", TestContext.Current.CancellationToken);
+        AppShellUiHelpers.Flush();
+        window.UpdateLayout();
+        var missing = value.Value;
 
-        // Assert: the value is the name of the choice in both cases, and so is the text of every choice
+        // Assert: the value is the name of the choice in each case, and so is the text of every choice
         Assert.Equal(StylePickerViewModel.NoStyleLabel, noStyle);
         Assert.Equal("DEMA", dema);
+        Assert.True(((StylePickerItem)picker.SelectedItem!).IsMissing);
+        Assert.Equal("team-kit (not found)", missing);
         Assert.All(picker.Items.OfType<StylePickerItem>(), item =>
         {
             Assert.Equal(item.DisplayName, item.ToString());

@@ -73,15 +73,18 @@ The unit is made of these parts, all in the user interface layer:
   keeps the latest row of the transcript in view. It follows the latest row (a flag that is set when the panel is
   shown, when its view model changes, when the transcript is emptied to show another conversation, and when the user's
   own sent message is added): whenever the `ScrollChanged` of the transcript reports a change of the content or of the
-  height (rows restored or added, a reply that grows, the first layout, the composer that grows or shrinks) while
-  following, it scrolls to the end. A movement of the offset is the reader's when nothing else changed, or when it went
-  up while the content did not shrink and the view did not grow (the only reasons for the layout to move it up); after
-  it, the panel follows only when the reader is at the end, within a tolerance of 24 pixels, about a line
-  (`FollowTolerance`). So a reader who scrolled up keeps the place while replies arrive, and scrolling back to the end
-  or sending a message follows again. The rule is driven by the scroll changes and not by a single scroll to the end
-  when a row is added, because the rows of a restored conversation are added before the panel is laid out (or before
-  the view exists, on the first open), when a scroll to the end does nothing and the later layout left the transcript at
-  its oldest message.
+  height (rows restored or added, a reply that grows, the first layout, the composer that grows or shrinks, the window
+  that is resized) while following, it scrolls to the end. A movement of the offset is the reader's when nothing else
+  changed, or when it went up while the content did not shrink and the view did not grow (the only reasons for the
+  layout to move it up); after it, the panel follows only when the reader is at the end, within a tolerance of 24
+  pixels, about a line (`FollowTolerance`). A change that the layout made never stops the following, and it starts it
+  again when it leaves the reader at the end (`_followLatest |= IsAtEnd()`), as when a reader who scrolled up a little
+  makes the panel taller. When the panel is shown again it also scrolls to the end at once, because its content and
+  height may be what they were, so no scroll change would follow. So a reader who scrolled up keeps the place while
+  replies arrive, and scrolling back to the end or sending a message follows again. The rule is driven by the scroll
+  changes and not by a single scroll to the end when a row is added, because the rows of a restored conversation are
+  added before the panel is laid out (or before the view exists, on the first open), when a scroll to the end does
+  nothing and the later layout left the transcript at its oldest message.
 - `TranscriptEntryViewModel`: one sent message. It holds the `SentMessage`, its `Payload` when it is a `MessagePayload`,
   `Items` (the runs of text with their origin and the chips, in order), `Summary` (for example `2 marks, 1 attachment`),
   `SentText` (the time), `Thumbnails`, and `ViewPayloadCommand`. It owns the picture provider it made and releases it in

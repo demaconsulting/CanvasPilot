@@ -68,9 +68,11 @@ and writes them atomically, so values owned by other subsystems are not overwrit
   written.
 - *Returns*: `bool` — `true` when the picture is remembered; `false` for an unlisted project, an invalid path, or a
   failed save.
-- *Postconditions*: The picture of the project is the given path. When it already was, nothing is written, so selecting
+- *Postconditions*: The picture of the project is the given path. When it already was, nothing is written, so storing
   the same picture again costs no write of the settings. `Changed` is not raised, because the list did not change and
-  the welcome screen, which follows `Changed`, need not be built again.
+  the welcome screen, which follows `Changed`, need not be built again. Each call that changes the picture writes the
+  settings file, so the caller keeps the shown picture in memory and calls this once per project, not on every
+  selection (see *MainWindowShell*).
 
 #### Error Handling
 
@@ -89,5 +91,6 @@ paths, of a project or of a picture, are ignored rather than thrown.
 
 - The application shell — adds a project file when a project is created or opened, removes one that cannot
   be opened or that the user removes from a welcome card, and shows the list in the File menu and on the welcome screen,
-  which also shows the time of opening. It remembers each picture that the user shows and selects the remembered picture
-  when a project is opened.
+  which also shows the time of opening. It keeps the picture that the user shows last in the open project in memory,
+  stores it here once when the project is closed, another project is opened, or the application exits, and selects the
+  remembered picture when a project is opened.

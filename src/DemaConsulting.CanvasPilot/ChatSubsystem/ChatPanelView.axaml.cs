@@ -46,8 +46,9 @@ namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 ///         application's view locator, and follows the latest row: whenever the content or the height of the list changes
 ///         (rows are restored or added, a reply grows, the panel is laid out for the first time) while the reader is at the
 ///         end, it scrolls to the end again, so a project opens at its latest message. A reader who scrolls up stops the
-///         following and keeps the place; scrolling back to the end, sending a message, or showing another conversation
-///         follows again. Following is decided from the scroll changes themselves, because restored rows are added before
+///         following and keeps the place; scrolling back to the end, sending a message, showing another conversation,
+///         showing the panel again, or a change of the layout that leaves the reader at the end follows again. Following
+///         is decided from the scroll changes themselves, because restored rows are added before
 ///         the list has a size, when scrolling to the end at once does nothing. The banner
 ///         of the readiness of the copilot, the indicator that it works, and the Stop button are bound to the view model.
 ///         <b>Pictures.</b> The composer's editing control gets the panel's
@@ -153,8 +154,10 @@ public sealed partial class ChatPanelView : UserControl
     {
         base.OnAttachedToVisualTree(e);
 
-        // A panel that is shown again starts at the latest row
+        // A panel that is shown again starts at the latest row: its content and height may be as they were, so no change
+        // of the scroll viewer would bring it there
         _followLatest = true;
+        TranscriptScroll.ScrollToEnd();
 
         // Load the speech engine now so that the first press of the talk button does not wait for it, and find out whether
         // the copilot can be used so that the banner is right from the start
@@ -317,11 +320,12 @@ public sealed partial class ChatPanelView : UserControl
     /// </summary>
     /// <remarks>
     ///     A change of the content or of the height of the list (a row added or restored, a reply that grows, the first
-    ///     layout, the composer that grows or shrinks) scrolls to the end while following. A movement of the offset is the
-    ///     reader's when nothing else changed, or when it went up while the content did not shrink and the view did not
-    ///     grow, which are the only reasons for the layout to move the offset up; after a movement of the reader, following
-    ///     goes on only when it left the reader at the end. A movement that the layout made is not the reader's, so it
-    ///     does not stop the following.
+    ///     layout, the composer that grows or shrinks, the window that is resized) scrolls to the end while following. A
+    ///     movement of the offset is the reader's when nothing else changed, or when it went up while the content did not
+    ///     shrink and the view did not grow, which are the only reasons for the layout to move the offset up; after a
+    ///     movement of the reader, following goes on only when it left the reader at the end. A change that the layout
+    ///     made is not the reader's, so it never stops the following; it starts it again when it leaves the reader at the
+    ///     end, as when a reader who scrolled up a little makes the panel taller.
     /// </remarks>
     /// <param name="sender">The scroll viewer of the transcript.</param>
     /// <param name="e">How the content, the offset, and the height changed.</param>
@@ -333,6 +337,10 @@ public sealed partial class ChatPanelView : UserControl
         if (readerMoved)
         {
             _followLatest = IsAtEnd();
+        }
+        else if (contentChanged)
+        {
+            _followLatest |= IsAtEnd();
         }
 
         if (contentChanged && _followLatest)

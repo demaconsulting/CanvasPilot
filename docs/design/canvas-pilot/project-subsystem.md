@@ -102,9 +102,10 @@ when to refresh, and where the small pictures of the drawings come from.
 3. To open a project, the caller calls `OpenAsync`; on success the project file is added to
    `RecentProjects`, and a failure message is shown to the user. After a create or an open, the caller asks
    `RecentProjects.GetShownPicture` for the picture last shown in the project and selects it in the explorer, and it
-   tells `RecentProjects.RememberShownPicture` each picture that the user shows. The picture is kept with the recent
-   projects of the user, not in the project file, because a project folder is copied, shared, and put under source
-   control, and which picture a person looked at is that person's own view state.
+   tells `RecentProjects.RememberShownPicture` the picture that the user showed last once, when the project is closed,
+   another opens, or the application exits. The picture is kept with the recent projects of the user, not in the
+   project file, because a project folder is copied, shared, and put under source control, and which picture a person
+   looked at is that person's own view state; a project that leaves the list takes its picture along.
 4. When the open project changes, the caller opens the project folder in `ProjectExplorerViewModel`, or closes
    the explorer when no project is open. The explorer shows the folders of the project and in them the image source
    files and the assets as a tree, watches the folder and its sub-folders, and refreshes after a short delay when files

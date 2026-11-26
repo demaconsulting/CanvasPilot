@@ -74,9 +74,10 @@ public interface IRecentProjects
     ///     project when it leaves the list.
     /// </summary>
     /// <remarks>
-    ///     Nothing is written when the picture is the one already remembered, so selecting the same picture again costs
-    ///     nothing. <see cref="Changed" /> is not raised, because the list did not change and the welcome screen that
-    ///     follows it need not be built again.
+    ///     Nothing is written when the picture is the one already remembered. Each call that changes the picture writes the
+    ///     settings file, so a caller keeps the shown picture itself and calls this once, when the project is closed or
+    ///     another opens, rather than on every selection. <see cref="Changed" /> is not raised, because the list did not
+    ///     change and the welcome screen that follows it need not be built again.
     /// </remarks>
     /// <param name="projectFile">The path of the project file.</param>
     /// <param name="picture">The path of the picture relative to the folder of the project.</param>
