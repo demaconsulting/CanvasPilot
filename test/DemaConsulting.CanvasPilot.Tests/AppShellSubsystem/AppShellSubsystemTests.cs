@@ -142,6 +142,40 @@ public sealed class AppShellSubsystemTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that in the composed application a project that is reopened from the list of recent projects, after a
+    ///     restart, shows the picture that was last shown in it: the explorer selects it and the preview draws it.
+    /// </summary>
+    [Fact]
+    public async Task AppShellSubsystem_ReopenProject_LastShownPicture_IsSelectedAndDrawn()
+    {
+        // Arrange: a composed application whose user creates a project with two pictures and shows the second
+        var firstRun = Compose();
+        _dialogs.OnNewProject = dialog =>
+        {
+            dialog.ProjectName = "Resume";
+            dialog.OkCommand.Execute(null);
+        };
+        await firstRun.Shell.NewProjectCommand.ExecuteAsync(null);
+        var folder = firstRun.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(Path.Combine(folder, "a.svg"), "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='10'/>", TestContext.Current.CancellationToken);
+        var second = Path.Combine(folder, "b.svg");
+        await File.WriteAllTextAsync(second, "<svg xmlns='http://www.w3.org/2000/svg' width='30' height='10'/>", TestContext.Current.CancellationToken);
+        firstRun.Shell.Workspace.Explorer.Refresh();
+        firstRun.Shell.Workspace.Explorer.SelectFile(second);
+        firstRun.Shell.CloseProjectCommand.Execute(null);
+
+        // Act: a second run reopens the project from the list of recent projects
+        var secondRun = Compose();
+        await secondRun.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        await secondRun.Preview.RenderCompletion;
+
+        // Assert: the picture is selected and drawn
+        Assert.Equal(second, secondRun.Shell.Workspace.SelectedFile);
+        Assert.Equal(second, secondRun.Preview.CurrentImage?.SourcePath);
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
     ///     Test that renaming and deleting through the workspace change the project folder and the explorer list.
     /// </summary>
     [Fact]

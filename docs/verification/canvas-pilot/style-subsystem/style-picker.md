@@ -97,9 +97,9 @@ three kits of the program, with no style selected. This scenario is tested by
 `StylePickerView_TitleBar_ShownOnlyWithAProjectAndListsTheKits`.
 
 **StylePickerView_Pill_AnnouncesTheNameOfTheChoiceAndNotTheRecord**: The value that the pill gives to automation is
-`(No style)` with no kit chosen and `DEMA` after the DEMA kit is chosen, and the text of every choice is its display
-name and holds no record text. This scenario is tested by
-`StylePickerView_Pill_AnnouncesTheNameOfTheChoiceAndNotTheRecord`.
+`(No style)` with no kit chosen, `DEMA` after the DEMA kit is chosen, and `team-kit (not found)` after the project names
+a kit that cannot be found, and the text of every choice is its display name and holds no record text. This scenario is
+tested by `StylePickerView_Pill_AnnouncesTheNameOfTheChoiceAndNotTheRecord`.
 
 **StylePickerView_Pill_ShowsNameAndSwatchesOfTheChosenKit**: With a project open the pill shows the words `(No style)`;
 after the DEMA kit is chosen the pill is 26 high, shows only the name `DEMA`, and shows between one and three dots, each

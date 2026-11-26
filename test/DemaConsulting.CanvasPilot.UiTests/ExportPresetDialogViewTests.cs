@@ -20,6 +20,7 @@
 
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Threading;
 using DemaConsulting.CanvasPilot.PreviewSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
@@ -83,6 +84,26 @@ public sealed class ExportPresetDialogViewTests
         Assert.True(closed);
         Assert.True(viewModel.Accepted);
         Assert.Equal("kit:slide", viewModel.SelectedPreset!.Id);
+    }
+
+    /// <summary>
+    ///     Test that a screen reader names every line of the list by the name of its size, which is the first line of the
+    ///     row, and not by the type of the line.
+    /// </summary>
+    [AvaloniaFact]
+    public void ExportPresetDialogView_PresetList_RowsAreNamedByThePresetName()
+    {
+        // Arrange: a shown dialog
+        var (window, _) = ShowDialog();
+        Dispatcher.UIThread.RunJobs();
+
+        // Act: read the names of the rows
+        var names = SettingsUiHelpers.AnnouncedRowNames(SettingsUiHelpers.Find<ListBox>(window, "ExportPresetList"));
+
+        // Assert: each row is named by its size
+        Assert.Equal(["As rendered", "Slide", "Email"], names);
+
+        window.Close();
     }
 
     /// <summary>

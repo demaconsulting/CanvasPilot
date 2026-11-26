@@ -22,13 +22,16 @@ the default kit (`StyleKitChoice`), and a view (`StyleSettingsPageView`) that th
   reachable, with the number of kit folders in it that cannot be used when there are some; or that it is not reachable
   now, with the reason the catalog gave, and that it stays in the list and is tried again. The catalog tells this in
   `IStyleKitCatalog.Locations`, and the page matches a row to the place by the full path without a closing separator,
-  without regard to case on Windows.
+  without regard to case on Windows. The text of a row (`ToString`) is its path, the first line it shows, because a
+  screen reader names a row of two lines by the text of its item; the status stays readable as the second line.
 - `SelectedFolder`: the row that the buttons act on. `NewFolderText`: the path that the user is typing. `FolderError`
   and `HasFolderError`: why the last folder was not added.
 - `DefaultKitChoices`: no style (the id is an empty string), then each kit of the catalog that is not hidden by a kit of
   a more local place, with the place in brackets, and last, only when the settings name a default kit that no kit has,
   that id with `(not found)`. `SelectedDefaultKit`: the choice that is selected, which is the default of the settings
-  until the user chooses another.
+  until the user chooses another. The text of a `StyleKitChoice` (`ToString`) is its label, because a closed drop-down
+  list tells a screen reader the text of its chosen item, and the text of a record would print its members; the label of
+  a missing kit already says `(not found)`, so the announced words are the shown words.
 - `IsValid`: true while every folder in the list is a full path.
 - `Title` is `Style Kits`, `Description` the sentence `Where shared style kits are kept, and which kit a new project
   starts with.`, and `IconKey` is `CpIconBraces`, which the settings dialog shows in its page list and under the title

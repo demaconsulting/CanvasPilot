@@ -121,6 +121,11 @@ Project dialog, an image is added and the explorer refreshed, the project is sav
 recent project is opened. The title and explorer follow each step and the reopened project has a modified time.
 This scenario is tested by `AppShellSubsystem_ProjectLifecycle_NewSaveCloseReopenFromRecent`.
 
+**AppShellSubsystem_ReopenProject_LastShownPicture_IsSelectedAndDrawn**: The composed application creates a project
+with two pictures, the second is shown, and the project is closed; a second composition over the same folders opens the
+project from the list of recent projects, and the second picture is selected in the explorer and drawn by the preview.
+This scenario is tested by `AppShellSubsystem_ReopenProject_LastShownPicture_IsSelectedAndDrawn`.
+
 **AppShellSubsystem_ManageFiles_RenameAndDelete_UpdateFolderAndExplorer**: A project with two images has the first
 selected; the user renames it and then deletes the renamed file after confirming. The folder and the list show
 each change and no message was shown. This scenario is tested by

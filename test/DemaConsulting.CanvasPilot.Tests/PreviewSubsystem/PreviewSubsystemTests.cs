@@ -463,6 +463,33 @@ public sealed class PreviewSubsystemTests : IDisposable
         Assert.Equal("Card", user.SelectedWhenOffered[1]);
     }
 
+    /// <summary>
+    ///     Test that the sizes that the exporter offers through the real export dialog view model, the picture as shown, the
+    ///     sizes of the application, and the sizes of the style kit, read as the names that their lines show, so a screen
+    ///     reader names each line by its size and not by the type of the line.
+    /// </summary>
+    [Fact]
+    public async Task PreviewSubsystem_AnnounceChosenEntries_ExportSizes_ReadAsTheirNames()
+    {
+        // Arrange: a shown picture, a size of the application and a size of the style kit, and a user of the real dialog
+        await File.WriteAllTextAsync(Path.Combine(_folder, "wide.svg"), WideSvg, TestContext.Current.CancellationToken);
+        var (explorer, pane) = Create();
+        var card = new ExportPreset("app:card", "Card", 300, 300, 200, false, "#FFFFFF", ExportPresetOrigin.Application);
+        var mail = new ExportPreset("kit:mail", "Mail", 800, null, null, false, "#102030", ExportPresetOrigin.StyleKit);
+        var exporter = new ImageExporter(pane, new ImageRenderService(), null, new StaticPresets(mail, card));
+        var user = new DialogViewModelUser("Card", Path.Combine(_folder, "wide-card.png"));
+        explorer.Open(_folder);
+        explorer.SelectFile(Path.Combine(_folder, "wide.svg"));
+        await pane.RenderCompletion;
+
+        // Act: export, which offers the sizes
+        await exporter.ExportPngAsync(user);
+
+        // Assert: the text of every line is the name it shows
+        Assert.Equal(user.Offers[0], user.OfferTexts[0]);
+        Assert.Equal(["As rendered", "Mail", "Card"], user.OfferTexts[0]);
+    }
+
     private (ProjectExplorerViewModel Explorer, PreviewPaneViewModel Pane) Create(string? dragFolder = null)
     {
         var explorer = new ProjectExplorerViewModel(new CanvasNetImageSourceFilter(), _explorerScheduler);
@@ -505,6 +532,11 @@ public sealed class PreviewSubsystemTests : IDisposable
         /// </summary>
         public List<string?> SelectedWhenOffered { get; } = [];
 
+        /// <summary>
+        ///     Gets the text of every line of each offer, which is what a screen reader names the line by.
+        /// </summary>
+        public List<string[]> OfferTexts { get; } = [];
+
         /// <inheritdoc />
         public Task<string?> PickSaveFileAsync(string title, string suggestedFileName, string filterName, string filterPattern)
         {
@@ -516,6 +548,7 @@ public sealed class PreviewSubsystemTests : IDisposable
         {
             var viewModel = new ExportPresetDialogViewModel(presets, last);
             Offers.Add(viewModel.Items.Select(item => item.Name).ToArray());
+            OfferTexts.Add(viewModel.Items.Select(item => item.ToString()).ToArray());
             SelectedWhenOffered.Add(viewModel.SelectedItem?.Name);
             viewModel.SelectedItem = viewModel.Items.First(item => item.Name == presetName);
             viewModel.ExportCommand.Execute(null);

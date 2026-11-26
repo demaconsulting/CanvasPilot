@@ -186,3 +186,19 @@ sections:
               - CanvasPilot-StyleSettingsPage-BeUsableWithAssistiveTechnology
             tests:
               - Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize
+
+          - id: CanvasPilot-Style-AnnounceChosenEntries
+            title: >-
+              The Style subsystem shall tell a screen reader the chosen style kit of the project, the chosen default kit
+              of the settings, the place where new kits go, and each shared kit folder by the words that they show,
+              including no style and a kit that cannot be found.
+            justification: |
+              The style kit decides the look of every picture, so a person who uses a screen reader must hear which kit is
+              chosen in the same words that the list shows, and not the data behind the entry.
+            children:
+              - CanvasPilot-StylePicker-AnnounceChosenEntries
+              - CanvasPilot-StyleSettingsPage-AnnounceChosenEntries
+              - CanvasPilot-StyleKitManager-AnnounceChosenEntries
+            tests:
+              - StyleSubsystem_AnnounceChosenEntries_PickerPageAndManagerLists_ReadAsTheirShownWords
+              - StyleKitManagerView_TargetList_AnnouncesTheShownPlace

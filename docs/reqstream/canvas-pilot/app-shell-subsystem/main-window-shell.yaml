@@ -417,3 +417,28 @@ sections:
                   - MainWindowShell_OpenLogFolder_NoLoggerOrLauncherFails_UsesTheDefaultFolderAndTellsTheUser
                   - MainWindowShell_OpenLogFolder_WithoutLauncher_IsDisabledAndDoesNothing
                   - MainWindowView_OpenLogFolderMenuItem_ShowsTheFolderOfTheLog
+
+              - id: CanvasPilot-MainWindowShell-ReopenAtLastShownPicture
+                title: >-
+                  The MainWindowShell shall keep the picture that the user shows last in the open project, store it with
+                  the recent projects once when the project is closed, another project is opened, or the shell is disposed
+                  at exit, and, when a project that is in the list of recent projects is opened, select the picture last
+                  shown in it, selecting nothing when that file is gone; selecting a folder shall not forget the picture.
+                justification: |
+                  The welcome screen, the File menu, the Recent Projects menu, and New Project all end in the shell, so
+                  the shell brings each opened project back to its picture. A selection that is no picture, as when a
+                  folder is selected or the project closes, says nothing about the picture the user looked at. Storing
+                  the picture on every selection would write the settings file of the user on every click, take back the
+                  changes of another running instance of the application each time, and report a failing write on every
+                  click.
+                tests:
+                  - MainWindowShell_SelectedFile_ShownPicture_IsRememberedForTheProject
+                  - MainWindowShell_SelectedFile_ManyPictures_StoredOnceWhenTheProjectCloses
+                  - MainWindowShell_SelectedFile_SettingsCannotBeWritten_LogsOnceWhenTheProjectCloses
+                  - MainWindowShell_Dispose_ShownPicture_IsStored
+                  - MainWindowShell_OpenProject_RememberedPicture_IsSelected
+                  - MainWindowShell_RecentProjects_OpenOnChoice_SelectsTheRememberedPicture
+                  - MainWindowShell_OpenProject_RememberedPictureGone_SelectsNothing
+                  - MainWindowShell_OpenProject_TwoProjects_EachOpensAtItsOwnPicture
+                  - MainWindowShell_NewProject_NothingRemembered_SelectsNothing
+                  - MainWindowView_OpenProject_FromWelcomeCardAndRecentMenu_ShowsTheLastShownPicture

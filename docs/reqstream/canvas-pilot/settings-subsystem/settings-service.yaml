@@ -215,3 +215,15 @@ sections:
                   a file that was edited by hand must never give the window a key that takes away typing.
                 tests:
                   - SettingsService_Load_PushToTalkKey_IsNormalizedAndUnsafeOrOldF8BecomesTheDefault
+
+              - id: CanvasPilot-SettingsService-KeepRecentProjectPictures
+                title: >-
+                  The SettingsService shall keep the picture last shown in each listed recent project, store it in the
+                  settings file, read it back, and drop a picture of a project that is not listed and a path that is not
+                  relative to its project folder.
+                justification: |
+                  The picture belongs to the recent projects of the user, so it lives and dies with the list. The settings
+                  file may be edited by hand, so a path that would point outside a project must not be taken in.
+                tests:
+                  - SettingsService_SaveLoad_RecentProjectPicture_RoundTrips
+                  - SettingsService_Load_RecentProjectPicture_KeepsOnlyListedProjectsAndRelativePaths

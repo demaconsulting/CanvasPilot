@@ -28,7 +28,9 @@ shared package of this program.
   unknown model with `ArgumentException`, and stops with `OperationCanceledException` when cancelled.
 - `ISpeechModel.Parameters` — the model's tunable parameters as `NumericParameter`, `ChoiceParameter`, and
   `BooleanParameter` descriptors with identifiers, bounds or options, and defaults; their stored values are passed to
-  the engine as an untyped bag of numbers, strings, and booleans.
+  the engine as an untyped bag of numbers, strings, and booleans. The options of a `ChoiceParameter`
+  (`ChoiceParameterOption`) are shown through a local record of the editor, because their own text lists their members,
+  which a screen reader would announce.
 - `SpeechRecognizerFactory.LoadAsync` — loads the engine (`ISpeechRecognizerEngine`) of an installed speech-to-text
   model, with an `ISpeechDiagnostics` sink. It answers a model that is not installed, an absent native runtime, and a
   machine without a microphone with an unavailable engine (`IsAvailable` is false), not an exception. Loading takes a

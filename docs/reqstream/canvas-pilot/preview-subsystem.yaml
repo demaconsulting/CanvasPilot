@@ -210,3 +210,15 @@ sections:
             tests:
               - ThumbnailProvider_CreateAsync_DrawsOnceUntilTheFileChanges
               - ThumbnailProvider_CreateAsync_FullCacheOrBadFile_EvictsLeastRecentlyUsedAndGivesNoBitmap
+
+          - id: CanvasPilot-Preview-AnnounceChosenEntries
+            title: >-
+              The Preview subsystem shall tell a screen reader each size that the export dialog offers by the name that
+              its line shows.
+            justification: |
+              A person who uses a screen reader chooses the size of an exported picture by hearing the lines of the
+              dialog; a line that is read as the name of a type cannot be told apart from the others.
+            children:
+              - CanvasPilot-ExportPresetDialog-AnnounceChosenEntries
+            tests:
+              - PreviewSubsystem_AnnounceChosenEntries_ExportSizes_ReadAsTheirNames

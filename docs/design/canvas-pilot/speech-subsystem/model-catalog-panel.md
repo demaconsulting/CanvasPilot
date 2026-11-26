@@ -14,7 +14,8 @@ with progress, cancellation, and an explanation of failures. Each row is a `Mode
 shows), `Id`, `DisplayName`, `Role`, and the observable `State`, `ProgressFraction` (`double?`, 0 to 1 for the file
 being transferred), and `FailureMessage`, with the derived `StatusText` ("Not downloaded", "Downloading",
 "Installed", or "Failed or corrupt"), `CanDownload` (not downloaded, or failed, so a download can be retried),
-`IsDownloading`, and `HasFailureMessage`.
+`IsDownloading`, and `HasFailureMessage`. The text of a row (`ToString`) is its `DisplayName`, the first line it shows,
+because a screen reader names a row of two lines by the text of its item, which would otherwise be the type name.
 
 **SttModels / TtsModels**: `ObservableCollection<ModelListItemViewModel>` split by `SpeechModelRole`.
 

@@ -429,11 +429,11 @@ user, for example) is refused, so that a configuration mistake cannot write into
 
 - *Direction*: Input and output.
 - *Type*: JSON file on the local file system.
-- *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects with the time each was opened, the
-  AI provider choices, the speech choices (the devices, the models, and the talk key), the style choices (the shared kit
-  folders and the default kit), the window layout (size, place, state, and the widths of the explorer and the chat
-  column), and the appearance (the theme choice, the small pictures of the explorer, and the row height). Unknown
-  properties are ignored.
+- *Format*: One UTF-8 `settings.json` document with a `version`, the recent projects with the time each was opened and
+  the picture last shown in each (relative to the project folder), the AI provider choices, the speech choices (the
+  devices, the models, and the talk key), the style choices (the shared kit folders and the default kit), the window
+  layout (size, place, state, and the widths of the explorer and the chat column), and the appearance (the theme choice,
+  the small pictures of the explorer, and the row height). Unknown properties are ignored.
 - *Constraints*: The default location is `%APPDATA%\CanvasPilot\settings.json`. The file is written
   atomically. A corrupt file is renamed `settings.json.bad` and defaults are used. The file never
   contains credentials.
@@ -961,6 +961,8 @@ and has the service forget the conversation and delete the session of the provid
 - Logging shall be safe to call from multiple threads.
 - The settings file shall be under the per-user application data folder, written atomically, and tolerant
   of missing, corrupt, and newer content.
+- The view state of a person, such as the picture last shown in a project, shall be kept in the settings of that person
+  and never in the project folder, because a project folder is copied, shared, and put under source control.
 - Settings pages shall be supplied to the settings dialog, never referenced by it.
 - The settings subsystem shall hold no reference to any AI provider SDK or client.
 - The project file shall carry a format version, and a file with a newer version shall never be rewritten.
@@ -972,6 +974,11 @@ and has the service forget the conversation and delete the session of the provid
 - View models shall talk to the user only through `IDialogService`, which the main window implements, so no
   view model references a window.
 - Every control that a test or assistive technology must find shall carry an automation identifier.
+- Every value that a drop-down list or a list shows shall be announced by the words that the entry shows as its name,
+  because the automation peers of Avalonia tell a screen reader the value of a closed drop-down list, and the name of a
+  row whose template is a panel, from the text of the item; a record or a view model without that text would be
+  announced as the printout of its members or as its type name. The item gives those words from its `ToString`, or the
+  row names itself with `AutomationProperties.Name`, as the rows of the page rail of the settings dialog do.
 - The image preview plugs into the shell through `IImageExporter` and `ProjectWorkspaceViewModel.Preview`
   and does not require changes to the shell's commands. `Preview` shall not depend on `AppShell`: it owns the
   exporter seam `IImageExporter` and the dialog seam `IExportDialogs`, and `AppShell` refers to `Preview` only for

@@ -55,3 +55,14 @@ sections:
                   - DeviceSelectionViewModel_Refresh_KeepsChoicesAndShowsNewDevices
                   - DeviceSelectionViewModel_Refresh_Refused_ShowsProblem
                   - SpeechSettingsPageView_RefreshDevicesButton_ScansAndShowsNewDevice
+
+              - id: CanvasPilot-DeviceSelection-AnnounceChosenEntries
+                title: >-
+                  The DeviceSelection shall tell assistive technology the chosen microphone and speakers by the words that
+                  the device lists show, including the system default and a stored device that is not connected.
+                justification: |
+                  A closed drop-down list tells a screen reader the text of its chosen entry, so that text must be the
+                  device name or the note that the list shows, not the data behind the entry.
+                tests:
+                  - DeviceSelectionViewModel_Devices_ReadAsTheirLabels
+                  - SpeechSettingsPageView_DeviceLists_AnnounceTheShownDevice

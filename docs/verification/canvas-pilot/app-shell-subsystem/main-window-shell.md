@@ -64,6 +64,9 @@ temporary local folders; no network or external services are required.
   creation, a damaged file, and a failed save are shown to the user.
 - Recent projects are listed newest first, open when chosen, show underscores as typed, and a missing project is
   reported and removed.
+- A project opens at the picture last shown in it, or with nothing selected when that picture is gone or the project is
+  new; showing pictures writes nothing, and the picture shown last is stored once when the project is closed, another
+  is opened, or the shell is disposed, so a failed write is logged once.
 - Exit closes the window; Save and Close follow the open project.
 - Settings opens over its pages and tells them when it closed; About opens the About dialog.
 - Drawing Knowledge, in the Help menu above About, asks the dialog service to show a browser over the catalog that the
@@ -508,3 +511,45 @@ settings are walked in the dark and the light theme; a button that shows no text
 28 by 28, and every enabled button takes the focus; every field, list, drop-down, slider, and tree has a name; and more
 than 150 controls were looked at. This scenario is tested by
 `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**MainWindowShell_SelectedFile_ShownPicture_IsRememberedForTheProject**: A picture in a subfolder of the open project is
+selected and then its folder; when the project closes, the path of the picture relative to the project folder is stored
+for the project. This scenario is tested by `MainWindowShell_SelectedFile_ShownPicture_IsRememberedForTheProject`.
+
+**MainWindowShell_SelectedFile_ManyPictures_StoredOnceWhenTheProjectCloses**: Three pictures of the open project and
+then the first again are shown; the settings service announces no write and holds no picture for the project, and
+closing the project writes the settings once, with the first picture. This scenario is tested by
+`MainWindowShell_SelectedFile_ManyPictures_StoredOnceWhenTheProjectCloses`.
+
+**MainWindowShell_SelectedFile_SettingsCannotBeWritten_LogsOnceWhenTheProjectCloses**: After the project was opened, the
+folder of the settings is replaced by a file, so no write can succeed; two pictures are shown three times each, and the
+log has no failed write; closing the project logs the failed write once, closes the project, and shows no message. This
+scenario is tested by `MainWindowShell_SelectedFile_SettingsCannotBeWritten_LogsOnceWhenTheProjectCloses`.
+
+**MainWindowShell_Dispose_ShownPicture_IsStored**: A picture is shown in the open project and nothing is stored; the
+shell is disposed, as the application does when it exits, and a settings service that loads the same folder holds the
+picture. This scenario is tested by `MainWindowShell_Dispose_ShownPicture_IsStored`.
+
+**MainWindowShell_OpenProject_RememberedPicture_IsSelected**: File, Open Project opens a project whose second picture
+is remembered; that picture is selected. This scenario is tested by
+`MainWindowShell_OpenProject_RememberedPicture_IsSelected`.
+
+**MainWindowShell_RecentProjects_OpenOnChoice_SelectsTheRememberedPicture**: A picture remembered in an earlier run is
+selected when a restarted shell opens the project from its list of recent projects. This scenario is tested by
+`MainWindowShell_RecentProjects_OpenOnChoice_SelectsTheRememberedPicture`.
+
+**MainWindowShell_OpenProject_RememberedPictureGone_SelectsNothing**: The remembered picture was deleted; the project
+opens with nothing selected and no message. This scenario is tested by
+`MainWindowShell_OpenProject_RememberedPictureGone_SelectsNothing`.
+
+**MainWindowShell_OpenProject_TwoProjects_EachOpensAtItsOwnPicture**: A picture is shown in each of two projects that
+are opened one after the other; the second opens at first with nothing selected, and when each is opened again it
+selects its own picture. This scenario is tested by `MainWindowShell_OpenProject_TwoProjects_EachOpensAtItsOwnPicture`.
+
+**MainWindowShell_NewProject_NothingRemembered_SelectsNothing**: A new project opens with nothing selected and nothing
+remembered for it. This scenario is tested by `MainWindowShell_NewProject_NothingRemembered_SelectsNothing`.
+
+**MainWindowView_OpenProject_FromWelcomeCardAndRecentMenu_ShowsTheLastShownPicture**: Headless UI test of the composed
+window: the card of a project on the welcome screen opens it with the remembered picture selected in the tree; another
+picture is then shown, the project closed, and opened from the Recent Projects menu, which selects that picture. This
+scenario is tested by `MainWindowView_OpenProject_FromWelcomeCardAndRecentMenu_ShowsTheLastShownPicture`.

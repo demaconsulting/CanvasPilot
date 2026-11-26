@@ -605,6 +605,19 @@ first entry is opened. The project reopens with its name. A damaged project file
 a failed result, the open project is unchanged, and the refusal is logged. This scenario is tested by
 `CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject`.
 
+**CanvasPilot_ResumeProject_ReopenedProject_SelectsTheLastShownPicture**: The composed application creates a project
+with two pictures and shows the second; after a restart, the project is opened from the list of recent projects and the
+second picture is selected and drawn. After the picture is deleted and the application restarted again, the project
+opens with nothing selected and no message. This scenario is tested by
+`CanvasPilot_ResumeProject_ReopenedProject_SelectsTheLastShownPicture`.
+
+**CanvasPilot_ResumeProject_ComposedWindow_ShowsTheLastPictureAndTheLatestMessage**: A remembered project with two
+pictures, the second shown last, and a saved conversation of forty rows; the composed main window (a headless UI test
+in `CanvasPilotThemeTests.cs`, with Ollama without a model as the provider so that nothing is started or asked) opens
+the project from its card on the welcome screen. The second picture is selected and drawn, and the transcript is
+longer than its view and scrolled to its end, within 24 pixels. This scenario is tested by
+`CanvasPilot_ResumeProject_ComposedWindow_ShowsTheLastPictureAndTheLatestMessage`.
+
 **CanvasPilot_BrowseProjectImages_OpenProject_ListsImageSourceFiles**: A created project holds two SVG files and
 a text file; the project explorer is opened on the project folder and lists the two SVG files in name order,
 and selecting one reports its path. This scenario is tested by
@@ -1095,6 +1108,14 @@ requirement: `Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey` (every menu 
 `Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly` (the main, quiet, and card buttons show the
 focus ring on the Tab key and on no other control), and `Accessibility_Colors_NoticesAndWelcomeTextAreReadable` (the
 text on notices, the amber button, and the welcome backdrop has a contrast of at least 4.5 to 1).
+
+**Accessibility_Lists_AnnounceTheWordsOfTheChosenEntry**: The composed application opens a remembered project with two
+pictures, with settings that name a shared kit folder and a default kit that no kit has (a headless UI test in
+`AccessibilityViewTests.cs`). In the workspace, the window that manages style kits, and every page of the Settings
+dialog, the value that every shown drop-down list with a chosen entry gives to automation is a text that the list shows,
+and the name of every shown row of a list is a text that the row shows; neither is a type name or the printout of a
+record. The check must have looked at the style picker, the place where new kits go, the default kit, the shared
+folders, the provider, and the theme. This scenario is tested by `Accessibility_Lists_AnnounceTheWordsOfTheChosenEntry`.
 
 **ThirdPartyNotices_Published**: After the Windows build job publishes the application self-contained for win-x64,
 FileAssert asserts that the published folder, which the installer takes whole, holds exactly one

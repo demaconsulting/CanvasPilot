@@ -37,7 +37,8 @@ return arrow from the preview to the description step is for marking problems or
 Available now:
 
 - **Projects**: A project is a folder; create, open, save, and close projects, and return to recent ones from a welcome
-  screen with a picture of each
+  screen with a picture of each, each opening at the picture you last looked at and the latest message of its
+  conversation
 - **Modern interface**: A dark and a light theme that follow your system or stay as you choose, a title bar with the
   menu and pills for the style kit and the AI provider, a status bar, and a window that remembers its size and layout;
   every command is also reachable with the keyboard, and the controls have names for screen readers

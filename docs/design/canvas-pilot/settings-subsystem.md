@@ -14,7 +14,8 @@ does not depend on the pages. The one thing that it takes from the `Speech` subs
 keys are safe (`PushToTalkBinding`), because the service cleans the stored talk key when it normalizes the settings. The
 same file keeps the layout of the main window (size, place, state, and the widths of the
 explorer and chat columns), the appearance (the theme choice and the options of the explorer), and the time at which
-each recent project was last opened; the shell reads them when it builds and restores the window. The Agent subsystem
+each recent project was last opened and the picture last shown in it; the shell reads them when it builds and restores
+the window, and when it opens a project. The Agent subsystem
 reads the AI provider choices through `ISettingsService`, and checks them and lists the models of the provider through
 the `IProviderCheck` and `IProviderModelSource` interfaces that this subsystem owns and that the Agent subsystem
 implements; this subsystem depends on neither.

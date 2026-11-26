@@ -143,6 +143,30 @@ sections:
         tests:
           - CanvasPilot_ManageProjects_NewProject_CreatesReopensAndRemembersProject
 
+      - id: CanvasPilot-System-ResumeProjectWhereLeftOff
+        title: >-
+          The application shall, when a project that is in the list of recent projects is opened from the welcome screen,
+          the File menu, or the list of recent projects, select and show the picture that was last shown in that project
+          on this computer, selecting nothing when that file no longer exists, and show the conversation scrolled to its
+          latest message, keeping the latest message in view as messages and replies arrive unless the user has scrolled
+          up to read.
+        tags: [system]
+        justification: |
+          Returning to work should not start from an empty stage and the oldest message of a long conversation. Which
+          picture a person looked at is that person's own view state, and a project folder is copied, shared, and put
+          under source control, so the picture is kept on this computer with the recent projects and not in the project.
+          The list of recent projects holds at most ten projects, so a project that was removed from it or fell off it
+          has no picture to return to. A reader who scrolled up to read an earlier answer must not be pulled away from it
+          by a new reply.
+        children:
+          - CanvasPilot-AppShell-ReopenAtLastShownPicture
+          - CanvasPilot-Project-RememberShownPicture
+          - CanvasPilot-Settings-RememberLayoutAndAppearance
+          - CanvasPilot-Chat-FollowLatestMessage
+        tests:
+          - CanvasPilot_ResumeProject_ReopenedProject_SelectsTheLastShownPicture
+          - CanvasPilot_ResumeProject_ComposedWindow_ShowsTheLastPictureAndTheLatestMessage
+
       - id: CanvasPilot-System-BrowseProjectImages
         title: >-
           The application shall show the folders and the image source files of the open project as a tree, with a
@@ -680,6 +704,23 @@ sections:
           - Accessibility_MainMenu_EveryEntryHasAUniqueAccessKey
           - Accessibility_ButtonThemes_TabKeyShowsTheFocusRingOnTheFocusedButtonOnly
           - Accessibility_Colors_NoticesAndWelcomeTextAreReadable
+
+      - id: CanvasPilot-System-AnnounceChosenEntries
+        title: >-
+          The application shall tell a screen reader the chosen entry of every drop-down list, and every entry of a list
+          of choices, by the words that the entry shows, and never by the text of the data behind it.
+        tags: [system]
+        justification: |
+          A person who cannot see the screen hears the value of a drop-down list and the name of a row instead of
+          reading them. A type name or a printout of the members of a record tells that person nothing and differs from
+          what a sighted user reads, so the chosen default style kit, for example, must be announced as "(No style)".
+        children:
+          - CanvasPilot-Settings-AnnounceChosenEntries
+          - CanvasPilot-Speech-AnnounceChosenEntries
+          - CanvasPilot-Style-AnnounceChosenEntries
+          - CanvasPilot-Preview-AnnounceChosenEntries
+        tests:
+          - Accessibility_Lists_AnnounceTheWordsOfTheChosenEntry
 
       - id: CanvasPilot-System-ShipThirdPartyNotices
         title: >-

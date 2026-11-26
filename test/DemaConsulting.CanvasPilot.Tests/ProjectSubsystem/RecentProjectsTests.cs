@@ -320,6 +320,141 @@ public sealed class RecentProjectsTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the picture last shown is kept for each listed project, relative to its folder, and read back by a new
+    ///     list over the same settings, as after a restart, without announcing a change of the list.
+    /// </summary>
+    [Fact]
+    public void RecentProjects_RememberShownPicture_StoredPerProjectAndReadBack()
+    {
+        // Arrange: two listed projects
+        var recent = new RecentProjects(_settings);
+        var one = CreateProjectFile("one");
+        var two = CreateProjectFile("two");
+        recent.Add(one);
+        recent.Add(two);
+        var changes = 0;
+        recent.Changed += (_, _) => changes++;
+
+        // Act: remember a picture of each, the second one twice, and read them back after a restart
+        var storedOne = recent.RememberShownPicture(one, "flow.svg");
+        var storedTwo = recent.RememberShownPicture(two, Path.Combine("diagrams", "first.svg"));
+        recent.RememberShownPicture(two, Path.Combine("diagrams", "chart.vl.json"));
+        var restartedSettings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        restartedSettings.Load();
+        var restarted = new RecentProjects(restartedSettings);
+
+        // Assert: each project has its own picture, the newest one, and the list was not announced as changed
+        Assert.True(storedOne && storedTwo);
+        Assert.Equal("flow.svg", restarted.GetShownPicture(one));
+        Assert.Equal(Path.Combine("diagrams", "chart.vl.json"), restarted.GetShownPicture(two));
+        Assert.Equal("flow.svg", recent.GetShownPicture(one.ToUpperInvariant()));
+        Assert.Equal(0, changes);
+    }
+
+    /// <summary>
+    ///     Test that a picture is refused for a project that is not listed and for a path that is empty, rooted, or leaves
+    ///     the folder of the project, and that nothing is given back for them.
+    /// </summary>
+    [Fact]
+    public void RecentProjects_RememberShownPicture_UnlistedProjectOrPathOutsideTheFolder_IsRefused()
+    {
+        // Arrange: one listed project and one that is not listed
+        var recent = new RecentProjects(_settings);
+        var listed = CreateProjectFile("listed");
+        var unlisted = CreateProjectFile("unlisted");
+        recent.Add(listed);
+
+        // Act: remember pictures that cannot be kept
+        var results = new[]
+        {
+            recent.RememberShownPicture(unlisted, "flow.svg"),
+            recent.RememberShownPicture(listed, string.Empty),
+            recent.RememberShownPicture(listed, "   "),
+            recent.RememberShownPicture(listed, Path.Combine(_tempRoot, "outside.svg")),
+            recent.RememberShownPicture(listed, Path.Combine("..", "other", "flow.svg")),
+            recent.RememberShownPicture(string.Empty, "flow.svg"),
+        };
+
+        // Assert: every one was refused and nothing is remembered
+        Assert.All(results, Assert.False);
+        Assert.Null(recent.GetShownPicture(listed));
+        Assert.Null(recent.GetShownPicture(unlisted));
+        Assert.Empty(_settings.Current.RecentProjectPicture);
+    }
+
+    /// <summary>
+    ///     Test that remembering the picture that is already remembered writes nothing to the settings and does not announce
+    ///     a change.
+    /// </summary>
+    [Fact]
+    public void RecentProjects_RememberShownPicture_SamePicture_WritesNothingAndDoesNotAnnounce()
+    {
+        // Arrange: a listed project with a remembered picture
+        var recent = new RecentProjects(_settings);
+        var project = CreateProjectFile("same");
+        recent.Add(project);
+        recent.RememberShownPicture(project, "flow.svg");
+        var writes = 0;
+        _settings.Changed += (_, _) => writes++;
+        var changes = 0;
+        recent.Changed += (_, _) => changes++;
+
+        // Act: remember the same picture again
+        var stored = recent.RememberShownPicture(project, "flow.svg");
+
+        // Assert: it is remembered, and nothing was written or announced
+        Assert.True(stored);
+        Assert.Equal(0, writes);
+        Assert.Equal(0, changes);
+    }
+
+    /// <summary>
+    ///     Test that a settings file that cannot be written does not throw when a picture is remembered, and is reported
+    ///     by the result.
+    /// </summary>
+    [Fact]
+    public void RecentProjects_RememberShownPicture_SettingsWriteFails_ReturnsFalse()
+    {
+        // Arrange: a settings service with a listed project whose update fails
+        var project = CreateProjectFile("unlucky");
+        var settings = Substitute.For<ISettingsService>();
+        settings.Current.Returns(new AppSettings { RecentProjects = [project] });
+        settings.Update(Arg.Any<Func<AppSettings, AppSettings>>()).Throws(new IOException("disk full"));
+        var recent = new RecentProjects(settings);
+        var changes = 0;
+        recent.Changed += (_, _) => changes++;
+
+        // Act: remember a picture
+        var stored = recent.RememberShownPicture(project, "flow.svg");
+
+        // Assert: the failure is reported by the result only
+        Assert.False(stored);
+        Assert.Equal(0, changes);
+    }
+
+    /// <summary>
+    ///     Test that a project that is removed from the list takes its picture along, so it opens with nothing selected if
+    ///     it is added again.
+    /// </summary>
+    [Fact]
+    public void RecentProjects_Remove_ForgetsTheShownPicture()
+    {
+        // Arrange: a listed project with a remembered picture
+        var recent = new RecentProjects(_settings);
+        var project = CreateProjectFile("gone");
+        recent.Add(project);
+        recent.RememberShownPicture(project, "flow.svg");
+
+        // Act: remove it and add it again
+        recent.Remove(project);
+        recent.Add(project);
+
+        // Assert: the picture was forgotten
+        Assert.Null(recent.GetShownPicture(project));
+        Assert.Empty(_settings.Current.RecentProjectPicture);
+    }
+
+    /// <summary>
     ///     Test that a null settings service is refused.
     /// </summary>
     [Fact]

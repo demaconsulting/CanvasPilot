@@ -113,4 +113,14 @@ public sealed partial class ModelListItemViewModel : ObservableObject
         SpeechModelState.FailedOrCorrupt => "Failed or corrupt",
         _ => State.ToString(),
     };
+
+    /// <summary>
+    ///     Gives the model name shown as the first line of the row, so a screen reader names the row by the model.
+    /// </summary>
+    /// <remarks>
+    ///     A list row whose template is a panel of two lines is named by the text of its item, which would otherwise
+    ///     be the name of this type. The install state stays readable as the second line of the row.
+    /// </remarks>
+    /// <returns>The <see cref="DisplayName" />.</returns>
+    public override string ToString() => DisplayName;
 }

@@ -81,3 +81,8 @@ again when they are turned on. This scenario is tested by
 project, which holds the explorer, and the New Project dialog, in both theme variants, and finds names, tooltips,
 keyboard focus, and targets of at least 28 by 28 pixels. This scenario is tested by
 `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**ProjectSubsystem_RememberShownPicture_SetAndRestart_IsReadBackForTheProject**: Two real projects are listed and a
+picture is remembered for each; after a restart each project gives back its own picture, the project file is
+unchanged, and a project removed from the list has no picture any more. This scenario is tested by
+`ProjectSubsystem_RememberShownPicture_SetAndRestart_IsReadBackForTheProject`.

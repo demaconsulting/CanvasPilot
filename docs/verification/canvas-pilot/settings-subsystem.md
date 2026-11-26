@@ -79,3 +79,13 @@ an icon, and a message of a failed save shows in the banner. This scenario is te
 dialog is shown with each of its pages in both theme variants and every control is looked at; entries have names, a
 button that shows no text has a name and a tooltip, and every enabled button can take the keyboard focus. This scenario
 is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**SettingsSubsystem_AnnounceChosenEntries_PageLists_ReadAsTheirShownWords**: A dialog over the real service, the AI
+provider page, and the Appearance page loads stored settings with the dark theme; the text of every provider, reasoning
+level, and theme entry, and of the chosen ones, is the label that the list shows. This scenario is tested by
+`SettingsSubsystem_AnnounceChosenEntries_PageLists_ReadAsTheirShownWords`.
+
+**SettingsSubsystem_RememberLayoutAndAppearance_ShownPictureOfRecentProject_SurvivesRestartAndOtherChanges**: Stored
+pictures of two listed projects survive the OK of the dialog over the AI provider page and a restart, and only the
+project that stays in the list keeps its picture after the other leaves it. This scenario is tested by
+`SettingsSubsystem_RememberLayoutAndAppearance_ShownPictureOfRecentProject_SurvivesRestartAndOtherChanges`.

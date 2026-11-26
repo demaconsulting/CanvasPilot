@@ -217,3 +217,7 @@ dialog and window of the application, among them the Style Kits window, are show
 control is looked at; a button or toggle that shows no text has a name and a tooltip, a text box, drop-down, list, and
 slider has a name, every enabled button can take the keyboard focus, and an icon button is at least 28 by 28. This
 scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**StyleKitManagerView_TargetList_AnnouncesTheShownPlace**: A shown window over the kits that come with the program; the
+value that the closed list of where new kits go gives to automation is `My kits`, which is the text that the list
+shows. This scenario is tested by `StyleKitManagerView_TargetList_AnnouncesTheShownPlace`.

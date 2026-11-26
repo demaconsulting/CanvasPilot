@@ -15,7 +15,11 @@ settings in effect, and announces changes. A bad, missing, or newer file never s
 (`IReadOnlyList<string>`, most recent first), `AiProvider` (`AiProviderSettings`), `Speech`
 (`SpeechSettings`), `Styles` (`StyleSettings`), `Appearance` (`AppearanceSettings`), `Window` (`WindowSettings`), and
 `RecentProjectOpened` (`IReadOnlyDictionary<string, DateTimeOffset>`, the time at which each listed project was last
-opened, by the same path as in `RecentProjects`). Immutable; changed with `with` expressions.
+opened, by the same path as in `RecentProjects`), and `RecentProjectPicture` (`IReadOnlyDictionary<string, string>`,
+JSON `recentProjectPicture`, the picture last shown in each listed project, relative to its folder, by the same path).
+Immutable; changed with `with` expressions. `AppSettings.IsValidShownPicture(picture)` is the rule for a picture path:
+not blank, without a character that a path cannot hold, not rooted, and without a `..` part, so the path stays inside
+the folder of the project. It looks at the text only, not at the disk.
 
 **AiProviderSettings**: `record` — `Provider` (`AiProviderKind`: `GitHubCopilot` or `Ollama`), `ModelName` (`string`,
 the id of the model as the provider names it; empty for the provider default), `ContextWindowTokens` (`int`, 512 to
@@ -60,6 +64,10 @@ window clamps it when it restores itself.
 **Recent project times**: `RecentProjectOpened` is an additive part of the document: an earlier build ignores it and a
 file of an earlier build has none, so the version of the file stays 1. A project that is listed but has no time is
 shown without one.
+
+**Recent project pictures**: `RecentProjectPicture` is additive in the same way, so the version stays 1. It is kept in
+the settings of the user, and never in the project file, because a project folder is copied, shared, and put under
+source control, and which picture a person looked at is that person's own view state.
 
 **File format**: a camel-case JSON object with the same names, for example
 `{"version":1,"recentProjects":[],"aiProvider":{"provider":"GitHubCopilot",...},"speech":{...}}`. Enumerations
@@ -110,7 +118,9 @@ columns to their bounds (a value outside is brought to the nearest bound, not re
 32767, and treats an unknown state as `Normal`; an unknown theme choice becomes `FollowSystem`; it replaces the talk key
 by its normal form (`PushToTalkBinding.Normalize`: a safe key or chord is written in the order `Ctrl+Alt+Shift` and the
 key, and a missing value, a key that is not safe, or the old default F8 becomes the empty string, which means the
-default); and it keeps the times of opening only for paths that are in the list of recent projects (ignoring case).
+default); and it keeps the times of opening and the pictures last shown only for paths that are in the list of recent
+projects (ignoring case), and a picture only when `IsValidShownPicture` accepts it, so a hand-edited file cannot point
+outside a project.
 Because `Save` and `Update` normalize too, a talk key that a caller writes is cleaned in the same way before it is
 stored and announced, so the window never receives a key that would take away typing.
 

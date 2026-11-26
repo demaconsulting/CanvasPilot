@@ -68,3 +68,17 @@ sections:
                   with the list. A project that is no longer listed must not leave its time behind in the settings.
                 tests:
                   - RecentProjects_Add_RecordsTheTimeOfOpeningAndRemoveForgetsIt
+
+              - id: CanvasPilot-RecentProjects-RememberShownPicture
+                title: >-
+                  The RecentProjects shall store, for a listed project, the path of the picture last shown in it relative
+                  to the project folder, give it back, refuse a path that is not relative or leaves the folder and a
+                  project that is not listed, and forget the picture with the project.
+                justification: |
+                  A relative path names the same picture wherever the folder is opened from, and a path that is rooted or
+                  climbs out of the folder is not a picture of the project. The picture belongs to the user's list of
+                  recent projects, so it leaves with the project.
+                tests:
+                  - RecentProjects_RememberShownPicture_StoredPerProjectAndReadBack
+                  - RecentProjects_RememberShownPicture_UnlistedProjectOrPathOutsideTheFolder_IsRefused
+                  - RecentProjects_Remove_ForgetsTheShownPicture

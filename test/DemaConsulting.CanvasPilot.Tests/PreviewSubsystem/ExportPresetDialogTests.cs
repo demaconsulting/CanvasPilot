@@ -68,6 +68,23 @@ public sealed class ExportPresetDialogTests
     }
 
     /// <summary>
+    ///     Test that a line of the dialog reads as the name of its preset, so a screen reader names the row by the preset
+    ///     and not by the type of the line.
+    /// </summary>
+    [Fact]
+    public void ExportPresetItemViewModel_ToString_IsTheNameOfThePreset()
+    {
+        // Arrange: a dialog over as rendered and three sizes
+        var viewModel = new ExportPresetDialogViewModel([ExportPreset.AsRendered, Slide, Mail, Logo]);
+
+        // Act: read the text of every line
+        var texts = viewModel.Items.Select(item => item.ToString()).ToList();
+
+        // Assert: each text is the name shown on the line
+        Assert.Equal(["As rendered", "PowerPoint 16:9", "Mail", "Logo"], texts);
+    }
+
+    /// <summary>
     ///     Test that the choice of the last time is selected when it is still offered, found by identifier, and the first
     ///     is selected when it is not.
     /// </summary>

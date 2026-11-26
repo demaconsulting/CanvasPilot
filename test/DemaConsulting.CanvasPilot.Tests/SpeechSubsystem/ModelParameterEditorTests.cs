@@ -126,6 +126,27 @@ public sealed class ModelParameterEditorTests
     }
 
     /// <summary>
+    ///     Test that every option of a choice, and the chosen one, reads as the label the list shows, so a screen reader
+    ///     announces the chosen option by its words and not by the record of the speech library.
+    /// </summary>
+    [Fact]
+    public void ChoiceParameterViewModel_Options_ReadAsTheirLabels()
+    {
+        // Arrange: a choice at its default
+        var choice = new ChoiceParameterViewModel(SpeechTestData.Choice());
+
+        // Act: read the text of every option and of the chosen one
+        var texts = choice.Options.Select(option => option.ToString()).ToList();
+        var chosen = choice.SelectedOption.ToString();
+
+        // Assert: each text is the shown label, in the declared order, and never the record
+        Assert.Equal(["Anna", "Ben", "Cleo"], texts);
+        Assert.Equal(["a", "b", "c"], choice.Options.Select(option => option.Value));
+        Assert.Equal("Ben", chosen);
+        Assert.All(texts, text => Assert.DoesNotContain(" { ", text, StringComparison.Ordinal));
+    }
+
+    /// <summary>
     ///     Test that a choice accepts only the options the model declared.
     /// </summary>
     [Fact]
@@ -136,7 +157,7 @@ public sealed class ModelParameterEditorTests
 
         // Act: choose a declared option, an unknown one, and none
         choice.SelectedOption = choice.Options[2];
-        choice.SelectedOption = new ChoiceParameterOption("zzz", "Unknown");
+        choice.SelectedOption = new ParameterChoice("zzz", "Unknown");
         choice.SelectedOption = null!;
 
         // Assert: the declared choice stands

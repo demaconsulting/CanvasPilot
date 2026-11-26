@@ -162,6 +162,26 @@ public sealed class NumericParameterViewModel : ParameterViewModelBase
 }
 
 /// <summary>
+///     One option of a choice parameter, as the drop-down list shows it.
+/// </summary>
+/// <remarks>
+///     It stands for one <see cref="ChoiceParameterOption" /> of the speech library, whose text prints its members
+///     and cannot be changed. A closed drop-down list tells assistive technology the text of its chosen item, so the
+///     options are shown through this record, whose text is the label the list shows.
+/// </remarks>
+/// <param name="Value">The value stored in the settings.</param>
+/// <param name="Label">The text shown in the list.</param>
+public sealed record ParameterChoice(string Value, string Label)
+{
+    /// <summary>
+    ///     Gives the label shown for the option, so a screen reader announces the chosen option by the words the
+    ///     list shows.
+    /// </summary>
+    /// <returns>The <see cref="Label" />.</returns>
+    public override string ToString() => Label;
+}
+
+/// <summary>
 ///     One of a fixed set of options, shown as a drop-down list.
 /// </summary>
 public sealed class ChoiceParameterViewModel : ParameterViewModelBase
@@ -169,7 +189,7 @@ public sealed class ChoiceParameterViewModel : ParameterViewModelBase
     /// <summary>
     ///     Backing field of <see cref="SelectedOption" />.
     /// </summary>
-    private ChoiceParameterOption _selectedOption;
+    private ParameterChoice _selectedOption;
 
     /// <summary>
     ///     Creates the parameter at the option that is its declared default.
@@ -178,20 +198,20 @@ public sealed class ChoiceParameterViewModel : ParameterViewModelBase
     public ChoiceParameterViewModel(ChoiceParameter parameter)
         : base(parameter)
     {
-        Options = parameter.Options;
-        _selectedOption = parameter.Options.First(option => string.Equals(option.Value, parameter.Default, StringComparison.Ordinal));
+        Options = parameter.Options.Select(option => new ParameterChoice(option.Value, option.Label)).ToList();
+        _selectedOption = Options.First(option => string.Equals(option.Value, parameter.Default, StringComparison.Ordinal));
     }
 
     /// <summary>
     ///     Gets the options in the order the model declares them.
     /// </summary>
-    public IReadOnlyList<ChoiceParameterOption> Options { get; }
+    public IReadOnlyList<ParameterChoice> Options { get; }
 
     /// <summary>
     ///     Gets or sets the chosen option. A null or unknown option is ignored, so the value is always one the
     ///     model declared.
     /// </summary>
-    public ChoiceParameterOption SelectedOption
+    public ParameterChoice SelectedOption
     {
         get => _selectedOption;
         set

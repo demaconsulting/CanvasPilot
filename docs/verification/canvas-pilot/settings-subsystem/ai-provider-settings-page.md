@@ -385,3 +385,13 @@ the verification of the `SettingsDialog` unit.
 both theme variants and each of its pages, this one among them, is chosen and every control of it is looked at; a text
 box, drop-down, and list has a name, a button that shows no text has a name and a tooltip, and every enabled button can
 take the keyboard focus. This scenario is tested by `Accessibility_Windows_ControlsHaveNamesTooltipsFocusAndSize`.
+
+**AiProviderSettingsPageViewModel_Lists_EntriesReadAsTheirLabels**: A page over a model with reasoning levels and two
+context sizes and a model that cannot be used; the text of every provider, model, reasoning level, and context size
+entry is its label, including the note of the unusable model, and never a record. This scenario is tested by
+`AiProviderSettingsPageViewModel_Lists_EntriesReadAsTheirLabels`.
+
+**AiProviderSettingsPageView_Lists_AnnounceTheShownWordsOfTheChosenEntry**: A shown page with a model, its high level,
+and its larger context size chosen; the value that each closed list (provider, model, reasoning level, and context size)
+gives to automation is the label of the chosen entry. This scenario is tested by
+`AiProviderSettingsPageView_Lists_AnnounceTheShownWordsOfTheChosenEntry`.

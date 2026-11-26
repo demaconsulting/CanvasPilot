@@ -62,4 +62,14 @@ public sealed class ExportPresetItemViewModel
         ExportPresetOrigin.StyleKit => "Style kit",
         _ => "Application"
     };
+
+    /// <summary>
+    ///     Gives the preset name shown as the first line of the row, so a screen reader names the row by the preset.
+    /// </summary>
+    /// <remarks>
+    ///     A list row whose template is a panel of two lines is named by the text of its item, which would otherwise
+    ///     be the name of this type. The size line stays readable as the second line of the row.
+    /// </remarks>
+    /// <returns>The <see cref="Name" />.</returns>
+    public override string ToString() => Name;
 }

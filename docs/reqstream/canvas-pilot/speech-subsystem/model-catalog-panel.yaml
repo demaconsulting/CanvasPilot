@@ -72,3 +72,15 @@ sections:
                   - ModelCatalogPanelViewModel_CancelDownload_RunningDownload_CancelsAndRestoresRow
                   - ModelCatalogPanelViewModel_CancelAllDownloads_RunningDownloads_CancelsEach
                   - SpeechSettingsPageView_CancelButton_StopsDownloadAndExplains
+
+              - id: CanvasPilot-ModelCatalogPanel-AnnounceChosenEntries
+                title: >-
+                  The ModelCatalogPanel shall tell assistive technology each row of the recognition and synthesis model
+                  lists by the model name that the row shows.
+                justification: |
+                  A row that shows the model name over its install state is named for a screen reader by the text of the
+                  row; without the model name, a person who cannot see the list hears the name of a type for every row and
+                  cannot tell the models apart.
+                tests:
+                  - ModelListItemViewModel_ToString_IsTheDisplayName
+                  - SpeechSettingsPageView_ModelLists_RowsAreNamedByTheModelName

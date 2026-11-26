@@ -42,7 +42,7 @@
                   SelectedItem="{Binding SelectedOption}"
                   Width="220">
           <ComboBox.ItemTemplate>
-            <DataTemplate>
+            <DataTemplate x:DataType="vm:ParameterChoice">
               <TextBlock Text="{Binding Label}" />
             </DataTemplate>
           </ComboBox.ItemTemplate>

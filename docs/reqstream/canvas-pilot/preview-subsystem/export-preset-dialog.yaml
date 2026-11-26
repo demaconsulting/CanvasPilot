@@ -34,3 +34,14 @@ sections:
                   - ExportPresetDialogView_Show_ListsChoicesAndSelectsFirst
                   - ExportPresetDialogView_SelectSizeAndExport_ShowsResultAndAccepts
                   - ExportPresetDialogView_CancelButton_ClosesWindowWithoutAccepting
+
+              - id: CanvasPilot-ExportPresetDialog-AnnounceChosenEntries
+                title: >-
+                  The ExportPresetDialog shall tell assistive technology each line of its list of sizes by the name that the
+                  line shows.
+                justification: |
+                  A line that shows the name of a size over its size line is named for a screen reader by the text of the
+                  line; without the name, a person who cannot see the list hears the name of a type for every line.
+                tests:
+                  - ExportPresetItemViewModel_ToString_IsTheNameOfThePreset
+                  - ExportPresetDialogView_PresetList_RowsAreNamedByThePresetName

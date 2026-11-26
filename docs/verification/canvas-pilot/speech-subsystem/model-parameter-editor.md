@@ -63,3 +63,12 @@ is tested by `ModelParameterEditorViewModel_InvalidArguments_Throw`.
 **SpeechSettingsPageView_LoadedSettings_ShowDevicesModelsAndParameters**: A page is shown over a text-to-speech model
 that declares a voice choice with the default `b`. The parameter drop-down list is shown with `b` selected. This
 scenario is tested by `SpeechSettingsPageView_LoadedSettings_ShowDevicesModelsAndParameters`.
+
+**ChoiceParameterViewModel_Options_ReadAsTheirLabels**: A choice of three options at its default; the options keep the
+declared order and values, the text of each, and of the chosen one, is its label, and none is the printout of a record.
+This scenario is tested by `ChoiceParameterViewModel_Options_ReadAsTheirLabels`.
+
+**SpeechSettingsPageView_ParameterList_AnnouncesTheShownOption**: A shown Speech page with a synthesis model that has a
+voice parameter; the value that the closed list gives to automation is the label of the default option, and after the
+first option is chosen, its label. This scenario is tested by
+`SpeechSettingsPageView_ParameterList_AnnouncesTheShownOption`.

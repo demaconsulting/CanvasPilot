@@ -28,6 +28,7 @@ using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
@@ -700,6 +701,162 @@ public sealed class ChatPanelViewTests
         Assert.Equal(1, picker.Asked);
         Assert.Equal(harness.Composer.ProjectFolder, picker.InitialFolder);
         Assert.IsType<FileChip>(Assert.Single(harness.Composer.Document.Chips));
+    }
+
+    /// <summary>
+    ///     Test that a reader who scrolled up and then back to the end is followed again: the latest row stays in view as
+    ///     the answer grows.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_ScrolledBackToTheEnd_FollowsAgain()
+    {
+        // Arrange: a long restored conversation, a sent message whose answer has started, and a reader who scrolled up
+        var store = new MemoryChatHistoryStore();
+        var agent = new ScriptedAgentService();
+        using var harness = new ChatHarness(agent: agent, history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.Type("Draw a box");
+        harness.ClickSend();
+        agent.Emit(new AgentEvent.TextDelta("Here is"));
+        Assert.True(harness.WaitFor(() => harness.Chat.Transcript.OfType<AssistantReplyViewModel>().Any(reply => reply.Text == "Here is")));
+        harness.ScrollToTheTop();
+
+        // Act: scroll back to the end, and let the answer grow by many lines
+        harness.TranscriptScroll.ScrollToEnd();
+        harness.Layout();
+        agent.Emit(new AgentEvent.TextDelta(" the box" + string.Concat(Enumerable.Repeat("\nwith one more line", 20))));
+        Assert.True(harness.WaitFor(() => harness.Chat.Transcript.OfType<AssistantReplyViewModel>().Any(reply => reply.Text.EndsWith("line", StringComparison.Ordinal))));
+
+        // Assert: the latest row is in view again
+        Assert.True(harness.IsAtTheEndOfALongTranscript, $"Offset {harness.TranscriptScroll.Offset.Y} of {harness.TranscriptScroll.Extent.Height}.");
+    }
+
+    /// <summary>
+    ///     Test that a reader who scrolled up to read is brought to the latest row when the user sends a message, which the
+    ///     user wants to see.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_ScrolledUp_SendMessage_ScrollsToTheLatest()
+    {
+        // Arrange: a long restored conversation and a reader who scrolled up
+        var store = new MemoryChatHistoryStore();
+        using var harness = new ChatHarness(history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.ScrollToTheTop();
+        var scrolledUp = harness.TranscriptScroll.Offset.Y;
+
+        // Act: send a message
+        harness.Type("One more question");
+        harness.ClickSend();
+        harness.Layout();
+
+        // Assert: the reader was at the top, and the sent message is in view at the end
+        Assert.Equal(0, scrolledUp);
+        Assert.True(harness.IsAtTheEndOfALongTranscript, $"Offset {harness.TranscriptScroll.Offset.Y} of {harness.TranscriptScroll.Extent.Height}.");
+    }
+
+    /// <summary>
+    ///     Test that a reader who scrolled up sees the conversation of a project that is shown afterwards from its latest
+    ///     message: the conversation of the other project empties the transcript, and the conversation that comes back is
+    ///     followed again.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_ScrolledUp_AnotherProjectShown_OpensAtTheLatest()
+    {
+        // Arrange: a long restored conversation and a reader who scrolled up
+        var store = new MemoryChatHistoryStore();
+        using var harness = new ChatHarness(history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.ScrollToTheTop();
+        var scrolledUp = harness.TranscriptScroll.Offset.Y;
+
+        // Act: show another project, then the project with the long conversation again
+        harness.Composer.SetProject(Path.Combine(harness.Folder, "other"));
+        harness.Layout();
+        harness.Composer.SetProject(harness.Project);
+        harness.Layout();
+
+        // Assert: the reader was at the top, and the conversation that came back is shown at its latest message
+        Assert.Equal(0, scrolledUp);
+        Assert.True(harness.Chat.Transcript.Count >= 40);
+        Assert.True(harness.IsAtTheEndOfALongTranscript, $"Offset {harness.TranscriptScroll.Offset.Y} of {harness.TranscriptScroll.Extent.Height}.");
+    }
+
+    /// <summary>
+    ///     Test that a reader who scrolled up sees the conversation from its latest message when the panel is hidden and
+    ///     shown again.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_ScrolledUp_PanelHiddenAndShown_OpensAtTheLatest()
+    {
+        // Arrange: a long restored conversation and a reader who scrolled up
+        var store = new MemoryChatHistoryStore();
+        using var harness = new ChatHarness(history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.ScrollToTheTop();
+        var scrolledUp = harness.TranscriptScroll.Offset.Y;
+
+        // Act: take the panel out of the window and put it back
+        harness.Window.Content = null;
+        harness.Layout();
+        harness.Window.Content = harness.View;
+        harness.Layout();
+
+        // Assert: the reader was at the top, and the panel shows the latest message again
+        Assert.Equal(0, scrolledUp);
+        Assert.True(harness.IsAtTheEndOfALongTranscript, $"Offset {harness.TranscriptScroll.Offset.Y} of {harness.TranscriptScroll.Extent.Height}.");
+    }
+
+    /// <summary>
+    ///     Test that a reader who scrolled up sees the conversation from its latest message when the panel is given its
+    ///     view model again, as when the application gives it another conversation.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_ScrolledUp_DataContextChanged_OpensAtTheLatest()
+    {
+        // Arrange: a long restored conversation and a reader who scrolled up
+        var store = new MemoryChatHistoryStore();
+        using var harness = new ChatHarness(history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.ScrollToTheTop();
+        var scrolledUp = harness.TranscriptScroll.Offset.Y;
+
+        // Act: take the view model away from the panel and give it back
+        harness.View.DataContext = null;
+        harness.Layout();
+        harness.View.DataContext = harness.Chat;
+        harness.Layout();
+
+        // Assert: the reader was at the top, and the panel shows the latest message again
+        Assert.Equal(0, scrolledUp);
+        Assert.True(harness.IsAtTheEndOfALongTranscript, $"Offset {harness.TranscriptScroll.Offset.Y} of {harness.TranscriptScroll.Extent.Height}.");
+    }
+
+    /// <summary>
+    ///     Test that a reader who scrolled up a little and is brought to the end because the panel grew taller is followed
+    ///     again: the latest row stays in view as the answer of the copilot grows.
+    /// </summary>
+    [AvaloniaFact]
+    public void ChatPanelView_ScrolledUpALittle_PanelGrowsToTheEnd_FollowsAgain()
+    {
+        // Arrange: a long restored conversation, a sent message whose answer has started, and a reader who scrolled up by
+        // more than a line but less than the panel will grow
+        var store = new MemoryChatHistoryStore();
+        var agent = new ScriptedAgentService();
+        using var harness = new ChatHarness(agent: agent, history: store, prepare: project => store.Save(project, ChatHarness.LongConversation()));
+        harness.Type("Draw a box");
+        harness.ClickSend();
+        agent.Emit(new AgentEvent.TextDelta("Here is"));
+        Assert.True(harness.WaitFor(() => harness.Chat.Transcript.OfType<AssistantReplyViewModel>().Any(reply => reply.Text == "Here is")));
+        var scroll = harness.TranscriptScroll;
+        scroll.Offset = new Vector(0, scroll.Extent.Height - scroll.Viewport.Height - 100);
+        harness.Layout();
+        var scrolledUp = scroll.Extent.Height - (scroll.Offset.Y + scroll.Viewport.Height);
+
+        // Act: make the window 300 pixels taller, which brings the reader to the end, and let the answer grow
+        harness.Window.Height += 300;
+        harness.Layout();
+        agent.Emit(new AgentEvent.TextDelta(" the box" + string.Concat(Enumerable.Repeat("\nwith one more line", 20))));
+        Assert.True(harness.WaitFor(() => harness.Chat.Transcript.OfType<AssistantReplyViewModel>().Any(reply => reply.Text.EndsWith("line", StringComparison.Ordinal))));
+
+        // Assert: the reader was away from the end, and the latest row is in view after the answer grew
+        Assert.True(scrolledUp > 24, $"The reader was {scrolledUp} pixels above the end.");
+        Assert.True(harness.IsAtTheEndOfALongTranscript, $"Offset {harness.TranscriptScroll.Offset.Y} of {harness.TranscriptScroll.Extent.Height}.");
     }
 
     /// <summary>

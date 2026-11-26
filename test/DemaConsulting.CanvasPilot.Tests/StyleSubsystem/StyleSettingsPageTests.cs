@@ -371,6 +371,32 @@ public sealed class StyleSettingsPageTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that every choice of the default kit, including no style and a default that no kit has, and every shared
+    ///     folder row reads as the words it shows, so a screen reader announces them by those words and not by the record.
+    /// </summary>
+    [Fact]
+    public async Task StyleSettingsPage_DefaultKitChoicesAndFolders_ReadAsTheirShownWords()
+    {
+        // Arrange: the kits are read, and the settings name a shared folder and a default that no kit has
+        await _catalog.RefreshAsync(Ct);
+        var page = CreatePage();
+        var settings = SettingsWithDefault("team-kit");
+        page.Load(settings with { Styles = settings.Styles with { SharedKitFolders = [_places.Shared1] } });
+
+        // Act: read the text of every choice and of every folder row
+        var choices = page.DefaultKitChoices.Select(choice => (choice.Label, Text: choice.ToString())).ToList();
+        var folders = page.Folders.Select(row => (row.Path, Text: row.ToString())).ToList();
+
+        // Assert: each text is what is shown, and never the record
+        Assert.All(choices, choice => Assert.Equal(choice.Label, choice.Text));
+        Assert.Equal(StyleSettingsPageViewModel.NoStyleLabel, choices[0].Text);
+        Assert.Contains(choices, choice => choice.Text == "team-kit (not found)");
+        Assert.Equal([(_places.Shared1, _places.Shared1)], folders);
+        Assert.All(choices, choice => Assert.DoesNotContain(nameof(StyleKitChoice), choice.Text, StringComparison.Ordinal));
+        page.OnClosed();
+    }
+
+    /// <summary>
     ///     Test that while the page is open it follows the catalog, so that a folder that was not read yet shows its status
     ///     and the kits appear among the choices when they have been read, and that after the page is closed it follows no
     ///     more, and follows again when it is loaded again.

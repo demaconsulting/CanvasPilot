@@ -409,6 +409,274 @@ public sealed class MainWindowShellTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that the picture that the user shows in the open project is remembered for that project, relative to its
+    ///     folder, when the project closes, and that selecting a folder does not forget it.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_SelectedFile_ShownPicture_IsRememberedForTheProject()
+    {
+        // Arrange: an open project with a picture in a subfolder
+        var file = await CreateProjectFileAsync("Remember");
+        var picture = WritePicture(file, Path.Combine("diagrams", "flow.svg"));
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var shell = CreateShell(settings: settings);
+        _dialogs.ProjectFileToPick = file;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+
+        // Act: show the picture, then select its folder, then close the project
+        shell.Workspace.Explorer.SelectFile(picture);
+        shell.Workspace.Explorer.SelectedNode = shell.Workspace.Explorer.FindNode(Path.GetDirectoryName(picture)!);
+        shell.CloseProjectCommand.Execute(null);
+
+        // Assert: the relative path of the picture, not the folder, was remembered
+        Assert.Null(shell.Workspace.SelectedFile);
+        Assert.Equal(Path.Combine("diagrams", "flow.svg"), settings.Current.RecentProjectPicture[file]);
+    }
+
+    /// <summary>
+    ///     Test that showing many pictures does not write the settings file, and that the picture shown last is stored once
+    ///     when the project closes.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_SelectedFile_ManyPictures_StoredOnceWhenTheProjectCloses()
+    {
+        // Arrange: an open project with three pictures, and a count of the writes of the settings
+        var file = await CreateProjectFileAsync("Quiet");
+        var pictures = new[] { WritePicture(file, "a.svg"), WritePicture(file, "b.svg"), WritePicture(file, "c.svg") };
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var shell = CreateShell(settings: settings);
+        _dialogs.ProjectFileToPick = file;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        var writes = 0;
+        settings.Changed += (_, _) => writes++;
+
+        // Act: show each picture, and then the first again, then close the project
+        foreach (var picture in pictures.Append(pictures[0]))
+        {
+            shell.Workspace.Explorer.SelectFile(picture);
+        }
+
+        var writesWhileShowing = writes;
+        var storedWhileShowing = settings.Current.RecentProjectPicture.ContainsKey(file);
+        shell.CloseProjectCommand.Execute(null);
+
+        // Assert: nothing was written while the pictures were shown, and the last one was written once on close
+        Assert.Equal(0, writesWhileShowing);
+        Assert.False(storedWhileShowing);
+        Assert.Equal(1, writes);
+        Assert.Equal("a.svg", settings.Current.RecentProjectPicture[file]);
+    }
+
+    /// <summary>
+    ///     Test that when the settings cannot be written, showing many pictures logs nothing, and closing the project logs
+    ///     the failure once and leaves the project closed without a message.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_SelectedFile_SettingsCannotBeWritten_LogsOnceWhenTheProjectCloses()
+    {
+        // Arrange: an open project with two pictures, whose settings folder is then replaced by a file, so no write can
+        // succeed
+        var file = await CreateProjectFileAsync("Unwritable");
+        var pictures = new[] { WritePicture(file, "a.svg"), WritePicture(file, "b.svg") };
+        var logger = new RollingFileLogger(Path.Combine(_tempRoot, "logs"));
+        var settingsFolder = Path.Combine(_tempRoot, "settings");
+        var settings = new SettingsService(settingsFolder, logger);
+        var shell = CreateShell(settings: settings);
+        _dialogs.ProjectFileToPick = file;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        Directory.Delete(settingsFolder, recursive: true);
+        await File.WriteAllTextAsync(settingsFolder, "not a folder", TestContext.Current.CancellationToken);
+
+        // Act: show the pictures several times, then close the project
+        for (var round = 0; round < 3; round++)
+        {
+            foreach (var picture in pictures)
+            {
+                shell.Workspace.Explorer.SelectFile(picture);
+            }
+        }
+
+        var logWhileShowing = File.Exists(logger.ActiveFilePath)
+            ? await File.ReadAllTextAsync(logger.ActiveFilePath, TestContext.Current.CancellationToken)
+            : string.Empty;
+        shell.CloseProjectCommand.Execute(null);
+        var log = await File.ReadAllTextAsync(logger.ActiveFilePath, TestContext.Current.CancellationToken);
+
+        // Assert: the failed write was logged once, on close, and the project closed without a message
+        Assert.DoesNotContain("Settings could not be written", logWhileShowing, StringComparison.Ordinal);
+        Assert.Single(log.Split('\n'), line => line.Contains("Settings could not be written", StringComparison.Ordinal));
+        Assert.False(shell.HasProject);
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that the picture shown last is stored when the shell is disposed, as when the application exits with the
+    ///     project open.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_Dispose_ShownPicture_IsStored()
+    {
+        // Arrange: an open project in which a picture is shown
+        var file = await CreateProjectFileAsync("Exit");
+        WritePicture(file, "a.svg");
+        var picture = WritePicture(file, "b.svg");
+        var settingsFolder = Path.Combine(_tempRoot, "settings");
+        var settings = new SettingsService(settingsFolder);
+        var shell = CreateShell(settings: settings);
+        _dialogs.ProjectFileToPick = file;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        shell.Workspace.Explorer.SelectFile(picture);
+        var storedBeforeExit = settings.Current.RecentProjectPicture.ContainsKey(file);
+
+        // Act: dispose the shell, as the application does when it exits
+        shell.Dispose();
+
+        // Assert: nothing was stored before, and the settings file that the next start reads holds the picture
+        var restarted = new SettingsService(settingsFolder);
+        restarted.Load();
+        Assert.False(storedBeforeExit);
+        Assert.Equal("b.svg", restarted.Current.RecentProjectPicture[file]);
+    }
+
+    /// <summary>
+    ///     Test that File, Open Project selects and shows the picture that was last shown in the project.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenProject_RememberedPicture_IsSelected()
+    {
+        // Arrange: a remembered project with two pictures, the second of which was last shown
+        var file = await CreateProjectFileAsync("Reopen");
+        WritePicture(file, "a.svg");
+        var second = WritePicture(file, "b.svg");
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var recent = new RecentProjects(settings);
+        recent.Add(file);
+        recent.RememberShownPicture(file, "b.svg");
+        var shell = CreateShell(settings: settings, recent: recent);
+        _dialogs.ProjectFileToPick = file;
+
+        // Act: open the project with File, Open Project
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+
+        // Assert: the picture is selected
+        Assert.True(shell.HasProject);
+        Assert.Equal(second, shell.Workspace.SelectedFile);
+    }
+
+    /// <summary>
+    ///     Test that choosing a project in the list of recent projects, as on the welcome screen and in the Recent Projects
+    ///     menu, selects the picture that was last shown in it, also after a restart.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_RecentProjects_OpenOnChoice_SelectsTheRememberedPicture()
+    {
+        // Arrange: a project whose picture was shown in an earlier run, and a restarted shell
+        var file = await CreateProjectFileAsync("Recent");
+        var picture = WritePicture(file, "flow.svg");
+        WritePicture(file, "other.svg");
+        var settingsFolder = Path.Combine(_tempRoot, "settings");
+        var earlier = new RecentProjects(new SettingsService(settingsFolder));
+        earlier.Add(file);
+        earlier.RememberShownPicture(file, "flow.svg");
+        var settings = new SettingsService(settingsFolder);
+        settings.Load();
+        var shell = CreateShell(settings: settings, recent: new RecentProjects(settings));
+
+        // Act: choose the project in the list
+        await shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+
+        // Assert: the picture is selected
+        Assert.Equal(picture, shell.Workspace.SelectedFile);
+    }
+
+    /// <summary>
+    ///     Test that a project whose remembered picture was deleted opens with nothing selected, as before.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenProject_RememberedPictureGone_SelectsNothing()
+    {
+        // Arrange: a remembered picture that was deleted
+        var file = await CreateProjectFileAsync("Deleted");
+        var picture = WritePicture(file, "gone.svg");
+        WritePicture(file, "kept.svg");
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var recent = new RecentProjects(settings);
+        recent.Add(file);
+        recent.RememberShownPicture(file, "gone.svg");
+        File.Delete(picture);
+        var shell = CreateShell(settings: settings, recent: recent);
+        _dialogs.ProjectFileToPick = file;
+
+        // Act: open the project
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+
+        // Assert: the project is open with nothing selected, and no problem was shown
+        Assert.True(shell.HasProject);
+        Assert.Null(shell.Workspace.SelectedFile);
+        Assert.Empty(_dialogs.Messages);
+    }
+
+    /// <summary>
+    ///     Test that two projects each open at their own last shown picture when the user goes back and forth.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_OpenProject_TwoProjects_EachOpensAtItsOwnPicture()
+    {
+        // Arrange: two projects with two pictures each
+        var first = await CreateProjectFileAsync("First");
+        WritePicture(first, "one.svg");
+        var firstPicture = WritePicture(first, "two.svg");
+        var second = await CreateProjectFileAsync("Second");
+        var secondPicture = WritePicture(second, "three.svg");
+        WritePicture(second, "four.svg");
+        var shell = CreateShell();
+
+        // Act: show a picture in each, then open each again
+        _dialogs.ProjectFileToPick = first;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        shell.Workspace.Explorer.SelectFile(firstPicture);
+        _dialogs.ProjectFileToPick = second;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        var secondAtFirstOpen = shell.Workspace.SelectedFile;
+        shell.Workspace.Explorer.SelectFile(secondPicture);
+        _dialogs.ProjectFileToPick = first;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        var firstAgain = shell.Workspace.SelectedFile;
+        _dialogs.ProjectFileToPick = second;
+        await shell.OpenProjectCommand.ExecuteAsync(null);
+        var secondAgain = shell.Workspace.SelectedFile;
+
+        // Assert: nothing was selected in the second project at first, and each opened at its own picture afterwards
+        Assert.Null(secondAtFirstOpen);
+        Assert.Equal(firstPicture, firstAgain);
+        Assert.Equal(secondPicture, secondAgain);
+    }
+
+    /// <summary>
+    ///     Test that a new project, which has no picture that was shown, opens with nothing selected and nothing remembered.
+    /// </summary>
+    [Fact]
+    public async Task MainWindowShell_NewProject_NothingRemembered_SelectsNothing()
+    {
+        // Arrange: a shell whose user creates a project
+        var settings = new SettingsService(Path.Combine(_tempRoot, "settings"));
+        var shell = CreateShell(settings: settings, defaultProjectsFolder: Directory.CreateDirectory(Projects).FullName);
+        _dialogs.OnNewProject = dialog =>
+        {
+            dialog.ProjectName = "Fresh";
+            dialog.OkCommand.Execute(null);
+        };
+
+        // Act: run New Project
+        await shell.NewProjectCommand.ExecuteAsync(null);
+
+        // Assert: the project is open with nothing selected and no picture remembered for it
+        Assert.True(shell.HasProject);
+        Assert.Null(shell.Workspace.SelectedFile);
+        Assert.Empty(settings.Current.RecentProjectPicture);
+    }
+
+    /// <summary>
     ///     Test that the shell gives the explorer the row height that was saved in the Appearance settings and follows the
     ///     setting when it changes.
     /// </summary>
@@ -1030,6 +1298,20 @@ public sealed class MainWindowShellTests : IDisposable
     {
         var created = await new ProjectService().CreateAsync(Directory.CreateDirectory(Projects).FullName, name, TestContext.Current.CancellationToken);
         return created.Project!.FilePath;
+    }
+
+    /// <summary>
+    ///     Writes a small picture into the folder of a project.
+    /// </summary>
+    /// <param name="projectFile">The project file, whose folder holds the picture.</param>
+    /// <param name="relative">The path of the picture relative to the project folder.</param>
+    /// <returns>The full path of the picture.</returns>
+    private static string WritePicture(string projectFile, string relative)
+    {
+        var path = Path.Combine(Path.GetDirectoryName(projectFile)!, relative);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'/>");
+        return path;
     }
 
     /// <summary>

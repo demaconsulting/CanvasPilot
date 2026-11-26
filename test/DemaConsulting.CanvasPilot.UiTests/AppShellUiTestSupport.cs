@@ -136,8 +136,13 @@ internal static class AppShellUiHelpers
     /// <param name="application">The application whose theme the composition follows the settings for, or <see langword="null" />.</param>
     /// <param name="styleFolder">The folder of the style kits of the user, or <see langword="null" /> for the <c>styles</c> folder of the root.</param>
     /// <param name="folderLauncher">What shows a folder for the Help menu, or <see langword="null" /> for one that shows nothing, so that no test opens a file manager.</param>
+    /// <param name="historyRoot">
+    ///     The folder of the chat history, which also composes the AI copilot over the <c>local</c> folder of the root, or
+    ///     <see langword="null" /> for neither. A test that gives it must choose a provider in the settings that needs no
+    ///     process or server to tell that it is not ready, such as Ollama without a model.
+    /// </param>
     /// <returns>The composition.</returns>
-    public static ApplicationComposition Compose(string root, IImageExporter? exporter = null, Application? application = null, string? styleFolder = null, IFolderLauncher? folderLauncher = null)
+    public static ApplicationComposition Compose(string root, IImageExporter? exporter = null, Application? application = null, string? styleFolder = null, IFolderLauncher? folderLauncher = null, string? historyRoot = null)
     {
         var projects = Directory.CreateDirectory(Path.Combine(root, "projects")).FullName;
         var logger = new RollingFileLogger(Path.Combine(root, "logs"));
@@ -152,6 +157,8 @@ internal static class AppShellUiHelpers
             speechModels: new FakeSpeechModelService(),
             styleUserFolder: styleFolder ?? Path.Combine(root, "styles"),
             folderLauncher: folderLauncher ?? new RecordingFolderLauncher(),
+            localDataRoot: historyRoot is null ? null : Path.Combine(root, "local"),
+            historyRoot: historyRoot,
             application: application);
     }
 

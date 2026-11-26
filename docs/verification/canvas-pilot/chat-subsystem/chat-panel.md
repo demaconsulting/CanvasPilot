@@ -132,6 +132,9 @@ payload" button that shows on hover); they are not evidence for a requirement.
   transcript but for a notice that is
   not saved, resets the copilot, stops a turn that runs and drops its rows, says in an error notice when the history
   could not be deleted, and works without a store or a copilot.
+- The transcript opens at its latest row and keeps it in view as rows are added and replies grow; a reader who scrolled
+  up keeps the place, and following starts again when the reader is back at the end (by scrolling or because the panel
+  grew), sends a message, or the panel is shown again, gets its view model again, or shows another conversation.
 
 #### Test Scenarios
 
@@ -648,3 +651,41 @@ opened in a window: the restored message shows its words, the lines of the mark 
 that pictures are not kept, and has no "View payload" button and no chip; the reply and the tool line are shown as
 usual; the hint of the empty transcript is hidden. This scenario is tested by
 `ChatPanelView_RestoredHistory_ShowsTextRowsWithoutPayloadButtonOrPictures`.
+
+**ChatPanelView_RestoredHistory_OpensScrolledToTheLatestMessage**: A saved conversation of forty rows is restored when
+the panel opens the project, before the panel is laid out; the transcript is longer than its view and scrolled to its
+end. This scenario is tested by `ChatPanelView_RestoredHistory_OpensScrolledToTheLatestMessage`.
+
+**ChatPanelView_CopilotReply_AtTheEnd_KeepsTheLatestInView**: After a long restored conversation a message is sent and
+the scripted answer grows by one line fifteen times and completes; the transcript stays at its end. This scenario is
+tested by `ChatPanelView_CopilotReply_AtTheEnd_KeepsTheLatestInView`.
+
+**ChatPanelView_ScrolledUp_ReplyArrives_KeepsThePlaceOfTheReader**: The reader scrolls to the top while an answer
+streams; the answer grows by twenty lines and completes, and the transcript stays at the top. This scenario is tested by
+`ChatPanelView_ScrolledUp_ReplyArrives_KeepsThePlaceOfTheReader`.
+
+**ChatPanelView_ScrolledBackToTheEnd_FollowsAgain**: The reader scrolls to the top and back to the end while an answer
+streams; the answer grows by twenty lines and the transcript is at its end. This scenario is tested by
+`ChatPanelView_ScrolledBackToTheEnd_FollowsAgain`.
+
+**ChatPanelView_ScrolledUp_SendMessage_ScrollsToTheLatest**: The reader scrolls to the top of a long restored
+conversation and sends a message; the transcript is at its end. This scenario is tested by
+`ChatPanelView_ScrolledUp_SendMessage_ScrollsToTheLatest`.
+
+**ChatPanelView_ScrolledUp_AnotherProjectShown_OpensAtTheLatest**: The reader scrolls to the top of a long restored
+conversation; the composer is given another project folder, which empties the transcript, and then the project again,
+which restores its forty rows; the transcript is at its end. This scenario is tested by
+`ChatPanelView_ScrolledUp_AnotherProjectShown_OpensAtTheLatest`.
+
+**ChatPanelView_ScrolledUp_PanelHiddenAndShown_OpensAtTheLatest**: The reader scrolls to the top of a long restored
+conversation; the panel is taken out of the window and put back, with the same rows and the same size; the transcript
+is at its end. This scenario is tested by `ChatPanelView_ScrolledUp_PanelHiddenAndShown_OpensAtTheLatest`.
+
+**ChatPanelView_ScrolledUp_DataContextChanged_OpensAtTheLatest**: The reader scrolls to the top of a long restored
+conversation; the panel loses its view model and gets it back; the transcript is at its end. This scenario is tested by
+`ChatPanelView_ScrolledUp_DataContextChanged_OpensAtTheLatest`.
+
+**ChatPanelView_ScrolledUpALittle_PanelGrowsToTheEnd_FollowsAgain**: While an answer streams after a long restored
+conversation, the reader scrolls up by 100 pixels, more than the tolerance of a line; the window is made 300 pixels
+taller, which brings the reader to the end, and the answer grows by twenty lines; the transcript is at its end. This
+scenario is tested by `ChatPanelView_ScrolledUpALittle_PanelGrowsToTheEnd_FollowsAgain`.

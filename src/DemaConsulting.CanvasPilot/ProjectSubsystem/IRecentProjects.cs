@@ -56,4 +56,34 @@ public interface IRecentProjects
     /// </summary>
     /// <returns><see langword="true" /> when the list was stored.</returns>
     bool Clear();
+
+    /// <summary>
+    ///     Gets the picture that was last shown in a listed project on this computer, so that the project opens at it
+    ///     again.
+    /// </summary>
+    /// <param name="projectFile">The path of the project file.</param>
+    /// <returns>
+    ///     The path of the picture relative to the folder of the project, or <see langword="null" /> when the project is
+    ///     not listed, has no picture, or the path is empty or not valid. Whether the file still exists is not checked.
+    /// </returns>
+    string? GetShownPicture(string projectFile);
+
+    /// <summary>
+    ///     Remembers the picture that is shown now in a listed project, so that the project opens at it the next time. The
+    ///     picture is kept with the recent projects on this computer, never in the project, and is forgotten with the
+    ///     project when it leaves the list.
+    /// </summary>
+    /// <remarks>
+    ///     Nothing is written when the picture is the one already remembered. Each call that changes the picture writes the
+    ///     settings file, so a caller keeps the shown picture itself and calls this once, when the project is closed or
+    ///     another opens, rather than on every selection. <see cref="Changed" /> is not raised, because the list did not
+    ///     change and the welcome screen that follows it need not be built again.
+    /// </remarks>
+    /// <param name="projectFile">The path of the project file.</param>
+    /// <param name="picture">The path of the picture relative to the folder of the project.</param>
+    /// <returns>
+    ///     <see langword="true" /> when the picture is remembered (stored now or already); <see langword="false" /> when the
+    ///     project is not listed, the path is empty, rooted, or leaves the folder, or the settings could not be stored.
+    /// </returns>
+    bool RememberShownPicture(string projectFile, string picture);
 }

@@ -179,7 +179,14 @@ here because they only join the units together.
    unhandled errors in the log and disposes the composition when the application exits.
 3. The shell follows the project service: when the open project changes it updates the title and shows the
    project's folder in the workspace, which opens or closes the explorer. Changes raised on another thread are
-   posted to the user interface thread.
+   posted to the user interface thread. Every way of opening a project (the welcome screen, File, Open Project, the
+   Recent Projects menu, and New Project) ends in the shell, which then selects in the explorer the picture last shown
+   in the project (`IRecentProjects.GetShownPicture`), so the preview draws it; a picture that is gone selects nothing.
+   The shell follows the selected file of the workspace and keeps the picture that the user shows last in the open
+   project in memory; it stores it once (`IRecentProjects.RememberShownPicture`) when the project is closed, another
+   project is opened, or the application exits, so a selection does not write the settings file, and the picture is
+   kept with the recent projects of the user and never in the shared project folder. Only a project that is in the
+   list of recent projects has a picture to return to.
 4. The File, Edit, Image, Tools, and Help commands are methods of the shell that talk to the user through the dialog
    service. The workspace gets the same dialog service for the confirmed delete and the rename prompt.
 5. The view locator maps a view model `XxxViewModel` to the view `XxxView` of the same namespace, so the workspace

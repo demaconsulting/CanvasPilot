@@ -450,4 +450,44 @@ public sealed class StyleSubsystemTests : IDisposable
         Assert.True(File.Exists(Path.Combine(places.User, "poster", "examples", "logo.svg")));
         Assert.Equal(["Poster Look"], manager.Groups.Single(group => group.Location == StyleKitLocation.User).Items.Select(item => item.Name));
     }
+
+    /// <summary>
+    ///     Validates that the choices of the style picker, of the default kit on the Style Kits settings page, and the shared
+    ///     folder rows of that page all read as the words they show, including no style and a kit that cannot be found, so a
+    ///     screen reader announces the chosen entry by those words and not by the record.
+    /// </summary>
+    [Fact]
+    public async Task StyleSubsystem_AnnounceChosenEntries_PickerPageAndManagerLists_ReadAsTheirShownWords()
+    {
+        // Arrange: a kit of the program, an open project that names a kit that cannot be found, and settings with a
+        // shared folder and a default kit that no kit has
+        using var places = new StyleKitPlaces();
+        StyleKitPlaces.WriteKit(places.BuiltIn, StyleKitPlaces.Kit("clean", name: "Clean"));
+        places.Settings.Update(s => s with { Styles = new StyleSettings { SharedKitFolders = [places.Shared1], DefaultKitId = "team-kit" } });
+        using var catalog = places.CreateCatalog();
+        await catalog.RefreshAsync(TestContext.Current.CancellationToken);
+        places.OpenProject();
+        var active = new FakeActiveStyle();
+        active.UseMissing("lost-kit");
+        using var picker = new StylePickerViewModel(active, catalog, places.Projects);
+        var page = new StyleSettingsPageViewModel(catalog, () => null);
+        page.Load(places.Settings.Current);
+
+        // Act: read the shown words and the text of every entry
+        var entries = picker.Items.Select(item => (Shown: item.DisplayName, Text: item.ToString()))
+            .Concat(page.DefaultKitChoices.Select(choice => (Shown: choice.Label, Text: choice.ToString())))
+            .Concat(page.Folders.Select(row => (Shown: row.Path, Text: row.ToString())))
+            .ToList();
+        page.OnClosed();
+
+        // Assert: each text is the shown words and never a record, and the entries without a kit were read
+        Assert.All(entries, entry =>
+        {
+            Assert.Equal(entry.Shown, entry.Text);
+            Assert.DoesNotContain(" { ", entry.Text, StringComparison.Ordinal);
+        });
+        Assert.Contains(entries, entry => entry.Text == StyleSettingsPageViewModel.NoStyleLabel);
+        Assert.Contains(entries, entry => entry.Text == "team-kit (not found)");
+        Assert.Contains(entries, entry => entry.Text == places.Shared1);
+    }
 }

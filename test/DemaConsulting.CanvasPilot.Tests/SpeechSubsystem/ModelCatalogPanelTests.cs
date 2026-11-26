@@ -58,6 +58,24 @@ public sealed class ModelCatalogPanelTests
     }
 
     /// <summary>
+    ///     Test that a model row reads as the model name it shows, so a screen reader names the row by the model and
+    ///     not by the type of the row.
+    /// </summary>
+    [Fact]
+    public void ModelListItemViewModel_ToString_IsTheDisplayName()
+    {
+        // Arrange: a row for a catalog entry
+        var row = new ModelListItemViewModel(SpeechTestData.Descriptor("stt-a", SpeechModelRole.Recognition));
+
+        // Act: read the text of the row
+        var text = row.ToString();
+
+        // Assert: the text is the shown name
+        Assert.Equal(row.DisplayName, text);
+        Assert.DoesNotContain(nameof(ModelListItemViewModel), text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     ///     Test that a stored model the catalog does not list leaves nothing selected but keeps the stored identifier,
     ///     so the choice is not erased.
     /// </summary>
