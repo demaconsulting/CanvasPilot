@@ -28,11 +28,35 @@
 
   <Grid>
 
-    <!-- The stage: the picture sits on a quiet surface with a dot grid, with the tools floating over it -->
+    <!-- The stage: the picture sits on a quiet surface with a dot grid, with the tools floating over it. A right-click
+         on the picture or the stage around it, or Shift+F10 or the Menu key while the stage has the focus, opens the
+         menu of the picture, which runs the copy and export commands the host gives and stays closed while the host
+         turns it off (the view cancels its opening) and over the floating controls. -->
     <Grid Name="Stage"
           AutomationProperties.AutomationId="PreviewStage"
           ClipToBounds="True"
           Background="{DynamicResource CpSurfaceStage}">
+
+      <Grid.ContextMenu>
+        <ContextMenu Name="PictureMenu"
+                     AutomationProperties.AutomationId="PictureMenu"
+                     AutomationProperties.Name="Picture">
+          <!-- A menu item with no command is usable in Avalonia, so each item is also unusable while the host gave no
+               command -->
+          <MenuItem Name="PictureMenuCopyImage"
+                    AutomationProperties.AutomationId="PictureMenuCopyImage"
+                    AutomationProperties.Name="Copy image"
+                    Header="_Copy image"
+                    IsEnabled="{Binding CopyImageCommand, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    Command="{Binding CopyImageCommand}" />
+          <MenuItem Name="PictureMenuExportPng"
+                    AutomationProperties.AutomationId="PictureMenuExportPng"
+                    AutomationProperties.Name="Export as PNG"
+                    Header="_Export as PNG..."
+                    IsEnabled="{Binding ExportPngCommand, Converter={x:Static ObjectConverters.IsNotNull}}"
+                    Command="{Binding ExportPngCommand}" />
+        </ContextMenu>
+      </Grid.ContextMenu>
 
       <Border Name="StageDots"
               IsHitTestVisible="False"

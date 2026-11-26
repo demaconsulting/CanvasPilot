@@ -426,6 +426,24 @@ sections:
             tests:
               - AppShellSubsystem_CheckAgainstStyle_ComposedShell_ShowsNotesInThePreview
 
+          - id: CanvasPilot-AppShell-PictureMenu
+            title: >-
+              The AppShell subsystem shall give the menu on the stage of the preview the Copy Image and Export as PNG
+              commands of the Image menu, so that its items do the same and are usable at the same times, and shall turn
+              that menu off while a marking tool is chosen on the picture and on again when none is.
+            justification: |
+              The preview, the Image menu, and the layer for marks do not know each other, so the one place that builds the
+              application joins them. Running the same commands keeps one behavior and one rule of availability for the
+              picture, and a right-click while a mark is drawn must not open a menu that takes the pointer from the stroke.
+              The menu is turned off and on by the signal that the layer for marks already gives its host when a tool is
+              chosen and put away (CanvasPilot-AnnotationOverlay-ToggleDragOutWithTool, a requirement of the Annotation
+              subsystem), so the layer needs no new behavior, and the composed result is tested here.
+            children:
+              - CanvasPilot-MainWindowShell-ProvideImageMenuSeam
+            tests:
+              - AppShellSubsystem_PictureMenu_ComposedApplication_RunsTheImageCommandsAndIsOffWhileMarking
+              - MainWindowView_PictureMenu_ShownPicture_RunsTheImageCommandsAndStaysClosedWhileMarking
+
           - id: CanvasPilot-AppShell-ComposeAiCopilot
             title: >-
               The AppShell subsystem shall, when it is given the folder for the local data of the application, build the AI

@@ -19,12 +19,14 @@
 // SOFTWARE.
 
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -726,6 +728,323 @@ public sealed class PreviewPaneViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that right-clicking the shown picture opens the menu of the picture with a Copy image and an Export as PNG
+    ///     item, in that order, with access keys and names for screen readers, that choosing each item runs the command
+    ///     the host gave once, and that right-clicking the empty stage beside the picture opens the menu too.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_PictureMenu_RightClickOnPicture_OpensNamedItemsThatRunTheCommands()
+    {
+        // Arrange: a shown pane with a picture and two counting commands of a host
+        var (window, _, pane, menu) = await ShowPictureWithMenuAsync();
+        var copies = 0;
+        var exports = 0;
+        pane.CopyImageCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => copies++);
+        pane.ExportPngCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => exports++);
+        AppShellUiHelpers.Flush();
+        var center = Center(window, SettingsUiHelpers.Find<Image>(window, "PreviewImage"));
+
+        // Act: right-click the picture, read the items, and choose each; then close and right-click the empty stage
+        RightClick(window, center);
+        var openedOnPicture = menu.IsOpen;
+        var items = menu.Items.OfType<MenuItem>().ToList();
+        var usable = items.Select(item => item.IsEffectivelyEnabled).ToList();
+        items[0].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        items[1].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        RightClick(window, new Point(20, 150));
+        var openedOnStage = menu.IsOpen;
+        menu.Close();
+
+        // Assert: the menu opened both times; its items are named, in order, usable, and each ran its command once
+        Assert.True(openedOnPicture);
+        Assert.True(openedOnStage);
+        Assert.Equal(["PictureMenuCopyImage", "PictureMenuExportPng"], items.Select(AutomationProperties.GetAutomationId));
+        Assert.Equal(["_Copy image", "_Export as PNG..."], items.Select(item => item.Header));
+        Assert.Equal(["Copy image", "Export as PNG"], items.Select(AutomationProperties.GetName));
+        Assert.Equal("Picture", AutomationProperties.GetName(menu));
+        Assert.Equal([true, true], usable);
+        Assert.Equal(1, copies);
+        Assert.Equal(1, exports);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that Shift+F10 and the Menu key open the menu of the picture while the stage has the keyboard focus, also
+    ///     when Shift is released before F10, and that F10 alone does not.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_PictureMenu_ShiftF10OrMenuKeyOnFocusedStage_Opens()
+    {
+        // Arrange: a shown pane with a picture, commands of a host, and the keyboard focus on the stage
+        var (window, _, pane, menu) = await ShowPictureWithMenuAsync();
+        pane.CopyImageCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        pane.ExportPngCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        var stage = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
+
+        // Act: press Shift+F10, the Menu key, F10 alone, and Shift+F10 with Shift released before F10, each with the
+        // stage focused and the menu closed before
+        stage.Focus();
+        PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+        var openedByShiftF10 = menu.IsOpen;
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        stage.Focus();
+        PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+        var openedByMenuKey = menu.IsOpen;
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        stage.Focus();
+        PressKey(window, PhysicalKey.F10, RawInputModifiers.None);
+        var openedByF10 = menu.IsOpen;
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        stage.Focus();
+        window.KeyPressQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
+        window.KeyPressQwerty(PhysicalKey.F10, RawInputModifiers.Shift);
+        window.KeyReleaseQwerty(PhysicalKey.ShiftLeft, RawInputModifiers.None);
+        window.KeyReleaseQwerty(PhysicalKey.F10, RawInputModifiers.None);
+        AppShellUiHelpers.Flush();
+        var openedWithShiftReleasedFirst = menu.IsOpen;
+        menu.Close();
+
+        // Assert: Shift+F10, also with Shift released first, and the Menu key open the menu; F10 alone does not
+        Assert.True(openedByShiftF10);
+        Assert.True(openedByMenuKey);
+        Assert.False(openedByF10);
+        Assert.True(openedWithShiftReleasedFirst);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that Shift+F10 requests a context menu from the control inside the stage that has the keyboard focus,
+    ///     the way the Menu key does: from a focused layer in the overlay slot it opens the menu of the picture, a press
+    ///     whose focus moves before F10 is released opens nothing, and a focused control with a menu of its own opens
+    ///     that menu instead of the menu of the picture.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_PictureMenu_ShiftF10OnFocusedControlInStage_RequestsTheMenuFromThatControl()
+    {
+        // Arrange: a shown pane with a picture, commands of a host, a focusable layer in the overlay slot, and a
+        // focusable control with a menu of its own
+        var (window, _, pane, menu) = await ShowPictureWithMenuAsync();
+        pane.CopyImageCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        pane.ExportPngCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        var layer = new Border { Focusable = true, Background = Brushes.Transparent };
+        pane.Overlay = layer;
+        AppShellUiHelpers.Flush();
+        var stage = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
+        var ownMenu = new ContextMenu { Items = { new MenuItem { Header = "Own" } } };
+        var withOwnMenu = new Border { Focusable = true, Background = Brushes.Transparent, ContextMenu = ownMenu };
+
+        // Act: with the layer focused press Shift+F10, then the Menu key; press Shift+F10 on the layer and release it
+        // after the focus moved to the stage; then focus the control with its own menu and press Shift+F10
+        var layerTookFocus = layer.Focus();
+        PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+        var openedByShiftF10OnLayer = menu.IsOpen;
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        layer.Focus();
+        PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+        var openedByMenuKeyOnLayer = menu.IsOpen;
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        layer.Focus();
+        window.KeyPressQwerty(PhysicalKey.F10, RawInputModifiers.Shift);
+        stage.Focus();
+        window.KeyReleaseQwerty(PhysicalKey.F10, RawInputModifiers.Shift);
+        AppShellUiHelpers.Flush();
+        var openedAfterFocusMoved = menu.IsOpen;
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        pane.Overlay = withOwnMenu;
+        AppShellUiHelpers.Flush();
+        withOwnMenu.Focus();
+        PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+        var openedOwnMenu = ownMenu.IsOpen;
+        var openedPictureMenuFromOwn = menu.IsOpen;
+        ownMenu.Close();
+        menu.Close();
+
+        // Assert: the layer's keys open the menu of the picture, a moved focus opens nothing, and a control with its
+        // own menu opens only that menu
+        Assert.True(layerTookFocus);
+        Assert.True(openedByShiftF10OnLayer);
+        Assert.True(openedByMenuKeyOnLayer);
+        Assert.False(openedAfterFocusMoved);
+        Assert.True(openedOwnMenu);
+        Assert.False(openedPictureMenuFromOwn);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that where the platform counts Shift+F10 as a menu key, as Windows does, one press asks for the menu of
+    ///     the picture only once: it opens after a single opening, and while the menu is turned off it is asked once and
+    ///     stays closed.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_PictureMenu_ShiftF10WherePlatformCountsItAsMenuKey_RequestsTheMenuOnce()
+    {
+        // Arrange: a shown pane with a picture, commands of a host, a focusable layer in the overlay slot, a count of
+        // the menu's openings, and the platform's gestures for a context menu
+        var (window, _, pane, menu) = await ShowPictureWithMenuAsync();
+        pane.CopyImageCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        pane.ExportPngCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        var layer = new Border { Focusable = true, Background = Brushes.Transparent };
+        pane.Overlay = layer;
+        AppShellUiHelpers.Flush();
+        var openings = 0;
+        menu.Opening += (_, _) => openings++;
+        var gestures = window.GetPlatformSettings()!.HotkeyConfiguration.OpenContextMenu;
+        var shiftF10 = new KeyGesture(Key.F10, KeyModifiers.Shift);
+
+        // Act: count Shift+F10 as a menu key, as Windows does; press it on the focused layer with the menu on, then
+        // with the menu off
+        bool openedWhenOn;
+        int openingsWhenOn;
+        bool openedWhenOff;
+        int openingsWhenOff;
+        gestures.Add(shiftF10);
+        try
+        {
+            layer.Focus();
+            PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+            openedWhenOn = menu.IsOpen;
+            openingsWhenOn = openings;
+            menu.Close();
+            AppShellUiHelpers.Flush();
+            pane.IsPictureMenuEnabled = false;
+            layer.Focus();
+            PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+            openedWhenOff = menu.IsOpen;
+            openingsWhenOff = openings - openingsWhenOn;
+        }
+        finally
+        {
+            gestures.Remove(shiftF10);
+        }
+
+        // Assert: one opening opened the menu; while it was off it was asked once and stayed closed
+        Assert.True(openedWhenOn);
+        Assert.Equal(1, openingsWhenOn);
+        Assert.False(openedWhenOff);
+        Assert.Equal(1, openingsWhenOff);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the items of the menu of the picture are unusable while the host's commands cannot run, while the
+    ///     host gave no commands, and after a render failed, where right-clicking the error opens the menu.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_PictureMenu_CommandsCannotRunOrMissing_ItemsAreUnusable()
+    {
+        // Arrange: a shown pane with a picture, and a broken file in the project
+        await File.WriteAllTextAsync(Path.Combine(_folder, "broken.svg"), "<svg><not closed", TestContext.Current.CancellationToken);
+        var (window, explorer, pane, menu) = await ShowPictureWithMenuAsync();
+        var runs = 0;
+        var center = Center(window, SettingsUiHelpers.Find<Image>(window, "PreviewImage"));
+
+        // Act: right-click the picture with no commands, then with commands that cannot run; then show the broken
+        // file with commands that run only while a picture is shown, and right-click the error
+        RightClick(window, center);
+        var withoutCommands = UsableItems(menu);
+        menu.Close();
+        pane.CopyImageCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => runs++, () => false);
+        pane.ExportPngCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => runs++, () => false);
+        AppShellUiHelpers.Flush();
+        RightClick(window, center);
+        var cannotRun = UsableItems(menu);
+        menu.Items.OfType<MenuItem>().First().RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        menu.Close();
+        explorer.SelectFile(Path.Combine(_folder, "broken.svg"));
+        await pane.RenderCompletion;
+        pane.CopyImageCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => runs++, () => pane.HasImage);
+        pane.ExportPngCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => runs++, () => pane.HasImage);
+        AppShellUiHelpers.Flush();
+        RightClick(window, Center(window, SettingsUiHelpers.Find<StackPanel>(window, "PreviewErrorPanel")));
+        var openedOnError = menu.IsOpen;
+        var afterFailure = UsableItems(menu);
+        menu.Close();
+
+        // Assert: the menu opens every time, and its items are unusable each time and ran nothing
+        Assert.Equal([false, false], withoutCommands);
+        Assert.Equal([false, false], cannotRun);
+        Assert.True(openedOnError);
+        Assert.Equal([false, false], afterFailure);
+        Assert.Equal(0, runs);
+
+        window.Close();
+    }
+
+    /// <summary>
+    ///     Test that the menu of the picture does not open, by a right-click or from the keyboard, while the host has
+    ///     turned it off, nor by a right-click on a control that floats over the stage (the tool bar slot, the notes
+    ///     drawer, and the zoom pill), and opens again on the picture once it is turned on.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task PreviewPaneView_PictureMenu_TurnedOffOrOnFloatingControls_DoesNotOpen()
+    {
+        // Arrange: a shown pane with a picture, commands of a host, a control in the tool bar slot, and a note in the
+        // notes drawer
+        var (window, _, pane, menu) = await ShowPictureWithMenuAsync();
+        pane.CopyImageCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        pane.ExportPngCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(() => { });
+        var toolbarContent = new Border { Width = 100, Height = 20, Background = Brushes.Transparent };
+        pane.Toolbar = toolbarContent;
+        pane.ShowNotes("picture-menu", [new RenderDiagnostic(RenderDiagnosticSeverity.Info, "picture-menu-note", "a note")]);
+        AppShellUiHelpers.Flush();
+        var drawer = SettingsUiHelpers.Find<Expander>(window, "PreviewDiagnosticsExpander");
+        var center = Center(window, SettingsUiHelpers.Find<Image>(window, "PreviewImage"));
+        var stage = SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller");
+
+        // Act: turn the menu off and right-click the picture, press the Menu key and Shift+F10 on the stage; turn it on
+        // and right-click the tool bar slot's control, the open notes drawer, the header of the closed drawer, and a
+        // button of the zoom pill, then the picture
+        pane.IsPictureMenuEnabled = false;
+        RightClick(window, center);
+        var openedByRightClickWhileOff = menu.IsOpen;
+        stage.Focus();
+        PressKey(window, PhysicalKey.ContextMenu, RawInputModifiers.None);
+        var openedByMenuKeyWhileOff = menu.IsOpen;
+        stage.Focus();
+        PressKey(window, PhysicalKey.F10, RawInputModifiers.Shift);
+        var openedByShiftF10WhileOff = menu.IsOpen;
+        pane.IsPictureMenuEnabled = true;
+        RightClick(window, Center(window, toolbarContent));
+        var openedOnToolbar = menu.IsOpen;
+        RightClick(window, Center(window, drawer));
+        var openedOnOpenNotesDrawer = menu.IsOpen;
+        pane.AreDiagnosticsExpanded = false;
+        AppShellUiHelpers.Flush();
+        RightClick(window, Center(window, drawer));
+        var openedOnNotesDrawerHeader = menu.IsOpen;
+        RightClick(window, Center(window, SettingsUiHelpers.Find<Button>(window, "PreviewZoomActual")));
+        var openedOnZoomPill = menu.IsOpen;
+        RightClick(window, center);
+        var openedOnPictureWhenOn = menu.IsOpen;
+        menu.Close();
+
+        // Assert: nothing opened while off or over the floating controls; the picture opens it again once it is on
+        Assert.True(drawer.IsVisible);
+        Assert.False(openedByRightClickWhileOff);
+        Assert.False(openedByMenuKeyWhileOff);
+        Assert.False(openedByShiftF10WhileOff);
+        Assert.False(openedOnToolbar);
+        Assert.False(openedOnOpenNotesDrawer);
+        Assert.False(openedOnNotesDrawerHeader);
+        Assert.False(openedOnZoomPill);
+        Assert.True(openedOnPictureWhenOn);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the bitmap created for a picture has the picture's size and premultiplied BGRA pixels.
     /// </summary>
     [AvaloniaFact]
@@ -794,6 +1113,57 @@ public sealed class PreviewPaneViewTests : IDisposable
         await pane.RenderCompletion;
         AppShellUiHelpers.Flush();
         return (window, pane, overlay);
+    }
+
+    /// <summary>
+    ///     Shows a picture of 40 x 20 pixels in a pane in a window, and gives the menu of the picture on its stage.
+    /// </summary>
+    /// <returns>The window, the explorer, the pane view model, and the menu of the picture.</returns>
+    private async Task<(Window Window, ProjectExplorerViewModel Explorer, PreviewPaneViewModel Pane, ContextMenu Menu)> ShowPictureWithMenuAsync()
+    {
+        await File.WriteAllTextAsync(Path.Combine(_folder, "red.svg"), HalfRedSvg, TestContext.Current.CancellationToken);
+        var (window, explorer, pane) = ShowPane(new ImageRenderService());
+        explorer.SelectFile(Path.Combine(_folder, "red.svg"));
+        await pane.RenderCompletion;
+        AppShellUiHelpers.Flush();
+        var menu = SettingsUiHelpers.Find<Grid>(window, "PreviewStage").ContextMenu
+                   ?? throw new InvalidOperationException("The stage has no menu.");
+        return (window, explorer, pane, menu);
+    }
+
+    /// <summary>
+    ///     Presses and releases the right button at a point of a window, the way a user right-clicks.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    /// <param name="point">The point, in the window's coordinates.</param>
+    private static void RightClick(Window window, Point point)
+    {
+        window.MouseDown(point, MouseButton.Right);
+        window.MouseUp(point, MouseButton.Right);
+        AppShellUiHelpers.Flush();
+    }
+
+    /// <summary>
+    ///     Presses and releases a key with modifiers on a window, the way a user types it.
+    /// </summary>
+    /// <param name="window">The window.</param>
+    /// <param name="key">The physical key.</param>
+    /// <param name="modifiers">The modifiers held down.</param>
+    private static void PressKey(Window window, PhysicalKey key, RawInputModifiers modifiers)
+    {
+        window.KeyPressQwerty(key, modifiers);
+        window.KeyReleaseQwerty(key, modifiers);
+        AppShellUiHelpers.Flush();
+    }
+
+    /// <summary>
+    ///     Reads whether each item of a menu is usable, in the order of the items.
+    /// </summary>
+    /// <param name="menu">The menu.</param>
+    /// <returns>Whether each item is usable.</returns>
+    private static bool[] UsableItems(ContextMenu menu)
+    {
+        return menu.Items.OfType<MenuItem>().Select(item => item.IsEffectivelyEnabled).ToArray();
     }
 
     /// <summary>

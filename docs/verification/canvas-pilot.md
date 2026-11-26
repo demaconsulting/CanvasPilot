@@ -98,6 +98,9 @@ services, or display is required.
 - The shown picture can be prepared for dragging out as a PNG file in the application's drag folder; the files of
   earlier runs are deleted at start, and the application's own are deleted when it ends. Whether other programs accept
   the dropped picture is checked by hand before a release (see the verification of `ImageDragSource`).
+- The menu of the picture on the stage runs the Image menu's Copy Image and Export as PNG commands: it cannot run them
+  before a picture is shown or after a render failed, copies the shown picture and exports a PNG of its size with the
+  picture shown, and is off while a marking tool is chosen and on again afterwards.
 - A message is composed from typed text, dictated text, and chips for attached files, folders, images, and marks, which
   stay in the order they were placed with the origin and kind of each; each user action is one undo step and redo gives
   the same steps; sending clears the draft and what can be undone, and nothing of the draft is written to disk.
@@ -409,6 +412,14 @@ steps are in the verification of the unit or subsystem named at each check.
     size of the model through the composed application
     on the real Copilot runtime. They belong to no requirement, cost real premium requests, and are repeated before a
     release that changes the agent. (Verification of the `Agent` and `Chat` subsystems.)
+13. *The menu of the picture on a real desktop.* With a picture shown, right-click it, choose Copy image, and paste into
+    an Outlook message and a PowerPoint slide: each receives the picture. Choose Export as PNG... from the same menu and
+    check the file. Focus the stage with Tab and press Shift+F10, then the Menu key: each opens the menu, and a screen
+    reader reads "Copy image" and "Export as PNG". Draw a rectangle, press V to go back to Select without clicking
+    elsewhere, and press Shift+F10, once releasing F10 first and once releasing Shift first: the menu opens once each
+    time. Choose the rectangle tool and right-click during a stroke: no menu opens and the stroke keeps going. The
+    headless tests send the pointer and key events and check the menu, but neither the system clipboard of Windows nor
+    a real keyboard and screen reader. (Verification of `PreviewPane`.)
 
 ### Live verification record (agent turns)
 
@@ -698,6 +709,15 @@ earlier run in its drag folder, which is removed at start. Without a picture no 
 shown the offered file is in the drag folder, is named `logo-` and the start of the pixel fingerprint, and is a PNG
 of width 32 and height 16; with dragging out turned off none is offered; after the composition is disposed the file is
 gone. This scenario is tested by `CanvasPilot_DragImageOut_ShownPicture_ProvidesPngFile`.
+
+**CanvasPilot_PictureMenu_ShownPicture_CopiesAndExportsLikeTheImageMenuAndIsOffWhileMarking**: The composed application
+with a project that holds a 32 by 16 SVG and a broken one: the commands of the menu of the picture are the Image menu's
+Copy Image and Export as PNG commands and cannot run before a picture is shown; with the SVG shown both can, the copy
+puts the shown picture on the clipboard of the dialog service, and the export writes a PNG of width 32 and height 16;
+the menu is off while the rectangle tool is chosen and on again with none; with the broken file selected neither command
+can run. How the menu is opened (a right-click, Shift+F10, the Menu key) is verified by the headless tests of the
+`PreviewPane` unit and the composed window. This scenario is tested by
+`CanvasPilot_PictureMenu_ShownPicture_CopiesAndExportsLikeTheImageMenuAndIsOffWhileMarking`.
 
 **CanvasPilot_ComposeMessage_TextDictationAndChips_AreOneOrderedMessage**: A message is composed by typing, dictating a
 block, dropping a file and a folder in one operation, adding a mark where the caret was, and typing more. The message

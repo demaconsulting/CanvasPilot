@@ -70,6 +70,12 @@ services, or display are required.
   project is open, when the project file was saved (only once it has been) and the talk key that is in effect.
 - The talk key is F9 until the user chooses another on the Speech page; the window, the status bar, the welcome screen,
   and the chat panel name the key that works, and the talk key of the composed shell reaches the chat panel.
+- The menu of the picture on the stage of the composed application runs the very Copy Image and Export as PNG commands
+  of the Image menu, which are usable with a picture shown and copy the shown picture; the menu and dragging out are off
+  while each marking tool is chosen and on again with none. In the composed window the menu opens on a right-click of
+  the picture and with Shift+F10 on the focused stage, its items reach the exporter of the Image menu once each, and it
+  stays closed while the rectangle tool is chosen; with the drawing layer focused while the tool is chosen and the tool
+  then put away, the layer keeps the focus and Shift+F10 opens the menu.
 - The Help menu shows the folder of the log in the file manager (Open Log Folder), also with no project open, and tells
   the user when it cannot.
 - The window has no full-screen button and no full-screen mode, and the provider pill in the title bar stays clear of
@@ -151,6 +157,21 @@ message that says so and the notes stay empty; after the kit Clean is chosen it 
 FAILED and a `style-off-palette` note that names the lime green and opens the list; after another file is drawn the
 notes of the style are gone. This scenario is tested by
 `AppShellSubsystem_CheckAgainstStyle_ComposedShell_ShowsNotesInThePreview`.
+
+**AppShellSubsystem_PictureMenu_ComposedApplication_RunsTheImageCommandsAndIsOffWhileMarking**: A composed application
+with a project that shows a 32 by 16 picture: the preview's copy and export commands are the shell's Copy Image and
+Export as PNG commands and both can run; running the copy command through the preview puts the shown picture on the
+clipboard of the dialog service; the menu of the picture is on, and with each of the rectangle, ellipse, freehand, and
+arrow tools chosen the menu and dragging out are both off; with no tool both are on again. This scenario is tested by
+`AppShellSubsystem_PictureMenu_ComposedApplication_RunsTheImageCommandsAndIsOffWhileMarking`.
+
+**MainWindowView_PictureMenu_ShownPicture_RunsTheImageCommandsAndStaysClosedWhileMarking**: In the composed main window
+(a headless UI test in `MainWindowViewTests.cs`) over a counting exporter, with a project that shows a picture, a
+right-click on the picture opens the menu of the picture and its Copy image item reaches the exporter once; Shift+F10
+with the stage focused opens it again and its Export as PNG item reaches the exporter once; with the rectangle tool
+chosen a right-click on the picture opens nothing; with the drawing layer focused while the tool is chosen and the tool
+then put away, the layer keeps the focus and Shift+F10 opens the menu. This scenario is tested by
+`MainWindowView_PictureMenu_ShownPicture_RunsTheImageCommandsAndStaysClosedWhileMarking`.
 
 **AppShellSubsystem_StyleKits_ComposedShell_ShowsTheWindowOnTheCatalogOfTheApplication**: With the kits read, the Style
 Kits command of a composed shell is usable, gives the dialog service one window that lists the three kits that come with

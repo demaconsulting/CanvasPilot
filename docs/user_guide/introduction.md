@@ -329,6 +329,19 @@ With a picture shown, the **Image** menu offers:
 
 The three items are disabled while no picture is shown.
 
+The two most common actions are also on the picture itself. Right-click the picture, or the stage around it, to open a
+menu with:
+
+- **Copy image**, which does the same as **Image > Copy Image**;
+- **Export as PNG...**, which does the same as **Image > Export as PNG...**.
+
+For example, right-click the picture, choose **Copy image**, and paste it into an Outlook message or a PowerPoint slide.
+From the keyboard, give the stage the focus (press Tab until it is focused, or click the empty stage) and press
+**Shift+F10** or the **Menu** key; the menu opens at the bottom of the stage. Screen readers read the items as "Copy
+image" and "Export as PNG". Like the Image menu, both items are disabled while no picture is shown, also when the file
+could not be drawn. The menu does not open while a marking tool is chosen, so a right-click never interrupts a mark;
+choose **Select** (or press V) first.
+
 ## Drag the Picture Into Another Program
 
 You can also drag the picture straight out of the stage. Press the left mouse button on the picture, move the pointer
@@ -567,7 +580,8 @@ marks are not drawn on the new picture, because they might no longer point at th
 message and the marking bar says how many belong to an earlier picture. The message that you send holds the earlier
 picture that the marks were drawn on.
 
-While a marking tool is chosen, the picture cannot be dragged out. Choose **Select** to drag it again.
+While a marking tool is chosen, the picture cannot be dragged out, and right-clicking it opens no menu. Choose
+**Select** to drag it again or to use its menu.
 
 ## Sending a Message and Viewing the Payload
 
@@ -1365,6 +1379,7 @@ keys that CanvasPilot has, besides the usual keys of the system, are:
 | Stage | Ctrl+plus, Ctrl+minus, Ctrl+0, Ctrl+1 | Zoom in, zoom out, fit to window, actual size |
 | Stage | Ctrl+mouse wheel | Zoom in and out |
 | Stage | V, R, E, F, A | Choose Select, Rectangle, Ellipse, Freehand, or Arrow |
+| Stage | Shift+F10, Menu key | Open the menu of the picture: Copy image, Export as PNG... |
 | Marking | Arrow keys, then Enter or Space | Move the cursor on the picture, start and finish a shape |
 | Marking | Escape | Throw a shape away |
 | Splitter | Left and right arrows | Move the splitter by 16 pixels |

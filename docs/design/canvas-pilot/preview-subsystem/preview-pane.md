@@ -13,7 +13,7 @@ the shown picture (file name, size, format, render time) to the part of the wind
 itself holds no status line. The view model has no dependency on Avalonia's imaging; the view converts the pixels. The
 pane also hosts one overlay slot over the picture, so that other units can place content on the picture in its own
 pixel coordinates without the pane knowing them, and one slot that floats over the stage for the controls of that
-content.
+content. It offers a menu of the picture on the stage that runs the copy and export commands its host gives.
 
 #### Data Model
 
@@ -74,6 +74,13 @@ returns the path of a PNG file of the shown picture, written by the drag source,
 dragging out is off, the pane has no drag source, or the file could not be written. `ReportDragProblem` writes a
 failure of the view's drag to the log.
 
+**CopyImageCommand** / **ExportPngCommand** / **IsPictureMenuEnabled**: `CopyImageCommand` and `ExportPngCommand` are
+`ICommand?` slots, `null` by default, for the host's commands that copy the shown picture and export it as a PNG file;
+the menu of the picture runs them (see *Menu of the picture*). Like `Overlay`, the pane does not interpret them, so the
+menu runs exactly the host's commands, with their rule of availability, and the pane does not depend on the host.
+`IsPictureMenuEnabled` is a `bool`, true by default, that the host turns off while the pointer is used on the picture
+for something else, such as drawing a mark; the menu does not open while it is off. Each raises its change.
+
 **RenderCompletion**: a task that completes when every render started so far has applied or discarded its result,
 so tests and callers can wait.
 
@@ -84,8 +91,8 @@ composites blue, green, red, alpha with premultiplied alpha. Each color channel 
 row size. `Create` makes a 96 dpi `WriteableBitmap` (`Bgra8888`, `AlphaFormat.Premul`) and fills it through
 `Lock`.
 
-**View**: `PreviewPaneView` is one `Grid` (`PreviewStage`, clipped, background `CpSurfaceStage`) whose layers, from
-back to front, are:
+**View**: `PreviewPaneView` is one `Grid` (`PreviewStage`, clipped, background `CpSurfaceStage`, with the menu of the
+picture `PictureMenu` as its `ContextMenu`) whose layers, from back to front, are:
 
 1. A dot grid: a non-hit-testable `Border` at opacity 0.2 filled with a tiled drawing of one dot of 2 pixels every 20
    pixels in `CpTextTertiary`.
@@ -157,6 +164,40 @@ replaceable operation whose default is `DragDrop.DoDragDropAsync`, which never c
 so that tests replace it and check what is offered. Nothing awaits the drag, so any exception from it is caught and
 passed to `ReportDragProblem`, and the pane keeps working. See *ImageDragSource* for the file and the formats.
 
+**Menu of the picture**: The stage's `ContextMenu` (`PictureMenu`, named "Picture" for screen readers) holds two
+items, in this order: `PictureMenuCopyImage` (header `_Copy image`, named "Copy image") bound to `CopyImageCommand`, and
+`PictureMenuExportPng` (header `_Export as PNG...`, named "Export as PNG") bound to `ExportPngCommand`. A `MenuItem`
+whose command is `null` is usable in Avalonia, so each item's `IsEnabled` is also bound to whether its command slot is
+filled; with a command, the framework shows the item unusable while the command cannot run. Because the menu belongs to
+the whole stage, it opens on a right-click of the picture, the overlay on it, the empty stage around it, the error card,
+or the placeholder, so after a failed render the user sees its items unusable, as in the host's menu. The ways to open
+it:
+
+- A right-click: the framework raises `ContextRequested` from the control under the pointer when the right button is
+  released, and the request bubbles to the stage; the menu opens at the pointer.
+- The Menu key: the framework raises the request from the focused control on the key's release; with the scroller
+  (`PreviewScroller`, the stage's focus target after Tab or a click on the empty stage) or a control inside it, such as
+  the layer for marks, focused, it bubbles to the stage.
+- Shift+F10: the framework counts it as a menu key only on Windows, where it raises the request from the focused control
+  on the release of F10 while Shift is still held, as for the Menu key; on other platforms, and on the headless platform
+  of the tests, it does not. So a `KeyDown` handler on the scroller remembers a press of F10 with exactly Shift held,
+  together with the control inside the scroller that has the focus (the scroller itself, or a control in it such as the
+  layer for marks, which keeps the focus after its tool is put away), and marks it handled. The `KeyUp` handler raises a
+  `ContextRequestedEventArgs` from that control when its F10 is released, so the request bubbles as the Menu key's does:
+  a control with a menu of its own opens that menu, and otherwise the stage opens the menu of the picture, through the
+  same check in `Opening`. The handler does nothing when the platform's gestures for a context menu match the release,
+  because the framework has raised the request then, so one press never asks twice; on Windows the handler is what
+  opens the menu when Shift is released before F10. Any other key pressed in the scroller, a release on another
+  control, or the focus leaving a control in the scroller forgets the remembered press.
+
+The view handles the menu's `Opening` event and cancels it while `IsPictureMenuEnabled` is off or no view model is
+shown, which covers the pointer and the keys alike. Canceling the opening, instead of marking every request on the
+stage handled, keeps the context menus of controls on the stage, such as the text box of a note, working while a tool is
+chosen. The slot of the host's controls (`PreviewToolbar`), the zoom pill, and the notes drawer each mark a
+`ContextRequested` that bubbles through them handled, so a right-click or the Menu key on them never opens the menu of
+the picture; the handler runs as the request bubbles, after their children, so a child with a menu of its own still
+opens it.
+
 **Automation identifiers that changed**: `PreviewFitToWindow` is now a `ToggleButton` (it was a `CheckBox`) named "Fit
 to window"; new are `PreviewStage`, `PreviewZoomPill`, `PreviewZoomActual`, `PreviewZoomOut`, `PreviewZoomLabel`, and
 `PreviewZoomIn`; `PreviewStatus` is gone from the pane view (the status bar of the window holds it); `PreviewBusy` is
@@ -216,7 +257,10 @@ entry are ignored.
 **Known limitations**: The busy line and the spinner do not stop when the system asks for reduced motion. The sentence
 of the marking tools (`StatusText` of the annotation overlay) is a tooltip and a hidden live text of the overlay; it is
 not part of the live region of the status bar. Transparent pictures are drawn on the plain stage color, without a
-checkerboard, and the picture cannot be panned by dragging with the Space key held.
+checkerboard, and the picture cannot be panned by dragging with the Space key held. A menu of the picture that is opened
+from the keyboard is placed by the framework at the bottom of the stage's scroller, not at the picture. The menu cannot
+be opened from the keyboard while no picture is shown, because the scroller, the stage's focus target, is hidden then; a
+right-click still opens it.
 
 #### Dependencies
 
@@ -236,6 +280,7 @@ checkerboard, and the picture cannot be panned by dragging with the Space key he
 - The check of the picture against the style (`StyleCheckCommand`, of the `Style` subsystem) — reads the shown picture
   through `IRenderedImageSource` and gives its notes through `IRenderNoteSink`.
 - `ApplicationComposition` — creates the pane over the explorer, the refresh scheduler, and the drag source, puts the
-  marking layer in `Overlay` and its tool bar in `Toolbar`, and turns `IsDragOutEnabled` off while a marking tool is
-  chosen.
+  marking layer in `Overlay` and its tool bar in `Toolbar`, puts the shell's Copy Image and Export as PNG commands in
+  `CopyImageCommand` and `ExportPngCommand`, and turns `IsDragOutEnabled` and `IsPictureMenuEnabled` off while a marking
+  tool is chosen.
 - `AnnotationToolbarView` — finds the pane view among its ancestors to take the tool keys from it.

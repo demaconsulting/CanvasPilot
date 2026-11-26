@@ -25,8 +25,10 @@ using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using CommunityToolkit.Mvvm.Input;
+using DemaConsulting.CanvasPilot.AnnotationSubsystem;
 using DemaConsulting.CanvasPilot.AppShellSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
 using DemaConsulting.CanvasPilot.ComposerSubsystem;
@@ -1010,6 +1012,83 @@ public sealed class MainWindowViewTests : IDisposable
     }
 
     /// <summary>
+    ///     Test that in the main window the menu of the picture opens on a right-click of the shown picture and with
+    ///     Shift+F10 on the focused stage, that its items run the Copy Image and Export as PNG commands of the Image menu,
+    ///     that it stays closed while a marking tool is chosen, and that it opens again with Shift+F10 from the drawing
+    ///     layer once the tool is put away.
+    /// </summary>
+    [AvaloniaFact]
+    public async Task MainWindowView_PictureMenu_ShownPicture_RunsTheImageCommandsAndStaysClosedWhileMarking()
+    {
+        // Arrange: a shown window over a counting exporter, with a project that shows a picture
+        await CreateRememberedProjectAsync("Menu");
+        var exporter = new SwitchableImageExporter();
+        var (composition, window) = CreateWindow(exporter);
+        window.Show();
+        await composition.Shell.RecentProjects[0].OpenCommand.ExecuteAsync(null);
+        var folder = composition.Shell.CurrentProject!.FolderPath;
+        await File.WriteAllTextAsync(
+            Path.Combine(folder, "red.svg"),
+            "<svg xmlns='http://www.w3.org/2000/svg' width='40' height='20'><rect width='40' height='20' fill='#ff0000'/></svg>",
+            TestContext.Current.CancellationToken);
+        composition.Shell.Workspace.Explorer.Refresh();
+        composition.Shell.Workspace.Explorer.SelectFile(Path.Combine(folder, "red.svg"));
+        await composition.Preview.RenderCompletion;
+        exporter.CanExport = true;
+        AppShellUiHelpers.Flush();
+        var menu = SettingsUiHelpers.Find<Grid>(window, "PreviewStage").ContextMenu!;
+        var image = SettingsUiHelpers.Find<Image>(window, "PreviewImage");
+        var center = image.TranslatePoint(new Point(image.Bounds.Width / 2, image.Bounds.Height / 2), window)!.Value;
+
+        // Act: right-click the picture and choose Copy image; press Shift+F10 on the focused stage and choose Export as
+        // PNG; then choose the rectangle tool and right-click the picture again; then focus the drawing layer, put the
+        // tool away, and press Shift+F10
+        window.MouseDown(center, MouseButton.Right);
+        window.MouseUp(center, MouseButton.Right);
+        AppShellUiHelpers.Flush();
+        var openedByRightClick = menu.IsOpen;
+        MenuItemOf(menu, "PictureMenuCopyImage").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        SettingsUiHelpers.Find<ScrollViewer>(window, "PreviewScroller").Focus();
+        window.KeyPressQwerty(PhysicalKey.F10, RawInputModifiers.Shift);
+        window.KeyReleaseQwerty(PhysicalKey.F10, RawInputModifiers.Shift);
+        AppShellUiHelpers.Flush();
+        var openedByKeyboard = menu.IsOpen;
+        MenuItemOf(menu, "PictureMenuExportPng").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        menu.Close();
+        AppShellUiHelpers.Flush();
+        composition.Annotation.SelectTool(AnnotationTool.Rectangle);
+        AppShellUiHelpers.Flush();
+        window.MouseDown(center, MouseButton.Right);
+        window.MouseUp(center, MouseButton.Right);
+        AppShellUiHelpers.Flush();
+        var openedWhileMarking = menu.IsOpen;
+        var layer = SettingsUiHelpers.Find<AnnotationOverlayView>(window, "AnnotationOverlay");
+        layer.Focus();
+        composition.Annotation.SelectTool(AnnotationTool.None);
+        AppShellUiHelpers.Flush();
+        var layerKeepsFocus = layer.IsFocused;
+        window.KeyPressQwerty(PhysicalKey.F10, RawInputModifiers.Shift);
+        window.KeyReleaseQwerty(PhysicalKey.F10, RawInputModifiers.Shift);
+        AppShellUiHelpers.Flush();
+        var openedFromDrawingLayer = menu.IsOpen;
+        menu.Close();
+
+        // Assert: the menu opened both ways and reached the Image menu's exporter once per item; not while marking;
+        // and from the drawing layer, which kept the focus, once the tool was put away
+        Assert.True(openedByRightClick);
+        Assert.True(openedByKeyboard);
+        Assert.Equal(1, exporter.Copies);
+        Assert.Equal(1, exporter.Exports);
+        Assert.False(openedWhileMarking);
+        Assert.True(layerKeepsFocus);
+        Assert.True(openedFromDrawingLayer);
+
+        window.Close();
+    }
+
+    /// <summary>
     ///     Test that the window's message dialog shows its text and closes with OK.
     /// </summary>
     [AvaloniaFact]
@@ -1480,6 +1559,17 @@ public sealed class MainWindowViewTests : IDisposable
     private static string IdOf(Control control)
     {
         return AutomationProperties.GetAutomationId(control) ?? string.Empty;
+    }
+
+    /// <summary>
+    ///     Finds the item of a menu that has the given automation identifier.
+    /// </summary>
+    /// <param name="menu">The menu.</param>
+    /// <param name="automationId">The automation identifier of the item.</param>
+    /// <returns>The item.</returns>
+    private static MenuItem MenuItemOf(ContextMenu menu, string automationId)
+    {
+        return menu.Items.OfType<MenuItem>().Single(item => AutomationProperties.GetAutomationId(item) == automationId);
     }
 
     /// <summary>

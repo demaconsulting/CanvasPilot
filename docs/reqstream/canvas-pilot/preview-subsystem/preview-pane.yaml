@@ -8,7 +8,8 @@
 # tells the facts of the shown picture (file name, size, format, render time) and shows the busy line, the render
 # error as a card, the notes of the render in a drawer, and the placeholder. It also provides the slot for the layer
 # shown exactly over the picture, in the picture's own pixel coordinates, and the slot for the controls of that layer
-# that floats over the stage.
+# that floats over the stage, and the menu of the picture on the stage, which runs the copy and export commands of the
+# host.
 
 sections:
   - title: CanvasPilot Requirements
@@ -240,6 +241,30 @@ sections:
                   - PreviewPaneView_DragFromImage_PictureShown_OffersPngFileAndBitmap
                   - PreviewPaneView_DragFromImage_ClickOrNotAllowed_StartsNothing
                   - PreviewPaneView_DragFromImage_DragOperationFails_LogsAndKeepsWorking
+
+              - id: CanvasPilot-PreviewPane-ShowPictureMenu
+                title: >-
+                  The PreviewPane shall open a menu with a Copy image item and an Export as PNG item, in that order, each
+                  with an access key and a name for screen readers, when the user right-clicks the picture or the stage
+                  around it, or presses Shift+F10 or the Menu key while the stage has the keyboard focus; shall run the
+                  copy or export command that the host gives when an item is chosen; shall show an item unusable while
+                  its command cannot run or the host gave none; and shall not open the menu while the host has turned it
+                  off, nor from the controls that float over the stage.
+                justification: |
+                  The picture is where users expect to find Copy, and keyboard and screen-reader users need the same menu.
+                  The pane runs the host's commands so the menu and the host's own menu never differ. The pointer may be
+                  used for something else on the picture, such as drawing a mark, and the floating controls are not the
+                  picture.
+                children:
+                  - CanvasPilot-OTS-Avalonia-ShowMenusThatFollowCommands
+                tests:
+                  - PreviewPaneViewModel_PictureMenu_AssignedCommandsAndSwitch_AreExposedAndAnnounced
+                  - PreviewPaneView_PictureMenu_RightClickOnPicture_OpensNamedItemsThatRunTheCommands
+                  - PreviewPaneView_PictureMenu_ShiftF10OrMenuKeyOnFocusedStage_Opens
+                  - PreviewPaneView_PictureMenu_ShiftF10OnFocusedControlInStage_RequestsTheMenuFromThatControl
+                  - PreviewPaneView_PictureMenu_ShiftF10WherePlatformCountsItAsMenuKey_RequestsTheMenuOnce
+                  - PreviewPaneView_PictureMenu_CommandsCannotRunOrMissing_ItemsAreUnusable
+                  - PreviewPaneView_PictureMenu_TurnedOffOrOnFloatingControls_DoesNotOpen
 
               - id: CanvasPilot-PreviewPane-ShowStyleNotes
                 title: >-

@@ -45,7 +45,8 @@ Available now:
   them on a folder, make files and folders, and see changes made by other tools
 - **Live preview**: Draws the selected file with CanvasNet on a stage and redraws it when the file changes, with zoom
   (fit, 1:1, steps, and Ctrl+mouse wheel), and error codes, hints, and notes explained
-- **Export and share**: Export the picture as a PNG file, copy the image, or drag the picture into other applications
+- **Export and share**: Export the picture as a PNG file and copy the image, from the Image menu or by right-clicking
+  the picture (or Shift+F10), or drag the picture into other applications
 - **Chat composer**: Press Enter to send and Shift+Enter for a new line, write a message by typing or by push-to-talk
   dictation (hold F9 by default; you can choose another key on the Speech page), attach files by drag and drop, paste,
   or the paperclip, with folders and images as inline chips, and undo and redo in fine-grained steps

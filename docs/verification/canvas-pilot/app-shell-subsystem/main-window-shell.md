@@ -339,6 +339,14 @@ project name with the underscore doubled and its command opens the project. This
 exporter reports an image, then usable, and each reaches the exporter. This scenario is tested by
 `MainWindowView_ImageMenu_ExporterEnables_ItemsEnabledAndRunExporter`.
 
+**MainWindowView_PictureMenu_ShownPicture_RunsTheImageCommandsAndStaysClosedWhileMarking**: With the composed
+application over a counting exporter and a picture shown, the menu of the picture on the stage opens on a right-click of
+the picture and with Shift+F10 on the focused stage; its Copy image and Export as PNG items reach the exporter of the
+Image menu once each, and with the rectangle tool chosen a right-click opens nothing; with the drawing layer focused
+while the tool is chosen and the tool then put away, the layer keeps the focus and Shift+F10 opens the menu. The
+requirement it serves belongs to the `AppShell` subsystem (see its verification). This scenario is tested by
+`MainWindowView_PictureMenu_ShownPicture_RunsTheImageCommandsAndStaysClosedWhileMarking`.
+
 **MainWindowView_SelectSvg_ShowsPreviewAndEnablesImageMenu**: With the composed application, selecting an SVG in the
 explorer shows its bitmap in the preview pane inside the workspace and makes the Image items usable; closing the
 project makes them unusable again. This scenario is tested by

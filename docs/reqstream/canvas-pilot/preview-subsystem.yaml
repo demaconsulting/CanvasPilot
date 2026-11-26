@@ -8,7 +8,8 @@
 #   ImageExporter (ImageExporter.cs, IImageExporter.cs, IExportDialogs.cs), ExportPresetDialog, ImageDragSource
 #   (ImageDragSource.cs), and ThumbnailProvider (ThumbnailProvider.cs, which implements IThumbnailSource.cs of the
 #   Project subsystem)
-# - Subsystem requirements describe the preview behavior that satisfies the system-level preview requirements
+# - Subsystem requirements describe the preview behavior that satisfies the system-level preview requirements, including
+#   the menu of the picture on the stage, which runs the copy and export commands of the host
 
 sections:
   - title: CanvasPilot Requirements
@@ -163,6 +164,20 @@ sections:
               - CanvasPilot-PreviewPane-StartImageDrag
             tests:
               - PreviewSubsystem_DragImageOut_ShownPicture_ProvidesPngFileAndBytes
+
+          - id: CanvasPilot-Preview-PictureMenu
+            title: >-
+              The Preview subsystem shall offer a menu on the stage of the preview, opened by a right-click or from the
+              keyboard, whose Copy image and Export as PNG items run the copy and export commands that the host gives and
+              are usable only while those commands can run, and shall keep the menu closed while the host turns it off.
+            justification: |
+              The commands that copy and export the picture belong to the host, which already offers them, so the preview
+              runs them instead of a second copy of their logic and stays free of the host. Only the host knows when the
+              pointer is used for something else on the picture, such as drawing a mark.
+            children:
+              - CanvasPilot-PreviewPane-ShowPictureMenu
+            tests:
+              - PreviewSubsystem_PictureMenu_ExporterCommands_CopyAndExportTheShownPictureAndFollowIt
 
           - id: CanvasPilot-Preview-ZoomPicture
             title: >-

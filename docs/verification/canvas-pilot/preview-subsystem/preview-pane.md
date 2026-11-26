@@ -73,6 +73,16 @@ are not evidence for a requirement):
   dragging out is off, and a drag from a pane without a drag source start nothing; a drag operation that fails is
   logged and the next drag starts normally.
 - The pane gives a file for dragging only while a picture is shown, dragging out is on, and it has a drag source.
+- The command slots of the menu of the picture are empty and its switch is on by default; the very commands assigned
+  are exposed and every change is announced. A right-click on the picture or the empty stage, Shift+F10 (also when
+  Shift is released first), or the Menu key with the stage or a control inside it focused opens the menu, whose items
+  are Copy image and Export as PNG, in that order, with access keys, automation identifiers, and names for screen
+  readers, and run the assigned commands once each; F10 alone does not open it. Shift+F10 on a control inside the stage
+  that has a menu of its own opens that menu instead; a press whose focus moves away before the release opens nothing;
+  and where the platform counts Shift+F10 as a menu key, one press asks for the menu once. The items are unusable while
+  their commands cannot run, while no commands are assigned, and after a render failed, when a right-click on the error
+  opens the menu. The menu does not open while it is turned off, by a right-click or a key, nor by a right-click on the
+  slot of the host's tool bar, the notes drawer, or the zoom pill, and opens again on the picture once turned on.
 - Notes that a part gives for the shown picture replace, in place, the earlier notes of the same group, keep the notes
   of the renderer and of other groups in their order, open the list, are ignored while no picture is shown, and are gone
   when the picture is drawn again; a blank group and a missing list are refused.
@@ -273,6 +283,46 @@ no drag source. This scenario is tested by `PreviewPaneView_DragFromImage_ClickO
 **PreviewPaneView_DragFromImage_DragOperationFails_LogsAndKeepsWorking**: When the drag operation fails the first time,
 the log holds the problem and its text, and after the release a second drag starts normally. This scenario is tested by
 `PreviewPaneView_DragFromImage_DragOperationFails_LogsAndKeepsWorking`.
+
+**PreviewPaneViewModel_PictureMenu_AssignedCommandsAndSwitch_AreExposedAndAnnounced**: A new pane has no copy or export
+command and the menu of the picture on; assigning two commands exposes those same commands and announces each once, and
+turning the menu off and on again is announced twice. This scenario is tested by
+`PreviewPaneViewModel_PictureMenu_AssignedCommandsAndSwitch_AreExposedAndAnnounced`.
+
+**PreviewPaneView_PictureMenu_RightClickOnPicture_OpensNamedItemsThatRunTheCommands**: With a 40 by 20 picture shown
+and two counting commands assigned, a right-click on the center of the picture opens the menu (named "Picture"), whose
+items are `PictureMenuCopyImage` (`_Copy image`, named "Copy image") and `PictureMenuExportPng` (`_Export as PNG...`,
+named "Export as PNG"), both usable; choosing each runs its command once; a right-click on the empty stage beside the
+picture opens the menu too. This scenario is tested by
+`PreviewPaneView_PictureMenu_RightClickOnPicture_OpensNamedItemsThatRunTheCommands`.
+
+**PreviewPaneView_PictureMenu_ShiftF10OrMenuKeyOnFocusedStage_Opens**: With the stage's scroller focused, Shift+F10
+opens the menu, also when Shift is released before F10; the Menu key opens it; and F10 alone does not. This scenario is
+tested by `PreviewPaneView_PictureMenu_ShiftF10OrMenuKeyOnFocusedStage_Opens`.
+
+**PreviewPaneView_PictureMenu_ShiftF10OnFocusedControlInStage_RequestsTheMenuFromThatControl**: With a focusable layer
+in the overlay slot focused, Shift+F10 and the Menu key each open the menu of the picture. A Shift+F10 press whose focus
+moves to the scroller before F10 is released opens nothing. With a focusable control that has its own menu in the slot
+and focused, Shift+F10 opens that control's menu and not the menu of the picture. This scenario is tested by
+`PreviewPaneView_PictureMenu_ShiftF10OnFocusedControlInStage_RequestsTheMenuFromThatControl`.
+
+**PreviewPaneView_PictureMenu_ShiftF10WherePlatformCountsItAsMenuKey_RequestsTheMenuOnce**: With Shift+F10 added to the
+platform's gestures for a context menu, as on Windows, and the layer in the overlay slot focused, Shift+F10 opens the
+menu after a single opening. With the menu turned off, Shift+F10 asks it to open once and it stays closed. This
+scenario is tested by `PreviewPaneView_PictureMenu_ShiftF10WherePlatformCountsItAsMenuKey_RequestsTheMenuOnce`.
+
+**PreviewPaneView_PictureMenu_CommandsCannotRunOrMissing_ItemsAreUnusable**: A right-click on the picture with no
+commands assigned, and with commands that cannot run, opens the menu with both items unusable, and choosing an unusable
+item runs nothing; after a broken file is selected, with commands that run only while a picture is shown, a right-click
+on the error opens the menu with both items unusable. This is the error path of the menu. This scenario is tested by
+`PreviewPaneView_PictureMenu_CommandsCannotRunOrMissing_ItemsAreUnusable`.
+
+**PreviewPaneView_PictureMenu_TurnedOffOrOnFloatingControls_DoesNotOpen**: While the menu is turned off, a right-click
+on the picture, the Menu key, and Shift+F10 on the focused stage open nothing; once it is on again, with a control in
+the slot of the host's tool bar and a note in the notes drawer, a right-click on that control, on the open drawer, on
+the drawer's header once it is closed, and on the actual size button of the zoom pill opens nothing, and a right-click
+on the picture opens the menu. This scenario is tested by
+`PreviewPaneView_PictureMenu_TurnedOffOrOnFloatingControls_DoesNotOpen`.
 
 **PreviewPaneView_ProjectClosed_ClearsPicture**: Closing the project removes the bitmap and shows the placeholder
 `No project is open.`. This scenario is tested by `PreviewPaneView_ProjectClosed_ClearsPicture`.
