@@ -5,9 +5,8 @@
 # - Define requirements for the CanvasPilot Knowledge subsystem
 # - The Knowledge subsystem holds what the drawing assistant needs to know to draw with the formats CanvasNet draws and to
 #   work in a CanvasPilot project: a catalog of cards that is taken from the help of CanvasNet and extended with cards of
-#   CanvasPilot, a search of the cards, and the text of cards for the prompt of an assistant. It also reads the Markdown
-#   of the cards, which the copilot writes its replies in, and offers the control that draws the replies of the copilot.
-#   It is kept apart from every provider of a language model
+#   CanvasPilot, a search of the cards, and the text of cards for the prompt of an assistant. It has no user interface,
+#   and it is kept apart from every provider of a language model
 # - Subsystem requirements describe the behavior of the units working together
 
 sections:
@@ -104,19 +103,3 @@ sections:
               - CanvasPilot-KnowledgeSkills-NameSkillsFromIds
             tests:
               - KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostOnlyCards
-
-          - id: CanvasPilot-Knowledge-ShowRepliesAsMarkdown
-            title: >-
-              The Knowledge subsystem shall read text written in the small dialect of Markdown that the knowledge cards use
-              into headings, paragraphs, list items, and blocks of code with bold, italic, and code text without losing any
-              of its text, and shall offer a control that draws those blocks as text that the user can select and copy.
-            justification: |
-              The copilot writes its replies in Markdown, the dialect it reads in the cards. A reply that is shown with its
-              markers is hard to read, and a reply that is shown with part of its text missing would mislead, so the reader
-              and the control that draws its blocks are made once, here, and the reader is checked on every card. The user
-              takes words from a reply back to the copilot, so the text must be selectable.
-            children:
-              - CanvasPilot-KnowledgeMarkdown-ParseCardDialect
-              - CanvasPilot-KnowledgeMarkdown-DrawBlocks
-            tests:
-              - KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow

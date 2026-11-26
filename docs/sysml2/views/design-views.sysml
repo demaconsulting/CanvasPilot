@@ -264,13 +264,13 @@ package CanvasPilotDesignViews {
     }
 
     view ChatSubsystemPanelView : GeneralView {
-        doc /* Dependencies of the chat panel on the units that compose a message, on the turn runner that runs the turn of the AI copilot, on the planner of the prompts that it offers, on the key that is held to talk whose name it shows, on the contract of the Agent subsystem through which it asks whether the provider can be used, and on the Markdown reader of the Knowledge subsystem that draws the final text of a reply. Hub suppliers omitted: RollingFileLogger, PathHelpers, and ProjectService; the dependencies on the chat history store and the project service are in ChatSubsystemHistoryView. */
+        doc /* Dependencies of the chat panel on the units that compose a message, on the turn runner that runs the turn of the AI copilot, on the planner of the prompts that it offers, on the key that is held to talk whose name it shows, on the contract of the Agent subsystem through which it asks whether the provider can be used, and on the ReplyMarkdown unit that reads and draws the final text of a reply. Hub suppliers omitted: RollingFileLogger, PathHelpers, and ProjectService; the dependencies on the chat history store and the project service are in ChatSubsystemHistoryView. */
         expose CanvasPilot_ChatPanel::ChatPanel;
         expose CanvasPilot_ChatTurnRunner::ChatTurnRunner;
         expose CanvasPilot_FollowUpSuggestions::FollowUpSuggestions;
         expose CanvasPilot_PushToTalkBinding::PushToTalkBinding;
         expose CanvasPilot_AgentContract::AgentContract;
-        expose CanvasPilot_KnowledgeMarkdown::KnowledgeMarkdown;
+        expose CanvasPilot_ReplyMarkdown::ReplyMarkdown;
         expose CanvasPilot_ComposerViewModel::ComposerViewModel;
         expose CanvasPilot_ComposerEditor::ComposerEditor;
         expose CanvasPilot_MarkRegistry::MarkRegistry;
@@ -329,7 +329,6 @@ package CanvasPilotDesignViews {
         expose CanvasPilot_KnowledgePromptBuilder::KnowledgePromptBuilder;
         expose CanvasPilot_KnowledgeTools::KnowledgeTools;
         expose CanvasPilot_KnowledgeSkills::KnowledgeSkills;
-        expose CanvasPilot_KnowledgeMarkdown::KnowledgeMarkdown;
         expose OtsDependencies::CanvasNet;
         filter not (@SysML::Documentation);
     }

@@ -18,8 +18,6 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
-
 namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
@@ -136,7 +134,7 @@ public sealed class AssistantReplyViewModel : TranscriptRowViewModel
     ///     streaming, stopped, or failed, when the text is shown as plain text. The text is read once and the blocks are
     ///     kept.
     /// </summary>
-    public IReadOnlyList<MarkdownBlock>? Blocks => IsComplete ? _blocks ??= KnowledgeMarkdown.Parse(_text) : null;
+    public IReadOnlyList<MarkdownBlock>? Blocks => IsComplete ? _blocks ??= ReplyMarkdown.Parse(_text) : null;
 
     /// <summary>
     ///     Gets the word that says what became of a reply that did not end normally: <c>Stopped</c> or <c>Failed</c>, and

@@ -575,6 +575,7 @@ reviews:
       - "docs/design/canvas-pilot/chat-subsystem.md"
       - "docs/verification/canvas-pilot/chat-subsystem.md"
       - "test/**/ChatSubsystem/ChatSubsystemTests.cs"
+      - "test/**/ChatSubsystemUiTests.cs"
 
   - id: CanvasPilot-Chat-ChatPanel
     title: Review of CanvasPilot ChatPanel unit implementation
@@ -690,6 +691,29 @@ reviews:
       - "src/**/ChatSubsystem/PayloadPictureViewModel.cs"
       - "test/**/ChatSubsystem/PayloadInspectorTests.cs"
       - "test/**/PayloadInspectorViewTests.cs"
+
+  - id: CanvasPilot-Chat-ReplyMarkdown
+    title: Review of CanvasPilot ReplyMarkdown unit implementation
+    context:
+      - docs/design/canvas-pilot.md
+      - docs/reqstream/canvas-pilot.yaml
+      - docs/design/canvas-pilot/chat-subsystem.md
+      - docs/reqstream/canvas-pilot/chat-subsystem.yaml
+    paths:
+      - "docs/reqstream/canvas-pilot/chat-subsystem/reply-markdown.yaml"
+      - "docs/design/canvas-pilot/chat-subsystem/reply-markdown.md"
+      - "docs/verification/canvas-pilot/chat-subsystem/reply-markdown.md"
+      - "src/**/ChatSubsystem/ReplyMarkdown.cs"
+      - "src/**/ChatSubsystem/MarkdownBlock.cs"
+      - "src/**/ChatSubsystem/HeadingBlock.cs"
+      - "src/**/ChatSubsystem/ParagraphBlock.cs"
+      - "src/**/ChatSubsystem/ListItemBlock.cs"
+      - "src/**/ChatSubsystem/CodeBlock.cs"
+      - "src/**/ChatSubsystem/MarkdownSpan.cs"
+      - "src/**/ChatSubsystem/MarkdownSpanStyle.cs"
+      - "src/**/ChatSubsystem/MarkdownBlocksPanel.cs"
+      - "test/**/ChatSubsystem/ReplyMarkdownTests.cs"
+      - "test/**/ReplyMarkdownViewTests.cs"
 
   # CanvasPilot - Composer
   - id: CanvasPilot-Composer
@@ -904,29 +928,6 @@ reviews:
       - "src/**/KnowledgeSubsystem/KnowledgeSkills.cs"
       - "test/**/KnowledgeSubsystem/KnowledgeSkillsTests.cs"
       - "test/**/KnowledgeSubsystem/FakeKnowledgeCatalog.cs"
-
-  - id: CanvasPilot-Knowledge-KnowledgeMarkdown
-    title: Review of CanvasPilot KnowledgeMarkdown unit implementation
-    context:
-      - docs/design/canvas-pilot.md
-      - docs/reqstream/canvas-pilot.yaml
-      - docs/design/canvas-pilot/knowledge-subsystem.md
-      - docs/reqstream/canvas-pilot/knowledge-subsystem.yaml
-    paths:
-      - "docs/reqstream/canvas-pilot/knowledge-subsystem/knowledge-markdown.yaml"
-      - "docs/design/canvas-pilot/knowledge-subsystem/knowledge-markdown.md"
-      - "docs/verification/canvas-pilot/knowledge-subsystem/knowledge-markdown.md"
-      - "src/**/KnowledgeSubsystem/KnowledgeMarkdown.cs"
-      - "src/**/KnowledgeSubsystem/MarkdownBlock.cs"
-      - "src/**/KnowledgeSubsystem/HeadingBlock.cs"
-      - "src/**/KnowledgeSubsystem/ParagraphBlock.cs"
-      - "src/**/KnowledgeSubsystem/ListItemBlock.cs"
-      - "src/**/KnowledgeSubsystem/CodeBlock.cs"
-      - "src/**/KnowledgeSubsystem/MarkdownSpan.cs"
-      - "src/**/KnowledgeSubsystem/MarkdownSpanStyle.cs"
-      - "src/**/KnowledgeSubsystem/MarkdownBlocksPanel.cs"
-      - "test/**/KnowledgeSubsystem/KnowledgeMarkdownTests.cs"
-      - "test/**/KnowledgeMarkdownViewTests.cs"
 
   # CanvasPilot - Logging
   - id: CanvasPilot-Logging

@@ -72,7 +72,7 @@ sections:
                   each the name or another name of a card, ignoring case, shall find no card for a path that names no card
                   or a card that is left out, and shall give the cards below a card and the cards related to it in order.
                 justification: |
-                  An assistant and a user name cards in the way that comes to mind: a path, a name, a shorter name. Finding
+                  An assistant names cards in the way that comes to mind: a path, a name, a shorter name. Finding
                   the card in each way, and nothing for a name that is not offered, lets a request be answered or refused
                   exactly.
                 tests:
@@ -142,8 +142,8 @@ sections:
                   The KnowledgeCatalog shall offer its cards, examples, and results as values that do not change after they
                   are built: the lists that it hands out refuse every change.
                 justification: |
-                  What searches the cards, writes them for a prompt, and shows them reads the same values from many threads
-                  and many consumers. Values that cannot change can be shared between threads without a lock, and no consumer
-                  can alter what the others see.
+                  What searches the cards, writes them for a prompt, makes skills of them, and answers the help tool
+                  reads the same values from many threads and many consumers. Values that cannot change can be shared
+                  between threads without a lock, and no consumer can alter what the others see.
                 tests:
                   - KnowledgeCatalog_Default_ListsCannotBeChanged

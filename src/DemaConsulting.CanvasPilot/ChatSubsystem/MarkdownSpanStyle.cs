@@ -18,10 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     How a run of text of a card is drawn.
+///     How a run of Markdown text is drawn.
 /// </summary>
 public enum MarkdownSpanStyle
 {

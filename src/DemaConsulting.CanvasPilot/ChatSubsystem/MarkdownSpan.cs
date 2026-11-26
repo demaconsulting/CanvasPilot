@@ -18,11 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     An item of a bulleted or numbered list of a card, with the lines that continue it joined with a space.
+///     A run of text of a heading, paragraph, or list item that is drawn in one style.
 /// </summary>
-/// <param name="Marker">The marker of the item as the source wrote it: <c>-</c>, <c>*</c>, or <c>+</c> for a bullet, or the number and its dot or parenthesis, such as <c>1.</c>.</param>
-/// <param name="Spans">The text of the item, in runs that have one style each.</param>
-public sealed record ListItemBlock(string Marker, IReadOnlyList<MarkdownSpan> Spans) : MarkdownBlock;
+/// <param name="Text">The text of the run, without the markers that gave it its style.</param>
+/// <param name="Style">How the run is drawn.</param>
+public sealed record MarkdownSpan(string Text, MarkdownSpanStyle Style);

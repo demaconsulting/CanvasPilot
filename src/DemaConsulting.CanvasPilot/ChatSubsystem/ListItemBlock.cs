@@ -18,11 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     A heading of a card.
+///     An item of a bulleted or numbered list of a Markdown text, with the lines that continue it joined with a space.
 /// </summary>
-/// <param name="Level">The level of the heading, from 1 for <c>#</c> to 6 for <c>######</c>.</param>
-/// <param name="Spans">The text of the heading, in runs that have one style each.</param>
-public sealed record HeadingBlock(int Level, IReadOnlyList<MarkdownSpan> Spans) : MarkdownBlock;
+/// <param name="Marker">The marker of the item as the source wrote it: <c>-</c>, <c>*</c>, or <c>+</c> for a bullet, or the number and its dot or parenthesis, such as <c>1.</c>.</param>
+/// <param name="Spans">The text of the item, in runs that have one style each.</param>
+public sealed record ListItemBlock(string Marker, IReadOnlyList<MarkdownSpan> Spans) : MarkdownBlock;

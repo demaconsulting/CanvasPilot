@@ -4,8 +4,8 @@
 
 #### Purpose
 
-`KnowledgeSearch` finds the cards of a knowledge catalog that fit some words, so that a user or an assistant can ask for
-what they want to do without knowing the name of the card. The answer is the same for the same words and the same cards.
+`KnowledgeSearch` finds the cards of a knowledge catalog that fit some words, so that an assistant can ask for
+what it wants to do without knowing the name of the card. The answer is the same for the same words and the same cards.
 
 #### Data Model
 

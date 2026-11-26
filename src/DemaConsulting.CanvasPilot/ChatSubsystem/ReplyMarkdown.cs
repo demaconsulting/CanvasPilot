@@ -20,28 +20,29 @@
 
 using System.Text;
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     Reads the small dialect of Markdown that the knowledge cards and the replies of the copilot are written in into
-///     blocks and runs of text that <see cref="MarkdownBlocksPanel" /> draws.
+///     Reads the Markdown text of a reply of the copilot into blocks and runs of text that
+///     <see cref="MarkdownBlocksPanel" /> draws.
 /// </summary>
 /// <remarks>
 ///     <para>
-///         The cards use only headings (<c>#</c> to <c>######</c>), paragraphs, bulleted and numbered lists, fenced
-///         blocks of code, and, inside the text, <c>**bold**</c>, <c>*italic*</c>, and <c>`code`</c>. Their links were
-///         already written as the identifiers of cards in code quotes when the catalog was built, so the unit has no
-///         links, tables, or quotes, and a Markdown library would add a dependency for no gain. A line that starts a
-///         heading, a list item, or a fence ends the paragraph or item before it; the lines that follow a list item
-///         without a blank line continue the item; a blank line ends a paragraph or an item; a fence that is not closed
-///         runs to the end of the text. Lines of a paragraph or an item are joined with a space.
+///         The unit reads headings (<c>#</c> to <c>######</c>), paragraphs, bulleted and numbered lists, fenced blocks
+///         of code, and, inside the text, <c>**bold**</c>, <c>*italic*</c>, and <c>`code`</c>. Links, tables, quotes,
+///         and any other construct are kept as the text that was written, so a Markdown library would add a dependency
+///         for no gain. A line that starts a heading, a list item, or a fence ends the paragraph or item before it; the
+///         lines that follow a list item without a blank line continue the item; a blank line ends a paragraph or an
+///         item; a fence that is not closed runs to the end of the text. Lines of a paragraph or an item are joined with
+///         a space.
 ///     </para>
 ///     <para>
-///         Reading never fails and loses no character of text: a marker that has nothing to close it, such as a lone
-///         <c>*</c>, is kept as text. The unit holds no state and is safe for concurrent use.
+///         Reading never fails: a marker that has nothing to close it, such as a lone <c>*</c>, is kept as text. Only
+///         the first word after an opening fence is kept, as the language of the block. The unit holds no state and is
+///         safe for concurrent use.
 ///     </para>
 /// </remarks>
-public static class KnowledgeMarkdown
+public static class ReplyMarkdown
 {
     /// <summary>
     ///     The fewest backticks that open or close a fenced block.
@@ -59,7 +60,7 @@ public static class KnowledgeMarkdown
     private const int MaximumHeadingIndent = 3;
 
     /// <summary>
-    ///     Reads the Markdown of a card into blocks.
+    ///     Reads Markdown text into blocks.
     /// </summary>
     /// <param name="markdown">The Markdown text.</param>
     /// <returns>The blocks in order; empty for text that is empty or only blank lines.</returns>

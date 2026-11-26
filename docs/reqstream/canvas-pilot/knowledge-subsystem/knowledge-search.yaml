@@ -22,7 +22,7 @@ sections:
                   first and no more than the number asked for, return nothing for a query without a word, and refuse a
                   missing query and a number of results below one.
                 justification: |
-                  People and assistants ask for cards in their own words: the name of a format, a thing they want to draw,
+                  An assistant asks for cards in its own words: the name of a format, a thing it is asked to draw,
                   the plural of a word. Putting the exact names of a card first, then the words of its title, and last the
                   words of its summary, finds the card that is about the thing before the card that only mentions it, and
                   the bonus for a card that has every word keeps a card that has all of them above one that has a single
@@ -47,7 +47,7 @@ sections:
                   fewest first, and then by identifier, and shall give the same list for the same query and the same cards
                   every time, with no dependence on the culture, on chance, or on the order of a dictionary.
                 justification: |
-                  A test, a prompt, and a user who asks twice must see the same answer. When a name is shared by two
+                  A test, a prompt, and an assistant that asks twice must see the same answer. When a name is shared by two
                   formats, the card nearer the top of the tree is the more general one, and an order that does not depend on
                   anything else makes the list a record that can be compared.
                 tests:

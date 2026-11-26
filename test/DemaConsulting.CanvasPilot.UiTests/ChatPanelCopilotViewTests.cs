@@ -22,7 +22,6 @@ using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using DemaConsulting.CanvasPilot.AgentSubsystem;
 using DemaConsulting.CanvasPilot.ChatSubsystem;
-using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 

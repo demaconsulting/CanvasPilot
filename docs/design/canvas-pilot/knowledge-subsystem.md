@@ -10,16 +10,14 @@ title, a one-line summary, tags, other names, a body in Markdown that links to o
 and examples with their text. The cards come from two places: the help of CanvasNet, which tells how to write each
 format and is as current as the library that draws the files, and cards of CanvasPilot that are embedded in the
 application and tell what the library cannot know: where files go in a project, how to make the picture the user uses,
-how to read the marks and attachments of a message, and what the user sees. Everything in it except the control that
-draws Markdown, which the chat panel uses for the replies of the copilot, has no dependency on the user interface; none
-of it depends on any provider of a language model or on any agent library, so the knowledge can be given to any
-provider of the copilot.
+how to read the marks and attachments of a message, and what the user sees. None of it depends on the user interface,
+on any provider of a language model, or on any agent library, so the knowledge can be given to any provider of the
+copilot.
 
-The subsystem contains six units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
+The subsystem contains five units: `KnowledgeCatalog`, which builds the tree and answers lookups, `KnowledgeSearch`,
 which finds the cards that fit some words, `KnowledgePromptBuilder`, which writes the cards as text for the prompt of an
-assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, `KnowledgeSkills`, which
-describes each card as a skill, and `KnowledgeMarkdown`, which reads Markdown in the dialect of the cards, which the
-copilot writes its replies in, into blocks and draws them as selectable text. It depends on CanvasNet for the help
+assistant, `KnowledgeTools`, which describes the tool the assistant calls to get them, and `KnowledgeSkills`, which
+describes each card as a skill. It depends on CanvasNet for the help
 cards, and on `Project`, `Composer`, and `Annotation` only in its tests, which check that what the cards of CanvasPilot
 say about the application is what the code says.
 
@@ -77,20 +75,6 @@ say about the application is what the code says.
 - *Constraints*: The skills are made as they are read. The names of the skills of the catalog of the application are all
   different, which the tests check. Safe for concurrent use.
 
-**KnowledgeMarkdown**: Markdown in the dialect of the cards as blocks, and the control that draws them.
-
-- *Type*: In-process static class, with the immutable values `HeadingBlock`, `ParagraphBlock`, `ListItemBlock`,
-  `CodeBlock` (all `MarkdownBlock`), `MarkdownSpan`, and the enumeration `MarkdownSpanStyle`; and the Avalonia control
-  `MarkdownBlocksPanel`.
-- *Role*: Provider.
-- *Contract*: `Parse` reads the Markdown that the cards use into headings of six levels, paragraphs, list items with
-  their markers, and fenced blocks of code with their language, with the text of a heading, paragraph, or item as runs
-  of normal, bold, italic, and code text. `MarkdownBlocksPanel` draws the blocks it is given in its `Blocks` property as
-  text that can be selected, with the code blocks on a raised surface of the theme; the chat panel uses it for the
-  replies of the copilot.
-- *Constraints*: Any text can be read and no letter or digit of a card is lost, which the tests check on every card.
-  `Parse` is safe for concurrent use; the panel is used on the thread of the user interface.
-
 ### Design
 
 **Extend first, then leave cards out.** The catalog is made from the help catalog of CanvasNet by adding the cards that
@@ -120,9 +104,9 @@ CanvasNet); the root card of CanvasPilot tells the assistant that it cannot run 
 (`canvasnet_help` and the file tools).
 
 **Own values.** Every card is copied into a `KnowledgeCard`, so that what searches the cards, writes them for a prompt,
-and shows them does not depend on the help types of CanvasNet and can be tested with small catalogs. The links of a body
-are written once, here, as the identifier of a card in code quotes or as the name of an example and the card that holds
-it; a link to a card that is left out is plain text.
+makes skills of them, and answers the help tool does not depend on the help types of CanvasNet and can be tested with
+small catalogs. The links of a body are written once, here, as the identifier of a card in code quotes or as the name of
+an example and the card that holds it; a link to a card that is left out is plain text.
 
 **Deterministic and shared.** The default catalog is built once, thread-safe, from embedded resources only, so no file
 or network is touched and every caller sees the same tree.
@@ -146,11 +130,6 @@ of the card in its name, the title and summary as its description, and the card 
 text of all the cards is many times what should be built up front, so the skills are made one at a time as they are
 read.
 
-**An own small reader for Markdown.** The cards use only headings, paragraphs, lists, fenced code, and bold, italic,
-and code text, and their links were already written as identifiers; the copilot writes its replies in the same dialect.
-A reader of those constructs, whose tests prove on every card that no text is lost, draws the replies of the copilot
-without a Markdown library, which would be one more third-party item to document, test, and keep current.
-
 ### Dependencies
 
 - **KnowledgeCatalog** unit: the tree of cards.
@@ -159,9 +138,6 @@ without a Markdown library, which would be one more third-party item to document
   results of the search.
 - **KnowledgeTools** unit: the tool for an assistant, which answers from the catalog, the search, and the text writer.
 - **KnowledgeSkills** unit: the cards as skills, which reads the catalog and writes each card with the text writer.
-- **KnowledgeMarkdown** unit: the blocks of Markdown and the control that draws them, which has no dependency on another
-  unit.
-- **Avalonia** (OTS): the control `MarkdownBlocksPanel` of `KnowledgeMarkdown`, which is the only part that uses it.
 - **CanvasNet** (OTS): the help cards, their tag filter, and their extension by another assembly.
 
 The view below shows the dependencies between the units of this subsystem and on CanvasNet, from the SysML2 model.

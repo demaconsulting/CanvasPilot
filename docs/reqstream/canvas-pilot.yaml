@@ -827,7 +827,7 @@ sections:
           - CanvasPilot-Agent-ConverseInProjectConversations
           - CanvasPilot-Chat-ShowCopilotConversation
           - CanvasPilot-Chat-HideConversation
-          - CanvasPilot-Knowledge-ShowRepliesAsMarkdown
+          - CanvasPilot-Chat-ShowRepliesFormatted
           - CanvasPilot-AppShell-ComposeAiCopilot
           - CanvasPilot-OTS-AgentKit-RunToolTurnOnChatClient
           - CanvasPilot-OTS-AgentKit-SizeOllamaContext

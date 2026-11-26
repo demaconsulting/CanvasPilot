@@ -18,10 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     A block of a card that has been read from Markdown: a heading, a paragraph, an item of a list, or a block of code.
+///     A block of Markdown text that has been read: a heading, a paragraph, an item of a list, or a block of code.
 ///     The blocks are plain values, so <see cref="MarkdownBlocksPanel" /> can draw them with its own controls.
 /// </summary>
 /// <remarks>

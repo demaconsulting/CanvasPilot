@@ -8,9 +8,7 @@ application, and the list that leaves out the cards that are only about the host
 the assistant will use it. They check the observable result: which cards are offered, that the cards of CanvasPilot are
 last, that no card that is only about the host program is present and the cards for embedding pages and files are, that
 the catalog is one value that many readers share, and that the application library refers to no package of a language
-model or agent library. The one part of the subsystem with a user interface, the control that draws Markdown, is
-verified by the headless tests of the `KnowledgeMarkdown` unit; here the cards of the application are read into the
-blocks that it draws.
+model or agent library.
 
 ### Test Environment
 
@@ -31,8 +29,6 @@ the project file of the application library from the repository; no network, dis
   application, and answers bad arguments with a message.
 - The skills of the application have one skill for each card, with different names that start with `canvasnet-`,
   including the cards of CanvasPilot and none for a card that is left out.
-- The cards of the application are read into blocks that the control draws, with headings, list items, and code in
-  them.
 
 ### Test Scenarios
 
@@ -69,8 +65,3 @@ the application are as many as its cards, have different names that start with `
 cards of CanvasPilot and of the cards for files and PDF pages, have none for a card that is left out, and have the text
 of the card of the marks of a message with its example as the content of its skill. This scenario is tested by
 `KnowledgeSubsystem_Skills_ApplicationCatalog_HasOneSkillPerCardWithoutHostOnlyCards`.
-
-**KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow**: The body of the card of the marks of a
-message, which is a card of CanvasPilot, and the body of the card of framed figures, which is a card of CanvasNet, are
-each read into blocks with a heading, list items or paragraphs, and runs of code text, and no block is empty. This
-scenario is tested by `KnowledgeSubsystem_Markdown_CardOfTheApplication_IsReadIntoBlocksForAWindow`.

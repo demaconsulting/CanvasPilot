@@ -19,16 +19,15 @@
 // SOFTWARE.
 
 using System.Text;
-using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 
 namespace DemaConsulting.CanvasPilot.Tests;
 
 /// <summary>
-///     Unit tests for <see cref="KnowledgeMarkdown" />: every construct of the dialect that the cards use, the cases at
-///     the edges of each, and a test over every card and example description of the catalog of the application that no
-///     character of text is lost.
+///     Unit tests for <see cref="ReplyMarkdown" />: every construct that the unit reads, the cases at the edges of each,
+///     and a test over a reply full of constructs that the unit does not read that no letter or digit of text is lost.
 /// </summary>
-public sealed class KnowledgeMarkdownTests
+public sealed class ReplyMarkdownTests
 {
     /// <summary>
     ///     Writes the blocks of a text as short lines that tests compare: <c>H2:</c>, <c>P:</c>, <c>L-:</c>, or
@@ -39,7 +38,7 @@ public sealed class KnowledgeMarkdownTests
     /// <returns>One line for each block.</returns>
     private static string[] Describe(string markdown)
     {
-        return KnowledgeMarkdown.Parse(markdown).Select(Describe).ToArray();
+        return ReplyMarkdown.Parse(markdown).Select(Describe).ToArray();
     }
 
     /// <summary>
@@ -124,7 +123,7 @@ public sealed class KnowledgeMarkdownTests
     ///     after the marks, and a deep indent are not headings, and that a mark alone is an empty heading.
     /// </summary>
     [Fact]
-    public void KnowledgeMarkdown_Parse_Headings_AreReadByLevel()
+    public void ReplyMarkdown_Parse_Headings_AreReadByLevel()
     {
         // Arrange / Act / Assert: the six levels, a heading with a run of code, and the lines that only look like headings
         Assert.Equal(
@@ -141,16 +140,16 @@ public sealed class KnowledgeMarkdownTests
     ///     every kind of line break and the white space around the text are handled.
     /// </summary>
     [Fact]
-    public void KnowledgeMarkdown_Parse_Paragraphs_JoinLinesAndSplitAtBlankLines()
+    public void ReplyMarkdown_Parse_Paragraphs_JoinLinesAndSplitAtBlankLines()
     {
         // Arrange / Act / Assert
         Assert.Equal(["P:one two three"], Describe("one\ntwo\n  three  "));
         Assert.Equal(["P:one two", "P:three"], Describe("one\r\ntwo\r\n\r\nthree"));
         Assert.Equal(["P:one", "P:two"], Describe("one\r\r  \rtwo"));
         Assert.Equal(["H2:Title", "P:text"], Describe("## Title\ntext"));
-        Assert.Empty(KnowledgeMarkdown.Parse(string.Empty));
-        Assert.Empty(KnowledgeMarkdown.Parse("  \n\n \t \r\n"));
-        Assert.Throws<ArgumentNullException>(() => KnowledgeMarkdown.Parse(null!));
+        Assert.Empty(ReplyMarkdown.Parse(string.Empty));
+        Assert.Empty(ReplyMarkdown.Parse("  \n\n \t \r\n"));
+        Assert.Throws<ArgumentNullException>(() => ReplyMarkdown.Parse(null!));
     }
 
     /// <summary>
@@ -158,7 +157,7 @@ public sealed class KnowledgeMarkdownTests
     ///     lines that start a list inside a paragraph or end an item.
     /// </summary>
     [Fact]
-    public void KnowledgeMarkdown_Parse_Lists_ReadMarkersAndContinuations()
+    public void ReplyMarkdown_Parse_Lists_ReadMarkersAndContinuations()
     {
         // Arrange / Act / Assert: the three bullets and two kinds of number
         Assert.Equal(["L-:one", "L*:two", "L+:three"], Describe("- one\n* two\n+ three"));
@@ -183,7 +182,7 @@ public sealed class KnowledgeMarkdownTests
     ///     with no dot, bold at the start of a line, and a star next to text.
     /// </summary>
     [Fact]
-    public void KnowledgeMarkdown_Parse_LinesThatOnlyLookLikeListItems_AreParagraphs()
+    public void ReplyMarkdown_Parse_LinesThatOnlyLookLikeListItems_AreParagraphs()
     {
         // Arrange / Act / Assert
         Assert.Equal(["P:-"], Describe("-"));
@@ -198,7 +197,7 @@ public sealed class KnowledgeMarkdownTests
     ///     shorter one, an indented fence, and lines that look like other blocks but are code.
     /// </summary>
     [Fact]
-    public void KnowledgeMarkdown_Parse_FencedCode_IsKeptVerbatim()
+    public void ReplyMarkdown_Parse_FencedCode_IsKeptVerbatim()
     {
         // Arrange / Act / Assert: language and text, blank lines kept, markers inside the block not read
         Assert.Equal(["C[xml]<svg>\n\n  <g/>\n</svg>"], Describe("```xml\n<svg>\n\n  <g/>\n</svg>\n```"));
@@ -223,7 +222,7 @@ public sealed class KnowledgeMarkdownTests
     ///     because they have no end or are next to white space.
     /// </summary>
     [Fact]
-    public void KnowledgeMarkdown_Parse_Spans_ReadBoldItalicAndCode()
+    public void ReplyMarkdown_Parse_Spans_ReadBoldItalicAndCode()
     {
         // Arrange / Act / Assert: the three styles and a mix
         Assert.Equal(["P:a <b>bold</b> b"], Describe("a **bold** b"));
@@ -246,67 +245,68 @@ public sealed class KnowledgeMarkdownTests
 
     /// <summary>
     ///     Validates that neighbors that end up in the same style are one run, that no run is empty, and that the order of
-    ///     the blocks of a whole card is the order of its text.
+    ///     the blocks of a whole reply is the order of its text.
     /// </summary>
     [Fact]
-    public void KnowledgeMarkdown_Parse_WholeCard_KeepsOrderAndMergesRuns()
+    public void ReplyMarkdown_Parse_WholeReply_KeepsOrderAndMergesRuns()
     {
-        // Arrange: a card in the dialect of the cards
+        // Arrange: a reply that uses every construct that the unit reads
         const string markdown = "Intro with `a` and **b**.\n\n## Steps\n\n1. Do *this*\n   first.\n2. Then that.\n\n```xml\n<svg/>\n```\n\n- end";
 
         // Act
-        var blocks = KnowledgeMarkdown.Parse(markdown);
+        var blocks = ReplyMarkdown.Parse(markdown);
 
         // Assert: every block in order, and unmatched markers merged into the text around them
         Assert.Equal(
             ["P:Intro with <c>a</c> and <b>b</b>.", "H2:Steps", "L1.:Do <i>this</i> first.", "L2.:Then that.", "C[xml]<svg/>", "L-:end"],
             blocks.Select(Describe).ToArray());
-        var merged = Assert.IsType<ParagraphBlock>(KnowledgeMarkdown.Parse("a * b ** c").Single());
+        var merged = Assert.IsType<ParagraphBlock>(ReplyMarkdown.Parse("a * b ** c").Single());
         var span = Assert.Single(merged.Spans);
         Assert.Equal(new MarkdownSpan("a * b ** c", MarkdownSpanStyle.Normal), span);
         Assert.All(blocks.OfType<ParagraphBlock>(), p => Assert.All(p.Spans, s => Assert.NotEqual(string.Empty, s.Text)));
     }
 
     /// <summary>
-    ///     Validates, on every card and example description of the catalog of the application, that reading does not fail,
-    ///     that no letter or digit of the text is lost or added, and that the constructs of the dialect that the cards use
-    ///     occur.
+    ///     Validates, on a reply full of constructs that the unit does not read (links, images, tables, quotes, setext
+    ///     headings, rules, underscore emphasis, HTML, strike-through, a nested item, and a fence that is not closed),
+    ///     that reading does not fail, that no letter or digit of the text is lost or added, and that a link is kept as
+    ///     the text that was written.
     /// </summary>
     [Fact]
-    public void KnowledgeMarkdown_Parse_RealCatalog_ReadsEveryCardWithoutLosingText()
+    public void ReplyMarkdown_Parse_ConstructsItDoesNotRead_KeepEveryLetterAndDigit()
     {
-        // Arrange: the text of every card body and every example description
-        var catalog = KnowledgeCatalog.Default;
-        var texts = catalog.Cards
-            .SelectMany(c => c.Examples.Select(e => e.Description).Prepend(c.Body))
-            .ToList();
-        var blocks = new List<MarkdownBlock>();
+        // Arrange: a reply that uses the constructs the unit keeps as text; the fence line has only a language
+        const string link = "See [docs](https://example.com/a1) and ![alt](p.png) for more.";
+        var markdown = string.Join(
+            "\n",
+            link,
+            string.Empty,
+            "| a | b |",
+            "|---|---|",
+            "| 1 | 2 |",
+            string.Empty,
+            "> quote of 3 words",
+            string.Empty,
+            "Title",
+            "=====",
+            string.Empty,
+            "***",
+            string.Empty,
+            "Some _under_ and __double__ text, <b>html</b>, and ~~strike~~.",
+            string.Empty,
+            "- outer",
+            "  - nested 4",
+            string.Empty,
+            "```svg",
+            "<rect width=\"5\"/>");
 
-        // Act / Assert: each text reads, and its letters and digits are the ones of its source
-        foreach (var text in texts)
-        {
-            var parsed = KnowledgeMarkdown.Parse(text);
-            blocks.AddRange(parsed);
-            Assert.Equal(LettersAndDigits(text), string.Concat(parsed.Select(ShownLettersAndDigits)));
-        }
+        // Act
+        var blocks = ReplyMarkdown.Parse(markdown);
 
-        // The corpus uses these constructs, so the check above covers each of them; italic text is not in any card today and
-        // is covered by the tests of the spans
-        Assert.True(texts.Count > catalog.Cards.Count);
-        Assert.Contains(blocks, b => b is HeadingBlock { Level: 2 });
-        Assert.Contains(blocks, b => b is ParagraphBlock);
-        Assert.Contains(blocks, b => b is ListItemBlock { Marker: "-" });
-        Assert.Contains(blocks, b => b is ListItemBlock { Marker: "1." });
-        Assert.Contains(blocks, b => b is CodeBlock { Language: not null });
-        var spans = blocks.SelectMany(b => b switch
-        {
-            HeadingBlock h => h.Spans,
-            ParagraphBlock p => p.Spans,
-            ListItemBlock l => l.Spans,
-            _ => []
-        }).ToList();
-        Assert.Contains(spans, s => s.Style == MarkdownSpanStyle.Bold);
-        Assert.Contains(spans, s => s.Style == MarkdownSpanStyle.Code);
-        Assert.DoesNotContain(spans, s => s.Text.Length == 0);
+        // Assert: the letters and digits of the source are the ones shown, and the link is one plain run as written
+        Assert.Equal(LettersAndDigits(markdown), string.Concat(blocks.Select(ShownLettersAndDigits)));
+        var first = Assert.IsType<ParagraphBlock>(blocks[0]);
+        Assert.Equal(new MarkdownSpan(link, MarkdownSpanStyle.Normal), Assert.Single(first.Spans));
+        Assert.Equal(new CodeBlock("svg", "<rect width=\"5\"/>"), blocks[^1]);
     }
 }

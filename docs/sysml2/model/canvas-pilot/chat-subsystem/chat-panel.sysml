@@ -7,7 +7,7 @@ package CanvasPilot_ChatPanel {
     private import CanvasPilot_ComposerViewModel::*;
     private import CanvasPilot_DictationService::*;
     private import CanvasPilot_FollowUpSuggestions::*;
-    private import CanvasPilot_KnowledgeMarkdown::*;
+    private import CanvasPilot_ReplyMarkdown::*;
     private import CanvasPilot_MarkImageComposer::*;
     private import CanvasPilot_MarkRegistry::*;
     private import CanvasPilot_MessagePayload::*;
@@ -93,8 +93,8 @@ package CanvasPilot_ChatPanel {
         // Asks the copilot whether the provider can be used (IAgentService and the readiness report only) for the banner.
         dependency ChatPanel to AgentContract;
 
-        // Reads the final text of a reply as Markdown and draws it with the control of the Knowledge subsystem.
-        dependency ChatPanel to KnowledgeMarkdown;
+        // Reads the final text of a reply as Markdown and draws it with the control of the ReplyMarkdown unit.
+        dependency ChatPanel to ReplyMarkdown;
 
         // Saves the words of every turn, shows them again when the project is opened, and deletes them on request, through the store (IChatHistoryStore and the row records only).
         dependency ChatPanel to ChatHistoryStore;

@@ -24,15 +24,15 @@ using Avalonia.Controls.Documents;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media;
 using Avalonia.VisualTree;
-using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 
 /// <summary>
 ///     Headless UI tests for <see cref="MarkdownBlocksPanel" />: the control that draws the blocks that
-///     <see cref="KnowledgeMarkdown" /> reads from Markdown, which the chat panel uses for the replies of the copilot.
+///     <see cref="ReplyMarkdown" /> reads from Markdown, which the chat panel uses for the replies of the copilot.
 /// </summary>
-public sealed class KnowledgeMarkdownViewTests
+public sealed class ReplyMarkdownViewTests
 {
     /// <summary>
     ///     Reads the text of a text block, which is the text of its runs when it has runs.
@@ -54,7 +54,7 @@ public sealed class KnowledgeMarkdownViewTests
     public void MarkdownBlocksPanel_Blocks_DrawsEveryKindOfBlock()
     {
         // Arrange: a panel over the blocks that the reader makes of a small text
-        var blocks = KnowledgeMarkdown.Parse(
+        var blocks = ReplyMarkdown.Parse(
             "## Heading\n\nSome **bold**, *italic*, and `code` text.\n\n- a bullet\n3. a number\n\n```xml\n<svg/>\n<g/>\n```");
         var panel = new MarkdownBlocksPanel { Blocks = blocks };
         var window = new Window { Content = panel, Width = 500, Height = 400 };
@@ -76,11 +76,11 @@ public sealed class KnowledgeMarkdownViewTests
         Assert.Contains(paragraphRuns, run => run.Text == "code" && run.Background is not null);
         var markers = panel.Children.OfType<Grid>().Select(grid => grid.Children.OfType<TextBlock>().First(t => t is not SelectableTextBlock).Text).ToList();
         Assert.Equal(["\u2022", "3."], markers);
-        var code = panel.GetVisualDescendants().OfType<SelectableTextBlock>().Single(t => AutomationProperties.GetAutomationId(t) == "KnowledgeBodyCode");
+        var code = panel.GetVisualDescendants().OfType<SelectableTextBlock>().Single(t => AutomationProperties.GetAutomationId(t) == "ReplyMarkdownCode");
         Assert.Equal("<svg/>\n<g/>", code.Text?.Replace("\r\n", "\n", StringComparison.Ordinal));
 
         // Act: draw different blocks, then none
-        panel.Blocks = KnowledgeMarkdown.Parse("Only text.");
+        panel.Blocks = ReplyMarkdown.Parse("Only text.");
         var afterChange = panel.Children.Count;
         panel.Blocks = null;
 

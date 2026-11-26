@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:DemaConsulting.CanvasPilot.ChatSubsystem"
-             xmlns:knowledge="using:DemaConsulting.CanvasPilot.KnowledgeSubsystem"
              x:Class="DemaConsulting.CanvasPilot.ChatSubsystem.AssistantReplyView"
              x:DataType="vm:AssistantReplyViewModel"
              AutomationProperties.AutomationId="AssistantReply">
@@ -67,10 +66,10 @@
                            Text="{Binding Text}"
                            IsVisible="{Binding !IsComplete}" />
 
-      <knowledge:MarkdownBlocksPanel Name="ReplyMarkdown"
-                                     AutomationProperties.AutomationId="AssistantReplyMarkdown"
-                                     Blocks="{Binding Blocks}"
-                                     IsVisible="{Binding IsComplete}" />
+      <vm:MarkdownBlocksPanel Name="ReplyMarkdown"
+                              AutomationProperties.AutomationId="AssistantReplyMarkdown"
+                              Blocks="{Binding Blocks}"
+                              IsVisible="{Binding IsComplete}" />
     </StackPanel>
 
     <!-- What the turn cost, small and quiet, under the last reply of the turn -->

@@ -34,8 +34,9 @@ that are the same in both variants at the top level. All keys start with `Cp`.
 - *Fills*: `CpFillDictated` (behind dictated words in a sent message) and `CpFillCode` (behind code in Markdown text,
   such as a reply of the copilot), translucent gray shades (alpha 13 and 19 percent) that let the surface below show
   through, so they read the same on a dark and a light surface. The two views that use them (`TranscriptEntryView` and
-  `MarkdownBlocksPanel`) bind the background of a text run to the token with the resource observable of their text
-  block, so a run follows a change of the theme variant and has no background when the token is missing.
+  the `MarkdownBlocksPanel` of the Chat subsystem's `ReplyMarkdown` unit) bind the background of a text run to the token
+  with the resource observable of their text block, so a run follows a change of the theme variant and has no background
+  when the token is missing.
 - *File-type badges*: `CpBadgeSvg`, `CpBadgeMermaid`, `CpBadgeVega`, `CpBadgePdf`, `CpBadgeImage`, `CpBadgeData`, and
   `CpBadgeSource`, the tile colors of the explorer. They are the same in both variants and each is dark enough for a
   white glyph at 4.5 to 1 or more. A badge never carries the meaning alone, because the name and extension are beside

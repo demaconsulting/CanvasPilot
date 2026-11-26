@@ -28,7 +28,7 @@ using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
-using DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+using DemaConsulting.CanvasPilot.ChatSubsystem;
 
 namespace DemaConsulting.CanvasPilot.UiTests;
 

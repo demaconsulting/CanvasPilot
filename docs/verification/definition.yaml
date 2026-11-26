@@ -54,6 +54,7 @@ input-files:
   - docs/verification/canvas-pilot/chat-subsystem/chat-history-store.md
   - docs/verification/canvas-pilot/chat-subsystem/follow-up-suggestions.md
   - docs/verification/canvas-pilot/chat-subsystem/payload-inspector.md
+  - docs/verification/canvas-pilot/chat-subsystem/reply-markdown.md
   - docs/verification/canvas-pilot/composer-subsystem.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-document.md
   - docs/verification/canvas-pilot/composer-subsystem/composer-history.md
@@ -67,7 +68,6 @@ input-files:
   - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-prompt-builder.md
   - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-tools.md
   - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-skills.md
-  - docs/verification/canvas-pilot/knowledge-subsystem/knowledge-markdown.md
   - docs/verification/canvas-pilot/logging-subsystem.md
   - docs/verification/canvas-pilot/logging-subsystem/rolling-file-logger.md
   - docs/verification/canvas-pilot/payload-subsystem.md

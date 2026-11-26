@@ -18,11 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     A run of text of a heading, paragraph, or list item that is drawn in one style.
+///     A paragraph of a Markdown text: the lines of the source that follow each other, joined with a space.
 /// </summary>
-/// <param name="Text">The text of the run, without the markers that gave it its style.</param>
-/// <param name="Style">How the run is drawn.</param>
-public sealed record MarkdownSpan(string Text, MarkdownSpanStyle Style);
+/// <param name="Spans">The text of the paragraph, in runs that have one style each.</param>
+public sealed record ParagraphBlock(IReadOnlyList<MarkdownSpan> Spans) : MarkdownBlock;

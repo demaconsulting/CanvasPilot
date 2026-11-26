@@ -187,15 +187,15 @@ tool that the copilot calls, and notices and errors), stops on request and keeps
 interface, and tells the panel when it is busy, so that the panel can block sending while the copilot works. The panel
 starts a turn for every message that was sent when it has a copilot (without one, it only adds the entry), shows the
 moving indicator and the Stop button while the turn runs, shows the text of a reply as plain selectable text while it
-streams and as Markdown, with the `MarkdownBlocksPanel` of the `Knowledge` subsystem, once it is whole, shows a banner
-with the sentence of the readiness report of the copilot when the provider cannot be used (or can be used with a
-warning), and raises a request to open the settings, from the banner and from an error row, which the shell turns into
-its own command; it does not depend on `Settings`. The `Chat` subsystem depends on `Composer`, `Annotation`, `Payload`,
-`Speech`, `Logging`, `Project` (the open project and the path of its file, for the history), `Knowledge` (to draw
-Markdown only), and, through `IAgentService` and the events of a turn only, `Agent`, and not on `AppShell`. The `Agent`
-subsystem does not depend on `Chat`. The main window places the panel in the chat column of the workspace, which is
-shown while a project is open, and the shell makes the panel the target of the Edit menu (through the composer) and of
-the talk key.
+streams and as Markdown, read and drawn by its own `ReplyMarkdown` unit (a small reader of headings, lists, fenced code,
+and bold, italic, and code text, with every other construct kept as text), once it is whole, shows a banner with the
+sentence of the readiness report of the copilot when the provider cannot be used (or can be used with a warning), and
+raises a request to open the settings, from the banner and from an error row, which the shell turns into its own
+command; it does not depend on `Settings`. The `Chat` subsystem depends on `Composer`, `Annotation`, `Payload`,
+`Speech`, `Logging`, `Project` (the open project and the path of its file, for the history), and, through
+`IAgentService` and the events of a turn only, `Agent`, and not on `AppShell`. The `Agent` subsystem does not depend on
+`Chat`. The main window places the panel in the chat column of the workspace, which is shown while a project is open,
+and the shell makes the panel the target of the Edit menu (through the composer) and of the talk key.
 
 `AgentContract` is the one thing of the AI copilot that the rest of the application sees: `IAgentService` with the
 request of a turn, the events that answer it, and the readiness report, all plain records that name no AI library.
@@ -230,11 +230,8 @@ the marks and attachments of a message. The catalog is built once, from embedded
 for the prompt of an assistant within a size budget, `KnowledgeTools` describes the one tool by which an assistant
 fetches them, and `KnowledgeSkills` describes each card as a skill; none of these units refers to a provider of a
 language model, so the same knowledge goes to any provider: the AI copilot is given the index in its instructions and
-fetches a card with the tool `canvasnet_help`. `KnowledgeMarkdown` reads Markdown in the dialect of the cards, which the
-copilot writes its replies in, into blocks without a Markdown library, and its control `MarkdownBlocksPanel` draws the
-completed replies of the copilot in the chat panel; that control is the only part of the subsystem with a user
-interface. The `Knowledge` subsystem depends on CanvasNet (and on Avalonia for the control), and not on `Chat` or
-`AppShell`.
+fetches a card with the tool `canvasnet_help`. The `Knowledge` subsystem has no user interface; it depends on
+CanvasNet, and not on `Chat` or `AppShell`.
 
 `StyleKitDocument` is the format of a style kit and the one place that reads and writes it: a folder with a `style.json`
 file (a palette of named colors, fonts, a line width, a corner radius, a spacing, a Mermaid theme, a Vega-Lite
@@ -648,23 +645,22 @@ settings and project files and the description of a payload, and, for dialogs, p
 CommunityToolkit.Mvvm, which are runtime third-party items (the `Composer` editor view also uses the AvaloniaEdit
 editing control, which is a runtime third-party item too; the other `Annotation`, `Chat`, and `Composer` units use base
 class library types and Avalonia only, and the `Payload` units base class library types and CanvasNet; of the
-`Knowledge` units only the control of `KnowledgeMarkdown` uses Avalonia, and the catalog reads the help cards of
-CanvasNet; the `Style` units read and write their files with `System.Text.Json` and `System.IO.Compression`,
-`StyleKitDocument` classifies font families with CanvasNet, and the picker, page, manager, and editor use Avalonia and
-CommunityToolkit.Mvvm). The `ImageRenderService` unit draws files and encodes PNG with the
-`DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws the marks of a message over a picture with
-the same library, and the `ProjectExplorer` unit uses its extension list to decide which files are image sources. The
-`AudioDeviceService`, `SpeechModelService`, and `DictationService` units list audio devices and speech models, download
-models, create capture devices, and load and run the speech engine with the `DemaConsulting.Speech` library and its
-Sherpa model package, whose native speech runtime is shipped with the application, and the speech descriptor types are
-shown by the other units of the `Speech` subsystem; both libraries are documented as OTS items (see *OTS Dependencies*).
-The units of the `Agent` subsystem use the AI libraries (AgentKit, which brings the path policy and the tool framework,
-the Microsoft Agent Framework, Microsoft.Extensions.AI, and OllamaSharp, and the Copilot SDK, with which AgentKit talks
-to a Copilot CLI), which are documented as OTS items too; the Copilot runtime that the Copilot SDK would bundle is
-switched off for every project by `CopilotSkipCliDownload` in `Directory.Build.props` and is never shipped or
-downloaded. Build, documentation, and quality tools are documented in the OTS design documents. The Windows installer
-package is built from the published application by the WiX Toolset, also documented as an OTS item; no run-time item
-depends on it.
+`Knowledge` units use no Avalonia, and the catalog reads the help cards of CanvasNet; the `Style` units read and write
+their files with `System.Text.Json` and `System.IO.Compression`, `StyleKitDocument` classifies font families with
+CanvasNet, and the picker, page, manager, and editor use Avalonia and CommunityToolkit.Mvvm). The `ImageRenderService`
+unit draws files and encodes PNG with the `DemaConsulting.CanvasNet.Viewer` library, the `MarkImageComposer` unit draws
+the marks of a message over a picture with the same library, and the `ProjectExplorer` unit uses its extension list to
+decide which files are image sources. The `AudioDeviceService`, `SpeechModelService`, and `DictationService` units list
+audio devices and speech models, download models, create capture devices, and load and run the speech engine with the
+`DemaConsulting.Speech` library and its Sherpa model package, whose native speech runtime is shipped with the
+application, and the speech descriptor types are shown by the other units of the `Speech` subsystem; both libraries are
+documented as OTS items (see *OTS Dependencies*). The units of the `Agent` subsystem use the AI libraries (AgentKit,
+which brings the path policy and the tool framework, the Microsoft Agent Framework, Microsoft.Extensions.AI, and
+OllamaSharp, and the Copilot SDK, with which AgentKit talks to a Copilot CLI), which are documented as OTS items too;
+the Copilot runtime that the Copilot SDK would bundle is switched off for every project by `CopilotSkipCliDownload` in
+`Directory.Build.props` and is never shipped or downloaded. Build, documentation, and quality tools are documented in
+the OTS design documents. The Windows installer package is built from the published application by the WiX Toolset, also
+documented as an OTS item; no run-time item depends on it.
 
 ## Risk Control Measures
 
@@ -1026,8 +1022,7 @@ and has the service forget the conversation and delete the session of the provid
 - Dictation shall listen only while a talk control is held and for a short moment afterwards, shall release the
   microphone when the session ends, and shall never write what was recognized to the log.
 - The `Knowledge` subsystem shall hold no reference to any AI provider SDK, client, or agent framework, shall write
-  nothing anywhere, and shall have a user interface only in the `MarkdownBlocksPanel` control of `KnowledgeMarkdown`; it
-  shall not depend on `Chat` or `AppShell`.
+  nothing anywhere, and shall have no user interface; it shall not depend on `Chat` or `AppShell`.
 - The catalog shall be extended with the cards of the application before the cards that are only about the host program
   are left out (by identifier, not by the tag `hosting`, which is also on cards that a drawing needs), shall be built
   once from embedded resources only, and shall never change; the index of its cards shall stay

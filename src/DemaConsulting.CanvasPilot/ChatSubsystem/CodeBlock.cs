@@ -18,10 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-namespace DemaConsulting.CanvasPilot.KnowledgeSubsystem;
+namespace DemaConsulting.CanvasPilot.ChatSubsystem;
 
 /// <summary>
-///     A fenced block of code of a card.
+///     A fenced block of code of a Markdown text.
 /// </summary>
 /// <param name="Language">The language that follows the opening fence, or <see langword="null" /> when there is none.</param>
 /// <param name="Text">The lines of the block as the source wrote them, joined with line feeds and without a final line feed.</param>
