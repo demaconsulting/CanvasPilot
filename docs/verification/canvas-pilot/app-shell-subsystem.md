@@ -14,6 +14,9 @@ documents. The behavior that needs no composition to show (the talk key and the 
 Folder with a fake launcher, the window buttons and the full-screen rule, the time of the last save in the status bar,
 and the talk key in the hints) is verified in the unit and the headless UI tests of `MainWindowShell`, `StatusBar`, and
 `Welcome`; the subsystem tests check that the composition joins the units so that the talk key reaches the chat panel.
+The style kits are read in the background when the application is composed; a test that opens the settings dialog waits
+for that first read before it opens the dialog, so the Style Kits page is loaded over the kits that were read and the
+test does not depend on how fast the computer reads its files.
 
 ### Test Environment
 
