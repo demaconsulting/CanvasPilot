@@ -397,9 +397,30 @@ public sealed class StylePickerTests : IDisposable
     /// <summary>
     ///     Creates a picker over the real units with the default of the selection as its way to start a project.
     /// </summary>
+    /// <remarks>
+    ///     The picker captures <see cref="SynchronizationContext.Current" /> as its owner thread and posts every change
+    ///     that arrives on another thread to it. The project and the catalog announce changes from thread-pool threads
+    ///     (after awaits with ConfigureAwait(false)), so under xUnit's context the rebuild of the list, the selection, and
+    ///     the error message would be posted and could still be pending when <see cref="StylePickerViewModel.ChangeTask" />
+    ///     completes, which only covers writing the choice. The tests then read a stale list on a slow machine. The
+    ///     picker is therefore built with no context, so it applies every change on the announcing thread before the
+    ///     awaited call returns; the application builds it on the Avalonia UI thread, where posting is the intended
+    ///     behavior.
+    /// </remarks>
     /// <returns>The picker.</returns>
-    private StylePickerViewModel CreatePicker() =>
-        new(_selection, _catalog, _projects, _selection.ApplyDefaultToNewProjectAsync);
+    private StylePickerViewModel CreatePicker()
+    {
+        var previous = SynchronizationContext.Current;
+        SynchronizationContext.SetSynchronizationContext(null);
+        try
+        {
+            return new StylePickerViewModel(_selection, _catalog, _projects, _selection.ApplyDefaultToNewProjectAsync);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+    }
 
     /// <summary>
     ///     Creates a project in the temporary folder, makes it the open project, and lets the catalog read its kits.
