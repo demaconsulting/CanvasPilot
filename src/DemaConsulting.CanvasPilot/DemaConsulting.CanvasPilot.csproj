@@ -15,7 +15,7 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="DemaConsulting.Speech" Version="0.2.0" />
     <PackageReference Include="DemaConsulting.Speech.Sherpa" Version="0.2.0" />
-    <PackageReference Include="DemaConsulting.CanvasNet.Viewer" Version="0.2.0-beta.13" />
+    <PackageReference Include="DemaConsulting.CanvasNet.Viewer" Version="0.2.0-beta.16" />
     <!-- The AI agent library. Core gives the confined tool framework, Agents.Copilot the GitHub Copilot agent factory
          and the runtime that runs the Copilot CLI that the user installed (its own bundled runtime is never shipped, see
          CopilotSkipCliDownload in Directory.Build.props), Agents.ChatClient the agent factory for any chat client, and
